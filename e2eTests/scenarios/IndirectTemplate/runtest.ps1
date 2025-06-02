@@ -12,21 +12,21 @@ Param(
 )
 
 Write-Host -ForegroundColor Yellow @'
-#  _____           _ _               _     _______                   _       _
-# |_   _|         | (_)             | |   |__   __|                 | |     | |
-#   | |  _ __   __| |_ _ __ ___  ___| |_     | | ___ _ __ ___  _ __ | | __ _| |_ ___
-#   | | | '_ \ / _` | | '__/ _ \/ __| __|    | |/ _ \ '_ ` _ \| '_ \| |/ _` | __/ _ \
-#  _| |_| | | | (_| | | | |  __/ (__| |_     | |  __/ | | | | | |_) | | (_| | ||  __/
-# |_____|_| |_|\__,_|_|_|  \___|\___|\__|    |_|\___|_| |_| |_| .__/|_|\__,_|\__\___|
-#                                                             | |
-#                                                             |_|
+#   _____          _                    _______                   _       _
+#  / ____|        | |                  |__   __|                 | |     | |
+# | |    _   _ ___| |_ ___  _ __ ___      | | ___ _ __ ___  _ __ | | __ _| |_ ___
+# | |   | | | / __| __/ _ \| '_ ` _ \     | |/ _ \ '_ ` _ \| '_ \| |/ _` | __/ _ \
+# | |___| |_| \__ \ || (_) | | | | | |    | |  __/ | | | | | |_) | | (_| | ||  __/
+#  \_____\__,_|___/\__\___/|_| |_| |_|    |_|\___|_| |_| |_| .__/|_|\__,_|\__\___|
+#                                                          | |
+#                                                          |_|
 # This test tests the following scenario:
 #
-#  - Create a new repository based on the PTE template with no apps (this will be the "indirect" template repository)
+#  - Create a new repository based on the PTE template with no apps (this will be the custom template repository)
 #  - Create a new repository based on the PTE template with 1 app, using compilerfolder and donotpublishapps (this will be the "final" template repository)
-#  - Run Update AL-Go System Files in final repo (using indirect repo as template)
-#  - Run Update AL-Go System files in indirect repo
-#  - Validate that custom step is present in indirect repo
+#  - Run Update AL-Go System Files in final repo (using custom template repository as template)
+#  - Run Update AL-Go System files in custom template repository
+#  - Validate that custom step is present in custom template repository
 #  - Run Update AL-Go System files in final repo
 #  - Validate that custom step is present in final repo
 #  - Run Update AL-Go System files in final repo
@@ -214,8 +214,8 @@ CancelAllWorkflows -repository $repository
 # Pull changes
 Pull
 
-(Join-Path (Get-Location) $IndirectTemplateRepoSettingsFile) | Should -Exist
-(Join-Path (Get-Location) $IndirectTemplateProjectSettingsFile) | Should -Exist
+(Join-Path (Get-Location) $CustomTemplateRepoSettingsFile) | Should -Exist
+(Join-Path (Get-Location) $CustomTemplateProjectSettingsFile) | Should -Exist
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait

@@ -175,10 +175,10 @@ function TestALGoRepository {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
         elseif ($_.Directory.Name -eq ([System.IO.Path]::GetDirectoryName($RepoSettingsFile)) -and $_.BaseName -like '*ettings') {
-            if ($_.Name -eq ([System.IO.Path]::GetFileName($RepoSettingsFile)) -or $_.Name -eq ([System.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile))) {
+            if ($_.Name -eq ([System.IO.Path]::GetFileName($RepoSettingsFile)) -or $_.Name -eq ([System.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile))) {
                 $type = 'Repo'
             }
-            elseif ($_.Name -eq ([System.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile))) {
+            elseif ($_.Name -eq ([System.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile))) {
                 $type = 'Project'
             }
             else {

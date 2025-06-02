@@ -13,8 +13,8 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
-$IndirectTemplateRepoSettingsFile = Join-Path '.github' 'AL-Go-TemplateRepoSettings.doNotEdit.json'
-$IndirectTemplateProjectSettingsFile = Join-Path '.github' 'AL-Go-TemplateProjectSettings.doNotEdit.json'
+$CustomTemplateRepoSettingsFile = Join-Path '.github' 'AL-Go-TemplateRepoSettings.doNotEdit.json'
+$CustomTemplateProjectSettingsFile = Join-Path '.github' 'AL-Go-TemplateProjectSettings.doNotEdit.json'
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPushBranches', Justification = 'False positive.')]
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
@@ -681,10 +681,10 @@ function GetDefaultSettings
 # Read settings from the settings files
 # Settings are read from the following files:
 # - ALGoOrgSettings (github Variable)                    = Organization settings variable
-# - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from indirect template
+# - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
 # - .github/AL-Go-Settings.json                          = Repository Settings file
 # - ALGoRepoSettings (github Variable)                   = Repository settings variable
-# - .github/AL-Go-TemplateProjectSettings.doNotEdit.json = Project settings from indirect template
+# - .github/AL-Go-TemplateProjectSettings.doNotEdit.json = Project settings from custom template
 # - <project>/.AL-Go/settings.json                       = Project settings file
 # - .github/<workflowName>.settings.json                 = Workflow settings file
 # - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
@@ -748,8 +748,8 @@ function ReadSettings {
     }
 
     # Read settings from repository settings file
-    $indirectTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $IndirectTemplateRepoSettingsFile)
-    $settingsObjects += @($indirectTemplateRepoSettingsObject)
+    $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
+    $settingsObjects += @($customTemplateRepoSettingsObject)
 
     # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
@@ -763,8 +763,8 @@ function ReadSettings {
 
     if ($project) {
         # Read settings from repository settings file
-        $indirectTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $IndirectTemplateProjectSettingsFile)
-        $settingsObjects += @($indirectTemplateProjectSettingsObject)
+        $customTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateProjectSettingsFile)
+        $settingsObjects += @($customTemplateProjectSettingsObject)
         # Read settings from project settings file
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)

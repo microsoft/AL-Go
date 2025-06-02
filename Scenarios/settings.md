@@ -14,13 +14,13 @@ When running a workflow or a local script, the settings are applied by reading s
 
 1. `ALGoOrgSettings` is a **GitHub variable**, which can be defined on an **organizational level** and will apply to **all AL-Go repositories** in this organization.
 
-1. `.github/templateRepoSettings.doNotEdit.json` is the repository settings from an indirect template repository (if applicable)
+1. `.github/AL-Go-TemplateRepoSettings.doNotEdit.json` is the repository settings from a custom template repository (if applicable)
 
 1. `.github/AL-Go-settings.json` is the **repository settings file**. This settings file contains settings that are relevant for all projects in the repository. **Special note:** The repository settings file can also contains `BcContainerHelper` settings, which will be applied when loading `BcContainerHelper` in a workflow - the GitHub variables are not considered for BcContainerHelper settings. (see expert section).
 
 1. `ALGoRepoSettings` is a **GitHub variable**, which can be defined on an **repository level** and can contain settings that are relevant for **all projects** in the repository.
 
-1. `.github/templateProjectSettings.doNotEdit.json` is the project settings from an indirect template repository (if applicable)
+1. `.github/AL-Go-TemplateProjectSettings.doNotEdit.json` is the project settings from a custom template repository (if applicable)
 
 1. `.AL-Go/settings.json` is the **project settings file**. If the repository is a single project, the .AL-Go folder is in the root folder of the repository. If the repository contains multiple projects, there will be a .AL-Go folder in each project folder (like `project/.AL-Go/settings.json`)
 
@@ -412,27 +412,27 @@ Custom jobs will be preserved when running Update AL-Go System Files.
 
 **Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
 
-<a id="indirect"></a>
+<a id="customtemplate"></a>
 
-## Indirect template repositories
+## Custom template repositories
 
-If you are utilizing script overrides, custom jobs, custom steps, custom delivery or like in many repositories, you might want to take advantage of the indirect template repository feature.
+If you are utilizing script overrides, custom jobs, custom steps, custom delivery or like in many repositories, you might want to take advantage of the custom template repository feature.
 
-An indirect template repository is an AL-Go for GitHub repository (without any apps), which is used as a template for the remaining AL-Go for GitHub repositories. As an example, if you are using a custom delivery script, which you want to have in all your repositories, you can create an empty AL-Go for GitHub repository, place the delivery script in the .github folder and use that repository as a template when running Update AL-Go system files in your other repositories.
+A custom template repository is an AL-Go for GitHub repository (without any apps), which is used as a template for the remaining AL-Go for GitHub repositories. As an example, if you are using a custom delivery script, which you want to have in all your repositories, you can create an empty AL-Go for GitHub repository, place the delivery script in the .github folder and use that repository as a template when running Update AL-Go system files in your other repositories.
 
 This would make sure that all repositories would have this script (and updated versions of the script) in the future.
 
-The items, which are currently supported from indirect template repositories are:
+The items, which are currently supported from custom template repositories are:
 
 - Repository script overrides in the .github folder
 - Project script overrides in the .AL-Go folder
 - Custom workflows in the .github/workflows folder
 - Custom jobs in any AL-Go for GitHub workflow
 - Custom steps in the \_BuildALGoProject workflow
-- New repository settings
-- New project settings
+- Changes to repository settings in .github/AL-Go-settings.json
+- Changes to project settings in .AL-Go/settings.json
 
-**Note** that an AL-Go for GitHub indirect template repository can be private or public.
+**Note** that an AL-Go for GitHub custom template repository can be private or public.
 
 ## Your own version of AL-Go for GitHub
 

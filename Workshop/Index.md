@@ -27,7 +27,7 @@ This workshop shows you how to take advantage of the functionality, which is pro
 1. [Custom Delivery](CustomDelivery.md) - *FUTURE TOPIC: Setting up custom delivery to f.ex. a Teams channel.*
 1. [Custom Delivery](CustomDeployment.md) - *FUTURE TOPIC: Setting up custom deployment to f.ex. an on-premises environment.*
 1. [Custom Jobs](CustomJobs.md) - *FUTURE TOPIC: Adding a custom job to an AL-Go for GitHub workflows.*
-1. [Using Indirect Templates](IndirectTemplates.md) - *FUTURE TOPIC: Using indirect templates to ensure that all repositories are using the same customizations*
+1. [Using Custom Templates](CustomTemplates.md) - *FUTURE TOPIC: Using custom templates to ensure that all repositories are using the same customizations*
 
 ## Additional Future topics
 

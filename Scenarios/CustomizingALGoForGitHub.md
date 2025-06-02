@@ -26,7 +26,7 @@ Keeping your repositories up-to-date can be done manually or on a schedule (like
 There are three ways you can customize AL-Go for GitHub to fit your needs. You can
 
 1. customize the repository with custom scripts, workflows or jobs following the guidelines below
-1. create a customized repository and use this as your template repository (indirect template)
+1. create a customized repository and use this as your custom template repository
 1. fork the AL-Go for GitHub and create your "own" version (not recommended)
 
 > [!CAUTION]
@@ -181,23 +181,23 @@ Adding a custom job like this, will cause this job to run simultaneously with th
 
 If any of your custom jobs require permissions, which exceeds the permissions already assigned in the workflow, then these permissions can be specified directly on the custom job.
 
-## Using indirect templates
+## Using custom template repositories
 
-If you have have customizations you want to apply to multiple repositories, you might want to consider using an indirect template. An indirect template is really just an AL-Go repository (which can be customized), which you use as a template repository for your repositories. This way, you can control your scripts, jobs or steps in a central location, potentially for specific purposes.
+If you have have customizations you want to apply to multiple repositories, you might want to consider using a custom template. A custom template is really just an AL-Go repository (which can be customized), which you use as a template repository for your repositories. This way, you can control your scripts, jobs or steps in a central location, potentially for specific purposes.
 
 > [!NOTE]
-> Indirect templates can be public or private. If you are using a private indirect template, AL-Go for GitHub will use the GhTokenWorkflow secret for downloading the template during Update AL-Go System Files and check for updates.
+> Custom templates can be public or private. If you are using a private custom template repository, AL-Go for GitHub will use the GhTokenWorkflow secret for downloading the template during Update AL-Go System Files and check for updates.
 
 > [!TIP]
-> The recommended way to create a new repository based on your indirect AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a **GhTokenWorkflow** secret and then run the `Update AL-Go System Files` workflow with your indirect template specified.
+> The recommended way to create a new repository based on your custom AL-Go template is to create a new repository based on [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource), create a **GhTokenWorkflow** secret and then run the `Update AL-Go System Files` workflow with your custom template specified.
 
 > [!NOTE]
-> If you use the indirect template as a GitHub template for creating the repository, by clicking use this template in your indirect template - then you need to re-specify the indirect Template the first time you run Update `AL-Go System Files` as the repository will be a copy of the template repository and by default point to the template repository of the indirect template as it's template repository.
+> If you use the custom template as a GitHub template for creating the repository, by clicking use this template in your custom template - then you need to re-specify the custom Template the first time you run Update `AL-Go System Files` as the repository will be a copy of the template repository and by default point to the template repository of the custom template as it's template repository.
 
-Repositories based on your indirect template will notify you that changes are available for your AL-Go System Files when you update the indirect template only. You will not be notified when new versions of AL-Go for GitHub is released in every repository - only in the indirect template repository.
+Repositories based on your custom template will notify you that changes are available for your AL-Go System Files when you update the custom template only. You will not be notified when new versions of AL-Go for GitHub is released in every repository - only in the custom template repository.
 
 > [!WARNING]
-> You should ensure that your indirect template repository is kept up-to-date with the latest changes in AL-Go for GitHub.
+> You should ensure that your custom template repository is kept up-to-date with the latest changes in AL-Go for GitHub.
 
 > [!TIP]
 > You can setup the Update AL-Go System Files workflow to run on a schedule to uptake new releases of AL-Go for GitHub regularly.

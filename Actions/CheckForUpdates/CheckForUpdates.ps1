@@ -86,13 +86,13 @@ if (-not $isDirectALGo) {
     if (Test-Path -Path $templateRepoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
-            # The template repository is a url to another AL-Go repository (an indirect template repository)
-            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the indirect template repository points to the "real" template repository
-            # Copy files and folders from the indirect template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
+            # The template repository is a url to another AL-Go repository (a custom template repository)
+            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the custom template repository points to the "real" template repository
+            # Copy files and folders from the custom template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
             # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.json (will be read before .github/AL-Go-Settings.json in the final repo)
             # Copy .AL-Go/settings.json to .github/templateProjectSettings.json (will be read before .AL-Go/settings.json in the final repo)
 
-            Write-Host "Indirect AL-Go template repository detected, downloading the 'real' template repository"
+            Write-Host "Custom AL-Go template repository detected, downloading the 'real' template repository"
             $realTemplateUrl = $templateRepoSettings.templateUrl
             if ($templateRepoSettings.Keys -contains "templateSha") {
                 $realTemplateSha = $templateRepoSettings.templateSha
@@ -101,16 +101,16 @@ if (-not $isDirectALGo) {
                 $realTemplateSha = ""
             }
 
-            # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the indirect template repository
+            # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
             $realTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
             Write-Host "Real Template Folder: $realTemplateFolder"
 
             # Set TemplateBranch and TemplateOwner
-            # Keep TemplateUrl and TemplateSha pointing to the indirect template repository
+            # Keep TemplateUrl and TemplateSha pointing to the custom template repository
             $templateBranch = $realTemplateUrl.Split('@')[1]
             $templateOwner = $realTemplateUrl.Split('/')[3]
 
-            # If the indirect template contains unusedALGoSystemFiles, we need to remove them from the current repository
+            # If the custom template contains unusedALGoSystemFiles, we need to remove them from the current repository
             if ($templateRepoSettings.ContainsKey('unusedALGoSystemFiles')) {
                 $unusedALGoSystemFiles += $templateRepoSettings.unusedALGoSystemFiles
             }
@@ -137,8 +137,8 @@ $checkfiles = @(
 
 if ($realTemplateFolder) {
     $checkfiles += @(
-        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($IndirectTemplateRepoSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($IndirectTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
-        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($IndirectTemplateProjectSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($IndirectTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
+        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateRepoSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
+        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateProjectSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
     )
 }
 
@@ -179,7 +179,7 @@ foreach($checkfile in $checkfiles) {
     $srcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
     $realSrcFolder = $null
     if ($realTemplateFolder -and $type -notlike 'template*settings') {
-        # Get Real source folder except for template settings - these are applied from the indirect temoplate´repository
+        # Get Real source folder except for template settings - these are applied from the custom temoplate´repository
         $realSrcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
     }
     if ($srcFolder) {
@@ -210,7 +210,7 @@ foreach($checkfile in $checkfiles) {
                 $isFileDirectALGo = $isDirectALGo
                 Write-Host "SrcFolder: $srcFolder"
                 if ($realSrcFolder) {
-                    # if SrcFile is an indirect template repository, we need to find the file in the "real" template repository
+                    # if SrcFile is a custom template repository, we need to find the file in the "real" template repository
                     $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
                     if (Test-Path -Path $fname -PathType Leaf) {
                         Write-Host "File is available in the 'real' template repository"
@@ -251,8 +251,8 @@ foreach($checkfile in $checkfiles) {
                 }
 
                 if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
-                    # Apply customizations from indirect template repository
-                    Write-Host "Apply customizations from indirect template repository: $srcFile"
+                    # Apply customizations from custom template repository
+                    Write-Host "Apply customizations from custom template repository: $srcFile"
                     [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile)
                 }
 
