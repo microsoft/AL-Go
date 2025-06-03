@@ -3,6 +3,7 @@ name: Mark stale issues
 on:
   schedule:
   - cron: '44 5 * * 2' # Tuesday, 5:44
+  workflow_dispatch:
 
 jobs:
   stale:
