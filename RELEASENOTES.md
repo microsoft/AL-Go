@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1770: Wrong type of _projects_ setting in settings schema
+
 ## v7.2
 
 ### Removed functionality
