@@ -13,7 +13,7 @@ Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "TelemetryHelper.psm1" -Resolve)
 
-$AdditionalData = @{}
+[System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
 try {
     $startTime = Get-Date
     Invoke-Command -ScriptBlock $Action
