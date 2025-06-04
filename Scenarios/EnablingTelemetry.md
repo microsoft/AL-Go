@@ -45,7 +45,7 @@ SeverityLevel: 1
 Additional Dimensions:
 | Dimension | Description |
 |-----------|-------------|
-| ActionDuration | The duration of the workflow run |
+| ActionDuration | The duration of the action |
 
 ### AL-Go action failed
 
