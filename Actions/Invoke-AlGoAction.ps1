@@ -20,13 +20,13 @@ try {
     Invoke-Command -ScriptBlock $Action
 
     if (-not $SkipTelemetry) {
-        $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds)
+        $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds).ToString()
         Trace-Information -ActionName $ActionName -AdditionalData $AdditionalData
     }
 }
 catch {
     if (-not $SkipTelemetry) {
-        $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds)
+        $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds).ToString()
         Trace-Exception -ActionName $ActionName -ErrorRecord $_ -AdditionalData $AdditionalData
     }
 
