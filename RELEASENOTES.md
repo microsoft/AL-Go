@@ -30,7 +30,7 @@ By setting failOn to 'newWarning', pull requests will fail if new warnings are i
 
 ### AL-Go Telemetry 
 
-Now AL-Go telemetry also logs ´ActionDuration´ which makes it possible to track the duration of the different steps in the AL-Go workflows (e.g. RunPipeline or Sign)
+Now AL-Go telemetry also logs `ActionDuration` which makes it possible to track the duration of the different steps in the AL-Go workflows (e.g. RunPipeline or Sign)
 
 ## v7.1
 
