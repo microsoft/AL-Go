@@ -42,7 +42,10 @@ Telemetry message: AL-Go action ran
 
 SeverityLevel: 1
 
-Additional Dimensions: None
+Additional Dimensions:
+| Dimension | Description |
+|-----------|-------------|
+| ActionDuration | The duration of the action |
 
 ### AL-Go action failed
 
