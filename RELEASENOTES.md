@@ -28,7 +28,7 @@ AL-Go for GitHub settings now has a schema. The following line is added at the b
 
 By setting failOn to 'newWarning', pull requests will fail if new warnings are introduced. This feature compares the warnings in the pull request build against those in the latest successful CI/CD build and fails if new warnings are detected.
 
-### AL-Go Telemetry 
+### AL-Go Telemetry
 
 Now AL-Go telemetry also logs `ActionDuration` which makes it possible to track the duration of the different steps in the AL-Go workflows (e.g. RunPipeline or Sign)
 
