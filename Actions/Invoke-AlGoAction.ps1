@@ -4,7 +4,9 @@ param(
     [Parameter(Mandatory = $true)]
     [scriptblock]$Action,
     [Parameter(Mandatory = $false)]
-    [switch]$SkipTelemetry
+    [switch]$SkipTelemetry,
+    [Parameter(Mandatory = $false)]
+    [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
 )
 
 $errorActionPreference = "Stop"
@@ -13,14 +15,12 @@ Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "TelemetryHelper.psm1" -Resolve)
 
-[System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
 try {
     $startTime = Get-Date
     Invoke-Command -ScriptBlock $Action
 
     if (-not $SkipTelemetry) {
         $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds)
-        Write-Host "Action '$ActionName' completed in $($AdditionalData["ActionDuration"]) seconds"
         Trace-Information -ActionName $ActionName -AdditionalData $AdditionalData
     }
 }
