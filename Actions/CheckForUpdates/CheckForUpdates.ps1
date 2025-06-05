@@ -72,7 +72,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
     $downloadLatest = $true
 }
 
-$realTemplateFolder = $null
+$originalTemplateFolder = $null
 $templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 Write-Host "Template Folder: $templateFolder"
 
@@ -87,28 +87,28 @@ if (-not $isDirectALGo) {
         $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
             # The template repository is a url to another AL-Go repository (a custom template repository)
-            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the custom template repository points to the "real" template repository
-            # Copy files and folders from the custom template repository, but grab the unmodified file from the "real" template repository if it exists and apply customizations
-            # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.json (will be read before .github/AL-Go-Settings.json in the final repo)
-            # Copy .AL-Go/settings.json to .github/templateProjectSettings.json (will be read before .AL-Go/settings.json in the final repo)
+            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the custom template repository points to the "original" template repository
+            # Copy files and folders from the custom template repository, but grab the unmodified file from the "original" template repository if it exists and apply customizations
+            # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.doNotEdit.json (will be read before .github/AL-Go-Settings.json in the final repo)
+            # Copy .AL-Go/settings.json to .github/templateProjectSettings.doNotEdit.json (will be read before .AL-Go/settings.json in the final repo)
 
-            Write-Host "Custom AL-Go template repository detected, downloading the 'real' template repository"
-            $realTemplateUrl = $templateRepoSettings.templateUrl
+            Write-Host "Custom AL-Go template repository detected, downloading the 'original' template repository"
+            $originalTemplateUrl = $templateRepoSettings.templateUrl
             if ($templateRepoSettings.Keys -contains "templateSha") {
-                $realTemplateSha = $templateRepoSettings.templateSha
+                $originalTemplateSha = $templateRepoSettings.templateSha
             }
             else {
-                $realTemplateSha = ""
+                $originalTemplateSha = ""
             }
 
-            # Download the "real" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
-            $realTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $realTemplateUrl -templateSha ([ref]$realTemplateSha) -downloadLatest ($realTemplateSha -eq '')
-            Write-Host "Real Template Folder: $realTemplateFolder"
+            # Download the "original" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
+            $originalTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $originalTemplateUrl -templateSha ([ref]$originalTemplateSha) -downloadLatest ($originalTemplateSha -eq '')
+            Write-Host "Original Template Folder: $originalTemplateFolder"
 
             # Set TemplateBranch and TemplateOwner
             # Keep TemplateUrl and TemplateSha pointing to the custom template repository
-            $templateBranch = $realTemplateUrl.Split('@')[1]
-            $templateOwner = $realTemplateUrl.Split('/')[3]
+            $templateBranch = $originalTemplateUrl.Split('@')[1]
+            $templateOwner = $originalTemplateUrl.Split('/')[3]
 
             # If the custom template contains unusedALGoSystemFiles, we need to remove them from the current repository
             if ($templateRepoSettings.ContainsKey('unusedALGoSystemFiles')) {
@@ -135,7 +135,7 @@ $checkfiles = @(
     @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.settings.json'; 'type' = 'settings' }
 )
 
-if ($realTemplateFolder) {
+if ($originalTemplateFolder) {
     $checkfiles += @(
         @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateRepoSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
         @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateProjectSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
@@ -177,10 +177,10 @@ foreach($checkfile in $checkfiles) {
     $dstPath = $checkfile.dstPath
     $dstFolder = Join-Path $baseFolder $dstPath
     $srcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
-    $realSrcFolder = $null
-    if ($realTemplateFolder -and $type -notlike 'template*settings') {
-        # Get Real source folder except for template settings - these are applied from the custom temoplate´repository
-        $realSrcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $realTemplateUrl -templateFolder $realTemplateFolder -srcPath $srcPath
+    $originalSrcFolder = $null
+    if ($originalTemplateFolder -and $type -notlike 'template*settings') {
+        # Get Original source folder except for template settings - these are applied from the custom template´repository
+        $originalSrcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateFolder -srcPath $srcPath
     }
     if ($srcFolder) {
         Push-Location -Path $srcFolder
@@ -206,16 +206,16 @@ foreach($checkfile in $checkfiles) {
                 Write-Host "- $filename"
                 $dstFile = Join-Path $dstFolder $filename
                 $srcFile = $_.FullName
-                $realSrcFile = $srcFile
+                $originalSrcFile = $srcFile
                 $isFileDirectALGo = $isDirectALGo
                 Write-Host "SrcFolder: $srcFolder"
-                if ($realSrcFolder) {
-                    # if SrcFile is a custom template repository, we need to find the file in the "real" template repository
-                    $fname = Join-Path $realSrcFolder (Resolve-Path $srcFile -Relative)
+                if ($originalSrcFolder) {
+                    # if SrcFile is a custom template repository, we need to find the file in the "original" template repository
+                    $fname = Join-Path $originalSrcFolder (Resolve-Path $srcFile -Relative)
                     if (Test-Path -Path $fname -PathType Leaf) {
-                        Write-Host "File is available in the 'real' template repository"
-                        $realSrcFile = $fname
-                        $isFileDirectALGo = IsDirectALGo -templateUrl $realTemplateUrl
+                        Write-Host "File is available in the 'original' template repository"
+                        $originalSrcFile = $fname
+                        $isFileDirectALGo = IsDirectALGo -templateUrl $originalTemplateUrl
                     }
                 }
                 $dstFileExists = Test-Path -Path $dstFile -PathType Leaf
@@ -231,15 +231,15 @@ foreach($checkfile in $checkfiles) {
                 switch ($type) {
                     "workflow" {
                         # For workflow files, we might need to modify the file based on the settings
-                        $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $realsrcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
+                        $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalsrcFile -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
                      }
                      "settings" {
                         # For settings files, we need to modify the file based on the settings
-                        $srcContent = GetModifiedSettingsContent -srcSettingsFile $realSrcFile -dstSettingsFile $dstFile
+                        $srcContent = GetModifiedSettingsContent -srcSettingsFile $originalSrcFile -dstSettingsFile $dstFile
                      }
                     Default {
                         # For non-workflow files, just read the file content
-                        $srcContent = Get-ContentLF -Path $realSrcFile
+                        $srcContent = Get-ContentLF -Path $originalSrcFile
                     }
                 }
                 # Replace static placeholders
@@ -250,7 +250,7 @@ foreach($checkfile in $checkfiles) {
                     ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
                 }
 
-                if ($type -eq 'workflow' -and $realSrcFile -ne $srcFile) {
+                if ($type -eq 'workflow' -and $originalSrcFile -ne $srcFile) {
                     # Apply customizations from custom template repository
                     Write-Host "Apply customizations from custom template repository: $srcFile"
                     [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile)
