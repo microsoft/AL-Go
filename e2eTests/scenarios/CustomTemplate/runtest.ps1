@@ -1,14 +1,19 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Global vars used for local test execution only.')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'All scenario tests have equal parameter set.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'Secrets are transferred as plain text.')]
 Param(
     [switch] $github,
     [switch] $linux,
     [string] $githubOwner = $global:E2EgithubOwner,
     [string] $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()),
-    [string] $token = ($Global:SecureE2EPAT | Get-PlainText),
+    [string] $e2eAppId,
+    [string] $e2eAppKey,
+    [string] $algoauthapp = ($global:SecureALGOAUTHAPP | Get-PlainText),
     [string] $pteTemplate = $global:pteTemplate,
     [string] $appSourceTemplate = $global:appSourceTemplate,
-    [string] $adminCenterApiToken = ($global:SecureAdminCenterApiToken | Get-PlainText)
+    [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
+    [string] $azureCredentials = ($global:SecureAzureCredentials | Get-PlainText),
+    [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -49,7 +54,7 @@ $branch = "main"
 $template = "https://github.com/$pteTemplate"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -token $token -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 # Create tempolate repository
 CreateAlGoRepository `
@@ -79,7 +84,7 @@ CreateAlGoRepository `
 $finalRepoPath = (Get-Location).Path
 
 # Update AL-Go System Files to use template repository
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
 
 Set-Location $templateRepoPath
 
@@ -206,7 +211,7 @@ $cicdYaml.Save($cicdWorkflow)
 CommitAndPush -commitMessage 'Add final repo customizations'
 
 # Update AL-Go System Files to uptake UseProjectDependencies setting
-RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $token -repository $repository -branch $branch | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
 
 # Stop all currently running workflows and run a new CI/CD workflow
 CancelAllWorkflows -repository $repository
