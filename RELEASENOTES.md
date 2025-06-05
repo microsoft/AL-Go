@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1770 Wrong type of _projects_ setting in settings schema
+
 ### Add custom jobs to AL-Go workflows
 
 It is now possible to add custom jobs to AL-Go workflows. The Custom Job needs to be named `CustomJob<something>` and should be placed after all other jobs in the .yaml file. The order of which jobs are executed is determined by the Needs statements. Your custom job will be executed after all jobs specified in the Needs clause in your job and if you need the job to be executed before other jobs, you should add the job name in the Needs clause of that job. See [https://aka.ms/algosettings#customjobs](https://aka.ms/algosettings#customjobs) for details.
