@@ -284,6 +284,7 @@ foreach($checkfile in $checkfiles) {
         }
     }
 }
+$removeFiles = @($removeFiles | Select-Object -Unique)
 
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
@@ -294,7 +295,6 @@ if ($update -ne 'Y') {
 
         }
         if ($removeFiles) {
-            $removeFiles = @($removeFiles | Select-Object -Unique)
             Write-Host "Removed files:"
             $removeFiles | ForEach-Object { Write-Host "- $_" }
         }
