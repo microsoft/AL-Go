@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1770: Wrong type of _projects_ setting in settings schema
+- Issue 1722 Check if apps are already installed on a higher version before deploying
 
 ## v7.2
 
