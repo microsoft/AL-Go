@@ -683,6 +683,7 @@ function GetDefaultSettings
 # - .github/<workflowName>.settings.json              = Workflow settings file
 # - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
 # - <project>/.AL-Go/<userName>.settings.json         = User settings file
+# - DeployTo (github Variable)                        = Deployment Environment settings variable
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -694,6 +695,8 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [string] $environmentName = "",
+        [string] $environmentDeployToVariableValue = "",
         [switch] $silent
     )
 
@@ -765,6 +768,16 @@ function ReadSettings {
             $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
+    }
+    if ($environmentDeployToVariableValue) {
+        # Read settings from environment variable (parameter)
+        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
+        @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
+            if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
+                Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
+            }
+        }
+        $settingsObjects += @($environmentVariableObject)
     }
     foreach($settingsJson in $settingsObjects) {
         if ($settingsJson) {
