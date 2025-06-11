@@ -219,6 +219,34 @@ try {
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+    function LoadDLL {
+    Param(
+        [string] $path
+    )
+        $bytes = [System.IO.File]::ReadAllBytes($path)
+        [System.Reflection.Assembly]::Load($bytes) | Out-Null
+    }
+    $allInstallApps = $install.Apps + $install.TestApps
+    # Create folder in temp directory with a unique name
+    $tempFolder = Join-Path $ENV:RUNNER_TEMP "DevelopmentTools-$(Get-Random)"
+    dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --version "16.0.23.34358-beta" --tool-path $tempFolder | Out-Host
+
+    # Find the Microsoft.Dynamics.Nav.CodeAnalysis.dll
+    $codeanalysisdll = Get-ChildItem -Path $tempFolder -Filter "Microsoft.Dynamics.Nav.CodeAnalysis.dll" -Recurse | Select-Object -First 1
+    LoadDLL -path $codeanalysisdll.FullName
+
+    foreach($app in $allInstallApps) {
+        # If the app is a URL, skip it
+        if ($app -like 'http*://*') {
+            continue
+        }
+        $packageStream = [System.IO.File]::OpenRead($app)
+        $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create($PackageStream, $true)
+        if (($null -eq $package.ReadSourceCodeFilePaths()) -and (-not $package.IsRuntimePackage)) {
+            # This is likely a symbols package. Write a waning that this app shouldn't be published to a container
+            OutputWarning -message "App $app is a symbols package and should not be published to a container. Skipping."
+        }
+    }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
