@@ -28,8 +28,9 @@ AL-Go provides a template data explorer report to help you get started. To use t
 
 1. Download the telemetrydashboard.json file from [here](resources/telemetrydashboard.json)
 1. Open the file in an editor and replace the clusterUri and database:
-   - database: Name of your application insights resource in Azure
-   - clusterUri (Replace YourSubscriptionId, YourResourceGroup and YourApplicationInsightsName): https://ade.applicationinsights.io/subscriptions/YourSubscriptionId/resourcegroups/YourResourceGroup/providers/microsoft.insights/components/YourApplicationInsightsName
+   - **database**: Name of your application insights resource in Azure
+   - **clusterUri**: Use the following uri but replace YourSubscriptionId, YourResourceGroup and YourApplicationInsightsName
+     - https://ade.applicationinsights.io/subscriptions/YourSubscriptionId/resourcegroups/YourResourceGroup/providers/microsoft.insights/components/YourApplicationInsightsName
 1. Go to https://dataexplorer.azure.com/dashboards
 1. In the top left corner, click on the arrow next to "New Dashboard" and select "Import dashboard from file".
 
