@@ -1,7 +1,7 @@
 {
     "$schema": "https://dataexplorer.azure.com/static/d/schema/60/dashboard.json",
     "id": "8236b4f1-bac0-43b6-a73a-39ee5ce3662c",
-    "eTag": "f3051096-911b-4d35-afdd-dca19eed740a",
+    "eTag": "8e9a0389-c89c-4dd7-9e43-11054c8020a7",
     "title": "AL-Go Telemetry",
     "schema_version": "60",
     "pagesNavWidth": 187,
@@ -938,10 +938,11 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where RunnerEnvironment <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeHours=round(sum(ActionDurationSeconds)/3600,1) by RunnerEnvironment",
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunnerEnvironment <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeHours=round(sum(ActionDurationSeconds)/3600,1) by RunnerEnvironment",
             "id": "e8b24c11-b45a-44ce-b50a-949c3331be68",
             "usedVariables": [
-                "ActionTelemetry"
+                "ActionTelemetry",
+                "_repository"
             ]
         },
         {
@@ -961,10 +962,11 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=round(sum(ActionDurationSeconds)/3600,1) by RepositoryName, RunnerEnvironment",
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=round(sum(ActionDurationSeconds)/3600,1) by RepositoryName, RunnerEnvironment",
             "id": "80eda281-74c1-43a1-8208-f8892e968141",
             "usedVariables": [
-                "ActionTelemetry"
+                "ActionTelemetry",
+                "_repository"
             ]
         },
         {
@@ -984,10 +986,11 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where RunnerOs <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalCompute=round(sum(ActionDurationSeconds),1) by RunnerOs",
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunnerOs <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalCompute=round(sum(ActionDurationSeconds),1) by RunnerOs",
             "id": "791009e7-ed47-492c-ac47-1284e0360da1",
             "usedVariables": [
-                "ActionTelemetry"
+                "ActionTelemetry",
+                "_repository"
             ]
         },
         {
@@ -995,10 +998,11 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=sum(ActionDurationSeconds)/3600 by bin(timestamp, 1d), RunnerEnvironment",
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=sum(ActionDurationSeconds)/3600 by bin(timestamp, 1d), RunnerEnvironment",
             "id": "a3b1b3a3-3b88-44cc-9822-00d581b8eef0",
             "usedVariables": [
-                "ActionTelemetry"
+                "ActionTelemetry",
+                "_repository"
             ]
         },
         {
