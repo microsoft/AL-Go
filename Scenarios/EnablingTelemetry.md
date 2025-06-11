@@ -32,7 +32,6 @@ AL-Go provides a template data explorer report to help you get started. To use t
    - Cluster URI: https://ade.applicationinsights.io/subscriptions/\<SubscriptionId>/resourcegroups/\<ResourceGroup>/providers/microsoft.insights/components/\<Application Insights Name>
 1. Go to https://dataexplorer.azure.com/dashboards
 1. In the top left corner, click on the arrow next to "New Dashboard" and select "Import dashboard from file".
-1. In the top left corner, click on the arrow next to "New Dashboard" and select "Import dashboard from file".
 
 ### Getting Started with writing your own queries
 
