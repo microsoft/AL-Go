@@ -240,7 +240,10 @@ try {
         if ($app -like 'http*://*') {
             continue
         }
-        $packageStream = [System.IO.File]::OpenRead($app)
+        Write-Host "Analyzing app $app for version dependencies"
+        $appFile = Get-ChildItem $app
+        Write-Host "Analyzing app file $appFile"
+        $packageStream = [System.IO.File]::OpenRead($appFile)
         $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create($PackageStream, $true)
         if (($null -eq $package.ReadSourceCodeFilePaths()) -and (-not $package.IsRuntimePackage)) {
             # This is likely a symbols package. Write a waning that this app shouldn't be published to a container
