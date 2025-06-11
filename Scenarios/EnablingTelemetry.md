@@ -27,7 +27,7 @@ Sending extended telemetry to Microsoft is helpful for when we need to help inve
 AL-Go provides a template data explorer report to help you get started. To use this report:
 
 1. Download the telemetrydashboard.json file from [here](resources/telemetrydashboard.json)
-1. Open the file in an editor and fill in the clusterUri and database:
+1. Open the file in an editor and replace the clusterUri and database:
    - Database: Name of your application insights resource in Azure
    - Cluster URI: https://ade.applicationinsights.io/subscriptions/\<SubscriptionId>/resourcegroups/\<ResourceGroup>/providers/microsoft.insights/components/\<Application Insights Name>
 1. Go to https://dataexplorer.azure.com/dashboards
