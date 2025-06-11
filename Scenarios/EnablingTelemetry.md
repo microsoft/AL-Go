@@ -22,19 +22,17 @@ Sending extended telemetry to Microsoft is helpful for when we need to help inve
 
 ## Getting Started with Dashboard and Queries
 
-In order to get started with consuming AL-Go telemetry
-
 ### Getting Started with Data Explorer
 
-AL-Go offers a template data explorer report that can be used as a starting point. In order to use this report do the following:
+AL-Go provides a template data explorer report to help you get started. To use this report:
 
 1. Download the telemetrydashboard.json file from [here](resources/telemetrydashboard.json)
-1. Open the file in an editor and fill in the clusterUri and database
+1. Open the file in an editor and fill in the clusterUri and database:
    - Database: Name of your application insights resource in Azure
    - Cluster URI: https://ade.applicationinsights.io/subscriptions/\<SubscriptionId>/resourcegroups/\<ResourceGroup>/providers/microsoft.insights/components/\<Application Insights Name>
 1. Go to https://dataexplorer.azure.com/dashboards
-1. In the top left corner, click on the allow next to "New Dashboard". Select "Import dashboard from file"
-1. Select the edited json file and give the new dashboard a name
+1. In the top left corner, click on the arrow next to "New Dashboard" and select "Import dashboard from file".
+1. In the top left corner, click on the arrow next to "New Dashboard" and select "Import dashboard from file".
 
 ### Getting Started with writing your own queries
 
