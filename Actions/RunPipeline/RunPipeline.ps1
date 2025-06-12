@@ -235,7 +235,7 @@ try {
     $codeanalysisdll = Get-ChildItem -Path $tempFolder -Filter "Microsoft.Dynamics.Nav.CodeAnalysis.dll" -Recurse | Select-Object -First 1
     LoadDLL -path $codeanalysisdll.FullName
 
-    foreach($app in $allInstallApps) {
+    <#foreach($app in $allInstallApps) {
         # If the app is a URL, skip it
         if ($app -like 'http*://*') {
             continue
@@ -249,7 +249,7 @@ try {
             # This is likely a symbols package. Write a waning that this app shouldn't be published to a container
             OutputWarning -message "App $app is a symbols package and should not be published to a container. Skipping."
         }
-    }
+    }#>
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
