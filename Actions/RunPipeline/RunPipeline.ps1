@@ -240,9 +240,12 @@ try {
         foreach($app in $allInstallApps) {
             # If the app is a URL, skip it for now
             if ($app -like 'http*://*') {
+                $appFile = "something.app" # TODO
+                Invoke-WebRequest -Uri $app -Method GET -OutFile $appFile
                 continue
+            } else {
+                $appFile = Join-Path $projectPath $app -Resolve -ErrorAction SilentlyContinue
             }
-            $appFile = Join-Path $projectPath $app -Resolve -ErrorAction SilentlyContinue
             if ($appFile) {
                 Write-Host "Analyzing app file $appFile"
                 $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create([System.IO.File]::OpenRead($appFile), $true)
