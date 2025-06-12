@@ -220,39 +220,45 @@ try {
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
     function LoadDLL {
-    Param(
-        [string] $path
-    )
+        Param(
+            [string] $path
+        )
         $bytes = [System.IO.File]::ReadAllBytes($path)
         [System.Reflection.Assembly]::Load($bytes) | Out-Null
     }
-    $allInstallApps = $install.Apps + $install.TestApps
-    # Create folder in temp directory with a unique name
-    $tempFolder = Join-Path $ENV:RUNNER_TEMP "DevelopmentTools-$(Get-Random)"
-    dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --version "16.0.23.34358-beta" --tool-path $tempFolder | Out-Host
-
-    # Find the Microsoft.Dynamics.Nav.CodeAnalysis.dll
-    $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse | Where-Object { $_.FullName -like "*Microsoft.Dynamics.Nav.CodeAnalysis.dll" } | Select -Last 1
-    Write-Host "Found $codeanalysisdll - Loading dll"
-    LoadDLL -path $codeanalysisdll.FullName
-
-    foreach($app in $allInstallApps) {
-        # If the app is a URL, skip it
-        if ($app -like 'http*://*') {
-            continue
+    
+    function AnalyzeInstallApps() {
+        Param(
+            [string[]] $AllInstallApps,
+            [string] $RunnerTempFolder = $ENV:RUNNER_TEMP
+        )
+        # Create folder in temp directory with a unique name
+        $tempFolder = Join-Path $RunnerTempFolder "DevelopmentTools-$(Get-Random)"
+        dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --version "16.0.23.34358-beta" --tool-path $tempFolder | Out-Host
+        $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse | Where-Object { $_.FullName -like "*Microsoft.Dynamics.Nav.CodeAnalysis.dll" } | Select -Last 1
+        LoadDLL -path $codeanalysisdll.FullName
+        foreach($app in $allInstallApps) {
+            # If the app is a URL, skip it for now
+            if ($app -like 'http*://*') {
+                continue
+            }
+            $appFile = Join-Path $projectPath $app -Resolve -ErrorAction SilentlyContinue
+            if ($appFile) {
+                Write-Host "Analyzing app file $appFile"
+                $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create([System.IO.File]::OpenRead($appFile), $true)
+                if ((($null -eq $package.ReadSourceCodeFilePaths()) -or ("" -eq $package.ReadSourceCodeFilePaths())) -and (-not $package.IsRuntimePackage)) {
+                    # This is likely a symbols package. Write a waning that this app shouldn't be published to a container
+                    OutputWarning -message "App $app is a symbols package and should not be published to a container."
+                }
+            }
         }
-        Write-Host "Analyzing app $app for version dependencies in $projectPath"
-        $appFile = Join-Path $projectPath $app -Resolve
-        Write-Host "Analyzing app file $appFile"
-        $packageStream = [System.IO.File]::OpenRead($appFile)
-        $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create($PackageStream, $true)
-        Write-Host "IsRuntimePackage: $($package.IsRuntimePackage)"
-        Write-Host "SourceCodeFilePaths: $($package.ReadSourceCodeFilePaths())"
-        if ((($null -eq $package.ReadSourceCodeFilePaths()) -or ("" -eq $package.ReadSourceCodeFilePaths())) -and (-not $package.IsRuntimePackage)) {
-            # This is likely a symbols package. Write a waning that this app shouldn't be published to a container
-            OutputWarning -message "App $app is a symbols package and should not be published to a container. Skipping."
-        }
+        
     }
+    
+    
+    $allInstallApps = $install.Apps + $install.TestApps
+
+    
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
