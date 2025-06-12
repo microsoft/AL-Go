@@ -255,10 +255,7 @@ try {
         
     }
     
-    
-    $allInstallApps = $install.Apps + $install.TestApps
-
-    
+    AnalyzeInstallApps -AllInstallApps ($install.Apps + $install.TestApps)
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
