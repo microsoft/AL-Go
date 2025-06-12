@@ -232,7 +232,8 @@ try {
     dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --version "16.0.23.34358-beta" --tool-path $tempFolder | Out-Host
 
     # Find the Microsoft.Dynamics.Nav.CodeAnalysis.dll
-    $codeanalysisdll = Get-ChildItem -Path $tempFolder -Filter "Microsoft.Dynamics.Nav.CodeAnalysis.dll" -Recurse | Select-Object -First 1
+    $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse | Where-Object { $_.FullName -like "*Microsoft.Dynamics.Nav.CodeAnalysis.dll" } | Select -Last 1
+    Write-Host "Found $codeanalysisdll - Loading dll"
     LoadDLL -path $codeanalysisdll.FullName
 
     foreach($app in $allInstallApps) {
