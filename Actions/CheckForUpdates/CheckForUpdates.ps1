@@ -122,17 +122,17 @@ if (-not $isDirectALGo) {
 # - All files in .github that ends with .copy.md
 # - All PowerShell scripts in .AL-Go folders (all projects)
 $checkfiles = @(
-    @{ 'dstPath' = (Join-Path '.github' 'workflows'); 'newname' = ''; 'srcPath' = (Join-Path '.github' 'workflows'); 'pattern' = '*'; 'type' = 'workflow' },
-    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
-    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.ps1'; 'type' = 'script' }
-    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = 'AL-Go-Settings.json'; 'type' = 'settings' },
-    @{ 'dstPath' = '.github'; 'newname' = ''; 'srcPath' = '.github'; 'pattern' = '*.settings.json'; 'type' = 'settings' }
+    @{ 'dstPath' = (Join-Path '.github' 'workflows'); 'dstName' = ''; 'srcPath' = (Join-Path '.github' 'workflows'); 'pattern' = '*'; 'type' = 'workflow' },
+    @{ 'dstPath' = '.github'; 'dstName' = ''; 'srcPath' = '.github'; 'pattern' = '*.copy.md'; 'type' = 'releasenotes' }
+    @{ 'dstPath' = '.github'; 'dstName' = ''; 'srcPath' = '.github'; 'pattern' = '*.ps1'; 'type' = 'script' }
+    @{ 'dstPath' = '.github'; 'dstName' = ''; 'srcPath' = '.github'; 'pattern' = 'AL-Go-Settings.json'; 'type' = 'settings' },
+    @{ 'dstPath' = '.github'; 'dstName' = ''; 'srcPath' = '.github'; 'pattern' = '*.settings.json'; 'type' = 'settings' }
 )
 
 if ($originalTemplateFolder) {
     $checkfiles += @(
-        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateRepoSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
-        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateProjectSettingsFile)); 'newname' = ([system.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
+        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateRepoSettingsFile)); 'dstName' = ([system.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings' }
+        @{ 'dstPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateProjectSettingsFile)); 'dstName' = ([system.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile)); 'SrcPath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'pattern' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); ; 'type' = 'template project settings' }
     )
 }
 
@@ -143,8 +143,8 @@ Write-Host "Projects found: $($projects.Count)"
 foreach($project in $projects) {
     Write-Host "- $project"
     $checkfiles += @(
-        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'newname' = ''; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' },
-        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'newname' = ''; 'srcPath' = '.AL-Go'; 'pattern' = 'settings.json'; 'type' = 'settings' }
+        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'dstName' = ''; 'srcPath' = '.AL-Go'; 'pattern' = '*.ps1'; 'type' = 'script' },
+        @{ 'dstPath' = Join-Path $project '.AL-Go'; 'dstName' = ''; 'srcPath' = '.AL-Go'; 'pattern' = 'settings.json'; 'type' = 'settings' }
     )
 }
 
@@ -191,8 +191,8 @@ foreach($checkfile in $checkfiles) {
             Get-ChildItem -Path $srcFolder -Filter $checkfile.pattern | ForEach-Object {
                 # Read the template file and modify it based on the settings
                 # Compare the modified file with the file in the current repository
-                if ($checkfile.newname) {
-                    $filename = $checkfile.newname
+                if ($checkfile.dstName) {
+                    $filename = $checkfile.dstName
                 }
                 else {
                     $filename = $_.Name
