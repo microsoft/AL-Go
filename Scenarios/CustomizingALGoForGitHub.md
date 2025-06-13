@@ -174,7 +174,7 @@ Adding a custom job like this, will cause this job to run simultaneously with th
 > All custom jobs will be moved to the tail of the yaml file when running Update AL-Go System Files, but dependencies to/from the custom jobs will be maintained.
 
 > [!CAUTION]
-> Custom jobs might be broken if the customized AL-Go for GitHub workflow has been refactored and the referenced jobs have been renamed.
+> Custom jobs might be broken if the customized AL-Go for GitHub workflow has been refactored and the referenced jobs have been renamed. Therefore, please make sure to review the changes in AL-Go workflows when running Update AL-Go System Files.
 
 ### Custom job permissions
 
