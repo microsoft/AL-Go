@@ -34,8 +34,6 @@ Write-Host -ForegroundColor Yellow @'
 #  - Validate that custom job is present in custom template repository
 #  - Run Update AL-Go System files in final repo
 #  - Validate that custom job is present in final repo
-#  - Run Update AL-Go System files in final repo
-#  - Validate that both custom steps is present in final repo
 #
 '@
 

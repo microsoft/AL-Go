@@ -410,13 +410,13 @@ In the `needs` property, you specify which jobs should be complete before this j
 
 Custom jobs will be preserved when running Update AL-Go System Files.
 
-**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs and custom steps, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
+**Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
 
 <a id="customtemplate"></a>
 
 ## Custom template repositories
 
-If you are utilizing script overrides, custom jobs, custom steps, custom delivery or like in many repositories, you might want to take advantage of the custom template repository feature.
+If you are utilizing script overrides, custom jobs, custom delivery or like in many repositories, you might want to take advantage of the custom template repository feature.
 
 A custom template repository is an AL-Go for GitHub repository (without any apps), which is used as a template for the remaining AL-Go for GitHub repositories. As an example, if you are using a custom delivery script, which you want to have in all your repositories, you can create an empty AL-Go for GitHub repository, place the delivery script in the .github folder and use that repository as a template when running Update AL-Go system files in your other repositories.
 
@@ -428,7 +428,6 @@ The items, which are currently supported from custom template repositories are:
 - Project script overrides in the .AL-Go folder
 - Custom workflows in the .github/workflows folder
 - Custom jobs in any AL-Go for GitHub workflow
-- Custom steps in the \_BuildALGoProject workflow
 - Changes to repository settings in .github/AL-Go-settings.json
 - Changes to project settings in .AL-Go/settings.json
 
