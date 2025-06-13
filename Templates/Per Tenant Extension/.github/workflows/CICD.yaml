@@ -166,7 +166,6 @@ jobs:
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
