@@ -17,7 +17,7 @@ Note that custom jobs might break by future changes to AL-Go for GitHub workflow
 Create an AL-Go for GitHub repository based on [https://aka.ms/algopte](https://aka.ms/algopte) or [https://aka.ms/algoappsource](https://aka.ms/algoappsource), add custom workflows, custom jobs and/or settings to this repository and then use that repository as the template repository for other repositories. Using custom template repositories allows you to create and use highly customized template repositories and control the uptake of this in all repositories. See [https://aka.ms/algosettings#customtemplate](https://aka.ms/algosettings#customtemplate) for details.
 
 > [!NOTE]
-> Customized repositories might break by future changes to AL-Go for GitHub. If you are customizing AL-Go for GitHub, you should always doublecheck the pull request when updating AL-Go system files in your custom template repositories.
+> Customized repositories might break by future changes to AL-Go for GitHub. If you are customizing AL-Go for GitHub, you should always double-check the pull request when updating AL-Go system files in your custom template repositories.
 
 ## v7.2
 
