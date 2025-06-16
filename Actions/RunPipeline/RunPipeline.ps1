@@ -25,6 +25,7 @@ try {
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".RunPipeline.psm1" -Resolve)
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -193,6 +194,7 @@ try {
     }
 
     # Replace secret names in install.apps and install.testApps
+    $tempDependenciesLocation = Join-Path $ENV:RUNNER_TEMP "Dependencies-$(Get-Random)"
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
@@ -203,62 +205,29 @@ try {
             else {
                 $finalUrl = $url
             }
-            # Check validity of URL
+
+            # Download the app file if the URL is valid
             if ($finalUrl -like 'http*://*') {
                 try {
-                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                    $appFile = Join-Path $tempDependenciesLocation ([Uri]::UnescapeDataString([System.IO.Path]::GetFileName($finalUrl.Split('?')[0].TrimEnd('/'))))
+                    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
                 }
                 catch {
                     throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
                 }
             }
-            return $finalUrl
+            return $appFile
         })
     }
 
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
-    function LoadDLL {
-        Param(
-            [string] $path
-        )
-        $bytes = [System.IO.File]::ReadAllBytes($path)
-        [System.Reflection.Assembly]::Load($bytes) | Out-Null
+    if ((-not $settings.useCompilerFolder) -and (-not $settings.doNotPublishApps)) {
+        # Test that InstallApps are not symbols packages
+        # Skip this check if we are using a compiler folder or doNotPublishApps is set
+        Test-InstallApps -AllInstallApps ($install.Apps + $install.TestApps) -ProjectPath $projectPath
     }
-    
-    function AnalyzeInstallApps() {
-        Param(
-            [string[]] $AllInstallApps,
-            [string] $RunnerTempFolder = $ENV:RUNNER_TEMP
-        )
-        # Create folder in temp directory with a unique name
-        $tempFolder = Join-Path $RunnerTempFolder "DevelopmentTools-$(Get-Random)"
-        dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --version "16.0.23.34358-beta" --tool-path $tempFolder | Out-Host
-        $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse | Where-Object { $_.FullName -like "*Microsoft.Dynamics.Nav.CodeAnalysis.dll" } | Select -Last 1
-        LoadDLL -path $codeanalysisdll.FullName
-        foreach($app in $allInstallApps) {
-            # If the app is a URL, skip it for now
-            if ($app -like 'http*://*') {
-                $appFile = "something.app" # TODO
-                Invoke-WebRequest -Uri $app -Method GET -OutFile $appFile
-                continue
-            } else {
-                $appFile = Join-Path $projectPath $app -Resolve -ErrorAction SilentlyContinue
-            }
-            if ($appFile) {
-                Write-Host "Analyzing app file $appFile"
-                $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create([System.IO.File]::OpenRead($appFile), $true)
-                if ((($null -eq $package.ReadSourceCodeFilePaths()) -or ("" -eq $package.ReadSourceCodeFilePaths())) -and (-not $package.IsRuntimePackage)) {
-                    # This is likely a symbols package. Write a waning that this app shouldn't be published to a container
-                    OutputWarning -message "App $app is a symbols package and should not be published to a container."
-                }
-            }
-        }
-        
-    }
-    
-    AnalyzeInstallApps -AllInstallApps ($install.Apps + $install.TestApps)
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
