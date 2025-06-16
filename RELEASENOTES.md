@@ -2,6 +2,24 @@
 
 AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
 
+### DeployTo setting can now be defined in GitHub deployment environment variables.
+
+The [DeployTo setting](https://aka.ms/algosettings#deployto) can now be defined in GitHub deployment environment variables. When defined this way, they will take priority over any DeployTo setting defined in AL-Go settings files.
+
+When defined in a deployment environment variable, the variable should be named 'DeployTo' and not 'DeployTo\<environmentname>', and the content should be a JSON block consisting of the DeployTo properties. Eg:
+
+```
+{
+  "Branches": [
+    "*"
+  ],
+  "includeTestAppsInSandboxEnvironment": false,
+  "excludeAppIds": [ 1234 ]
+}
+```
+
+Please note, that due to certain security limitations, the properties `runs-on`, `shell` and `ContinousDeployment` will <ins>**NOT**</ins> be respected if defined in a deployment environment variable. To use these properties, please keep them defined in your AL-Go settings file.
+
 ### Issues
 
 - Issue 1770: Wrong type of _projects_ setting in settings schema
@@ -25,24 +43,6 @@ As stated in [AL-Go Deprecations](https://aka.ms/algodeprecations#cleanModePrepr
 ### Workflow input validation
 
 Some workflow inputs are now validated early in order to avoid workflows to make modifications like creating a release, when we already should know that an error will occur later.
-
-### DeployTo setting can now be defined in GitHub deployment environment variables.
-
-The [DeployTo setting](https://aka.ms/algosettings#deployto) can now be defined in GitHub deployment environment variables. When defined this way, they will take priority over any DeployTo setting defined in AL-Go settings files.
-
-When defined in a deployment environment variable, the variable should be named 'DeployTo' and not 'DeployTo\<environmentname>', and the content should be a JSON block consisting of the DeployTo properties. Eg:
-
-```
-{
-  "Branches": [
-    "*"
-  ],
-  "includeTestAppsInSandboxEnvironment": false,
-  "excludeAppIds": [ 1234 ]
-}
-```
-
-Please note, that due to certain security limitations, the properties `runs-on`, `shell` and `ContinousDeployment` will <ins>**NOT**</ins> be respected if defined in a deployment environment variable. To use these properties, please keep them defined in your AL-Go settings file.
 
 ### Test settings against a JSON schema
 
