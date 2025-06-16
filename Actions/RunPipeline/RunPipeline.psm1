@@ -9,6 +9,19 @@ function LoadDLL {
     [System.Reflection.Assembly]::Load($bytes) | Out-Null
 }
 
+<#
+    .SYNOPSIS
+    Analyzes the install apps to check if they are symbols packages.
+    .DESCRIPTION
+    Analyzes the install apps to check if they are symbols packages.
+    If an app is a symbols package, it outputs a warning message.
+    .PARAMETER AllInstallApps
+    The list of all install apps to analyze.
+    .PARAMETER ProjectPath
+    The path to the project where the apps are located.
+    .PARAMETER RunnerTempFolder
+    The temporary folder used by the runner (default is $ENV:RUNNER_TEMP).
+#>
 function Test-InstallApps() {
     Param(
         [string[]] $AllInstallApps,
