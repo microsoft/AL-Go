@@ -466,14 +466,6 @@ try {
         $runAlPipelineParams["preprocessorsymbols"] = @()
     }
 
-    # DEPRECATION: REMOVE AFTER April 1st 2025 --->
-    if ($buildMode -eq 'Clean' -and $settings.ContainsKey('cleanModePreprocessorSymbols')) {
-        Write-Host "Adding Preprocessor symbols : $($settings.cleanModePreprocessorSymbols -join ',')"
-        $runAlPipelineParams["preprocessorsymbols"] += $settings.cleanModePreprocessorSymbols
-        Trace-DeprecationWarning -Message "cleanModePreprocessorSymbols is deprecated" -DeprecationTag "cleanModePreprocessorSymbols"
-    }
-    # <--- REMOVE AFTER April 1st 2025
-
     if ($settings.ContainsKey('preprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
         $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols

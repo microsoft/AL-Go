@@ -1,0 +1,20 @@
+name: Mark stale issues
+
+on:
+  schedule:
+  - cron: '44 5 * * 2' # Tuesday, 5:44
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
+      with:
+        stale-issue-label: 'stale'
+        days-before-issue-stale: 180
+        days-before-issue-close: 14
+        close-issue-message: 'There has been no recent activity on this issue. Please re-open or create a new issue, if needed.'
