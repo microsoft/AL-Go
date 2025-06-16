@@ -70,7 +70,7 @@ function CheckInstalledApps {
             $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
 
             if ($currentVersion -lt $installedVersion) {
-                Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json."
+                Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
             }
         }
     }
