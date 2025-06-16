@@ -429,4 +429,31 @@ Describe "ReadSettings" {
             $_.Exception.Message | Should -Be "The JSON is not valid with the schema: The string value is not a match for the indicated regular expression at '/shell'"
         }
     }
+
+    It 'Projects setting is an array of strings' {
+        # If the projects setting is not an array, it should throw an error
+        $defaultSettings = GetDefaultSettings
+        $defaultSettings.projects = "not an array"
+        try {
+            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+        }
+        catch {
+            $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"string`" but should be `"array`" at '/projects'"
+        }
+
+        # If the projects setting is an array, but contains non-string values, it should throw an error
+        $defaultSettings.projects = @("project1", 42)
+        try {
+            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+        }
+        catch {
+            $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/projects/1'"
+        }
+
+        # If the projects setting is an array of strings, it should pass the schema validation
+        $defaultSettings.projects = @("project1")
+        Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+        $defaultSettings.projects = @("project1", "project2")
+        Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+    }
 }

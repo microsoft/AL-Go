@@ -1,0 +1,1042 @@
+{
+    "$schema": "https://dataexplorer.azure.com/static/d/schema/60/dashboard.json",
+    "id": "8236b4f1-bac0-43b6-a73a-39ee5ce3662c",
+    "eTag": "8e9a0389-c89c-4dd7-9e43-11054c8020a7",
+    "title": "AL-Go Telemetry",
+    "schema_version": "60",
+    "pagesNavWidth": 187,
+    "dataSources": [
+        {
+            "id": "8320a60e-6341-4e9d-9245-9b89f7c218f0",
+            "kind": "manual-kusto",
+            "scopeId": "kusto",
+            "name": "AL-Go Telemetry",
+            "clusterUri": "<Insert your cluster URI here>",
+            "database": "<Insert your application insights name here"
+        }
+    ],
+    "tiles": [
+        {
+            "id": "5c705191-ebab-4de3-91b3-ec75046496d2",
+            "title": "Workflow Runs",
+            "visualType": "table",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 0,
+                "y": 13,
+                "width": 22,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "fa4c75b2-ebce-4ced-a249-2fc75f4cddd2"
+            },
+            "description": "All completed workflow runs except PR Builds",
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": false,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": true,
+                "crossFilter": [
+                    {
+                        "interaction": "column",
+                        "property": "RunId",
+                        "parameterId": "e35cb8d1-bb86-4cf1-a5eb-8a213b27d53a",
+                        "disabled": false
+                    }
+                ],
+                "drillthrough": [],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": [
+                    {
+                        "id": "a64df981-f922-4a0e-a012-d9018a003584",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "rows",
+                        "conditions": [
+                            {
+                                "operator": ">=",
+                                "column": "severityLevel",
+                                "values": [
+                                    "3"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "or",
+                        "colorStyle": "bold",
+                        "color": "red",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "table"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "adc0cefe-4ceb-4422-9dd0-3e7a0263b048",
+            "title": "Deprecation Warnings",
+            "visualType": "table",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 0,
+                "y": 23,
+                "width": 21,
+                "height": 11
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "fbcdbfa7-92c7-4dab-ac58-a4ac93799249"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": false,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": [
+                    {
+                        "id": "eebd31ac-3e93-49ad-9430-d100d988815c",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "rows",
+                        "conditions": [
+                            {
+                                "operator": "==",
+                                "column": "severityLevel",
+                                "values": [
+                                    "2"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "and",
+                        "colorStyle": "bold",
+                        "color": "yellow",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "table"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "376d828b-f4fe-4177-b447-38f4e0219dfe",
+            "title": "Workflow Runs Over Time",
+            "visualType": "line",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 0,
+                "y": 3,
+                "width": 22,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "96799d0d-f921-4e4a-b8f2-a3ad700ba841"
+            },
+            "visualOptions": {
+                "multipleYAxes": {
+                    "base": {
+                        "id": "-1",
+                        "label": "",
+                        "columns": [],
+                        "yAxisMaximumValue": null,
+                        "yAxisMinimumValue": null,
+                        "yAxisScale": "linear",
+                        "horizontalLines": []
+                    },
+                    "additional": [],
+                    "showMultiplePanels": false
+                },
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumnTitle": "",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "xAxisScale": "linear",
+                "verticalLine": "",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "501c87dd-3bd1-44b2-9387-da1b03433bf2",
+            "title": "Workflow Runs",
+            "visualType": "card",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 4,
+                "y": 0,
+                "width": 4,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "169a97e3-a6d5-4b9c-895a-2ce6ef434864"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": false,
+                "colorStyle": "light",
+                "colorRules": [
+                    {
+                        "id": "a64df981-f922-4a0e-a012-d9018a003584",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "cells",
+                        "conditions": [
+                            {
+                                "operator": ">=",
+                                "column": "severityLevel",
+                                "values": [
+                                    "3"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "or",
+                        "colorStyle": "bold",
+                        "color": "red",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "card"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "36bed6a0-3b4d-4e02-a055-a88c5e52f4e9",
+            "title": "Failed Workflow Runs",
+            "visualType": "card",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 8,
+                "y": 0,
+                "width": 4,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "faff193e-c054-48a3-ac1a-b1b3f8d9f80e"
+            },
+            "description": "Failed workflow runs excluding PR Builds as it is expected they might fail",
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": false,
+                "colorStyle": "light",
+                "colorRules": [
+                    {
+                        "id": "a64df981-f922-4a0e-a012-d9018a003584",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "cells",
+                        "conditions": [
+                            {
+                                "operator": ">=",
+                                "column": "severityLevel",
+                                "values": [
+                                    "3"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "or",
+                        "colorStyle": "bold",
+                        "color": "red",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "card"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "d218dfd9-ea24-409b-a8f9-fbf6269b942f",
+            "title": "AL-Go Version",
+            "visualType": "table",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 0,
+                "y": 7,
+                "width": 21,
+                "height": 6
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "575ba48b-4b8c-477d-a0a6-afc203b85746"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": false,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "c2b4a776-060e-4c91-9f63-1d525e72f5a9",
+            "title": "AL-Go versions",
+            "visualType": "markdownCard",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 21,
+                "height": 7
+            },
+            "markdownText": "## AL-Go Versions\nMicrosoft recommends that you always run the latest version of AL-Go for GitHub.\n\nOld versions of AL-Go for GitHub uses old and unsupported versions of GitHub actions, which might be removed or no longer work due to unresolved dependencies no longer being installed on the GitHub runners.\n\nIf you're unsure if your repositories are on latest version of AL-Go you can always check https://github.com/microsoft/AL-Go/releases to read more about the latest AL-Go releases. To automatically check for the latest changes consider adding the following setting to your repositories:\n```\n{\n    \"ConditionalSettings\": [\n        {\n            \"settings\": {\n                \"workflowSchedule\": {\n                    \"cron\": \"0 08 * * 1\",\n                    \"includeBranches\": [\n                        \"main\"\n                    ]\n                }\n            },\n            \"workflows\": [\n                \"Update AL-Go System Files\"\n            ]\n        }\n    ]\n}\n```",
+            "visualOptions": {}
+        },
+        {
+            "id": "1e4cc82e-d880-40fd-83e8-997541ea58b9",
+            "title": "AL-Go Deprecations",
+            "visualType": "markdownCard",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 0,
+                "y": 19,
+                "width": 21,
+                "height": 4
+            },
+            "markdownText": "## AL-Go Deprecations\nFrom time to time certain settings/features in AL-Go will be deprecated. \n\nPlease check https://aka.ms/ALGoDeprecations for more information on deprecated settings and what to do to remove dependencies on deprecated settings. ",
+            "visualOptions": {}
+        },
+        {
+            "id": "01ec79fe-b564-44dd-a3b8-1d8f301af957",
+            "title": "Workflow Run Duration",
+            "visualType": "table",
+            "pageId": "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 18,
+                "height": 7
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "244b9392-5f43-43f2-9ae9-dc74ba5db279"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "ea86e1a1-84e4-4f88-a659-8c401b7581b4",
+            "title": "Workflow run duration over time",
+            "visualType": "line",
+            "pageId": "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
+            "layout": {
+                "x": 0,
+                "y": 14,
+                "width": 18,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "fe341fbe-4704-4715-b745-14ab79a7663d"
+            },
+            "visualOptions": {
+                "multipleYAxes": {
+                    "base": {
+                        "id": "-1",
+                        "label": "",
+                        "columns": [],
+                        "yAxisMaximumValue": null,
+                        "yAxisMinimumValue": null,
+                        "yAxisScale": "linear",
+                        "horizontalLines": []
+                    },
+                    "additional": [],
+                    "showMultiplePanels": false
+                },
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumnTitle": "",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "xAxisScale": "linear",
+                "verticalLine": "",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "837ad13d-4cf6-4e0b-bbc1-e33d2b2e7857",
+            "title": "Repositories",
+            "visualType": "card",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 4,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "0487c350-e72b-420f-ae4d-030f171a4a99"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": []
+            }
+        },
+        {
+            "id": "5b968dec-fd4e-4621-b9f0-855effe66911",
+            "title": "Runner minutes by Environment Type",
+            "visualType": "pie",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 0,
+                "y": 3,
+                "width": 10,
+                "height": 8
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "e8b24c11-b45a-44ce-b50a-949c3331be68"
+            },
+            "visualOptions": {
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "labelDisabled": false,
+                "pie__label": [
+                    "name",
+                    "percentage"
+                ],
+                "tooltipDisabled": false,
+                "pie__tooltip": [
+                    "name",
+                    "percentage",
+                    "value"
+                ],
+                "pie__orderBy": "size",
+                "pie__kind": "pie",
+                "pie__topNSlices": null,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "bc356a22-f3df-48ee-be34-22d0c1708d10",
+            "title": "Last time \"Update AL-Go System Files\" was run",
+            "visualType": "table",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 0,
+                "y": 13,
+                "width": 21,
+                "height": 6
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "ac949667-7db6-45d7-be58-c3a89009ca13"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": false,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": [
+                    {
+                        "id": "3618cef1-1a07-4f9b-bbc8-1d9f64b80d89",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "rows",
+                        "conditions": [
+                            {
+                                "operator": ">=",
+                                "column": "DaysSinceLastRun",
+                                "values": [
+                                    "30"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "and",
+                        "colorStyle": "bold",
+                        "color": "yellow",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "table"
+                    },
+                    {
+                        "id": "d2df39c3-93c3-4238-a878-0621a8499165",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "rows",
+                        "conditions": [
+                            {
+                                "operator": "<=",
+                                "column": "DaysSinceLastRun",
+                                "values": [
+                                    "7"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "and",
+                        "colorStyle": "bold",
+                        "color": "green",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "table"
+                    },
+                    {
+                        "id": "4abb84e4-8824-4d20-bad4-86197fd3b3f1",
+                        "ruleType": "colorByCondition",
+                        "applyToColumn": null,
+                        "hideText": false,
+                        "applyTo": "rows",
+                        "conditions": [
+                            {
+                                "operator": "!=",
+                                "column": "WorkflowConclusion",
+                                "values": [
+                                    "Success"
+                                ]
+                            }
+                        ],
+                        "chainingOperator": "and",
+                        "colorStyle": "bold",
+                        "color": "red",
+                        "tag": "",
+                        "icon": null,
+                        "ruleName": "",
+                        "visualType": "table"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "3a849546-61bc-4a59-b0c5-58ad0c561ba2",
+            "title": "The total compute time of AL-Go actions by repo and environment",
+            "visualType": "table",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 10,
+                "y": 3,
+                "width": 10,
+                "height": 8
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "80eda281-74c1-43a1-8208-f8892e968141"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "1374eb1c-8b7e-486b-8110-68c2c307872c",
+            "title": "Error Messages",
+            "visualType": "table",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 0,
+                "y": 23,
+                "width": 22,
+                "height": 12
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "5924e7fd-4c10-4724-a7c5-27e4fde9973a"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "displayColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "f4baf8ce-3177-45c6-a4d8-893991b2a58f",
+            "title": "Runner minutes by OS",
+            "visualType": "pie",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 0,
+                "y": 24,
+                "width": 10,
+                "height": 8
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "791009e7-ed47-492c-ac47-1284e0360da1"
+            },
+            "visualOptions": {
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "labelDisabled": false,
+                "pie__label": [
+                    "name",
+                    "percentage"
+                ],
+                "tooltipDisabled": false,
+                "pie__tooltip": [
+                    "name",
+                    "percentage",
+                    "value"
+                ],
+                "pie__orderBy": "size",
+                "pie__kind": "pie",
+                "pie__topNSlices": null,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "b4052b08-c95d-4060-bede-0a75a48c5a04",
+            "title": "The total compute time in hours of AL-Go over time",
+            "visualType": "timechart",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 0,
+                "y": 11,
+                "width": 20,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "a3b1b3a3-3b88-44cc-9822-00d581b8eef0"
+            },
+            "visualOptions": {
+                "multipleYAxes": {
+                    "base": {
+                        "id": "-1",
+                        "label": "",
+                        "columns": [],
+                        "yAxisMaximumValue": null,
+                        "yAxisMinimumValue": null,
+                        "yAxisScale": "linear",
+                        "horizontalLines": []
+                    },
+                    "additional": [],
+                    "showMultiplePanels": false
+                },
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumnTitle": "",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "xAxisScale": "linear",
+                "verticalLine": "",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "1c2d334f-99bc-4f5a-8fa1-87cf0c705268",
+            "title": "New tile",
+            "visualType": "markdownCard",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 20,
+                "height": 3
+            },
+            "markdownText": "## Runner Environments\r\nAL-Go supports both GitHub-hosted runners and self-hosted runners. In the tiles below you can get an overview over which environments AL-Go actions are running in. ",
+            "visualOptions": {}
+        },
+        {
+            "id": "c8af28ce-330d-4a3c-9e6e-9d011f67648c",
+            "title": "New tile",
+            "visualType": "markdownCard",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 0,
+                "y": 21,
+                "width": 20,
+                "height": 3
+            },
+            "markdownText": "## Runner OS\r\nAL-Go also supports running certain jobs on linux. You can learn more about that [here](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SelfHostedGitHubRunner.md#githubrunner-vs-runs-on)\r\n",
+            "visualOptions": {}
+        }
+    ],
+    "baseQueries": [
+        {
+            "id": "ec1ba8a5-09ab-4052-9f85-6be541bcd4ae",
+            "queryId": "e64bc2eb-abdd-47ad-88f1-92a6e66043e5",
+            "variableName": "WorkflowTelemetry"
+        },
+        {
+            "id": "d1709fb2-9c37-494b-acea-d170f6dfc881",
+            "queryId": "15db6a5a-4615-4d75-a316-3047f1a7c7a7",
+            "variableName": "ActionTelemetry"
+        }
+    ],
+    "parameters": [
+        {
+            "kind": "duration",
+            "id": "b992b25d-49dc-42ea-880d-114c971c0150",
+            "displayName": "Time range",
+            "description": "",
+            "beginVariableName": "_startTime",
+            "endVariableName": "_endTime",
+            "defaultValue": {
+                "kind": "dynamic",
+                "count": 30,
+                "unit": "days"
+            },
+            "showOnPages": {
+                "kind": "all"
+            }
+        },
+        {
+            "kind": "string",
+            "id": "03cef627-cbb5-4acc-b2b0-fa61d1bad48c",
+            "displayName": "Repository",
+            "description": "",
+            "variableName": "_repository",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "RepositoryName"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "caac08b2-8c59-4e15-a4d6-eae88351e628"
+                }
+            },
+            "showOnPages": {
+                "kind": "all"
+            }
+        },
+        {
+            "kind": "string",
+            "selectionType": "freetext",
+            "id": "e35cb8d1-bb86-4cf1-a5eb-8a213b27d53a",
+            "displayName": "RunId",
+            "variableName": "_runId",
+            "description": "",
+            "defaultValue": {
+                "kind": "all"
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "6a960332-dd3e-47e6-bad1-54502c0f21eb"
+                ]
+            }
+        }
+    ],
+    "pages": [
+        {
+            "name": "Overview",
+            "id": "6a960332-dd3e-47e6-bad1-54502c0f21eb"
+        },
+        {
+            "name": "Workflow Duration",
+            "id": "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
+        },
+        {
+            "name": "Runners",
+            "id": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
+        },
+        {
+            "name": "AL-Go Maintenance",
+            "id": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519"
+        }
+    ],
+    "queries": [
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| where (RunId == _runId) or (_runId == \"\")\r\n| where WorkflowName != \"Pull Request Build\" // Filter out PR Builds as it is expected they might fail\r\n| sort by timestamp desc ",
+            "id": "fa4c75b2-ebce-4ced-a249-2fc75f4cddd2",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_runId"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "traces\n| where timestamp > _startTime\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDuration = todouble(customDimensions.WorkflowDuration),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where severityLevel == 2 // Warning \n| where message startswith \"Deprecation Warning:\"\n| where (RepositoryName == _repository) or (_repository == \"\")\n| distinct message, RepositoryName, severityLevel",
+            "id": "fbcdbfa7-92c7-4dab-ac58-a4ac93799249",
+            "usedVariables": [
+                "_repository",
+                "_startTime"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| where WorkflowName != \"Pull Request Build\" // Filter out PR Builds as it is expected they might fail\r\n| sort by timestamp desc \r\n| summarize Count=count() by bin(timestamp, 1d), WorkflowConclusion",
+            "id": "96799d0d-f921-4e4a-b8f2-a3ad700ba841",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| summarize Count=count()",
+            "id": "169a97e3-a6d5-4b9c-895a-2ce6ef434864",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| where severityLevel == 3\r\n| where WorkflowName != \"Pull Request Build\" // Filter out PR Builds as it is expected they might fail\r\n| summarize Count=count()",
+            "id": "faff193e-c054-48a3-ac1a-b1b3f8d9f80e",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "traces\n| where timestamp > _startTime\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDuration = todouble(customDimensions.WorkflowDuration),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where ALGoVersion <> \"\"\n| summarize arg_max(timestamp, *) by RepositoryName\n| project RepositoryName, ALGoVersion\n",
+            "id": "575ba48b-4b8c-477d-a0a6-afc203b85746",
+            "usedVariables": [
+                "_repository",
+                "_startTime"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunAttempt == 1\n| where (WorkflowName == \"CI/CD\") or (WorkflowName == \"Test Next Major\") or (WorkflowName == \"Test Next Minor\") or (WorkflowName == \"Test Current\") or (WorkflowName == \"Pull Request Build\")\n| summarize AvgWorkflowDuration=round(avg(WorkflowDurationMinutes), 1) by WorkflowName, RepositoryName\n| project RepositoryName, WorkflowName, AvgWorkflowDuration\n| order by RepositoryName asc, AvgWorkflowDuration desc ",
+            "id": "244b9392-5f43-43f2-9ae9-dc74ba5db279",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunAttempt == 1\n| where (WorkflowName == \"CI/CD\") or (WorkflowName == \"Test Next Major\") or (WorkflowName == \"Test Next Minor\") or (WorkflowName == \"Test Current\") or (WorkflowName == \"Pull Request Build\")\n| summarize Duration=avg(WorkflowDurationMinutes) by bin(timestamp, 1d), WorkflowName",
+            "id": "fe341fbe-4704-4715-b745-14ab79a7663d",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| distinct RepositoryName\n| summarize count()",
+            "id": "0487c350-e72b-420f-ae4d-030f171a4a99",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunnerEnvironment <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeHours=round(sum(ActionDurationSeconds)/3600,1) by RunnerEnvironment",
+            "id": "e8b24c11-b45a-44ce-b50a-949c3331be68",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where WorkflowName == \"Update AL-Go System Files\"\n| where (RepositoryName == _repository) or (_repository == \"\")\n| summarize arg_max(timestamp, *) by RepositoryName\n| extend DaysSinceLastRun = datetime_diff('day', now(), timestamp)\n| project RepositoryName, WorkflowName, WorkflowConclusion, LastRunUTC=format_datetime(timestamp, 'yyyy-MM-dd [HH:mm:ss]') , DaysSinceLastRun, HtmlUrl\n| sort by DaysSinceLastRun desc",
+            "id": "ac949667-7db6-45d7-be58-c3a89009ca13",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=round(sum(ActionDurationSeconds)/3600,1) by RepositoryName, RunnerEnvironment",
+            "id": "80eda281-74c1-43a1-8208-f8892e968141",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n| where ErrorMessage != \"\"\n| where WorkflowName != \"Pull Request Build\"\n| where (RunId == _runId) or (_runId == \"\")\n| project timestamp, message, RepositoryName, WorkflowName, RefName, ErrorMessage, HtmlUrl\n| order by timestamp desc ",
+            "id": "5924e7fd-4c10-4724-a7c5-27e4fde9973a",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_runId"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunnerOs <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalCompute=round(sum(ActionDurationSeconds),1) by RunnerOs",
+            "id": "791009e7-ed47-492c-ac47-1284e0360da1",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=sum(ActionDurationSeconds)/3600 by bin(timestamp, 1d), RunnerEnvironment",
+            "id": "a3b1b3a3-3b88-44cc-9822-00d581b8eef0",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "id": "e64bc2eb-abdd-47ad-88f1-92a6e66043e5",
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "traces\n| where timestamp > _startTime\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDurationMinutes = round(todouble(customDimensions.WorkflowDuration) / 60, 2),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where message contains \"AL-Go workflow\"",
+            "usedVariables": [
+                "_startTime"
+            ]
+        },
+        {
+            "id": "15db6a5a-4615-4d75-a316-3047f1a7c7a7",
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "traces\n| where timestamp > _startTime\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDuration = todouble(customDimensions.WorkflowDuration),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName),\n            RunnerOs = tostring(customDimensions.RunnerOs),\n            RunnerEnvironment = tostring(customDimensions.RunnerEnvironment),\n            ErrorMessage = tostring(customDimensions.ErrorMessage),\n            ActionDurationSeconds = todouble(customDimensions.ActionDuration)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where message contains \"AL-Go action\"",
+            "usedVariables": [
+                "_startTime"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where timestamp > ago(30d)\n| distinct RepositoryName",
+            "id": "caac08b2-8c59-4e15-a4d6-eae88351e628",
+            "usedVariables": [
+                "WorkflowTelemetry"
+            ]
+        }
+    ]
+}
