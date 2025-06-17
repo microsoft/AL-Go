@@ -35,7 +35,7 @@ on:
         default: 'preview'
 
 env:
-  TestUpgradesFromVersion: 'v3.1'
+  TestUpgradesFromVersion: 'v5.0'
 
 defaults:
   run:
