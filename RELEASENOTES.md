@@ -1,3 +1,7 @@
+### AL-Go Telemetry
+
+AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
+
 ### Issues
 
 - Issue 1770: Wrong type of _projects_ setting in settings schema
