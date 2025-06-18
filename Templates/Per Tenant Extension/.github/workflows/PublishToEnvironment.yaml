@@ -147,6 +147,8 @@ jobs:
         with:
           shell: ${{ matrix.shell }}
           get: type,powerPlatformSolutionFolder
+          environmentName: ${{ matrix.environment }}
+          environmentDeployToVariableValue: ${{ vars.DeployTo }}
 
       - name: Read secrets
         id: ReadSecrets
