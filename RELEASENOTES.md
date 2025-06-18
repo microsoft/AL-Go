@@ -23,6 +23,7 @@ Please note, that due to certain security limitations, the properties `runs-on`,
 ### Issues
 
 - Issue 1770: Wrong type of _projects_ setting in settings schema
+- Issue 1787: Publish to Environment from PR fails in private repos
 
 ## v7.2
 
