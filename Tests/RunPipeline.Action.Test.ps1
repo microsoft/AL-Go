@@ -34,11 +34,11 @@ Describe "RunPipeline Action Tests" {
 
         # Invoke the function with TestApp1 (a symbols package) and TestApp2 (a full app package)
         $tempFolder = [System.IO.Path]::GetTempPath()
-        Test-InstallApps -AllInstallApps @(".\TestApps\EssentialBusinessHeadlinesFull.app", ".\TestApps\BaseApplicationSymbols.app") -ProjectPath $PSScriptRoot -RunnerTempFolder $tempFolder
+        Test-InstallApps -AllInstallApps @(".\TestApps\EssentialBusinessHeadlinesFull.app", ".\TestApps\EssentialBusinessHeadlinesSymbols.app") -ProjectPath $PSScriptRoot -RunnerTempFolder $tempFolder
 
         # Assert that the warning was output
         Should -Invoke -CommandName 'OutputWarning' -Times 1 -ModuleName RunPipeline
-        Should -Invoke -CommandName 'OutputWarning' -Times 1 -ModuleName RunPipeline -ParameterFilter { $Message -like "*App BaseApplicationSymbols.app is a symbols package and should not be published. The workflow may fail if you try to publish it." }
+        Should -Invoke -CommandName 'OutputWarning' -Times 1 -ModuleName RunPipeline -ParameterFilter { $Message -like "*App EssentialBusinessHeadlinesSymbols.app is a symbols package and should not be published. The workflow may fail if you try to publish it." }
 
         # Assert that Trace-Information was not called
         Assert-MockCalled Trace-Warning -Exactly 0 -ModuleName RunPipeline
