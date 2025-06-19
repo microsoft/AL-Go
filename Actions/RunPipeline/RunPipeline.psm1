@@ -49,7 +49,7 @@ function Test-InstallApps() {
                 if ((($null -eq $package.ReadSourceCodeFilePaths()) -or ("" -eq $package.ReadSourceCodeFilePaths())) -and (-not $package.IsRuntimePackage)) {
                     # If package is not a runtime package and has no source code files, it is likely a symbols package
                     # Symbols packages are not meant to be published to a container
-                    OutputWarning -message "App $appFileName is a symbols package and should not be published to a container. The workflow may fail if you try to publish it."
+                    OutputWarning -message "App $appFileName is a symbols package and should not be published. The workflow may fail if you try to publish it."
                 }
             }
         }

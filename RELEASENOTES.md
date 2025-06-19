@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 1770: Wrong type of _projects_ setting in settings schema
+- Issue 1512: Throw a warning before trying to publish symbols packages
 
 ## v7.2
 
