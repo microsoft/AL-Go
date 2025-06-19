@@ -102,6 +102,7 @@ jobs:
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       artifactsRetentionDays: ${{ fromJson(needs.Initialization.outputs.artifactsRetentionDays) }}
       artifactsNameSuffix: 'Current'
+      needsContext:  ${{ toJson(needs) }}
 
   PostProcess:
     needs: [ Initialization, Build ]
