@@ -1,6 +1,11 @@
+### AL-Go Telemetry
+
+AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
+
 ### Issues
 
 - Issue 1770: Wrong type of _projects_ setting in settings schema
+- Issue 1787: Publish to Environment from PR fails in private repos
 - Issue 1512: Throw a warning before trying to publish symbols packages
 
 ## v7.2
