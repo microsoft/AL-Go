@@ -25,6 +25,7 @@ try {
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -193,6 +194,7 @@ try {
     }
 
     # Replace secret names in install.apps and install.testApps
+    $tempDependenciesLocation = Join-Path $ENV:RUNNER_TEMP "Dependencies-$(Get-Random)"
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
@@ -203,22 +205,29 @@ try {
             else {
                 $finalUrl = $url
             }
-            # Check validity of URL
+
+            # Download the app file if the URL is valid
             if ($finalUrl -like 'http*://*') {
                 try {
-                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                    $appFile = Join-Path $tempDependenciesLocation ([Uri]::UnescapeDataString([System.IO.Path]::GetFileName($finalUrl.Split('?')[0].TrimEnd('/'))))
+                    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
                 }
                 catch {
                     throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
                 }
             }
-            return $finalUrl
+            return $appFile
         })
     }
 
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+    if ((-not $settings.useCompilerFolder) -and (-not $settings.doNotPublishApps)) {
+        # Test that InstallApps are not symbols packages
+        # Skip this check if we are using a compiler folder or doNotPublishApps is set
+        Test-InstallApps -AllInstallApps ($install.Apps + $install.TestApps) -ProjectPath $projectPath
+    }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
