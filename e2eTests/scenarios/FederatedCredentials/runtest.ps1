@@ -137,7 +137,7 @@ $noOfApps = 0
 Get-Item "signedApps/Main App-main-Apps-$($newVersion.Major).$($newVersion.Minor).$($newVersion.Build).*/*.app" | ForEach-Object {
     $appFile = $_.FullName
     Write-Host "Check that $appFile was signed"
-    [System.Text.Encoding]::Ascii.GetString([System.IO.File]::ReadAllBytes($appFile)).indexof('DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA') | Should -BeGreaterThan -1
+    [System.Text.Encoding]::Ascii.GetString([System.IO.File]::ReadAllBytes($appFile)).indexof('DigiCert Trusted G4 TimeStamping RSA4096 SHA') | Should -BeGreaterThan -1
     $noOfApps++
 }
 # Check that two apps were signed
