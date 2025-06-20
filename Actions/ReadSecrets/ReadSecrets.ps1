@@ -77,6 +77,7 @@ try {
                 }
             }
         }
+
         # Look through installApps and installTestApps for secrets and add them to the collection of secrets to get
         foreach($installSettingsKey in @('installApps','installTestApps')) {
             if ($settings.Keys -contains $installSettingsKey) {

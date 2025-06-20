@@ -20,7 +20,7 @@ class Yaml {
 
     # Save the Yaml file with LF line endings using UTF8 encoding
     Save([string] $filename) {
-        $this.content | Set-ContentLF -Path $filename
+        $this.content -join "`n" | Set-ContentLF -Path $filename
     }
 
     # Find the lines for the specified Yaml path, given by $line
@@ -126,6 +126,45 @@ class Yaml {
         return $this.Get($line, [ref] $start, [ref] $count)
     }
 
+    # Locate all lines in the next level of a yaml path
+    # if $line is empty, you get all first level lines
+    # Example:
+    # GetNextLevel("jobs:/") returns @("Initialization:","CheckForUpdates:","Build:","Deploy:",...)
+    [string[]] GetNextLevel([string] $line) {
+        [int]$start = 0
+        [int]$count = 0
+        [Yaml] $yaml = $this
+        if ($line) {
+            $yaml = $this.Get($line, [ref] $start, [ref] $count)
+        }
+        return $yaml.content | Where-Object { $_ -and -not $_.StartsWith(' ') }
+    }
+
+    # Get the value of a property as a string
+    # Example:
+    # GetProperty("jobs:/Build:/needs:") returns "[ Initialization, Build1 ]"
+    [string] GetProperty([string] $line) {
+        [int]$start = 0
+        [int]$count = 0
+        [Yaml] $yaml = $this.Get($line, [ref] $start, [ref] $count)
+        if ($yaml -and $yaml.content.Count -eq 1) {
+            return $yaml.content[0].SubString($yaml.content[0].IndexOf(':')+1).Trim()
+        }
+        return $null
+    }
+
+    # Get the value of a property as a string array
+    # Example:
+    # GetPropertyArray("jobs:/Build:/needs:") returns @("Initialization", "Build")
+    [string[]] GetPropertyArray([string] $line) {
+        $prop = $this.GetProperty($line)
+        if ($prop) {
+            # "needs: [ Initialization, Build ]" becomes @("Initialization", "Build")
+            return $prop.TrimStart('[').TrimEnd(']').Split(',').Trim()
+        }
+        return $null
+    }
+
     # Replace the lines for the specified Yaml path, given by $line with the lines in $content
     # If $line ends with '/', then the lines for the section are replaced only
     # If $line doesn't end with '/', then the line + the lines for the section are replaced
@@ -193,5 +232,100 @@ class Yaml {
         else {
             $this.content = $this.content[0..($index-1)] + $yamlContent + $this.content[$index..($this.content.Count-1)]
         }
+    }
+
+    # Add lines to Yaml content
+    [void] Add([string[]] $yamlContent) {
+        if (!$yamlContent) {
+            return
+        }
+        $this.Insert($this.content.Count, $yamlContent)
+    }
+
+    # Locate jobs in YAML based on a name pattern
+    # Example:
+    # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
+    # GetCustomJobsFromYaml("Build*") returns @("Build1","Build2","Build")
+    [hashtable[]] GetCustomJobsFromYaml([string] $name) {
+        $result = @()
+        $allJobs = $this.GetNextLevel('jobs:/').Trim(':')
+        $customJobs = @($allJobs | Where-Object { $_ -like $name })
+        if ($customJobs) {
+            $nativeJobs = @($allJobs | Where-Object { $customJobs -notcontains $_ })
+            Write-Host "Native Jobs:"
+            foreach($nativeJob in $nativeJobs) {
+                Write-Host "- $nativeJob"
+            }
+            Write-Host "Custom Jobs:"
+            foreach($customJob in $customJobs) {
+                Write-Host "- $customJob"
+                $jobsWithDependency = @($nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } })
+                # If any Build Job has a dependency on this CustomJob, add will be added to all build jobs later
+                if ($jobsWithDependency | Where-Object { $_ -like 'Build*' }) {
+                    $jobsWithDependency = @($jobsWithDependency | Where-Object { $_ -notlike 'Build*' }) + @('Build')
+                }
+                if ($jobsWithDependency) {
+                    Write-Host "  - Jobs with dependency: $($jobsWithDependency -join ', ')"
+                }
+                else {
+                    Write-Host "  - No jobs with dependency on this"
+                }
+                $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = $jobsWithDependency })
+            }
+        }
+        return $result
+    }
+
+    # Add jobs to Yaml and update Needs section from native jobs which needs this custom Job
+    # $customJobs is an array of hashtables with Name, Content and NeedsThis
+    # Example:
+    # $customJobs = @(@{ "Name" = "CustomJob1"; "Content" = @("  - pwsh","  -File Build1"); "NeedsThis" = @("Initialization", "Build") })
+    # AddCustomJobsToYaml($customJobs)
+    # The function will add the job CustomJob1 to the Yaml file and update the Needs section of Initialization and Build
+    # The function will not add the job CustomJob1 if it already exists
+    [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
+        $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
+        Write-Host "Adding New Jobs"
+        foreach($customJob in $customJobs) {
+            Write-Host "$($customJob.Name) has dependencies from $($customJob.NeedsThis -join ',')"
+            foreach($needsthis in $customJob.NeedsThis) {
+                if ($needsthis -eq 'Build') {
+                    $existingJobs | Where-Object { $_ -like 'Build*'} | ForEach-Object {
+                        # Add dependency to all build jobs
+                        $this.Replace("jobs:/$($_):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob.Name) -join ', ') ]")
+                    }
+                }
+                elseif ($existingJobs -contains $needsthis) {
+                    # Add dependency to job
+                    $needs = @(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) | Where-Object { $_ } | Select-Object -Unique) -join ', '
+                    $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $needs ]")
+                }
+            }
+            if ($existingJobs -contains $customJob.Name) {
+                Write-Host "Job $($customJob.Name) already exists"
+                continue
+            }
+            $this.content += @('') + @($customJob.content | ForEach-Object { "  $_" })
+        }
+    }
+
+    static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile) {
+        $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
+        try {
+            $yaml = [Yaml]::Load($yamlFile)
+        }
+        catch {
+            Write-Host "Unable to read YAML file $yamlFile. Skipping custom jobs."
+            return
+        }
+
+        # Locate custom jobs in destination YAML
+        Write-Host "Apply custom jobs"
+        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
+        if ($customJobs) {
+            # Add custom jobs to template YAML
+            $srcYaml.AddCustomJobsToYaml($customJobs)
+        }
+        $srcContent.Value = $srcYaml.content -join "`n"
     }
 }
