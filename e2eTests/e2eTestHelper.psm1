@@ -67,8 +67,9 @@ function RefreshToken {
             throw "Token not set."
         }
 
-        # Check if the last token refresh was more than 30 minutes ago
-        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 30)) {
+        # Check if the last token refresh was more than 10 minutes ago
+
+        if ((-not $force) -and ($script:lastTokenRefresh -ne 0) -and (([DateTime]::Now - $script:lastTokenRefresh).TotalMinutes -lt 10)) {
             return
         }
 
