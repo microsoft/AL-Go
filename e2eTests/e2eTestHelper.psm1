@@ -279,14 +279,11 @@ function WaitWorkflow {
     if (!$repository) {
         $repository = $defaultRepository
     }
-    $count = 0
     $status = ""
     do {
         RefreshToken -repository $repository
-        if ($count % 45 -eq 0) {
-            $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
-            $count++
-        }
+        $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
+
         if ($delay) {
             Start-Sleep -Seconds 60
         }
