@@ -11,7 +11,12 @@ try {
 }
 
 # Colors
+$colorCodeRed = '31'
+$colorCodeGreen = '32'
+$colorCodeYellow = '33'
+$colorCodeBlue = '34'
 $colorCodeMagenta = '35'
+$colorCodeCyan = '36'
 
 function Write-Debug-Base {
     param (
@@ -35,12 +40,13 @@ function Write-Debug-Info {
 }
 
 # Function to write debug information about function calls
+# The $parameters param should always be called with $MyInvocation.BoundParameters if the given function got parameters.
 function Write-Debug-FunctionCallInfo {
     param (
         [Parameter(Mandatory = $true)]
         [string] $FunctionName,
-        [Parameter(Mandatory = $true)]
-        [System.Object] $Parameters
+        [Parameter(Mandatory = $false)]
+        [System.Object] $Parameters = @{}
     )
 
     if ($debugLoggingEnabled) {
@@ -54,12 +60,42 @@ function Write-Debug-FunctionCallInfo {
     }
 }
 
-# Regular log that is always written
-function Write-Info {
+# Helper functions to wrap logs in groups for better overview in GitHub actions
+function Write-GroupStart {
     param (
         [Parameter(Mandatory = $true)]
         [string] $Message
     )
 
-    Write-Host $Message
+    Write-Host "::group::$Message"
+}
+
+function Write-GroupEnd {
+    Write-Host "::endgroup::"
+}
+
+# Regular log that is always written and supports color coding
+function Write-Info {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Message,
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan')]
+        [string] $Color 
+    )
+
+    if ($Color) {
+        $colorCode = 0
+        switch ($Color) {
+            'Red' { $colorCode = $colorCodeRed }
+            'Green' { $colorCode = $colorCodeGreen }
+            'Yellow' { $colorCode = $colorCodeYellow }
+            'Blue' { $colorCode = $colorCodeBlue }
+            'Magenta' { $colorCode = $colorCodeMagenta }
+            'Cyan' { $colorCode = $colorCodeCyan }
+        }
+        Write-Host "$([char] 27)[${colorCode}m$Message$([char] 27)[0m"
+    } else {
+        Write-Host $Message
+    }  
 }
