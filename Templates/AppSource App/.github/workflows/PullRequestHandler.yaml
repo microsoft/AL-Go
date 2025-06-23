@@ -104,6 +104,7 @@ jobs:
       secrets: 'licenseFileUrl,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       artifactsRetentionDays: ${{ fromJson(needs.Initialization.outputs.artifactsRetentionDays) }}
       artifactsNameSuffix: 'PR${{ github.event.number }}'
+      needsContext:  ${{ toJson(needs) }}
       useArtifactCache: true
 
   StatusCheck:
