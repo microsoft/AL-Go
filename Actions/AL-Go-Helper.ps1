@@ -787,6 +787,17 @@ function ReadSettings {
         }
     }
 
+    if ($environmentDeployToVariableValue) {
+        # Read settings from environment variable (parameter)
+        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
+        @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
+            if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
+                Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
+            }
+        }
+        $settingsObjects += @($environmentVariableObject)
+    }
+
     foreach($settingsJson in $settingsObjects) {
         if ($settingsJson) {
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
