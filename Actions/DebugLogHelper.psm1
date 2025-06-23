@@ -2,7 +2,7 @@ $debugLoggingEnabled = $false
 try {
     if ($env:RUNNER_DEBUG -eq 1) {
         $debugLoggingEnabled = $true
-        Write-Host "AL-Go extended debugging is enabled."
+        Write-Host "AL-Go extended debug logging is enabled."
     } else {
         Write-Host "AL-Go extended debug logging is disabled."
     }
