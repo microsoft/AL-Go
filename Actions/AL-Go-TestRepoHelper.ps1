@@ -1,4 +1,6 @@
-﻿function Test-Property {
+﻿. (Join-Path $PSScriptRoot "AL-Go-Helper.ps1")
+
+function Test-Property {
     Param(
         [HashTable] $json,
         [string] $settingsDescription,
@@ -48,11 +50,6 @@ function Test-Deprecations {
         [HashTable] $json,
         [string] $settingsDescription
     )
-
-    # cleanModePreprocessorSymbols is deprecated
-    if ($json.Keys -contains 'cleanModePreprocessorSymbols') {
-        OutputWarning -Message "cleanModePreprocessorSymbols in $settingsDescription is deprecated. See https://aka.ms/algodeprecations#cleanModePreprocessorSymbols"
-    }
 
     # <workflowName>Schedule is deprecated
     ($json.Keys | Where-Object {$_ -like '*Schedule' -and $_ -ne 'WorkflowSchedule'}) | ForEach-Object {
@@ -174,12 +171,15 @@ function TestALGoRepository {
     # Test .json files are formatted correctly
     # Get-ChildItem needs -force to include folders starting with . (e.x. .github / .AL-Go) on Linux
     Get-ChildItem -Path $baseFolder -Filter '*.json' -Recurse -Force | ForEach-Object {
-        if ($_.Directory.Name -eq '.AL-Go' -and $_.BaseName -eq 'settings') {
+        if ($_.Directory.Name -eq ([System.IO.Path]::GetDirectoryName($ALGoSettingsFile)) -and $_.Name -eq ([System.IO.Path]::GetFileName($ALGoSettingsFile))) {
             Test-JsonFile -jsonFile $_.FullName -baseFolder $baseFolder -type 'Project'
         }
-        elseif ($_.Directory.Name -eq '.github' -and $_.BaseName -like '*ettings') {
-            if ($_.BaseName -eq 'AL-Go-Settings') {
+        elseif ($_.Directory.Name -eq ([System.IO.Path]::GetDirectoryName($RepoSettingsFile)) -and $_.BaseName -like '*ettings') {
+            if ($_.Name -eq ([System.IO.Path]::GetFileName($RepoSettingsFile)) -or $_.Name -eq ([System.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile))) {
                 $type = 'Repo'
+            }
+            elseif ($_.Name -eq ([System.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile))) {
+                $type = 'Project'
             }
             else {
                 $type = 'Workflow'

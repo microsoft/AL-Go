@@ -116,6 +116,24 @@ Describe "CheckForUpdates Action Tests" {
         $permissionsContent.content[1].Trim() | Should -be 'actions: read'
     }
 
+    It 'Test YamlClass Customizations' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet.txt'))
+        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+
+        # Get Custom jobs from yaml
+        $customJobs = $customizedYaml.GetCustomJobsFromYaml('CustomJob*')
+        $customJobs | Should -Not -BeNullOrEmpty
+        $customJobs.Count | Should -be 1
+
+        # Apply Custom jobs and steps to yaml
+        $yaml.AddCustomJobsToYaml($customJobs)
+
+        # Check if new yaml content is equal to customized yaml content
+        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+    }
+
     It 'Test that Update AL-Go System Files uses fixes runs-on' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
@@ -125,8 +143,6 @@ Describe "CheckForUpdates Action Tests" {
             $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
         }
     }
-
-    # Call action
 }
 
 Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {

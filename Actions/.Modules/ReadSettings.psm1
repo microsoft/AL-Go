@@ -1,6 +1,83 @@
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
+$CustomTemplateRepoSettingsFile = Join-Path '.github' 'AL-Go-TemplateRepoSettings.doNotEdit.json'
+$CustomTemplateProjectSettingsFile = Join-Path '.github' 'AL-Go-TemplateProjectSettings.doNotEdit.json'
+
+function MergeCustomObjectIntoOrderedDictionary {
+    Param(
+        [System.Collections.Specialized.OrderedDictionary] $dst,
+        [PSCustomObject] $src
+    )
+
+    # Loop through all properties in the source object
+    # If the property does not exist in the destination object, add it with the right type, but no value
+    # Types supported: PSCustomObject, Object[] and simple types
+    $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
+        $prop = $_.Name
+        $srcProp = $src."$prop"
+        $srcPropType = $srcProp.GetType().Name
+        if (-not $dst.Contains($prop)) {
+            if ($srcPropType -eq "PSCustomObject") {
+                $dst.Add("$prop", [ordered]@{})
+            }
+            elseif ($srcPropType -eq "Object[]") {
+                $dst.Add("$prop", @())
+            }
+            else {
+                $dst.Add("$prop", $srcProp)
+            }
+        }
+    }
+
+    # Loop through all properties in the destination object
+    # If the property does not exist in the source object, do nothing
+    # If the property exists in the source object, but is of a different type, throw an error
+    # If the property exists in the source object:
+    # If the property is an Object, call this function recursively to merge values
+    # If the property is an Object[], merge the arrays
+    # If the property is a simple type, replace the value in the destination object with the value from the source object
+    @($dst.Keys) | ForEach-Object {
+        $prop = $_
+        if ($src.PSObject.Properties.Name -eq $prop) {
+            $dstProp = $dst."$prop"
+            $srcProp = $src."$prop"
+            $dstPropType = $dstProp.GetType().Name
+            $srcPropType = $srcProp.GetType().Name
+            if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
+                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
+            }
+            elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
+                # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
+                # This is not seen as an error and will not throw an error
+                throw "property $prop should be of type $dstPropType, is $srcPropType."
+            }
+            else {
+                if ($srcProp -is [Object[]]) {
+                    $srcProp | ForEach-Object {
+                        $srcElm = $_
+                        $srcElmType = $srcElm.GetType().Name
+                        if ($srcElmType -eq "PSCustomObject") {
+                            # Array of objects are not checked for uniqueness
+                            $ht = [ordered]@{}
+                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture ([cultureinfo]::InvariantCulture) | ForEach-Object {
+                                $ht[$_.Name] = $_.Value
+                            }
+                            $dst."$prop" += @($ht)
+                        }
+                        else {
+                            # Add source element to destination array, but only if it does not already exist
+                            $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique)
+                        }
+                    }
+                }
+                else {
+                    $dst."$prop" = $srcProp
+                }
+            }
+        }
+    }
+}
 
 function GetDefaultSettings
 (
@@ -144,130 +221,17 @@ function GetDefaultSettings
     }
 }
 
-function MergeCustomObjectIntoOrderedDictionary {
-    Param(
-        [System.Collections.Specialized.OrderedDictionary] $dst,
-        [PSCustomObject] $src
-    )
-
-    # Loop through all properties in the source object
-    # If the property does not exist in the destination object, add it with the right type, but no value
-    # Types supported: PSCustomObject, Object[] and simple types
-    $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
-        $prop = $_.Name
-        $srcProp = $src."$prop"
-        $srcPropType = $srcProp.GetType().Name
-        if (-not $dst.Contains($prop)) {
-            if ($srcPropType -eq "PSCustomObject") {
-                $dst.Add("$prop", [ordered]@{})
-            }
-            elseif ($srcPropType -eq "Object[]") {
-                $dst.Add("$prop", @())
-            }
-            else {
-                $dst.Add("$prop", $srcProp)
-            }
-        }
-    }
-
-    # Loop through all properties in the destination object
-    # If the property does not exist in the source object, do nothing
-    # If the property exists in the source object, but is of a different type, throw an error
-    # If the property exists in the source object:
-    # If the property is an Object, call this function recursively to merge values
-    # If the property is an Object[], merge the arrays
-    # If the property is a simple type, replace the value in the destination object with the value from the source object
-    @($dst.Keys) | ForEach-Object {
-        $prop = $_
-        if ($src.PSObject.Properties.Name -eq $prop) {
-            $dstProp = $dst."$prop"
-            $srcProp = $src."$prop"
-            $dstPropType = $dstProp.GetType().Name
-            $srcPropType = $srcProp.GetType().Name
-            if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
-                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
-            }
-            elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
-                # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
-                # This is not seen as an error and will not throw an error
-                throw "property $prop should be of type $dstPropType, is $srcPropType."
-            }
-            else {
-                if ($srcProp -is [Object[]]) {
-                    $srcProp | ForEach-Object {
-                        $srcElm = $_
-                        $srcElmType = $srcElm.GetType().Name
-                        if ($srcElmType -eq "PSCustomObject") {
-                            # Array of objects are not checked for uniqueness
-                            $ht = [ordered]@{}
-                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture ([cultureinfo]::InvariantCulture) | ForEach-Object {
-                                $ht[$_.Name] = $_.Value
-                            }
-                            $dst."$prop" += @($ht)
-                        }
-                        else {
-                            # Add source element to destination array, but only if it does not already exist
-                            $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique)
-                        }
-                    }
-                }
-                else {
-                    $dst."$prop" = $srcProp
-                }
-            }
-        }
-    }
-}
-
-<#
-    .SYNOPSIS
-        Validate the settings against the settings schema file.
-    .PARAMETER settings
-        The settings to validate.
-#>
-function ValidateSettings {
-    Param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        $settings
-    )
-    Process {
-        $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
-        $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
-
-        $result = ""
-        try{
-            $command  = [scriptblock] {
-                $result = ''
-                Test-Json -Json $args[0] -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
-                return $result
-            }
-
-            if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
-            }
-            else {
-                $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
-            }
-        }
-        catch {
-            OutputWarning "Error validating settings. Error: $($_.Exception.Message)"
-        }
-        if ($result) {
-            OutputWarning "Settings are not valid. Error: $result"
-        }
-    }
-}
-
-
 # Read settings from the settings files
 # Settings are read from the following files:
-# - ALGoOrgSettings (github Variable)                 = Organization settings variable
-# - .github/AL-Go-Settings.json                       = Repository Settings file
-# - ALGoRepoSettings (github Variable)                = Repository settings variable
-# - <project>/.AL-Go/settings.json                    = Project settings file
-# - .github/<workflowName>.settings.json              = Workflow settings file
-# - <project>/.AL-Go/<workflowName>.settings.json     = Project workflow settings file
-# - <project>/.AL-Go/<userName>.settings.json         = User settings file
+# - ALGoOrgSettings (github Variable)                    = Organization settings variable
+# - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
+# - .github/AL-Go-Settings.json                          = Repository Settings file
+# - ALGoRepoSettings (github Variable)                   = Repository settings variable
+# - .github/AL-Go-TemplateProjectSettings.doNotEdit.json = Project settings from custom template
+# - <project>/.AL-Go/settings.json                       = Project settings file
+# - .github/<workflowName>.settings.json                 = Workflow settings file
+# - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
+# - <project>/.AL-Go/<userName>.settings.json            = User settings file
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -325,20 +289,31 @@ function ReadSettings {
         $orgSettingsVariableObject = $orgSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @($orgSettingsVariableObject)
     }
+
+    # Read settings from repository settings file
+    $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
+    $settingsObjects += @($customTemplateRepoSettingsObject)
+
     # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
     $settingsObjects += @($repoSettingsObject)
+
     # Read settings from repository settings variable (parameter)
     if ($repoSettingsVariableValue) {
         $repoSettingsVariableObject = $repoSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @($repoSettingsVariableObject)
     }
+
     if ($project) {
+        # Read settings from repository settings file
+        $customTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateProjectSettingsFile)
+        $settingsObjects += @($customTemplateProjectSettingsObject)
         # Read settings from project settings file
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
         $settingsObjects += @($projectSettingsObject)
     }
+
     if ($workflowName) {
         # Read settings from workflow settings file
         $workflowSettingsObject = GetSettingsObject -Path (Join-Path $gitHubFolder "$workflowName.settings.json")
@@ -351,6 +326,7 @@ function ReadSettings {
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
     }
+
     foreach($settingsJson in $settingsObjects) {
         if ($settingsJson) {
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
@@ -430,5 +406,44 @@ function ReadSettings {
     $settings
 }
 
+<#
+    .SYNOPSIS
+        Validate the settings against the settings schema file.
+    .PARAMETER settings
+        The settings to validate.
+#>
+function ValidateSettings {
+    Param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        $settings
+    )
+    Process {
+        $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
+        $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
+
+        $result = ""
+        try{
+            $command  = [scriptblock] {
+                $result = ''
+                Test-Json -Json $args[0] -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
+                return $result
+            }
+
+            if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
+                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
+            }
+            else {
+                $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
+            }
+        }
+        catch {
+            OutputWarning "Error validating settings. Error: $($_.Exception.Message)"
+        }
+        if ($result) {
+            OutputWarning "Settings are not valid. Error: $result"
+        }
+    }
+}
+
 Export-ModuleMember -Function ReadSettings
-Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile
+Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile

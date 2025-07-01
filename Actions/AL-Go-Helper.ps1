@@ -15,13 +15,16 @@ if (Test-Path $readSettingsModule) {
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+$ALGoFolderName = '.AL-Go'
+$ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
+$RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPushBranches', Justification = 'False positive.')]
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
 $runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
-$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId")
+$notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
@@ -40,6 +43,8 @@ $runAlPipelineOverrides = @(
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
+    "PipelineInitialize"
+    "PipelineFinalize"
 )
 
 # Well known AppIds

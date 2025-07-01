@@ -98,6 +98,12 @@ jobs:
           shell: powershell
           get: templateUrl,repoName,type,powerPlatformSolutionFolder
 
+      - name: Validate Workflow Input
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: microsoft/AL-Go-Actions/ValidateWorkflowInput@main
+        with:
+          shell: powershell
+
       - name: Read secrets
         id: ReadSecrets
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
@@ -115,6 +121,8 @@ jobs:
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
