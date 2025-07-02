@@ -215,6 +215,8 @@ try {
                 catch {
                     throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
                 }
+            } else {
+                $appFile = $_
             }
             return $appFile
         })
