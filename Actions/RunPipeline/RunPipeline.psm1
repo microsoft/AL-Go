@@ -56,7 +56,8 @@ function Test-InstallApps() {
         }
     }
     catch {
-        Trace-Warning -Message "Something went wrong while analyzing install apps. Error was: $($_.Exception.Message)"
+        #Trace-Warning -Message "Something went wrong while analyzing install apps. Error was: $($_.Exception.Message)"
+        Write-Host "$($_.Exception.Message)"
     } finally {
         # Clean up the temporary folder
         if (Test-Path -Path $tempFolder) {
