@@ -221,17 +221,43 @@ function GetDefaultSettings
     }
 }
 
-# Read settings from the settings files
-# Settings are read from the following files:
-# - ALGoOrgSettings (github Variable)                    = Organization settings variable
-# - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
-# - .github/AL-Go-Settings.json                          = Repository Settings file
-# - ALGoRepoSettings (github Variable)                   = Repository settings variable
-# - .github/AL-Go-TemplateProjectSettings.doNotEdit.json = Project settings from custom template
-# - <project>/.AL-Go/settings.json                       = Project settings file
-# - .github/<workflowName>.settings.json                 = Workflow settings file
-# - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
-# - <project>/.AL-Go/<userName>.settings.json            = User settings file
+
+<#
+    .SYNOPSIS
+        Read settings from the settings files and merge them into an ordered dictionary.
+    .DESCRIPTION
+        This function reads settings from various files and merges them into an ordered dictionary.
+        The settings are read from the following files:
+        - ALGoOrgSettings (github Variable)                    = Organization settings variable
+        - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
+        - .github/AL-Go-Settings.json                          = Repository Settings file
+        - ALGoRepoSettings (github Variable)                   = Repository settings variable
+        - .github/AL-Go-TemplateProjectSettings.doNotEdit.json = Project settings from custom template
+        - <project>/.AL-Go/settings.json                       = Project settings file
+        - .github/<workflowName>.settings.json                 = Workflow settings file
+        - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
+        - <project>/.AL-Go/<userName>.settings.json            = User settings file
+    .PARAMETER baseFolder
+        The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
+    .PARAMETER repoName
+        The name of the repository. Default is $ENV:GITHUB_REPOSITORY when running in GitHub Actions.
+    .PARAMETER project
+        The project path relative to the base folder. Default is '.'
+    .PARAMETER buildMode
+        The build mode to use when there are conditional settings. Default is "Default".
+    .PARAMETER workflowName
+        The name of the workflow. Default is $ENV:GITHUB_WORKFLOW when running in GitHub Actions.
+    .PARAMETER userName
+        The name of the user. Default is $ENV:GITHUB_ACTOR when running in GitHub Actions.
+    .PARAMETER branchName
+        The name of the branch to use for conditional settings. Default is $ENV:GITHUB_REF_NAME when running in GitHub Actions.
+    .PARAMETER orgSettingsVariableValue
+        The value of the organization settings variable. Default is $ENV:ALGoOrgSettings.
+    .PARAMETER repoSettingsVariableValue
+        The value of the repository settings variable. Default is $ENV:ALGoRepoSettings.
+    .PARAMETER silent
+        If specified, the function will not output any messages to the console.
+#>
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
