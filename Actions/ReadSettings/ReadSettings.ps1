@@ -13,7 +13,7 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = ReadSettings -project $project -buildMode $buildMode -environmentName $environmentName -environmentSettingsVariableValue $environmentDeployToVariableValue
+$settings = ReadSettings -project $project -buildMode $buildMode #-environmentName $environmentName -environmentSettingsVariableValue $environmentDeployToVariableValue
 if ($get) {
     $getSettings = $get.Split(',').Trim()
 }

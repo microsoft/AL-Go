@@ -701,8 +701,8 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
-        [string] $environmentSettingsVariableValue = "",
-        [string] $environmentName = "",
+        [string] $environmentSettingsVariableValue = "$ENV:testALGoEnvSettings",
+        [string] $environmentName = "$ENV:testALGoEnvName",
         [switch] $silent
     )
     Write-Host "Debug - EnvSettingsVar: $($ENV:testALGoEnvSettings) - EnvName: $($ENV:testALGoEnvName)"
