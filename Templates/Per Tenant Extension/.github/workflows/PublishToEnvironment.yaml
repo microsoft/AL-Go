@@ -142,6 +142,12 @@ jobs:
           $envName = '${{ matrix.environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
+      - name: RepoEnvVariable
+        id: repoEnvVariable
+        run: |
+          Add-Content -Encoding UTF8 -Path $env:testALGoEnvSettings -Value "${{ vars.DeployTo }}"
+          Add-Content -Encoding UTF8 -Path $env:testALGoEnvName -Value "${{ matrix.environment }}"
+
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
@@ -149,9 +155,6 @@ jobs:
           get: type,powerPlatformSolutionFolder
           environmentName: ${{ matrix.environment }}
           environmentDeployToVariableValue: ${{ vars.DeployTo }}
-        env:
-          testALGoEnvSettings: ${{ vars.DeployTo }}
-          testALGoEnvName: ${{ matrix.environment }}
 
       - name: Read secrets
         id: ReadSecrets
