@@ -131,8 +131,6 @@ jobs:
       url: ${{ steps.Deploy.outputs.environmentUrl }}
     env:
       deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
-      testALGoEnvSettings: ${{ vars.DeployTo }}
-      testALGoEnvName: ${{ matrix.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -151,6 +149,9 @@ jobs:
           get: type,powerPlatformSolutionFolder
           environmentName: ${{ matrix.environment }}
           environmentDeployToVariableValue: ${{ vars.DeployTo }}
+        env:
+          testALGoEnvSettings: ${{ vars.DeployTo }}
+          testALGoEnvName: ${{ matrix.environment }}
 
       - name: Read secrets
         id: ReadSecrets
