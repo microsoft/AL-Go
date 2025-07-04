@@ -701,11 +701,11 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [string] $environmentSettingsVariableValue = "",
         [string] $environmentName = "",
-        [string] $environmentDeployToVariableValue = "",
         [switch] $silent
     )
-
+    Write-Host "Debug - EnvSettingsVar: $($ENV:testALGoEnvSettings) - EnvName: $($ENV:testALGoEnvName)"
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
         $branchName = $env:GITHUB_BASE_REF
@@ -787,9 +787,9 @@ function ReadSettings {
         }
     }
 
-    if ($environmentDeployToVariableValue) {
+    if ($environmentSettingsVariableValue) {
         # Read settings from environment variable (parameter)
-        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentDeployToVariableValue | ConvertFrom-Json) }
+        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentSettingsVariableValue | ConvertFrom-Json) }
         @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
             if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
                 Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
