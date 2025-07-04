@@ -24,7 +24,7 @@ Describe "RunPipeline Action Tests" {
     }
 
     It 'Test warning for symbols packages' {
-        Import-Module (Join-Path $scriptRoot '.\RunPipeline.psm1' -Resolve)
+        Import-Module (Join-Path $scriptRoot '.\RunPipeline.psm1' -Resolve) -Force
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
         Import-Module (Join-Path $PSScriptRoot '../Actions/TelemetryHelper.psm1')
 
@@ -40,7 +40,7 @@ Describe "RunPipeline Action Tests" {
         Should -Invoke -CommandName 'OutputWarning' -Times 1 -ModuleName RunPipeline
         Should -Invoke -CommandName 'OutputWarning' -Times 1 -ModuleName RunPipeline -ParameterFilter { $Message -like "*App EssentialBusinessHeadlinesSymbols.app is a symbols package and should not be published. The workflow may fail if you try to publish it." }
 
-        # Assert that Trace-Information was not called
+        # Assert that Trace-Warning was not called
         Assert-MockCalled Trace-Warning -Exactly 0 -ModuleName RunPipeline
     }
 
