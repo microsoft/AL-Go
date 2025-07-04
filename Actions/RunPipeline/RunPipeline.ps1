@@ -209,6 +209,9 @@ try {
             # Download the app file if the URL is valid
             if ($finalUrl -like 'http*://*') {
                 try {
+                    if (-not (Test-Path $tempDependenciesLocation)) {
+                        New-Item -Path $tempDependenciesLocation -ItemType Directory | Out-Null
+                    }
                     $appFile = Join-Path $tempDependenciesLocation ([Uri]::UnescapeDataString([System.IO.Path]::GetFileName($finalUrl.Split('?')[0].TrimEnd('/'))))
                     Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
                 }
