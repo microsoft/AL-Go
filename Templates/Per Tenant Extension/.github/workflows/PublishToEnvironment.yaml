@@ -145,7 +145,7 @@ jobs:
       - name: RepoEnvVariable
         id: repoEnvVariable
         run: |
-          $envVarValue = ${{ vars.DeployTo }}
+          $envVarValue = "${{ vars.DeployTo }}"
           $envVarValueCompressed = (ConvertFrom-Json $envVarValue) | ConvertTo-Json -Compress
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "testALGoEnvSettings=$envVarValueCompressed"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "testALGoEnvName=${{ matrix.environment }}"
