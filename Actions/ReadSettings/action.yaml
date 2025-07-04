@@ -17,14 +17,6 @@ inputs:
     description: Specifies which properties to get from the settings file, default is all
     required: false
     default: ''
-  environmentName:
-    description: Environment name for current deployment. Should only be set when environmentDeployToVariableValue is also set.
-    required: false
-    default: ''
-  environmentDeployToVariableValue:
-    description: Value of the DeployTo settings variable defined in the github environment. If this is set, the environmentName should also be set.
-    required: false
-    default: ''
 outputs:
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format
@@ -42,11 +34,9 @@ runs:
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _get: ${{ inputs.get }}
-        _environmentName: ${{ inputs.environmentName }}
-        _environmentDeployToVariableValue: ${{ inputs.environmentDeployToVariableValue }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadSettings" -Action {
-          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -get $ENV:_get -environmentName $ENV:_environmentName -environmentDeployToVariableValue $ENV:_environmentDeployToVariableValue
+          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -get $ENV:_get
         }
 branding:
   icon: terminal
