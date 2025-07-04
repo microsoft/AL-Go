@@ -145,8 +145,8 @@ jobs:
       - name: RepoEnvVariable
         id: repoEnvVariable
         run: |
-          Add-Content -Encoding UTF8 -Path $env:testALGoEnvSettings -Value "${{ vars.DeployTo }}"
-          Add-Content -Encoding UTF8 -Path $env:testALGoEnvName -Value "${{ matrix.environment }}"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "testALGoEnvSettings=${{ vars.DeployTo }}"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "testALGoEnvName=${{ matrix.environment }}"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
