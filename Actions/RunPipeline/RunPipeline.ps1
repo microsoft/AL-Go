@@ -225,9 +225,9 @@ try {
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
-    if ((-not $settings.useCompilerFolder) -and (-not $settings.doNotPublishApps)) {
+    if ((-not $settings.doNotPublishApps)) {
         # Test that InstallApps are not symbols packages
-        # Skip this check if we are using a compiler folder or doNotPublishApps is set
+        # Skip this check if doNotPublishApps is set
         Test-InstallApps -AllInstallApps ($install.Apps + $install.TestApps) -ProjectPath $projectPath
     }
 
