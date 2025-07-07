@@ -689,7 +689,7 @@ function GetDefaultSettings
 # - .github/<workflowName>.settings.json                 = Workflow settings file
 # - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
 # - <project>/.AL-Go/<userName>.settings.json            = User settings file
-# - DeployTo (github Variable)                           = Deployment Environment settings variable
+# - ALGoEnvSettings (github Variable)                    = Deployment Environment settings variable
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
