@@ -142,13 +142,19 @@ jobs:
           $envName = '${{ matrix.environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
+      - name: RepoEnvVariable
+        id: repoEnvVariable
+        run: |
+          $envVarValue = '${{ vars.DeployTo }}'
+          $envVarValueCompressed = (ConvertFrom-Json $envVarValue) | ConvertTo-Json -Compress
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvSettings=$envVarValueCompressed"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvName=${{ matrix.environment }}"
+
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: ${{ matrix.shell }}
           get: type,powerPlatformSolutionFolder
-          environmentName: ${{ matrix.environment }}
-          environmentDeployToVariableValue: ${{ vars.DeployTo }}
 
       - name: Read secrets
         id: ReadSecrets

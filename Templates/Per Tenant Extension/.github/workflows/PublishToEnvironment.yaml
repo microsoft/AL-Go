@@ -147,8 +147,8 @@ jobs:
         run: |
           $envVarValue = '${{ vars.DeployTo }}'
           $envVarValueCompressed = (ConvertFrom-Json $envVarValue) | ConvertTo-Json -Compress
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "testALGoEnvSettings=$envVarValueCompressed"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "testALGoEnvName=${{ matrix.environment }}"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvSettings=$envVarValueCompressed"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvName=${{ matrix.environment }}"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
