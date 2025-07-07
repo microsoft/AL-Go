@@ -4,17 +4,19 @@ AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. A
 
 ### DeployTo setting can now be defined in GitHub deployment environment variables.
 
-The [DeployTo setting](https://aka.ms/algosettings#deployto) can now be defined in GitHub deployment environment variables. When defined this way, they will take priority over any DeployTo setting defined in AL-Go settings files.
+The [DeployTo setting](https://aka.ms/algosettings#deployto) can now be defined in GitHub deployment environment variables. When defined this way, they will take priority over any DeployTo setting defined in AL-Go repo, org or settings files.
 
-When defined in a deployment environment variable, the variable should be named 'DeployTo' and not 'DeployTo\<environmentname>', and the content should be a JSON block consisting of the DeployTo properties. Eg:
+When defined in a deployment environment variable, the variable should be named 'ALGoEnvironmentSettings', and the content should be a JSON block consisting of the DeployTo\<EnvName> structure with your settings inside where \<EnvName> matches the name of your GitHub environment. Eg:
 
 ```
 {
-  "Branches": [
-    "*"
-  ],
-  "includeTestAppsInSandboxEnvironment": false,
-  "excludeAppIds": [ 1234 ]
+  DeployToProduction {
+    "Branches": [
+        "*"
+    ],
+    "includeTestAppsInSandboxEnvironment": false,
+    "excludeAppIds": [ 1234 ]
+  } 
 }
 ```
 
