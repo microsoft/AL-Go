@@ -796,9 +796,8 @@ function ReadSettings {
         }
         # Warn user if 'runs-on', 'shell' or 'ContinuousDeployment' is defined in the environment settings variable, as these are not supported when defined there.
         if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo$environmentName") {
-            $keyName = $_
             @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
-                if ($environmentVariableObject.$keyName.PSObject.Properties.Name -contains $_) {
+                if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
                     Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
                 }
             }
