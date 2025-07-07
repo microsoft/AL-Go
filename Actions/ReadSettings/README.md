@@ -16,8 +16,6 @@ none
 | project | | Project name if the repository is setup for multiple projects | . |
 | buildMode | | Build mode. Only set when called from \_BuildALGoProject | Default |
 | get | | Specifies which properties to get from the settings file, default is all | |
-| environmentName | | Environment name for current deployment. Should only be set when environmentDeployToVariableValue is also set. | |
-| environmentDeployToVariableValue | | Value of the DeployTo settings variable defined in the github environment. If this is set, the environmentName should also be set. | |
 
 ## OUTPUT
 
