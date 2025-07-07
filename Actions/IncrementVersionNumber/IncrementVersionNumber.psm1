@@ -237,7 +237,7 @@ function Set-DependenciesVersionInAppManifests {
     })
 
     # Update dependencies in app.json files
-    $appFolders | ForEach-Object {
+    $distinctAppFolders | ForEach-Object {
         $appJsonPath = Join-Path $_ "app.json"
 
         $appJson = Get-Content -Path $appJsonPath -Encoding UTF8 -Raw | ConvertFrom-Json
