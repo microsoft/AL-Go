@@ -16,7 +16,7 @@ When defined in a deployment environment variable, the variable should be named 
     ],
     "includeTestAppsInSandboxEnvironment": false,
     "excludeAppIds": [ 1234 ]
-  } 
+  }
 }
 ```
 
