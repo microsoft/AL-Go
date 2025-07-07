@@ -705,7 +705,6 @@ function ReadSettings {
         [string] $environmentName = "$ENV:ALGoEnvName",
         [switch] $silent
     )
-    Write-Host "Debug - EnvSettingsVar: $($ENV:ALGoEnvSettings) - EnvName: $($ENV:ALGoEnvName)"
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
         $branchName = $env:GITHUB_BASE_REF
