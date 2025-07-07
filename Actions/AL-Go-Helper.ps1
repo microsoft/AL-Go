@@ -804,15 +804,8 @@ function ReadSettings {
             }
         }
         else {
-            Write-Host '''
-            ::warning::The environment settings variable does not contain the property 'DeployTo$environmentName'. Did you define your environment settings at the top JSON level?
-            Deployment settings should be defined within the 'DeployTo$environmentName' property, like in other settings like:
-            {
-                "DeployTo$environmentName": {
-                    ...
-                }
-            }
-            '''
+            $sampleJson = "{`n`t`"DeployTo$environmentName`": {`n`t`t...`n`t}`n}"
+            Write-Host "::warning::The environment settings variable does not contain the property 'DeployTo$environmentName'. Did you define your environment settings at the top JSON level? `nDeployment settings should be defined within the 'DeployTo$environmentName' property, as in other settings like: `n$sampleJson"
         }    
         $settingsObjects += @($environmentVariableObject)
     }
