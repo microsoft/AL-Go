@@ -701,11 +701,11 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
-        [string] $environmentSettingsVariableValue = "$ENV:testALGoEnvSettings",
-        [string] $environmentName = "$ENV:testALGoEnvName",
+        [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
+        [string] $environmentName = "$ENV:ALGoEnvName",
         [switch] $silent
     )
-    Write-Host "Debug - EnvSettingsVar: $($ENV:testALGoEnvSettings) - EnvName: $($ENV:testALGoEnvName)"
+    Write-Host "Debug - EnvSettingsVar: $($ENV:ALGoEnvSettings) - EnvName: $($ENV:ALGoEnvName)"
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
         $branchName = $env:GITHUB_BASE_REF
@@ -789,12 +789,31 @@ function ReadSettings {
 
     if ($environmentSettingsVariableValue) {
         # Read settings from environment variable (parameter)
-        $environmentVariableObject = [pscustomobject]@{"DeployTo$environmentName" = ($environmentSettingsVariableValue | ConvertFrom-Json) }
-        @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
-            if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
-                Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
+        $environmentVariableObject = $environmentSettingsVariableValue | ConvertFrom-Json
+        # Warn user that 'DeployTo' setting needs to include environment name
+        if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo") {
+            Write-Host "::warning::The environment settings variable contains the property 'DeployTo'. Did you intend to use 'DeployTo$environmentName' instead? The 'DeployTo' property without a specific environment name is not supported."
+        }
+        # Warn user if 'runs-on', 'shell' or 'ContinuousDeployment' is defined in the environment settings variable, as these are not supported when defined there.
+        if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo$environmentName") {
+            $keyName = $_
+            @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
+                if ($environmentVariableObject.$keyName.PSObject.Properties.Name -contains $_) {
+                    Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
+                }
             }
         }
+        else {
+            Write-Host '''
+            ::warning::The environment settings variable does not contain the property 'DeployTo$environmentName'. Did you define your environment settings at the top JSON level?
+            Deployment settings should be defined within the 'DeployTo$environmentName' property, like in other settings like:
+            {
+                "DeployTo$environmentName": {
+                    ...
+                }
+            }
+            '''
+        }    
         $settingsObjects += @($environmentVariableObject)
     }
 
