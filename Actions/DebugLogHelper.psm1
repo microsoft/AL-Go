@@ -81,7 +81,7 @@ function Write-Info {
         [string] $Message,
         [Parameter(Mandatory = $false)]
         [ValidateSet('Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan')]
-        [string] $Color 
+        [string] $Color
     )
 
     if ($Color) {
@@ -97,5 +97,5 @@ function Write-Info {
         Write-Host "$([char] 27)[${colorCode}m$Message$([char] 27)[0m"
     } else {
         Write-Host $Message
-    }  
+    }
 }
