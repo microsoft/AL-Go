@@ -50,6 +50,32 @@ function CheckIfAppNeedsInstallOrUpgrade {
     return $needsInstall, $needsUpgrade
 }
 
+# Check if the apps are already installed and emit a warning if the installed version is higher than the version in the app file
+function CheckInstalledApps {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $appFiles
+    )
+
+    $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+    foreach($appFile in $appFiles) {
+        # Get AppJson (works for full .app files, symbol files and also runtime packages)
+        $appJson = Get-AppJsonFromAppFile -appFile $appFile
+        $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+
+        # Check if the version of the installed app is lower than the version in the app file
+        if ($installedApp) {
+            $currentVersion = [version]::new($appJson.Version)
+            $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+
+            if ($currentVersion -lt $installedVersion) {
+                Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+            }
+        }
+    }
+}
+
 function InstallOrUpgradeApps {
     Param(
         [hashtable] $bcAuthContext,
@@ -403,6 +429,9 @@ else {
                     if ($syncMode -eq 'ForceSync') { $syncMode = 'Force' }
                     $parameters += @{ "SchemaSyncMode" = $syncMode }
                 }
+
+                CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+
                 Write-Host "Publishing apps using automation API"
                 Publish-PerTenantExtensionApps @parameters
             }
