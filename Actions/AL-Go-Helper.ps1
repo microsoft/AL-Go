@@ -791,19 +791,19 @@ function ReadSettings {
         $environmentVariableObject = $environmentSettingsVariableValue | ConvertFrom-Json
         # Warn user that 'DeployTo' setting needs to include environment name
         if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo") {
-            Write-Host "::warning::The environment settings variable contains the property 'DeployTo'. Did you intend to use 'DeployTo$environmentName' instead? The 'DeployTo' property without a specific environment name is not supported."
+            OutputWarning "The environment settings variable contains the property 'DeployTo'. Did you intend to use 'DeployTo$environmentName' instead? The 'DeployTo' property without a specific environment name is not supported."
         }
         # Warn user if 'runs-on', 'shell' or 'ContinuousDeployment' is defined in the environment settings variable, as these are not supported when defined there.
         if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo$environmentName") {
             @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
                 if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
-                    Write-Host "::warning::The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property within the AL-Go repo settings file instead."
+                    OutputWarning "The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property elsewhere."
                 }
             }
         }
         else {
             $sampleJson = "{`n`t`"DeployTo$environmentName`": {`n`t`t...`n`t}`n}"
-            Write-Host "::warning::The environment settings variable does not contain the property 'DeployTo$environmentName'. Did you define your environment settings at the top JSON level? `nDeployment settings should be defined within the 'DeployTo$environmentName' property, as in other settings like: `n$sampleJson"
+            OutputWarning "The environment settings variable does not contain the property 'DeployTo$environmentName'. Did you define your environment settings at the top JSON level? `nDeployment settings should be defined within the 'DeployTo$environmentName' property, as in other settings like: `n$sampleJson"
         }
         $settingsObjects += @($environmentVariableObject)
     }
