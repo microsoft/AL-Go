@@ -2,11 +2,13 @@
 
 AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
 
-### DeployTo setting can now be defined in GitHub deployment environment variables.
+### Support for AL-Go settings as GitHub environment variable: ALGoEnvSettings
 
-The [DeployTo setting](https://aka.ms/algosettings#deployto) can now be defined in GitHub deployment environment variables. When defined this way, they will take priority over any DeployTo setting defined in AL-Go repo, org or settings files.
+AL-Go settings can now be defined in GitHub environment variables. To use this feature, create a new variable under your GitHub environment called `ALGoEnvironmentSettings`. Please note that this variable should not include your environment name.
 
-When defined in a deployment environment variable, the variable should be named 'ALGoEnvironmentSettings', and the content should be a JSON block consisting of the DeployTo\<EnvName> structure with your settings inside where \<EnvName> matches the name of your GitHub environment. Eg:
+Settings loaded this way, will only be available during the Deploy step of the CI/CD or Publish to Environment actions, but not the Build step, making it most suitable for the [DeployTo setting](https://aka.ms/algosettings#deployto). Settings defined in this variable will take priority over any setting defined in AL-Go repo, org or settings files.
+
+The contents of the variable should be a JSON block, similar to any other settings file or variable. When defining the `DeployTo\<EnvName>` setting in this variable, it should still include the environment name. Eg:
 
 ```
 {
@@ -20,7 +22,7 @@ When defined in a deployment environment variable, the variable should be named 
 }
 ```
 
-Please note, that due to certain security limitations, the properties `runs-on`, `shell` and `ContinousDeployment` will <ins>**NOT**</ins> be respected if defined in a deployment environment variable. To use these properties, please keep them defined in your AL-Go settings file.
+Please note, that due to certain security limitations, the properties `runs-on`, `shell` and `ContinousDeployment` of the `DeployTo` setting will <ins>**NOT**</ins> be respected if defined in a GitHub environment variable. To use these properties, please keep them defined elsewhere, such as your AL-Go settings file or Org/Repo settings variables.
 
 ### Issues
 
