@@ -205,6 +205,9 @@ function Set-VersionInAppManifests($projectPath, $projectSettings, $newValue, [r
     $allAppFolders | ForEach-Object {
         $appFolder = Join-Path $projectPath $_ -Resolve
 
+        if (-not $updatedAppFolders.Value) {
+            $updatedAppFolders.Value = @()
+        }
         # Update the app only if it's not already updated
         if (-not ($updatedAppFolders.Value -contains $appFolder)) {
             $appJson = Join-Path $appFolder "app.json"
