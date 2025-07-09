@@ -5,16 +5,16 @@ This section describes how to contribute to AL-Go. How to set up your own enviro
 You can do this in two ways:
 
 - Use a fork of AL-Go for GitHub in your own **personal GitHub account** in development mode
-- Use 3 public repositories in your own **personal GitHub account** (AL-Go-PTE, AL-Go-AppSource and AL-Go-Actions, much like in production)
+- Use 2 public repositories in your own **personal GitHub account** (AL-Go-PTE and AL-Go-AppSource, much like in production)
 
 ## Use a fork of AL-Go for GitHub in "development mode"
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
 1. You can optionally also create a branch in the AL-Go fork for the feature you are working on.
 
-**https://github.com/<yourGitHubUserName>/AL-Go@<yourBranch>** can now be used as a template in your AL-Go project when running _Update AL-Go System Files_ to use the actions/workflows from this fork.
+**<yourGitHubUserName>/AL-Go@<yourBranch>** can now be used as a template in your AL-Go project when running _Update AL-Go System Files_ to use the actions/workflows from this fork.
 
-## Use 3 public repositories in "production mode"
+## Use 2 public repositories in "production mode"
 
 1. Fork the [https://github.com/microsoft/AL-Go](https://github.com/microsoft/AL-Go) repository to your **personal GitHub account**.
 1. Navigate to [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new) and create a new personal access token with **Full control of private repositories** and **workflow** permissions.
@@ -22,9 +22,8 @@ You can do this in two ways:
 1. In your personal fork of AL-Go, navigate to **Actions**, select the **Deploy** workflow and choose **Run Workflow**.
 1. Using the default settings press **Run workflow**. Select the AL-Go branch to run from and the branch to deploy to.
 
-Now you should have 3 new public repositories:
+Now you should have 2 new public repositories:
 
-- [https://github.com/yourGitHubUserName/AL-Go-Actions](https://github.com/yourGitHubUserName/AL-Go-Actions)
 - [https://github.com/yourGitHubUserName/AL-Go-AppSource](https://github.com/yourGitHubUserName/AL-Go-AppSource)
 - [https://github.com/yourGitHubUserName/AL-Go-PTE](https://github.com/yourGitHubUserName/AL-Go-PTE)
 
@@ -57,9 +56,8 @@ In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end
 - The scenarios folder contains a set of AL-Go scenarios, which tests specific functionality end to end. Every folder under e2eTests/scenarios, which contains a runtests.ps1 will be run as a scenario test, like:
   - UseProjectDependencies - create a repo with multiple projects and set **UseProjectDependencies** to modify CI/CD and other build workflows to build projects in the right order
   - GitHubPackages - create 3 repositories using GitHub Packages as dependency resolver and check that artifacts are built properly
-  - BuildModes - create a repository, set buildModes and test that generated artifacts are as expected.
-  - ReleaseBranches - testing that create release works, release branches are create and subsequently found correctly as previous build
   - SpecialCharacters - testing that various settings (+ publisher name and app name) can contain special national characters
+  - and more...
 
 In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
 

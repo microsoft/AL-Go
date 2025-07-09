@@ -121,6 +121,8 @@ jobs:
 
       - name: Check for updates to AL-Go system files
         uses: microsoft/AL-Go-Actions/CheckForUpdates@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
