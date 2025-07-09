@@ -374,3 +374,111 @@ Describe "Set-VersionInSettingsFile tests" {
         Remove-Item $settingsFile -Force -ErrorAction Ignore
     }
 }
+
+Describe 'Set-VersionInAppManifests tests' {
+    BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "..\Actions\AL-Go-Helper.ps1" -Resolve)
+        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\Actions\IncrementVersionNumber\IncrementVersionNumber.psm1" -Resolve) -Force
+    }
+
+    BeforeEach {
+        $testProjectPath = Join-Path ([System.IO.Path]::GetTempPath()) "TestProject"
+        New-Item -ItemType Directory -Path $testProjectPath -Force | Out-Null
+
+        # Create mock app folders for TestProject
+        $appFolders = @('App1', 'App2', 'Test1', 'BCPTTest1')
+        foreach ($folder in $appFolders) {
+            New-Item -ItemType Directory -Path (Join-Path $testProjectPath $folder) -Force | Out-Null
+            New-Item -ItemType File -Path (Join-Path $testProjectPath $folder 'app.json') -Force | Out-Null
+            $appJsonContent = @{
+                "version" = "0.1"
+                "name" = $folder
+            }
+            $appJsonContent | ConvertTo-Json | Set-Content (Join-Path $testProjectPath $folder 'app.json') -Encoding UTF8
+        }
+
+        $testProjectSettings = @{
+            appFolders = @($appFolders[0..1]) # App1, App2
+            testFolders = @($appFolders[2]) # Test1
+            bcptTestFolders = @($appFolders[3]) # BCPTTest1
+        }
+
+        # Create another project folder that points to the same app folders
+        $anotherTestProjectPath = Join-Path ([System.IO.Path]::GetTempPath()) "AnotherTestProject"
+        New-Item -ItemType Directory -Path $anotherTestProjectPath -Force | Out-Null
+
+        Push-Location $anotherTestProjectPath
+        $anotherTestProjectSettings = @{
+            appFolders = @($appFolders[0..1]) | ForEach-Object { Resolve-Path (Join-Path $testProjectPath $_) -Relative } # App1, App2
+            testFolders = @($appFolders[2]) | ForEach-Object { Resolve-Path (Join-Path $testProjectPath $_) -Relative } # Test1
+            bcptTestFolders = @($appFolders[3]) | ForEach-Object { Resolve-Path (Join-Path $testProjectPath $_) -Relative } # BCPTTest1
+        }
+
+        $anotherTestProjectAppFolder = 'Another TestProjectApp'
+        New-Item -ItemType Directory -Path (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder) -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder 'app.json') -Force | Out-Null
+        $anotherTestProjectAppJsonContent = @{
+            "version" = "0.2"
+            "name" = $anotherTestProjectAppFolder
+        }
+        $anotherTestProjectAppJsonContent | ConvertTo-Json | Set-Content (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder 'app.json') -Encoding UTF8
+
+        Pop-Location
+    }
+
+    It 'Set-VersionInAppManifests updates all app.json files once and increments the version' {
+        $updatedAppFolders = @()
+        $testProjectSettings = @{
+            versioningStrategy = 0
+            appFolders = @('App1', 'App2')
+            testFolders = @('Test1')
+            bcptTestFolders = @('BCPTTest1')
+        }
+
+        Set-VersionInAppManifests -projectPath $testProjectPath -projectSettings $testProjectSettings -newValue '+0.1' -updatedAppFolders ([ref] $updatedAppFolders)
+
+        $updatedAppFolders.Count | Should -Be 4
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'App1' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'App2' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'Test1' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'BCPTTest1' -Resolve)
+
+        Set-VersionInAppManifests -projectPath $anotherTestProjectPath -projectSettings $anotherTestProjectSettings -newValue '+0.1' -updatedAppFolders ([ref] $updatedAppFolders)
+
+        $updatedAppFolders.Count | Should -Be 4
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'App1' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'App2' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'Test1' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'BCPTTest1' -Resolve)
+
+        # Add the new app folder to the settings for anotherTestProject
+        $anotherTestProjectSettings.appFolders += @($anotherTestProjectAppFolder)
+
+        Set-VersionInAppManifests -projectPath $anotherTestProjectPath -projectSettings $anotherTestProjectSettings -newValue '+0.1' -updatedAppFolders ([ref] $updatedAppFolders)
+        $updatedAppFolders.Count | Should -Be 5
+        $updatedAppFolders | Should -Contain (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'App1' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'App2' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'Test1' -Resolve)
+        $updatedAppFolders | Should -Contain (Join-Path $testProjectPath 'BCPTTest1' -Resolve)
+
+        # Verify the app.json files have been updated only once and the version is incremented
+        $appJsonFiles = Get-ChildItem -Path $testProjectPath -Recurse -Filter 'app.json'
+        $appJsonFiles | ForEach-Object {
+            $appJsonContent = Get-Content $_.FullName -Encoding UTF8 | ConvertFrom-Json
+            $appJsonContent.version | Should -Be "0.2" # 0.1 + 0.1
+        }
+
+        $anotherAppJsonFiles = Get-ChildItem -Path $anotherTestProjectPath -Recurse -Filter 'app.json'
+        $anotherAppJsonFiles | ForEach-Object {
+            $appJsonContent = Get-Content $_.FullName -Encoding UTF8 | ConvertFrom-Json
+            $appJsonContent.version | Should -Be "0.3" # 0.2 + 0.1
+        }
+    }
+
+    AfterEach {
+        # Clean up the projects directory
+        Remove-Item -Path $testProjectPath -Recurse -Force -ErrorAction Ignore
+        Remove-Item -Path $anotherTestProjectPath -Recurse -Force -ErrorAction Ignore
+    }
+}
