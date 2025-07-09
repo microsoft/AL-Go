@@ -5,7 +5,8 @@ AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. A
 ### Issues
 
 - Issue 1770 Wrong type of _projects_ setting in settings schema
-- Issue 1787: Publish to Environment from PR fails in private repos
+- Issue 1787 Publish to Environment from PR fails in private repos
+- Issue 1722 Check if apps are already installed on a higher version before deploying
 
 ### Add custom jobs to AL-Go workflows
 
