@@ -397,6 +397,7 @@ Describe 'Set-VersionInAppManifests tests' {
             $appJsonContent | ConvertTo-Json | Set-Content (Join-Path $testProjectPath $folder 'app.json') -Encoding UTF8
         }
 
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testProjectSettings', Justification = 'False positive.')]
         $testProjectSettings = @{
             appFolders = @($appFolders[0..1]) # App1, App2
             testFolders = @($appFolders[2]) # Test1
@@ -408,6 +409,7 @@ Describe 'Set-VersionInAppManifests tests' {
         New-Item -ItemType Directory -Path $anotherTestProjectPath -Force | Out-Null
 
         Push-Location $anotherTestProjectPath
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'anotherTestProjectSettings', Justification = 'False positive.')]
         $anotherTestProjectSettings = @{
             appFolders = @($appFolders[0..1]) | ForEach-Object { Resolve-Path (Join-Path $testProjectPath $_) -Relative } # App1, App2
             testFolders = @($appFolders[2]) | ForEach-Object { Resolve-Path (Join-Path $testProjectPath $_) -Relative } # Test1
