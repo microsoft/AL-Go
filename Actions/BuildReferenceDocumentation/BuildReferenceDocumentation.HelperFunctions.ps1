@@ -131,6 +131,7 @@ function GenerateDocsSite {
         [string] $version,
         [string[]] $allVersions,
         [hashtable] $allApps,
+        [hashtable] $allDependencies,
         [string] $repoName,
         [string] $releaseNotes,
         [string] $header,
@@ -195,6 +196,14 @@ function GenerateDocsSite {
         foreach($value in $allApps.Values) {
             $apps += @($value)
         }
+        
+        # Include dependencies for ALDoc to resolve symbols correctly
+        if ($allDependencies) {
+            foreach($value in $allDependencies.Values) {
+                $apps += @($value)
+            }
+        }
+        
         $apps = @($apps | Select-Object -Unique)
 
         $arguments = $aldocArguments + @(
