@@ -276,7 +276,7 @@ function ReadSettings {
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
         $branchName = $env:GITHUB_BASE_REF
     }
-    
+
     function GetSettingsObject {
         Param(
             [string] $path
