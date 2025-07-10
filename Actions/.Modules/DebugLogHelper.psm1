@@ -36,7 +36,15 @@ function Write-Debug-Base {
     Write-Host "$([char] 27)[${colorCodeMagenta}m[AL-Go-Debug]$([char] 27)[0m $Message"
 }
 
-# Debug logging that is only written when additional logging is enabled
+<#
+    .SYNOPSIS
+        Writes debug information if extended deubug logging is enabled.
+    .DESCRIPTION
+        Writes debug information to the console if extended debug logging is enabled. The message is prefixed with "[AL-Go-Debug]".
+        This is intended for debugging partner issues.
+    .PARAMETER Message
+        Message to be written to console.
+#>
 function Write-Debug-Info {
     param (
         [Parameter(Mandatory = $true)]
@@ -48,8 +56,18 @@ function Write-Debug-Info {
     }
 }
 
-# Function to write debug information about function calls
-# The $parameters param should always be called with $MyInvocation.BoundParameters if the given function got parameters.
+<#
+    .SYNOPSIS
+        Writes debug information about the function call and its parameters if extended debug logging is enabled.
+    .DESCRIPTION
+        Writes debug information about the function call and its parameters to the console if extended debug logging is enabled.
+        Should be called like: Write-Debug-FunctionCallInfo -FunctionName "<FunctionName>" -Parameters $MyInvocation.BoundParameters
+        Or in case of no parameters: Write-Debug-FunctionCallInfo -FunctionName "<FunctionName>".
+    .PARAMETER FunctionName
+        Name of the function being called.
+    .PARAMETER Parameters
+        Paraeters passed to the function. Should always be passed using $MyInvocation.BoundParameters.
+#>
 function Write-Debug-FunctionCallInfo {
     param (
         [Parameter(Mandatory = $true)]
@@ -69,7 +87,14 @@ function Write-Debug-FunctionCallInfo {
     }
 }
 
-# Helper functions to wrap logs in groups for better overview in GitHub actions
+<#
+    .SYNOPSIS
+        Starts a console log group.
+    .DESCRIPTION
+        Starts a console log group. All subsequent log messages will be grouped under this message until Write-GroupEnd is called.
+    .PARAMETER Message
+        Name/Title of the group.
+#>
 function Write-GroupStart {
     param (
         [Parameter(Mandatory = $true)]
@@ -79,11 +104,28 @@ function Write-GroupStart {
     Write-Host "::group::$Message"
 }
 
+<#
+    .SYNOPSIS
+        Ends a console log group.
+    .DESCRIPTION
+        Ends a console log group started with Write-GroupStart. All subsequent log messages will be outside of this group.
+    .PARAMETER Message
+        Name/Title of the group.
+#>
 function Write-GroupEnd {
     Write-Host "::endgroup::"
 }
 
-# Regular log that is always written and supports color coding
+<#
+    .SYNOPSIS
+        Writes to console with optional color.
+    .DESCRIPTION
+        Writes a message to the console with an optional color. If no color is specified, the message is written in the default console color.
+    .PARAMETER Message
+        Message to be written to console.
+    .PARAMETER Color
+        Optional color for the message. Valid values are 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan'.
+#>
 function Write-Info {
     param (
         [Parameter(Mandatory = $true)]
@@ -109,6 +151,14 @@ function Write-Info {
     }
 }
 
+<#
+    .SYNOPSIS
+        Write an error message to the console.
+    .DESCRIPTION
+        Writes an error message to the console. If running locally, it throws an exception with the message.
+    .PARAMETER Message
+        Message to be written to console.
+#>
 function OutputError {
     Param(
         [string] $message
@@ -123,6 +173,14 @@ function OutputError {
     }
 }
 
+<#
+    .SYNOPSIS
+        Write a warning message to the console.
+    .DESCRIPTION
+        Writes a warning message to the console. If running locally, it writes the message in yellow.
+    .PARAMETER Message
+        Message to be written to console.
+#>
 function OutputWarning {
     Param(
         [string] $message
@@ -136,6 +194,14 @@ function OutputWarning {
     }
 }
 
+<#
+    .SYNOPSIS
+        Write a notice message to the console.
+    .DESCRIPTION
+        Writes a notice message to the console. If running locally, it writes the message in blue.
+    .PARAMETER Message
+        Message to be written to console.
+#>
 function OutputNotice {
     Param(
         [string] $message
@@ -149,6 +215,14 @@ function OutputNotice {
     }
 }
 
+<#
+    .SYNOPSIS
+        Mask a value in the log.
+    .DESCRIPTION
+        Masks a value in the log to prevent sensitive information from being displayed. If running locally, it writes the masked value to the console.
+    .PARAMETER Value
+        The value to be masked in the log.
+#>
 function MaskValueInLog {
     Param(
         [string] $value
@@ -159,6 +233,14 @@ function MaskValueInLog {
     }
 }
 
+<#
+    .SYNOPSIS
+        Write a debug message to the console.
+    .DESCRIPTION
+        Writes a debug message to the console. If running locally, it writes the message in magenta.
+    .PARAMETER Message
+        Message to be written to console.
+#>
 function OutputDebug {
     Param(
         [string] $message
