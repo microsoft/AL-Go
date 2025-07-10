@@ -265,6 +265,14 @@ jobs:
         with:
           path: '.artifacts'
 
+      - name: RepoEnvVariable
+        id: repoEnvVariable
+        run: |
+          $envVarValue = '${{ vars.ALGoEnvironmentSettings }}'
+          $envVarValueCompressed = (ConvertFrom-Json $envVarValue) | ConvertTo-Json -Compress
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvSettings=$envVarValueCompressed"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvName=${{ matrix.environment }}"
+
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
