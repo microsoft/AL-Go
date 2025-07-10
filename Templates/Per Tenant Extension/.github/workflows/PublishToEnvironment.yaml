@@ -131,6 +131,8 @@ jobs:
       url: ${{ steps.Deploy.outputs.environmentUrl }}
     env:
       deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
+      ALGoEnvSettings: ${{ vars.ALGoEnvironmentSettings }}
+      ALGoEnvName: ${{ matrix.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -142,13 +144,13 @@ jobs:
           $envName = '${{ matrix.environment }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
-      - name: RepoEnvVariable
-        id: repoEnvVariable
-        run: |
-          $envVarValue = '${{ vars.ALGoEnvironmentSettings }}'
-          $envVarValueCompressed = (ConvertFrom-Json $envVarValue) | ConvertTo-Json -Compress
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvSettings=$envVarValueCompressed"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvName=${{ matrix.environment }}"
+      # - name: RepoEnvVariable
+      #   id: repoEnvVariable
+      #   run: |
+      #     $envVarValue = '${{ vars.ALGoEnvironmentSettings }}'
+      #     $envVarValueCompressed = (ConvertFrom-Json $envVarValue) | ConvertTo-Json -Compress
+      #     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvSettings=$envVarValueCompressed"
+      #     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoEnvName=${{ matrix.environment }}"
 
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
