@@ -1,3 +1,12 @@
+
+if ($env:GITHUB_ACTIONS -eq "true") {
+    Write-Host "Running in GitHub Actions"
+    $runningLocal = $false
+} else {
+    Write-Host "Running locally"
+    $runningLocal = $true
+}
+
 $debugLoggingEnabled = $false
 try {
     if ($env:RUNNER_DEBUG -eq 1) {
@@ -99,3 +108,69 @@ function Write-Info {
         Write-Host $Message
     }
 }
+
+function OutputError {
+    Param(
+        [string] $message
+    )
+
+    if ($runningLocal) {
+        throw $message
+    }
+    else {
+        Write-Host "::Error::$($message.Replace("`r",'').Replace("`n",' '))"
+        $host.SetShouldExit(1)
+    }
+}
+
+function OutputWarning {
+    Param(
+        [string] $message
+    )
+
+    if ($runningLocal) {
+        Write-Host -ForegroundColor Yellow "WARNING: $message"
+    }
+    else {
+        Write-Host "::Warning::$message"
+    }
+}
+
+function OutputNotice {
+    Param(
+        [string] $message
+    )
+
+    if ($runningLocal) {
+        Write-Host $message
+    }
+    else {
+        Write-Host "::Notice::$message"
+    }
+}
+
+function MaskValueInLog {
+    Param(
+        [string] $value
+    )
+
+    if (!$runningLocal) {
+        Write-Host "`r::add-mask::$value"
+    }
+}
+
+function OutputDebug {
+    Param(
+        [string] $message
+    )
+
+    if ($runningLocal) {
+        Write-Host $message
+    }
+    else {
+        Write-Host "::Debug::$message"
+    }
+}
+
+Export-ModuleMember -Function Write-Debug-Info, Write-Debug-FunctionCallInfo, Write-GroupStart, Write-GroupEnd, Write-Info, OutputError, OutputWarning, OutputNotice, MaskValueInLog, OutputDebug
+Export-ModuleMember -Variable debugLoggingEnabled

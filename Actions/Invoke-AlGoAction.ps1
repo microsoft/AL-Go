@@ -14,7 +14,7 @@ $progressPreference = "SilentlyContinue"
 Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "TelemetryHelper.psm1" -Resolve)
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DebugLogHelper.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".Modules/DebugLogHelper.psm1" -Resolve)
 
 try {
     $startTime = Get-Date
