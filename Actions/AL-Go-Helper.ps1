@@ -4,6 +4,7 @@ Param(
 
 $gitHubHelperPath = Join-Path $PSScriptRoot 'Github-Helper.psm1'
 $readSettingsModule = Join-Path $PSScriptRoot '.Modules/ReadSettings.psm1'
+$debugLoggingModule = Join-Path $PSScriptRoot '.Modules/DebugLogHelper.psm1'
 if (Test-Path $gitHubHelperPath) {
     Import-Module $gitHubHelperPath
     # If we are adding more dependencies here, then localDevEnv and cloudDevEnv needs to be updated
@@ -11,6 +12,10 @@ if (Test-Path $gitHubHelperPath) {
 
 if (Test-Path $readSettingsModule) {
     Import-Module $readSettingsModule
+}
+
+if (Test-Path $debugLoggingModule) {
+    Import-Module $debugLoggingModule
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
