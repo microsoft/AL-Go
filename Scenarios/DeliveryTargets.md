@@ -72,7 +72,7 @@ Replace:
 
 ### Step 3: Configure Repository Settings (Optional)
 
-You can control delivery behavior by adding settings to your AL-Go settings file:
+You can control delivery behavior by adding settings to your AL-Go settings file. For detailed information about DeliveryTarget settings, see [DeliverTo<deliveryTarget>](https://aka.ms/algosettings#deliverto).
 
 ```json
 {
@@ -106,7 +106,7 @@ Common NuGet feed URLs:
 
 ### Step 2: Configure Dependency Resolution (Optional)
 
-Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not automatically used for dependency resolution. To use your custom feed for dependencies, add it to `trustedNuGetFeeds`:
+Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not automatically used for dependency resolution. To use your custom feed for dependencies, add it to [trustedNuGetFeeds](https://aka.ms/algosettings#trustedNuGetFeeds):
 
 ```json
 {
@@ -122,7 +122,9 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 
 ## Configuration Examples
 
-### Example 1: GitHub Packages for Organization
+### Example 1: GitHub Packages for PTE Organization
+
+**Use Case**: A company developing Per-Tenant Extensions (PTEs) wants to automatically publish apps to GitHub Packages for internal distribution and dependency management.
 
 **Organizational Secret**: `GitHubPackagesContext`
 ```json
@@ -139,7 +141,9 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 }
 ```
 
-### Example 2: Azure DevOps Artifacts
+### Example 2: Azure DevOps Artifacts for PTE Development
+
+**Use Case**: A partner company with existing Azure DevOps infrastructure wants to deliver PTEs to their existing Azure DevOps Artifacts feed for controlled distribution.
 
 **Repository Secret**: `NuGetContext`
 ```json
@@ -159,7 +163,9 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 }
 ```
 
-### Example 3: Multi-Environment Setup
+### Example 3: Multi-Environment PTE Setup
+
+**Use Case**: A PTE development team that wants to publish development builds to GitHub Packages and production releases to a private NuGet feed.
 
 **AL-Go-Settings.json**:
 ```json
@@ -300,7 +306,7 @@ You can configure multiple trusted NuGet feeds for dependency resolution:
 
 ## Next Steps
 
-- [Learn more about AL-Go Settings](settings.md)
+- [Learn more about AL-Go Settings](https://aka.ms/algosettings)
 - [Explore Continuous Delivery options](../Workshop/ContinuousDelivery.md)
 - [Set up dependencies between repositories](../Workshop/Dependencies2.md)
-- [Understand AL-Go Secrets](secrets.md)
+- [Understand AL-Go Secrets](https://aka.ms/algosecrets)
