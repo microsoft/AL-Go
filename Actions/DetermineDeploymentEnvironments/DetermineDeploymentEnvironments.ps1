@@ -5,13 +5,13 @@
     [ValidateSet('CD','Publish','All')]
     [string] $type
 )
-Write-Debug-FunctionCallInfo -FunctionName "DetermineDeploymentEnvironments" -Parameters $MyInvocation.BoundParameters
+OutputDebugFunctionCall
 
 function IsGitHubPagesAvailable() {
-    Write-Debug-FunctionCallInfo -FunctionName "IsGitHubPagesAvailable" -Parameters @{}
+    OutputDebugFunctionCall
     $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
-    Write-Debug-Info "Url: $url"
+    OutputDebug "Url: $url"
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
         $ghPages = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
@@ -23,10 +23,10 @@ function IsGitHubPagesAvailable() {
 }
 
 function GetGitHubEnvironments() {
-    Write-Debug-FunctionCallInfo -FunctionName "GetGitHubEnvironments" -Parameters @{}
+    OutputDebugFunctionCall
     $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-    Write-Debug-Info "Url: $url"
+    OutputDebug "Url: $url"
     try {
         Write-Host "Requesting environments from GitHub"
         $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
@@ -39,7 +39,7 @@ function GetGitHubEnvironments() {
 }
 
 function Get-BranchesFromPolicy($ghEnvironment) {
-    Write-Debug-FunctionCallInfo -FunctionName "Get-BranchesFromPolicy" -Parameters $MyInvocation.BoundParameters
+    OutputDebugFunctionCall
     if ($ghEnvironment) {
         # Environment is defined in GitHub - check protection rules
         $headers = GetHeaders -token $env:GITHUB_TOKEN
