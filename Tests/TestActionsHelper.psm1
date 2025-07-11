@@ -2,6 +2,8 @@
 
 $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/DebugLogHelper.psm1') -Global
+
 function iReplace {
     Param(
         [string] $string,
