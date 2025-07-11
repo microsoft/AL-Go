@@ -34,24 +34,24 @@ $colorCodeCyan = '36'
 #>
 function OutputDebugFunctionCall {
     if ($debugLoggingEnabled -or $runningLocal) {
-        try {       
+        try {
             $caller = (Get-PSCallStack)[1]
             $callerName = $caller.Command
             $argString = $caller.Arguments
 
             OutputDebug "Function '$callerName' called with parameters:"
-            
+
             if ($argString -match '^\{(.*)\}$') {
                 $inner = $matches[1]
 
                 # Match key=value pairs, allowing for quoted strings with commas
                 $pattern = '(?<key>\w+)\s*=\s*(?<value>(?:(?!,\s*\w+\s*=).)+)'
-                $matches = [regex]::Matches($inner, $pattern)
+                $regexMatches = [regex]::Matches($inner, $pattern)
 
-                if ($matches.Count -eq 0) {
+                if ($regexMatches.Count -eq 0) {
                     OutputDebug "None"
                 }
-                foreach ($match in $matches) {
+                foreach ($match in $regexMatches) {
                     $key = $match.Groups['key'].Value
                     $val = $match.Groups['value'].Value
                     OutputDebug "-$($key): $val"
@@ -62,7 +62,7 @@ function OutputDebugFunctionCall {
         } catch {
             OutputDebug "Unable to parse arguments."
         }
-        
+
     }
 }
 
@@ -100,7 +100,7 @@ function OutputGroupEnd {
         Write-Host "==== Group end ===="
     } else {
         Write-Host "::endgroup::"
-    }   
+    }
 }
 
 <#
