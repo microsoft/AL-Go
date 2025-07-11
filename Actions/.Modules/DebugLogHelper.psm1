@@ -246,5 +246,5 @@ function OutputDebug {
     }
 }
 
-Export-ModuleMember -Function Write-Debug-Info, Write-Debug-FunctionCallInfo, Write-GroupStart, Write-GroupEnd, Write-Info, OutputError, OutputWarning, OutputNotice, MaskValueInLog, OutputDebug
+Export-ModuleMember -Function OutputColor, OutputDebugFunctionCall, OutputGroupStart, OutputGroupEnd, OutputError, OutputWarning, OutputNotice, MaskValueInLog, OutputDebug
 Export-ModuleMember -Variable debugLoggingEnabled
