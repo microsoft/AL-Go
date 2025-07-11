@@ -32,7 +32,7 @@ function Write-Debug-Base {
         [Parameter(Mandatory = $true)]
         [string] $Message
     )
-
+    # Char 27 is the escape character for ANSI sequences. PowerShell 7 can use `e, but this is not supported in PowerShell 5. 
     Write-Host "$([char] 27)[${colorCodeMagenta}m[AL-Go-Debug]$([char] 27)[0m $Message"
 }
 
