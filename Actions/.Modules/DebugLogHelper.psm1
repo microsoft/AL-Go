@@ -30,12 +30,7 @@ $colorCodeCyan = '36'
         Writes debug information about the function call and its parameters if extended debug logging is enabled.
     .DESCRIPTION
         Writes debug information about the function call and its parameters to the console if extended debug logging is enabled.
-        Should be called like: Write-Debug-FunctionCallInfo -FunctionName "<FunctionName>" -Parameters $MyInvocation.BoundParameters
-        Or in case of no parameters: Write-Debug-FunctionCallInfo -FunctionName "<FunctionName>".
-    .PARAMETER FunctionName
-        Name of the function being called.
-    .PARAMETER Parameters
-        Paraeters passed to the function. Should always be passed using $MyInvocation.BoundParameters.
+        Automatically retrieves the caller's name and arguments from the call stack.
 #>
 function OutputDebugFunctionCall {
     if ($debugLoggingEnabled -or $runningLocal) {
