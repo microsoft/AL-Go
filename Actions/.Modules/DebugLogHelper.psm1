@@ -46,7 +46,7 @@ function OutputDebugFunctionCall {
 
             OutputDebug "Function '$callerName' called with parameters:"
             
-            if ($argString -match '^\{(.+)\}$') {
+            if ($argString -match '^\{(.*)\}$') {
                 $inner = $matches[1]
 
                 # Match key=value pairs, allowing for quoted strings with commas
@@ -54,7 +54,7 @@ function OutputDebugFunctionCall {
                 $matches = [regex]::Matches($inner, $pattern)
 
                 if ($matches.Count -eq 0) {
-                    OutputDebug "No parameters found."
+                    OutputDebug "None"
                 }
                 foreach ($match in $matches) {
                     $key = $match.Groups['key'].Value
@@ -242,7 +242,7 @@ function OutputDebug {
         Write-Host $message
     }
     else {
-        Write-Host "::Debug::$message"
+        Write-Host "::Debug::[AL-Go]$message"
     }
 }
 
