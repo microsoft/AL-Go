@@ -1,9 +1,7 @@
 
 if ($env:GITHUB_ACTIONS -eq "true") {
-    Write-Host "Running in GitHub Actions"
     $runningLocal = $false
 } else {
-    Write-Host "Running locally"
     $runningLocal = $true
 }
 
@@ -27,35 +25,6 @@ $colorCodeBlue = '34'
 $colorCodeMagenta = '35'
 $colorCodeCyan = '36'
 
-function Write-Debug-Base {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string] $Message
-    )
-    # Char 27 is the escape character for ANSI sequences. PowerShell 7 can use `e, but this is not supported in PowerShell 5.
-    Write-Host "$([char] 27)[${colorCodeMagenta}m[AL-Go-Debug]$([char] 27)[0m $Message"
-}
-
-<#
-    .SYNOPSIS
-        Writes debug information if extended deubug logging is enabled.
-    .DESCRIPTION
-        Writes debug information to the console if extended debug logging is enabled. The message is prefixed with "[AL-Go-Debug]".
-        This is intended for debugging partner issues.
-    .PARAMETER Message
-        Message to be written to console.
-#>
-function Write-Debug-Info {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string] $Message
-    )
-
-    if ($debugLoggingEnabled) {
-        Write-Debug-Base $Message
-    }
-}
-
 <#
     .SYNOPSIS
         Writes debug information about the function call and its parameters if extended debug logging is enabled.
@@ -68,22 +37,37 @@ function Write-Debug-Info {
     .PARAMETER Parameters
         Paraeters passed to the function. Should always be passed using $MyInvocation.BoundParameters.
 #>
-function Write-Debug-FunctionCallInfo {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string] $FunctionName,
-        [Parameter(Mandatory = $false)]
-        [System.Object] $Parameters = @{}
-    )
+function OutputDebugFunctionCall {
+    if ($debugLoggingEnabled -or $runningLocal) {
+        try {       
+            $caller = (Get-PSCallStack)[1]
+            $callerName = $caller.Command
+            $argString = $caller.Arguments
 
-    if ($debugLoggingEnabled) {
-        Write-Debug-Base "Function '$functionName' called with parameters:"
-        foreach ($param in $Parameters.Keys) {
-            Write-Debug-Base "- $($param): $($Parameters[$param])"
+            OutputDebug "Function '$callerName' called with parameters:"
+            
+            if ($argString -match '^\{(.+)\}$') {
+                $inner = $matches[1]
+
+                # Match key=value pairs, allowing for quoted strings with commas
+                $pattern = '(?<key>\w+)\s*=\s*(?<value>(?:(?!,\s*\w+\s*=).)+)'
+                $matches = [regex]::Matches($inner, $pattern)
+
+                if ($matches.Count -eq 0) {
+                    OutputDebug "No parameters found."
+                }
+                foreach ($match in $matches) {
+                    $key = $match.Groups['key'].Value
+                    $val = $match.Groups['value'].Value
+                    OutputDebug "-$($key): $val"
+                }
+            } else {
+                OutputDebug "Unable to parse arguments."
+            }
+        } catch {
+            OutputDebug "Unable to parse arguments."
         }
-        if ($Parameters.Count -eq 0) {
-            Write-Debug-Base "- None"
-        }
+        
     }
 }
 
@@ -95,13 +79,17 @@ function Write-Debug-FunctionCallInfo {
     .PARAMETER Message
         Name/Title of the group.
 #>
-function Write-GroupStart {
+function OutputGroupStart {
     param (
         [Parameter(Mandatory = $true)]
         [string] $Message
     )
 
-    Write-Host "::group::$Message"
+    if ($runningLocal) {
+        Write-Host "==== Group start: $Message ===="
+    } else {
+        Write-Host "::group::$Message"
+    }
 }
 
 <#
@@ -112,8 +100,12 @@ function Write-GroupStart {
     .PARAMETER Message
         Name/Title of the group.
 #>
-function Write-GroupEnd {
-    Write-Host "::endgroup::"
+function OutputGroupEnd {
+    if ($runningLocal) {
+        Write-Host "==== Group end ===="
+    } else {
+        Write-Host "::endgroup::"
+    }   
 }
 
 <#
@@ -126,7 +118,7 @@ function Write-GroupEnd {
     .PARAMETER Color
         Optional color for the message. Valid values are 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan'.
 #>
-function Write-Info {
+function OutputColor {
     param (
         [Parameter(Mandatory = $true)]
         [string] $Message,
