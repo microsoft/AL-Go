@@ -375,10 +375,6 @@ function ReadSettings {
                 }
             }
         }
-        else {
-            $sampleJson = "{`n`t`"DeployTo$environmentName`": {`n`t`t...`n`t}`n}"
-            OutputWarning "The environment settings variable does not contain the property 'DeployTo$environmentName'. Did you define your environment settings at the top JSON level? `nDeployment settings should be defined within the 'DeployTo$environmentName' property, as in other settings like: `n$sampleJson"
-        }
         $settingsObjects += @($environmentVariableObject)
     }
 
