@@ -221,7 +221,7 @@ function OutputDebug {
     )
 
     if ($runningLocal) {
-        Write-Host $message
+        Write-Debug $message
     }
     else {
         Write-Host "::Debug::[AL-Go]$message"
