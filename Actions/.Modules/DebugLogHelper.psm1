@@ -37,32 +37,19 @@ function OutputDebugFunctionCall {
         try {
             $caller = (Get-PSCallStack)[1]
             $callerName = $caller.Command
-            $argString = $caller.Arguments
+            $callerParameters = $caller.InvocationInfo.BoundParameters
 
             OutputDebug "Function '$callerName' called with parameters:"
-
-            if ($argString -match '^\{(.*)\}$') {
-                $inner = $matches[1]
-
-                # Match key=value pairs, allowing for quoted strings with commas
-                $pattern = '(?<key>\w+)\s*=\s*(?<value>(?:(?!,\s*\w+\s*=).)+)'
-                $regexMatches = [regex]::Matches($inner, $pattern)
-
-                if ($regexMatches.Count -eq 0) {
-                    OutputDebug "None"
-                }
-                foreach ($match in $regexMatches) {
-                    $key = $match.Groups['key'].Value
-                    $val = $match.Groups['value'].Value
-                    OutputDebug "-$($key): $val"
-                }
-            } else {
-                OutputDebug "Unable to parse arguments."
+            if ($callerParameters.Count -eq 0) {
+                OutputDebug "None"
+            }
+            foreach ($key in $callerParameters.Keys) {
+                $val = $callerParameters[$key]
+                OutputDebug "-$($key): $val"
             }
         } catch {
             OutputDebug "Unable to parse arguments."
         }
-
     }
 }
 
