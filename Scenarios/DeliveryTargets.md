@@ -247,14 +247,46 @@ Example custom delivery script:
 ```powershell
 # .github/DeliverToCustomFeed.ps1
 Param(
-    [string] $artifacts,
-    [string] $deliveryTarget,
-    [string] $deliveryContext
+    [Parameter(Mandatory = $true)]
+    [HashTable] $parameters
 )
 
+# Extract parameters
+$project = $parameters.project
+$projectName = $parameters.projectName
+$type = $parameters.type
+$appsFolder = $parameters.appsFolder
+$testAppsFolder = $parameters.testAppsFolder
+$dependenciesFolder = $parameters.dependenciesFolder
+$appsFolders = $parameters.appsFolders
+$testAppsFolders = $parameters.testAppsFolders
+$dependenciesFolders = $parameters.dependenciesFolders
+
 # Custom delivery logic here
-Write-Host "Delivering to custom feed: $deliveryTarget"
+Write-Host "Delivering project '$project' (type: $type) to custom feed"
+if ($appsFolder) {
+    Write-Host "Apps folder: $appsFolder"
+    # Process apps in $appsFolder
+}
 ```
+
+#### Supported Parameters
+
+Your custom delivery script receives a hash table with the following parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `project` | string | Project path (escaped for artifact naming) |
+| `projectName` | string | Project name (sanitized for use in paths) |
+| `type` | string | Delivery type: "CD" (Continuous Delivery) or "Release" |
+| `appsFolder` | string | Path to folder containing app files (.app) |
+| `testAppsFolder` | string | Path to folder containing test app files (if available) |
+| `dependenciesFolder` | string | Path to folder containing dependency files (if available) |
+| `appsFolders` | string[] | Array of paths to all apps folders from different build modes |
+| `testAppsFolders` | string[] | Array of paths to all test app folders from different build modes |
+| `dependenciesFolders` | string[] | Array of paths to all dependency folders from different build modes |
+
+> **Note:** The folder parameters (`*Folder`) may be `$null` if no artifacts of that type were found. The plural versions (`*Folders`) contain arrays of all matching folders across different build modes.
 
 ### Branch-Specific Delivery
 
