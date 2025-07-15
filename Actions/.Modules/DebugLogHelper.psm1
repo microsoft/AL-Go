@@ -15,9 +15,9 @@ $colorCodeCyan = '36'
 
 <#
     .SYNOPSIS
-        Writes debug information about the function call and its parameters if extended debug logging is enabled.
+        Writes debug information about the function call and its parameters if extended debug logging is enabled or running locally.
     .DESCRIPTION
-        Writes debug information about the function call and its parameters to the console if extended debug logging is enabled.
+        Writes debug information about the function call and its parameters to the console if extended debug logging is enabled or running locally.
         Automatically retrieves the caller's name and arguments from the call stack.
 #>
 function OutputDebugFunctionCall {
@@ -35,7 +35,7 @@ function OutputDebugFunctionCall {
             OutputDebug "-$($key): $val"
         }
     } catch {
-        OutputDebug "Unable to parse arguments."
+        OutputDebug "Unable to retrieve function information from call stack."
     }
 }
 
@@ -43,7 +43,8 @@ function OutputDebugFunctionCall {
     .SYNOPSIS
         Starts a console log group.
     .DESCRIPTION
-        Starts a console log group. All subsequent log messages will be grouped under this message until Write-GroupEnd is called.
+        Starts a console log group. All subsequent log messages will be grouped under this message until OutputGroupEnd is called.
+        If running locally, it writes a simple message to the console. If running in GitHub Actions, it uses the `::group::` command to create a collapsible group in the log.
     .PARAMETER Message
         Name/Title of the group.
 #>
@@ -64,9 +65,7 @@ function OutputGroupStart {
     .SYNOPSIS
         Ends a console log group.
     .DESCRIPTION
-        Ends a console log group started with Write-GroupStart. All subsequent log messages will be outside of this group.
-    .PARAMETER Message
-        Name/Title of the group.
+        Ends a console log group started with OutputGroupStart. All subsequent log messages will be outside of this group.
 #>
 function OutputGroupEnd {
     if ($runningLocal) {
@@ -105,6 +104,7 @@ function OutputColor {
             'Magenta' { $colorCode = $colorCodeMagenta }
             'Cyan' { $colorCode = $colorCodeCyan }
         }
+        # char 27 is the escape character for ANSI codes which works in both PS 5 and 7.
         Write-Host "$([char] 27)[${colorCode}m$Message$([char] 27)[0m"
     } else {
         Write-Host $Message
@@ -115,7 +115,7 @@ function OutputColor {
     .SYNOPSIS
         Write an error message to the console.
     .DESCRIPTION
-        Writes an error message to the console. If running locally, it throws an exception with the message.
+        Writes an error message to the console. Throws an exception if running locally, otherwise formats the message for GitHub Actions.
     .PARAMETER Message
         Message to be written to console.
 #>
@@ -137,7 +137,7 @@ function OutputError {
     .SYNOPSIS
         Write a warning message to the console.
     .DESCRIPTION
-        Writes a warning message to the console. If running locally, it writes the message in yellow.
+        Writes a warning message to the console. Uses Write-Warning if running locally, otherwise formats the message for GitHub Actions.
     .PARAMETER Message
         Message to be written to console.
 #>
@@ -158,7 +158,7 @@ function OutputWarning {
     .SYNOPSIS
         Write a notice message to the console.
     .DESCRIPTION
-        Writes a notice message to the console. If running locally, it writes the message in blue.
+        Writes a notice message to the console. Uses regular Write-Host if running locally, otherwise formats the message for GitHub Actions.
     .PARAMETER Message
         Message to be written to console.
 #>
@@ -197,7 +197,7 @@ function MaskValueInLog {
     .SYNOPSIS
         Write a debug message to the console.
     .DESCRIPTION
-        Writes a debug message to the console. If running locally, it writes the message in magenta.
+        Writes a debug message to the console. Uses Write-Debug if running locally, otherwise formats the message for GitHub Actions.
     .PARAMETER Message
         Message to be written to console.
 #>
