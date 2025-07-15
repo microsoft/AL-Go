@@ -80,17 +80,17 @@ For comprehensive documentation on setting up NuGet and GitHub Packages delivery
 ### Quick Setup for GitHub Packages
 
 1. **Create Personal Access Token**: Create a classic personal access token with `write:packages` scope
-2. **Create Organizational Secret**: Create `GitHubPackagesContext` secret with format:
+1. **Create Organizational Secret**: Create `GitHubPackagesContext` secret with format:
    ```json
    {"token":"ghp_YOUR_TOKEN","serverUrl":"https://nuget.pkg.github.com/YOUR_ORG/index.json"}
    ```
-3. **Run CI/CD**: Your apps will automatically be published to GitHub Packages after successful builds
+1. **Run CI/CD**: Your apps will automatically be published to GitHub Packages after successful builds
 
 ### Quick Setup for Custom NuGet Feed
 
 1. **Create NuGetContext Secret**: Create `NuGetContext` secret with your custom feed URL and token
-2. **Configure Dependency Resolution**: Add your feed to `trustedNuGetFeeds` setting if you want to use it for dependencies
-3. **Run CI/CD**: Your apps will be delivered to the specified NuGet feed
+1. **Configure Dependency Resolution**: Add your feed to `trustedNuGetFeeds` setting if you want to use it for dependencies
+1. **Run CI/CD**: Your apps will be delivered to the specified NuGet feed
 
 For detailed step-by-step instructions, configuration examples, and troubleshooting, refer to the [comprehensive DeliveryTargets guide](../Scenarios/DeliveryTargets.md).
 

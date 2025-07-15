@@ -30,8 +30,8 @@ AL-Go for GitHub provides experimental support for delivering your Business Cent
 DeliveryTargets in AL-Go define where and how your built applications should be delivered after a successful build. Each delivery target is configured through:
 
 1. **Context Secret**: A secret named `<DeliveryTarget>Context` containing connection information
-2. **Delivery Script**: An optional PowerShell script named `DeliverTo<DeliveryTarget>.ps1` for custom delivery logic
-3. **Settings**: Optional configuration in AL-Go settings files
+1. **Delivery Script**: An optional PowerShell script named `DeliverTo<DeliveryTarget>.ps1` for custom delivery logic
+1. **Settings**: Optional configuration in AL-Go settings files
 
 ### Supported Delivery Targets
 
@@ -49,8 +49,8 @@ GitHub Packages provides a free NuGet feed for each GitHub organization. This is
 ### Step 1: Create Personal Access Token
 
 1. Navigate to [GitHub Personal Access Tokens](https://github.com/settings/tokens/new)
-2. Create a **Classic Personal Access Token** (Fine-grained tokens don't support packages yet)
-3. Select the following scopes:
+1. Create a **Classic Personal Access Token** (Fine-grained tokens don't support packages yet)
+1. Select the following scopes:
    - `write:packages` - Required for publishing packages
    - `read:packages` - Required for consuming packages
    - `repo` - Required if your repositories are private
@@ -64,6 +64,7 @@ Create an organizational secret named `GitHubPackagesContext` with the following
 ```
 
 Replace:
+
 - `YOUR_TOKEN_HERE` with your personal access token
 - `YOUR_ORG` with your GitHub organization name
 
@@ -100,6 +101,7 @@ Create a secret named `NuGetContext` with the following format:
 ```
 
 Common NuGet feed URLs:
+
 - **Azure DevOps**: `https://pkgs.dev.azure.com/{org}/{project}/_packaging/{feedName}/nuget/v3/index.json`
 - **GitHub Packages**: `https://nuget.pkg.github.com/{org}/index.json`
 - **NuGet.org**: `https://api.nuget.org/v3/index.json`
@@ -127,11 +129,13 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 **Use Case**: A company developing Per-Tenant Extensions (PTEs) wants to automatically publish apps to GitHub Packages for internal distribution and dependency management.
 
 **Organizational Secret**: `GitHubPackagesContext`
+
 ```json
 {"token":"ghp_1234567890abcdef","serverUrl":"https://nuget.pkg.github.com/contoso/index.json"}
 ```
 
 **AL-Go-Settings.json** (optional):
+
 ```json
 {
   "DeliverToGitHubPackages": {
@@ -146,11 +150,13 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 **Use Case**: A partner company with existing Azure DevOps infrastructure wants to deliver PTEs to their existing Azure DevOps Artifacts feed for controlled distribution.
 
 **Repository Secret**: `NuGetContext`
+
 ```json
 {"token":"YOUR_AZURE_DEVOPS_TOKEN","serverUrl":"https://pkgs.dev.azure.com/contoso/BusinessCentral/_packaging/BC-Apps/nuget/v3/index.json"}
 ```
 
 **AL-Go-Settings.json**:
+
 ```json
 {
   "trustedNuGetFeeds": [
@@ -168,6 +174,7 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 **Use Case**: A PTE development team that wants to publish development builds to GitHub Packages and production releases to a private NuGet feed.
 
 **AL-Go-Settings.json**:
+
 ```json
 {
   "DeliverToGitHubPackages": {
@@ -191,33 +198,39 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 ### Common Issues
 
 #### 1. Missing Context Secret
+
 **Error**: `Secret 'GitHubPackagesContext' not found`
 **Solution**: Ensure the secret is created at the organization level (or repository level) and is accessible to your repository.
 
 #### 2. Authentication Failed
+
 **Error**: `401 Unauthorized` when publishing packages
-**Solution**: 
+**Solution**:
+
 - Verify your personal access token has the correct scopes
 - Check if your token has expired
 - Ensure your token has access to the target organization
 
 #### 3. Package Not Found During Dependency Resolution
+
 **Error**: Unable to find package during build
 **Solution**:
+
 - Verify the package was published successfully
 - Check that dependency resolution is configured correctly
 - Ensure the package name and version match your app.json dependencies
 
 #### 4. Curly Brackets Masked in Logs
+
 **Error**: Seeing `***` instead of JSON in logs
 **Solution**: Ensure your JSON secrets are compressed (single line) without formatting.
 
 ### Debugging Steps
 
 1. **Check Workflow Logs**: Look for the "Deliver to [Target]" job in your CI/CD workflow
-2. **Verify Package Publication**: Check your organization's packages page
-3. **Test Dependency Resolution**: Look for "Resolving Dependencies" and "installing app dependencies" in build logs
-4. **Validate Secret Format**: Use `New-ALGoNuGetContext` to generate correctly formatted secrets
+1. **Verify Package Publication**: Check your organization's packages page
+1. **Test Dependency Resolution**: Look for "Resolving Dependencies" and "installing app dependencies" in build logs
+1. **Validate Secret Format**: Use `New-ALGoNuGetContext` to generate correctly formatted secrets
 
 ## Advanced Scenarios
 
@@ -226,10 +239,11 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 For advanced scenarios, you can create custom delivery scripts:
 
 1. Create a PowerShell script named `DeliverTo<TargetName>.ps1` in your `.github` folder
-2. Create a context secret named `<TargetName>Context`
-3. AL-Go will automatically detect and use your custom delivery target
+1. Create a context secret named `<TargetName>Context`
+1. AL-Go will automatically detect and use your custom delivery target
 
 Example custom delivery script:
+
 ```powershell
 # .github/DeliverToCustomFeed.ps1
 Param(
@@ -299,10 +313,10 @@ You can configure multiple trusted NuGet feeds for dependency resolution:
 ### Best Practices
 
 1. **Use semantic versioning**: Follow semantic versioning for your packages
-2. **Test in isolation**: Test delivery configuration in a separate repository first
-3. **Monitor package sizes**: Be aware of package size limits
-4. **Document dependencies**: Clearly document your app dependencies
-5. **Regular cleanup**: Implement package cleanup policies
+1. **Test in isolation**: Test delivery configuration in a separate repository first
+1. **Monitor package sizes**: Be aware of package size limits
+1. **Document dependencies**: Clearly document your app dependencies
+1. **Regular cleanup**: Implement package cleanup policies
 
 ## Next Steps
 
