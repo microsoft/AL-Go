@@ -5,18 +5,6 @@ if ($env:GITHUB_ACTIONS -eq "true") {
     $runningLocal = $true
 }
 
-$debugLoggingEnabled = $false
-try {
-    if ($env:RUNNER_DEBUG -eq 1) {
-        $debugLoggingEnabled = $true
-        Write-Host "AL-Go extended debug logging is enabled."
-    } else {
-        Write-Host "AL-Go extended debug logging is disabled."
-    }
-} catch {
-    Write-Host "Failed to parse RUNNER_DEBUG environment variable. Defaulting to false."
-}
-
 # Colors
 $colorCodeRed = '31'
 $colorCodeGreen = '32'
@@ -33,23 +21,21 @@ $colorCodeCyan = '36'
         Automatically retrieves the caller's name and arguments from the call stack.
 #>
 function OutputDebugFunctionCall {
-    if ($debugLoggingEnabled -or $runningLocal) {
-        try {
-            $caller = (Get-PSCallStack)[1]
-            $callerName = $caller.Command
-            $callerParameters = $caller.InvocationInfo.BoundParameters
+    try {
+        $caller = (Get-PSCallStack)[1]
+        $callerName = $caller.Command
+        $callerParameters = $caller.InvocationInfo.BoundParameters
 
-            OutputDebug "Function '$callerName' called with parameters:"
-            if ($callerParameters.Count -eq 0) {
-                OutputDebug "None"
-            }
-            foreach ($key in $callerParameters.Keys) {
-                $val = $callerParameters[$key]
-                OutputDebug "-$($key): $val"
-            }
-        } catch {
-            OutputDebug "Unable to parse arguments."
+        OutputDebug "Function '$callerName' called with parameters:"
+        if ($callerParameters.Count -eq 0) {
+            OutputDebug "None"
         }
+        foreach ($key in $callerParameters.Keys) {
+            $val = $callerParameters[$key]
+            OutputDebug "-$($key): $val"
+        }
+    } catch {
+        OutputDebug "Unable to parse arguments."
     }
 }
 
@@ -161,7 +147,7 @@ function OutputWarning {
     )
 
     if ($runningLocal) {
-        Write-Host -ForegroundColor Yellow "WARNING: $message"
+        Write-Warning $message
     }
     else {
         Write-Host "::Warning::$message"
