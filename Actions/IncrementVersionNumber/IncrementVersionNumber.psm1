@@ -189,8 +189,10 @@ function Test-SettingExists {
         Name of the project (relative to the base folder).
     .Parameter newValue
         New version number. If the version number starts with a +, the new version number will be added to the old version number. Else the new version number will replace the old version number.
+    .Parameter updatedAppFolders
+        [ref] Array of paths to the app folders that were updated. This is used to avoid updating the same app folder multiple times.
 #>
-function Set-VersionInAppManifests($projectPath, $projectSettings, $newValue) {
+function Set-VersionInAppManifests($projectPath, $projectSettings, $newValue, [ref] $updatedAppFolders) {
 
     # Check if the project uses repoVersion versioning strategy
     $useRepoVersion = (($projectSettings.PSObject.Properties.Name -eq "versioningStrategy") -and (($projectSettings.versioningStrategy -band 16) -eq 16))
@@ -198,13 +200,22 @@ function Set-VersionInAppManifests($projectPath, $projectSettings, $newValue) {
         $newValue = $projectSettings.repoVersion
     }
 
+    if (-not $updatedAppFolders.Value) {
+        $updatedAppFolders.Value = @()
+    }
+
     $allAppFolders = @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders)
     # Set version in app.json files
     $allAppFolders | ForEach-Object {
-        $appFolder = Join-Path $projectPath $_
-        $appJson = Join-Path $appFolder "app.json"
+        $appFolder = Join-Path $projectPath $_ -Resolve
 
-        Set-VersionInSettingsFile -settingsFilePath $appJson -settingName 'version' -newValue $newValue
+        # Update the app only if it's not already updated
+        if (-not ($updatedAppFolders.Value -contains $appFolder)) {
+            $appJson = Join-Path $appFolder "app.json"
+            Set-VersionInSettingsFile -settingsFilePath $appJson -settingName 'version' -newValue $newValue
+
+            $updatedAppFolders.Value += @($appFolder)
+        }
     }
 }
 
