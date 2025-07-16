@@ -199,11 +199,15 @@ function GenerateDocsSite {
 
         # Include dependencies for ALDoc to resolve symbols correctly
         $dependencies = @()
-        if ($allDependencies) {
-            foreach($value in $allDependencies.Values) {
-                $dependencies += @($value)
-            }
+        foreach($value in $allDependencies.Values) {
+            $dependencies += @($value)
         }
+
+        Write-Host "Apps to document:"
+        $apps | ForEach-Object { Write-Host "- $_" }
+
+        Write-Host "Dependencies to use for symbols:"
+        $dependencies | ForEach-Object { Write-Host "- $_" }
 
         $apps = @($apps | Select-Object -Unique)
 
