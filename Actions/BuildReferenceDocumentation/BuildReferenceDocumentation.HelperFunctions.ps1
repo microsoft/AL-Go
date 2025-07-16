@@ -245,7 +245,7 @@ function GenerateDocsSite {
                 "--output ""$docfxpath"""
                 "--loglevel $loglevel"
                 "--source ""$_"""
-                "--packageCache ""$($dependencies -join '","')"""
+                "--packagecache ""$($dependencies -join '","')"""
                 )
             Write-Host "invoke $aldocCommand $arguments"
             CmdDo -command $aldocCommand -arguments $arguments
