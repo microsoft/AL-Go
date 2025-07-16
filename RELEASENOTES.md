@@ -29,6 +29,11 @@ Please note, that due to certain security limitations, the properties `runs-on`,
 - Issue 1770 Wrong type of _projects_ setting in settings schema
 - Issue 1787 Publish to Environment from PR fails in private repos
 - Issue 1722 Check if apps are already installed on a higher version before deploying
+- Issue 1774 Increment Version Number with +0.1 can increment some version numbers twice
+
+### Additional debug logging functionality
+
+We have improved how logging is handled in AL-Go, and now make better use of GitHub built-in extended debug logging functionality. Extended debug logging can be enabled when re-running actions by clicking the 'Enable debug logging' checkbox in the pop-up window. This can be done both for jobs that failed and jobs that succeeded, but did not produce the correct result.
 
 ### Add custom jobs to AL-Go workflows
 

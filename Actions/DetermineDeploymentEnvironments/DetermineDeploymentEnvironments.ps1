@@ -5,10 +5,13 @@
     [ValidateSet('CD','Publish','All')]
     [string] $type
 )
+OutputDebugFunctionCall
 
 function IsGitHubPagesAvailable() {
+    OutputDebugFunctionCall
     $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/pages"
+    OutputDebug "Url: $url"
     try {
         Write-Host "Requesting GitHub Pages settings from GitHub"
         $ghPages = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json
@@ -20,8 +23,10 @@ function IsGitHubPagesAvailable() {
 }
 
 function GetGitHubEnvironments() {
+    OutputDebugFunctionCall
     $headers = GetHeaders -token $env:GITHUB_TOKEN
     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+    OutputDebug "Url: $url"
     try {
         Write-Host "Requesting environments from GitHub"
         $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
@@ -34,6 +39,7 @@ function GetGitHubEnvironments() {
 }
 
 function Get-BranchesFromPolicy($ghEnvironment) {
+    OutputDebugFunctionCall
     if ($ghEnvironment) {
         # Environment is defined in GitHub - check protection rules
         $headers = GetHeaders -token $env:GITHUB_TOKEN
