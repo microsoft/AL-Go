@@ -82,7 +82,7 @@ For comprehensive documentation on setting up NuGet and GitHub Packages delivery
 1. **Create Personal Access Token**: Create a classic personal access token with `write:packages` scope
 1. **Create Organizational Secret**: Create `GitHubPackagesContext` secret with format:
    ```json
-   {"token":"ghp_YOUR_TOKEN","serverUrl":"https://nuget.pkg.github.com/YOUR_ORG/index.json"}
+   {"token":"ghp_<your_token>","serverUrl":"https://nuget.pkg.github.com/<your_org>/index.json"}
    ```
 1. **Run CI/CD**: Your apps will automatically be published to GitHub Packages after successful builds
 

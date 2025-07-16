@@ -59,14 +59,17 @@ GitHub Packages provides a free NuGet feed for each GitHub organization. This is
 
 Create an organizational secret named `GitHubPackagesContext` with the following compressed JSON format:
 
+> [!WARNING]
+> The secret must be in compressed JSON format (single line). Multi-line JSON will break AL-Go functionality as curly brackets will be masked in logs.
+
 ```json
-{"token":"ghp_YOUR_TOKEN_HERE","serverUrl":"https://nuget.pkg.github.com/YOUR_ORG/index.json"}
+{"token":"ghp_<your_token>","serverUrl":"https://nuget.pkg.github.com/<your_org>/index.json"}
 ```
 
 Replace:
 
-- `YOUR_TOKEN_HERE` with your personal access token
-- `YOUR_ORG` with your GitHub organization name
+- `<your_token>` with your personal access token
+- `<your_org>` with your GitHub organization name
 
 > [!TIP]
 > Use the BcContainerHelper function `New-ALGoNuGetContext` to create a correctly formatted JSON structure.
@@ -96,14 +99,17 @@ For custom NuGet feeds (e.g., Azure DevOps Artifacts, private NuGet servers), us
 
 Create a secret named `NuGetContext` with the following format:
 
+> [!NOTE]
+> Replace `<your_token>`, `<your_org>`, `<your_project>`, and `<your_feed>` with your actual values.
+
 ```json
-{"token":"YOUR_NUGET_TOKEN","serverUrl":"https://pkgs.dev.azure.com/YOUR_ORG/YOUR_PROJECT/_packaging/YOUR_FEED/nuget/v3/index.json"}
+{"token":"<your_token>","serverUrl":"https://pkgs.dev.azure.com/<your_org>/<your_project>/_packaging/<your_feed>/nuget/v3/index.json"}
 ```
 
 Common NuGet feed URLs:
 
-- **Azure DevOps**: `https://pkgs.dev.azure.com/{org}/{project}/_packaging/{feedName}/nuget/v3/index.json`
-- **GitHub Packages**: `https://nuget.pkg.github.com/{org}/index.json`
+- **Azure DevOps**: `https://pkgs.dev.azure.com/<org>/<project>/_packaging/<feedName>/nuget/v3/index.json`
+- **GitHub Packages**: `https://nuget.pkg.github.com/<org>/index.json`
 - **NuGet.org**: `https://api.nuget.org/v3/index.json`
 
 ### Step 2: Configure Dependency Resolution (Optional)
@@ -114,7 +120,7 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 {
   "trustedNuGetFeeds": [
     {
-      "url": "https://pkgs.dev.azure.com/YOUR_ORG/YOUR_PROJECT/_packaging/YOUR_FEED/nuget/v3/index.json",
+      "url": "https://pkgs.dev.azure.com/<your_org>/<your_project>/_packaging/<your_feed>/nuget/v3/index.json",
       "authTokenSecret": "NuGetContext",
       "patterns": ["*"]
     }
@@ -152,7 +158,7 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 **Repository Secret**: `NuGetContext`
 
 ```json
-{"token":"YOUR_AZURE_DEVOPS_TOKEN","serverUrl":"https://pkgs.dev.azure.com/contoso/BusinessCentral/_packaging/BC-Apps/nuget/v3/index.json"}
+{"token":"<your_token>","serverUrl":"https://pkgs.dev.azure.com/contoso/BusinessCentral/_packaging/BC-Apps/nuget/v3/index.json"}
 ```
 
 **AL-Go-Settings.json**:
