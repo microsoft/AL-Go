@@ -4,6 +4,7 @@ Param(
 
 $gitHubHelperPath = Join-Path $PSScriptRoot 'Github-Helper.psm1'
 $readSettingsModule = Join-Path $PSScriptRoot '.Modules/ReadSettings.psm1'
+$debugLoggingModule = Join-Path $PSScriptRoot '.Modules/DebugLogHelper.psm1'
 if (Test-Path $gitHubHelperPath) {
     Import-Module $gitHubHelperPath
     # If we are adding more dependencies here, then localDevEnv and cloudDevEnv needs to be updated
@@ -11,6 +12,10 @@ if (Test-Path $gitHubHelperPath) {
 
 if (Test-Path $readSettingsModule) {
     Import-Module $readSettingsModule
+}
+
+if (Test-Path $debugLoggingModule) {
+    Import-Module $debugLoggingModule
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -22,7 +27,6 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
@@ -180,69 +184,6 @@ function ConvertTo-HashTable() {
             }
         }
         $ht
-    }
-}
-
-function OutputError {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        throw $message
-    }
-    else {
-        Write-Host "::Error::$($message.Replace("`r",'').Replace("`n",' '))"
-        $host.SetShouldExit(1)
-    }
-}
-
-function OutputWarning {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        Write-Host -ForegroundColor Yellow "WARNING: $message"
-    }
-    else {
-        Write-Host "::Warning::$message"
-    }
-}
-
-function OutputNotice {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        Write-Host $message
-    }
-    else {
-        Write-Host "::Notice::$message"
-    }
-}
-
-function MaskValueInLog {
-    Param(
-        [string] $value
-    )
-
-    if (!$runningLocal) {
-        Write-Host "`r::add-mask::$value"
-    }
-}
-
-function OutputDebug {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        Write-Host $message
-    }
-    else {
-        Write-Host "::Debug::$message"
     }
 }
 
