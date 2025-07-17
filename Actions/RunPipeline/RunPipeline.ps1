@@ -274,7 +274,7 @@ try {
         $imageName = $settings.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
-            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
+            Flush-ContainerHelperCache -cache 'all,exitedcontainers,ALGoContainersOnly' -keepdays $settings.cacheKeepDays
             Write-Host "::endgroup::"
         }
     }
@@ -516,7 +516,7 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps `
-        -NewBcContainer { Param([Hashtable]$parameters) Write-Host "Debug custom container script.."; $parameters.additionalParameters += @("--label creator=AL-Go"); New-BcContainer @parameters; Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' } }
+        -NewBcContainer { Param([Hashtable]$parameters) $parameters.additionalParameters += @("--label creator=AL-Go"); New-BcContainer @parameters; Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' } }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
