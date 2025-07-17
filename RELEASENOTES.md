@@ -9,6 +9,10 @@ AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. A
 - Issue 1722 Check if apps are already installed on a higher version before deploying
 - Issue 1774 Increment Version Number with +0.1 can increment some version numbers twice
 
+### Additional debug logging functionality
+
+We have improved how logging is handled in AL-Go, and now make better use of GitHub built-in extended debug logging functionality. Extended debug logging can be enabled when re-running actions by clicking the 'Enable debug logging' checkbox in the pop-up window. This can be done both for jobs that failed and jobs that succeeded, but did not produce the correct result.
+
 ### Add custom jobs to AL-Go workflows
 
 It is now possible to add custom jobs to AL-Go workflows. The Custom Job needs to be named `CustomJob<something>` and should be placed after all other jobs in the .yaml file. The order of which jobs are executed is determined by the Needs statements. Your custom job will be executed after all jobs specified in the Needs clause in your job and if you need the job to be executed before other jobs, you should add the job name in the Needs clause of that job. See [https://aka.ms/algosettings#customjobs](https://aka.ms/algosettings#customjobs) for details.
