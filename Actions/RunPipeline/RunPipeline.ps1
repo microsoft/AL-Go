@@ -515,7 +515,8 @@ try {
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
-        -uninstallRemovedApps
+        -uninstallRemovedApps `
+        -NewBcContainer { Param([Hashtable]$parameters) Write-Host "Debug custom container script.."; $parameters.additionalParameters += @("--label creator=AL-Go"); New-BcContainer @parameters; Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' } }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
