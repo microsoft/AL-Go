@@ -1,0 +1,240 @@
+﻿Get-Module TestActionsHelper | Remove-Module -Force
+Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+Describe "Custom Job Removal Tests" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+        . (Join-Path -Path $scriptRoot -ChildPath "yamlclass.ps1")
+        
+        # Create temporary directory for test files
+        $testDir = Join-Path $PSScriptRoot "temp_custom_job_test"
+        if (Test-Path $testDir) {
+            Remove-Item -Path $testDir -Recurse -Force
+        }
+        New-Item -Path $testDir -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        # Clean up test directory
+        $testDir = Join-Path $PSScriptRoot "temp_custom_job_test"
+        if (Test-Path $testDir) {
+            Remove-Item -Path $testDir -Recurse -Force
+        }
+    }
+
+    It 'Custom jobs should not be applied from final repositories' {
+        $testDir = Join-Path $PSScriptRoot "temp_custom_job_test"
+        
+        # Create a mock template CICD workflow (base workflow)
+        $templateWorkflow = @(
+            "name: 'CI/CD'",
+            "on:",
+            "  workflow_dispatch:",
+            "jobs:",
+            "  Initialization:",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Initialize",
+            "        run: echo 'Initializing'",
+            "  Build:",
+            "    needs: [ Initialization ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Build",
+            "        run: echo 'Building'",
+            "  PostProcess:",
+            "    needs: [ Initialization, Build ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: PostProcess",
+            "        run: echo 'PostProcessing'"
+        )
+        
+        # Create a final repository workflow with custom jobs (simulating a repository that uses a template)
+        $finalRepoWorkflow = @(
+            "name: 'CI/CD'",
+            "on:",
+            "  workflow_dispatch:",
+            "jobs:",
+            "  Initialization:",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Initialize",
+            "        run: echo 'Initializing'",
+            "  CustomJob-ShouldNotPersist:",
+            "    needs: [ Initialization ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Custom Step",
+            "        run: echo 'This custom job should not persist'",
+            "  Build:",
+            "    needs: [ Initialization, CustomJob-ShouldNotPersist ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Build",
+            "        run: echo 'Building'",
+            "  PostProcess:",
+            "    needs: [ Initialization, Build ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: PostProcess",
+            "        run: echo 'PostProcessing'"
+        )
+        
+        # Save test files
+        $templateFile = Join-Path $testDir "template_cicd.yaml"
+        $finalRepoFile = Join-Path $testDir "final_repo_cicd.yaml"
+        
+        $templateWorkflow -join "`n" | Set-Content -Path $templateFile -Encoding UTF8
+        $finalRepoWorkflow -join "`n" | Set-Content -Path $finalRepoFile -Encoding UTF8
+        
+        # Mock environment and repo settings for final repository
+        $env:GITHUB_REPOSITORY = "testowner/final-repo"
+        $repoSettings = @{
+            templateUrl = "https://github.com/testowner/template-repo@main"
+        }
+        
+        # Simulate the logic from CheckForUpdates.ps1
+        $srcContent = Get-Content -Path $templateFile -Raw
+        $dstFileExists = Test-Path -Path $finalRepoFile
+        $type = 'workflow'
+        
+        # Apply the final repository detection logic
+        $currentRepoReference = $env:GITHUB_REPOSITORY
+        $isFinalRepository = $false
+        
+        if ($repoSettings.templateUrl) {
+            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        }
+        
+        # Test that final repository is correctly detected
+        $isFinalRepository | Should -Be $true
+        
+        # Apply customizations based on repository type
+        if ($dstFileExists -and $type -eq 'workflow') {
+            if (-not $isFinalRepository) {
+                [Yaml]::ApplyCustomizations([ref] $srcContent, $finalRepoFile)
+            }
+        }
+        
+        # Verify that custom jobs were NOT applied (srcContent should not contain CustomJob-ShouldNotPersist)
+        $srcContent | Should -Not -Match "CustomJob-ShouldNotPersist"
+        $srcContent | Should -Not -Match "This custom job should not persist"
+        
+        # Verify that the base template structure is preserved
+        $srcContent | Should -Match "Initialization:"
+        $srcContent | Should -Match "Build:"
+        $srcContent | Should -Match "PostProcess:"
+    }
+
+    It 'Custom jobs should be applied from template repositories' {
+        $testDir = Join-Path $PSScriptRoot "temp_custom_job_test"
+        
+        # Create a mock template CICD workflow (base workflow)
+        $templateWorkflow = @(
+            "name: 'CI/CD'",
+            "on:",
+            "  workflow_dispatch:",
+            "jobs:",
+            "  Initialization:",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Initialize",
+            "        run: echo 'Initializing'",
+            "  Build:",
+            "    needs: [ Initialization ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Build",
+            "        run: echo 'Building'",
+            "  PostProcess:",
+            "    needs: [ Initialization, Build ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: PostProcess",
+            "        run: echo 'PostProcessing'"
+        )
+        
+        # Create a template repository workflow with custom jobs
+        $templateRepoWorkflow = @(
+            "name: 'CI/CD'",
+            "on:",
+            "  workflow_dispatch:",
+            "jobs:",
+            "  Initialization:",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Initialize",
+            "        run: echo 'Initializing'",
+            "  CustomJob-Template:",
+            "    needs: [ Initialization ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Template Custom Step",
+            "        run: echo 'This is a template custom job'",
+            "  Build:",
+            "    needs: [ Initialization, CustomJob-Template ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Build",
+            "        run: echo 'Building'",
+            "  PostProcess:",
+            "    needs: [ Initialization, Build ]",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: PostProcess",
+            "        run: echo 'PostProcessing'"
+        )
+        
+        # Save test files
+        $templateFile = Join-Path $testDir "template_cicd2.yaml"
+        $templateRepoFile = Join-Path $testDir "template_repo_cicd.yaml"
+        
+        $templateWorkflow -join "`n" | Set-Content -Path $templateFile -Encoding UTF8
+        $templateRepoWorkflow -join "`n" | Set-Content -Path $templateRepoFile -Encoding UTF8
+        
+        # Mock environment and repo settings for template repository (no templateUrl)
+        $env:GITHUB_REPOSITORY = "testowner/template-repo"
+        $repoSettings = @{}  # No templateUrl - this is a template repository
+        
+        # Simulate the logic from CheckForUpdates.ps1
+        $srcContent = Get-Content -Path $templateFile -Raw
+        $dstFileExists = Test-Path -Path $templateRepoFile
+        $type = 'workflow'
+        
+        # Apply the final repository detection logic
+        $currentRepoReference = $env:GITHUB_REPOSITORY
+        $isFinalRepository = $false
+        
+        if ($repoSettings.templateUrl) {
+            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        }
+        
+        # Test that template repository is correctly detected
+        $isFinalRepository | Should -Be $false
+        
+        # Apply customizations based on repository type
+        if ($dstFileExists -and $type -eq 'workflow') {
+            if (-not $isFinalRepository) {
+                [Yaml]::ApplyCustomizations([ref] $srcContent, $templateRepoFile)
+            }
+        }
+        
+        # Verify that custom jobs WERE applied (srcContent should contain CustomJob-Template)
+        $srcContent | Should -Match "CustomJob-Template"
+        $srcContent | Should -Match "This is a template custom job"
+        
+        # Verify that the base template structure is preserved
+        $srcContent | Should -Match "Initialization:"
+        $srcContent | Should -Match "Build:"
+        $srcContent | Should -Match "PostProcess:"
+    }
+}

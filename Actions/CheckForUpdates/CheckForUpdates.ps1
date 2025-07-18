@@ -254,8 +254,25 @@ foreach($checkfile in $checkfiles) {
 
                 if ($dstFileExists) {
                     if ($type -eq 'workflow') {
-                        Write-Host "Apply customizations from current repository: $dstFile"
-                        [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
+                        # Determine if current repository is a final repository (has templateUrl pointing to another repo)
+                        # Final repositories should not have custom jobs applied to prevent persistence of removed template jobs
+                        $currentRepoReference = $env:GITHUB_REPOSITORY
+                        $isFinalRepository = $false
+                        
+                        if ($repoSettings.templateUrl) {
+                            # Extract repository reference from templateUrl (e.g., "microsoft/AL-Go-PTE" from "https://github.com/microsoft/AL-Go-PTE@main")
+                            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+                            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+                            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+                        }
+                        
+                        if ($isFinalRepository) {
+                            Write-Host "Skipping custom jobs from current repository (final repository using template: $($repoSettings.templateUrl)): $dstFile"
+                        }
+                        else {
+                            Write-Host "Apply customizations from current repository: $dstFile"
+                            [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
+                        }
                     }
 
                     # file exists, compare and add to $updateFiles if different
