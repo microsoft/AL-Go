@@ -149,51 +149,51 @@ Describe "CheckForUpdates Action Tests" {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
-        
+
         # Mock environment variables
         $env:GITHUB_REPOSITORY = "testowner/testrepo"
-        
+
         # Test scenario 1: Final repository using template
         $repoSettings = @{
             templateUrl = "https://github.com/testowner/template-repo@main"
         }
-        
+
         # Extract repository reference logic (mirroring the actual code)
         $currentRepoReference = $env:GITHUB_REPOSITORY
         $isFinalRepository = $false
-        
+
         if ($repoSettings.templateUrl) {
             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
             $isFinalRepository = $templateRepoReference -ne $currentRepoReference
         }
-        
+
         $isFinalRepository | Should -Be $true -Because "Repository using template should be detected as final repository"
-        
+
         # Test scenario 2: Template repository (no templateUrl)
         $repoSettings = @{}
-        
+
         $isFinalRepository = $false
         if ($repoSettings.templateUrl) {
             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
             $isFinalRepository = $templateRepoReference -ne $currentRepoReference
         }
-        
+
         $isFinalRepository | Should -Be $false -Because "Repository without templateUrl should not be detected as final repository"
-        
+
         # Test scenario 3: Repository referencing itself (edge case)
         $repoSettings = @{
             templateUrl = "https://github.com/testowner/testrepo@main"
         }
-        
+
         $isFinalRepository = $false
         if ($repoSettings.templateUrl) {
             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
             $isFinalRepository = $templateRepoReference -ne $currentRepoReference
         }
-        
+
         $isFinalRepository | Should -Be $false -Because "Repository referencing itself should not be detected as final repository"
     }
 }

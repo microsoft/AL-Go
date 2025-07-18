@@ -258,14 +258,14 @@ foreach($checkfile in $checkfiles) {
                         # Final repositories should not have custom jobs applied to prevent persistence of removed template jobs
                         $currentRepoReference = $env:GITHUB_REPOSITORY
                         $isFinalRepository = $false
-                        
+
                         if ($repoSettings.templateUrl) {
                             # Extract repository reference from templateUrl (e.g., "microsoft/AL-Go-PTE" from "https://github.com/microsoft/AL-Go-PTE@main")
                             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
                             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
                             $isFinalRepository = $templateRepoReference -ne $currentRepoReference
                         }
-                        
+
                         if ($isFinalRepository) {
                             Write-Host "Skipping custom jobs from current repository (final repository using template: $($repoSettings.templateUrl)): $dstFile"
                         }
