@@ -59,12 +59,6 @@ GitHub Packages provides a free NuGet feed for each GitHub organization. This is
 
 Create an organizational secret named `GitHubPackagesContext` with the following compressed JSON format:
 
-> [!TIP]
-> Use the BcContainerHelper function `New-ALGoNuGetContext` to create a correctly formatted JSON structure.
-
-> [!WARNING]
-> The secret must be in compressed JSON format (single line). Multi-line JSON will break AL-Go functionality as curly brackets will be masked in logs.
-
 ```json
 {"token":"ghp_<your_token>","serverUrl":"https://nuget.pkg.github.com/<your_org>/index.json"}
 ```
@@ -73,6 +67,12 @@ Replace:
 
 - `<your_token>` with your personal access token
 - `<your_org>` with your GitHub organization name
+
+> [!TIP]
+> Use the BcContainerHelper function `New-ALGoNuGetContext` to create a correctly formatted JSON structure.
+
+> [!WARNING]
+> The secret must be in compressed JSON format (single line). Multi-line JSON will break AL-Go functionality as curly brackets will be masked in logs.
 
 ### Step 3: Configure Repository Settings (Optional)
 
