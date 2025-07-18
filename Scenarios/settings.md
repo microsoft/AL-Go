@@ -408,7 +408,10 @@ In the `needs` property, you specify which jobs should be complete before this j
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
 ```
 
-Custom jobs will be preserved when running Update AL-Go System Files.
+Custom jobs will be preserved when running Update AL-Go System Files, with the following behavior:
+
+- **Template repositories** (repositories without a `templateUrl` setting): Custom jobs are preserved and applied during updates
+- **Final repositories** (repositories with a `templateUrl` pointing to another repository): Custom jobs from the current repository are NOT applied during updates to prevent persistence of jobs removed from the template
 
 **Note** that installing [apps from the GitHub marketplace](https://github.com/marketplace?type=apps) might require you to add custom jobs or steps to some of the workflows to get the right integration. In custom jobs, you can use any [actions from the GitHub marketplace](https://github.com/marketplace?type=actions).
 
