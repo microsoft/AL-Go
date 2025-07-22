@@ -94,24 +94,37 @@ Describe "Custom Job Removal Tests" {
 
         # Mock environment and repo settings for final repository
         $env:GITHUB_REPOSITORY = "testowner/final-repo"
-        $repoSettings = @{
-            templateUrl = "https://github.com/testowner/template-repo@main"
-        }
+        $env:GITHUB_API_URL = "https://api.github.com"
+        $repoSettings = @{}
+
+        # Mock GitHub API for final repository (not a template)
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": false}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/final-repo" }
 
         # Simulate the logic from CheckForUpdates.ps1
         $srcContent = Get-Content -Path $templateFile -Raw
         $dstFileExists = Test-Path -Path $finalRepoFile
         $type = 'workflow'
 
-        # Apply the final repository detection logic
+        # Apply the template repository detection logic (using GitHub API)
+        $token = "mock-token"
         $isFinalRepository = $false
 
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
-            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
-            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
         # Test that final repository is correctly detected
@@ -200,24 +213,39 @@ Describe "Custom Job Removal Tests" {
         $templateWorkflow -join "`n" | Set-Content -Path $templateFile -Encoding UTF8
         $templateRepoWorkflow -join "`n" | Set-Content -Path $templateRepoFile -Encoding UTF8
 
-        # Mock environment and repo settings for template repository (no templateUrl)
+        # Mock environment and repo settings for template repository
         $env:GITHUB_REPOSITORY = "testowner/template-repo"
-        $repoSettings = @{}  # No templateUrl - this is a template repository
+        $env:GITHUB_API_URL = "https://api.github.com"
+        $repoSettings = @{}
+
+        # Mock GitHub API for template repository (marked as template)
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": true}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/template-repo" }
 
         # Simulate the logic from CheckForUpdates.ps1
         $srcContent = Get-Content -Path $templateFile -Raw
         $dstFileExists = Test-Path -Path $templateRepoFile
         $type = 'workflow'
 
-        # Apply the final repository detection logic
+        # Apply the template repository detection logic (using GitHub API)
+        $token = "mock-token"
         $isFinalRepository = $false
 
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
-            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
-            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
         # Test that template repository is correctly detected
@@ -308,16 +336,24 @@ Describe "Custom Job Removal Tests" {
 
         # Mock environment and repo settings for final repository with allowCustomJobsInEndRepos = true
         $env:GITHUB_REPOSITORY = "testowner/final-repo"
+        $env:GITHUB_API_URL = "https://api.github.com"
         $repoSettings = @{
-            templateUrl = "https://github.com/testowner/template-repo@main"
             allowCustomJobsInEndRepos = $true
         }
+
+        # Mock GitHub API for final repository (not a template)
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": false}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/final-repo" }
 
         # Test the workflow processing logic (simulating CheckForUpdates.ps1 behavior)
         [Yaml]$templateYaml = [Yaml]::load($templateFile)
         $srcContent = $templateYaml.content -join "`n"
 
         # Simulate the repository type detection and custom job handling
+        $token = "mock-token"
         $isFinalRepository = $false
         $allowCustomJobsInEndRepos = $false
 
@@ -325,12 +361,18 @@ Describe "Custom Job Removal Tests" {
             $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
         }
 
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
-            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
-            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
         # Verify that it's detected as a final repository
@@ -356,7 +398,6 @@ Describe "Custom Job Removal Tests" {
 
     It 'allowCustomJobsInEndRepos setting defaults to false when not specified' {
         $repoSettings = @{
-            templateUrl = "https://github.com/testowner/template-repo@main"
             # allowCustomJobsInEndRepos is not specified - should default to false
         }
 
@@ -369,55 +410,69 @@ Describe "Custom Job Removal Tests" {
         $allowCustomJobsInEndRepos | Should -Be $false
     }
 
-    It 'Repositories using standard AL-Go templates should NOT be considered final repositories' {
-        $standardTemplates = @(
-            "https://github.com/microsoft/AL-Go-PTE@main",
-            "https://github.com/microsoft/AL-Go-AppSource@main", 
-            "https://github.com/microsoft/AL-Go@main"
-        )
+    It 'GitHub template repositories should always allow custom jobs' {
+        # Mock environment variables
+        $env:GITHUB_REPOSITORY = "testowner/template-repo"
+        $env:GITHUB_API_URL = "https://api.github.com"
 
-        foreach ($templateUrl in $standardTemplates) {
-            $repoSettings = @{
-                templateUrl = $templateUrl
+        # Mock GitHub API for template repository
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": true}'
             }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/template-repo" }
 
-            $isFinalRepository = $false
-            if ($repoSettings.templateUrl) {
-                $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-                $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-                # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
-                $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
-                $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+        $token = "mock-token"
+        $isFinalRepository = $false
+
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
             }
-
-            # Standard AL-Go templates should NOT be considered final repositories
-            $isFinalRepository | Should -Be $false -Because "Repository using $templateUrl should not be considered a final repository"
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
         }
+        catch {
+            $isFinalRepository = $true
+        }
+
+        # Template repositories should NOT be detected as final repositories
+        $isFinalRepository | Should -Be $false -Because "GitHub template repository should always allow custom jobs"
     }
 
-    It 'Repositories using custom templates should be considered final repositories' {
-        $customTemplates = @(
-            "https://github.com/myorg/my-custom-template@main",
-            "https://github.com/company/custom-algo-template@v1.0",
-            "https://github.com/team/modified-template@development"
-        )
+    It 'Non-template repositories should be considered final repositories' {
+        # Mock environment variables
+        $env:GITHUB_REPOSITORY = "testowner/final-repo"
+        $env:GITHUB_API_URL = "https://api.github.com"
 
-        foreach ($templateUrl in $customTemplates) {
-            $repoSettings = @{
-                templateUrl = $templateUrl
+        # Mock GitHub API for non-template repository
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": false}'
             }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/final-repo" }
 
-            $isFinalRepository = $false
-            if ($repoSettings.templateUrl) {
-                $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-                $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-                # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
-                $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
-                $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+        $token = "mock-token"
+        $isFinalRepository = $false
+
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
             }
-
-            # Custom templates should be considered final repositories
-            $isFinalRepository | Should -Be $true -Because "Repository using $templateUrl should be considered a final repository"
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
         }
+        catch {
+            $isFinalRepository = $true
+        }
+
+        # Non-template repositories should be detected as final repositories
+        $isFinalRepository | Should -Be $true -Because "Non-template repository should be considered a final repository"
     }
 }

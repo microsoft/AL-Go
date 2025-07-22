@@ -144,69 +144,99 @@ Describe "CheckForUpdates Action Tests" {
         }
     }
 
-    It 'Test final repository detection logic' {
-        # Test the repository detection logic used to determine if custom jobs should be applied
+    It 'Test template repository detection logic' {
+        # Test the repository detection logic using GitHub API to determine if repository is a template
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+        Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
 
         # Mock environment variables
         $env:GITHUB_REPOSITORY = "testowner/testrepo"
+        $env:GITHUB_API_URL = "https://api.github.com"
 
-        # Test scenario 1: Final repository using template
-        $repoSettings = @{
-            templateUrl = "https://github.com/testowner/template-repo@main"
-        }
+        # Mock InvokeWebRequest for template repository
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": true}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/testrepo" }
 
-        # Extract repository reference logic (mirroring the actual code)
-        $currentRepoReference = $env:GITHUB_REPOSITORY
+        # Test scenario 1: Template repository (GitHub template)
+        $token = "mock-token"
         $isFinalRepository = $false
 
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
-        $isFinalRepository | Should -Be $true -Because "Repository using template should be detected as final repository"
+        $isFinalRepository | Should -Be $false -Because "GitHub template repository should not be detected as final repository"
 
-        # Test scenario 2: Template repository (no templateUrl)
-        $repoSettings = @{}
+        # Mock InvokeWebRequest for final repository
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": false}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/testrepo" }
+
+        # Test scenario 2: Final repository (not a GitHub template)
+        $isFinalRepository = $false
+
+        try {
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
+        }
+
+        $isFinalRepository | Should -Be $true -Because "Non-template repository should be detected as final repository"
+
+        # Test scenario 3: API error (fallback behavior)
+        Mock InvokeWebRequest -MockWith {
+            throw "API Error"
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/testrepo" }
 
         $isFinalRepository = $false
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+
+        try {
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
-        $isFinalRepository | Should -Be $false -Because "Repository without templateUrl should not be detected as final repository"
-
-        # Test scenario 3: Repository referencing itself (edge case)
-        $repoSettings = @{
-            templateUrl = "https://github.com/testowner/testrepo@main"
-        }
-
-        $isFinalRepository = $false
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
-        }
-
-        $isFinalRepository | Should -Be $false -Because "Repository referencing itself should not be detected as final repository"
+        $isFinalRepository | Should -Be $true -Because "When API fails, repository should be assumed to be final repository"
     }
 
     It 'Test allowCustomJobsInEndRepos setting behavior' {
-        # Test the allowCustomJobsInEndRepos setting logic used to determine if custom jobs should be applied
+        # Test the allowCustomJobsInEndRepos setting logic for template vs final repositories
         $env:GITHUB_REPOSITORY = "testowner/final-repo"
+        $env:GITHUB_API_URL = "https://api.github.com"
+        Import-Module (Join-Path $PSScriptRoot "..\Actions\CheckForUpdates\..\Github-Helper.psm1") -DisableNameChecking -Force
 
-        # Test scenario 1: Final repository with allowCustomJobsInEndRepos = false (default)
-        $repoSettings = @{
-            templateUrl = "https://github.com/testowner/template-repo@main"
-        }
+        # Test scenario 1: Final repository (not template) with allowCustomJobsInEndRepos = false (default)
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": false}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/final-repo" }
 
-        $currentRepoReference = $env:GITHUB_REPOSITORY
+        $repoSettings = @{}
+        $token = "mock-token"
         $isFinalRepository = $false
         $allowCustomJobsInEndRepos = $false
 
@@ -214,10 +244,18 @@ Describe "CheckForUpdates Action Tests" {
             $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
         }
 
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        try {
+            $headers = @{
+                "Accept" = "application/vnd.github+json"
+                "Authorization" = "Bearer $token"
+                "X-GitHub-Api-Version" = "2022-11-28"
+            }
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
         $shouldSkipCustomJobs = $isFinalRepository -and -not $allowCustomJobsInEndRepos
@@ -225,7 +263,6 @@ Describe "CheckForUpdates Action Tests" {
 
         # Test scenario 2: Final repository with allowCustomJobsInEndRepos = true
         $repoSettings = @{
-            templateUrl = "https://github.com/testowner/template-repo@main"
             allowCustomJobsInEndRepos = $true
         }
 
@@ -238,15 +275,29 @@ Describe "CheckForUpdates Action Tests" {
         $shouldSkipCustomJobs | Should -Be $false -Because "Final repository with allowCustomJobsInEndRepos = true should NOT skip custom jobs"
 
         # Test scenario 3: Template repository (should always apply custom jobs regardless of setting)
+        Mock InvokeWebRequest -MockWith {
+            return @{
+                Content = '{"is_template": true}'
+            }
+        } -ParameterFilter { $uri -eq "https://api.github.com/repos/testowner/final-repo" }
+
         $repoSettings = @{
             allowCustomJobsInEndRepos = $false
         }
 
+        $allowCustomJobsInEndRepos = $false
+        if ($repoSettings.ContainsKey('allowCustomJobsInEndRepos')) {
+            $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
+        }
+
         $isFinalRepository = $false
-        if ($repoSettings.templateUrl) {
-            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
-            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        try {
+            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+            $isTemplateRepository = $repoInfo.is_template
+            $isFinalRepository = -not $isTemplateRepository
+        }
+        catch {
+            $isFinalRepository = $true
         }
 
         $shouldSkipCustomJobs = $isFinalRepository -and -not $allowCustomJobsInEndRepos
