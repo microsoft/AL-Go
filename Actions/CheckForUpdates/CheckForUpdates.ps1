@@ -254,8 +254,43 @@ foreach($checkfile in $checkfiles) {
 
                 if ($dstFileExists) {
                     if ($type -eq 'workflow') {
-                        Write-Host "Apply customizations from current repository: $dstFile"
-                        [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
+                        # Determine if current repository is a final repository (has templateUrl pointing to another repo)
+                        # Final repositories should not have custom jobs applied to prevent persistence of removed template jobs
+                        # unless allowCustomJobsInEndRepos is explicitly set to true
+                        $isFinalRepository = $false
+                        $allowCustomJobsInEndRepos = $false
+
+                        if ($repoSettings.ContainsKey('allowCustomJobsInEndRepos')) {
+                            $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
+                        }
+
+                        # Check if current repository is a GitHub template repository
+                        # Template repositories should always allow custom jobs
+                        # Final repositories (non-template) should respect the allowCustomJobsInEndRepos setting
+                        try {
+                            $headers = @{
+                                "Accept" = "application/vnd.github+json"
+                                "Authorization" = "Bearer $token"
+                                "X-GitHub-Api-Version" = "2022-11-28"
+                            }
+                            $repoInfo = (InvokeWebRequest -Headers $headers -Uri "$($env:GITHUB_API_URL)/repos/$($env:GITHUB_REPOSITORY)").Content | ConvertFrom-Json
+                            $isTemplateRepository = $repoInfo.is_template
+
+                            # Final repository is one that is NOT marked as a template repository
+                            $isFinalRepository = -not $isTemplateRepository
+                        }
+                        catch {
+                            Write-Host "Warning: Could not determine if repository is a template. Assuming it's a final repository."
+                            $isFinalRepository = $true
+                        }
+
+                        if ($isFinalRepository -and -not $allowCustomJobsInEndRepos) {
+                            Write-Host "Skipping custom jobs from current repository (final repository, not marked as template, allowCustomJobsInEndRepos: $allowCustomJobsInEndRepos): $dstFile"
+                        }
+                        else {
+                            Write-Host "Apply customizations from current repository: $dstFile"
+                            [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
+                        }
                     }
 
                     # file exists, compare and add to $updateFiles if different
