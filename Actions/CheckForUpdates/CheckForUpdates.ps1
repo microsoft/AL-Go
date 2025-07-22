@@ -257,7 +257,6 @@ foreach($checkfile in $checkfiles) {
                         # Determine if current repository is a final repository (has templateUrl pointing to another repo)
                         # Final repositories should not have custom jobs applied to prevent persistence of removed template jobs
                         # unless allowCustomJobsInEndRepos is explicitly set to true
-                        $currentRepoReference = $env:GITHUB_REPOSITORY
                         $isFinalRepository = $false
                         $allowCustomJobsInEndRepos = $false
 
@@ -269,7 +268,9 @@ foreach($checkfile in $checkfiles) {
                             # Extract repository reference from templateUrl (e.g., "microsoft/AL-Go-PTE" from "https://github.com/microsoft/AL-Go-PTE@main")
                             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
                             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-                            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+                            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
+                            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
+                            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
                         }
 
                         if ($isFinalRepository -and -not $allowCustomJobsInEndRepos) {

@@ -104,13 +104,14 @@ Describe "Custom Job Removal Tests" {
         $type = 'workflow'
 
         # Apply the final repository detection logic
-        $currentRepoReference = $env:GITHUB_REPOSITORY
         $isFinalRepository = $false
 
         if ($repoSettings.templateUrl) {
             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
+            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
+            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
         }
 
         # Test that final repository is correctly detected
@@ -209,13 +210,14 @@ Describe "Custom Job Removal Tests" {
         $type = 'workflow'
 
         # Apply the final repository detection logic
-        $currentRepoReference = $env:GITHUB_REPOSITORY
         $isFinalRepository = $false
 
         if ($repoSettings.templateUrl) {
             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
+            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
+            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
         }
 
         # Test that template repository is correctly detected
@@ -316,7 +318,6 @@ Describe "Custom Job Removal Tests" {
         $srcContent = $templateYaml.content -join "`n"
 
         # Simulate the repository type detection and custom job handling
-        $currentRepoReference = $env:GITHUB_REPOSITORY
         $isFinalRepository = $false
         $allowCustomJobsInEndRepos = $false
 
@@ -327,7 +328,9 @@ Describe "Custom Job Removal Tests" {
         if ($repoSettings.templateUrl) {
             $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
             $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
-            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+            # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
+            $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
+            $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
         }
 
         # Verify that it's detected as a final repository
@@ -364,5 +367,57 @@ Describe "Custom Job Removal Tests" {
 
         # Should default to false
         $allowCustomJobsInEndRepos | Should -Be $false
+    }
+
+    It 'Repositories using standard AL-Go templates should NOT be considered final repositories' {
+        $standardTemplates = @(
+            "https://github.com/microsoft/AL-Go-PTE@main",
+            "https://github.com/microsoft/AL-Go-AppSource@main", 
+            "https://github.com/microsoft/AL-Go@main"
+        )
+
+        foreach ($templateUrl in $standardTemplates) {
+            $repoSettings = @{
+                templateUrl = $templateUrl
+            }
+
+            $isFinalRepository = $false
+            if ($repoSettings.templateUrl) {
+                $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+                $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+                # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
+                $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
+                $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+            }
+
+            # Standard AL-Go templates should NOT be considered final repositories
+            $isFinalRepository | Should -Be $false -Because "Repository using $templateUrl should not be considered a final repository"
+        }
+    }
+
+    It 'Repositories using custom templates should be considered final repositories' {
+        $customTemplates = @(
+            "https://github.com/myorg/my-custom-template@main",
+            "https://github.com/company/custom-algo-template@v1.0",
+            "https://github.com/team/modified-template@development"
+        )
+
+        foreach ($templateUrl in $customTemplates) {
+            $repoSettings = @{
+                templateUrl = $templateUrl
+            }
+
+            $isFinalRepository = $false
+            if ($repoSettings.templateUrl) {
+                $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+                $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+                # Final repository is one where templateUrl doesn't point to standard AL-Go repositories
+                $standardAlGoRepos = @('microsoft/AL-Go-PTE', 'microsoft/AL-Go-AppSource', 'microsoft/AL-Go')
+                $isFinalRepository = $templateRepoReference -notin $standardAlGoRepos
+            }
+
+            # Custom templates should be considered final repositories
+            $isFinalRepository | Should -Be $true -Because "Repository using $templateUrl should be considered a final repository"
+        }
     }
 }
