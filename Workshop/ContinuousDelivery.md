@@ -70,7 +70,29 @@ Continuous delivery to **AppSource** is supported by the AppSource template and 
 
 ## NuGet
 
-Still work-in-progress. Delivery to NuGet is supposed to be delivery to a NuGet feed, where your partners can get access to your apps or runtime packages. This section will be updated when we release delivery to NuGet in it's final version.
+AL-Go for GitHub supports experimental delivery to NuGet feeds and GitHub Packages. This enables you to automatically publish your apps to package repositories for distribution and dependency management.
+
+> [!NOTE]
+> **Experimental Feature**: NuGet and GitHub Packages delivery is currently experimental but stable. The functionality has been used in production by several partners for over 6 months.
+
+For comprehensive documentation on setting up NuGet and GitHub Packages delivery, including detailed configuration examples and troubleshooting, see the [DeliveryTargets and NuGet/GitHub Packages](../Scenarios/DeliveryTargets.md) guide.
+
+### Quick Setup for GitHub Packages
+
+1. **Create Personal Access Token**: Create a classic personal access token with `write:packages` scope
+1. **Create Organizational Secret**: Create `GitHubPackagesContext` secret with format:
+   ```json
+   {"token":"ghp_<your_token>","serverUrl":"https://nuget.pkg.github.com/<your_org>/index.json"}
+   ```
+1. **Run CI/CD**: Your apps will automatically be published to GitHub Packages after successful builds
+
+### Quick Setup for Custom NuGet Feed
+
+1. **Create NuGetContext Secret**: Create `NuGetContext` secret with your custom feed URL and token
+1. **Configure Dependency Resolution**: Add your feed to `trustedNuGetFeeds` setting if you want to use it for dependencies
+1. **Run CI/CD**: Your apps will be delivered to the specified NuGet feed
+
+For detailed step-by-step instructions, configuration examples, and troubleshooting, refer to the [comprehensive DeliveryTargets guide](../Scenarios/DeliveryTargets.md).
 
 ## Custom delivery
 
