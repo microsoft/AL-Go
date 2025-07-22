@@ -196,6 +196,62 @@ Describe "CheckForUpdates Action Tests" {
 
         $isFinalRepository | Should -Be $false -Because "Repository referencing itself should not be detected as final repository"
     }
+
+    It 'Test allowCustomJobsInEndRepos setting behavior' {
+        # Test the allowCustomJobsInEndRepos setting logic used to determine if custom jobs should be applied
+        $env:GITHUB_REPOSITORY = "testowner/final-repo"
+
+        # Test scenario 1: Final repository with allowCustomJobsInEndRepos = false (default)
+        $repoSettings = @{
+            templateUrl = "https://github.com/testowner/template-repo@main"
+        }
+
+        $currentRepoReference = $env:GITHUB_REPOSITORY
+        $isFinalRepository = $false
+        $allowCustomJobsInEndRepos = $false
+
+        if ($repoSettings.ContainsKey('allowCustomJobsInEndRepos')) {
+            $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
+        }
+
+        if ($repoSettings.templateUrl) {
+            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        }
+
+        $shouldSkipCustomJobs = $isFinalRepository -and -not $allowCustomJobsInEndRepos
+        $shouldSkipCustomJobs | Should -Be $true -Because "Final repository with allowCustomJobsInEndRepos = false should skip custom jobs"
+
+        # Test scenario 2: Final repository with allowCustomJobsInEndRepos = true
+        $repoSettings = @{
+            templateUrl = "https://github.com/testowner/template-repo@main"
+            allowCustomJobsInEndRepos = $true
+        }
+
+        $allowCustomJobsInEndRepos = $false
+        if ($repoSettings.ContainsKey('allowCustomJobsInEndRepos')) {
+            $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
+        }
+
+        $shouldSkipCustomJobs = $isFinalRepository -and -not $allowCustomJobsInEndRepos
+        $shouldSkipCustomJobs | Should -Be $false -Because "Final repository with allowCustomJobsInEndRepos = true should NOT skip custom jobs"
+
+        # Test scenario 3: Template repository (should always apply custom jobs regardless of setting)
+        $repoSettings = @{
+            allowCustomJobsInEndRepos = $false
+        }
+
+        $isFinalRepository = $false
+        if ($repoSettings.templateUrl) {
+            $templateRepoUrl = $repoSettings.templateUrl.Split('@')[0]
+            $templateRepoReference = $templateRepoUrl.Split('/')[-2..-1] -join '/'
+            $isFinalRepository = $templateRepoReference -ne $currentRepoReference
+        }
+
+        $shouldSkipCustomJobs = $isFinalRepository -and -not $allowCustomJobsInEndRepos
+        $shouldSkipCustomJobs | Should -Be $false -Because "Template repository should always apply custom jobs regardless of allowCustomJobsInEndRepos setting"
+    }
 }
 
 Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {

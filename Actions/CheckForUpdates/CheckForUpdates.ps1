@@ -256,8 +256,14 @@ foreach($checkfile in $checkfiles) {
                     if ($type -eq 'workflow') {
                         # Determine if current repository is a final repository (has templateUrl pointing to another repo)
                         # Final repositories should not have custom jobs applied to prevent persistence of removed template jobs
+                        # unless allowCustomJobsInEndRepos is explicitly set to true
                         $currentRepoReference = $env:GITHUB_REPOSITORY
                         $isFinalRepository = $false
+                        $allowCustomJobsInEndRepos = $false
+
+                        if ($repoSettings.ContainsKey('allowCustomJobsInEndRepos')) {
+                            $allowCustomJobsInEndRepos = $repoSettings.allowCustomJobsInEndRepos
+                        }
 
                         if ($repoSettings.templateUrl) {
                             # Extract repository reference from templateUrl (e.g., "microsoft/AL-Go-PTE" from "https://github.com/microsoft/AL-Go-PTE@main")
@@ -266,8 +272,8 @@ foreach($checkfile in $checkfiles) {
                             $isFinalRepository = $templateRepoReference -ne $currentRepoReference
                         }
 
-                        if ($isFinalRepository) {
-                            Write-Host "Skipping custom jobs from current repository (final repository using template: $($repoSettings.templateUrl)): $dstFile"
+                        if ($isFinalRepository -and -not $allowCustomJobsInEndRepos) {
+                            Write-Host "Skipping custom jobs from current repository (final repository using template: $($repoSettings.templateUrl), allowCustomJobsInEndRepos: $allowCustomJobsInEndRepos): $dstFile"
                         }
                         else {
                             Write-Host "Apply customizations from current repository: $dstFile"
