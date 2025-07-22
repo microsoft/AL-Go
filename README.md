@@ -36,6 +36,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 1. [Enable KeyVault access for your AppSource App during development and/or tests](Scenarios/EnableKeyVaultForAppSourceApp.md)
 1. [Set up your own GitHub runner to increase build performance](Scenarios/SelfHostedGitHubRunner.md)
 1. [Introducing a dependency to another GitHub repository](Scenarios/AppDependencies.md)
+1. [DeliveryTargets and NuGet/GitHub Packages](Scenarios/DeliveryTargets.md)
 1. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 1. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
 1. [Publish your app to AppSource](Scenarios/PublishToAppSource.md)
