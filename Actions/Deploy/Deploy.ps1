@@ -240,18 +240,21 @@ if (Test-Path $artifactsFolder -PathType Container) {
             $refname = (GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token).Replace('/','_')
         }
         Write-Host "project '$project'"
-
+        
         $allApps = @()
+        OutputDebug -message "projectApps filter: $project-$refname-$($buildMode)Apps-$artifactVersionFilter"
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
         $projectTestApps = @()
         if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
             Write-Host "Including test apps for deployment"
+            OutputDebug -message "projectTestApps filter: $project-$refname-$($buildMode)TestApps-$artifactVersionFilter"
             $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
         }
         if ($deploymentSettings.excludeAppIds) {
             Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
         }
         if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
+            OutputDebug -message "projectDependencies filter: $project-$refname-$($buildMode)Dependencies-$artifactVersionFilter/*.app"
             $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
         }
         if (!($projectApps)) {
