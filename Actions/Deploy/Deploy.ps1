@@ -237,7 +237,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
                 throw "Invalid PR id: $prId"
             }
             $artifactVersionFilter = "PR$prId-*"
-            $refname = GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token
+            $refname = (GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token).Replace('/','_')
         }
         Write-Host "project '$project'"
 
