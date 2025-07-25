@@ -240,7 +240,7 @@ if (Test-Path $artifactsFolder -PathType Container) {
             $refname = (GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token).Replace('/','_')
         }
         Write-Host "project '$project'"
-        
+
         $allApps = @()
         OutputDebug -message "projectApps filter: $project-$refname-$($buildMode)Apps-$artifactVersionFilter"
         $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
