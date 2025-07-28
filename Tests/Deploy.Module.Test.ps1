@@ -2,6 +2,18 @@ Import-Module (Join-Path $PSScriptRoot '../Actions/Github-Helper.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/DebugLogHelper.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '../Actions/Deploy/Deploy.psm1') -Force
 
+function Get-AppJsonFromAppFile {
+    param($appFile)
+    # This is just a stub - will be mocked anyway
+    throw "This function should be mocked in tests"
+}
+
+function Sort-AppFilesByDependencies {
+    param($appFiles, $unknownDependencies)
+    # This is just a stub - will be mocked anyway
+    throw "This function should be mocked in tests"
+}
+
 InModuleScope Deploy { # Allows testing of private functions
     Describe "Deploy" {
         BeforeEach {
