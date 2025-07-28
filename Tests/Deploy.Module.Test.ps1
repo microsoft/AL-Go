@@ -28,7 +28,7 @@ InModuleScope Deploy { # Allows testing of private functions
             Mock OutputDebugFunctionCall { }
             Mock OutputGroupStart { }
             Mock OutputGroupEnd { }
-            # Mock OutputDebug { }
+            Mock OutputDebug { }
             Mock OutputWarning { }
             Mock Get-AppJsonFromAppFile { 
                 return @{
