@@ -44,9 +44,6 @@ InModuleScope Deploy { # Allows testing of private functions
             }
             Mock Sort-AppFilesByDependencies { }
             Mock Write-Host { }
-
-            # Mock global variables
-            $global:TestsTestLibrariesAppId = "5d86850b-0d76-4eca-bd7b-951ad998e997"
         }
 
         AfterEach {
