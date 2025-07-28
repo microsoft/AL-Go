@@ -48,13 +48,16 @@ function GetAppsAndDependenciesFromArtifacts {
         [Parameter(Mandatory = $true)]
         [hashtable] $deploymentSettings,
         [Parameter(Mandatory = $false)]
-        [string] $artifactsVersion = ''
+        [string] $artifactsVersion = '',
+        [Parameter(Mandatory = $false)]
+        [string] $buildMode = ''
     )
     OutputDebugFunctionCall
     OutputGroupStart -Message "GetAppsAndDependenciesFromArtifacts"
     $apps = @()
     $dependencies = @()
     $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
+    $TestsTestLibrariesAppId = "5d86850b-0d76-4eca-bd7b-951ad998e997"
     if (Test-Path $artifactsFolder -PathType Container) {
         $deploymentSettings.Projects.Split(',') | ForEach-Object {
             $project = $_.Replace('\','_').Replace('/','_')
