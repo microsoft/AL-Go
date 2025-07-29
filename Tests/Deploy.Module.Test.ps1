@@ -127,8 +127,8 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 New-Item -Path $projectAppsFolder -ItemType Directory -Force | Out-Null
                 New-Item -Path $projectTestAppsFolder -ItemType Directory -Force | Out-Null
-                New-Item -Path $projectDepsFolder -ItemType Directory -Force | Out-Null            
-                New-Item -Path $project2AppsFolder -ItemType Directory -Force | Out-Null              
+                New-Item -Path $projectDepsFolder -ItemType Directory -Force | Out-Null
+                New-Item -Path $project2AppsFolder -ItemType Directory -Force | Out-Null
 
                 # Create test .app files
                 New-Item -Path (Join-Path $projectAppsFolder "AppSourceApp.app") -ItemType File -Force | Out-Null
@@ -466,7 +466,7 @@ InModuleScope Deploy { # Allows testing of private functions
                         { $appFile -like "*LowerVersion.app" } {
                             return @{
                                 id = $script:lowerVersionAppId
-                                name = "Lower Version App" 
+                                name = "Lower Version App"
                                 Version = "1.0.0.0"
                             }
                         }
@@ -502,7 +502,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
-                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1 -ParameterFilter {
                     $bcAuthContext.tenantId -eq "test-tenant" -and $environment -eq "test-env"
                 }
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 1 -ParameterFilter {
@@ -529,7 +529,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Warns when app version is lower than installed version' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
-                $environment = "test-env" 
+                $environment = "test-env"
                 $appFiles = @("LowerVersion.app")
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
@@ -539,7 +539,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     $appFile -eq "LowerVersion.app"
                 }
                 # Should call OutputWarning with warning for lower version
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
                     $message -like "*is already installed in version*which is higher than*"
                 }
             }
@@ -569,7 +569,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 4
                 # Should only warn for the lower version app
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
                     $message -like "*Lower Version App*"
                 }
             }
@@ -616,7 +616,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
                 # Should warn because 1.2.3.2 < 1.2.3.4
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
                     $message -like "*1.2.3.4*" -and $message -like "*1.2.3.2*"
                 }
             }
@@ -667,10 +667,10 @@ InModuleScope Deploy { # Allows testing of private functions
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
                 # Should only warn for App1 (which is installed), not App2 (which is not installed)
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
                     $message -like "*App 1*"
                 }
-                Assert-MockCalled OutputWarning -Times 0 -ParameterFilter { 
+                Assert-MockCalled OutputWarning -Times 0 -ParameterFilter {
                     $message -like "*App 2*"
                 }
             }
@@ -721,7 +721,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     )
                 }
 
-                Mock Install-BcAppFromAppSource { 
+                Mock Install-BcAppFromAppSource {
                     param($bcAuthContext, $environment, $appId, $acceptIsvEula, $installOrUpdateNeededDependencies, $allowInstallationOnProduction)
                     # Mock successful installation
                     return $true
@@ -735,7 +735,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 Mock New-Item { }
                 Mock Remove-Item { }
-                Mock Join-Path { 
+                Mock Join-Path {
                     param($Path, $ChildPath)
                     return "$Path\$ChildPath"
                 }
@@ -746,7 +746,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" }
-                    )        
+                    )
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
@@ -756,10 +756,10 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
 
-                Assert-MockCalled New-Item -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled New-Item -Exactly 1 -ParameterFilter {
                     $ItemType -eq "Directory" -and $Path -like "*temp*"
                 }
-                Assert-MockCalled Remove-Item -Exactly 1 -ParameterFilter { 
+                Assert-MockCalled Remove-Item -Exactly 1 -ParameterFilter {
                     $Path -like "*temp*" -and $Force -eq $true -and $Recurse -eq $true
                 }
             }
@@ -782,7 +782,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" }
-                    )        
+                    )
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
@@ -802,7 +802,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" }
-                    )        
+                    )
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
@@ -823,7 +823,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "PTEApp.app" }
-                    )        
+                    )
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
@@ -844,7 +844,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "PTEApp.app" }
-                    )        
+                    )
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
@@ -864,7 +864,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "DevScopeApp.app" }
-                    )        
+                    )
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
@@ -914,7 +914,7 @@ InModuleScope Deploy { # Allows testing of private functions
             It 'Handles empty apps array' {
                 Mock Get-ChildItem {
                     param($Path, $Filter)
-                    return @()        
+                    return @()
                 }
 
                 $bcAuthContext = @{ tenantId = "test-tenant" }
