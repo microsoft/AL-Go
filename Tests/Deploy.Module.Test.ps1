@@ -35,10 +35,8 @@ InModuleScope Deploy { # Allows testing of private functions
                 }
                 return @{ Content = "{}" }
             }
-            Mock OutputDebugFunctionCall { }
             Mock OutputGroupStart { }
             Mock OutputGroupEnd { }
-            Mock OutputDebug { }
             Mock OutputWarning { }
             Mock Get-AppJsonFromAppFile {
                 param($appFile)
@@ -84,7 +82,40 @@ InModuleScope Deploy { # Allows testing of private functions
                     }
                 }
             }
+            Mock Get-BcInstalledExtensions {
+                return @(
+                    @{
+                        id = $script:appSourceApp1Id
+                        isInstalled = $true
+                        versionMajor = 1
+                        versionMinor = 0
+                        versionBuild = 0
+                        versionRevision = 0
+                        publishedAs = "Global"
+                    },
+                    @{
+                        id = $script:pteApp1Id
+                        isInstalled = $true
+                        versionMajor = 1
+                        versionMinor = 0
+                        versionBuild = 0
+                        versionRevision = 0
+                        publishedAs = "Tenant"
+                    },
+                    @{
+                        id = $script:devScopeAppId
+                        isInstalled = $true
+                        versionMajor = 1
+                        versionMinor = 0
+                        versionBuild = 0
+                        versionRevision = 0
+                        publishedAs = "Dev"
+                    }
+                )
+            }
             Mock Sort-AppFilesByDependencies { }
+            Mock Install-BcAppFromAppSource { return $true }
+            Mock Publish-PerTenantExtensionApps { return $true }
             Mock Write-Host { }
         }
 
@@ -678,39 +709,6 @@ InModuleScope Deploy { # Allows testing of private functions
 
         Describe "InstallOrUpgradeApps" {
             BeforeEach {
-                # Mock all BcContainerHelper functions
-                Mock Get-BcInstalledExtensions {
-                    return @(
-                        @{
-                            id = $script:appSourceApp1Id
-                            isInstalled = $true
-                            versionMajor = 1
-                            versionMinor = 0
-                            versionBuild = 0
-                            versionRevision = 0
-                            publishedAs = "Global"
-                        },
-                        @{
-                            id = $script:pteApp1Id
-                            isInstalled = $true
-                            versionMajor = 1
-                            versionMinor = 0
-                            versionBuild = 0
-                            versionRevision = 0
-                            publishedAs = "Tenant"
-                        },
-                        @{
-                            id = $script:devScopeAppId
-                            isInstalled = $true
-                            versionMajor = 1
-                            versionMinor = 0
-                            versionBuild = 0
-                            versionRevision = 0
-                            publishedAs = "Dev"
-                        }
-                    )
-                }
-
                 Mock Copy-AppFilesToFolder { }
 
                 Mock Get-ChildItem {
@@ -718,16 +716,6 @@ InModuleScope Deploy { # Allows testing of private functions
                         @{ FullName = Join-Path $Path "AppSourceApp.app" },
                         @{ FullName = Join-Path $Path "PTEApp.app" }
                     )
-                }
-
-                Mock Install-BcAppFromAppSource {
-                    # Mock successful installation
-                    return $true
-                }
-
-                Mock Publish-PerTenantExtensionApps {
-                    # Mock successful publishing
-                    return $true
                 }
 
                 Mock New-Item { }
@@ -938,6 +926,229 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 # Should call Get-BcInstalledExtensions twice: once initially, once after AppSource install
                 Assert-MockCalled Get-BcInstalledExtensions -Exactly 2
+            }
+        }
+
+        Describe "InstallUnknownDependencies" {
+            BeforeEach {
+                Mock Install-BcAppFromAppSource { }
+            }
+
+            It 'Installs new AppSource dependency successfully' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
+                $apps = @("$($nonInstalledAppId):PTE_App_3.0.0.0.app")
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
+                    $appId -eq $nonInstalledAppId
+                }
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 2
+            }
+
+            It 'Upgrades existing AppSource dependency successfully' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @("$($script:appSourceApp1Id):AppSource_App_3.0.0.0.app")
+                $installMode = "upgrade"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
+                    $appId -eq $script:appSourceApp1Id -and
+                    $acceptIsvEula -eq $true -and
+                    $installOrUpdateNeededDependencies -eq $true -and
+                    $allowInstallationOnProduction -eq $true
+                }
+            }
+
+            It 'Skips apps marked as EXCLUDE' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
+                $apps = @(
+                    "$($script:appSourceApp1Id):Microsoft__EXCLUDE_TestApp_1.0.0.0.app",
+                    "$($nonInstalledAppId):PTE_App_1.0.0.0.app"
+                )
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Should only install the non-excluded app
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
+                    $appId -eq $nonInstalledAppId
+                }
+            }
+
+            It 'Handles apps with invalid version format' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
+                $apps = @(
+                    "$($script:appSourceApp1Id):InvalidVersionApp.app",
+                    "$($nonInstalledAppId):PTE_App_1.0.0.0.app"
+                )
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Should only install the app with valid version
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
+                    $appId -eq $nonInstalledAppId
+                }
+            }
+
+            It 'Warns when trying to upgrade Dev scope app' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @("$($script:devScopeAppId):Dev_Scope_App_2.0.0.0.app")
+                $installMode = "upgrade"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
+                    $message -like "*Dev_Scope_App*" -and $message -like "*Dev scope*"
+                }
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+            }
+
+            It 'Handles Dev scope app with trimmed publishedAs value' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @("$($script:devScopeAppId):Dev_Scope_App_2.0.0.0.app")
+                $installMode = "upgrade"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                Assert-MockCalled OutputWarning -Exactly 1
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+            }
+
+            It 'Refreshes installed apps list after installation' {
+                $callCount = 0
+                Mock Get-BcInstalledExtensions {
+                    $callCount++
+                    if ($callCount -eq 1) {
+                        return @() # Empty initially
+                    } else {
+                        return @(
+                            @{
+                                id = $script:pteApp1Id
+                                name = "PTE App"
+                                Version = "1.0.0.0"
+                                isInstalled = $true
+                                publishedAs = "AppSource"
+                            }
+                        )
+                    }
+                }
+
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @("$($script:pteApp1Id):PTE_App_1.0.0.0.app")
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Should call Get-BcInstalledExtensions twice: once initially, once after installation
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 2
+            }
+
+            It 'Processes multiple apps correctly' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
+                $apps = @(
+                    "$($script:appSourceApp1Id):AppSource_App_3.0.0.0.app",  # Upgrade
+                    "$($nonInstalledAppId):PTE_App_1.0.0.0.app",              # Install new
+                    "$($script:appSourceAppTestId):Microsoft__EXCLUDE_TestApp_1.0.0.0.app"  # Exclude
+                )
+                $installMode = "upgrade"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Should install 2 apps (exclude the EXCLUDE one)
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 2
+                Assert-MockCalled Install-BcAppFromAppSource -ParameterFilter { $appId -eq $script:appSourceApp1Id }
+                Assert-MockCalled Install-BcAppFromAppSource -ParameterFilter { $appId -eq $nonInstalledAppId }
+            }
+
+            It 'Handles empty apps array' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @()
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+            }
+
+            It 'Handles malformed app string gracefully' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
+                $apps = @(
+                    "malformed-app-string",
+                    "$($nonInstalledAppId):PTE_App_1.0.0.0.app"
+                )
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Should only install the valid app
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
+                    $appId -eq $nonInstalledAppId
+                }
+            }
+
+            It 'Uses CheckIfAppNeedsInstallOrUpgrade correctly for install mode' {
+                Mock Get-BcInstalledExtensions { return @() }
+
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @("$($script:pteApp1Id):PTE_App_1.0.0.0.app")
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Since app is not installed and mode is install, should install
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1
+            }
+
+            It 'Uses CheckIfAppNeedsInstallOrUpgrade correctly for upgrade mode' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $apps = @("$($script:appSourceApp1Id):AppSource_App_3.0.0.0.app")
+                $installMode = "upgrade"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Since app is installed with lower version and mode is upgrade, should upgrade
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1
+            }
+
+            It 'Handles version parsing edge cases' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
+                $apps = @(
+                    "$($nonInstalledAppId):App_With_Multiple_Versions_1.0.0.0_2.0.0.0.app",
+                    "$($script:pteApp1Id):App_No_Version.app",
+                    "$($script:appSourceAppTestId):App_Short_Version_1.0.app"
+                )
+                $installMode = "install"
+
+                InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
+
+                # Should only install the app with properly formatted version (first one)
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
+                    $appId -eq $nonInstalledAppId
+                }
             }
         }
     }
