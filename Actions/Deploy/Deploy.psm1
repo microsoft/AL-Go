@@ -1,12 +1,12 @@
 <#
- .SYNOPSIS
-  Get the head ref from a PR
- .PARAMETER repository
-  Repository to search in
- .PARAMETER prId
-  The PR Id
- .PARAMETER token
-  Auth token
+    .SYNOPSIS
+        Get the head ref from a PR
+    .PARAMETER repository
+        Repository to search in
+    .PARAMETER prId
+        The PR Id
+    .PARAMETER token
+        The GitHub token running the action
 #>
 function GetHeadRefFromPRId {
     Param(
@@ -28,16 +28,18 @@ function GetHeadRefFromPRId {
 }
 
 <#
- .SYNOPSIS
-  Get apps and dependencies from artifacts
- .PARAMETER token
-  The GitHub token running the action
- .PARAMETER artifactsFolder
-  The folder where artifacts are stored
- .PARAMETER deploymentSettings
-  Deployment settings for the action
- .PARAMETER artifactsVersion
-  Version of the artifacts to use (optional) - This is only used for PR deployments and should take the form of PR_X
+    .SYNOPSIS
+        Get apps and dependencies from artifacts
+    .PARAMETER token
+        The GitHub token running the action
+    .PARAMETER artifactsFolder
+        The folder where artifacts are stored
+    .PARAMETER deploymentSettings
+        Deployment settings for the action
+    .PARAMETER artifactsVersion
+        Version of the artifacts to use (optional) - This is only used for PR deployments and should take the form of PR_X
+    .PARAMETER buildMode
+        The build mode to use (optional) - This is used to determine which build artifacts to use
 #>
 function GetAppsAndDependenciesFromArtifacts {
     Param(
