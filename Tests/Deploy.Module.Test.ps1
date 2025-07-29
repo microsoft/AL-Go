@@ -16,7 +16,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
         BeforeEach {
             # Set up common test environment variables
-            $env:GITHUB_WORKSPACE = [System.IO.Path]::GetTempPath()
+            $env:GITHUB_WORKSPACE = (Join-Path ([System.IO.Path]::GetTempPath()) "deployModuleTest")
             $env:GITHUB_REPOSITORY = "test/repo"
             $env:GITHUB_REF_NAME = "main"
 
