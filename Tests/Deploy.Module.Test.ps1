@@ -714,7 +714,6 @@ InModuleScope Deploy { # Allows testing of private functions
                 Mock Copy-AppFilesToFolder { }
 
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" },
                         @{ FullName = Join-Path $Path "PTEApp.app" }
@@ -722,13 +721,11 @@ InModuleScope Deploy { # Allows testing of private functions
                 }
 
                 Mock Install-BcAppFromAppSource {
-                    param($bcAuthContext, $environment, $appId, $acceptIsvEula, $installOrUpdateNeededDependencies, $allowInstallationOnProduction)
                     # Mock successful installation
                     return $true
                 }
 
                 Mock Publish-PerTenantExtensionApps {
-                    param($bcAuthContext, $environment, $appFiles, $SchemaSyncMode)
                     # Mock successful publishing
                     return $true
                 }
