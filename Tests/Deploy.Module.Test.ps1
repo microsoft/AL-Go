@@ -728,7 +728,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Creates and cleans up temporary directory' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" }
                     )
@@ -764,7 +764,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Gets installed extensions from environment' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" }
                     )
@@ -784,7 +784,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Installs AppSource apps via AppSource when upgrade needed' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" }
                     )
@@ -805,7 +805,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Publishes PTE apps when upgrade needed' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "PTEApp.app" }
                     )
@@ -826,7 +826,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Uses Force schema sync mode when installMode is ForceUpgrade' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "PTEApp.app" }
                     )
@@ -846,7 +846,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Skips AppSource apps published in Dev scope when upgrade needed' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "DevScopeApp.app" }
                     )
@@ -898,7 +898,6 @@ InModuleScope Deploy { # Allows testing of private functions
 
             It 'Handles empty apps array' {
                 Mock Get-ChildItem {
-                    param($Path, $Filter)
                     return @()
                 }
 
