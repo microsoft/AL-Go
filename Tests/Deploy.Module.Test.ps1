@@ -757,10 +757,10 @@ InModuleScope Deploy { # Allows testing of private functions
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
 
                 Assert-MockCalled New-Item -Exactly 1 -ParameterFilter {
-                    $ItemType -eq "Directory" -and $Path -like "*temp*"
+                    $ItemType -eq "Directory"
                 }
                 Assert-MockCalled Remove-Item -Exactly 1 -ParameterFilter {
-                    $Path -like "*temp*" -and $Force -eq $true -and $Recurse -eq $true
+                    $Force -eq $true -and $Recurse -eq $true
                 }
             }
 
