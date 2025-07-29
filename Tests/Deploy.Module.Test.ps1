@@ -36,10 +36,29 @@ InModuleScope Deploy { # Allows testing of private functions
             Mock OutputDebug { }
             Mock OutputWarning { }
             Mock Get-AppJsonFromAppFile {
-                return @{
-                    id = "12345678-1234-1234-1234-123456789012"
-                    name = "Test App"
-                    version = "1.0.0.0"
+                param($appFile)
+                switch ($appFile) {
+                    { $appFile -like "*TestApp1.app" } {
+                        return @{
+                            id = "00000000-0000-0000-0000-000000000001"
+                            name = "Test App 1"
+                            version = "1.0.0.0"
+                        }
+                    }
+                    { $appFile -like "*TestApp2.app" } {
+                        return @{
+                            id = "00000000-0000-0000-0000-000000000002"
+                            name = "Test App 2"
+                            version = "1.0.0.0"
+                        }
+                    }
+                    Default {
+                        return @{
+                            id = "12345678-1234-1234-1234-123456789012"
+                            name = "Test App"
+                            version = "1.0.0.0"
+                        }
+                    }
                 }
             }
             Mock Sort-AppFilesByDependencies { }
@@ -81,16 +100,19 @@ InModuleScope Deploy { # Allows testing of private functions
                 $projectAppsFolder = Join-Path $artifactsFolder "project1-main-Apps-1.0.0.0"
                 $projectTestAppsFolder = Join-Path $artifactsFolder "project1-main-TestApps-1.0.0.0"
                 $projectDepsFolder = Join-Path $artifactsFolder "project1-main-Dependencies-1.0.0.0"
+                $project2AppsFolder = Join-Path $env:GITHUB_WORKSPACE "artifacts/project2-main-Apps-1.0.0.0"
 
                 New-Item -Path $projectAppsFolder -ItemType Directory -Force | Out-Null
                 New-Item -Path $projectTestAppsFolder -ItemType Directory -Force | Out-Null
-                New-Item -Path $projectDepsFolder -ItemType Directory -Force | Out-Null
+                New-Item -Path $projectDepsFolder -ItemType Directory -Force | Out-Null            
+                New-Item -Path $project2AppsFolder -ItemType Directory -Force | Out-Null              
 
                 # Create test .app files
                 New-Item -Path (Join-Path $projectAppsFolder "TestApp1.app") -ItemType File -Force | Out-Null
                 New-Item -Path (Join-Path $projectAppsFolder "TestApp2.app") -ItemType File -Force | Out-Null
                 New-Item -Path (Join-Path $projectTestAppsFolder "TestApp.Test.app") -ItemType File -Force | Out-Null
                 New-Item -Path (Join-Path $projectDepsFolder "Dependency.app") -ItemType File -Force | Out-Null
+                New-Item -Path (Join-Path $project2AppsFolder "Project2App.app") -ItemType File -Force | Out-Null
             }
 
             It 'Returns apps and dependencies from artifacts folder' {
@@ -100,9 +122,6 @@ InModuleScope Deploy { # Allows testing of private functions
                     excludeAppIds = @()
                     DependencyInstallMode = "install"
                 }
-
-                # Mock buildMode variable
-                $script:buildMode = ""
 
                 $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
 
@@ -122,8 +141,6 @@ InModuleScope Deploy { # Allows testing of private functions
                     DependencyInstallMode = "install"
                 }
 
-                $script:buildMode = ""
-
                 $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
 
                 $apps.Count | Should -Be 3
@@ -134,15 +151,13 @@ InModuleScope Deploy { # Allows testing of private functions
                 $deploymentSettings = @{
                     Projects = "project1"
                     includeTestAppsInSandboxEnvironment = $false
-                    excludeAppIds = @("12345678-1234-1234-1234-123456789012")
+                    excludeAppIds = @("00000000-0000-0000-0000-000000000001")
                     DependencyInstallMode = "install"
                 }
 
-                $script:buildMode = ""
-
                 $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
 
-                $apps.Count | Should -Be 0
+                $apps.Count | Should -Be 1
             }
 
             It 'Ignores dependencies when DependencyInstallMode is ignore' {
@@ -152,8 +167,6 @@ InModuleScope Deploy { # Allows testing of private functions
                     excludeAppIds = @()
                     DependencyInstallMode = "ignore"
                 }
-
-                $script:buildMode = ""
 
                 $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
 
@@ -167,13 +180,6 @@ InModuleScope Deploy { # Allows testing of private functions
                     excludeAppIds = @()
                     DependencyInstallMode = "install"
                 }
-
-                # Create second project folder
-                $project2AppsFolder = Join-Path $env:GITHUB_WORKSPACE "artifacts/project2-main-Apps-1.0.0.0"
-                New-Item -Path $project2AppsFolder -ItemType Directory -Force | Out-Null
-                New-Item -Path (Join-Path $project2AppsFolder "Project2App.app") -ItemType File -Force | Out-Null
-
-                $script:buildMode = ""
 
                 $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
 
@@ -202,8 +208,6 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 # Mock PR artifact scenario
                 $artifactsVersion = "PR_123"
-                $token = "placeholder"
-                # $script:buildMode = ""
 
                 # Mock GetHeadRefFromPRId to return a branch name
                 Mock GetHeadRefFromPRId { return "feature_test-branch" }
@@ -213,7 +217,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 New-Item -Path $prAppsFolder -ItemType Directory -Force | Out-Null
                 New-Item -Path (Join-Path $prAppsFolder "PRApp.app") -ItemType File -Force | Out-Null
 
-                $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -token $token -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings -artifactsVersion $artifactsVersion
+                $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -token 'token' -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings -artifactsVersion $artifactsVersion
 
                 Assert-MockCalled GetHeadRefFromPRId -Exactly 1
                 $apps.Count | Should -Be 1
