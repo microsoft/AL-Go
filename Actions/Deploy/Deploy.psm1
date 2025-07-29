@@ -177,7 +177,7 @@ function CheckIfAppNeedsInstallOrUpgrade {
                 $needsUpgrade = $true
             }
             else {
-                Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
+                OutputWarning -message "$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
             }
         }
         elseif ($dependencyVersion -lt $installedVersion) {
@@ -224,7 +224,7 @@ function CheckInstalledApps {
             $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
 
             if ($currentVersion -lt $installedVersion) {
-                Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+                OutputWarning -message "App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
             }
         }
     }
@@ -272,7 +272,7 @@ function InstallOrUpgradeApps {
             $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
             if ($needsUpgrade) {
                 if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
-                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    OutputWarning -message "Dependency AppSource App $($appJson.name) is published in Dev scope. Cannot upgrade."
                     $needsUpgrade = $false
                 }
             }
@@ -346,7 +346,7 @@ function InstallUnknownDependencies {
             $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
             if ($needsUpgrade) {
                 if ($installedApp.publishedAs.Trim() -eq 'Dev') {
-                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    OutputWarning -message "Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
                     $needsUpgrade = $false
                 }
             }
