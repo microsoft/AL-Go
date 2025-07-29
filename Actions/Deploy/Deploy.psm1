@@ -164,6 +164,7 @@ function CheckIfAppNeedsInstallOrUpgrade {
         $installedApp,
         [string] $installMode
     )
+    OutputDebugFunctionCall
 
     $needsInstall = $false
     $needsUpgrade = $false
@@ -211,6 +212,7 @@ function CheckInstalledApps {
         [string] $environment,
         [string[]] $appFiles
     )
+    OutputDebugFunctionCall
 
     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
     foreach($appFile in $appFiles) {
@@ -249,6 +251,7 @@ function InstallOrUpgradeApps {
         [string[]] $apps,
         [string] $installMode
     )
+    OutputDebugFunctionCall
 
     $schemaSyncMode = 'Add'
     if ($installMode -eq 'ForceUpgrade') {
@@ -316,6 +319,7 @@ function InstallUnknownDependencies {
         [string[]] $apps,
         [string] $installMode
     )
+    OutputDebugFunctionCall
 
     Write-Host "Installing unknown dependencies: $($apps -join ', ')"
     try {
@@ -344,9 +348,10 @@ function InstallUnknownDependencies {
 
             $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
             $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
+            OutputDebug -message "Checking app $($appJson.name): needsInstall=$needsInstall, needsUpgrade=$needsUpgrade"
             if ($needsUpgrade) {
                 if ($installedApp.publishedAs.Trim() -eq 'Dev') {
-                    OutputWarning -message "Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    OutputWarning -message "Dependency AppSource App $($appJson.name) is published in Dev scope. Cannot upgrade."
                     $needsUpgrade = $false
                 }
             }
