@@ -147,3 +147,217 @@ function GetAppsAndDependenciesFromArtifacts {
     OutputGroupEnd
     return $apps, $dependencies
 }
+
+<#
+    .SYNOPSIS
+        Check if an app needs to be installed or upgraded based on the app.json and the installed version.
+    .PARAMETER appJson
+        The app.json object of the app to check.
+    .PARAMETER installedApp
+        The installed app object to compare against.
+    .PARAMETER installMode
+        The mode of installation, can be 'ignore', 'upgrade', 'forceUpgrade'.
+#>
+function CheckIfAppNeedsInstallOrUpgrade {
+    Param(
+        [PSCustomObject] $appJson,
+        $installedApp,
+        [string] $installMode
+    )
+
+    $needsInstall = $false
+    $needsUpgrade = $false
+    if ($installedApp) {
+        $dependencyVersion = [version]::new($appJson.Version)
+        $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+        if ($dependencyVersion -gt $installedVersion) {
+            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $dependencyVersion."
+            if ($installMode -eq 'upgrade') {
+                Write-Host "$msg Needs upgrade."
+                $needsUpgrade = $true
+            }
+            else {
+                Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
+            }
+        }
+        elseif ($dependencyVersion -lt $installedVersion) {
+            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $dependencyVersion, used in app.json."
+        }
+        else {
+            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
+        }
+    }
+    else {
+        Write-Host "Dependency app $($appJson.name) is not installed."
+        $needsInstall = ($installMode -ne 'ignore')
+    }
+    return $needsInstall, $needsUpgrade
+}
+
+# Check if the apps are already installed and emit a warning if the installed version is higher than the version in the app file
+<#
+    .SYNOPSIS
+        Check installed apps against the provided app files and emit warnings if the installed version is higher than the version in the app file.
+    .PARAMETER bcAuthContext
+        The Business Central authentication context.
+    .PARAMETER environment
+        The environment to check installed apps in.
+    .PARAMETER appFiles
+        The list of app files to check against installed apps.
+#>
+function CheckInstalledApps {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $appFiles
+    )
+
+    $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+    foreach($appFile in $appFiles) {
+        # Get AppJson (works for full .app files, symbol files and also runtime packages)
+        $appJson = Get-AppJsonFromAppFile -appFile $appFile
+        $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+
+        # Check if the version of the installed app is lower than the version in the app file
+        if ($installedApp) {
+            $currentVersion = [version]::new($appJson.Version)
+            $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+
+            if ($currentVersion -lt $installedVersion) {
+                Write-Host "::WARNING::App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+            }
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+        Install or upgrade apps in Business Central.
+    .PARAMETER bcAuthContext
+        The Business Central authentication context.
+    .PARAMETER environment
+        The environment to install or upgrade apps in.
+    .PARAMETER apps
+        The list of app files to install or upgrade.
+    .PARAMETER installMode
+        The mode of installation, can be 'ignore', 'upgrade', 'forceUpgrade'.
+#>
+function InstallOrUpgradeApps {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $apps,
+        [string] $installMode
+    )
+
+    $schemaSyncMode = 'Add'
+    if ($installMode -eq 'ForceUpgrade') {
+        $schemaSyncMode = 'Force'
+        $installMode = 'upgrade'
+    }
+
+    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    try {
+        Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
+        $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
+        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+        $PTEsToInstall = @()
+        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
+        foreach($app in $apps) {
+            # Get AppJson (works for full .app files, symbol files and also runtime packages)
+            $appJson = Get-AppJsonFromAppFile -appFile $app
+            $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
+            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
+            if ($needsUpgrade) {
+                if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
+                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    $needsUpgrade = $false
+                }
+            }
+            if ($needsUpgrade -or $needsInstall) {
+                if ($isPTE) {
+                    $PTEsToInstall += $app
+                }
+                else {
+                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
+                    # Update installed apps list as dependencies may have changed / been installed
+                    $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+                }
+            }
+        }
+        if ($PTEsToInstall) {
+            # Install or upgrade PTEs
+            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode
+        }
+    }
+    finally {
+        Remove-Item -Path $tempPath -Force -Recurse
+    }
+}
+
+<#
+    .SYNOPSIS
+        Install unknown dependencies in Business Central.
+    .PARAMETER bcAuthContext
+        The Business Central authentication context.
+    .PARAMETER environment
+        The environment to install unknown dependencies in.
+    .PARAMETER apps
+        The list of unknown dependency apps to install.
+    .PARAMETER installMode
+        The mode of installation, can be 'ignore', 'upgrade', 'forceUpgrade'.
+#>
+function InstallUnknownDependencies {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $apps,
+        [string] $installMode
+    )
+
+    Write-Host "Installing unknown dependencies: $($apps -join ', ')"
+    try {
+        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
+        foreach($app in $apps) {
+            # The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
+            $appId, $appName = $app.Split(':')
+            $appVersion = ""
+            if ($appName -like 'Microsoft__EXCLUDE_*') {
+                Write-Host "App $appName is ignored as it is marked as EXCLUDE"
+                continue
+            }
+            elseif ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
+                $appVersion = $matches.1
+            } else {
+                Write-Host "Version not found or incorrect format for unknown dependency $app"
+                continue
+            }
+            # Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
+            $appJson = @{
+                "name" = $appName
+                "id" = $appId
+                "Version" = $appVersion
+            }
+
+            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
+            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
+            if ($needsUpgrade) {
+                if ($installedApp.publishedAs.Trim() -eq 'Dev') {
+                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
+                    $needsUpgrade = $false
+                }
+            }
+            if ($needsUpgrade -or $needsInstall) {
+                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
+                # Update installed apps list as dependencies may have changed / been installed
+                $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+            }
+        }
+    }
+    finally {
+        Write-Host "Unknown dependencies installed or upgraded"
+    }
+}
