@@ -12,6 +12,9 @@ InModuleScope Deploy { # Allows testing of private functions
             $script:pteApp1Id = "00000000-0000-0000-0000-000000000002"
             $script:appSourceAppTestId = "00000000-0000-0000-0000-000000000003"
             $script:devScopeAppId = "00000000-0000-0000-0000-000000000004"
+            $script:notInstalledAppId = "00000000-0000-0000-0000-000000000005"
+            $script:project2AppId = "00000000-0000-0000-0000-000000000006"
+            $script:prAppId = "00000000-0000-0000-0000-000000000007"
         }
 
         BeforeEach {
@@ -45,7 +48,7 @@ InModuleScope Deploy { # Allows testing of private functions
                         return @{
                             id = $script:appSourceApp1Id
                             name = "AppSource App"
-                            Version = "2.0.0.0"
+                            Version = "2.0.0.0" # Higher version than mocked installed version
                             idRanges = @( @{ from = 100000; to = 199999 } )  # AppSource range
                         }
                     }
@@ -53,7 +56,7 @@ InModuleScope Deploy { # Allows testing of private functions
                         return @{
                             id = $script:pteApp1Id
                             name = "PTE App"
-                            Version = "2.0.0.0"
+                            Version = "2.0.0.0" # Higher version than mocked installed version
                             idRanges = @( @{ from = 50000; to = 99999 } )  # PTE range
                         }
                     }
@@ -61,7 +64,7 @@ InModuleScope Deploy { # Allows testing of private functions
                         return @{
                             id = $script:appSourceAppTestId
                             name = "AppSource App Test"
-                            Version = "2.0.0.0"
+                            Version = "1.5.0.0" # Same version as mocked installed version
                             idRanges = @( @{ from = 100000; to = 199999 } )  # AppSource range
                         }
                     }
@@ -73,11 +76,27 @@ InModuleScope Deploy { # Allows testing of private functions
                             idRanges = @( @{ from = 100000; to = 199999 } )  # AppSource range
                         }
                     }
-                    Default {
+                    { $appFile -like "*Project2App.app" } {
                         return @{
-                            id = "12345678-1234-1234-1234-123456789012"
-                            name = "Test App"
-                            version = "1.0.0.0"
+                            id = $script:project2AppId
+                            name = "Project 2 App"
+                            Version = "1.0.0.0" # Lower version than mocked installed version
+                            idRanges = @( @{ from = 100000; to = 199999 } )  # AppSource range
+                        }
+                    }
+                    { $appFile -like "*PRApp.app" } {
+                        return @{
+                            id = $script:prAppId
+                            name = "PR App"
+                            Version = "2.0.0.0"
+                            idRanges = @( @{ from = 100000; to = 199999 } )  # AppSource range
+                        }
+                    }
+                    { $appFile -like "*NotInstalled.app" } {
+                        return @{
+                            id = $script:notInstalledAppId
+                            name = "Not Installed App"
+                            Version = "1.0.0.0"
                         }
                     }
                 }
@@ -103,6 +122,15 @@ InModuleScope Deploy { # Allows testing of private functions
                         publishedAs = "Tenant"
                     },
                     @{
+                        id = $script:appSourceAppTestId
+                        isInstalled = $true
+                        versionMajor = 1
+                        versionMinor = 5
+                        versionBuild = 0
+                        versionRevision = 0
+                        publishedAs = "Global"
+                    },
+                    @{
                         id = $script:devScopeAppId
                         isInstalled = $true
                         versionMajor = 1
@@ -110,6 +138,15 @@ InModuleScope Deploy { # Allows testing of private functions
                         versionBuild = 0
                         versionRevision = 0
                         publishedAs = "Dev"
+                    }
+                    @{
+                        id = $script:project2AppId
+                        isInstalled = $true
+                        versionMajor = 2
+                        versionMinor = 0
+                        versionBuild = 0
+                        versionRevision = 0
+                        publishedAs = "Global"
                     }
                 )
             }
@@ -446,90 +483,10 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         Describe "CheckInstalledApps" {
-            BeforeAll {
-                $script:higherVersionAppId = "00000000-0000-0000-0000-000000000005"
-                $script:lowerVersionAppId = "00000000-0000-0000-0000-000000000006"
-                $script:sameVersionAppId = "00000000-0000-0000-0000-000000000007"
-                $script:notInstalledAppId = "00000000-0000-0000-0000-000000000008"
-            }
-            BeforeEach {
-                # Mock the BcContainerHelper functions
-                Mock Get-BcInstalledExtensions {
-                    return @(
-                        @{
-                            id = $script:higherVersionAppId
-                            isInstalled = $true
-                            versionMajor = 2
-                            versionMinor = 0
-                            versionBuild = 0
-                            versionRevision = 0
-                        },
-                        @{
-                            id = $script:sameVersionAppId
-                            isInstalled = $true
-                            versionMajor = 1
-                            versionMinor = 5
-                            versionBuild = 0
-                            versionRevision = 0
-                        },
-                        @{
-                            id = $script:lowerVersionAppId
-                            isInstalled = $true
-                            versionMajor = 2
-                            versionMinor = 0
-                            versionBuild = 0
-                            versionRevision = 0
-                        }
-                    )
-                }
-
-                # Mock Get-AppJsonFromAppFile for different scenarios
-                Mock Get-AppJsonFromAppFile {
-                    param($appFile)
-                    switch ($appFile) {
-                        { $appFile -like "*HigherVersion.app" } {
-                            return @{
-                                id = $script:higherVersionAppId
-                                name = "Higher Version App"
-                                Version = "3.0.0.0"
-                            }
-                        }
-                        { $appFile -like "*LowerVersion.app" } {
-                            return @{
-                                id = $script:lowerVersionAppId
-                                name = "Lower Version App"
-                                Version = "1.0.0.0"
-                            }
-                        }
-                        { $appFile -like "*SameVersion.app" } {
-                            return @{
-                                id = $script:sameVersionAppId
-                                name = "Same Version App"
-                                Version = "1.5.0.0"
-                            }
-                        }
-                        { $appFile -like "*NotInstalled.app" } {
-                            return @{
-                                id = $script:notInstalledAppId
-                                name = "Not Installed App"
-                                Version = "1.0.0.0"
-                            }
-                        }
-                        Default {
-                            return @{
-                                id = "12345678-1234-1234-1234-123456789012"
-                                name = "Default Test App"
-                                Version = "1.0.0.0"
-                            }
-                        }
-                    }
-                }
-            }
-
             It 'Does not warn when app version matches installed version' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $appFiles = @("SameVersion.app")
+                $appFiles = @("AppSourceApp.Test.app")
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
@@ -537,7 +494,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     $bcAuthContext.tenantId -eq "test-tenant" -and $environment -eq "test-env"
                 }
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 1 -ParameterFilter {
-                    $appFile -eq "SameVersion.app"
+                    $appFile -eq "AppSourceApp.Test.app"
                 }
                 # Should not call Write-Host with warning
                 Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like "*::WARNING::*" }
@@ -546,13 +503,13 @@ InModuleScope Deploy { # Allows testing of private functions
             It 'Does not warn when app version is higher than installed version' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $appFiles = @("HigherVersion.app")
+                $appFiles = @("AppSourceApp.app")
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
                 Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 1 -ParameterFilter {
-                    $appFile -eq "HigherVersion.app"
+                    $appFile -eq "AppSourceApp.app"
                 }
                 # Should not call Write-Host with warning for higher version
                 Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like "*::WARNING::*" }
@@ -561,13 +518,13 @@ InModuleScope Deploy { # Allows testing of private functions
             It 'Warns when app version is lower than installed version' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $appFiles = @("LowerVersion.app")
+                $appFiles = @("Project2App.app")
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
                 Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 1 -ParameterFilter {
-                    $appFile -eq "LowerVersion.app"
+                    $appFile -eq "Project2App.app"
                 }
                 # Should call OutputWarning with warning for lower version
                 Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
@@ -586,14 +543,14 @@ InModuleScope Deploy { # Allows testing of private functions
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 1 -ParameterFilter {
                     $appFile -eq "NotInstalled.app"
                 }
-                # Should not call Write-Host with warning for non-installed app
-                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like "*::WARNING::*" }
+                # Should not call OutputWarning for non-installed app
+                Assert-MockCalled OutputWarning -Times 0
             }
 
             It 'Handles multiple app files correctly' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $appFiles = @("HigherVersion.app", "LowerVersion.app", "SameVersion.app", "NotInstalled.app")
+                $appFiles = @("AppSourceApp.Test.app", "AppSourceApp.app", "Project2App.app", "NotInstalled.app")
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles
 
@@ -601,7 +558,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 Assert-MockCalled Get-AppJsonFromAppFile -Exactly 4
                 # Should only warn for the lower version app
                 Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                    $message -like "*Lower Version App*"
+                    $message -like "*Project 2 App is already installed*"
                 }
             }
 
@@ -712,6 +669,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 Mock Copy-AppFilesToFolder { }
 
                 Mock Get-ChildItem {
+                    param($Path)
                     return @(
                         @{ FullName = Join-Path $Path "AppSourceApp.app" },
                         @{ FullName = Join-Path $Path "PTEApp.app" }
@@ -929,10 +887,6 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         Describe "InstallUnknownDependencies" {
-            BeforeEach {
-                Mock Install-BcAppFromAppSource { }
-            }
-
             It 'Installs new AppSource dependency successfully' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
@@ -1027,27 +981,9 @@ InModuleScope Deploy { # Allows testing of private functions
             }
 
             It 'Refreshes installed apps list after installation' {
-                $callCount = 0
-                Mock Get-BcInstalledExtensions {
-                    $callCount++
-                    if ($callCount -eq 1) {
-                        return @() # Empty initially
-                    } else {
-                        return @(
-                            @{
-                                id = $script:pteApp1Id
-                                name = "PTE App"
-                                Version = "1.0.0.0"
-                                isInstalled = $true
-                                publishedAs = "AppSource"
-                            }
-                        )
-                    }
-                }
-
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $apps = @("$($script:pteApp1Id):PTE_App_1.0.0.0.app")
+                $apps = @("$($script:notInstalledAppId):PTE_App_1.0.0.0.app")
                 $installMode = "install"
 
                 InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
@@ -1059,10 +995,9 @@ InModuleScope Deploy { # Allows testing of private functions
             It 'Processes multiple apps correctly' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
                 $apps = @(
                     "$($script:appSourceApp1Id):AppSource_App_3.0.0.0.app",  # Upgrade
-                    "$($nonInstalledAppId):PTE_App_1.0.0.0.app",              # Install new
+                    "$($script:notInstalledAppId):PTE_App_1.0.0.0.app",              # Install new
                     "$($script:appSourceAppTestId):Microsoft__EXCLUDE_TestApp_1.0.0.0.app"  # Exclude
                 )
                 $installMode = "upgrade"
@@ -1072,7 +1007,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 # Should install 2 apps (exclude the EXCLUDE one)
                 Assert-MockCalled Install-BcAppFromAppSource -Exactly 2
                 Assert-MockCalled Install-BcAppFromAppSource -ParameterFilter { $appId -eq $script:appSourceApp1Id }
-                Assert-MockCalled Install-BcAppFromAppSource -ParameterFilter { $appId -eq $nonInstalledAppId }
+                Assert-MockCalled Install-BcAppFromAppSource -ParameterFilter { $appId -eq $notInstalledAppId }
             }
 
             It 'Handles empty apps array' {
@@ -1090,10 +1025,9 @@ InModuleScope Deploy { # Allows testing of private functions
             It 'Handles malformed app string gracefully' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
                 $apps = @(
                     "malformed-app-string",
-                    "$($nonInstalledAppId):PTE_App_1.0.0.0.app"
+                    "$($script:notInstalledAppId):PTE_App_1.0.0.0.app"
                 )
                 $installMode = "install"
 
@@ -1101,16 +1035,14 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 # Should only install the valid app
                 Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
-                    $appId -eq $nonInstalledAppId
+                    $appId -eq $script:notInstalledAppId
                 }
             }
 
             It 'Uses CheckIfAppNeedsInstallOrUpgrade correctly for install mode' {
-                Mock Get-BcInstalledExtensions { return @() }
-
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $apps = @("$($script:pteApp1Id):PTE_App_1.0.0.0.app")
+                $apps = @("$($script:notInstalledAppId):PTE_App_1.0.0.0.app")
                 $installMode = "install"
 
                 InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
@@ -1134,9 +1066,8 @@ InModuleScope Deploy { # Allows testing of private functions
             It 'Handles version parsing edge cases' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
-                $nonInstalledAppId = "00000000-0000-0000-0000-000000000099"
                 $apps = @(
-                    "$($nonInstalledAppId):App_With_Multiple_Versions_1.0.0.0_2.0.0.0.app",
+                    "$($script:notInstalledAppId):App_With_Multiple_Versions_1.0.0.0_2.0.0.0.app",
                     "$($script:pteApp1Id):App_No_Version.app",
                     "$($script:appSourceAppTestId):App_Short_Version_1.0.app"
                 )
@@ -1146,7 +1077,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 # Should only install the app with properly formatted version (first one)
                 Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
-                    $appId -eq $nonInstalledAppId
+                    $appId -eq $script:notInstalledAppId
                 }
             }
         }
