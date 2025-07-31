@@ -1,3 +1,18 @@
+### Configurable merge method for pull request auto-merge
+
+A new setting `pullRequestMergeMethod` has been added to the `commitOptions` structure, allowing you to configure which merge method to use when `pullRequestAutoMerge` is enabled. Valid values are "merge" or "rebase". The default value is "squash" to maintain backward compatibility.
+
+Example
+
+```json
+{
+  "commitOptions": {
+    "pullRequestAutoMerge": true,
+    "pullRequestMergeMethod": "merge"
+  }
+}
+```
+
 ### AL-Go Telemetry
 
 AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
