@@ -12,7 +12,7 @@ resources:
     ref: refs/heads/main
   
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  template: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     pool:
       name: d365bc-agentpool-nonprod
