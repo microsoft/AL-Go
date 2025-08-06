@@ -10,7 +10,7 @@ resources:
     type: git
     name: 1ESPipelineTemplates/1ESPipelineTemplates
     ref: refs/heads/main
-  
+
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
@@ -21,7 +21,7 @@ extends:
       jobs:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
-        steps:      
+        steps:
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
