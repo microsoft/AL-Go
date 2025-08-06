@@ -15,7 +15,7 @@ extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     pool:
-      name: EngSys-ADOExtension-AgentPool
+      name: d365bc-agentpool-nonprod-1ESPT
     stages:
     - stage: ComponentGovernanceStage
       jobs:
