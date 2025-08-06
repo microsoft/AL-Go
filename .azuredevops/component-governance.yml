@@ -1,18 +1,28 @@
+name: 2.0.$(Year:yy)$(DayOfYear).$(Rev:r)
 trigger:
   branches:
     include:
       - main
 
-stages:
-- stage: ComponentGovernance
-  displayName: 'Component Governance Stage'
-  jobs:
-  - job: ComponentDetection
-    displayName: 'Component Detection Job'
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/heads/main
+  
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
     pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-      displayName: 'Component Detection'
-      inputs:
-        sourceScanPath: $(Agent.BuildDirectory)/s/Actions
+      name: d365bc-agentpool-nonprod-release-engsys
+    stages:
+    - stage: ComponentGovernanceStage
+      jobs:
+      - job: ComponentGovernanceJob
+        displayName: 'Component Governance'
+        steps:      
+        - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+          displayName: 'Component Detection'
+          inputs:
+            sourceScanPath: $(Agent.BuildDirectory)/s/Actions
