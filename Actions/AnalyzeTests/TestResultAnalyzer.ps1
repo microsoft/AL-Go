@@ -446,6 +446,7 @@ function GetPageScriptingTestResultSummaryMD {
         [string] $testResultsFile,
         [string] $project = ''
     )
+    Write-Host "testResultsFile - $testResultsFile"
 
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
@@ -520,6 +521,7 @@ function GetPageScriptingTestResultSummaryMD {
         }
     }
     else {
+        Write-Host "Did not find test results file"
         $failuresSummaryMD = ''
     }
 
