@@ -24,6 +24,10 @@
 
 1. By default, this workflow will apply any updates to the **workflow files (in .github\\workflows)** or **system scripts (in .AL-Go)** from the template repository used to spin up the repository. If you want to change branch or template Url, you can specify the `templateUrl@branch` when you run the workflow.
 
+1. **Custom jobs behavior**: When updating system files, custom jobs are handled differently based on repository type:
+   - **Template repositories** (without `templateUrl` setting): Custom jobs are preserved and applied
+   - **Final repositories** (with `templateUrl` pointing to another repository): Custom jobs from the current repository are NOT applied to prevent persistence of jobs removed from the template
+
 ______________________________________________________________________
 
 [back](../README.md)
