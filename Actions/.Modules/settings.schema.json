@@ -602,6 +602,11 @@
                 "pullRequestAutoMerge": {
                     "type": "boolean"
                 },
+                "pullRequestMergeMethod": {
+                    "type": "string",
+                    "enum": ["merge", "squash"],
+                    "default": "squash"
+                },
                 "pullRequestLabels": {
                     "type": "array",
                     "items": {}
