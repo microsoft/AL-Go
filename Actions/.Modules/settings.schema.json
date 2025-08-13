@@ -293,6 +293,10 @@
             },
             "description": "See https://aka.ms/ALGoSettings#customcodecops"
         },
+        "trackCodeCopIssuesInGitHub": {
+            "type": "boolean",
+            "description": "Enable tracking of CodeCop issues in GitHub. See https://aka.ms/ALGoSettings#trackCodeCopIssuesInGitHub"
+        },
         "failOn": {
             "type": "string",
             "pattern": "^(none|warning|error|newWarning)$",
