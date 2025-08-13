@@ -1,0 +1,25 @@
+<testsuites id="" name="" tests="2" failures="1" skipped="0" errors="0" time="75.277">
+  <testsuite name="D-a-ALGoPagescriptingTest-ALGoPagescriptingTest-RecordedTests-SomePageScript" timestamp="2025-01-01T10:02:12.069Z" hostname="chromium" tests="1" failures="1" skipped="0" time="42.000" errors="0">
+    <testcase name=" (D:\a\ALGoPagescriptingTest\ALGoPagescriptingTest\RecordedTests\SomePageScript.yml)" classname="dist\player.spec.js" time="42.000">
+      <properties>
+        <property name="log" value="Test">
+        </property>
+      </properties>
+      <failure message="player.spec.js:35:21  (D:\a\ALGoPagescriptingTest\ALGoPagescriptingTest\RecordedTests\SomePageScript.yml)" type="FAILURE"><![CDATA[  [chromium] › dist\player.spec.js:35:21 ›  (D:\a\ALGoPagescriptingTest\ALGoPagescriptingTest\RecordedTests\SomePageScript.yml) 
+
+    Error: An error occurred during replaying the recording. See replay log for further info.
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]></failure>
+      <system-out><![CDATA[Output]]></system-out>
+    </testcase>
+  </testsuite>
+  <testsuite name="D-a-ALGoPagescriptingTest-ALGoPagescriptingTest-RecordedTests-SomeOtherPageScript" timestamp="2025-01-01T10:03:26.051Z" hostname="chromium" tests="1" failures="0" skipped="0" time="11.000" errors="0">
+    <testcase name=" (D:\a\ALGoPagescriptingTest\ALGoPagescriptingTest\RecordedTests\SomeOtherPageScript.yml)" classname="dist\player.spec.js" time="11.000">
+      <properties>
+        <property name="log" value="Log2" />
+      </properties>
+      <system-out><![CDATA[Output]]></system-out>
+    </testcase>
+  </testsuite>
+</testsuites>

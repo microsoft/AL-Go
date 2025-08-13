@@ -135,6 +135,12 @@ Describe "AnalyzeTests Action Tests" {
         $script:warningCount | Should -be 0
     }
 
+    It 'Test GetPageScriptingTestResultSummaryMD returns a hashtable' {
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        $output = GetPageScriptingTestResultSummaryMD -testResultsFile (Join-Path $PSScriptRoot 'TestArtifacts/PageScriptingTestResults.xml') -project 'TestProject' 
+        $output | Should -BeOfType 'hashtable'
+    }
+
     AfterAll {
         Remove-Item -Path $bcptFilename -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine1 -Force -ErrorAction SilentlyContinue
