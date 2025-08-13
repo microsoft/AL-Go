@@ -1,6 +1,6 @@
 ### Configurable merge method for pull request auto-merge
 
-A new setting `pullRequestMergeMethod` has been added to the `commitOptions` structure, allowing you to configure which merge method to use when `pullRequestAutoMerge` is enabled. Valid values are "merge" or "rebase". The default value is "squash" to maintain backward compatibility.
+A new setting `pullRequestMergeMethod` has been added to the `commitOptions` structure, allowing you to configure which merge method to use when `pullRequestAutoMerge` is enabled. Valid values are "merge" or "squash". The default value is "squash" to maintain backward compatibility.
 
 Example
 
