@@ -1,5 +1,4 @@
 $errorLogsFolder = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
-$errorLogFiles = Get-ChildItem -Path $errorLogsFolder -Filter "*.errorLog.json" -File -Recurse
 
 # Base SARIF structure
 $sarif = @{
@@ -16,7 +15,6 @@ $sarif = @{
         results = @()
     })
 }
-
 
 function GenerateSARIFJson {
     param(
@@ -58,19 +56,26 @@ function GenerateSARIFJson {
     }
 }
 
-$errorLogFiles | ForEach-Object {
-    OutputDebug -message "Found error log file: $($_.FullName)"
-    $fileName = $_.Name
-    try {
-        $errorLogContent = Get-Content -Path $_.FullName -Raw | ConvertFrom-Json
-        GenerateSARIFJson -errorLogContent $errorLogContent
+if (Test-Path $errorLogsFolder -PathType Directory){
+    $errorLogFiles = Get-ChildItem -Path $errorLogsFolder -Filter "*.errorLog.json" -File -Recurse
+    Write-Host "Found $($errorLogFiles.Count) error log files in $errorLogsFolder"
+    $errorLogFiles | ForEach-Object {
+        OutputDebug -message "Found error log file: $($_.FullName)"
+        $fileName = $_.Name
+        try {
+            $errorLogContent = Get-Content -Path $_.FullName -Raw | ConvertFrom-Json
+            GenerateSARIFJson -errorLogContent $errorLogContent
+        }
+        catch {
+            OutputWarning "Failed to process $fileName. AL code alerts might not appear in GitHub. You can manually inspect your artifacts for AL code alerts"
+            OutputDebug -message "Error: $_"
+        }
     }
-    catch {
-        OutputWarning "Failed to process $fileName. AL code alerts might not appear in GitHub."
-        OutputDebug -message "Error: $_"
-    }
-}
 
-$sarifJson = $sarif | ConvertTo-Json -Depth 10 -Compress
-OutputDebug -message $sarifJson
-Set-Content -Path "$errorLogsFolder/output.sarif.json" -Value $sarifJson
+    $sarifJson = $sarif | ConvertTo-Json -Depth 10 -Compress
+    OutputDebug -message $sarifJson
+    Set-Content -Path "$errorLogsFolder/output.sarif.json" -Value $sarifJson
+}
+else {
+    OutputWarning -message "ErrorLogs folder not found. You can manually inspect your artifacts for AL code alerts."
+}
