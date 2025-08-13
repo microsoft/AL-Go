@@ -12,7 +12,7 @@ $sarif = @{
                 informationUri = 'https://aka.ms/AL-Go'
                 rules = @()
             }
-        }     
+        }
         results = @()
     })
 }
