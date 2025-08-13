@@ -44,6 +44,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "PageScriptingTestResultDetailsArtifactsName=ALGOProject-main-CleanPageScriptingTestResultDetails-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-CleanBuildOutput-22.0.123.0"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-CleanContainerEventLog-22.0.123.0"
+        $generatedOutPut | Should -Contain "ErrorLogsArtifactsName=ALGOProject-main-CleanErrorLogs-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildMode=Clean"
 
     }
@@ -65,6 +66,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "PageScriptingTestResultDetailsArtifactsName=ALGOProject-main-PageScriptingTestResultDetails-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-main-BuildOutput-22.0.123.0"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-main-ContainerEventLog-22.0.123.0"
+        $generatedOutPut | Should -Contain "ErrorLogsArtifactsName=ALGOProject-main-ErrorLogs-22.0.123.0"
     }
 
     It 'should escape slashes and backslashes in artifact name' {
@@ -84,6 +86,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "PageScriptingTestResultDetailsArtifactsName=ALGOProject-releases_1.0-PageScriptingTestResultDetails-22.0.123.0"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-22.0.123.0"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-22.0.123.0"
+        $generatedOutPut | Should -Contain "ErrorLogsArtifactsName=ALGOProject-releases_1.0-ErrorLogs-22.0.123.0"
     }
 
     It 'should use the specified suffix if provided' {
@@ -108,6 +111,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "PageScriptingTestResultDetailsArtifactsName=ALGOProject-releases_1.0-PageScriptingTestResultDetails-Current-$currentDate"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject-releases_1.0-BuildOutput-Current-$currentDate"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject-releases_1.0-ContainerEventLog-Current-$currentDate"
+        $generatedOutPut | Should -Contain "ErrorLogsArtifactsName=ALGOProject-releases_1.0-ErrorLogs-Current-$currentDate"
     }
 
     It 'handles special characters in project name' {
@@ -133,6 +137,7 @@ Describe 'CalculateArtifactNames Action Tests' {
         $generatedOutPut | Should -Contain "PageScriptingTestResultDetailsArtifactsName=ALGOProject_øåæ-releases_1.0-PageScriptingTestResultDetails-Current-$currentDate"
         $generatedOutPut | Should -Contain "BuildOutputArtifactsName=ALGOProject_øåæ-releases_1.0-BuildOutput-Current-$currentDate"
         $generatedOutPut | Should -Contain "ContainerEventLogArtifactsName=ALGOProject_øåæ-releases_1.0-ContainerEventLog-Current-$currentDate"
+        $generatedOutPut | Should -Contain "ErrorLogsArtifactsName=ALGOProject_øåæ-releases_1.0-ErrorLogs-Current-$currentDate"
     }
 
     It 'Compile Action' {
@@ -151,6 +156,7 @@ Describe 'CalculateArtifactNames Action Tests' {
             "PageScriptingTestResultDetailsArtifactsName" = "Artifacts name for PageScriptingTestResultDetails"
             "BuildOutputArtifactsName" = "Artifacts name for BuildOutput"
             "ContainerEventLogArtifactsName" = "Artifacts name for ContainerEventLog"
+            "ErrorLogsArtifactsName" = "Artifacts name for ErrorLogs"
             "BuildMode" = "Build mode used when building the artifacts"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
