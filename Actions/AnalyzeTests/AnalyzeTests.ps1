@@ -33,7 +33,10 @@ switch ($testType) {
     }
     'pageScripting' {
         $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\.buildartifacts\PageScriptingTestResults.xml"
-        $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project $project
+        $pageScriptingResults = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project $project
+        $testResultsSummaryMD = $pageScriptingResults.SummaryMD
+        $testResultsfailuresMD = $pageScriptingResults.FailuresMD
+        $testResultsFailuresSummaryMD = $pageScriptingResults.FailuresSummaryMD
         $testTitle = "Page Scripting test results"
     }
     default {
@@ -57,10 +60,8 @@ Write-Host "----"
 
 
 $titleSize = GetStringByteSize("## $testTitle`n`n")
-#$summarySize = GetStringByteSize("$($testResultsSummaryMD.Replace("\n","`n"))`n`n")
-#$failureSummarySize = GetStringByteSize("$($testResultsfailuresMD.Replace("\n","`n"))`n`n")
-$summarySize = GetStringByteSize("oakepokff")
-$failureSummarySize = GetStringByteSize("ifjoisjf")
+$summarySize = GetStringByteSize("$($testResultsSummaryMD.Replace("\n","`n"))`n`n")
+$failureSummarySize = GetStringByteSize("$($testResultsfailuresMD.Replace("\n","`n"))`n`n")
 
 # GitHub job summaries are limited to just under 1MB and we call Add-Content 3 times which each adds a new line, hence 1MB - 4.
 # If no tests are found, don't add a job summary at all.
