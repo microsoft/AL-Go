@@ -49,7 +49,7 @@ else {
     $suffix = "$($repoVersion.Major).$($repoVersion.Minor).$($appBuild).$($settings.appRevision)"
 }
 
-'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'PageScriptingTestResults', 'PageScriptingTestResultDetails', 'BuildOutput', 'ContainerEventLog', 'PowerPlatformSolution' | ForEach-Object {
+'Apps', 'Dependencies', 'TestApps', 'TestResults', 'BcptTestResults', 'PageScriptingTestResults', 'PageScriptingTestResultDetails', 'BuildOutput', 'ContainerEventLog', 'PowerPlatformSolution', 'ErrorLogs' | ForEach-Object {
     $name = "$($_)ArtifactsName"
     $value = "$($projectName)-$($branchName)-$buildMode$_-$suffix"
     Set-OutputVariable -name $name -value $value
