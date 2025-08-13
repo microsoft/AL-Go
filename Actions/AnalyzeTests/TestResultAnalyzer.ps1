@@ -446,7 +446,6 @@ function GetPageScriptingTestResultSummaryMD {
         [string] $testResultsFile,
         [string] $project = ''
     )
-    Write-Host "testResultsFile - $testResultsFile"
 
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()

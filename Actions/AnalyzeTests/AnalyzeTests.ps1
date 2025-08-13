@@ -50,15 +50,6 @@ function GetStringByteSize($string) {
     return $bytes.Length
 }
 
-Write-Host "----"
-Write-Host "## $testTitle"
-Write-Host "----"
-Write-Host "$($testResultsSummaryMD)"
-Write-Host "----"
-Write-Host "$($testResultsfailuresMD)"
-Write-Host "----"
-
-
 $titleSize = GetStringByteSize("## $testTitle`n`n")
 $summarySize = GetStringByteSize("$($testResultsSummaryMD.Replace("\n","`n"))`n`n")
 $failureSummarySize = GetStringByteSize("$($testResultsfailuresMD.Replace("\n","`n"))`n`n")
