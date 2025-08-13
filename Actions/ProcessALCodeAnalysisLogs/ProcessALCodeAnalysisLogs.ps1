@@ -66,11 +66,11 @@ $errorLogFiles | ForEach-Object {
         GenerateSARIFJson -errorLogContent $errorLogContent
     }
     catch {
-        Write-Host "Failed to process $fileName"
-        OutputDebug -message "Failed to read error log file: $_"
+        OutputWarning "Failed to process $fileName. AL code alerts might not appear in GitHub."
+        OutputDebug -message "Error: $_"
     }
 }
 
 $sarifJson = $sarif | ConvertTo-Json -Depth 10 -Compress
-Write-Host ($sarifJson)
+OutputDebug -message $sarifJson
 Set-Content -Path "$errorLogsFolder/output.sarif.json" -Value $sarifJson
