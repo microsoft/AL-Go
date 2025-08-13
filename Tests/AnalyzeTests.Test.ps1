@@ -137,7 +137,7 @@ Describe "AnalyzeTests Action Tests" {
 
     It 'Test GetPageScriptingTestResultSummaryMD returns a hashtable' {
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
-        $output = GetPageScriptingTestResultSummaryMD -testResultsFile (Join-Path $PSScriptRoot 'TestArtifacts/PageScriptingTestResults.xml') -project 'TestProject' 
+        $output = GetPageScriptingTestResultSummaryMD -testResultsFile (Join-Path $PSScriptRoot 'TestArtifacts/PageScriptingTestResults.xml') -project 'TestProject'
         $output | Should -BeOfType 'hashtable'
     }
 
