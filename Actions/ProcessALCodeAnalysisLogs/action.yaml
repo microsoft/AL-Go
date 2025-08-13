@@ -1,4 +1,4 @@
-name: Analyze Diagnostic Logs
+name: Process AL Code Analysis Logs
 author: Microsoft Corporation
 inputs:
   shell:
