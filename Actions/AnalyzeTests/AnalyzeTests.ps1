@@ -47,9 +47,20 @@ function GetStringByteSize($string) {
     return $bytes.Length
 }
 
+Write-Host "----"
+Write-Host "## $testTitle"
+Write-Host "----"
+Write-Host "$($testResultsSummaryMD)"
+Write-Host "----"
+Write-Host "$($testResultsfailuresMD)"
+Write-Host "----"
+
+
 $titleSize = GetStringByteSize("## $testTitle`n`n")
-$summarySize = GetStringByteSize("$($testResultsSummaryMD.Replace("\n","`n"))`n`n")
-$failureSummarySize = GetStringByteSize("$($testResultsfailuresMD.Replace("\n","`n"))`n`n")
+#$summarySize = GetStringByteSize("$($testResultsSummaryMD.Replace("\n","`n"))`n`n")
+#$failureSummarySize = GetStringByteSize("$($testResultsfailuresMD.Replace("\n","`n"))`n`n")
+$summarySize = GetStringByteSize("oakepokff")
+$failureSummarySize = GetStringByteSize("ifjoisjf")
 
 # GitHub job summaries are limited to just under 1MB and we call Add-Content 3 times which each adds a new line, hence 1MB - 4.
 # If no tests are found, don't add a job summary at all.
