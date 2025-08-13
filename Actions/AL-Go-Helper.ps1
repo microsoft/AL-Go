@@ -2049,11 +2049,11 @@ function GetFoldersFromAllProjects {
 }
 
 function GetPackageVersion($packageName) {
-    $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
+    $alGoPackages = Get-Content -Path "$PSScriptRoot\Package.json" | ConvertFrom-Json
 
     # Check if the package is in the list of packages
-    if ($alGoPackages.PSobject.Properties.name -eq $PackageName) {
-        return $alGoPackages."$PackageName"
+    if ($alGoPackages.dependencies.PSobject.Properties.name -eq $PackageName) {
+        return $alGoPackages.dependencies."$PackageName"
     }
     else {
         throw "Package $PackageName is not in the list of packages"
