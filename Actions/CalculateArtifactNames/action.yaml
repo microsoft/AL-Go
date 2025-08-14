@@ -46,6 +46,9 @@ outputs:
   ContainerEventLogArtifactsName:
     description: Artifacts name for ContainerEventLog
     value: ${{ steps.calculateartifactnames.outputs.ContainerEventLogArtifactsName }}
+  ErrorLogsArtifactsName:
+    description: Artifacts name for ErrorLogs
+    value: ${{ steps.calculateartifactnames.outputs.ErrorLogsArtifactsName }}
   BuildMode:
     description: Build mode used when building the artifacts
     value: ${{ steps.calculateartifactnames.outputs.BuildMode }}
