@@ -240,7 +240,7 @@ jobs:
         if: (success() || failure()) && env.trackCodeCopIssuesInGitHub == 'True'
         uses: microsoft/AL-Go-Actions/ProcessALCodeAnalysisLogs@main
         with:
-          shell: ${{ inputs.shell }}
+          shell: powershell
 
       - name: Upload SARIF file to GitHub
         uses: github/codeql-action/upload-sarif@v3
