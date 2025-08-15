@@ -22,12 +22,6 @@ extends:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
         steps:
-        - task: NuGetCommand@2
-          inputs:
-            command: 'custom'
-            arguments: 'pack Actions/Packages.nuspec'
-            workingDirectory: '$(Agent.BuildDirectory)/s/Actions'
-            restoreSolution: ''
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
