@@ -22,16 +22,11 @@ extends:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
         steps:      
-        - powershell: |
-            $req = Import-PowerShellDataFile -Path 'Actions/requirements.psd1'
-            foreach ($mod in $req.RequiredModules) {
-                Write-host "Installing $($mod.ModuleName) with version $($mod.ModuleVersion)"
-                try {
-                    Install-Module -Name $mod.ModuleName -RequiredVersion $mod.ModuleVersion -Scope CurrentUser -Force
-                } catch {
-                    Write-Host "Failed with error: $_"
-                }
-            }
+        - task: NuGetCommand@2
+          displayName: 'Pack NuGet packages'
+          inputs:
+            command: pack
+            packagesToPack: 'Actions/AL-Go.nuspec'
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
