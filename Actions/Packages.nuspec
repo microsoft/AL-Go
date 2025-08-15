@@ -1,18 +1,16 @@
 <?xml version='1.0' encoding='utf-8'?>
-<package>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>ALGoPackages</id>
 		<version>1.0.0</version>
 		<authors>Microsoft</authors>
 		<description>NuGet packages used by AL-Go</description>
 		<dependencies>
-			<group>
-				<dependency id="sign" version="0.9.1-beta.25278.1" />
-				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
-				<dependency id="Az.Accounts" version="2.15.1" />
-				<dependency id="Az.Storage" version="6.1.1" />
-				<dependency id="Az.KeyVault" version="5.2.0" />
-			</group>
+			<dependency id="sign" version="0.9.1-beta.25278.1" />
+			<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
+			<dependency id="Az.Accounts" version="2.15.1" />
+			<dependency id="Az.Storage" version="6.1.1" />
+			<dependency id="Az.KeyVault" version="5.2.0" />
 		</dependencies>
 	</metadata>
 </package>
