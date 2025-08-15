@@ -22,11 +22,13 @@ extends:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
         steps:      
-        - task: NuGetCommand@2
-          inputs:
-            command: 'restore'
-            restoreSolution: '**/*.csproj'
+        - powershell: |
+            $req = Import-PowerShellDataFile -Path 'Actions/requirements.psd1'
+            foreach ($mod in $req.RequiredModules) {
+                Install-Module -Name $mod.ModuleName -RequiredVersion $mod.ModuleVersion -Scope CurrentUser -Force
+            }
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
             sourceScanPath: $(Agent.BuildDirectory)/s/Actions
+            verbosity: 'Verbose'
