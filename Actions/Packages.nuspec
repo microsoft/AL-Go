@@ -3,6 +3,8 @@
 	<metadata>
 		<id>ALGoPackages</id>
 		<version>1.0.0</version>
+		<authors>Microsoft</authors>
+		<description>NuGet packages used by AL-Go</description>
 		<dependencies>
 			<group>
 				<dependency id="sign" version="0.9.1-beta.25278.1" />
