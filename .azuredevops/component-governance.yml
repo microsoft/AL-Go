@@ -31,4 +31,4 @@ extends:
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
-            sourceScanPath: $(Agent.BuildDirectory)/s/Actions
+            sourceScanPath: $(Agent.BuildDirectory)/s
