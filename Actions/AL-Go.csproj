@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <CountryCode>us</CountryCode>
+  </PropertyGroup>
+  <ItemGroup>    
+	<PackageReference Include="sign" Version="0.9.1-beta.25278.1" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" />
+    <PackageReference Include="Az.Accounts" Version="2.15.1" />
+    <PackageReference Include="Az.Storage" Version="6.1.1" />
+    <PackageReference Include="Az.KeyVault" Version="5.2.0" />
+  </ItemGroup>
+</Project>
