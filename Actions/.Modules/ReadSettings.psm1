@@ -207,6 +207,7 @@ function GetDefaultSettings
         "commitOptions"                                 = [ordered]@{
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
+            "pullRequestMergeMethod"                    = "squash"
             "pullRequestLabels"                         = @()
             "createPullRequest"                         = $true
         }
