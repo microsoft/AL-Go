@@ -21,8 +21,12 @@ extends:
       jobs:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
-        steps:
+        steps:      
+        - task: NuGetCommand@2
+          inputs:
+            command: 'restore'
+            restoreSolution: '**/*.csproj'
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
-            sourceScanPath: $(Agent.BuildDirectory)/s
+            sourceScanPath: $(Agent.BuildDirectory)/s/Actions
