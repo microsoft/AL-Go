@@ -2059,18 +2059,18 @@ function GetFoldersFromAllProjects {
 
 function GetPackageVersion($packageName) {
     $projFilePath = "$PSScriptRoot\Environment.Packages.proj"
-    
+
     # Check if the proj file exists
     if (-not (Test-Path $projFilePath)) {
         throw "Environment.Packages.proj file not found at $projFilePath"
     }
-    
+
     # Load the XML content
     [xml]$projXml = Get-Content -Path $projFilePath
-    
+
     # Find the PackageReference with the specified Include (package name)
     $packageReference = $projXml.Project.ItemGroup.PackageReference | Where-Object { $_.Include -eq $packageName }
-    
+
     if ($packageReference) {
         return $packageReference.Version
     }

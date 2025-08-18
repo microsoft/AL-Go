@@ -21,7 +21,7 @@ extends:
       jobs:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
-        steps:      
+        steps:
         - task: NuGetAuthenticate@1
 
         - task: MSBuild@1
@@ -29,7 +29,7 @@ extends:
           inputs:
             solution: 'Actions/Environment.Packages.proj'
             msbuildArguments: '-t:Restore'
-        
+
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:

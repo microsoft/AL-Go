@@ -14,7 +14,7 @@
     <PackageReference Include="Az.Accounts" Version="2.15.1" GeneratePathProperty="true" ExcludeAssets="All" />
     <PackageReference Include="Az.Storage" Version="6.1.1" GeneratePathProperty="true" ExcludeAssets="All" />
     <PackageReference Include="Az.KeyVault" Version="5.2.0" GeneratePathProperty="true" ExcludeAssets="All" />
-  </ItemGroup>  
-  
+  </ItemGroup>
+
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
