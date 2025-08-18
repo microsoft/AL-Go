@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputPath>./.out</OutputPath>
+    <RestorePackagesPath>$(OutputPath)/packages</RestorePackagesPath>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <OutputType>Library</OutputType>
+    <!-- <ProjectTypeGuids>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids> -->
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="sign" Version="0.9.1-beta.25278.1" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Az.Accounts" Version="3.0.4" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Az.Storage" Version="2.1.3" GeneratePathProperty="true" ExcludeAssets="All" />
+  </ItemGroup>  
+  <Target Name="Build" />
+
+  <Target Name="CopyPackages">
+    <ItemGroup>
+      <AzAccounts Include="$(PkgAz_Accounts)\**\*.*" Exclude="$(PkgAz_Accounts)\*.nupkg*;$(PkgAz_Accounts)\*.nuspec"/>
+      <Microsoft_ApplicationInsights Include="$(PkgMicrosoft_ApplicationInsights)\**\*.*" Exclude="$(PkgMicrosoft_ApplicationInsights)\*.nupkg*;$(PkgMicrosoft_ApplicationInsights)\*.nuspec"/>
+      <AzStorage Include="$(PkgAz_Storage)\**\*.*" Exclude="$(PkgAz_Storage)\*.nupkg*;$(PkgAz_Storage)\*.nuspec"/>
+      <sign Include="$(Pkgsign)\**\*.*" Exclude="$(Pkgsign)\*.nupkg*;$(Pkgsign)\*.nuspec"/>
+    </ItemGroup>
+    <Message Text="Copy Az Powershell modules" />
+    <Copy SourceFiles="@(AzAccounts)" DestinationFolder="$(OutputPath)\Az.Accounts\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(Microsoft_ApplicationInsights)" DestinationFolder="$(OutputPath)\Microsoft.ApplicationInsights\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AzStorage)" DestinationFolder="$(OutputPath)\Az.Storage\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(sign)" DestinationFolder="$(OutputPath)\sign\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+  
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

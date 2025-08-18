@@ -22,13 +22,21 @@ extends:
       - job: ComponentGovernanceJob
         displayName: 'Component Governance'
         steps:      
-        - task: NuGetCommand@2
-          displayName: 'Pack NuGet packages'
+        - task: MSBuild@1
+          displayName: 'Restore NuGet packages'
           inputs:
-            command: pack
-            packagesToPack: 'Actions/AL-Go.nuspec'
+            solution: 'Actions/Environment.Packages.proj'
+            msbuildArguments: '-t:Restore'
+            
+        - task: MSBuild@1
+          displayName: 'Copy packages to output directory'
+          inputs:
+            solution: 'Actions/Environment.Packages.proj'
+            msbuildArguments: '-t:CopyPackages'
+        
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
           inputs:
             sourceScanPath: $(Agent.BuildDirectory)/s/Actions
+            ignoreDirectories: 'Actions'
             verbosity: 'Verbose'
