@@ -6,7 +6,9 @@
     <RestorePackagesPath>$(OutputPath)/packages</RestorePackagesPath>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <OutputType>Library</OutputType>
-    <RestoreSources>https://dynamicssmb2.pkgs.visualstudio.com/_packaging/DynamicsSMBPackages/nuget/v3/index.json</RestoreSources>
+    <!-- RestoreSources can be passed via command line: -p:RestoreSources="your-feed-url" -->
+    <!-- Default to public NuGet if no custom source is provided -->
+    <RestoreSources Condition="'$(RestoreSources)' == ''">https://api.nuget.org/v3/index.json</RestoreSources>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="sign" Version="0.9.1-beta.25278.1" GeneratePathProperty="true" ExcludeAssets="All" />
@@ -15,27 +17,6 @@
     <PackageReference Include="Az.Storage" Version="6.1.1" GeneratePathProperty="true" ExcludeAssets="All" />
     <PackageReference Include="Az.KeyVault" Version="5.2.0" GeneratePathProperty="true" ExcludeAssets="All" />
   </ItemGroup>  
-
-  <!-- <Target Name="CopyPackages">
-    <Message Text="Az.Accounts path: $(PkgAz_Accounts)" Importance="high" />
-    <Message Text="Az.Storage path: $(PkgAz_Storage)" Importance="high" />
-    <Message Text="Sign path: $(PkgSign)" Importance="high" />
-    <Message Text="Microsoft.ApplicationInsights path: $(PkgMicrosoft_ApplicationInsights)" Importance="high" />
-    <Message Text="Az.KeyVault path: $(PkgAz_KeyVault)" Importance="high"/>
-    <ItemGroup>
-      <AzAccounts Include="$(PkgAz_Accounts)\**\*.*" Exclude="$(PkgAz_Accounts)\*.nupkg*;$(PkgAz_Accounts)\*.nuspec"/>
-      <Microsoft_ApplicationInsights Include="$(PkgMicrosoft_ApplicationInsights)\**\*.*" Exclude="$(PkgMicrosoft_ApplicationInsights)\*.nupkg*;$(PkgMicrosoft_ApplicationInsights)\*.nuspec"/>
-      <AzStorage Include="$(PkgAz_Storage)\**\*.*" Exclude="$(PkgAz_Storage)\*.nupkg*;$(PkgAz_Storage)\*.nuspec"/>
-      <sign Include="$(Pkgsign)\**\*.*" Exclude="$(Pkgsign)\*.nupkg*;$(Pkgsign)\*.nuspec"/>
-      <AzKeyVault Include="$(PkgAz_KeyVault)\**\*.*" Exclude="$(PkgAz_KeyVault)\*.nupkg*;$(PkgAz_KeyVault)\*.nuspec"/>
-    </ItemGroup>
-    <Message Text="Copy Az Powershell modules" />
-    <Copy SourceFiles="@(AzAccounts)" DestinationFolder="$(OutputPath)\Az.Accounts\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(Microsoft_ApplicationInsights)" DestinationFolder="$(OutputPath)\Microsoft.ApplicationInsights\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(AzStorage)" DestinationFolder="$(OutputPath)\Az.Storage\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(sign)" DestinationFolder="$(OutputPath)\sign\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(AzKeyVault)" DestinationFolder="$(OutputPath)\Az.KeyVault\%(RecursiveDir)" SkipUnchangedFiles="true" />
-  </Target> -->
   
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

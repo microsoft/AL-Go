@@ -23,18 +23,12 @@ extends:
         displayName: 'Component Governance'
         steps:      
         - task: NuGetAuthenticate@1
-        
+
         - task: MSBuild@1
           displayName: 'Restore NuGet packages'
           inputs:
             solution: 'Actions/Environment.Packages.proj'
             msbuildArguments: '-t:Restore'
-            
-        # - task: MSBuild@1
-        #   displayName: 'Copy packages to output directory'
-        #   inputs:
-        #     solution: 'Actions/Environment.Packages.proj'
-        #     msbuildArguments: '-t:CopyPackages'
         
         - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
           displayName: 'Component Detection'
