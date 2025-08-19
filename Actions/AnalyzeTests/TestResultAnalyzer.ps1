@@ -499,11 +499,11 @@ function GetPageScriptingTestResultSummaryMD {
                             $testCaseFailureNode = [FailureNode]::new($true)
                             $testCaseFailureNode.errorMessage = $testcase.failure.message
                             $testCaseFailureNode.errorStackTrace = $testcase.failure."#cdata-section"
-                            $testCaseSummaryNode.childSummaries.Add($testCaseFailureNode)
-                            $suiteFailureNode.childSummaries.Add($testCaseSummaryNode)
+                            $testCaseSummaryNode.childSummaries.Add($testCaseFailureNode) | Out-Null
+                            $suiteFailureNode.childSummaries.Add($testCaseSummaryNode) | Out-Null
                         }
                     }
-                    $rootFailureNode.childSummaries.Add($suiteFailureNode)
+                    $rootFailureNode.childSummaries.Add($suiteFailureNode) | Out-Null
                 }
             }
             $summarySb = BuildTestMarkdownTable -Headers $mdTableHeaders -Rows $mdTableRows -resultIcons $mdTableEmojis
@@ -520,10 +520,13 @@ function GetPageScriptingTestResultSummaryMD {
         }
     }
     else {
+        Write-Host "Did not find test results file"
         $failuresSummaryMD = ''
     }
 
-    $summarySb.ToString()
-    $failuresSb.ToString()
-    $failuresSummaryMD
+    return @{
+        SummaryMD = $summarySb.ToString()
+        FailuresMD = $failuresSb.ToString()
+        FailuresSummaryMD = $failuresSummaryMD
+    }
 }

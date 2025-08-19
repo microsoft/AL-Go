@@ -1,3 +1,18 @@
+### Configurable merge method for pull request auto-merge
+
+A new setting `pullRequestMergeMethod` has been added to the `commitOptions` structure, allowing you to configure which merge method to use when `pullRequestAutoMerge` is enabled. Valid values are "merge" or "squash". The default value is "squash" to maintain backward compatibility.
+
+Example
+
+```json
+{
+  "commitOptions": {
+    "pullRequestAutoMerge": true,
+    "pullRequestMergeMethod": "merge"
+  }
+}
+```
+
 ### AL Code Analysis tracked in GitHub
 
 AL-Go already supports AL code analysis, but up until now this was not tracked in GitHub. It is now possible to track code analysis issues automatically in the GitHub security tab, as well as having any new issues posted as a comment in Pull Requests.
@@ -39,6 +54,7 @@ Please note, that due to certain security limitations, the properties `runs-on`,
 - Issue 1722 Check if apps are already installed on a higher version before deploying
 - Issue 1774 Increment Version Number with +0.1 can increment some version numbers twice
 - Issue 1837 Deployment from PR builds fail if PR branch name includes forward slashes (e.g., `feature/branch-name`).
+- Issue 1852 Page Scripting Tests are not added to build summary
 
 ### Additional debug logging functionality
 

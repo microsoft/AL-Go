@@ -33,7 +33,10 @@ switch ($testType) {
     }
     'pageScripting' {
         $testResultsFile = Join-Path $ENV:GITHUB_WORKSPACE "$project\.buildartifacts\PageScriptingTestResults.xml"
-        $testResultsSummaryMD, $testResultsfailuresMD, $testResultsFailuresSummaryMD = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project $project
+        $pageScriptingResults = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project $project
+        $testResultsSummaryMD = $pageScriptingResults.SummaryMD
+        $testResultsfailuresMD = $pageScriptingResults.FailuresMD
+        $testResultsFailuresSummaryMD = $pageScriptingResults.FailuresSummaryMD
         $testTitle = "Page Scripting test results"
     }
     default {
