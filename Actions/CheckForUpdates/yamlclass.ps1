@@ -371,9 +371,11 @@ class Yaml {
         }
 
         # Locate custom jobs in destination YAML
-        Write-Host "Apply custom jobs"
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*')) | Where-Object { $_.Origin -eq $origin }
         if ($customJobs) {
+            Write-Host "Apply custom jobs for origin $origin"
+
+            Trace-Information -Message "Adding custom jobs with origin $origin"
             # Add custom jobs to template YAML
             $srcYaml.AddCustomJobsToYaml($customJobs)
         }
@@ -381,10 +383,10 @@ class Yaml {
     }
 
     static [void] ApplyTemplateCustomizations([ref] $srcContent, [string] $yamlFile) {
-        ApplyCustomizations([ref] $srcContent, $yamlFile, [CustomizationOrigin]::TemplateRepository)
+        [Yaml]::ApplyCustomizations([ref] $srcContent, $yamlFile, [CustomizationOrigin]::TemplateRepository)
     }
 
     static [void] ApplyFinalCustomizations([ref] $srcContent, [string] $yamlFile) {
-        ApplyCustomizations([ref] $srcContent, $yamlFile, [CustomizationOrigin]::FinalRepository)
+        [Yaml]::ApplyCustomizations([ref] $srcContent, $yamlFile, [CustomizationOrigin]::FinalRepository)
     }
 }
