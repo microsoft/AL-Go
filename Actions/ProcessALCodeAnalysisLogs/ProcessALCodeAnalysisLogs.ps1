@@ -54,7 +54,7 @@ function GenerateSARIFJson {
 }
 
 try {
-    if (Test-Path $errorLogsFolderPath -PathType Container -and $sarif -neq $null){
+    if ((Test-Path $errorLogsFolderPath -PathType Container) -and ($null -ne $sarif)){
         $errorLogFiles = @(Get-ChildItem -Path $errorLogsFolderPath -Filter "*.errorLog.json" -File -Recurse)
         Write-Host "Found $($errorLogFiles.Count) error log files in $errorLogsFolderPath"
         $errorLogFiles | ForEach-Object {
