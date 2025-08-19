@@ -116,7 +116,7 @@ jobs:
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && ${{ needs.Initialization.outputs.trackCodeCopIssuesInGitHub == 'True' }} 
+    if: (!cancelled()) && ${{ needs.Initialization.outputs.trackCodeCopIssuesInGitHub == 'True' }}
     runs-on: [ windows-latest ]
     name: Code Analysis Processing
     steps:
