@@ -1,4 +1,9 @@
-$errorLogsFolder = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
+Param(
+    [Parameter(HelpMessage = "Folder containing error logs and SARIF output", Mandatory = $false)]
+    [string] $errorLogsFolder = "ErrorLogs"
+)
+
+$errorLogsFolderPath = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
 
 # Base SARIF structure
 $sarif = @{
@@ -56,9 +61,9 @@ function GenerateSARIFJson {
     }
 }
 
-if (Test-Path $errorLogsFolder -PathType Container){
-    $errorLogFiles = @(Get-ChildItem -Path $errorLogsFolder -Filter "*.errorLog.json" -File -Recurse)
-    Write-Host "Found $($errorLogFiles.Count) error log files in $errorLogsFolder"
+if (Test-Path $errorLogsFolderPath -PathType Container){
+    $errorLogFiles = @(Get-ChildItem -Path $errorLogsFolderPath -Filter "*.errorLog.json" -File -Recurse)
+    Write-Host "Found $($errorLogFiles.Count) error log files in $errorLogsFolderPath"
     $errorLogFiles | ForEach-Object {
         OutputDebug -message "Found error log file: $($_.FullName)"
         $fileName = $_.Name
@@ -74,7 +79,7 @@ if (Test-Path $errorLogsFolder -PathType Container){
 
     $sarifJson = $sarif | ConvertTo-Json -Depth 10 -Compress
     OutputDebug -message $sarifJson
-    Set-Content -Path "$errorLogsFolder/output.sarif.json" -Value $sarifJson
+    Set-Content -Path "$errorLogsFolderPath/output.sarif.json" -Value $sarifJson
 }
 else {
     OutputWarning -message "ErrorLogs folder not found. You can manually inspect your artifacts for AL code alerts."
