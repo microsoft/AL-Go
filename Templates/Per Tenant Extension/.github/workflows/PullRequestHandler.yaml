@@ -73,6 +73,7 @@ jobs:
       - name: Set AL Code Analysis Var output
         id: SetALCodeAnalysisVar
         run: |
+          Write-Host "trackCodeCopIssuesInGitHub environment variable: '$($env:trackCodeCopIssuesInGitHub)'"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "trackCodeCopIssuesInGitHub=$($env:trackCodeCopIssuesInGitHub)"
 
       - name: Determine Workflow Depth
@@ -116,7 +117,7 @@ jobs:
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && ${{ needs.Initialization.outputs.trackCodeCopIssuesInGitHub == 'True' }}
+    if: (!cancelled()) && (needs.Initialization.outputs.trackCodeCopIssuesInGitHub == 'True')
     runs-on: [ windows-latest ]
     name: Code Analysis Processing
     steps:
