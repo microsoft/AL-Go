@@ -175,7 +175,7 @@ foreach($checkfile in $checkfiles) {
     $srcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath
     $originalSrcFolder = $null
     if ($originalTemplateFolder -and $type -notlike 'template*settings') {
-        # Get Original source folder except for template settings - these are applied from the custom template´repository
+        # Get Original source folder except for template settings - these are applied from the custom template repository
         $originalSrcFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateFolder -srcPath $srcPath
     }
     if ($srcFolder) {
@@ -249,13 +249,13 @@ foreach($checkfile in $checkfiles) {
                 if ($type -eq 'workflow' -and $originalSrcFile -ne $srcFile) {
                     # Apply customizations from custom template repository
                     Write-Host "Apply customizations from custom template repository: $srcFile"
-                    [Yaml]::ApplyCustomizations([ref] $srcContent, $srcFile)
+                    [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcFile)
                 }
 
                 if ($dstFileExists) {
                     if ($type -eq 'workflow') {
                         Write-Host "Apply customizations from current repository: $dstFile"
-                        [Yaml]::ApplyCustomizations([ref] $srcContent, $dstFile)
+                        [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstFile)
                     }
 
                     # file exists, compare and add to $updateFiles if different

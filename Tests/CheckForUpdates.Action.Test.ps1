@@ -20,12 +20,30 @@ Describe "CheckForUpdates Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
+    It 'Test that Update AL-Go System Files uses fixes runs-on' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $updateYamlFile = Join-Path $scriptRoot "..\..\Templates\Per Tenant Extension\.github\workflows\UpdateGitHubGoSystemFiles.yaml"
+        $updateYaml = [Yaml]::Load($updateYamlFile)
+        $updateYaml.content | Where-Object { $_ -like '*runs-on:*' } | ForEach-Object {
+            $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
+        }
+    }
+}
+
+Describe('YamlClass Tests') {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptRoot', Justification = 'False positive.')]
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+    }
+
     It 'Test YamlClass' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
         $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
 
         # Yaml file should have 77 entries
-        $yaml.content.Count | Should -be 73
+        $yaml.content.Count | Should -be 74
 
         $start = 0; $count = 0
         # Locate lines for permissions section (including permissions: line)
@@ -55,7 +73,7 @@ Describe "CheckForUpdates Action Tests" {
 
         # Locate CheckForUpdates
         $jobsYaml.Find('CheckForUpdates:', [ref] $start, [ref] $count) | Should -be $true
-        $start | Should -be 23
+        $start | Should -be 24
         $count | Should -be 19
 
         # Replace all occurances of 'shell: powershell' with 'shell: pwsh'
@@ -65,7 +83,7 @@ Describe "CheckForUpdates Action Tests" {
         # Replace Permissions
         $yaml.Replace('Permissions:/',@('contents: write','actions: read'))
         $yaml.content[44].Trim() | Should -be 'shell: pwsh'
-        $yaml.content.Count | Should -be 71
+        $yaml.content.Count | Should -be 72
 
         # Get Jobs section (without the jobs: line)
         $jobsYaml = $yaml.Get('jobs:/')
@@ -116,32 +134,89 @@ Describe "CheckForUpdates Action Tests" {
         $permissionsContent.content[1].Trim() | Should -be 'actions: read'
     }
 
-    It 'Test YamlClass Customizations' {
+    It 'Test YamlClass Customizations from final repository' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet.txt'))
+        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromFinalRepository.txt'))
         $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
 
         # Get Custom jobs from yaml
         $customJobs = $customizedYaml.GetCustomJobsFromYaml('CustomJob*')
         $customJobs | Should -Not -BeNullOrEmpty
         $customJobs.Count | Should -be 1
+        $customJobs[0].Name | Should -Be 'CustomJob-MyFinalJob'
+        $customJobs[0].Origin | Should -Be 'FinalRepository'
 
         # Apply Custom jobs and steps to yaml
         $yaml.AddCustomJobsToYaml($customJobs)
 
         # Check if new yaml content is equal to customized yaml content
         ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+
+        # Applying the custom jobs again doesn't change the yaml content
+        $yaml.AddCustomJobsToYaml($customJobs)
+        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
     }
 
-    It 'Test that Update AL-Go System Files uses fixes runs-on' {
+    It 'Test YamlClass Customizations from custom template repository' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        $updateYamlFile = Join-Path $scriptRoot "..\..\Templates\Per Tenant Extension\.github\workflows\UpdateGitHubGoSystemFiles.yaml"
-        $updateYaml = [Yaml]::Load($updateYamlFile)
-        $updateYaml.content | Where-Object { $_ -like '*runs-on:*' } | ForEach-Object {
-            $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
-        }
+        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromTemplateRepository.txt'))
+        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+
+        # Get Custom jobs from yaml
+        $customJobs = $customizedYaml.GetCustomJobsFromYaml('CustomJob*')
+        $customJobs | Should -Not -BeNullOrEmpty
+        $customJobs.Count | Should -be 1
+        $customJobs[0].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
+        $customJobs[0].Origin | Should -Be 'TemplateRepository'
+
+        # Apply Custom jobs and steps to yaml
+        $yaml.AddCustomJobsToYaml($customJobs)
+
+        # Check if new yaml content is equal to customized yaml content
+        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+
+        # Applying the custom jobs again doesn't change the yaml content
+        $yaml.AddCustomJobsToYaml($customJobs)
+        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+    }
+
+    It 'Test YamlClass Customizations from both final repository and custom template repository' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $customizedYamlTemplateRepo = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromTemplateRepository.txt'))
+        $customizedYamlFinalRepo = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromFinalRepository.txt'))
+
+        $customizedYamlAll = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+
+        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+
+        # Get Custom jobs from yaml
+        $customJobsTemplateRepo = $customizedYamlTemplateRepo.GetCustomJobsFromYaml('CustomJob*')
+        $customJobsTemplateRepo | Should -Not -BeNullOrEmpty
+        $customJobsTemplateRepo.Count | Should -be 1
+        $customJobsTemplateRepo[0].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
+        $customJobsTemplateRepo[0].Origin | Should -Be 'TemplateRepository'
+
+        # Get Custom jobs from final repo
+        $customJobsFinalRepo = $customizedYamlFinalRepo.GetCustomJobsFromYaml('CustomJob*')
+        $customJobsFinalRepo | Should -Not -BeNullOrEmpty
+        $customJobsFinalRepo.Count | Should -be 1
+        $customJobsFinalRepo[0].Name | Should -Be 'CustomJob-MyFinalJob'
+        $customJobsFinalRepo[0].Origin | Should -Be 'FinalRepository'
+
+        $allCustomJobs = $customJobsTemplateRepo + $customJobsFinalRepo
+
+        # Apply Custom jobs and steps to yaml
+        $yaml.AddCustomJobsToYaml($allCustomJobs)
+
+        # Check if new yaml content is equal to customized yaml content
+        ($yaml.content -join "`r`n") | Should -be ($customizedYamlAll.content -join "`r`n")
+
+        # Applying the custom jobs again doesn't change the yaml content
+        $yaml.AddCustomJobsToYaml($allCustomJobs)
+        ($yaml.content -join "`r`n") | Should -be ($customizedYamlAll.content -join "`r`n")
     }
 }
 
