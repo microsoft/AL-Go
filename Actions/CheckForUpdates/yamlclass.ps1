@@ -323,7 +323,12 @@ class Yaml {
         Based on the job's origin, the function will add a comment to differentiate the custom jobs
 
         Example:
-        AddCustomJobsToYaml(@{}
+        AddCustomJobsToYaml(@{
+            Name = "CustomJob1"
+            Content = @("  - pwsh", "  -File Build1")
+            NeedsThis = @("Initialization"),
+            Origin = [CustomizationOrigin]::TemplateRepository
+        })
     #>
     [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
         $allJobs = $this.GetNextLevel('jobs:/').Trim(':') | Where-Object { -not $_.StartsWith('#') } # exclude job-level comments
@@ -383,10 +388,10 @@ class Yaml {
     }
 
     static [void] ApplyTemplateCustomizations([ref] $srcContent, [string] $yamlFile) {
-        [Yaml]::ApplyCustomizations([ref] $srcContent, $yamlFile, [CustomizationOrigin]::TemplateRepository)
+        [Yaml]::ApplyCustomizations($srcContent, $yamlFile, [CustomizationOrigin]::TemplateRepository)
     }
 
     static [void] ApplyFinalCustomizations([ref] $srcContent, [string] $yamlFile) {
-        [Yaml]::ApplyCustomizations([ref] $srcContent, $yamlFile, [CustomizationOrigin]::FinalRepository)
+        [Yaml]::ApplyCustomizations($srcContent, $yamlFile, [CustomizationOrigin]::FinalRepository)
     }
 }
