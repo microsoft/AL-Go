@@ -5,20 +5,12 @@ Param(
 
 $errorLogsFolderPath = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
 
-# Base SARIF structure
-$sarif = @{
-    version = "2.1.0"
-    '$schema' = "https://json.schemastore.org/sarif-2.1.0.json"
-    runs = @(@{
-        tool = @{
-            driver = @{
-                name = 'ALCodeAnalysis'
-                informationUri = 'https://aka.ms/AL-Go'
-                rules = @()
-            }
-        }
-        results = @()
-    })
+$sarifPath = Join-Path -Path $PSScriptRoot -ChildPath ".\baseSarif.json" -Resolve
+$sarif = $null
+if (Test-Path $sarifPath) {
+    $sarif = Get-Content -Path $sarifPath -Raw | ConvertFrom-Json
+} else {
+    OutputError -message "Base SARIF file not found at $sarifPath"
 }
 
 function GenerateSARIFJson {
@@ -61,26 +53,32 @@ function GenerateSARIFJson {
     }
 }
 
-if (Test-Path $errorLogsFolderPath -PathType Container){
-    $errorLogFiles = @(Get-ChildItem -Path $errorLogsFolderPath -Filter "*.errorLog.json" -File -Recurse)
-    Write-Host "Found $($errorLogFiles.Count) error log files in $errorLogsFolderPath"
-    $errorLogFiles | ForEach-Object {
-        OutputDebug -message "Found error log file: $($_.FullName)"
-        $fileName = $_.Name
-        try {
-            $errorLogContent = Get-Content -Path $_.FullName -Raw | ConvertFrom-Json
-            GenerateSARIFJson -errorLogContent $errorLogContent
+try {
+    if (Test-Path $errorLogsFolderPath -PathType Container -and $sarif -neq $null){
+        $errorLogFiles = @(Get-ChildItem -Path $errorLogsFolderPath -Filter "*.errorLog.json" -File -Recurse)
+        Write-Host "Found $($errorLogFiles.Count) error log files in $errorLogsFolderPath"
+        $errorLogFiles | ForEach-Object {
+            OutputDebug -message "Found error log file: $($_.FullName)"
+            $fileName = $_.Name
+            try {
+                $errorLogContent = Get-Content -Path $_.FullName -Raw | ConvertFrom-Json
+                GenerateSARIFJson -errorLogContent $errorLogContent
+            }
+            catch {
+                OutputWarning "Failed to process $fileName. AL code alerts might not appear in GitHub. You can manually inspect your artifacts for AL code alerts"
+                OutputDebug -message "Error: $_"
+            }
         }
-        catch {
-            OutputWarning "Failed to process $fileName. AL code alerts might not appear in GitHub. You can manually inspect your artifacts for AL code alerts"
-            OutputDebug -message "Error: $_"
-        }
-    }
 
-    $sarifJson = $sarif | ConvertTo-Json -Depth 10 -Compress
-    OutputDebug -message $sarifJson
-    Set-Content -Path "$errorLogsFolderPath/output.sarif.json" -Value $sarifJson
+        $sarifJson = $sarif | ConvertTo-Json -Depth 10 -Compress
+        OutputDebug -message $sarifJson
+        Set-Content -Path "$errorLogsFolderPath/output.sarif.json" -Value $sarifJson
+    }
+    else {
+        OutputWarning -message "ErrorLogs folder not found. You can manually inspect your artifacts for AL code alerts."
+    }
 }
-else {
-    OutputWarning -message "ErrorLogs folder not found. You can manually inspect your artifacts for AL code alerts."
+catch {
+    OutputWarning -message "Unexpected error processing AL code analysis results. You can manually inspect your artifacts for AL code alerts."
+    OutputDebug -message "Error: $_"
 }
