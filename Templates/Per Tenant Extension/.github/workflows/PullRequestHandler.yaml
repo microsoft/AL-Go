@@ -68,7 +68,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
-          get: shortLivedArtifactsRetentionDays
+          get: shortLivedArtifactsRetentionDays,trackCodeCopIssuesInGitHub
 
       - name: Set AL Code Analysis Var output
         id: SetALCodeAnalysisVar
