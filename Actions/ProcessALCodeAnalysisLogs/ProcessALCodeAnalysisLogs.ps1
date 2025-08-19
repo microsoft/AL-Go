@@ -3,7 +3,7 @@ Param(
     [string] $errorLogsFolder = "ErrorLogs"
 )
 
-$errorLogsFolderPath = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
+$errorLogsFolderPath = Join-Path $ENV:GITHUB_WORKSPACE $errorLogsFolder
 
 $sarifPath = Join-Path -Path $PSScriptRoot -ChildPath ".\baseSarif.json" -Resolve
 $sarif = $null
