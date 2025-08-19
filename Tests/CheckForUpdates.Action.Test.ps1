@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+Import-Module (Join-Path $PSScriptRoot "..\Actions\TelemetryHelper.psm1")
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "CheckForUpdates Action Tests" {
@@ -36,6 +37,8 @@ Describe('YamlClass Tests') {
         $actionName = "CheckForUpdates"
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptRoot', Justification = 'False positive.')]
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+
+        Mock Trace-Information {}
     }
 
     It 'Test YamlClass' {
@@ -217,6 +220,28 @@ Describe('YamlClass Tests') {
         # Applying the custom jobs again doesn't change the yaml content
         $yaml.AddCustomJobsToYaml($allCustomJobs)
         ($yaml.content -join "`r`n") | Should -be ($customizedYamlAll.content -join "`r`n")
+    }
+
+    It('Test YamlClass ApplyTemplateCustomizations') {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $srcContent = Get-Content (Join-Path $PSScriptRoot 'YamlSnippet.txt')
+        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromTemplateRepository.txt')
+
+        [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+
+        $srcContent | Should -Be ($resultContent -join "`n")
+    }
+
+    It('Test YamlClass ApplyFinalCustomizations') {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $srcContent = Get-Content (Join-Path $PSScriptRoot 'YamlSnippet.txt')
+        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromFinalRepository.txt')
+
+        [Yaml]::ApplyFinalCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+
+        $srcContent | Should -Be ($resultContent -join "`n")
     }
 }
 
