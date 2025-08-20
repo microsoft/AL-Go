@@ -248,13 +248,13 @@ foreach($checkfile in $checkfiles) {
 
                 if ($type -eq 'workflow' -and $originalSrcFile -ne $srcFile) {
                     # Apply customizations from custom template repository
-                    Write-Host "Apply customizations from custom template repository: $srcFile"
+                    Write-Host "Apply customizations from custom template repository, file: $srcFile"
                     [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcFile)
                 }
 
                 if ($dstFileExists) {
                     if ($type -eq 'workflow') {
-                        Write-Host "Apply customizations from current repository: $dstFile"
+                        Write-Host "Apply customizations from current repository, file: $dstFile"
                         [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstFile)
                     }
 
