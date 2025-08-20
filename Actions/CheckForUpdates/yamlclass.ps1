@@ -271,7 +271,7 @@ class Yaml {
             @{ "Name" = "CustomJob2"; "Content" = @("  - pwsh","  -File Build2"); "NeedsThis" = @("Initialization", "Build"); "Origin" = [CustomizationOrigin]::FinalRepository }
         )
     #>
-    [hashtable[]] GetCustomJobsFromYaml([string] $name) {
+    hidden [hashtable[]] GetCustomJobsFromYaml([string] $name) {
         $result = @()
         $allLines = $this.GetNextLevel('jobs:/').Trim(':')
 
