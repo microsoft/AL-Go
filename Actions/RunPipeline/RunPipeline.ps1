@@ -321,6 +321,16 @@ try {
             }
         }
     }
+    if (!$runAlPipelineParams.NewBcContainer) {
+        $runAlPipelineParams += @{
+            "NewBcContainer" = { 
+                Param([Hashtable]$parameters) 
+                $parameters.additionalParameters += @("--label creator=AL-Go"); 
+                New-BcContainer @parameters; 
+                Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' } 
+            }
+        }
+    }
 
     if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
@@ -515,8 +525,7 @@ try {
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
-        -uninstallRemovedApps `
-        -NewBcContainer { Param([Hashtable]$parameters) $parameters.additionalParameters += @("--label creator=AL-Go"); New-BcContainer @parameters; Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' } }
+        -uninstallRemovedApps 
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
