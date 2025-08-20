@@ -273,11 +273,16 @@ class Yaml {
     #>
     hidden [hashtable[]] GetCustomJobsFromYaml([string] $name) {
         $result = @()
-        $allLines = $this.GetNextLevel('jobs:/').Trim(':')
+        $allLines = @($this.GetNextLevel('jobs:/').Trim(':'))
+
+        if ($allLines.Count -eq 0) {
+            Write-Host "No jobs found in the YAML file."
+            return $result
+        }
 
         # Get the custom template jobs. Each custom template job is preceeded by a specific comment.
         $customTemplateJobComment = [Yaml]::GetComment([CustomizationOrigin]::TemplateRepository)
-        $customTemplateJobs = 0..($allLines.Count-1) | Where-Object { $allLines[$_] -eq $customTemplateJobComment } | ForEach-Object { $allLines[$_ + 1] } | Where-Object { $_ -ne '' -and $_ -like "$name*" }
+        $customTemplateJobs = 0..($allLines.Count - 1) | Where-Object { $allLines[$_] -eq $customTemplateJobComment } | ForEach-Object { $allLines[$_ + 1] } | Where-Object { $_ -ne '' -and $_ -like "$name*" }
 
         # Exclude comments
         $allJobs = @($allLines | Where-Object { -not $_.StartsWith('#') })
