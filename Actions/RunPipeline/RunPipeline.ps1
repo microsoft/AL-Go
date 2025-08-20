@@ -321,7 +321,7 @@ try {
             }
         }
     }
-    if (!$runAlPipelineParams.NewBcContainer) {
+    if ($runAlPipelineParams.Keys -notcontains 'NewBcContainer') {
         $runAlPipelineParams += @{
             "NewBcContainer" = { 
                 Param([Hashtable]$parameters) 
