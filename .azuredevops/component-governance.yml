@@ -34,5 +34,4 @@ extends:
           displayName: 'Component Detection'
           inputs:
             sourceScanPath: $(Agent.BuildDirectory)/s/Actions
-            ignoreDirectories: 'Actions'
             verbosity: 'Verbose'
