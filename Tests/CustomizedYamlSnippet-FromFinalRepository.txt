@@ -1,0 +1,82 @@
+name: 'CI/CD'
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Pull Request Handler"]
+    types:
+      - completed
+  push:
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/*.yaml'
+      - '!.github/workflows/CICD.yaml'
+    branches: [ 'main', 'release/*', 'feature/*' ]
+
+run-name: ${{ fromJson(format('["","Check pull request from {1}/{2}{0} {3}"]',':',github.event.workflow_run.head_repository.owner.login,github.event.workflow_run.head_branch,github.event.workflow_run.display_title))[github.event_name == 'workflow_run'] }}
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  checks: write
+
+defaults:
+  run:
+    shell: powershell
+
+env:
+  workflowDepth: 1
+
+jobs:
+  Initialization:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: [ windows-latest ]
+    outputs:
+      telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Initialize the workflow
+        id: init
+        uses: microsoft/AL-Go-Actions/WorkflowInitialize@main
+        with:
+          shell: powershell
+
+      - name: Read settings
+        id: ReadSettings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
+  # This is comment on job level
+  CheckForUpdates:
+    runs-on: [ windows-latest ]
+    needs: [ Initialization, CustomJob-MyFinalJob ]
+    if: github.event_name != 'workflow_run'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+          get: templateUrl
+
+      - name: Check for updates to AL-Go system files
+        uses: microsoft/AL-Go-Actions/CheckForUpdates@main
+        with:
+          shell: powershell
+          templateUrl: ${{ env.templateUrl }}
+
+  CustomJob-MyFinalJob:
+    needs: [ Initialization ]
+    runs-on: [ windows-latest ]
+    steps:
+      - name: MyStep
+        run: |
+          Write-Host 'My own job!'
