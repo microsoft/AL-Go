@@ -39,17 +39,25 @@ function GenerateSARIFJson {
         $relativePath = $absolutePath.Replace($workspacePath, '').TrimStart('\').Replace('\', '/')
 
         # Add result
-        $sarif.runs[0].results += @{
-            ruleId = $issue.ruleId
-            message = @{ text = $issue.shortMessage }
-            locations = @(@{
-                physicalLocation = @{
-                    artifactLocation = @{ uri = $relativePath }
-                    region = $issue.locations[0].analysisTarget[0].region
-                }
-            })
-            level = ($issue.properties.severity).ToLower()
-        }
+        if (-not ($sarif.runs[0].results | Where-Object {           
+            $_.ruleId -eq $issue.ruleId -and 
+            $_.message.text -eq $issue.shortMessage -and
+            $_.locations[0].physicalLocation.artifactLocation.uri -eq $relativePath -and 
+            ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json) -and
+            $_.level -eq ($issue.properties.severity).ToLower()
+        })) {
+            $sarif.runs[0].results += @{
+                ruleId = $issue.ruleId
+                message = @{ text = $issue.shortMessage }
+                locations = @(@{
+                    physicalLocation = @{
+                        artifactLocation = @{ uri = $relativePath }
+                        region = $issue.locations[0].analysisTarget[0].region
+                    }
+                })
+                level = ($issue.properties.severity).ToLower()
+            }
+        }  
     }
 }
 

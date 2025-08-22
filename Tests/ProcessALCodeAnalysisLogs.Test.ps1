@@ -198,6 +198,24 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
         $sarifContent.runs[0].tool.driver.rules.Count | Should -Be 2
     }
 
+    It 'Duplicate issues are only included once' {
+        # Create 1 error log file with 3 issues where 2 are duplicates
+        $errorLogFile = Join-Path $errorLogsFolder "sample.errorLog.json"
+        $baseIssueContent = $alErrorLogSchema
+        $baseIssueContent.issues += $sampleIssue1
+        $baseIssueContent.issues += $sampleIssue1
+        $baseIssueContent.issues += $sampleIssue2
+        $baseIssueContent | ConvertTo-Json -Depth 10 | Set-Content -Path $errorLogFile
+
+        & $scriptPath
+
+        $baseIssueContent.issues.Count | Should -Be 3
+        $sarifFile = Join-Path $errorLogsFolder "output.sarif.json"
+        $sarifContent = Get-Content -Path $sarifFile -Raw | ConvertFrom-Json
+        $sarifContent.runs[0].tool.driver.rules.Count | Should -Be 1
+        $sarifContent.runs[0].results.Count | Should -Be 2
+    }
+
     It 'Compile Action' {
         Invoke-Expression $actionScript
     }
