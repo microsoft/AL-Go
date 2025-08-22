@@ -151,7 +151,7 @@ jobs:
           sha: ${{ github.event.pull_request.head.sha }}
 
   StatusCheck:
-    needs: [ Initialization, Build, CodeAnalysisUpload ]
+    needs: [ Initialization, Build ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     name: Pull Request Status Check
