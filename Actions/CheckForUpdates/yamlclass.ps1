@@ -1,5 +1,10 @@
 #requires -Version 5.0
 
+enum CustomizationOrigin {
+    TemplateRepository
+    FinalRepository
+}
+
 # This class holds the content of a Yaml file
 # The content is stored in an array of strings, where each string is a line of the Yaml file
 # The class provides methods to find and replace lines in the Yaml file
@@ -242,21 +247,54 @@ class Yaml {
         $this.Insert($this.content.Count, $yamlContent)
     }
 
-    # Locate jobs in YAML based on a name pattern
-    # Example:
-    # GetCustomJobsFromYaml() returns @("CustomJob1", "CustomJob2")
-    # GetCustomJobsFromYaml("Build*") returns @("Build1","Build2","Build")
-    [hashtable[]] GetCustomJobsFromYaml([string] $name) {
+    static hidden [string] GetComment([CustomizationOrigin] $origin) {
+        switch ($origin) {
+            TemplateRepository { return "# DO NOT EDIT. The following job was added through a custom template." }
+            FinalRepository { return "" }
+        }
+
+        return $null
+    }
+
+    <#
+        Get custom jobs from Yaml file
+        This function retrieves custom jobs from the Yaml file based on a name pattern.
+        It searches for jobs that match the specified name and returns an array of matching jobs with the following properties:
+        - Name: The name of the job
+        - Content: The content of the job
+        - NeedsThis: An array of jobs that need this job
+        - Origin: The origin of the job (TemplateRepository or FinalRepository)
+
+        Example:
+        GetCustomJobsFromYaml("CustomJob*") returns @(
+            @{ "Name" = "CustomJob1"; "Content" = @("  - pwsh","  -File Build1"); "NeedsThis" = @("Initialization", "Build"); "Origin" = [CustomizationOrigin]::TemplateRepository },
+            @{ "Name" = "CustomJob2"; "Content" = @("  - pwsh","  -File Build2"); "NeedsThis" = @("Initialization", "Build"); "Origin" = [CustomizationOrigin]::FinalRepository }
+        )
+    #>
+    hidden [hashtable[]] GetCustomJobsFromYaml([string] $name) {
         $result = @()
-        $allJobs = $this.GetNextLevel('jobs:/').Trim(':')
-        $customJobs = @($allJobs | Where-Object { $_ -like $name })
+        $allLines = @($this.GetNextLevel('jobs:/').Trim(':'))
+
+        if ($allLines.Count -eq 0) {
+            Write-Host "No jobs found in the YAML file."
+            return $result
+        }
+
+        # Get the custom template jobs. Each custom template job is preceeded by a specific comment.
+        $customTemplateJobComment = [Yaml]::GetComment([CustomizationOrigin]::TemplateRepository)
+        $customTemplateJobs = 0..($allLines.Count - 1) | Where-Object { $allLines[$_] -eq $customTemplateJobComment } | ForEach-Object { $allLines[$_ + 1] } | Where-Object { $_ -ne '' -and $_ -like "$name*" }
+
+        # Exclude comments
+        $allJobs = @($allLines | Where-Object { -not $_.StartsWith('#') })
+
+        # Custom final jobs (defined in the final repository) are custom jobs that do not come from the custom template repository
+        $customFinalJobs = @($allJobs | Where-Object { $_ -like $name -and $_ -notin $customTemplateJobs })
+
+        # Native jobs are all jobs that are not custom final jobs or custom template jobs
+        $nativeJobs = @($allJobs | Where-Object { $customFinalJobs -notcontains $_ -and $customTemplateJobs -notcontains $_ })
+
+        $customJobs = @($customFinalJobs) + @($customTemplateJobs)
         if ($customJobs) {
-            $nativeJobs = @($allJobs | Where-Object { $customJobs -notcontains $_ })
-            Write-Host "Native Jobs:"
-            foreach($nativeJob in $nativeJobs) {
-                Write-Host "- $nativeJob"
-            }
-            Write-Host "Custom Jobs:"
             foreach($customJob in $customJobs) {
                 Write-Host "- $customJob"
                 $jobsWithDependency = @($nativeJobs | Where-Object { $this.GetPropertyArray("jobs:/$($_):/needs:") | Where-Object { $_ -eq $customJob } })
@@ -270,46 +308,69 @@ class Yaml {
                 else {
                     Write-Host "  - No jobs with dependency on this"
                 }
-                $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = $jobsWithDependency })
+                if($customTemplateJobs -contains $customJob) {
+                    $origin = [CustomizationOrigin]::TemplateRepository
+                }
+                else {
+                    $origin = [CustomizationOrigin]::FinalRepository
+                }
+                $result += @(@{ "Name" = $customJob; "Content" = @($this.Get("jobs:/$($customJob):").content); "NeedsThis" = $jobsWithDependency; "Origin" = $origin })
             }
         }
         return $result
     }
 
-    # Add jobs to Yaml and update Needs section from native jobs which needs this custom Job
-    # $customJobs is an array of hashtables with Name, Content and NeedsThis
-    # Example:
-    # $customJobs = @(@{ "Name" = "CustomJob1"; "Content" = @("  - pwsh","  -File Build1"); "NeedsThis" = @("Initialization", "Build") })
-    # AddCustomJobsToYaml($customJobs)
-    # The function will add the job CustomJob1 to the Yaml file and update the Needs section of Initialization and Build
-    # The function will not add the job CustomJob1 if it already exists
+    <#
+        Add custom jobs to the YAML content
+        This function will add the custom jobs to the YAML content
+        It will also update the needs section of any jobs that depend on these custom jobs
+
+        Based on the job's origin, the function will add a comment to differentiate the custom jobs
+
+        Example:
+        AddCustomJobsToYaml(@{
+            Name = "CustomJob1"
+            Content = @("  - pwsh", "  -File Build1")
+            NeedsThis = @("Initialization"),
+            Origin = [CustomizationOrigin]::TemplateRepository
+        })
+    #>
     [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
-        $existingJobs = $this.GetNextLevel('jobs:/').Trim(':')
-        Write-Host "Adding New Jobs"
+        $allJobs = $this.GetNextLevel('jobs:/').Trim(':') | Where-Object { -not $_.StartsWith('#') } # exclude job-level comments
+
+        Write-Host "Adding custom jobs"
         foreach($customJob in $customJobs) {
             Write-Host "$($customJob.Name) has dependencies from $($customJob.NeedsThis -join ',')"
             foreach($needsthis in $customJob.NeedsThis) {
                 if ($needsthis -eq 'Build') {
-                    $existingJobs | Where-Object { $_ -like 'Build*'} | ForEach-Object {
+                    $allJobs | Where-Object { $_ -like 'Build*'} | ForEach-Object {
                         # Add dependency to all build jobs
-                        $this.Replace("jobs:/$($_):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($_):/needs:"))+@($customJob.Name) -join ', ') ]")
+                        $this.Replace("jobs:/$($_):/needs:","needs: [ $(@($this.GetPropertyArray("jobs:/$($_):/needs:")) + @($customJob.Name) -join ', ') ]")
                     }
                 }
-                elseif ($existingJobs -contains $needsthis) {
+                elseif ($allJobs -contains $needsthis) {
                     # Add dependency to job
-                    $needs = @(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:"))+@($customJob.Name) | Where-Object { $_ } | Select-Object -Unique) -join ', '
+                    $needs = @(@($this.GetPropertyArray("jobs:/$($needsthis):/needs:")) + @($customJob.Name) | Where-Object { $_ } | Select-Object -Unique) -join ', '
                     $this.Replace("jobs:/$($needsthis):/needs:","needs: [ $needs ]")
                 }
             }
-            if ($existingJobs -contains $customJob.Name) {
+            if ($allJobs -contains $customJob.Name) {
                 Write-Host "Job $($customJob.Name) already exists"
                 continue
             }
-            $this.content += @('') + @($customJob.content | ForEach-Object { "  $_" })
+
+            Write-Host "Adding job $($customJob.Name) with origin $($customJob.Origin)"
+            $comment = [Yaml]::GetComment($customJob.Origin)
+            $this.content += @('') # This will add an empty line
+            if($comment) {
+                $this.content += @("  $comment") # add the comment based on the origin to differentiate the custom jobs
+            }
+
+            $this.content += @($customJob.content | ForEach-Object { "  $_" }) # add custom job content
         }
     }
 
-    static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile) {
+    hidden static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [CustomizationOrigin] $origin) {
         $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
             $yaml = [Yaml]::Load($yamlFile)
@@ -320,12 +381,22 @@ class Yaml {
         }
 
         # Locate custom jobs in destination YAML
-        Write-Host "Apply custom jobs"
-        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
+        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*')) | Where-Object { $_.Origin -eq $origin }
         if ($customJobs) {
+            Write-Host "Apply custom jobs for origin $origin"
+
+            Trace-Information -Message "Adding custom jobs with origin $origin"
             # Add custom jobs to template YAML
             $srcYaml.AddCustomJobsToYaml($customJobs)
         }
         $srcContent.Value = $srcYaml.content -join "`n"
+    }
+
+    static [void] ApplyTemplateCustomizations([ref] $srcContent, [string] $yamlFile) {
+        [Yaml]::ApplyCustomizations($srcContent, $yamlFile, [CustomizationOrigin]::TemplateRepository)
+    }
+
+    static [void] ApplyFinalCustomizations([ref] $srcContent, [string] $yamlFile) {
+        [Yaml]::ApplyCustomizations($srcContent, $yamlFile, [CustomizationOrigin]::FinalRepository)
     }
 }
