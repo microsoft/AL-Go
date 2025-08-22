@@ -6,14 +6,14 @@
     "schema_version": "60",
     "pagesNavWidth": 187,
     "dataSources": [
-    {
-        "id": "8320a60e-6341-4e9d-9245-9b89f7c218f0",
-        "kind": "manual-kusto",
-        "scopeId": "kusto",
-        "name": "AL-Go Telemetry",
-        "clusterUri": "<Insert your cluster URI here>",
-        "database": "<Insert your application insights name here"
-    }
+        {
+            "id": "8320a60e-6341-4e9d-9245-9b89f7c218f0",
+            "kind": "manual-kusto",
+            "scopeId": "kusto",
+            "name": "AL-Go Telemetry",
+            "clusterUri": "<Insert your cluster URI here>",
+            "database": "<Insert your application insights name here"
+        }
     ],
     "tiles": [
         {
