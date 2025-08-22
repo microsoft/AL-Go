@@ -385,6 +385,7 @@ try {
             if (!$isNewBcContainerOverridden) {
                 $flushCacheParam += ',ALGoContainersOnly'
             }
+            OutputDebug -message "Running Flush-ContainerHelperCache with parameters: -cache $flushCacheParam -keepdays $($settings.cacheKeepDays)"
             Flush-ContainerHelperCache -cache $flushCacheParam -keepdays $settings.cacheKeepDays
             Write-Host "::endgroup::"
         }
