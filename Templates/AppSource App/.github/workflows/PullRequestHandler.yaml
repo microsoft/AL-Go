@@ -40,8 +40,8 @@ jobs:
       buildOrderJson: ${{ steps.determineProjectsToBuild.outputs.BuildOrderJson }}
       baselineWorkflowRunId: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowRunId }}
       baselineWorkflowSHA: ${{ steps.determineProjectsToBuild.outputs.BaselineWorkflowSHA }}
-      workflowDepth: ${{ steps.DetermineWorkflowDepth.outputs.WorkflowDepth }}
-      artifactsRetentionDays: ${{ steps.DetermineWorkflowDepth.outputs.ArtifactsRetentionDays }}
+      workflowDepth: ${{ env.workflowDepth }}
+      artifactsRetentionDays: ${{ fromJson(steps.ReadSettings.outputs.SelectedSettingsJson).shortLivedArtifactsRetentionDays }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
     steps:
       - name: Dump Workflow Information
@@ -67,12 +67,6 @@ jobs:
         with:
           shell: powershell
           get: shortLivedArtifactsRetentionDays
-
-      - name: Determine Workflow Depth
-        id: DetermineWorkflowDepth
-        run: |
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "WorkflowDepth=$($env:workflowDepth)"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "ArtifactsRetentionDays=$($env:shortLivedArtifactsRetentionDays)"
 
       - name: Determine Projects To Build
         id: determineProjectsToBuild
