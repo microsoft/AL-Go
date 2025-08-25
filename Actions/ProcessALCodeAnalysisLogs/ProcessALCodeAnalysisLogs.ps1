@@ -13,8 +13,18 @@ if (Test-Path $sarifPath) {
     OutputError -message "Base SARIF file not found at $sarifPath"
 }
 
+<#
+    .SYNOPSIS
+    Generates SARIF JSON.
+    .DESCRIPTION
+    Generates SARIF JSON from a error log file and adds both rules and results to the base sarif object.
+    Rules and results are de-duplicated.
+    .PARAMETER errorLogContent
+    The contents of the error log file to process.
+#>
 function GenerateSARIFJson {
     param(
+        [Parameter(HelpMessage = "The contents of the error log file to process.", Mandatory = $true)]
         [PSCustomObject] $errorLogContent
     )
 
