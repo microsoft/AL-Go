@@ -2058,14 +2058,24 @@ function GetFoldersFromAllProjects {
 }
 
 function GetPackageVersion($packageName) {
-    $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
+    $projFilePath = "$PSScriptRoot\Environment.Packages.proj"
 
-    # Check if the package is in the list of packages
-    if ($alGoPackages.PSobject.Properties.name -eq $PackageName) {
-        return $alGoPackages."$PackageName"
+    # Check if the proj file exists
+    if (-not (Test-Path $projFilePath)) {
+        throw "Environment.Packages.proj file not found at $projFilePath"
+    }
+
+    # Load the XML content
+    [xml]$projXml = Get-Content -Path $projFilePath
+
+    # Find the PackageReference with the specified Include (package name)
+    $packageReference = $projXml.Project.ItemGroup.PackageReference | Where-Object { $_.Include -eq $packageName }
+
+    if ($packageReference) {
+        return $packageReference.Version
     }
     else {
-        throw "Package $PackageName is not in the list of packages"
+        throw "Package $packageName is not in the list of packages"
     }
 }
 
