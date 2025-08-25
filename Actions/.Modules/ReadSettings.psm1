@@ -207,6 +207,7 @@ function GetDefaultSettings
         "commitOptions"                                 = [ordered]@{
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
+            "pullRequestMergeMethod"                    = "squash"
             "pullRequestLabels"                         = @()
             "createPullRequest"                         = $true
         }
@@ -237,6 +238,7 @@ function GetDefaultSettings
         - .github/<workflowName>.settings.json                 = Workflow settings file
         - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
         - <project>/.AL-Go/<userName>.settings.json            = User settings file
+        - ALGoEnvSettings (github Variable)                    = Deployment Environment settings variable
     .PARAMETER baseFolder
         The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
     .PARAMETER repoName
@@ -255,6 +257,10 @@ function GetDefaultSettings
         The value of the organization settings variable. Default is $ENV:ALGoOrgSettings.
     .PARAMETER repoSettingsVariableValue
         The value of the repository settings variable. Default is $ENV:ALGoRepoSettings.
+    .PARAMETER environmentSettingsVariableValue
+        The value of the current GitHub environment settings variable, based on workflow context. Default is $ENV:ALGoEnvSettings.
+    .PARAMETER environmentName
+        The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
     .PARAMETER silent
         If specified, the function will not output any messages to the console.
 #>
@@ -269,6 +275,8 @@ function ReadSettings {
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
+        [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
+        [string] $environmentName = "$ENV:ALGoEnvName",
         [switch] $silent
     )
 
@@ -351,6 +359,24 @@ function ReadSettings {
             $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
+    }
+
+    if ($environmentSettingsVariableValue) {
+        # Read settings from environment variable (parameter)
+        $environmentVariableObject = $environmentSettingsVariableValue | ConvertFrom-Json
+        # Warn user that 'DeployTo' setting needs to include environment name
+        if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo") {
+            OutputWarning "The environment settings variable contains the property 'DeployTo'. Did you intend to use 'DeployTo$environmentName' instead? The 'DeployTo' property without a specific environment name is not supported."
+        }
+        # Warn user if 'runs-on', 'shell' or 'ContinuousDeployment' is defined in the environment settings variable, as these are not supported when defined there.
+        if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo$environmentName") {
+            @('runs-on', 'shell', 'ContinuousDeployment') | ForEach-Object {
+                if ($environmentVariableObject."DeployTo$environmentName".PSObject.Properties.Name -contains $_) {
+                    OutputWarning "The property $_ in the DeployTo setting is not supported when defined within a GitHub deployment environment variable. Please define this property elsewhere."
+                }
+            }
+        }
+        $settingsObjects += @($environmentVariableObject)
     }
 
     foreach($settingsJson in $settingsObjects) {

@@ -1005,13 +1005,22 @@ function CommitFromNewFolder {
             } else {
                 invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body"
             }
-
-            if ($settings.commitOptions.pullRequestAutoMerge) {
-                invoke-gh pr merge --auto --squash --delete-branch
-            }
         }
         catch {
             OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+        }
+
+        # Set up auto-merge for the Pull Request if specified in settings
+        if ($settings.commitOptions.pullRequestAutoMerge) {
+            try {
+                if (($settings.commitOptions.pullRequestMergeMethod).ToLowerInvariant() -eq "merge") {
+                    invoke-gh pr merge --auto --merge --delete-branch
+                } else {
+                    invoke-gh pr merge --auto --squash --delete-branch
+                }
+            } catch {
+                OutputError("Could not set up auto-merge for the Pull Request with merge method $($settings.commitOptions.pullRequestMergeMethod)")
+            }
         }
         return $true
     }

@@ -22,7 +22,15 @@
                 "ms-vscode.powershell"
             ],
             "settings": {
-              "terminal.integrated.defaultProfile.linux": "pwsh"
+              "terminal.integrated.defaultProfile.linux": "pwsh",
+              "mcp": {
+                "servers": {
+                  "github": {
+                    "url": "https://api.githubcopilot.com/mcp/",
+                    "type": "http"
+                  }
+                }
+              }
             }
         }
     }
