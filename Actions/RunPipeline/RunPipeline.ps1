@@ -268,7 +268,7 @@ try {
     }
 
     $additionalCountries = $settings.additionalCountries
- 
+
     $authContext = $null
     $environmentName = ""
     $CreateRuntimePackages = $false
@@ -316,11 +316,11 @@ try {
     $isNewBcContainerOverridden = $false
     if ($runAlPipelineParams.Keys -notcontains 'NewBcContainer') {
         $runAlPipelineParams += @{
-            "NewBcContainer" = { 
-                Param([Hashtable]$parameters) 
-                $parameters.additionalParameters += @("--label creator=AL-Go"); 
-                New-BcContainer @parameters; 
-                Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' } 
+            "NewBcContainer" = {
+                Param([Hashtable]$parameters)
+                $parameters.additionalParameters += @("--label creator=AL-Go");
+                New-BcContainer @parameters;
+                Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' }
             }
         }
     }
@@ -537,7 +537,7 @@ try {
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
-        -uninstallRemovedApps 
+        -uninstallRemovedApps
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
