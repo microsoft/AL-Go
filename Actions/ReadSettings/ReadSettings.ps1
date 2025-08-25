@@ -55,6 +55,7 @@ if ($settings.versioningstrategy -ne -1) {
 }
 
 $outSettings = @{}
+$selectedSettings = @{}
 $settings.Keys | ForEach-Object {
     $setting = $_
     $settingValue = $settings."$setting"
@@ -69,6 +70,8 @@ $settings.Keys | ForEach-Object {
         else {
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
         }
+        # Add to selected settings for JSON output
+        $selectedSettings[$setting] = $settingValue
     }
 }
 
@@ -83,3 +86,8 @@ Write-Host "GitHubRunnerJson=$githubRunner"
 $gitHubRunnerShell = $settings.githubRunnerShell
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
 Write-Host "GitHubRunnerShell=$githubRunnerShell"
+
+# Create JSON output for selected settings
+$selectedSettingsJson = $selectedSettings | ConvertTo-Json -Depth 99 -Compress
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "SelectedSettingsJson=$selectedSettingsJson"
+Write-Host "SelectedSettingsJson=$selectedSettingsJson"
