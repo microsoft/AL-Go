@@ -24,6 +24,9 @@ outputs:
   GitHubRunnerShell:
     description: Shell for GitHubRunner jobs
     value: ${{ steps.readsettings.outputs.GitHubRunnerShell }}
+  SelectedSettingsJson:
+    description: Selected settings from the get parameter in compressed JSON format
+    value: ${{ steps.readsettings.outputs.SelectedSettingsJson }}
 runs:
   using: composite
   steps:
