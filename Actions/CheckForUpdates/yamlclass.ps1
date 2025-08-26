@@ -370,7 +370,7 @@ class Yaml {
         }
     }
 
-    hidden static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [CustomizationOrigin] $origin) {
+    hidden static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [CustomizationOrigin] $targetOrigin) {
         $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
             $yaml = [Yaml]::Load($yamlFile)
@@ -383,17 +383,18 @@ class Yaml {
         # Locate custom jobs in destination YAML
         $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
 
-        # If the origin is FinalRepository, filter the custom jobs. In any other case all custom jobs should be processed.
-        if ($origin -eq [CustomizationOrigin]::FinalRepository) {
+        # If the target origin is FinalRepository, filter the custom jobs.
+        # This case is to ensure that only jobs specific to the final repository are processed.
+        if ($targetOrigin -eq [CustomizationOrigin]::FinalRepository) {
             $customJobs = $customJobs | Where-Object { $_.Origin -eq [CustomizationOrigin]::FinalRepository }
         }
 
         if ($customJobs) {
-            Write-Host "Apply custom jobs for origin $origin"
+            Write-Host "Apply custom jobs for origin $targetOrigin"
 
-            Trace-Information -Message "Adding custom jobs with origin $origin"
+            Trace-Information -Message "Adding custom jobs with origin $targetOrigin"
             # Add custom jobs to template YAML
-            $srcYaml.AddCustomJobsToYaml($customJobs, $origin)
+            $srcYaml.AddCustomJobsToYaml($customJobs, $targetOrigin)
         }
         $srcContent.Value = $srcYaml.content -join "`n"
     }
