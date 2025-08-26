@@ -43,6 +43,7 @@ Describe "ReadSettings Action Tests" {
 
     It 'Settings in get param are correctly added to SelectedSettingsJson output' {
         & $scriptPath `
+            -project '' `
             -get 'shortLivedArtifactsRetentionDays,powerPlatformSolutionFolder'
 
         # Read the output file content
