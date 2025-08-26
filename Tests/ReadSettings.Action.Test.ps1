@@ -1,4 +1,5 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
+Get-Module ReadSettings | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -11,13 +12,14 @@ Describe "ReadSettings Action Tests" {
         $scriptPath = Join-Path $scriptRoot $scriptName
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+        $testFolder = (Join-Path ([System.IO.Path]::GetTempPath()) "readSettingsActionTest")
+        $ENV:GITHUB_WORKSPACE = $testFolder
+        New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
         # Mock Write-Host { }
         Mock Out-Host { }
     }
 
     BeforeEach {
-        $testFolder = (Join-Path ([System.IO.Path]::GetTempPath()) "readSettingsActionTest")
-        New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
         $env:GITHUB_ENV = (Join-Path $testFolder "githubEnv")
         $env:GITHUB_OUTPUT = (Join-Path $testFolder "githubOutput")
         New-Item -Path $env:GITHUB_ENV -ItemType file -Force | Out-Null
