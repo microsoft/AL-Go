@@ -55,14 +55,14 @@ Describe "ReadSettings Action Tests" {
         # Extract the JSON value from the line
         if ($selectedSettingsLine -match '^SelectedSettingsJson=(.*)$') {
             $jsonValue = $Matches[1]
-            
+
             # Parse the JSON to verify it's valid
             $settingsObject = $jsonValue | ConvertFrom-Json
-            
+
             # Verify the expected properties are present
             $settingsObject.PSObject.Properties.Name | Should -Contain 'shortLivedArtifactsRetentionDays'
             $settingsObject.PSObject.Properties.Name | Should -Contain 'powerPlatformSolutionFolder'
-            
+
             # Verify the values are correct (assuming default values)
             $settingsObject.shortLivedArtifactsRetentionDays | Should -Be 1
             $settingsObject.powerPlatformSolutionFolder | Should -Be ''
