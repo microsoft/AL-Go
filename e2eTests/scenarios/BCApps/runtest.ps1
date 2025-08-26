@@ -96,7 +96,7 @@ $branch = "e2etest"
 $title = "End 2 end test"
 invoke-git checkout -b $branch
 
-$fileToChange = Join-Path $repoPath "src/Tools/Performance Toolkit/App/src/BCPTTestSuite.Codeunit.al"
+$fileToChange = Join-Path $repoPath "src/Tools/Performance Toolkit/Test/src/BCPTSetupCardTest.Codeunit.al"
 $fileContent = Get-Content -Path $fileToChange -Encoding UTF8
 $fileContent[0] = $fileContent[0] + "// $title"
 Set-Content -Path $fileToChange -Value $fileContent -Encoding UTF8
