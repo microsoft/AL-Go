@@ -48,6 +48,7 @@ Please note, that due to certain security limitations, the properties `runs-on`,
 - Issue 1837 Deployment from PR builds fail if PR branch name includes forward slashes (e.g., `feature/branch-name`).
 - Issue 1852 Page Scripting Tests are not added to build summary
 - Issue 1829 Added custom jobs cannot be removed
+- Idea 1856 Include workflow name as input for action ReadSetting
 
 ### Additional debug logging functionality
 

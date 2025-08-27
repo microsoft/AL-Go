@@ -3,13 +3,15 @@
     [string] $project = ".",
     [Parameter(HelpMessage = "Build mode", Mandatory = $false)]
     [string] $buildMode = "Default",
+    [Parameter(HelpMessage = "Workflow name for which the settings are to be read", Mandatory = $false)]
+    [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
     [string] $get = ""
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = ReadSettings -project $project -buildMode $buildMode
+$settings = ReadSettings -project $project -buildMode $buildMode -workflowName $workflowName
 if ($get) {
     $getSettings = $get.Split(',').Trim()
 }
