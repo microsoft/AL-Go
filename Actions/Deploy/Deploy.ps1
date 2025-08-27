@@ -14,150 +14,6 @@ Param(
     [string] $artifactsVersion = ''
 )
 
-function CheckIfAppNeedsInstallOrUpgrade {
-    Param(
-        [PSCustomObject] $appJson,
-        $installedApp,
-        [string] $installMode
-    )
-
-    $needsInstall = $false
-    $needsUpgrade = $false
-    if ($installedApp) {
-        $dependencyVersion = [version]::new($appJson.Version)
-        $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
-        if ($dependencyVersion -gt $installedVersion) {
-            $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $dependencyVersion."
-            if ($installMode -eq 'upgrade') {
-                Write-Host "$msg Needs upgrade."
-                $needsUpgrade = $true
-            }
-            else {
-                Write-Host "::WARNING::$msg Set DependencyInstallMode to 'upgrade' or 'forceUpgrade' to upgrade dependencies."
-            }
-        }
-        elseif ($dependencyVersion -lt $installedVersion) {
-            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion, which is higher than $dependencyVersion, used in app.json."
-        }
-        else {
-            Write-Host "Dependency app $($appJson.name) is already installed in version $installedVersion."
-        }
-    }
-    else {
-        Write-Host "Dependency app $($appJson.name) is not installed."
-        $needsInstall = ($installMode -ne 'ignore')
-    }
-    return $needsInstall, $needsUpgrade
-}
-
-function InstallOrUpgradeApps {
-    Param(
-        [hashtable] $bcAuthContext,
-        [string] $environment,
-        [string[]] $apps,
-        [string] $installMode
-    )
-
-    $schemaSyncMode = 'Add'
-    if ($installMode -eq 'ForceUpgrade') {
-        $schemaSyncMode = 'Force'
-        $installMode = 'upgrade'
-    }
-
-    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-    New-Item -ItemType Directory -Path $tempPath | Out-Null
-    try {
-        Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
-        $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
-        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-        $PTEsToInstall = @()
-        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
-        foreach($app in $apps) {
-            # Get AppJson (works for full .app files, symbol files and also runtime packages)
-            $appJson = Get-AppJsonFromAppFile -appFile $app
-            $isPTE = ($appjson.idRanges.from -lt 100000 -and $appjson.idRanges.from -ge 50000)
-            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
-            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
-            if ($needsUpgrade) {
-                if (-not $isPTE -and $installedApp.publishedAs.Trim() -eq 'Dev') {
-                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
-                    $needsUpgrade = $false
-                }
-            }
-            if ($needsUpgrade -or $needsInstall) {
-                if ($isPTE) {
-                    $PTEsToInstall += $app
-                }
-                else {
-                    Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
-                    # Update installed apps list as dependencies may have changed / been installed
-                    $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-                }
-            }
-        }
-        if ($PTEsToInstall) {
-            # Install or upgrade PTEs
-            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode
-        }
-    }
-    finally {
-        Remove-Item -Path $tempPath -Force -Recurse
-    }
-}
-
-function InstallUnknownDependencies {
-    Param(
-        [hashtable] $bcAuthContext,
-        [string] $environment,
-        [string[]] $apps,
-        [string] $installMode
-    )
-
-    Write-Host "Installing unknown dependencies: $($apps -join ', ')"
-    try {
-        $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-        # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
-        foreach($app in $apps) {
-            # The output of Sort-AppFilesByDependencies is in the format of "AppId:AppName"
-            $appId, $appName = $app.Split(':')
-            $appVersion = ""
-            if ($appName -like 'Microsoft__EXCLUDE_*') {
-                Write-Host "App $appName is ignored as it is marked as EXCLUDE"
-                continue
-            }
-            elseif ($appName -match "_(\d+\.\d+\.\d+\.\d+)\.app$") {
-                $appVersion = $matches.1
-            } else {
-                Write-Host "Version not found or incorrect format for unknown dependency $app"
-                continue
-            }
-            # Create a fake appJson with the properties used in CheckIfAppNeedsInstallOrUpgrade
-            $appJson = @{
-                "name" = $appName
-                "id" = $appId
-                "Version" = $appVersion
-            }
-
-            $installedApp = $installedApps | Where-Object { $_.id -eq $appJson.id }
-            $needsInstall, $needsUpgrade = CheckIfAppNeedsInstallOrUpgrade -appJson $appJson -installedApp $installedApp -installMode $installMode
-            if ($needsUpgrade) {
-                if ($installedApp.publishedAs.Trim() -eq 'Dev') {
-                    Write-Host "::WARNING::Dependency AppSource App $($appJson.name) is published in Dev scoope. Cannot upgrade."
-                    $needsUpgrade = $false
-                }
-            }
-            if ($needsUpgrade -or $needsInstall) {
-                Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
-                # Update installed apps list as dependencies may have changed / been installed
-                $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
-            }
-        }
-    }
-    finally {
-        Write-Host "Unknown dependencies installed or upgraded"
-    }
-}
-
 Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
@@ -197,85 +53,7 @@ if (-not $authContext) {
 
 $apps = @()
 $dependencies = @()
-$artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
-if (Test-Path $artifactsFolder -PathType Container) {
-    $deploymentSettings.Projects.Split(',') | ForEach-Object {
-        $project = $_.Replace('\','_').Replace('/','_')
-        $artifactVersionFilter = '*.*.*.*'
-        $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
-        # Artifacts from PRs are named differently - project-ref-Apps-PRx-date
-        if ($artifactsVersion -like "PR_*") {
-            $prId = $artifactsVersion.SubString(3)
-            $intId = 0
-            if (!([Int]::TryParse($prId, [ref] $intId))) {
-                throw "Invalid PR id: $prId"
-            }
-            $artifactVersionFilter = "PR$prId-*"
-            $refname = GetHeadRefFromPRId -repository $ENV:GITHUB_REPOSITORY -prId $prId -token $token
-        }
-        Write-Host "project '$project'"
-
-        $allApps = @()
-        $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
-        $projectTestApps = @()
-        if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
-            Write-Host "Including test apps for deployment"
-            $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
-        }
-        if ($deploymentSettings.excludeAppIds) {
-            Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
-        }
-        if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
-            $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
-        }
-        if (!($projectApps)) {
-            if ($project -ne '*') {
-                throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)Apps-<version>."
-            }
-        }
-        else {
-            $allApps += $projectApps
-        }
-        if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
-            if ($project -ne '*') {
-                Write-Host "::warning::There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
-            }
-        }
-        else {
-            $allApps += $projectTestApps
-        }
-        # Go through all .app files and exclude any with ids in the excludeAppIds list
-        # Also exclude apps with direct dependencies on Tests-TestLibraries
-        if ($allApps) {
-            foreach($folder in $allApps) {
-                foreach($app in (Get-ChildItem -Path $folder -Filter "*.app")) {
-                    Write-Host "Processing app: $($app.Name)"
-                    $appJson = Get-AppJsonFromAppFile -appFile $app.FullName
-                    if ($appJson.id -notin $deploymentSettings.excludeAppIds) {
-                        # If app should be included, verify that it does not depend on Tests-TestLibraries
-                        $unknownDependenciesForApp = @()
-                        Sort-AppFilesByDependencies -appFiles @($app.FullName) -unknownDependencies ([ref]$unknownDependenciesForApp) -WarningAction SilentlyContinue | Out-Null
-                        $unknownDependenciesForApp | ForEach-Object {
-                            if ($_.Split(':')[0] -eq $TestsTestLibrariesAppId) {
-                                Write-Host "::WARNING::Test-TestLibraries can't be installed - skipping app $($app.Name)"
-                                continue
-                            }
-                        }
-
-                        $apps += $app.FullName
-                        Write-Host "App $($app.Name) with id $($appJson.id) included in deployment"
-                    }
-                    else {
-                        Write-Host "App $($app.Name) with id $($appJson.id) excluded from deployment"
-                    }
-                }
-            }
-        }
-    }
-}
-else {
-    throw "Artifact $artifactsFolder was not found. Make sure that the artifact files exist and files are not corrupted."
-}
+$apps, $dependencies = GetAppsAndDependenciesFromArtifacts -token $token -artifactsFolder $artifactsFolder -deploymentSettings $deploymentSettings -artifactsVersion $artifactsVersion
 
 # Calculate unknown dependencies for all apps and known dependencies
 $unknownDependencies = @()
@@ -403,6 +181,9 @@ else {
                     if ($syncMode -eq 'ForceSync') { $syncMode = 'Force' }
                     $parameters += @{ "SchemaSyncMode" = $syncMode }
                 }
+
+                CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+
                 Write-Host "Publishing apps using automation API"
                 Publish-PerTenantExtensionApps @parameters
             }

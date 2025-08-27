@@ -1,8 +1,0 @@
-{
-    "sign": "0.9.1-beta.25278.1",
-    "Microsoft.ApplicationInsights": "2.20.0",
-    "Az.Accounts": "2.15.1",
-    "Az.Storage": "6.1.1",
-    "Az.KeyVault": "5.2.0",
-    "Microsoft.Dynamics.BusinessCentral.Development.Tools": "16.0.24.41895-beta"
-}
