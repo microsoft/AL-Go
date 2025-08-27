@@ -140,7 +140,7 @@ $customJobs = @(
     }
 )
 # Add custom Jobs
-$cicdYaml.AddCustomJobsToYaml($customJobs)
+$cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepository) # In the context of the template repository, these custom jobs are treated as final customizations
 $cicdYaml.Save($cicdWorkflow)
 
 # Push
@@ -206,7 +206,7 @@ $customJobs = @(
     }
 )
 # Add custom Jobs
-$cicdYaml.AddCustomJobsToYaml($customJobs)
+$cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepository)
 
 # save
 $cicdYaml.Save($cicdWorkflow)
