@@ -1,6 +1,6 @@
 # AL-Go Per Tenant Extension Template
 
-This template repository can be used for managing AppSource Apps for Business Central.
+This template repository can be used for managing Per-tenant Extensions (PTEs) for Business Central.
 
 Please go to https://aka.ms/AL-Go to learn more.
 
