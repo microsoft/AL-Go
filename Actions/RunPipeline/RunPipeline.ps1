@@ -206,8 +206,15 @@ try {
                 $finalUrl = $url
             }
 
-            # Download the app file if the URL is valid
             if ($finalUrl -like 'http*://*') {
+                # Check validity of URL
+                try {
+                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
+                } catch {
+                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
+                }
+
+                # Try downloading the app file
                 try {
                     if (-not (Test-Path $tempDependenciesLocation)) {
                         New-Item -Path $tempDependenciesLocation -ItemType Directory | Out-Null
@@ -216,7 +223,9 @@ try {
                     Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
                 }
                 catch {
-                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
+                    # If the app file fails to be downloaded we skip the check
+                    Write-Host "Failed to download app from $finalUrl. Error was: $($_.Exception.Message)"
+                    return $finalUrl
                 }
             } else {
                 $appFile = $_
@@ -243,7 +252,11 @@ try {
             Import-Module (Join-Path -Path $ScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
             Test-InstallApps -AllInstallApps $AllInstallApps -ProjectPath $ProjectPath -RunnerTempFolder $RunnerTempFolder
         }
-        pwsh -NoProfile -Command $scriptBlock -args $PSScriptRoot, ($install.Apps + $install.TestApps), $projectPath, $ENV:RUNNER_TEMP
+
+        # Filter out URLs and non-existing files
+        $allInstallApps = ($install.Apps + $install.TestApps) | Where-Object { $_ -notlike 'http*://*' -and (Test-Path $_) }
+
+        pwsh -NoProfile -Command $scriptBlock -args $PSScriptRoot, $allInstallApps, $projectPath, $ENV:RUNNER_TEMP
     }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
