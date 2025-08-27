@@ -325,20 +325,20 @@ class Yaml {
         This function will add the custom jobs to the YAML content
         It will also update the needs section of any jobs that depend on these custom jobs
 
-        Based on the job's origin, the function will add a comment to differentiate the custom jobs
+        Based on the target origin, the function will add a comment to differentiate the custom jobs
 
         Example:
         AddCustomJobsToYaml(@{
             Name = "CustomJob1"
             Content = @("  - pwsh", "  -File Build1")
             NeedsThis = @("Initialization"),
-            Origin = [CustomizationOrigin]::TemplateRepository
-        })
+            Origin = [CustomizationOrigin]::FinalRepository
+        }, [CustomizationOrigin]::TemplateRepository)
     #>
-    [void] AddCustomJobsToYaml([hashtable[]] $customJobs) {
+    [void] AddCustomJobsToYaml([hashtable[]] $customJobs, [CustomizationOrigin] $targetOrigin) {
         $allJobs = $this.GetNextLevel('jobs:/').Trim(':') | Where-Object { -not $_.StartsWith('#') } # exclude job-level comments
 
-        Write-Host "Adding custom jobs"
+        $comment = [Yaml]::GetComment($targetOrigin)
         foreach($customJob in $customJobs) {
             Write-Host "$($customJob.Name) has dependencies from $($customJob.NeedsThis -join ',')"
             foreach($needsthis in $customJob.NeedsThis) {
@@ -359,8 +359,8 @@ class Yaml {
                 continue
             }
 
-            Write-Host "Adding job $($customJob.Name) with origin $($customJob.Origin)"
-            $comment = [Yaml]::GetComment($customJob.Origin)
+            Write-Host "Adding job $($customJob.Name) with target origin $targetOrigin"
+
             $this.content += @('') # This will add an empty line
             if($comment) {
                 $this.content += @("  $comment") # add the comment based on the origin to differentiate the custom jobs
@@ -370,7 +370,7 @@ class Yaml {
         }
     }
 
-    hidden static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [CustomizationOrigin] $origin) {
+    hidden static [void] ApplyCustomizations([ref] $srcContent, [string] $yamlFile, [CustomizationOrigin] $targetOrigin) {
         $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
         try {
             $yaml = [Yaml]::Load($yamlFile)
@@ -381,13 +381,20 @@ class Yaml {
         }
 
         # Locate custom jobs in destination YAML
-        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*')) | Where-Object { $_.Origin -eq $origin }
-        if ($customJobs) {
-            Write-Host "Apply custom jobs for origin $origin"
+        $customJobs = @($yaml.GetCustomJobsFromYaml('CustomJob*'))
 
-            Trace-Information -Message "Adding custom jobs with origin $origin"
+        # If the target origin is FinalRepository, filter the custom jobs.
+        # This case is to ensure that only jobs specific to the final repository are processed.
+        if ($targetOrigin -eq [CustomizationOrigin]::FinalRepository) {
+            $customJobs = $customJobs | Where-Object { $_.Origin -eq [CustomizationOrigin]::FinalRepository }
+        }
+
+        if ($customJobs) {
+            Write-Host "Apply custom jobs for origin $targetOrigin"
+
+            Trace-Information -Message "Adding custom jobs with origin $targetOrigin"
             # Add custom jobs to template YAML
-            $srcYaml.AddCustomJobsToYaml($customJobs)
+            $srcYaml.AddCustomJobsToYaml($customJobs, $targetOrigin)
         }
         $srcContent.Value = $srcYaml.content -join "`n"
     }
