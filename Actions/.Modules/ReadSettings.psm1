@@ -393,9 +393,11 @@ function ReadSettings {
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
 
                                 # If propname is workflows then we should sanitize the workflow name in the same way we sanitize the $workflowName variable
+                                Write-Host "1: $propName = $propName, propValue = $propValue"
                                 if(($propName -eq "workflows") -and ($null -ne $propValue)) {
                                     $propValue = SanitizeWorkflowName -workflowName $propValue
                                 }
+                                Write-Host "2: $propName = $propName, propValue = $propValue"
 
                                 $conditionMet = $propValue -and $conditionMet -and ($conditionalSetting."$propName" | Where-Object { $propValue -like $_ })
                                 $conditions += @("$($propName): $propValue")
