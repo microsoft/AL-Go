@@ -310,7 +310,7 @@ function ReadSettings {
 
     $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
     $githubFolder = Join-Path $baseFolder ".github"
-    $workflowName = $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+    $workflowName = SanitizeWorkflowName -workflowName $workflowName
 
     # Start with default settings
     $settings = GetDefaultSettings -repoName $repoName
@@ -391,6 +391,12 @@ function ReadSettings {
                             $propName = $_.Key
                             $propValue = $_.Value
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
+
+                                # If propname is workflows then we should sanitize the workflow name in the same way we sanitize the $workflowName variable
+                                if(($propName -eq "workflows") -and ($null -ne $propValue)) {
+                                    $propValue = SanitizeWorkflowName -workflowName $propValue
+                                }
+
                                 $conditionMet = $propValue -and $conditionMet -and ($conditionalSetting."$propName" | Where-Object { $propValue -like $_ })
                                 $conditions += @("$($propName): $propValue")
                             }
@@ -495,6 +501,21 @@ function ValidateSettings {
             OutputWarning "Settings are not valid. Error: $result"
         }
     }
+}
+
+<#
+    .SYNOPSIS
+        Sanitize a workflow name by removing invalid file name characters.
+    .PARAMETER workflowName
+        The workflow name to sanitize.
+    .OUTPUTS
+        The sanitized workflow name.
+#>
+function SanitizeWorkflowName {
+    Param(
+        [string] $workflowName
+    )
+    return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
 Export-ModuleMember -Function ReadSettings
