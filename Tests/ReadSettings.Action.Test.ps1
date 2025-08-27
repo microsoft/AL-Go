@@ -14,12 +14,12 @@ Describe "ReadSettings Action Tests" {
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
         $testFolder = (Join-Path ([System.IO.Path]::GetTempPath()) "readSettingsActionTest")
         $ENV:GITHUB_WORKSPACE = $testFolder
-        New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
-        # Mock Write-Host { }
+        Mock Write-Host { }
         Mock Out-Host { }
     }
 
     BeforeEach {
+        New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
         $env:GITHUB_ENV = (Join-Path $testFolder "githubEnv")
         $env:GITHUB_OUTPUT = (Join-Path $testFolder "githubOutput")
         New-Item -Path $env:GITHUB_ENV -ItemType file -Force | Out-Null
