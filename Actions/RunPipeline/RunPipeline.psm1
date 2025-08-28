@@ -60,7 +60,7 @@ function Test-InstallApps() {
                 $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create([System.IO.File]::OpenRead($appFile), $true)
                 if ((($null -eq $package.ReadSourceCodeFilePaths()) -or ("" -eq $package.ReadSourceCodeFilePaths())) -and (-not $package.IsRuntimePackage)) {
                     # If package is not a runtime package and has no source code files, it is a symbols package
-                    # Symbols packages are not meant to be published to a container
+                    # Symbols packages are not meant to be published to a BC Environment
                     OutputWarning -Message "App $appFileName is a symbols package and should not be published. The workflow may fail if you try to publish it."
                 }
             } else {
