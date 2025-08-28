@@ -47,7 +47,12 @@ function Test-InstallApps() {
         LoadDLL -path $codeanalysisdll.FullName
 
         foreach ($app in $AllInstallApps) {
-            $appFilePath = Join-Path $ProjectPath $app -Resolve -ErrorAction SilentlyContinue
+            if (Test-Path -Path $app) {
+                $appFilePath = (Get-Item -Path $app).FullName
+            } else {
+                $appFilePath = Join-Path $ProjectPath $app -Resolve -ErrorAction SilentlyContinue
+            }
+
             if ($appFilePath) {
                 $appFile = Get-Item -Path $appFilePath
                 $appFileName = $appFile.Name
