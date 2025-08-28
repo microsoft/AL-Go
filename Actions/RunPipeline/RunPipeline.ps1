@@ -223,7 +223,7 @@ try {
                     Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
                 }
                 catch {
-                    # If the app file fails to be downloaded we skip the check
+                    # If the app file fails to be downloaded we keep it as a URL and let Run-ALPipeline download it
                     Write-Host "Failed to download app from $finalUrl. Error was: $($_.Exception.Message)"
                     return $finalUrl
                 }
@@ -239,8 +239,6 @@ try {
     # Analyze InstallApps and InstallTestApps before launching pipeline
     if ((-not $settings.doNotPublishApps)) {
         # Test that InstallApps are not symbols packages
-        # Skip this check if doNotPublishApps is set
-
         $scriptBlock = {
             param (
                 [string]$ScriptRoot,
