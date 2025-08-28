@@ -255,7 +255,7 @@ try {
         Write-Host "Found the following apps: $(($install.Apps + $install.TestApps) -join ', ')"
 
         # Filter out URLs and non-existing files
-        $allInstallApps = ($install.Apps + $install.TestApps) | Where-Object { $_ -notlike 'http*://*' -and (Test-Path $_) }
+        $allInstallApps = ($install.Apps + $install.TestApps) | Where-Object { $_ -notlike 'http*://*' }
 
         pwsh -NoProfile -Command $scriptBlock -args $PSScriptRoot, $allInstallApps, $projectPath, $ENV:RUNNER_TEMP
     }
