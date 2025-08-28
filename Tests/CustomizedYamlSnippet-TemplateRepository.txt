@@ -55,7 +55,7 @@ jobs:
   # This is comment on job level
   CheckForUpdates:
     runs-on: [ windows-latest ]
-    needs: [ Initialization, CustomJob-MyFinalJob ]
+    needs: [ Initialization, CustomJob-MyCustomTemplateJob ]
     if: github.event_name != 'workflow_run'
     steps:
       - name: Checkout
@@ -73,7 +73,7 @@ jobs:
           shell: powershell
           templateUrl: ${{ env.templateUrl }}
 
-  CustomJob-MyFinalJob:
+  CustomJob-MyCustomTemplateJob:
     needs: [ Initialization ]
     runs-on: [ windows-latest ]
     steps:
