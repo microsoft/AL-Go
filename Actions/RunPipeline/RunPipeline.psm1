@@ -64,7 +64,7 @@ function Test-InstallApps() {
                     OutputWarning -Message "App $appFileName is a symbols package and should not be published. The workflow may fail if you try to publish it."
                 }
             } else {
-                Write-Host "App file path for $app could not be resolved ($appFilePath)."
+                Write-Host "App file path for $app could not be resolved ($appFilePath). Skipping symbols check."
             }
         }
     }
