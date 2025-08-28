@@ -252,6 +252,7 @@ try {
             Import-Module (Join-Path -Path $ScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
             Test-InstallApps -AllInstallApps $AllInstallApps -ProjectPath $ProjectPath -RunnerTempFolder $RunnerTempFolder
         }
+        Write-Host "Found the following apps: $(($install.Apps + $install.TestApps) -join ', ')"
 
         # Filter out URLs and non-existing files
         $allInstallApps = ($install.Apps + $install.TestApps) | Where-Object { $_ -notlike 'http*://*' -and (Test-Path $_) }
