@@ -219,7 +219,10 @@ try {
                     if (-not (Test-Path $tempDependenciesLocation)) {
                         New-Item -Path $tempDependenciesLocation -ItemType Directory | Out-Null
                     }
-                    $appFile = Join-Path $tempDependenciesLocation ([Uri]::UnescapeDataString([System.IO.Path]::GetFileName($finalUrl.Split('?')[0].TrimEnd('/'))))
+                    $urlWithoutQuery = $finalUrl.Split('?')[0].TrimEnd('/')
+                    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
+                    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
+                    $appFile = Join-Path $tempDependenciesLocation $decodedFileName
                     Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
                 }
                 catch {
