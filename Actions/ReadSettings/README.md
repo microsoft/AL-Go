@@ -35,3 +35,4 @@ none
 | :-- | :-- |
 | GitHubRunnerJson | GitHubRunner in compressed Json format |
 | GitHubRunnerShell | Shell for GitHubRunner jobs |
+| SelectedSettingsJson | Selected settings from the get parameter in compressed JSON format |
