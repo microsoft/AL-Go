@@ -15,6 +15,14 @@ Example
 }
 ```
 
+### AL Code Analysis tracked in GitHub
+
+AL-Go already supports AL code analysis, but up until now this was not tracked in GitHub. It is now possible to track code analysis issues automatically in the GitHub security tab, as well as having any new issues posted as a comment in Pull Requests.
+
+Enable this feature by using the new setting [trackCodeCopIssuesInGitHub](https://aka.ms/algosettings#trackCodeCopIssuesInGitHub). This can only be enabled for the full repository, and not select projects.
+
+Please note that some automated features are premium and require the use of [GitHub Code Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security)
+
 ### AL-Go Telemetry
 
 AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
