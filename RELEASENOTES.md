@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1512: Throw a warning before trying to publish symbols packages
+
 ## v7.3
 
 ### Configurable merge method for pull request auto-merge

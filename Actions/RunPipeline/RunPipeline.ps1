@@ -25,6 +25,7 @@ try {
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -193,6 +194,7 @@ try {
     }
 
     # Replace secret names in install.apps and install.testApps
+    $tempDependenciesLocation = Join-Path $ENV:RUNNER_TEMP "Dependencies-$(Get-Random)"
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
@@ -203,22 +205,59 @@ try {
             else {
                 $finalUrl = $url
             }
-            # Check validity of URL
+
             if ($finalUrl -like 'http*://*') {
+                # Check validity of URL
                 try {
                     Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
-                }
-                catch {
+                } catch {
                     throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
                 }
+
+                # Try downloading the app file
+                try {
+                    if (-not (Test-Path $tempDependenciesLocation)) {
+                        New-Item -Path $tempDependenciesLocation -ItemType Directory | Out-Null
+                    }
+                    $urlWithoutQuery = $finalUrl.Split('?')[0].TrimEnd('/')
+                    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
+                    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
+                    $appFile = Join-Path $tempDependenciesLocation $decodedFileName
+                    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
+                }
+                catch {
+                    # If the app file fails to be downloaded we keep it as a URL and let Run-ALPipeline download it
+                    Write-Host "Failed to download app from $finalUrl. Error was: $($_.Exception.Message)"
+                    return $finalUrl
+                }
+            } else {
+                $appFile = $_
             }
-            return $finalUrl
+            return $appFile
         })
     }
 
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+    if ((-not $settings.doNotPublishApps)) {
+        # Test that InstallApps are not symbols packages
+        $scriptBlock = {
+            param (
+                [string]$ScriptRoot,
+                [array]$AllInstallApps,
+                [string]$ProjectPath,
+                [string]$RunnerTempFolder
+            )
+
+            Import-Module (Join-Path -Path $ScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
+            Test-InstallApps -AllInstallApps $AllInstallApps -ProjectPath $ProjectPath -RunnerTempFolder $RunnerTempFolder
+        }
+        # Filter out URLs and non-existing files
+        $allInstallApps = ($install.Apps + $install.TestApps) | Where-Object { $_ -notlike 'http*://*' }
+
+        pwsh -NoProfile -Command $scriptBlock -args $PSScriptRoot, $allInstallApps, $projectPath, $ENV:RUNNER_TEMP
+    }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
