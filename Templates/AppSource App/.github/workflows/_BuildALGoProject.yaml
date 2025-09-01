@@ -108,7 +108,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules
+          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackCodeCopIssuesInGitHub
 
       - name: Determine whether to build project
         id: DetermineBuildProject
@@ -278,7 +278,7 @@ jobs:
 
       - name: Publish artifacts - ErrorLogs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: inputs.artifactsRetentionDays >= 0 && (hashFiles(format('{0}/.buildartifacts/ErrorLogs/*',inputs.project)) != '')
+        if: inputs.artifactsRetentionDays >= 0 && (hashFiles(format('{0}/.buildartifacts/ErrorLogs/*',inputs.project)) != '') && env.trackALAlertsInGithub == 'True'
         with:
           name: ${{ steps.calculateArtifactsNames.outputs.ErrorLogsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/ErrorLogs/'

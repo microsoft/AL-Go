@@ -2,7 +2,7 @@
 
 AL-Go already supports AL code analysis, but up until now this was not tracked in GitHub. It is now possible to track code analysis issues automatically in the GitHub security tab, as well as having any new issues posted as a comment in Pull Requests.
 
-Enable this feature by using the new setting [trackCodeCopIssuesInGitHub](https://aka.ms/algosettings#trackCodeCopIssuesInGitHub). This can only be enabled for the full repository, and not select projects.
+Enable this feature by using the new setting [trackALAlertsInGithub](https://aka.ms/algosettings#trackALAlertsInGithub). This setting must be enabled at the repo level, but can optionally be disabled per project.
 
 Please note that some automated features are premium and require the use of [GitHub Code Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security)
 

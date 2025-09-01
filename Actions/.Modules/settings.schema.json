@@ -293,9 +293,9 @@
             },
             "description": "See https://aka.ms/ALGoSettings#customcodecops"
         },
-        "trackCodeCopIssuesInGitHub": {
+        "trackALAlertsInGitHub": {
             "type": "boolean",
-            "description": "Enable tracking of CodeCop issues in GitHub. See https://aka.ms/ALGoSettings#trackCodeCopIssuesInGitHub"
+            "description": "Enable tracking of AL Alerts in GitHub. See https://aka.ms/ALGoSettings#trackALAlertsInGitHub"
         },
         "failOn": {
             "type": "string",

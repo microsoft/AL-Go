@@ -133,7 +133,7 @@ function GetDefaultSettings
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
         "customCodeCops"                                = @()
-        "trackCodeCopIssuesInGitHub"                    = $false
+        "trackALAlertsInGitHub"                         = $false
         "failOn"                                        = "error"
         "treatTestFailuresAsWarnings"                   = $false
         "rulesetFile"                                   = ""
