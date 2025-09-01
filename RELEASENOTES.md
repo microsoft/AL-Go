@@ -1,3 +1,7 @@
+### Issues
+
+- Discussion 1885 Conditional settings for CI/CD are not applied
+
 ## v7.3
 
 ### Configurable merge method for pull request auto-merge
