@@ -137,98 +137,58 @@ Describe('YamlClass Tests') {
         $permissionsContent.content[1].Trim() | Should -be 'actions: read'
     }
 
-    It 'Test YamlClass Customizations from final repository' {
+    It 'Test YamlClass GetCustomJobsFromYaml' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromFinalRepository.txt'))
-        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+        $nonCustomizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
 
         # Get Custom jobs from yaml
         $customJobs = $customizedYaml.GetCustomJobsFromYaml('CustomJob*')
         $customJobs | Should -Not -BeNullOrEmpty
-        $customJobs.Count | Should -be 1
+        $customJobs.Count | Should -be 2
+
         $customJobs[0].Name | Should -Be 'CustomJob-MyFinalJob'
         $customJobs[0].Origin | Should -Be 'FinalRepository'
 
-        # Apply Custom jobs and steps to yaml
-        $yaml.AddCustomJobsToYaml($customJobs)
+        $customJobs[1].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
+        $customJobs[1].Origin | Should -Be 'TemplateRepository'
 
-        # Check if new yaml content is equal to customized yaml content
-        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
-
-        # Applying the custom jobs again doesn't change the yaml content
-        $yaml.AddCustomJobsToYaml($customJobs)
-        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+        $emptyCustomJobs = $nonCustomizedYaml.GetCustomJobsFromYaml('CustomJob*')
+        $emptyCustomJobs | Should -BeNullOrEmpty
     }
 
-    It 'Test YamlClass Customizations from custom template repository' {
+    It 'Test YamlClass AddCustomJobsToYaml' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromTemplateRepository.txt'))
-        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+        $customTemplateYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt'))
+        $finalRepositoryYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FinalRepository.txt'))
+        $nonCustomizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
 
-        # Get Custom jobs from yaml
-        $customJobs = $customizedYaml.GetCustomJobsFromYaml('CustomJob*')
-        $customJobs | Should -Not -BeNullOrEmpty
-        $customJobs.Count | Should -be 1
-        $customJobs[0].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
-        $customJobs[0].Origin | Should -Be 'TemplateRepository'
+        $customTemplateJobs = $customTemplateYaml.GetCustomJobsFromYaml('CustomJob*')
+        $customTemplateJobs | Should -Not -BeNullOrEmpty
+        $customTemplateJobs.Count | Should -be 1
+        $customTemplateJobs[0].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
+        $customTemplateJobs[0].Origin | Should -Be 'FinalRepository' # Custom template job has FinalRepository as origin when in the template itself
 
-        # Apply Custom jobs and steps to yaml
-        $yaml.AddCustomJobsToYaml($customJobs)
+        # Add the custom job to the non-customized yaml
+        $nonCustomizedYaml.AddCustomJobsToYaml($customTemplateJobs, [CustomizationOrigin]::TemplateRepository)
 
-        # Check if new yaml content is equal to customized yaml content
-        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+        $nonCustomizedYaml.content -join "`r`n" | Should -Be ($finalRepositoryYaml.content -join "`r`n")
 
-        # Applying the custom jobs again doesn't change the yaml content
-        $yaml.AddCustomJobsToYaml($customJobs)
-        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
-    }
+        # Adding the jobs again doesn't have an effect
+        $nonCustomizedYaml.AddCustomJobsToYaml($customTemplateJobs, [CustomizationOrigin]::TemplateRepository)
 
-    It 'Test YamlClass Customizations from both final repository and custom template repository' {
-        . (Join-Path $scriptRoot "yamlclass.ps1")
-
-        $customizedYamlTemplateRepo = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromTemplateRepository.txt'))
-        $customizedYamlFinalRepo = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromFinalRepository.txt'))
-
-        $customizedYamlAll = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
-
-        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
-
-        # Get Custom jobs from yaml
-        $customJobsTemplateRepo = $customizedYamlTemplateRepo.GetCustomJobsFromYaml('CustomJob*')
-        $customJobsTemplateRepo | Should -Not -BeNullOrEmpty
-        $customJobsTemplateRepo.Count | Should -be 1
-        $customJobsTemplateRepo[0].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
-        $customJobsTemplateRepo[0].Origin | Should -Be 'TemplateRepository'
-
-        # Get Custom jobs from final repo
-        $customJobsFinalRepo = $customizedYamlFinalRepo.GetCustomJobsFromYaml('CustomJob*')
-        $customJobsFinalRepo | Should -Not -BeNullOrEmpty
-        $customJobsFinalRepo.Count | Should -be 1
-        $customJobsFinalRepo[0].Name | Should -Be 'CustomJob-MyFinalJob'
-        $customJobsFinalRepo[0].Origin | Should -Be 'FinalRepository'
-
-        $allCustomJobs = $customJobsTemplateRepo + $customJobsFinalRepo
-
-        # Apply Custom jobs and steps to yaml
-        $yaml.AddCustomJobsToYaml($allCustomJobs)
-
-        # Check if new yaml content is equal to customized yaml content
-        ($yaml.content -join "`r`n") | Should -be ($customizedYamlAll.content -join "`r`n")
-
-        # Applying the custom jobs again doesn't change the yaml content
-        $yaml.AddCustomJobsToYaml($allCustomJobs)
-        ($yaml.content -join "`r`n") | Should -be ($customizedYamlAll.content -join "`r`n")
+        $nonCustomizedYaml.content -join "`r`n" | Should -Be ($finalRepositoryYaml.content -join "`r`n")
     }
 
     It('Test YamlClass ApplyTemplateCustomizations') {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $srcContent = Get-Content (Join-Path $PSScriptRoot 'YamlSnippet.txt')
-        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromTemplateRepository.txt')
+        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FinalRepository.txt')
 
-        [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+        [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt'))
 
         $srcContent | Should -Be ($resultContent -join "`n")
     }
@@ -237,9 +197,9 @@ Describe('YamlClass Tests') {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $srcContent = Get-Content (Join-Path $PSScriptRoot 'YamlSnippet.txt')
-        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FromFinalRepository.txt')
+        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt')
 
-        [Yaml]::ApplyFinalCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+        [Yaml]::ApplyFinalCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt')) # Threat the template repo as a final repo
 
         $srcContent | Should -Be ($resultContent -join "`n")
     }
