@@ -93,7 +93,7 @@ try {
         Set-Content -Path "$errorLogsFolderPath/output.sarif.json" -Value $sarifJson
     }
     else {
-        OutputWarning -message "ErrorLogs folder not found. You can manually inspect your artifacts for AL code alerts."
+        OutputWarning -message "ErrorLogs $errorLogsFolder folder not found. You can manually inspect your artifacts for AL code alerts."
     }
 }
 catch {
