@@ -99,5 +99,5 @@ try {
 catch {
     OutputWarning -message "Unexpected error processing AL code analysis results. You can manually inspect your artifacts for AL code alerts."
     OutputDebug -message "Error: $_"
-    Trace-Exception -Message "Unexpected Error" -ActionName "ProcessALCodeAnalysisLogs" -ErrorRecord $_
+    Trace-Exception -ActionName "ProcessALCodeAnalysisLogs" -ErrorRecord $_
 }
