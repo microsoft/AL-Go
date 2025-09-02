@@ -1,3 +1,9 @@
+### Issues
+
+- Discussion 1885 Conditional settings for CI/CD are not applied
+
+## v7.3
+
 ### Configurable merge method for pull request auto-merge
 
 A new setting `pullRequestMergeMethod` has been added to the `commitOptions` structure, allowing you to configure which merge method to use when `pullRequestAutoMerge` is enabled. Valid values are "merge" or "squash". The default value is "squash" to maintain backward compatibility.
