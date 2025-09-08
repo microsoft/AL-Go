@@ -149,7 +149,7 @@ jobs:
           target_commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
 
       - name: Create release
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         id: createrelease
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
@@ -219,7 +219,7 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $ENV:MATRIX_URL -OutFile "$($ENV:MATRIX_NAME).zip"
 
       - name: Upload release artifacts
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
           releaseId: ${{ needs.createrelease.outputs.releaseId }}
           MATRIX_NAME: ${{ matrix.name }}
