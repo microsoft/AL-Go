@@ -25,9 +25,12 @@ function DownloadTemplateRepository {
     $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
     try {
         $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl
+        OutputDebug -message ($response | Format-List | Out-String)
     }
     catch {
         # Ignore error
+        OutputDebug -message "Error getting template repository with GITHUB_TOKEN:"
+        OutputDebug -message $_
         $response = $null
     }
     if (-not $response -or $response.StatusCode -ne 200) {
