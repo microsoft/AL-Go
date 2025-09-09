@@ -22,6 +22,7 @@ function DownloadTemplateRepository {
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
 
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
+    OutputDebug -message "Getting template repository ($templateRepository) with GITHUB_TOKEN"
     $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
     try {
         $response = Invoke-WebRequest -Headers $headers -Method Head -Uri $templateRepositoryUrl
