@@ -629,11 +629,13 @@ function GetAccessToken {
     )
 
     if ([string]::IsNullOrEmpty($token)) {
+        OutputDebug -message "Attempted to get Access Token but token is null or empty"
         return [string]::Empty
     }
 
     if (!($token.StartsWith("{"))) {
         # not a json token
+        OutputDebug -message "Attempting to get Access Token but token is not in JSON format, returning as is."
         return $token
     }
     else {
