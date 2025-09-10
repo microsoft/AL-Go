@@ -1,0 +1,25 @@
+name: Process AL Code Analysis Logs
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  errorLogsFolder:
+    description: Folder containing error logs and SARIF output
+    required: false
+    default: ErrorLogs
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _errorLogsFolder: ${{ inputs.errorLogsFolder }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ProcessALCodeAnalysisLogs" -Action {
+          ${{ github.action_path }}/ProcessALCodeAnalysisLogs.ps1 -errorLogsFolder $ENV:_errorLogsFolder
+        }
+branding:
+  icon: terminal
+  color: blue

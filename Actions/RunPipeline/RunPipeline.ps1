@@ -545,6 +545,7 @@ try {
         -failOn $settings.failOn `
         -treatTestFailuresAsWarnings:$settings.treatTestFailuresAsWarnings `
         -rulesetFile $settings.rulesetFile `
+        -generateErrorLog:$settings.trackALAlertsInGitHub `
         -enableExternalRulesets:$settings.enableExternalRulesets `
         -appSourceCopMandatoryAffixes $settings.appSourceCopMandatoryAffixes `
         -additionalCountries $additionalCountries `
