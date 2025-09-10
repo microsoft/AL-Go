@@ -64,12 +64,13 @@ function Test-InstallApps() {
                     OutputWarning -Message "App $appFileName is a symbols package and should not be published. The workflow may fail if you try to publish it."
                 }
             } else {
-                Write-Host "App file path for $app could not be resolved ($appFilePath). Skipping symbols check."
+                Write-Host "App file path for $app could not be resolved. Skipping symbols check."
             }
         }
     }
     catch {
         Trace-Warning -Message "Something went wrong while analyzing install apps."
+        OutputDebug -message "Error: $_"
     } finally {
         # Clean up the temporary folder
         if (Test-Path -Path $tempFolder) {
