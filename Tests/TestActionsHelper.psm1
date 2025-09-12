@@ -2,6 +2,8 @@
 
 $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/DebugLogHelper.psm1') -Global
+
 function iReplace {
     Param(
         [string] $string,
@@ -181,12 +183,13 @@ function TestActionsReferences {
 
     $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
     $gitHubActionPattern = "^actions/*"
+    $gitHubCodeQLActionPattern = "^github/codeql-action/*"
 
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
         $version = $_.Groups[2].Value
 
-        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern)"
+        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern)"
 
         if($origin -match $alGoActionPattern) {
             $version | Should -Match "main"

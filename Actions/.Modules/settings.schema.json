@@ -293,6 +293,10 @@
             },
             "description": "See https://aka.ms/ALGoSettings#customcodecops"
         },
+        "trackALAlertsInGitHub": {
+            "type": "boolean",
+            "description": "Enable tracking of AL Alerts in GitHub. See https://aka.ms/ALGoSettings#trackALAlertsInGitHub"
+        },
         "failOn": {
             "type": "string",
             "pattern": "^(none|warning|error|newWarning)$",
@@ -601,6 +605,11 @@
                 },
                 "pullRequestAutoMerge": {
                     "type": "boolean"
+                },
+                "pullRequestMergeMethod": {
+                    "type": "string",
+                    "enum": ["merge", "squash"],
+                    "default": "squash"
                 },
                 "pullRequestLabels": {
                     "type": "array",

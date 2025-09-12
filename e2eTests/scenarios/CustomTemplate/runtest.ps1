@@ -108,6 +108,7 @@ $customJobs = @(
             "        Write-Host 'CustomJob-TemplateInit was here!'"
         )
         "NeedsThis" = @( 'Initialization' )
+        "Origin" = [CustomizationOrigin]::TemplateRepository
     }
     @{
         "Name" = "CustomJob-TemplateDeploy"
@@ -121,6 +122,7 @@ $customJobs = @(
             "        Write-Host 'CustomJob-TemplateDeploy was here!'"
         )
         "NeedsThis" = @( 'PostProcess' )
+        "Origin" = [CustomizationOrigin]::TemplateRepository
     }
     @{
         "Name" = "JustSomeTemplateJob"
@@ -134,10 +136,11 @@ $customJobs = @(
             "        Write-Host 'JustSomeTemplateJob was here!'"
         )
         "NeedsThis" = @( )
+        "Origin" = [CustomizationOrigin]::TemplateRepository
     }
 )
 # Add custom Jobs
-$cicdYaml.AddCustomJobsToYaml($customJobs)
+$cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepository) # In the context of the template repository, these custom jobs are treated as final customizations
 $cicdYaml.Save($cicdWorkflow)
 
 # Push
@@ -170,6 +173,7 @@ $customJobs = @(
             "        Write-Host 'JustSomeJob was here!'"
         )
         "NeedsThis" = @( 'Build' )
+        "Origin" = [CustomizationOrigin]::FinalRepository
     }
     @{
         "Name" = "CustomJob-PreDeploy"
@@ -183,6 +187,7 @@ $customJobs = @(
             "        Write-Host 'CustomJob-PreDeploy was here!'"
         )
         "NeedsThis" = @( 'Deploy' )
+        "Origin" = [CustomizationOrigin]::FinalRepository
     }
     @{
         "Name" = "CustomJob-PostDeploy"
@@ -197,10 +202,11 @@ $customJobs = @(
             "        Write-Host 'CustomJob-PostDeploy was here!'"
         )
         "NeedsThis" = @( 'PostProcess' )
+        "Origin" = [CustomizationOrigin]::FinalRepository
     }
 )
 # Add custom Jobs
-$cicdYaml.AddCustomJobsToYaml($customJobs)
+$cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepository)
 
 # save
 $cicdYaml.Save($cicdWorkflow)

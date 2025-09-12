@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+Import-Module (Join-Path $PSScriptRoot "..\Actions\TelemetryHelper.psm1")
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "CheckForUpdates Action Tests" {
@@ -20,12 +21,32 @@ Describe "CheckForUpdates Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
+    It 'Test that Update AL-Go System Files uses fixes runs-on' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $updateYamlFile = Join-Path $scriptRoot "..\..\Templates\Per Tenant Extension\.github\workflows\UpdateGitHubGoSystemFiles.yaml"
+        $updateYaml = [Yaml]::Load($updateYamlFile)
+        $updateYaml.content | Where-Object { $_ -like '*runs-on:*' } | ForEach-Object {
+            $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
+        }
+    }
+}
+
+Describe('YamlClass Tests') {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptRoot', Justification = 'False positive.')]
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+
+        Mock Trace-Information {}
+    }
+
     It 'Test YamlClass' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
         $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
 
         # Yaml file should have 77 entries
-        $yaml.content.Count | Should -be 73
+        $yaml.content.Count | Should -be 74
 
         $start = 0; $count = 0
         # Locate lines for permissions section (including permissions: line)
@@ -55,7 +76,7 @@ Describe "CheckForUpdates Action Tests" {
 
         # Locate CheckForUpdates
         $jobsYaml.Find('CheckForUpdates:', [ref] $start, [ref] $count) | Should -be $true
-        $start | Should -be 23
+        $start | Should -be 24
         $count | Should -be 19
 
         # Replace all occurances of 'shell: powershell' with 'shell: pwsh'
@@ -65,7 +86,7 @@ Describe "CheckForUpdates Action Tests" {
         # Replace Permissions
         $yaml.Replace('Permissions:/',@('contents: write','actions: read'))
         $yaml.content[44].Trim() | Should -be 'shell: pwsh'
-        $yaml.content.Count | Should -be 71
+        $yaml.content.Count | Should -be 72
 
         # Get Jobs section (without the jobs: line)
         $jobsYaml = $yaml.Get('jobs:/')
@@ -116,32 +137,71 @@ Describe "CheckForUpdates Action Tests" {
         $permissionsContent.content[1].Trim() | Should -be 'actions: read'
     }
 
-    It 'Test YamlClass Customizations' {
+    It 'Test YamlClass GetCustomJobsFromYaml' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet.txt'))
-        $yaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+        $customizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-All.txt'))
+        $nonCustomizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
 
         # Get Custom jobs from yaml
         $customJobs = $customizedYaml.GetCustomJobsFromYaml('CustomJob*')
         $customJobs | Should -Not -BeNullOrEmpty
-        $customJobs.Count | Should -be 1
+        $customJobs.Count | Should -be 2
 
-        # Apply Custom jobs and steps to yaml
-        $yaml.AddCustomJobsToYaml($customJobs)
+        $customJobs[0].Name | Should -Be 'CustomJob-MyFinalJob'
+        $customJobs[0].Origin | Should -Be 'FinalRepository'
 
-        # Check if new yaml content is equal to customized yaml content
-        ($yaml.content -join "`r`n") | Should -be ($customizedYaml.content -join "`r`n")
+        $customJobs[1].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
+        $customJobs[1].Origin | Should -Be 'TemplateRepository'
+
+        $emptyCustomJobs = $nonCustomizedYaml.GetCustomJobsFromYaml('CustomJob*')
+        $emptyCustomJobs | Should -BeNullOrEmpty
     }
 
-    It 'Test that Update AL-Go System Files uses fixes runs-on' {
+    It 'Test YamlClass AddCustomJobsToYaml' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        $updateYamlFile = Join-Path $scriptRoot "..\..\Templates\Per Tenant Extension\.github\workflows\UpdateGitHubGoSystemFiles.yaml"
-        $updateYaml = [Yaml]::Load($updateYamlFile)
-        $updateYaml.content | Where-Object { $_ -like '*runs-on:*' } | ForEach-Object {
-            $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
-        }
+        $customTemplateYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt'))
+        $finalRepositoryYaml = [Yaml]::load((Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FinalRepository.txt'))
+        $nonCustomizedYaml = [Yaml]::load((Join-Path $PSScriptRoot 'YamlSnippet.txt'))
+
+        $customTemplateJobs = $customTemplateYaml.GetCustomJobsFromYaml('CustomJob*')
+        $customTemplateJobs | Should -Not -BeNullOrEmpty
+        $customTemplateJobs.Count | Should -be 1
+        $customTemplateJobs[0].Name | Should -Be 'CustomJob-MyCustomTemplateJob'
+        $customTemplateJobs[0].Origin | Should -Be 'FinalRepository' # Custom template job has FinalRepository as origin when in the template itself
+
+        # Add the custom job to the non-customized yaml
+        $nonCustomizedYaml.AddCustomJobsToYaml($customTemplateJobs, [CustomizationOrigin]::TemplateRepository)
+
+        $nonCustomizedYaml.content -join "`r`n" | Should -Be ($finalRepositoryYaml.content -join "`r`n")
+
+        # Adding the jobs again doesn't have an effect
+        $nonCustomizedYaml.AddCustomJobsToYaml($customTemplateJobs, [CustomizationOrigin]::TemplateRepository)
+
+        $nonCustomizedYaml.content -join "`r`n" | Should -Be ($finalRepositoryYaml.content -join "`r`n")
+    }
+
+    It('Test YamlClass ApplyTemplateCustomizations') {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $srcContent = Get-Content (Join-Path $PSScriptRoot 'YamlSnippet.txt')
+        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-FinalRepository.txt')
+
+        [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt'))
+
+        $srcContent | Should -Be ($resultContent -join "`n")
+    }
+
+    It('Test YamlClass ApplyFinalCustomizations') {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        $srcContent = Get-Content (Join-Path $PSScriptRoot 'YamlSnippet.txt')
+        $resultContent = Get-Content (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt')
+
+        [Yaml]::ApplyFinalCustomizations([ref] $srcContent, (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt')) # Threat the template repo as a final repo
+
+        $srcContent | Should -Be ($resultContent -join "`n")
     }
 }
 

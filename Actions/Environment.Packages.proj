@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <OutputPath>./.out</OutputPath>
+    <RestorePackagesPath>$(OutputPath)/packages</RestorePackagesPath>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="sign" Version="0.9.1-beta.25278.1" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Az.Accounts" Version="2.15.1" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Az.Storage" Version="6.1.1" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Az.KeyVault" Version="5.2.0" GeneratePathProperty="true" ExcludeAssets="All" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

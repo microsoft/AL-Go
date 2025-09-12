@@ -4,6 +4,7 @@ Param(
 
 $gitHubHelperPath = Join-Path $PSScriptRoot 'Github-Helper.psm1'
 $readSettingsModule = Join-Path $PSScriptRoot '.Modules/ReadSettings.psm1'
+$debugLoggingModule = Join-Path $PSScriptRoot '.Modules/DebugLogHelper.psm1'
 if (Test-Path $gitHubHelperPath) {
     Import-Module $gitHubHelperPath
     # If we are adding more dependencies here, then localDevEnv and cloudDevEnv needs to be updated
@@ -11,6 +12,10 @@ if (Test-Path $gitHubHelperPath) {
 
 if (Test-Path $readSettingsModule) {
     Import-Module $readSettingsModule
+}
+
+if (Test-Path $debugLoggingModule) {
+    Import-Module $debugLoggingModule
 }
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -22,7 +27,6 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$runningLocal = $local.IsPresent
 $defaultBcContainerHelperVersion = "https://github.com/microsoft/navcontainerhelper/archive/refs/heads/generate-app-dependencies.zip" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
@@ -180,69 +184,6 @@ function ConvertTo-HashTable() {
             }
         }
         $ht
-    }
-}
-
-function OutputError {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        throw $message
-    }
-    else {
-        Write-Host "::Error::$($message.Replace("`r",'').Replace("`n",' '))"
-        $host.SetShouldExit(1)
-    }
-}
-
-function OutputWarning {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        Write-Host -ForegroundColor Yellow "WARNING: $message"
-    }
-    else {
-        Write-Host "::Warning::$message"
-    }
-}
-
-function OutputNotice {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        Write-Host $message
-    }
-    else {
-        Write-Host "::Notice::$message"
-    }
-}
-
-function MaskValueInLog {
-    Param(
-        [string] $value
-    )
-
-    if (!$runningLocal) {
-        Write-Host "`r::add-mask::$value"
-    }
-}
-
-function OutputDebug {
-    Param(
-        [string] $message
-    )
-
-    if ($runningLocal) {
-        Write-Host $message
-    }
-    else {
-        Write-Host "::Debug::$message"
     }
 }
 
@@ -1064,13 +1005,22 @@ function CommitFromNewFolder {
             } else {
                 invoke-gh pr create --fill --head $branch --repo $env:GITHUB_REPOSITORY --base $headBranch --body "$body"
             }
-
-            if ($settings.commitOptions.pullRequestAutoMerge) {
-                invoke-gh pr merge --auto --squash --delete-branch
-            }
         }
         catch {
             OutputError("GitHub actions are not allowed to create Pull Requests (see GitHub Organization or Repository Actions Settings). You can create the PR manually by navigating to $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/tree/$branch")
+        }
+
+        # Set up auto-merge for the Pull Request if specified in settings
+        if ($settings.commitOptions.pullRequestAutoMerge) {
+            try {
+                if (($settings.commitOptions.pullRequestMergeMethod).ToLowerInvariant() -eq "merge") {
+                    invoke-gh pr merge --auto --merge --delete-branch
+                } else {
+                    invoke-gh pr merge --auto --squash --delete-branch
+                }
+            } catch {
+                OutputError("Could not set up auto-merge for the Pull Request with merge method $($settings.commitOptions.pullRequestMergeMethod)")
+            }
         }
         return $true
     }
@@ -2108,14 +2058,24 @@ function GetFoldersFromAllProjects {
 }
 
 function GetPackageVersion($packageName) {
-    $alGoPackages = Get-Content -Path "$PSScriptRoot\Packages.json" | ConvertFrom-Json
+    $projFilePath = "$PSScriptRoot\Environment.Packages.proj"
 
-    # Check if the package is in the list of packages
-    if ($alGoPackages.PSobject.Properties.name -eq $PackageName) {
-        return $alGoPackages."$PackageName"
+    # Check if the proj file exists
+    if (-not (Test-Path $projFilePath)) {
+        throw "Environment.Packages.proj file not found at $projFilePath"
+    }
+
+    # Load the XML content
+    [xml]$projXml = Get-Content -Path $projFilePath
+
+    # Find the PackageReference with the specified Include (package name)
+    $packageReference = $projXml.Project.ItemGroup.PackageReference | Where-Object { $_.Include -eq $packageName }
+
+    if ($packageReference) {
+        return $packageReference.Version
     }
     else {
-        throw "Package $PackageName is not in the list of packages"
+        throw "Package $packageName is not in the list of packages"
     }
 }
 
