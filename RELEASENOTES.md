@@ -9,6 +9,7 @@ Please note that some automated features are premium and require the use of [Git
 ### Issues
 
 - Discussion 1885 Conditional settings for CI/CD are not applied
+- Issue 1512: Throw a warning before trying to publish symbols packages
 
 ## v7.3
 

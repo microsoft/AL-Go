@@ -176,7 +176,7 @@ function GetDefaultSettings
             "retentionDays"                             = 30
             "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps
         }
-        "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
+        "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/" #gitleaks:allow
         "partnerTelemetryConnectionString"              = ""
         "sendExtendedTelemetryToMicrosoft"              = $false
         "environments"                                  = @()
