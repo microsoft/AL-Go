@@ -233,12 +233,14 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | [ ] |
 
 ## Reset settings <a id="resetSettings"></a>
+
 By default, AL-Go merges settings from various places (see [settings levels](#where-are-the-settings-located)).
 
 Basic setting types such as `string` and `integer` are _overwritten_, but settings with complex types such as `array` and `object` are _merged_.
 
 _Example_:
 Say, `ALGoOrgSettings` contains the following values
+
 ```json
 {
     "country": "de"
@@ -247,6 +249,7 @@ Say, `ALGoOrgSettings` contains the following values
 ```
 
 and `.github\AL-Go-Settings.json` contains the following values:
+
 ```json
 {
     "country": "dk"
@@ -255,6 +258,7 @@ and `.github\AL-Go-Settings.json` contains the following values:
 ```
 
 then, after merging, the result settings object will contain the following values:
+
 ```json
 {
     "country": "dk"
@@ -266,6 +270,7 @@ In order to change this behavior, you can specify `resetSettings` property on a 
 
 _Example_:
 Say, `ALGoOrgSettings` contains the following values:
+
 ```json
 {
     "country": "de"
@@ -274,6 +279,7 @@ Say, `ALGoOrgSettings` contains the following values:
 ```
 
 and `.github\AL-Go-Settings.json` contains the following values
+
 ```json
 {
     "resetSettings": "buildModes"
@@ -283,14 +289,15 @@ and `.github\AL-Go-Settings.json` contains the following values
 ```
 
 then, after merging, the result settings object will contain the following values:
+
 ```json
 {
     "country": "dk"
     "buildModes": ["Clean"]
 }
 ```
-> _**Note**_: `resetSettings` isn't a setting on its own and it isn't avaibable in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types.
 
+> _**Note**_: `resetSettings` isn't a setting on its own and it isn't avaibable in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types.
 
 <a id="customdelivery"></a>
 
