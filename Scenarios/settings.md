@@ -232,6 +232,66 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="BcContainerHelperVersion"></a>BcContainerHelperVersion | This setting can be set to a specific version (ex. 3.0.8) of BcContainerHelper to force AL-Go to use this version. **latest** means that AL-Go will use the latest released version. **preview** means that AL-Go will use the latest preview version. **dev** means that AL-Go will use the dev branch of containerhelper. | latest (or preview for AL-Go preview) |
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | [ ] |
 
+## Reset settings <a id="resetSettings"></a>
+By default, AL-Go merges settings from various places (see [settings levels](#where-are-the-settings-located)).
+
+Basic setting types such as `string` and `integer` are _overwritten_, but settings with complex types such as `array` and `object` are _merged_.
+
+_Example_:
+Say, `ALGoOrgSettings` contains the following values
+```json
+{
+    "country": "de"
+    "buildModes": ["Default"]
+}
+```
+
+and `.github\AL-Go-Settings.json` contains the following values:
+```json
+{
+    "country": "dk"
+    "buildModes": ["Clean"]
+}
+```
+
+then, after merging, the result settings object will contain the following values:
+```json
+{
+    "country": "dk"
+    "buildModes": ["Default", "Clean"]
+}
+```
+
+In order to change this behavior, you can specify `resetSettings` property on a settings object. The purpose of the property is to reset the values of the specified settings, so that new values can be set on subsequent settings level.
+
+_Example_:
+Say, `ALGoOrgSettings` contains the following values:
+```json
+{
+    "country": "de"
+    "buildModes": ["Default"]
+}
+```
+
+and `.github\AL-Go-Settings.json` contains the following values
+```json
+{
+    "resetSettings": "buildModes"
+    "country": "dk"
+    "buildModes": ["Clean"]
+}
+```
+
+then, after merging, the result settings object will contain the following values:
+```json
+{
+    "country": "dk"
+    "buildModes": ["Clean"]
+}
+```
+> _**Note**_: `resetSettings` isn't a setting on its own and it isn't avaibable in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types.
+
+
 <a id="customdelivery"></a>
 
 ## Custom Delivery

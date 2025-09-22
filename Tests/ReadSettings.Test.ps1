@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
 
 InModuleScope ReadSettings { # Allows testing of private functions
     Describe "ReadSettings" {
@@ -263,6 +263,53 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
             $defaultSettings.projects = @("project1", "project2")
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+        }
+
+        It 'resetSettings property removes settings from destination object' {
+            $dst = [ordered]@{
+                property1 = "value1"
+                property2 = "value2"
+                property3 = "value3"
+            }
+            $src = [PSCustomObject]@{
+                resetSettings = @("property2", "property4") # property4 does not exist in dst, should be ignored
+                property1     = "newvalue1"
+                property5     = "value5"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.property1 | Should -Be 'newvalue1'   # Updated value
+            $dst.property2 | Should -BeNullOrEmpty    # Removed
+            $dst.property3 | Should -Be 'value3'      # Unchanged
+            $dst.property4 | Should -BeNullOrEmpty    # Did not exist, still does not exist
+            $dst.property5 | Should -Be 'value5'      # New property added
+
+            # Test for nested objects as well
+            $dst = [ordered]@{
+                nested = [ordered]@{
+                    property1 = "value1"
+                    property2 = "value2"
+                }
+                property3 = "value3"
+            }
+
+            $src = [PSCustomObject]@{
+                nested = [PSCustomObject]@{
+                    resetSettings = @("property2")
+                    property1     = "newvalue1"
+                    property4     = "value4"
+                }
+                property5 = "value5"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.nested.property1 | Should -Be 'newvalue1'   # Updated value
+            $dst.nested.property2 | Should -BeNullOrEmpty    # Removed
+            $dst.nested.property4 | Should -Be 'value4'      # New property added
+            $dst.property3 | Should -Be 'value3'             # Unchanged
+            $dst.property5 | Should -Be 'value5'             # New property added
         }
     }
 }

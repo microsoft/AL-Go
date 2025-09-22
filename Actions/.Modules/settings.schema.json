@@ -657,6 +657,13 @@
         },
         "shortLivedArtifactsRetentionDays": {
             "type": "integer"
+        },
+        "resetSettings": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "An array of settings to be reset (removed) from the current settings. See https://aka.ms/ALGoSettings#resetSettings"
         }
     }
 }

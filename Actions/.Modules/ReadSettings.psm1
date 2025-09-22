@@ -10,11 +10,27 @@ function MergeCustomObjectIntoOrderedDictionary {
         [PSCustomObject] $src
     )
 
+    # If the src object contains property 'resetSettings' (list of settings), remove these settings from the dst object
+    if ($src.PSObject.Properties.Name -contains "resetSettings") {
+        $src.resetSettings | ForEach-Object {
+            $prop = $_
+            if ($dst.Contains($prop)) {
+                $dst.Remove($prop)
+            }
+        }
+    }
+
     # Loop through all properties in the source object
     # If the property does not exist in the destination object, add it with the right type, but no value
     # Types supported: PSCustomObject, Object[] and simple types
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
+
+        # Skip resetSettings property as it's only used to remove settings from the destination object and is specific to the source object
+        if ($prop -eq "resetSettings") {
+            return
+        }
+
         $srcProp = $src."$prop"
         $srcPropType = $srcProp.GetType().Name
         if (-not $dst.Contains($prop)) {
