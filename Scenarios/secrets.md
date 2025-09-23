@@ -169,6 +169,16 @@ Example: `{"tenantId":"c645f7e7-0613-4b82-88ca-71f3dbb40045","scopes":"https://a
 
 Adding a secret called StorageContext to an AL-Go for GitHub repository, enables automatic delivery to an Azure storage account.
 
+In the secret, the following placeholders will be replaced automatically by AL-Go for GitHub:
+
+- {project} will become your project or repository name
+- {version} will be replaced with the version number you are delivering (plus -preview if this is continuous delivery)
+- {branch} will be replaced with the branch from which you are delivering
+- {type} will be replaced by apps, testapps or dependencies
+
+> [!NOTE]
+> The containerName have fairly strict limitations as to what is allowed. Valid names start and end with a lower case letter or a number and has in between a lower case letter, number or dash with no consecutive dashes and is 3 through 63 characters long.
+
 In AL-Go for GitHub, the Storage Context can be specified in 5 different ways, 5 different authentication mechanism towards an Azure Storage Account.
 
 ### Managed Identity/Federated credential
