@@ -177,7 +177,7 @@ The StorageContext secret must be a compressed json structure containing authent
 - {type} will be replaced by apps, testapps or dependencies
 
 > [!NOTE]
-> The containerName have fairly strict limitations as to what is allowed. Valid names start and end with a lower case letter or a number and has in between a lower case letter, number or dash with no consecutive dashes and is 3 through 63 characters long.
+> The containerName has fairly strict limitations as to what is allowed. Valid names start and end with a lower case letter or a number and have in between a lower case letter, number or dash with no consecutive dashes and is 3 through 63 characters long.
 
 In AL-Go for GitHub, the Storage Context can be specified in 5 different ways, 5 different authentication mechanism towards an Azure Storage Account.
 
