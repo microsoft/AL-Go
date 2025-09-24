@@ -285,6 +285,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting4 | Should -BeNullOrEmpty    # Did not exist, still does not exist
             $dst.setting5 | Should -Be 'value5'      # New setting added
 
+            # resetSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+
             # Test for nested objects as well
             $dst = [ordered]@{
                 nested = [ordered]@{
@@ -310,6 +313,10 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.nested.setting4 | Should -Be 'value4'      # New setting added
             $dst.setting3 | Should -Be 'value3'             # Unchanged
             $dst.setting5 | Should -Be 'value5'             # New setting added
+
+            # resetSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+            $dst.nested.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
         }
 
         It 'resetSettings property resets settings from destination object (complex types: arrays)' {
@@ -331,6 +338,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting3 | Should -Be 'value3'             # Unchanged
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
+            # resetSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+
             # Now use resetSettings to replace the complex setting
             $dst = [ordered]@{
                 complexSetting = @( "value1", "value2", "value3" )
@@ -348,6 +358,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.complexSetting | Should -Be @("newvalue1", "newvalue2") # Replaced
             $dst.setting3 | Should -Be 'value3'             # Unchanged
             $dst.setting5 | Should -Be 'value5'             # New setting added
+
+            # resetSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
         }
 
         It 'resetSettings property resets settings from destination object (complex types: objects)' {
@@ -408,6 +421,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.complexSetting.setting5 | Should -Be 'value5'      # New setting added
             $dst.setting4 | Should -Be 'value4'                     # Unchanged
             $dst.setting6 | Should -Be 'value6'                     # New setting added
+
+            # resetSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
         }
     }
 }
