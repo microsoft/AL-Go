@@ -282,7 +282,7 @@ and `.github\AL-Go-Settings.json` contains the following values
 
 ```json
 {
-    "resetSettings": "buildModes"
+    "resetSettings": ["buildModes"]
     "country": "dk"
     "buildModes": ["Clean"]
 }
