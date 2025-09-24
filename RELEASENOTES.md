@@ -1,8 +1,8 @@
 ### Mechanism to overwrite complex settings type
 
-By default, AL-Go merges settings from various places (see [settings levels](http://aka.ms/algosettings#where-are-the-settings-located)). Basic setting types such as `string` and `integer` are overwritten, but settings with complex types such as `array` and `object` are merged.
+By default, AL-Go merges settings from various places (see [settings levels](https://aka.ms/algosettings#where-are-the-settings-located)). Basic setting types such as `string` and `integer` are overwritten, but settings with complex types such as `array` and `object` are merged.
 
-However, sometimes it is useful to avoid merging complex types. This can be achieved by specifying `resetSettings` property on a settings object. The purpose of the property is to reset the values of the specified settings, so that new values can be set on subsequent settings level. Read more at [resetSettings property](http://aka.ms/algosettings#resetSettings)
+However, sometimes it is useful to avoid merging complex types. This can be achieved by specifying `resetSettings` property on a settings object. The purpose of the property is to reset the values of the specified settings, so that new values can be set on subsequent settings level. Read more at [resetSettings property](https://aka.ms/algosettings#resetSettings)
 
 ### AL Code Analysis tracked in GitHub
 
