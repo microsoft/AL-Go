@@ -297,7 +297,7 @@ then, after merging, the result settings object will contain the following value
 }
 ```
 
-> _**Note**_: `resetSettings` isn't a setting on its own and it isn't avaibable in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types.
+> _**Note**_: `resetSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types.
 
 <a id="customdelivery"></a>
 
