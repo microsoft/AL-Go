@@ -370,6 +370,14 @@
                 },
                 "continuousDelivery": {
                     "type": "boolean"
+                },
+                "resetSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["includeDependencies"]
+                    },
+                    "description": "An array of settings to be fully reset by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#resetSettings"
                 }
             },
             "required": [
@@ -595,7 +603,15 @@
                 "footer",
                 "defaultIndexMD",
                 "defaultReleaseMD"
-            ]
+            ],
+            "resetSettings": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["includeProjects", "excludeProjects"]
+                },
+                "description": "An array of settings to be fully reset by the current alDoc setting. See https://aka.ms/ALGoSettings#resetSettings"
+            }
         },
         "commitOptions": {
             "type": "object",
@@ -617,6 +633,14 @@
                 },
                 "createPullRequest": {
                     "type": "boolean"
+                },
+                "resetSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["pullRequestLabels"]
+                    },
+                    "description": "An array of settings to be fully reset by the current commitOptions setting. See https://aka.ms/ALGoSettings#resetSettings"
                 }
             },
             "required": [
@@ -661,9 +685,10 @@
         "resetSettings": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": "string",
+                "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
             },
-            "description": "An array of settings to be reset (removed) from the current settings. See https://aka.ms/ALGoSettings#resetSettings"
+            "description": "An array of settings to be reset by the current settings. See https://aka.ms/ALGoSettings#resetSettings"
         }
     },
     "required": [
