@@ -32,7 +32,7 @@ Example
 
 AL-Go now offers a dataexplorer dashboard to get started with AL-Go telemetry. Additionally, we've updated the documentation to include a couple of kusto queries if you would rather build your own reports.
 
-### Support for AL-Go settings as GitHub environment variable: ALGoEnvSettings
+### Support for AL-Go settings as GitHub environment variable: ALGoEnvironmentSettings
 
 AL-Go settings can now be defined in GitHub environment variables. To use this feature, create a new variable under your GitHub environment called `ALGoEnvironmentSettings`. Please note that this variable should not include your environment name.
 
