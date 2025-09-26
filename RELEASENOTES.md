@@ -15,6 +15,7 @@ Please note that some automated features are premium and require the use of [Git
 ### Issues
 
 - Discussion 1885 Conditional settings for CI/CD are not applied
+- Discussion 1899 Remove optional properties from "required" list in settings.schema.json
 
 ## v7.3
 
