@@ -10,9 +10,9 @@ function MergeCustomObjectIntoOrderedDictionary {
         [PSCustomObject] $src
     )
 
-    # If the src object contains property 'resetSettings' (list of settings), remove these settings from the dst object
-    if ($src.PSObject.Properties.Name -contains "resetSettings") {
-        $src.resetSettings | ForEach-Object {
+    # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
+    if ($src.PSObject.Properties.Name -contains "overwriteSettings") {
+        $src.overwriteSettings | ForEach-Object {
             $prop = $_
             if ($dst.Contains($prop) -and $src.PSObject.Properties.Name -contains $prop) {
                 # Remove the property from the destination object only if it also exists in the source object. The property will be re-added with the new value later on.
@@ -27,8 +27,8 @@ function MergeCustomObjectIntoOrderedDictionary {
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
 
-        # Skip resetSettings property as it's only used to remove settings from the destination object and is specific to the source object
-        if ($prop -eq "resetSettings") {
+        # Skip overwriteSettings property as it's only used to remove settings from the destination object and is specific to the source object
+        if ($prop -eq "overwriteSettings") {
             return
         }
 

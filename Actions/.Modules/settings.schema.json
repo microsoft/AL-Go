@@ -371,13 +371,13 @@
                 "continuousDelivery": {
                     "type": "boolean"
                 },
-                "resetSettings": {
+                "overwriteSettings": {
                     "type": "array",
                     "items": {
                         "type": "string",
                         "enum": ["includeDependencies"]
                     },
-                    "description": "An array of settings to be fully reset by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#resetSettings"
+                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -604,13 +604,13 @@
                 "defaultIndexMD",
                 "defaultReleaseMD"
             ],
-            "resetSettings": {
+            "overwriteSettings": {
                 "type": "array",
                 "items": {
                     "type": "string",
                     "enum": ["includeProjects", "excludeProjects"]
                 },
-                "description": "An array of settings to be fully reset by the current alDoc setting. See https://aka.ms/ALGoSettings#resetSettings"
+                "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
             }
         },
         "commitOptions": {
@@ -634,13 +634,13 @@
                 "createPullRequest": {
                     "type": "boolean"
                 },
-                "resetSettings": {
+                "overwriteSettings": {
                     "type": "array",
                     "items": {
                         "type": "string",
                         "enum": ["pullRequestLabels"]
                     },
-                    "description": "An array of settings to be fully reset by the current commitOptions setting. See https://aka.ms/ALGoSettings#resetSettings"
+                    "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -682,13 +682,13 @@
         "shortLivedArtifactsRetentionDays": {
             "type": "integer"
         },
-        "resetSettings": {
+        "overwriteSettings": {
             "type": "array",
             "items": {
                 "type": "string",
                 "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
             },
-            "description": "An array of settings to be reset by the current settings. See https://aka.ms/ALGoSettings#resetSettings"
+            "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
         }
     },
     "required": [

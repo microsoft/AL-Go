@@ -265,14 +265,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
         }
 
-        It 'resetSettings property resets settings from destination object (simple types)' {
+        It 'overwriteSettings property resets settings from destination object (simple types)' {
             $dst = [ordered]@{
                 setting1 = "value1"
                 setting2 = "value2"
                 setting3 = "value3"
             }
             $src = [PSCustomObject]@{
-                resetSettings = @("setting1","setting2","setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
+                overwriteSettings = @("setting1","setting2","setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
                 setting1     = "newvalue1"
                 setting5     = "value5"
             }
@@ -285,12 +285,12 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting4 | Should -BeNullOrEmpty    # Did not exist, still does not exist
             $dst.setting5 | Should -Be 'value5'      # New setting added
 
-            # resetSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
 
-        It 'resetSettings property resets settings from destination object (complex types: arrays)' {
-            # resetSettings should work for complex types (arrays)
+        It 'overwriteSettings property resets settings from destination object (complex types: arrays)' {
+            # overwriteSettings should work for complex types (arrays)
             $dst = [ordered]@{
                 complexSetting = @( "value1", "value2", "value3" )
                 setting3 = "value3"
@@ -301,24 +301,24 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 setting5 = "value5"
             }
 
-            # Without using resetSettings, the complex settings are merged, not replaced
+            # Without using overwriteSettings, the complex settings are merged, not overwritten
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
 
             $dst.complexSetting | Should -Be @("value1", "value2", "value3", "newvalue1", "newvalue2") # Merged
             $dst.setting3 | Should -Be 'value3'             # Unchanged
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
-            # resetSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
 
-            # Now use resetSettings to overwrite the complex setting
+            # Now use overwriteSettings to overwrite the complex setting
             $dst = [ordered]@{
                 complexSetting = @( "value1", "value2", "value3" )
                 setting3 = "value3"
             }
 
             $src = [PSCustomObject]@{
-                resetSettings = @("complexSetting")
+                overwriteSettings = @("complexSetting")
                 complexSetting = @( "newvalue1", "newvalue2" )
                 setting5 = "value5"
             }
@@ -329,12 +329,12 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting3 | Should -Be 'value3'             # Unchanged
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
-            # resetSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
 
-        It 'resetSettings property resets settings from destination object (complex types: objects)' {
-            # resetSettings should work for complex types (objects)
+        It 'overwriteSettings property resets settings from destination object (complex types: objects)' {
+            # overwriteSettings should work for complex types (objects)
             $dst = [ordered]@{
                 complexSetting = [ordered]@{
                     setting1 = "value1"
@@ -353,7 +353,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 setting6 = "value6"
             }
 
-            # Without using resetSettings, the complex settings are merged, not replaced
+            # Without using overwriteSettings, the complex settings are merged, not replaced
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
 
             $dst.complexSetting.setting1 | Should -Be 'newvalue1'   # Updated value
@@ -363,7 +363,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting4 | Should -Be 'value4'                     # Unchanged
             $dst.setting6 | Should -Be 'value6'                     # New setting added
 
-            # Now use resetSettings to replace the complex setting
+            # Now use overwriteSettings to replace the complex setting
             $dst = [ordered]@{
                 complexSetting = [PSCustomObject]@{
                     setting1 = "value1"
@@ -374,7 +374,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
 
             $src = [PSCustomObject]@{
-                resetSettings = @("complexSetting")
+                overwriteSettings = @("complexSetting")
                 complexSetting = [PSCustomObject]@{
                     setting1 = "newvalue1"
                     setting2 = "newvalue2"
@@ -392,27 +392,27 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting4 | Should -Be 'value4'                     # Unchanged
             $dst.setting6 | Should -Be 'value6'                     # New setting added
 
-            # resetSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
 
-        It 'resetSettings property does not reset a setting if it does not exist in the source object' {
+        It 'overwriteSettings property does not reset a setting if it does not exist in the source object' {
             $dst = [ordered]@{
                 setting1 = @("value1.0", "value1.1")
                 setting2 = @("value2.0", "value2.1")
             }
             $src = [PSCustomObject]@{
-                resetSettings = @("setting2") # setting2 does not exist in src, should be ignored
+                overwriteSettings = @("setting2") # setting2 does not exist in src, should be ignored
                 setting1     = @("newvalue1.2", "newvalue1.3")
             }
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
 
-            $dst.setting1 | Should -Be 'newvalue1.0, newvalue1.1, newvalue1.2, newvalue1.3' # Merged
-            $dst.setting2 | Should -Be 'value2.0, value2.1'                                 # Unchanged
+            $dst.setting1 | Should -Be @('value1.0', 'value1.1', 'newvalue1.2', 'newvalue1.3') # Merged
+            $dst.setting2 | Should -Be @('value2.0', 'value2.1')                           # Unchanged
 
-            # resetSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
     }
 }
