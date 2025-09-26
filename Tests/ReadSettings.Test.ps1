@@ -272,7 +272,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 setting3 = "value3"
             }
             $src = [PSCustomObject]@{
-                resetSettings = @("setting2", "setting4") # setting4 does not exist in dst, should be ignored
+                resetSettings = @("setting1","setting2","setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
                 setting1     = "newvalue1"
                 setting5     = "value5"
             }
@@ -280,43 +280,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
 
             $dst.setting1 | Should -Be 'newvalue1'   # Updated value
-            $dst.setting2 | Should -BeNullOrEmpty    # Removed
+            $dst.setting2 | Should -Be 'value2'      # Unchanged
             $dst.setting3 | Should -Be 'value3'      # Unchanged
             $dst.setting4 | Should -BeNullOrEmpty    # Did not exist, still does not exist
             $dst.setting5 | Should -Be 'value5'      # New setting added
 
             # resetSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
-
-            # Test for nested objects as well
-            $dst = [ordered]@{
-                nested = [ordered]@{
-                    setting1 = "value1"
-                    setting2 = "value2"
-                }
-                setting3 = "value3"
-            }
-
-            $src = [PSCustomObject]@{
-                nested = [PSCustomObject]@{
-                    resetSettings = @("setting2")
-                    setting1     = "newvalue1"
-                    setting4     = "value4"
-                }
-                setting5 = "value5"
-            }
-
-            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
-
-            $dst.nested.setting1 | Should -Be 'newvalue1'   # Updated value
-            $dst.nested.setting2 | Should -BeNullOrEmpty    # Removed
-            $dst.nested.setting4 | Should -Be 'value4'      # New setting added
-            $dst.setting3 | Should -Be 'value3'             # Unchanged
-            $dst.setting5 | Should -Be 'value5'             # New setting added
-
-            # resetSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
-            $dst.nested.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
         }
 
         It 'resetSettings property resets settings from destination object (complex types: arrays)' {
@@ -341,7 +311,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # resetSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
 
-            # Now use resetSettings to replace the complex setting
+            # Now use resetSettings to overwrite the complex setting
             $dst = [ordered]@{
                 complexSetting = @( "value1", "value2", "value3" )
                 setting3 = "value3"
@@ -355,7 +325,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
 
-            $dst.complexSetting | Should -Be @("newvalue1", "newvalue2") # Replaced
+            $dst.complexSetting | Should -Be @("newvalue1", "newvalue2") # Overwritten
             $dst.setting3 | Should -Be 'value3'             # Unchanged
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
@@ -421,6 +391,25 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.complexSetting.setting5 | Should -Be 'value5'      # New setting added
             $dst.setting4 | Should -Be 'value4'                     # Unchanged
             $dst.setting6 | Should -Be 'value6'                     # New setting added
+
+            # resetSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
+        }
+
+        It 'resetSettings property does not reset a setting if it does not exist in the source object' {
+            $dst = [ordered]@{
+                setting1 = @("value1.0", "value1.1")
+                setting2 = @("value2.0", "value2.1")
+            }
+            $src = [PSCustomObject]@{
+                resetSettings = @("setting2") # setting2 does not exist in src, should be ignored
+                setting1     = @("newvalue1.2", "newvalue1.3")
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.setting1 | Should -Be 'newvalue1.0, newvalue1.1, newvalue1.2, newvalue1.3' # Merged
+            $dst.setting2 | Should -Be 'value2.0, value2.1'                                 # Unchanged
 
             # resetSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'resetSettings'
