@@ -291,15 +291,15 @@ function WaitWorkflow {
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
         if ($run.status -ne $status) {
-            if ($status) { Write-Host }
             $status = $run.status
-            Write-Host -NoNewline "$status"
         }
-        Write-Host -NoNewline "."
+        Write-Host "Workflow run is in status $status"
+
         $delay = $true
     } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
-    Write-Host
-    Write-Host $run.conclusion
+
+    Write-Host "Workflow conclusion: $($run.conclusion)"
+
     if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
         if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
     }
