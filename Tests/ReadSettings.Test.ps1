@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
 
 InModuleScope ReadSettings { # Allows testing of private functions
     Describe "ReadSettings" {
@@ -263,6 +263,156 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
             $defaultSettings.projects = @("project1", "project2")
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+        }
+
+        It 'overwriteSettings property resets settings from destination object (simple types)' {
+            $dst = [ordered]@{
+                setting1 = "value1"
+                setting2 = "value2"
+                setting3 = "value3"
+            }
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("setting1","setting2","setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
+                setting1     = "newvalue1"
+                setting5     = "value5"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.setting1 | Should -Be 'newvalue1'   # Updated value
+            $dst.setting2 | Should -Be 'value2'      # Unchanged
+            $dst.setting3 | Should -Be 'value3'      # Unchanged
+            $dst.setting4 | Should -BeNullOrEmpty    # Did not exist, still does not exist
+            $dst.setting5 | Should -Be 'value5'      # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'overwriteSettings property resets settings from destination object (complex types: arrays)' {
+            # overwriteSettings should work for complex types (arrays)
+            $dst = [ordered]@{
+                complexSetting = @( "value1", "value2", "value3" )
+                setting3 = "value3"
+            }
+
+            $src = [PSCustomObject]@{
+                complexSetting = @( "newvalue1", "newvalue2" )
+                setting5 = "value5"
+            }
+
+            # Without using overwriteSettings, the complex settings are merged, not overwritten
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting | Should -Be @("value1", "value2", "value3", "newvalue1", "newvalue2") # Merged
+            $dst.setting3 | Should -Be 'value3'             # Unchanged
+            $dst.setting5 | Should -Be 'value5'             # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+
+            # Now use overwriteSettings to overwrite the complex setting
+            $dst = [ordered]@{
+                complexSetting = @( "value1", "value2", "value3" )
+                setting3 = "value3"
+            }
+
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("complexSetting")
+                complexSetting = @( "newvalue1", "newvalue2" )
+                setting5 = "value5"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting | Should -Be @("newvalue1", "newvalue2") # Overwritten
+            $dst.setting3 | Should -Be 'value3'             # Unchanged
+            $dst.setting5 | Should -Be 'value5'             # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'overwriteSettings property resets settings from destination object (complex types: objects)' {
+            # overwriteSettings should work for complex types (objects)
+            $dst = [ordered]@{
+                complexSetting = [ordered]@{
+                    setting1 = "value1"
+                    setting2 = "value2"
+                    setting3 = "value3"
+                }
+                setting4 = "value4"
+            }
+
+            $src = [PSCustomObject]@{
+                complexSetting = [PSCustomObject]@{
+                    setting1 = "newvalue1"
+                    setting2 = "newvalue2"
+                    setting5 = "value5"
+                }
+                setting6 = "value6"
+            }
+
+            # Without using overwriteSettings, the complex settings are merged, not replaced
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting.setting1 | Should -Be 'newvalue1'   # Updated value
+            $dst.complexSetting.setting2 | Should -Be 'newvalue2'   # Updated value
+            $dst.complexSetting.setting3 | Should -Be 'value3'      # Unchanged
+            $dst.complexSetting.setting5 | Should -Be 'value5'      # New setting added
+            $dst.setting4 | Should -Be 'value4'                     # Unchanged
+            $dst.setting6 | Should -Be 'value6'                     # New setting added
+
+            # Now use overwriteSettings to replace the complex setting
+            $dst = [ordered]@{
+                complexSetting = [PSCustomObject]@{
+                    setting1 = "value1"
+                    setting2 = "value2"
+                    setting3 = "value3"
+                }
+                setting4 = "value4"
+            }
+
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("complexSetting")
+                complexSetting = [PSCustomObject]@{
+                    setting1 = "newvalue1"
+                    setting2 = "newvalue2"
+                    setting5 = "value5"
+                }
+                setting6 = "value6"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting.setting1 | Should -Be 'newvalue1'   # Updated value
+            $dst.complexSetting.setting2 | Should -Be 'newvalue2'   #
+            $dst.complexSetting.setting3 | Should -BeNullOrEmpty    # Removed
+            $dst.complexSetting.setting5 | Should -Be 'value5'      # New setting added
+            $dst.setting4 | Should -Be 'value4'                     # Unchanged
+            $dst.setting6 | Should -Be 'value6'                     # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'overwriteSettings property does not reset a setting if it does not exist in the source object' {
+            $dst = [ordered]@{
+                setting1 = @("value1.0", "value1.1")
+                setting2 = @("value2.0", "value2.1")
+            }
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("setting2") # setting2 does not exist in src, should be ignored
+                setting1     = @("newvalue1.2", "newvalue1.3")
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.setting1 | Should -Be @('value1.0', 'value1.1', 'newvalue1.2', 'newvalue1.3') # Merged
+            $dst.setting2 | Should -Be @('value2.0', 'value2.1')                           # Unchanged
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
     }
 }

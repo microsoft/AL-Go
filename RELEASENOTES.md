@@ -1,3 +1,9 @@
+### Mechanism to overwrite complex settings type
+
+By default, AL-Go merges settings from various places (see [settings levels](https://aka.ms/algosettings#where-are-the-settings-located)). Basic setting types such as `string` and `integer` are overwritten, but settings with complex types such as `array` and `object` are merged.
+
+However, sometimes it is useful to avoid merging complex types. This can be achieved by specifying `overwriteSettings` property on a settings object. The purpose of the property is to list settings, for which the value will be overwritten, instead of merged. Read more at [overwriteSettings property](https://aka.ms/algosettings#overwriteSettings)
+
 ### AL Code Analysis tracked in GitHub
 
 AL-Go already supports AL code analysis, but up until now this was not tracked in GitHub. It is now possible to track code analysis issues automatically in the GitHub security tab, as well as having any new issues posted as a comment in Pull Requests.
