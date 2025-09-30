@@ -16,6 +16,7 @@ Please note that some automated features are premium and require the use of [Git
 
 - Discussion 1885 Conditional settings for CI/CD are not applied
 - Discussion 1899 Remove optional properties from "required" list in settings.schema.json
+- Issue 1905 AL-Go system files update fails (Get Workflow Multi-Run Branches action fails when there are tags with same value but different casing)
 - Issue 1926 Deployment fails when using build modes
 
 ## v7.3
