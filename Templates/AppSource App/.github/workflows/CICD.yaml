@@ -231,7 +231,7 @@ jobs:
 
       - name: Upload SARIF file to GitHub
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: (success() || failure()) && (hashFiles(format('{0}/ErrorLogs/output.sarif.json',github.workspace)) != '')
         with:
           sarif_file: '${{ github.workspace }}/ErrorLogs/output.sarif.json'
           category: "ALCodeAnalysis"
