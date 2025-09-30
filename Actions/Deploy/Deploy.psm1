@@ -57,10 +57,10 @@ function GetAppsAndDependenciesFromArtifacts {
     $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
     $TestsTestLibrariesAppId = "5d86850b-0d76-4eca-bd7b-951ad998e997"
 
-    $buildModePreffix = $deploymentSettings.Keys -contains "buildMode" ? $deploymentSettings.buildMode : 'default'
+    $buildModePrefix = $deploymentSettings.Keys -contains "buildMode" ? $deploymentSettings.buildMode : 'default'
     # If buildMode is not defined or is 'default', set it to empty string
-    if ($null -eq $buildModePreffix -or $buildModePreffix -eq 'default') {
-        $buildModePreffix = ''
+    if ($null -eq $buildModePrefix -or $buildModePrefix -eq 'default') {
+        $buildModePrefix = ''
     }
 
     if (Test-Path $artifactsFolder -PathType Container) {
@@ -82,25 +82,25 @@ function GetAppsAndDependenciesFromArtifacts {
             Write-Host "project '$project'"
 
             $allApps = @()
-            OutputDebug -message "projectApps filter: $project-$refname-$($buildModePreffix)Apps-$artifactVersionFilter"
-            $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildModePreffix)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
+            OutputDebug -message "projectApps filter: $project-$refname-$($buildModePrefix)Apps-$artifactVersionFilter"
+            $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildModePrefix)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
             $projectTestApps = @()
             if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
                 Write-Host "Including test apps for deployment"
-                OutputDebug -message "projectTestApps filter: $project-$refname-$($buildModePreffix)TestApps-$artifactVersionFilter"
-                $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildModePreffix)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
+                OutputDebug -message "projectTestApps filter: $project-$refname-$($buildModePrefix)TestApps-$artifactVersionFilter"
+                $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildModePrefix)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
             }
             if ($deploymentSettings.excludeAppIds) {
                 Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
             }
             if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
-                OutputDebug -message "projectDependencies filter: $project-$refname-$($buildModePreffix)Dependencies-$artifactVersionFilter/*.app"
-                $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildModePreffix)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
+                OutputDebug -message "projectDependencies filter: $project-$refname-$($buildModePrefix)Dependencies-$artifactVersionFilter/*.app"
+                $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildModePrefix)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
             }
             if (!($projectApps)) {
                 if ($project -ne '*') {
                     OutputGroupEnd
-                    throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildModePreffix)Apps-<version>."
+                    throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildModePrefix)Apps-<version>."
                 }
             }
             else {
@@ -108,7 +108,7 @@ function GetAppsAndDependenciesFromArtifacts {
             }
             if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
                 if ($project -ne '*') {
-                    OutputWarning -message "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildModePreffix)TestApps-<version>."
+                    OutputWarning -message "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildModePrefix)TestApps-<version>."
                 }
             }
             else {
