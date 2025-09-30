@@ -33,7 +33,7 @@ if (-not $branchPatterns) {
 
 Write-Host "Filtering branches by: $($branchPatterns -join ', ')"
 
-invoke-git fetch --quiet
+invoke-git fetch --quiet --no-tags
 $allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 $branches = @()
 
