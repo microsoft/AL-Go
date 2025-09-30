@@ -57,7 +57,12 @@ function GetAppsAndDependenciesFromArtifacts {
     $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
     $TestsTestLibrariesAppId = "5d86850b-0d76-4eca-bd7b-951ad998e997"
 
-    $buildModePrefix = $deploymentSettings.Keys -contains "buildMode" ? $deploymentSettings.buildMode : 'default'
+    # Determine buildMode prefix for artifact names based on settings
+    $buildModePrefix = 'default'
+    if ($deploymentSettings.Keys -contains "buildMode") {
+        $buildModePrefix = $deploymentSettings.buildMode
+    }
+
     # If buildMode is not defined or is 'default', set it to empty string
     if ($null -eq $buildModePrefix -or $buildModePrefix -eq 'default') {
         $buildModePrefix = ''
