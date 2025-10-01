@@ -120,6 +120,7 @@ if (!($environments)) {
 else {
     foreach($environmentName in $environments) {
         Write-Host "Evaluating Environment for deployment: $environmentName"
+        $envName = $environmentName.Split(' ')[0]
 
         # Check Obsolete Settings
         foreach($obsoleteSetting in "$($envName)-Projects","$($envName)_Projects") {
