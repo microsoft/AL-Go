@@ -8,8 +8,6 @@ Param(
     [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]
     [string] $type = "CD",
-    [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
-    [string] $deploymentEnvironmentsJson,
     [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
     [string] $artifactsVersion = ''
 )
@@ -18,12 +16,36 @@ Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
-$deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
-$deploymentSettings = $deploymentEnvironments."$environmentName"
+# Default deployment settings
+$deploymentSettings = @{
+    "EnvironmentType" = "SaaS"
+    "Projects" = @('*')
+    "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
+    "SyncMode" = $null
+    "Scope" = $null
+    "buildMode" = $null
+    "continuousDeployment" = $null
+    "companyId" = ''
+    "ppEnvironmentUrl" = ''
+    "includeTestAppsInSandboxEnvironment" = $false
+    "excludeAppIds" = @()
+}
 
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json
+
+
+# If there is a deployTo<environamentName> settings, overwrite the default settings
+$settingsName = "deployTo$($envName)"
+if($settings.PSObject.Properties.Name -contains $settingsName) {
+    Write-Host "Using custom settings for environment $environmentName"
+
+    $customDeploymentSettings = $settings."$settingsName"
+    foreach ($key in $customDeploymentSettings.PSObject.Properties.Name) {
+        $deploymentSettings.$key = $customDeploymentSettings.$key
+    }
+}
 
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {

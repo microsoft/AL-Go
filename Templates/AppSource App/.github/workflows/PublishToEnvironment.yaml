@@ -31,8 +31,6 @@ jobs:
     needs: [ ]
     runs-on: [ windows-latest ]
     outputs:
-      environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
-      environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
       deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
       deviceCode: ${{ steps.Authenticate.outputs.deviceCode }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -72,7 +70,7 @@ jobs:
         if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.environmentsMatrixJson).matrix.include[0].environment }}'.split(' ')[0]
+          $envName = '${{ fromJson(steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson).environments[0].name }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read secrets
@@ -119,20 +117,20 @@ jobs:
 
   Deploy:
     needs: [ Initialization ]
-    if: needs.Initialization.outputs.environmentCount > 0
+    if: fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environmentCount > 0
     strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
-    runs-on: ${{ fromJson(matrix.os) }}
-    name: Deploy to ${{ matrix.environment }}
+    runs-on: ${{ fromJson(matrix.runs-on) }}
+    name: Deploy to ${{ matrix.environmentName }}
     defaults:
       run:
         shell: ${{ matrix.shell }}
     environment:
-      name: ${{ matrix.environment }}
+      name: ${{ matrix.environmentName }}
       url: ${{ steps.Deploy.outputs.environmentUrl }}
     env:
       deviceCode: ${{ needs.Initialization.outputs.deviceCode }}
       ALGoEnvSettings: ${{ vars.ALGoEnvironmentSettings }}
-      ALGoEnvName: ${{ matrix.environment }}
+      ALGoEnvName: ${{ matrix.environmentName }}
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -141,7 +139,7 @@ jobs:
         id: envName
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $envName = '${{ matrix.environment }}'.split(' ')[0]
+          $envName = '${{ matrix.environmentName }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read settings
@@ -172,10 +170,9 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: ${{ matrix.shell }}
-          environmentName: ${{ matrix.environment }}
+          environmentName: ${{ matrix.environmentName }}
           artifactsFolder: '.artifacts'
           type: 'Publish'
-          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
           artifactsVersion: ${{ github.event.inputs.appVersion }}
 
       - name: Deploy to Power Platform
@@ -185,7 +182,7 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: ${{ matrix.shell }}
-          environmentName: ${{ matrix.environment }}
+          environmentName: ${{ matrix.environmentName }}
           artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 

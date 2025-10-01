@@ -12,15 +12,9 @@ inputs:
     description: Type of deployment (CD, Publish or All)
     required: true
 outputs:
-  EnvironmentsMatrixJson:
-    description: The Environment matrix to use for the Deploy step in compressed JSON format
-    value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
   DeploymentEnvironmentsJson:
-    description: Deployment Environments with settings in compressed JSON format
+    description: The JSON representation of the environment that are suitable for deployment.
     value: ${{ steps.determineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
-  EnvironmentCount:
-    description: Number of Deployment Environments
-    value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentCount }}
   UnknownEnvironment:
     description: Flag determining whether the environment is unknown
     value: ${{ steps.determineDeploymentEnvironments.outputs.UnknownEnvironment }}

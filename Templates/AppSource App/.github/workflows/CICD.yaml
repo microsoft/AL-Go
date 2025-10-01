@@ -31,9 +31,7 @@ jobs:
     runs-on: [ windows-latest ]
     outputs:
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
-      environmentsMatrixJson: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
-      environmentCount: ${{ steps.DetermineDeploymentEnvironments.outputs.EnvironmentCount }}
-      deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
+      DeploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
       generateALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.GenerateALDocArtifact }}
       deployALDocArtifact: ${{ steps.DetermineDeploymentEnvironments.outputs.DeployALDocArtifact }}
       deliveryTargetsJson: ${{ steps.DetermineDeliveryTargets.outputs.DeliveryTargetsJson }}
@@ -285,19 +283,22 @@ jobs:
 
   Deploy:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
-    runs-on: ${{ fromJson(matrix.os) }}
-    name: Deploy to ${{ matrix.environment }}
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && fromJson(needs.Initialization.outputs.DetermineDeploymentEnvironments).environmentCount > 0
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.Initialization.outputs.DeploymentEnvironmentsJson).environments }}
+      fail-fast: false
+    runs-on: ${{ fromJson(matrix.runs-on) }}
+    name: Deploy to ${{ matrix.environmentName }}
     defaults:
       run:
         shell: ${{ matrix.shell }}
     environment:
-      name: ${{ matrix.environment }}
+      name: ${{ matrix.environmentName }}
       url: ${{ steps.Deploy.outputs.environmentUrl }}
     env:
       ALGoEnvSettings: ${{ vars.ALGoEnvironmentSettings }}
-      ALGoEnvName: ${{ matrix.environment }}
+      ALGoEnvName: ${{ matrix.environmentName }}
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

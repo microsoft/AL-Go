@@ -21,9 +21,7 @@ Determines the environments to be used for a build or a publish
 
 ## OUTPUT
 
-| EnvironmentsMatrixJson | The Environment matrix to use for the Deploy step in compressed JSON format |
-| DeploymentEnvironmentsJson | Deployment Environments with settings in compressed JSON format |
-| EnvironmentCount | Number of Deployment Environments |
+| DeploymentEnvironmentsJson | The JSON representation of the environment that are suitable for deployment. |
 | UnknownEnvironment | Flag determining whether we try to publish to an unknown environment (invoke device code flow) |
 | GenerateALDocArtifact | Flag determining whether to generate the ALDoc artifact |
 | DeployALDocArtifact | Flag determining whether to deploy the ALDoc artifact to GitHub Pages |

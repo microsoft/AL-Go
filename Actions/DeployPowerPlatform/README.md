@@ -19,7 +19,6 @@ Deploy the Power Platform solution from the artifacts folder
 | environmentName | Yes | Name of environment to deploy to |
 | artifactsFolder | | Path to the downloaded artifacts to deploy (when deploying from a build) | |
 | solutionFolder | | Path to the unpacked solutions to deploy (when deploying from branch) | |
-| deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
 
 Either artifactsFolder or solutionFolder needs to be specified
 
