@@ -20,10 +20,7 @@ DownloadAndImportBcContainerHelper
 
 $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deploymentSettings = $deploymentEnvironments."$environmentName"
-$buildMode = $deploymentSettings.buildMode
-if ($null -eq $buildMode -or $buildMode -eq 'default') {
-    $buildMode = ''
-}
+
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json

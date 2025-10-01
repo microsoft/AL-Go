@@ -38,8 +38,6 @@ function GetHeadRefFromPRId {
         Deployment settings for the action
     .PARAMETER artifactsVersion
         Version of the artifacts to use (optional) - This is only used for PR deployments and should take the form of PR_X
-    .PARAMETER buildMode
-        The build mode to use (optional) - This is used to determine which build artifacts to use
 #>
 function GetAppsAndDependenciesFromArtifacts {
     Param(
@@ -50,9 +48,7 @@ function GetAppsAndDependenciesFromArtifacts {
         [Parameter(Mandatory = $true)]
         [hashtable] $deploymentSettings,
         [Parameter(Mandatory = $false)]
-        [string] $artifactsVersion = '',
-        [Parameter(Mandatory = $false)]
-        [string] $buildMode = ''
+        [string] $artifactsVersion = ''
     )
     OutputDebugFunctionCall
     OutputGroupStart -Message "GetAppsAndDependenciesFromArtifacts"
@@ -60,6 +56,18 @@ function GetAppsAndDependenciesFromArtifacts {
     $dependencies = @()
     $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
     $TestsTestLibrariesAppId = "5d86850b-0d76-4eca-bd7b-951ad998e997"
+
+    # Determine buildMode prefix for artifact names based on settings
+    $buildModePrefix = 'default'
+    if ($deploymentSettings.Keys -contains "buildMode") {
+        $buildModePrefix = $deploymentSettings.buildMode
+    }
+
+    # If buildMode is not defined or is 'default', set it to empty string
+    if ($null -eq $buildModePrefix -or $buildModePrefix -eq 'default') {
+        $buildModePrefix = ''
+    }
+
     if (Test-Path $artifactsFolder -PathType Container) {
         $deploymentSettings.Projects.Split(',') | ForEach-Object {
             $project = $_.Replace('\','_').Replace('/','_')
@@ -79,25 +87,25 @@ function GetAppsAndDependenciesFromArtifacts {
             Write-Host "project '$project'"
 
             $allApps = @()
-            OutputDebug -message "projectApps filter: $project-$refname-$($buildMode)Apps-$artifactVersionFilter"
-            $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
+            OutputDebug -message "projectApps filter: $project-$refname-$($buildModePrefix)Apps-$artifactVersionFilter"
+            $projectApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildModePrefix)Apps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
             $projectTestApps = @()
             if ($deploymentSettings.includeTestAppsInSandboxEnvironment) {
                 Write-Host "Including test apps for deployment"
-                OutputDebug -message "projectTestApps filter: $project-$refname-$($buildMode)TestApps-$artifactVersionFilter"
-                $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildMode)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
+                OutputDebug -message "projectTestApps filter: $project-$refname-$($buildModePrefix)TestApps-$artifactVersionFilter"
+                $projectTestApps = @((Get-ChildItem -Path $artifactsFolder -Filter "$project-$refname-$($buildModePrefix)TestApps-$artifactVersionFilter") | ForEach-Object { $_.FullName })
             }
             if ($deploymentSettings.excludeAppIds) {
                 Write-Host "Excluding apps with ids $($deploymentSettings.excludeAppIds) from deployment"
             }
             if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
-                OutputDebug -message "projectDependencies filter: $project-$refname-$($buildMode)Dependencies-$artifactVersionFilter/*.app"
-                $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildMode)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
+                OutputDebug -message "projectDependencies filter: $project-$refname-$($buildModePrefix)Dependencies-$artifactVersionFilter/*.app"
+                $dependencies += @((Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($buildModePrefix)Dependencies-$artifactVersionFilter/*.app")) | ForEach-Object { $_.FullName } )
             }
             if (!($projectApps)) {
                 if ($project -ne '*') {
                     OutputGroupEnd
-                    throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)Apps-<version>."
+                    throw "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildModePrefix)Apps-<version>."
                 }
             }
             else {
@@ -105,7 +113,7 @@ function GetAppsAndDependenciesFromArtifacts {
             }
             if ($deploymentSettings.includeTestAppsInSandboxEnvironment -and !($projectTestApps)) {
                 if ($project -ne '*') {
-                    OutputWarning -message "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildMode)TestApps-<version>."
+                    OutputWarning -message "There are no artifacts present in $artifactsFolder matching $project-$refname-$($buildModePrefix)TestApps-<version>."
                 }
             }
             else {
