@@ -15,6 +15,73 @@ if (Test-Path $sarifPath) {
 
 <#
     .SYNOPSIS
+    Finds a file in the workspace based on its absolute path.
+    .DESCRIPTION
+    Given an absolute path, this function searches the workspace for a file with the same name and returns its relative path.
+    If multiple files with the same name are found, it returns the one with the longest matching suffix to the absolute path.
+    If no file is found, it returns $null.
+    .PARAMETER AbsolutePath
+    The absolute path of the file to find.
+    .PARAMETER WorkspacePath
+    The workspace path to search in. Defaults to the GITHUB_WORKSPACE environment variable.
+#>
+function Get-FileFromAbsolutePath {
+    param(
+        [Parameter(HelpMessage = "The absolute path of the file to find.", Mandatory = $true)]
+        [string] $AbsolutePath,
+        [Parameter(HelpMessage = "The workspace path to search in.", Mandatory = $false)]
+        [string] $WorkspacePath = $ENV:GITHUB_WORKSPACE
+    )
+
+    # Remove leading drive letter and convert backslashes to forward slashes to match unix-style paths
+    $normalizedPath = ($AbsolutePath -replace '\\', '/') -replace '^[A-Za-z]:', ''
+
+    # Extract the file name from the absolute path
+    $fileName = [System.IO.Path]::GetFileName($normalizedPath)
+
+    # Search the workspace path for a file with that name
+    $matchingFiles = @(Get-ChildItem -Path $WorkspacePath -Filter $fileName -File -Recurse -ErrorAction SilentlyContinue)
+    if ($null -eq $matchingFiles) {
+        return $null
+    } elseif($matchingFiles.Count -eq 1) {
+        $foundFile = $matchingFiles | Select-Object -First 1
+    } else {
+        # If multiple files are found, return the one with the longest matching suffix to the absolute path
+        $foundFile = $matchingFiles | Sort-Object { ($normalizedPath -split [regex]::Escape($_.FullName)).Length } -Descending | Select-Object -First 1
+    }
+
+    # Return the relative path from the workspace root with forward slashes
+    $relativePath = [System.IO.Path]::GetRelativePath($workspacePath, $foundFile.FullName) -replace '\\', '/'
+    return $relativePath
+}
+
+<#
+    .SYNOPSIS
+    Extracts the most appropriate message from an issue object.
+    .DESCRIPTION
+    Given an issue object, this function checks for the presence of "shortMessage" and "fullMessage" properties
+    and returns the most appropriate one based on their availability.
+    If neither property is available, it returns $null.
+    .PARAMETER issue
+    The issue object to extract the message from.
+#>
+function Get-IssueMessage {
+    param(
+        [Parameter(HelpMessage = "The issue object to extract the message from.", Mandatory = $true)]
+        [PSCustomObject] $issue
+    )
+
+    if ($issue.PSObject.Properties.Name -contains "shortMessage") {
+        return $issue.shortMessage
+    } elseif ($issue.PSObject.Properties.Name -notcontains "fullMessage") {
+        return $issue.fullMessage
+    } else {
+        return $null
+    }
+}
+
+<#
+    .SYNOPSIS
     Generates SARIF JSON.
     .DESCRIPTION
     Generates SARIF JSON from a error log file and adds both rules and results to the base sarif object.
@@ -29,36 +96,51 @@ function GenerateSARIFJson {
     )
 
     foreach ($issue in $errorLogContent.issues) {
-        # Add rule if not already added
-        if (-not ($sarif.runs[0].tool.driver.rules | Where-Object { $_.id -eq $issue.ruleId })) {
-            $sarif.runs[0].tool.driver.rules += @{
-                id = $issue.ruleId
-                shortDescription = @{ text = $issue.fullMessage }
-                fullDescription = @{ text = $issue.fullMessage }
-                helpUri = $issue.properties.helpLink
-                properties = @{
-                    category = $issue.properties.category
-                    severity = $issue.properties.severity
-                }
-            }
+        # Skip issues without locations as GitHub expects at least one location
+        if (($issue.PSObject.Properties.Name -notcontains "locations" ) -or ($issue.locations.Count -eq 0)) {
+            continue
         }
 
-        # Convert absolute path to relative path from repository root
-        $absolutePath = $issue.locations[0].analysisTarget[0].uri
-        $workspacePath = $ENV:GITHUB_WORKSPACE
-        $relativePath = $absolutePath.Replace($workspacePath, '').TrimStart('\').Replace('\', '/')
+        $newResult = $null
+        $relativePath = Get-FileFromAbsolutePath -AbsolutePath $issue.locations[0].analysisTarget[0].uri
+        $message = Get-IssueMessage -issue $issue
 
-        # Add result
-        if (-not ($sarif.runs[0].results | Where-Object {
+        # Skip issues if we cannot find a message
+        if ($null -eq $message) {
+            OutputDebug -message "Could not extract message from issue: $($issue | ConvertTo-Json -Depth 10 -Compress)"
+            continue
+        }
+
+        # Check if result already exists in the sarif object
+        $existingResults = $sarif.runs[0].results | Where-Object {
             $_.ruleId -eq $issue.ruleId -and
-            $_.message.text -eq $issue.shortMessage -and
-            $_.locations[0].physicalLocation.artifactLocation.uri -eq $relativePath -and
-            ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json) -and
-            $_.level -eq ($issue.properties.severity).ToLower()
-        })) {
-            $sarif.runs[0].results += @{
+            $_.message.text -eq $message -and
+            $_.level -eq ($issue.properties.severity).ToLower() -and
+            ($_.locations[0].physicalLocation.artifactLocation.uri -eq $relativePath) -and
+            ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json)
+        }
+
+        # Add result if it does not already exist
+        if (-not $existingResults)
+        {
+            # Add rule to the sarif object if not already added
+            if (-not ($sarif.runs[0].tool.driver.rules | Where-Object { $_.id -eq $issue.ruleId })) {
+                $sarif.runs[0].tool.driver.rules += @{
+                    id = $issue.ruleId
+                    shortDescription = @{ text = $issue.fullMessage }
+                    fullDescription = @{ text = $issue.fullMessage }
+                    helpUri = $issue.properties.helpLink
+                    properties = @{
+                        category = $issue.properties.category
+                        severity = $issue.properties.severity
+                    }
+                }
+            }
+
+            # Create new result
+            $newResult = @{
                 ruleId = $issue.ruleId
-                message = @{ text = $issue.shortMessage }
+                message = @{ text = $message }
                 locations = @(@{
                     physicalLocation = @{
                         artifactLocation = @{ uri = $relativePath }
@@ -67,6 +149,11 @@ function GenerateSARIFJson {
                 })
                 level = ($issue.properties.severity).ToLower()
             }
+        }
+
+        # Add the new result if it was created
+        if ($null -ne $newResult) {
+            $sarif.runs[0].results += $newResult
         }
     }
 }
