@@ -283,10 +283,10 @@ jobs:
 
   Deploy:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && fromJson(needs.Initialization.outputs.DetermineDeploymentEnvironments).environmentCount > 0
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environmentCount > 0
     strategy:
       matrix:
-        include: ${{ fromJson(needs.Initialization.outputs.DeploymentEnvironmentsJson).environments }}
+        include: ${{ fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environments }}
       fail-fast: false
     runs-on: ${{ fromJson(matrix.runs-on) }}
     name: Deploy to ${{ matrix.environmentName }}
@@ -339,7 +339,6 @@ jobs:
           environmentName: ${{ matrix.environment }}
           artifactsFolder: '.artifacts'
           type: 'CD'
-          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
       - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
@@ -350,7 +349,6 @@ jobs:
           shell: powershell
           environmentName: ${{ matrix.environment }}
           artifactsFolder: '.artifacts'
-          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   Deliver:
     needs: [ Initialization, Build ]

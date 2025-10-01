@@ -297,7 +297,7 @@ jobs:
 
   Deploy:
     needs: [ Initialization, Build, BuildPP ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped') && fromJson(needs.Initialization.outputs.determineDeploymentEnvironments).environmentCount > 0
+    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped') && fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environmentCount > 0
     strategy:
       matrix:
         include: ${{ fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environments }}
