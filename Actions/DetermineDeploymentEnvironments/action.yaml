@@ -13,7 +13,7 @@ inputs:
     required: true
 outputs:
   DeploymentEnvironmentsJson:
-    description: The JSON representation of the environment that are suitable for deployment.
+    description: The JSON representation of the environment that are suitable for deployment
     value: ${{ steps.determineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
   UnknownEnvironment:
     description: Flag determining whether the environment is unknown
