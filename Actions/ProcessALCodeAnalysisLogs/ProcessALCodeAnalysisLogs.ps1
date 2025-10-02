@@ -41,7 +41,7 @@ function Get-FileFromAbsolutePath {
 
     # Search the workspace path for a file with that name
     $matchingFiles = @(Get-ChildItem -Path $WorkspacePath -Filter $fileName -File -Recurse -ErrorAction SilentlyContinue)
-    if ($null -eq $matchingFiles) {
+    if ($matchingFiles.Count -eq 0) {
         return $null
     } elseif($matchingFiles.Count -eq 1) {
         $foundFile = $matchingFiles | Select-Object -First 1
@@ -108,6 +108,12 @@ function GenerateSARIFJson {
         # Skip issues if we cannot find a message
         if ($null -eq $message) {
             OutputDebug -message "Could not extract message from issue: $($issue | ConvertTo-Json -Depth 10 -Compress)"
+            continue
+        }
+
+        # Skip issues if we cannot find the file in the workspace
+        if ($null -eq $relativePath) {
+            OutputDebug -message "Could not find file for issue: $($issue | ConvertTo-Json -Depth 10 -Compress)"
             continue
         }
 
