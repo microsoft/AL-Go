@@ -34,7 +34,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
                 @{
                     "analysisTarget" = @(
                         @{
-                            "uri" = "D:\\a\\repo\\repo\\projectName\\appName\\ALFileName.al"
+                            "uri" = "D:\\a\\repo\\repo\\TestArtifacts\\ALFileName.al"
                             "region" = @{
                                 "startLine" = 1
                                 "startColumn" = 1
@@ -65,7 +65,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
                 @{
                     "analysisTarget" = @(
                         @{
-                            "uri" = "D:\\a\\repo\\repo\\projectName\\appName\\ALFileName.al"
+                            "uri" = "D:\\a\\repo\\repo\\TestArtifacts\\ALFileName.al"
                             "region" = @{
                                 "startLine" = 2
                                 "startColumn" = 1
@@ -96,7 +96,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
                 @{
                     "analysisTarget" = @(
                         @{
-                            "uri" = "D:\\a\\repo\\repo\\projectName\\appName\\ALFileName.al"
+                            "uri" = "D:\\a\\repo\\repo\\TestArtifacts\\ALFileName.al"
                             "region" = @{
                                 "startLine" = 3
                                 "startColumn" = 1
@@ -121,6 +121,8 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
             }
         }
         $ENV:GITHUB_WORKSPACE = [System.IO.Path]::GetTempPath()
+        # Copy sample files to temp folder
+        Copy-Item -Path "$PSScriptRoot\TestArtifacts\*" -Destination $ENV:GITHUB_WORKSPACE -Recurse -Force
         $errorLogsFolder = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
         if (!(Test-Path $errorLogsFolder)) {
             New-Item -Path $errorLogsFolder -ItemType Directory -Force
