@@ -363,7 +363,6 @@ jobs:
           shell: powershell
           environmentName: ${{ matrix.environmentName }}
           artifactsFolder: '.artifacts'
-          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   Deliver:
     needs: [ Initialization, Build, BuildPP ]

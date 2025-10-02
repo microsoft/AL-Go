@@ -8,6 +8,7 @@ $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 $envName = $environmentName.Split(' ')[0]
 
+# TODO: Remove the need for deploymentEnvironmentsJson parameter
 # Read the deployment settings
 $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json
 $deploymentSettings = $deploymentEnvironments."$environmentName"

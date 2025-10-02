@@ -20,9 +20,6 @@ inputs:
     description: Name of the solution to download and folder in which to download the solution
     required: false
     default: ''
-  deploymentEnvironmentsJson:
-    description: The settings for all Deployment Environments
-    required: true
   updateBranch:
     description: Set the branch to update
     required: false
@@ -59,7 +56,6 @@ runs:
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
-        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         environmentName: ${{ inputs.environmentName }}
 
     - name: Set up new branch for changes

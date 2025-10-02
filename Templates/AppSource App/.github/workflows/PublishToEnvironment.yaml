@@ -118,7 +118,10 @@ jobs:
   Deploy:
     needs: [ Initialization ]
     if: fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environments }}
+      fail-fast: false
     runs-on: ${{ fromJson(matrix.runs-on) }}
     name: Deploy to ${{ matrix.environmentName }}
     defaults:
@@ -184,7 +187,6 @@ jobs:
           shell: ${{ matrix.shell }}
           environmentName: ${{ matrix.environmentName }}
           artifactsFolder: '.artifacts'
-          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   PostProcess:
     needs: [ Initialization, Deploy ]

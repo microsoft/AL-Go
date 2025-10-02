@@ -318,7 +318,7 @@ jobs:
         id: envName
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $envName = '${{ matrix.environment }}'.split(' ')[0]
+          $envName = '${{ matrix.environmentName }}'.split(' ')[0]
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "envName=$envName"
 
       - name: Read secrets
@@ -336,7 +336,7 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: ${{ matrix.shell }}
-          environmentName: ${{ matrix.environment }}
+          environmentName: ${{ matrix.environmentName }}
           artifactsFolder: '.artifacts'
           type: 'CD'
 
@@ -347,7 +347,7 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
           shell: powershell
-          environmentName: ${{ matrix.environment }}
+          environmentName: ${{ matrix.environmentName }}
           artifactsFolder: '.artifacts'
 
   Deliver:

@@ -121,7 +121,8 @@ jobs:
     strategy:
       matrix:
         include: ${{ fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environments }}
-    runs-on: ${{ fromJson(matrix.os) }}
+      fail-fast: false
+    runs-on: ${{ fromJson(matrix.runs-on) }}
     name: Deploy to ${{ matrix.environmentName }}
     defaults:
       run:
