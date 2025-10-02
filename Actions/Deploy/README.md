@@ -20,7 +20,6 @@ Deploy Apps to online environment
 | environmentName | Yes | Name of environment to deploy to |
 | artifactsFolder | Yes | Path to the downloaded artifacts to deploy | |
 | type | | Type of delivery (CD or Release) | CD |
-| deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
 
 ## OUTPUT
 
