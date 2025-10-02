@@ -16,7 +16,6 @@ Read settings for Power Platform deployment from settings and secrets
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
-| deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
 | environmentName | Yes | Name of environment to deploy to | |
 
 ## OUTPUT

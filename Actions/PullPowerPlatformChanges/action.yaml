@@ -51,6 +51,11 @@ runs:
         ref: ${{ env.actionsRef }}
         path: ${{ env.actionsPath }}
 
+    - name: Read settings
+      uses: ./_AL-Go/Actions/ReadSettings@main
+      with:
+        shell: ${{ matrix.shell }}
+
     - name: Parse DeployToSettings and AuthContext
       id: ReadPowerPlatformSettings
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings

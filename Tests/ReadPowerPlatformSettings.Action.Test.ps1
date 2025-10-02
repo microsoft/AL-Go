@@ -17,7 +17,7 @@ Describe "Read Power Platform Settings Action Tests" {
                 [Parameter(Mandatory = $true)]
                 [hashtable] $deployToDevProperties
             )
-            return @{
+            $env:Settings = @{
                 type                        = "PTE"
                 powerPlatformSolutionFolder = "CoffeMR"
                 DeployToDev                 = $deployToDevProperties
@@ -30,12 +30,11 @@ Describe "Read Power Platform Settings Action Tests" {
                 [hashtable] $secretProperties
             )
             $testSecret = $secretProperties | ConvertTo-Json
-            $env:Secrets = '{"DeployToDev-AuthContext": "' + [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($testSecret)) + '"}'
+            $env:Secrets = '{"Dev-AuthContext": "' + [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($testSecret)) + '"}'
         }
     }
 
     BeforeEach {
-        Write-Host "Before test"
         $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
         $env:GITHUB_ENV = [System.IO.Path]::GetTempFileName()
 
@@ -46,7 +45,6 @@ Describe "Read Power Platform Settings Action Tests" {
     }
 
     AfterEach {
-        Write-Host "After test"
         Remove-Item -Path $env:GITHUB_OUTPUT -Force
         Remove-Item -Path $env:GITHUB_ENV -Force
 
@@ -60,7 +58,7 @@ Describe "Read Power Platform Settings Action Tests" {
             companyId        = "11111111-1111-1111-1111-111111111111"
             ppEnvironmentUrl = "https://TestUrL.crm.dynamics.com"
         }
-        $jsonInput = ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
+        ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
 
         # Setup secrets as GitHub environment variable
         $secretProperties = @{
@@ -71,7 +69,7 @@ Describe "Read Power Platform Settings Action Tests" {
         SetSecretsEnvVariable -secretProperties $secretProperties
 
         # Run the action
-        ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev"
+        . (Join-Path $scriptRoot $scriptName) -environmentName "Dev"
 
         # Assert the GitHub environment variables are set correctly
         $gitHubEnvPlaceholder = Get-Content -Path $env:GITHUB_OUTPUT
@@ -90,7 +88,7 @@ Describe "Read Power Platform Settings Action Tests" {
             companyId        = "11111111-1111-1111-1111-111111111111"
             ppEnvironmentUrl = "https://TestUrL.crm.dynamics.com"
         }
-        $jsonInput = ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
+        ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
 
         # Setup secrets as GitHub environment variable
         $secretProperties = @{
@@ -100,7 +98,7 @@ Describe "Read Power Platform Settings Action Tests" {
         SetSecretsEnvVariable -secretProperties $secretProperties
 
         # Run the action
-        ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev"
+        . (Join-Path $scriptRoot $scriptName) -environmentName "Dev"
 
         # Assert the GitHub environment variables are set correctly
         $gitHubEnvPlaceholder = Get-Content -Path $env:GITHUB_OUTPUT
@@ -117,14 +115,13 @@ Describe "Read Power Platform Settings Action Tests" {
             param (
                 [hashtable] $deployToDevProperties
             )
-            # Convert hashtables to JSON strings
-            $jsonInput = ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
 
+            ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
             $errorObject = $null
             $HasThrownException = $false
             # Run the action
             try {
-                ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev"
+                . (Join-Path $scriptRoot $scriptName) -environmentName "Dev"
             }
             catch {
                 $errorObject = $_
@@ -141,6 +138,7 @@ Describe "Read Power Platform Settings Action Tests" {
             companyId       = "11111111-1111-1111-1111-111111111111"
         }
         $errorMessage = runMissingSettingsTest -deployToDevProperties $deployToDevProperties
+        Write-Host "Settings are: $($env:Settings)"
         $errorMessage | Should -Be "DeployToDev setting must contain 'ppEnvironmentUrl' property"
 
         # Test missing companyId
@@ -150,15 +148,6 @@ Describe "Read Power Platform Settings Action Tests" {
         }
         $errorMessage = runMissingSettingsTest -deployToDevProperties $deployToDevProperties
         $errorMessage | Should -Be "DeployToDev setting must contain 'companyId' property"
-
-        # Test missing environmentName
-        $deployToDevProperties = @{
-            companyId        = "11111111-1111-1111-1111-111111111111"
-            ppEnvironmentUrl = "https://TestUrL.crm.dynamics.com"
-        }
-        $errorMessage = runMissingSettingsTest -deployToDevProperties $deployToDevProperties
-        $errorMessage | Should -Be "DeployToDev setting must contain 'environmentName' property"
-
     }
 
     It 'Fails if required secret settings are missing' {
@@ -169,13 +158,13 @@ Describe "Read Power Platform Settings Action Tests" {
                 companyId        = "11111111-1111-1111-1111-111111111111"
                 ppEnvironmentUrl = "https://TestUrL.crm.dynamics.com"
             }
-            # Convert hashtables to JSON strings
-            $jsonInput = ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
+
+            ConvertToDeployToSettings -deployToDevProperties $deployToDevProperties
 
             $errorObject = $null
             # Run the action
             try {
-                ReadPowerPlatformSettings -deploymentEnvironmentsJson $jsonInput -environmentName "DeployToDev"
+                . (Join-Path $scriptRoot $scriptName) -environmentName "Dev"
             }
             catch {
                 $errorObject = $_
@@ -193,7 +182,7 @@ Describe "Read Power Platform Settings Action Tests" {
         }
         SetSecretsEnvVariable -secretProperties $secretProperties
         $errorMessage = runMissingSecretsTest
-        $errorMessage | Should -Be "Secret DeployToDev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
+        $errorMessage | Should -Be "Secret Dev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
 
 
         # Test secret missing username
@@ -202,7 +191,7 @@ Describe "Read Power Platform Settings Action Tests" {
         }
         SetSecretsEnvVariable -secretProperties $secretProperties
         $errorMessage = runMissingSecretsTest
-        $errorMessage | Should -Be "Secret DeployToDev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
+        $errorMessage | Should -Be "Secret Dev-AuthContext must contain either 'ppUserName' and 'ppPassword' properties or 'ppApplicationId', 'ppClientSecret' and 'ppTenantId' properties"
 
     }
 

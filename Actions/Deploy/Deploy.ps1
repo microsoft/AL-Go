@@ -16,9 +16,12 @@ Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
+$envName = $environmentName.Split(' ')[0]
+
 # Default deployment settings
 $deploymentSettings = @{
     "EnvironmentType" = "SaaS"
+    "EnvironmentName" = $envName
     "Projects" = @('*')
     "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
     "SyncMode" = $null
@@ -31,10 +34,8 @@ $deploymentSettings = @{
     "excludeAppIds" = @()
 }
 
-$envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json
-
 
 # If there is a deployTo<environamentName> settings, overwrite the default settings
 $settingsName = "deployTo$($envName)"
