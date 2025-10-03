@@ -19,9 +19,6 @@ inputs:
     description: Type of deployment (CD or Publish)
     required: false
     default: 'CD'
-  deploymentEnvironmentsJson:
-    description: The settings for all Deployment Environments
-    required: true
   artifactsVersion:
     description: Artifacts version. Used to check if this is a deployment from a PR
     required: false
@@ -41,11 +38,10 @@ runs:
         _environmentName: ${{ inputs.environmentName }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}
         _type: ${{ inputs.type }}
-        _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         _artifactsVersion: ${{ inputs.artifactsVersion }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Deploy" -Action {
-          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion
+          ${{ github.action_path }}/Deploy.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -artifactsVersion $ENV:_artifactsVersion
         }
 branding:
   icon: terminal
