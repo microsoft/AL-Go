@@ -1,3 +1,5 @@
+Import-Module (Join-Path -Path $PSScriptRoot "DebugLogHelper.psm1")
+
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
 $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
@@ -279,8 +281,6 @@ function GetDefaultSettings
         The value of the current GitHub environment settings variable, based on workflow context. Default is $ENV:ALGoEnvSettings.
     .PARAMETER environmentName
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
-    .PARAMETER silent
-        If specified, the function will not output any messages to the console.
 #>
 function ReadSettings {
     Param(
@@ -294,8 +294,7 @@ function ReadSettings {
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
-        [string] $environmentName = "$ENV:ALGoEnvName",
-        [switch] $silent
+        [string] $environmentName = "$ENV:ALGoEnvName"
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -310,7 +309,7 @@ function ReadSettings {
 
         if (Test-Path $path) {
             try {
-                if (!$silent.IsPresent) { Write-Host "Applying settings from $path" }
+                OutputDebug "Applying settings from $path"
                 $settings = Get-Content $path -Encoding UTF8 | ConvertFrom-Json
                 if ($settings) {
                     return $settings
@@ -321,7 +320,7 @@ function ReadSettings {
             }
         }
         else {
-            if (!$silent.IsPresent) { Write-Host "No settings found in $path" }
+            OutputDebug "No settings found in $path"
         }
         return $null
     }
@@ -338,29 +337,35 @@ function ReadSettings {
     $settingsObjects = @()
     # Read settings from organization settings variable (parameter)
     if ($orgSettingsVariableValue) {
+        OutputDebug "Applying settings from organization settings variable (ALGoOrgSettings)"
         $orgSettingsVariableObject = $orgSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @($orgSettingsVariableObject)
     }
 
     # Read settings from repository settings file
+    OutputDebug "Applying settings from custom template repository settings file: $CustomTemplateRepoSettingsFile"
     $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
     $settingsObjects += @($customTemplateRepoSettingsObject)
 
     # Read settings from repository settings file
+    OutputDebug "Applying settings from repository settings file: $RepoSettingsFile"
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
     $settingsObjects += @($repoSettingsObject)
 
     # Read settings from repository settings variable (parameter)
     if ($repoSettingsVariableValue) {
+        OutputDebug "Applying settings from repository settings variable (ALGoRepoSettings)"
         $repoSettingsVariableObject = $repoSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @($repoSettingsVariableObject)
     }
 
     if ($project) {
-        # Read settings from repository settings file
+        OutputDebug "Applying settings from custom template project settings file: $CustomTemplateProjectSettingsFile"
         $customTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateProjectSettingsFile)
         $settingsObjects += @($customTemplateProjectSettingsObject)
+
         # Read settings from project settings file
+        OutputDebug "Applying settings from project settings file: $(Join-Path $project $ALGoSettingsFile)"
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
         $settingsObjects += @($projectSettingsObject)
@@ -368,20 +373,26 @@ function ReadSettings {
 
     if ($workflowName) {
         # Read settings from workflow settings file
-        $workflowSettingsObject = GetSettingsObject -Path (Join-Path $gitHubFolder "$workflowName.settings.json")
+        OutputDebug "Applying settings from workflow settings file: $(Join-Path ".github" "$workflowName.settings.json")"
+        $workflowSettingsObject = GetSettingsObject -Path (Join-Path $githubFolder "$workflowName.settings.json")
         $settingsObjects += @($workflowSettingsObject)
         if ($project) {
             # Read settings from project workflow settings file
+            OutputDebug "Applying settings from project workflow settings file: $(Join-Path $project "$ALGoFolderName/$workflowName.settings.json")"
             $projectWorkflowSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json")
+
             # Read settings from user settings file
+            OutputDebug "Applying settings from user settings file: $(Join-Path $project "$ALGoFolderName/$userName.settings.json")"
             $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @($projectWorkflowSettingsObject, $userSettingsObject)
         }
     }
 
     if ($environmentSettingsVariableValue) {
+        OutputDebug "Reading settings from environment settings variable (ALGoEnvSettings)"
         # Read settings from environment variable (parameter)
         $environmentVariableObject = $environmentSettingsVariableValue | ConvertFrom-Json
+
         # Warn user that 'DeployTo' setting needs to include environment name
         if ($environmentVariableObject.PSObject.Properties.Name -contains "DeployTo") {
             OutputWarning "The environment settings variable contains the property 'DeployTo'. Did you intend to use 'DeployTo$environmentName' instead? The 'DeployTo' property without a specific environment name is not supported."
@@ -420,7 +431,7 @@ function ReadSettings {
                             }
                         }
                         if ($conditionMet) {
-                            if (!$silent.IsPresent) { Write-Host "Applying conditional settings for $($conditions -join ", ")" }
+                            OutputDebug "Applying conditional settings for $($conditions -join ", ")"
                             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
                         }
                     }
@@ -469,7 +480,7 @@ function ReadSettings {
     }
 
     if (($settings.githubRunner -like "*ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
-        if (!$silent.IsPresent) { Write-Host "Switching shell to pwsh for ubuntu" }
+        OutputDebug "Switching shell to pwsh for ubuntu"
         $settings.githubRunnerShell = "pwsh"
     }
 

@@ -2047,7 +2047,7 @@ function GetFoldersFromAllProjects {
         $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
         $folders = @()
         foreach($project in $projects) {
-            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
             ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
             $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
                 $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
