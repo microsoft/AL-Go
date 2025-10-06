@@ -18,6 +18,7 @@ function MergeCustomObjectIntoOrderedDictionary {
             $prop = $_
             if ($dst.Contains($prop) -and $src.PSObject.Properties.Name -contains $prop) {
                 # Remove the property from the destination object only if it also exists in the source object. The property will be re-added with the new value later on.
+                OutputDebug "Overwriting setting $prop"
                 $dst.Remove($prop)
             }
         }
