@@ -53,6 +53,7 @@ if ($settings.ContainsKey($settingsName)) {
             }
         }
     }
+}
 
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
