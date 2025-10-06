@@ -23,7 +23,7 @@ $deploymentSettings = $deploymentEnvironments."$environmentName"
 
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
-$settings = $env:Settings | ConvertFrom-Json
+$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
 # Check DeployTo<environmentName> setting (it could have been added in the environment-specific settings)
 $settingsName = "DeployTo$envName"
@@ -145,7 +145,7 @@ else {
         $sandboxEnvironment = ($response.environmentType -eq 1)
         $scope = $deploymentSettings.Scope
         if ($null -eq $scope) {
-            if ($settings.Type -eq 'AppSource App' -or ($sandboxEnvironment -and !($bcAuthContext.ClientSecret -or $bcAuthContext.ClientAssertion))) {
+            if ($settings.type -eq 'AppSource App' -or ($sandboxEnvironment -and !($bcAuthContext.ClientSecret -or $bcAuthContext.ClientAssertion))) {
                 # Sandbox and not S2S -> use dev endpoint (Publish-BcContainerApp)
                 $scope = 'Dev'
             }
