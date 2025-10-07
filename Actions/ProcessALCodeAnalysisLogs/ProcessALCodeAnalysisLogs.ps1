@@ -13,6 +13,14 @@ if (Test-Path $sarifPath) {
     OutputError -message "Base SARIF file not found at $sarifPath"
 }
 
+function NormalizePath {
+    param(
+        [string] $Path
+    )
+    # Convert backslashes to forward slashes and remove leading drive letter
+    return ($Path -replace '\\', '/') -replace '^[A-Za-z]:', ''
+}
+
 <#
     .SYNOPSIS
     Finds a file in the workspace based on its absolute path.
@@ -34,25 +42,28 @@ function Get-FileFromAbsolutePath {
     )
 
     # Remove leading drive letter and convert backslashes to forward slashes to match unix-style paths
-    $normalizedPath = ($AbsolutePath -replace '\\', '/') -replace '^[A-Za-z]:', ''
+    $normalizedPath = NormalizePath -path $AbsolutePath
+
+    if (Test-Path -Path $normalizedPath -PathType Leaf) {
+        OutputDebug -message "File exists at absolute path: $AbsolutePath"
+        # If the file exists at the absolute path, return the relative path from the workspace root
+        return NormalizePath -Path ([System.IO.Path]::GetRelativePath($workspacePath, $normalizedPath))
+    }
 
     # Extract the file name from the absolute path
     $fileName = [System.IO.Path]::GetFileName($normalizedPath)
 
     # Search the workspace path for a file with that name
     $matchingFiles = @(Get-ChildItem -Path $WorkspacePath -Filter $fileName -File -Recurse -ErrorAction SilentlyContinue)
-    if ($matchingFiles.Count -eq 0) {
-        return $null
-    } elseif($matchingFiles.Count -eq 1) {
+    if($matchingFiles.Count -eq 1) {
+        OutputDebug -message "Found one matching file for absolute path: $AbsolutePath"
         $foundFile = $matchingFiles | Select-Object -First 1
-    } else {
-        # If multiple files are found, return the one with the longest matching suffix to the absolute path
-        $foundFile = $matchingFiles | Sort-Object { ($normalizedPath -split [regex]::Escape($_.FullName)).Length } -Descending | Select-Object -First 1
+        $relativePath = NormalizePath -Path ([System.IO.Path]::GetRelativePath($workspacePath, $foundFile.FullName))
+        return $relativePath
     }
 
-    # Return the relative path from the workspace root with forward slashes
-    $relativePath = [System.IO.Path]::GetRelativePath($workspacePath, $foundFile.FullName) -replace '\\', '/'
-    return $relativePath
+    OutputDebug -message "Could not find file for absolute path: $AbsolutePath"
+    return $null
 }
 
 <#
