@@ -121,19 +121,24 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
             }
         }
         $ENV:GITHUB_WORKSPACE = [System.IO.Path]::GetTempPath()
-        # Copy sample files to temp folder
-        Copy-Item -Path "$PSScriptRoot\TestArtifacts\*" -Destination $ENV:GITHUB_WORKSPACE -Recurse -Force
         $errorLogsFolder = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
         if (!(Test-Path $errorLogsFolder)) {
             New-Item -Path $errorLogsFolder -ItemType Directory -Force
         }
+
+        # Copy sample files to temp folder
+        Copy-Item -Path "$PSScriptRoot\TestArtifacts" -Destination $ENV:GITHUB_WORKSPACE -Recurse -Force
     }
 
     AfterEach {
         $errorLogsFolder = Join-Path $ENV:GITHUB_WORKSPACE "ErrorLogs"
+        $TestArtifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE "TestArtifacts"
 
         if (Test-Path $errorLogsFolder) {
             Remove-Item -Path "$errorLogsFolder\*" -Recurse -Force
+        }
+        if (Test-Path $TestArtifactsFolder) {
+            Remove-Item -Path $TestArtifactsFolder -Recurse -Force
         }
     }
 
@@ -224,5 +229,65 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
 
     It 'Test action.yaml matches script' {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript
+    }
+
+    Context 'Get-FileFromAbsolutePath Function Tests' {
+
+        BeforeEach {
+            # Set up test workspace structure
+            $testWorkspace = Join-Path ([System.IO.Path]::GetTempPath()) "TestWorkspace"
+            $ENV:GITHUB_WORKSPACE = $testWorkspace
+
+            if (Test-Path $testWorkspace) {
+                Remove-Item -Path $testWorkspace -Recurse -Force
+            }
+            New-Item -Path $testWorkspace -ItemType Directory -Force
+
+            # Create test files with different structures
+            $subDir1 = Join-Path $testWorkspace "SubDir1"
+            $nestedDir = Join-Path $subDir1 "Nested"
+
+            New-Item -Path $subDir1 -ItemType Directory -Force
+            New-Item -Path $nestedDir -ItemType Directory -Force
+
+            # Create test files
+            Set-Content -Path (Join-Path $testWorkspace "UniqueFile.al") -Value "// Unique file content"
+            Set-Content -Path (Join-Path $nestedDir "NestedFile.al") -Value "// Nested file content"
+
+            Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\Actions\ProcessALCodeAnalysisLogs\ProcessALCodeAnalysisLogs.psm1" -Resolve) -Force
+
+        }
+
+        AfterEach {
+            if (Test-Path $testWorkspace) {
+                Remove-Item -Path $testWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Returns relative path when file exists at absolute path' {
+            $testFile = Join-Path $testWorkspace "UniqueFile.al"
+            $result = Get-FileFromAbsolutePath -AbsolutePath $testFile -WorkspacePath $testWorkspace
+
+            $result | Should -Be "UniqueFile.al"
+        }
+
+        It 'Returns relative path when file exists at absolute path with backslashes' {
+            # Test with Windows-style backslashes
+            $testFile = Join-Path $testWorkspace "UniqueFile.al"
+            $windowsStylePath = "C:" + ($testFile -replace '/', '\')
+
+            $result = Get-FileFromAbsolutePath -AbsolutePath $windowsStylePath -WorkspacePath $testWorkspace
+
+            $result | Should -Be "UniqueFile.al"
+        }
+
+        It 'Normalizes paths correctly by removing drive letters' {
+            # Test path normalization with drive letter
+            $testFile = Join-Path $testWorkspace "SubDir1/Nested/NestedFile.al"
+            $pathWithDrive = "D:" + $testFile
+            $result = Get-FileFromAbsolutePath -AbsolutePath $pathWithDrive -WorkspacePath $testWorkspace
+
+            $result | Should -Be "SubDir1/Nested/NestedFile.al"
+        }
     }
 }
