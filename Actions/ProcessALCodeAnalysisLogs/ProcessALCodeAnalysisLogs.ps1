@@ -126,35 +126,36 @@ function GenerateSARIFJson {
             ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json)
         }
 
-        # Add result if it does not already exist
-        if (-not $existingResults)
-        {
-            # Add rule to the sarif object if not already added
-            if (-not ($sarif.runs[0].tool.driver.rules | Where-Object { $_.id -eq $issue.ruleId })) {
-                $sarif.runs[0].tool.driver.rules += @{
-                    id = $issue.ruleId
-                    shortDescription = @{ text = $issue.fullMessage }
-                    fullDescription = @{ text = $issue.fullMessage }
-                    helpUri = $issue.properties.helpLink
-                    properties = @{
-                        category = $issue.properties.category
-                        severity = $issue.properties.severity
-                    }
+        if ($existingResults) {
+            # Skip if existing
+            continue
+        }
+
+        # Add rule to the sarif object if not already added
+        if (-not ($sarif.runs[0].tool.driver.rules | Where-Object { $_.id -eq $issue.ruleId })) {
+            $sarif.runs[0].tool.driver.rules += @{
+                id = $issue.ruleId
+                shortDescription = @{ text = $issue.fullMessage }
+                fullDescription = @{ text = $issue.fullMessage }
+                helpUri = $issue.properties.helpLink
+                properties = @{
+                    category = $issue.properties.category
+                    severity = $issue.properties.severity
                 }
             }
+        }
 
-            # Create new result
-            $newResult = @{
-                ruleId = $issue.ruleId
-                message = @{ text = $message }
-                locations = @(@{
-                    physicalLocation = @{
-                        artifactLocation = @{ uri = $relativePath }
-                        region = $issue.locations[0].analysisTarget[0].region
-                    }
-                })
-                level = ($issue.properties.severity).ToLower()
-            }
+        # Create new result
+        $newResult = @{
+            ruleId = $issue.ruleId
+            message = @{ text = $message }
+            locations = @(@{
+                physicalLocation = @{
+                    artifactLocation = @{ uri = $relativePath }
+                    region = $issue.locations[0].analysisTarget[0].region
+                }
+            })
+            level = ($issue.properties.severity).ToLower()
         }
 
         # Add the new result if it was created
