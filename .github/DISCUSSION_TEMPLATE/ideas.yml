@@ -1,0 +1,39 @@
+title: "[Idea] "
+labels: ["enhancement", "idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 💡 Share Your Idea
+
+        Thank you for taking the time to share your idea! We value community input and are always looking for ways to improve AL-Go for GitHub.
+
+        Please provide a clear description of your idea below and how it could benefit you and other users of AL-Go for GitHub.
+
+  - type: textarea
+    id: idea-description
+    attributes:
+      label: Idea Description
+      description: "Describe your idea in detail. What problem does it solve? How would it work? What benefits would it provide?"
+      placeholder: "Example: I think it would be great if AL-Go could automatically..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution (Optional)
+      description: "Are you interested in contributing to the implementation of this idea?"
+      options:
+        - label: "I would be open to contributing to this idea (implementation, documentation, testing, etc.)"
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## What happens next?
+
+        - The maintainers will review your idea
+        - Community members are welcome to comment, provide feedback and upvote the idea
+
+        Thank you for your contribution! 🚀
