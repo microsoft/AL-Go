@@ -20,6 +20,7 @@ Please note that some automated features are premium and require the use of [Git
 - Issue 1926 Deployment fails when using build modes
 - Issue 1898 GetDependencies in localDevEnv does not fallback to github token
 - Issue 1947 Project settings are ignored when loading bccontainerhelper
+- Issue 1937 trackALAlertsInGitHub is failing in preview
 
 ## v7.3
 
