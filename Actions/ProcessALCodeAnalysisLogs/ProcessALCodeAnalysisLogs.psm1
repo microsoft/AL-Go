@@ -78,7 +78,7 @@ function Get-IssueMessage {
 
     if ($issue.PSObject.Properties.Name -contains "shortMessage") {
         return $issue.shortMessage
-    } elseif ($issue.PSObject.Properties.Name -notcontains "fullMessage") {
+    } elseif ($issue.PSObject.Properties.Name -contains "fullMessage") {
         return $issue.fullMessage
     } else {
         return $null
