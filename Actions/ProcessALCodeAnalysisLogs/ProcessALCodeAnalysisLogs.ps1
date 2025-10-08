@@ -69,10 +69,15 @@ function GenerateSARIFJson {
 
         # Add rule to the sarif object if not already added
         if (-not ($sarif.runs[0].tool.driver.rules | Where-Object { $_.id -eq $issue.ruleId })) {
+            $fullMessage = $message
+            if ($issue.PSObject.Properties.Name -contains "fullMessage") {
+                $fullMessage = $issue.fullMessage
+            }
+
             $sarif.runs[0].tool.driver.rules += @{
                 id = $issue.ruleId
-                shortDescription = @{ text = $issue.fullMessage }
-                fullDescription = @{ text = $issue.fullMessage }
+                shortDescription = @{ text = $message }
+                fullDescription = @{ text = $fullMessage }
                 helpUri = $issue.properties.helpLink
                 properties = @{
                     category = $issue.properties.category
