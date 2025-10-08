@@ -14,6 +14,93 @@ if (Test-Path $sarifPath) {
     OutputError -message "Base SARIF file not found at $sarifPath"
 }
 
+<#
+    .SYNOPSIS
+    Generates SARIF JSON.
+    .DESCRIPTION
+    Generates SARIF JSON from a error log file and adds both rules and results to the base sarif object.
+    Rules and results are de-duplicated.
+    .PARAMETER errorLogContent
+    The contents of the error log file to process.
+#>
+function GenerateSARIFJson {
+    param(
+        [Parameter(HelpMessage = "The contents of the error log file to process.", Mandatory = $true)]
+        [PSCustomObject] $errorLogContent,
+        [Parameter(HelpMessage = "The base SARIF object to add results to.", Mandatory = $false)]
+        [PSCustomObject] $sarif = $null
+    )
+
+    foreach ($issue in $errorLogContent.issues) {
+        # Skip issues without locations as GitHub expects at least one location
+        if (($issue.PSObject.Properties.Name -notcontains "locations" ) -or ($issue.locations.Count -eq 0)) {
+            continue
+        }
+
+        $newResult = $null
+        $relativePath = Get-FileFromAbsolutePath -AbsolutePath $issue.locations[0].analysisTarget[0].uri
+        $message = Get-IssueMessage -issue $issue
+
+        # Skip issues if we cannot find a message
+        if ($null -eq $message) {
+            OutputDebug -message "Could not extract message from issue: $($issue | ConvertTo-Json -Depth 10 -Compress)"
+            continue
+        }
+
+        # Skip issues if we cannot find the file in the workspace
+        if ($null -eq $relativePath) {
+            OutputDebug -message "Could not find file for issue: $($issue | ConvertTo-Json -Depth 10 -Compress)"
+            continue
+        }
+
+        # Check if result already exists in the sarif object
+        $existingResults = $sarif.runs[0].results | Where-Object {
+            $_.ruleId -eq $issue.ruleId -and
+            $_.message.text -eq $message -and
+            $_.level -eq ($issue.properties.severity).ToLower() -and
+            ($_.locations[0].physicalLocation.artifactLocation.uri -eq $relativePath) -and
+            ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json)
+        }
+
+        if ($existingResults) {
+            # Skip if existing
+            continue
+        }
+
+        # Add rule to the sarif object if not already added
+        if (-not ($sarif.runs[0].tool.driver.rules | Where-Object { $_.id -eq $issue.ruleId })) {
+            $sarif.runs[0].tool.driver.rules += @{
+                id = $issue.ruleId
+                shortDescription = @{ text = $issue.fullMessage }
+                fullDescription = @{ text = $issue.fullMessage }
+                helpUri = $issue.properties.helpLink
+                properties = @{
+                    category = $issue.properties.category
+                    severity = $issue.properties.severity
+                }
+            }
+        }
+
+        # Create new result
+        $newResult = @{
+            ruleId = $issue.ruleId
+            message = @{ text = $message }
+            locations = @(@{
+                physicalLocation = @{
+                    artifactLocation = @{ uri = $relativePath }
+                    region = $issue.locations[0].analysisTarget[0].region
+                }
+            })
+            level = ($issue.properties.severity).ToLower()
+        }
+
+        # Add the new result if it was created
+        if ($null -ne $newResult) {
+            $sarif.runs[0].results += $newResult
+        }
+    }
+}
+
 try {
     if ((Test-Path $errorLogsFolderPath -PathType Container) -and ($null -ne $sarif)){
         $errorLogFiles = @(Get-ChildItem -Path $errorLogsFolderPath -Filter "*.errorLog.json" -File -Recurse)
