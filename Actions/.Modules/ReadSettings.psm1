@@ -123,7 +123,7 @@ function GetDefaultSettings
         "keyVaultCertificateUrlSecretName"              = "keyVaultCertificateUrl"
         "keyVaultCertificatePasswordSecretName"         = "keyVaultCertificatePassword"
         "keyVaultClientIdSecretName"                    = "keyVaultClientId"
-        "keyVaultCodesignCertificateName"               = "keyVaultCodesignCertificate"
+        "keyVaultCodesignCertificateName"               = ""
         "codeSignCertificateUrlSecretName"              = "codeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"         = "codeSignCertificatePassword"
         "additionalCountries"                           = @()
