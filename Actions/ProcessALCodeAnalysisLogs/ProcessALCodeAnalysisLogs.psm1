@@ -20,7 +20,6 @@ function NormalizePath {
     Finds a file in the workspace based on its absolute path.
     .DESCRIPTION
     Given an absolute path, this function searches the workspace for a file with the same name and returns its relative path.
-    If multiple files with the same name are found, it returns the one with the longest matching suffix to the absolute path.
     If no file is found, it returns $null.
     .PARAMETER AbsolutePath
     The absolute path of the file to find.
