@@ -368,9 +368,9 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
     # Default BcContainerHelper Version is hardcoded in AL-Go-Helper (replaced during AL-Go deploy)
     $bcContainerHelperVersion = $defaultBcContainerHelperVersion
 
-    if ("$env:settings" -ne "") {
+    if ("$env:Settings" -ne "") {
         $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
-        $env:settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
+        $env:Settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
     }
     else {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
@@ -787,6 +787,13 @@ function CheckAppDependencyProbingPaths {
                 }
                 else {
                     Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
+                    try {
+                        $token = invoke-gh -silent -returnValue auth token
+                    }
+                    catch {
+                        Write-Host "Unable to get token from gh, will attempt to access repository without token. Message: $($_.Exception.Message)"
+                        $token = $null
+                    }
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
