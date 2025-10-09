@@ -73,24 +73,20 @@ $settings.Keys | ForEach-Object {
     $outSettings += @{ "$setting" = $settingValue }
     if ($getSettings -contains $setting) {
         if ($settingValue -is [System.Collections.Specialized.OrderedDictionary] -or $settingValue -is [hashtable]) {
-            Write-Host "$setting=$(ConvertTo-Json $settingValue -Depth 99 -Compress)"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$(ConvertTo-Json $settingValue -Depth 99 -Compress)"
         }
         else {
-            Write-Host "$setting=$settingValue"
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "$setting=$settingValue"
         }
     }
 }
 
-OutputDebug "Final settings: $($outSettings | ConvertTo-Json -Depth 99 -Compress)"
+Write-Host "AL-Go settings: $($outSettings | ConvertTo-Json -Depth 99 -Compress)"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
 
 $gitHubRunner = $settings.githubRunner.Split(',').Trim() | ConvertTo-Json -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerJson=$githubRunner"
-Write-Host "GitHubRunnerJson=$githubRunner"
 
 $gitHubRunnerShell = $settings.githubRunnerShell
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubRunnerShell=$githubRunnerShell"
-Write-Host "GitHubRunnerShell=$githubRunnerShell"
