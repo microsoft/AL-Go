@@ -7,16 +7,25 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-defaults:
-  run:
-    shell: pwsh
-
 permissions:
   contents: read
 
 jobs:
   Test:
-    runs-on: [ ubuntu-latest ]
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            shell: powershell
+            psVersion: PS5
+          - os: ubuntu-latest
+            shell: pwsh
+            psVersion: PS7
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
@@ -26,16 +35,16 @@ jobs:
 
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Run AL-Go Actions Tests
+      - name: Run AL-Go Actions Tests (${{ matrix.psVersion }})
         run: |
           . (Join-Path "." "Tests/runtests.ps1") -Path "Tests"
 
-      - name: Test AL-Go Workflows
+      - name: Test AL-Go Workflows (${{ matrix.psVersion }})
         if: github.repository_owner == 'microsoft'
         run: |
           . (Join-Path "." "Tests/runtests.ps1") -Path "Tests/WorkflowSanitation"
 
-      - name: Test aka.ms links in markdown files
+      - name: Test aka.ms links in markdown files (${{ matrix.psVersion }})
         if: github.repository_owner == 'microsoft'
         run: |
           . (Join-Path "." "Tests/runtests.ps1") -Path "Tests/MarkdownLinks"
