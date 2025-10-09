@@ -11,8 +11,50 @@ function NormalizePath {
     param(
         [string] $Path
     )
-    # Convert backslashes to forward slashes and remove leading drive letter
-    return ($Path -replace '\\', '/') -replace '^[A-Za-z]:', ''
+    if ($null -eq $Path) {
+        return $null
+    }
+    $normalizedPath = $Path -replace '\\', '/' # Convert backslashes to forward slashes
+    $normalizedPath = $normalizedPath -replace '^[A-Za-z]:', '' # Remove leading drive letter
+    $normalizedPath = $normalizedPath -replace '^\./', '' # Remove leading ./
+    return $normalizedPath
+}
+
+<#
+    .SYNOPSIS
+    Gets the relative path from a base path to a target path using PowerShell 5/7 compatible approach.
+    .DESCRIPTION
+    This function calculates the relative path from a base path to a target path by temporarily
+    changing to the base directory and using Resolve-Path -Relative.
+    .PARAMETER BasePath
+    The base path from which to calculate the relative path.
+    .PARAMETER TargetPath
+    The target path to which the relative path should point.
+#>
+function GetRelativePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $BasePath,
+        [Parameter(Mandatory = $true)]
+        [string] $TargetPath
+    )
+    $relativePath = $null
+
+    try {
+        # Push to the base path location
+        Push-Location -Path $BasePath
+
+        # Get the relative path from current location to target
+        $relativePath = Resolve-Path -Path $TargetPath -Relative -ErrorAction Stop
+    }
+    catch {
+        OutputDebug -message "Error getting relative path from '$BasePath' to '$TargetPath': $_"
+    }
+    finally {
+        # Always pop back to original location
+        Pop-Location
+    }
+    return $relativePath
 }
 
 <#
@@ -40,7 +82,8 @@ function Get-FileFromAbsolutePath {
     if (Test-Path -Path $normalizedPath -PathType Leaf) {
         OutputDebug -message "File exists at absolute path: $AbsolutePath"
         # If the file exists at the absolute path, return the relative path from the workspace root
-        return NormalizePath -Path ([System.IO.Path]::GetRelativePath($workspacePath, $normalizedPath))
+        $relativePath = GetRelativePath -BasePath $workspacePath -TargetPath $normalizedPath
+        return NormalizePath -Path $relativePath
     }
 
     # Extract the file name from the absolute path
@@ -51,8 +94,8 @@ function Get-FileFromAbsolutePath {
     if($matchingFiles.Count -eq 1) {
         OutputDebug -message "Found one matching file for absolute path: $AbsolutePath"
         $foundFile = $matchingFiles | Select-Object -First 1
-        $relativePath = NormalizePath -Path ([System.IO.Path]::GetRelativePath($workspacePath, $foundFile.FullName))
-        return $relativePath
+        $relativePath = GetRelativePath -BasePath $workspacePath -TargetPath $foundFile.FullName
+        return NormalizePath -Path $relativePath
     }
 
     OutputDebug -message "Could not find file for absolute path: $AbsolutePath"
