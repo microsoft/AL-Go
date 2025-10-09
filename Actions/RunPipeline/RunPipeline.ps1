@@ -234,6 +234,8 @@ try {
     }
 
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
+        Trace-Information -Message "Using Azure KeyVault certificate for signing"
+
         $runAlPipelineParams += @{
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
             "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword
