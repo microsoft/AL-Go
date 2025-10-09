@@ -81,7 +81,7 @@ $settings.Keys | ForEach-Object {
     }
 }
 
-Write-Host "AL-Go settings: $($outSettings | ConvertTo-Json -Depth 99 -Compress)"
+Write-Host "AL-Go settings: $($outSettings | ConvertTo-Json -Depth 99)"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "Settings=$($outSettings | ConvertTo-Json -Depth 99 -Compress)"
 
