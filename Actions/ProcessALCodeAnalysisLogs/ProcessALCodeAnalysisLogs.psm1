@@ -45,7 +45,7 @@ function GetRelativePath {
         Push-Location -Path $BasePath
 
         # Get the relative path from current location to target
-        $relativePath = Resolve-Path -Path $TargetPath -Relative -ErrorAction Stop
+        $relativePath = Resolve-Path -Path $TargetPath -Relative
     }
     catch {
         OutputDebug -message "Error getting relative path from '$BasePath' to '$TargetPath': $_"
