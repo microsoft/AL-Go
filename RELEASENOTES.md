@@ -22,6 +22,7 @@ Please note that some automated features are premium and require the use of [Git
 - Issue 1947 Project settings are ignored when loading bccontainerhelper
 - Issue 1937 trackALAlertsInGitHub is failing in preview
 - DeployTo settings from environment-specific AL-Go settings are not applied when deploying
+- Issue 1946 KeyVault access in PR pipeline
 
 ## v7.3
 
