@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
@@ -234,7 +234,7 @@ try {
     }
 
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
-        Trace-Information -Message "Using Azure KeyVault certificate for signing"
+        Trace-Information -Message "Enabling key vault access for apps"
 
         $runAlPipelineParams += @{
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
