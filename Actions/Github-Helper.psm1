@@ -1026,7 +1026,7 @@ function GetArtifactsFromWorkflowRun {
         }
 
         foreach($project in $projectArr) {
-            $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
+            $artifactPattern = "$project-*-*$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
