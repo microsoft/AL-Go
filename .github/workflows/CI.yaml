@@ -23,6 +23,7 @@ jobs:
             psVersion: PS7
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    name: Run tests on ${{ matrix.os }} (${{ matrix.psVersion }})
     defaults:
       run:
         shell: ${{ matrix.shell }}
