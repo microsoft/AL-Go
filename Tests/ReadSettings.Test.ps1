@@ -199,7 +199,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Settings schema is valid' {
+        It 'Settings schema is valid' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             Test-Json -json $schema | Should -Be $true
         }
 
@@ -214,12 +214,12 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
-        It 'Default settings match schema' {
+        It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
         }
 
-        It 'Shell setting can only be pwsh or powershell' {
+        It 'Shell setting can only be pwsh or powershell' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.shell = 42
             try {
@@ -238,7 +238,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
-        It 'Projects setting is an array of strings' {
+        It 'Projects setting is an array of strings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             # If the projects setting is not an array, it should throw an error
             $defaultSettings = GetDefaultSettings
             $defaultSettings.projects = "not an array"
