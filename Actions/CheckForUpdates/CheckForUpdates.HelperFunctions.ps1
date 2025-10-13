@@ -244,7 +244,7 @@ function ModifyBuildWorkflows {
     # Modify Deliver and Deploy steps depending on build jobs
     if ($deploy) {
         $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")
-        $deploy.Replace('if:', "if: (!cancelled())$ifpart && needs.Initialization.outputs.environmentCount > 0")
+        $deploy.Replace('if:', "if: (!cancelled())$ifpart && fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environmentCount > 0")
         $yaml.Replace('jobs:/Deploy:/', $deploy.content)
         $postProcessNeeds += @('Deploy')
     }
