@@ -370,6 +370,14 @@
                 },
                 "continuousDelivery": {
                     "type": "boolean"
+                },
+                "overwriteSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["includeDependencies"]
+                    },
+                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -595,7 +603,15 @@
                 "footer",
                 "defaultIndexMD",
                 "defaultReleaseMD"
-            ]
+            ],
+            "overwriteSettings": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["includeProjects", "excludeProjects"]
+                },
+                "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+            }
         },
         "commitOptions": {
             "type": "object",
@@ -617,6 +633,14 @@
                 },
                 "createPullRequest": {
                     "type": "boolean"
+                },
+                "overwriteSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["pullRequestLabels"]
+                    },
+                    "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -657,95 +681,14 @@
         },
         "shortLivedArtifactsRetentionDays": {
             "type": "integer"
+        },
+        "overwriteSettings": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
+            },
+            "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
         }
-    },
-    "required": [
-        "type",
-        "unusedALGoSystemFiles",
-        "projects",
-        "powerPlatformSolutionFolder",
-        "country",
-        "artifact",
-        "companyName",
-        "repoVersion",
-        "repoName",
-        "versioningStrategy",
-        "runNumberOffset",
-        "appBuild",
-        "appRevision",
-        "keyVaultName",
-        "licenseFileUrlSecretName",
-        "ghTokenWorkflowSecretName",
-        "adminCenterApiCredentialsSecretName",
-        "applicationInsightsConnectionStringSecretName",
-        "keyVaultCertificateUrlSecretName",
-        "keyVaultCertificatePasswordSecretName",
-        "keyVaultClientIdSecretName",
-        "keyVaultCodesignCertificateName",
-        "codeSignCertificateUrlSecretName",
-        "codeSignCertificatePasswordSecretName",
-        "additionalCountries",
-        "appDependencies",
-        "projectName",
-        "appFolders",
-        "testDependencies",
-        "testFolders",
-        "bcptTestFolders",
-        "installApps",
-        "installTestApps",
-        "installOnlyReferencedApps",
-        "generateDependencyArtifact",
-        "skipUpgrade",
-        "applicationDependency",
-        "updateDependencies",
-        "installTestRunner",
-        "installTestFramework",
-        "installTestLibraries",
-        "installPerformanceToolkit",
-        "enableCodeCop",
-        "enableUICop",
-        "enableCodeAnalyzersOnTestApps",
-        "customCodeCops",
-        "failOn",
-        "treatTestFailuresAsWarnings",
-        "rulesetFile",
-        "enableExternalRulesets",
-        "vsixFile",
-        "assignPremiumPlan",
-        "enableTaskScheduler",
-        "doNotBuildTests",
-        "doNotRunTests",
-        "doNotRunBcptTests",
-        "doNotPublishApps",
-        "doNotSignApps",
-        "configPackages",
-        "appSourceCopMandatoryAffixes",
-        "deliverToAppSource",
-        "obsoleteTagMinAllowedMajorMinor",
-        "memoryLimit",
-        "templateUrl",
-        "templateSha",
-        "templateBranch",
-        "appDependencyProbingPaths",
-        "useProjectDependencies",
-        "runs-on",
-        "shell",
-        "githubRunner",
-        "githubRunnerShell",
-        "cacheImageName",
-        "cacheKeepDays",
-        "alwaysBuildAllProjects",
-        "microsoftTelemetryConnectionString",
-        "partnerTelemetryConnectionString",
-        "sendExtendedTelemetryToMicrosoft",
-        "environments",
-        "buildModes",
-        "useCompilerFolder",
-        "pullRequestTrigger",
-        "bcptThresholds",
-        "fullBuildPatterns",
-        "excludeEnvironments",
-        "alDoc",
-        "trustMicrosoftNuGetFeeds"
-    ]
+    }
 }

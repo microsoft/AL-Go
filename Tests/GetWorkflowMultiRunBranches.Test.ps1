@@ -36,7 +36,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
     Context 'workflow_dispatch event' {
         It 'Action sets the current branch as result when no branch patterns are specified' {
             $env:GITHUB_EVENT_NAME = "workflow_dispatch"
-            $env:settings = ""
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             # Call the action script
@@ -49,7 +49,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
 
         It 'Action sets the input branch as result when a branch pattern is specified' {
             $env:GITHUB_EVENT_NAME = "workflow_dispatch"
-            $env:settings = ""
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("test-branch", "main", "some-other-branch") }
@@ -64,7 +64,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
 
         It 'Action sets the input branch as result when a branch pattern with wild card is specified' {
             $env:GITHUB_EVENT_NAME = "workflow_dispatch"
-            $env:settings = ""
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("test-branch", "main", "some-other-branch") }
@@ -81,7 +81,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
     Context 'schedule event' {
         It 'Action sets the current branch as result when no branch patterns are specified' {
             $env:GITHUB_EVENT_NAME = "schedule"
-            $env:settings = "{ 'workflowSchedule': { 'includeBranches': [] } }"
+            $env:Settings = "{ 'workflowSchedule': { 'includeBranches': [] } }"
             $env:GITHUB_REF_NAME = "default-branch"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("test-branch", "main", "default-branch") }
@@ -96,7 +96,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
 
         It 'Action sets the input branch as result when a branch pattern is specified' {
             $env:GITHUB_EVENT_NAME = "schedule"
-            $env:settings = "{ 'workflowSchedule': { 'includeBranches': ['test-branch'] } }"
+            $env:Settings = "{ 'workflowSchedule': { 'includeBranches': ['test-branch'] } }"
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("test-branch", "main", "some-other-branch") }
@@ -111,7 +111,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
 
         It 'Action sets the input branch as result when a branch pattern with wild card is specified' {
             $env:GITHUB_EVENT_NAME = "schedule"
-            $env:settings = "{ 'workflowSchedule': { 'includeBranches': ['*branch*'] } }"
+            $env:Settings = "{ 'workflowSchedule': { 'includeBranches': ['*branch*'] } }"
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("test-branch", "main", "some-other-branch") }

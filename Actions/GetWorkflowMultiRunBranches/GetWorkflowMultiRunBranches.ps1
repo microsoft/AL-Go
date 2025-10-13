@@ -9,7 +9,7 @@ Import-Module $gitHubHelperPath -DisableNameChecking
 switch ($env:GITHUB_EVENT_NAME) {
     'schedule' {
       Write-Host "Event is schedule: getting branches from settings"
-      $settings = ConvertFrom-Json $env:settings
+      $settings = ConvertFrom-Json $env:Settings
 
       # Add defensive check to handle if workflowSchedule.includeBranches is not defined in settings
       if (($settings.PSObject.Properties.Name -eq "workflowSchedule") -and ($settings.workflowSchedule.PSObject.Properties.Name -eq "includeBranches") -and $($settings.workflowSchedule.includeBranches)) {
@@ -33,7 +33,7 @@ if (-not $branchPatterns) {
 
 Write-Host "Filtering branches by: $($branchPatterns -join ', ')"
 
-invoke-git fetch --quiet
+invoke-git fetch --quiet --no-tags
 $allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)" refs/remotes/origin | ForEach-Object { $_ -replace 'origin/', '' })
 $branches = @()
 
