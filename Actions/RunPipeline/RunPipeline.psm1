@@ -46,7 +46,7 @@ function Test-InstallApps() {
                     | Out-Host
 
         # Load the AL tool from the downloaded package
-        $alExe = Get-ChildItem -Path $tempFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1
+        $alExe = Get-ChildItem -Path $tempFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1 -ExpandProperty FullName
         if (-not $alExe) {
             throw "Could not find al.exe in the $DevelopmentToolsPackage package."
         }
