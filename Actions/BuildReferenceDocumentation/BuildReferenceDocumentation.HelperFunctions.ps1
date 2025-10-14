@@ -1,8 +1,15 @@
 ﻿function DownloadAlDoc {
+    Param(
+        [string] $artifactUrl = ''
+    )
     if ("$ENV:aldocPath" -eq "") {
         $ENV:aldocCommand = ''
         Write-Host "Locating aldoc"
-        $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
+        if ($artifactUrl -notlike "https://*") {
+            Write-Host "ArtifactUrl provided, but not on the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
+            $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
+        }
+        Write-Host "Found artifactUrl: $artifactUrl"
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
@@ -140,7 +147,8 @@ function GenerateDocsSite {
         [string] $docsPath,
         [string] $logLevel,
         [switch] $groupByProject,
-        [switch] $hostIt
+        [switch] $hostIt,
+        [string] $artifactUrl = ''
     )
 
     function ReplacePlaceHolders {
