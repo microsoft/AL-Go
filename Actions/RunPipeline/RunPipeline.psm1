@@ -45,8 +45,11 @@ function Test-InstallApps() {
                     --tool-path $tempFolder `
                     | Out-Host
 
-        # Load the DLL from the temp folder
-        $alExe = Get-ChildItem -Path $tempFolder -Recurse -Force | Where-Object { $_.FullName -like "*al.exe" } | Select-Object -First 1
+        # Load the AL tool from the downloaded package
+        $alExe = Get-ChildItem -Path $tempFolder -Filter "al" | Select-Object -First 1
+        if (-not $alExe) {
+            throw "Could not find al.exe in the $DevelopmentToolsPackage package."
+        }
 
         foreach ($app in $AllInstallApps) {
             if (Test-Path -Path $app) {
