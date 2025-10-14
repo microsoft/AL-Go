@@ -222,12 +222,10 @@ try {
                     $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
                     $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
                     $appFile = Join-Path $tempDependenciesLocation $decodedFileName
-                    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile | Out-Null
+                    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
                 }
                 catch {
-                    # If the app file fails to be downloaded we keep it as a URL and let Run-ALPipeline download it
-                    Write-Host "Failed to download app from $finalUrl. Error was: $($_.Exception.Message)"
-                    return $finalUrl
+                    throw "Could not download app from URL: $($url). Error was: $($_.Exception.Message)"
                 }
             } else {
                 $appFile = $_
