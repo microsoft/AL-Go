@@ -46,8 +46,7 @@ function Test-InstallApps() {
                     | Out-Host
 
         # Load the DLL from the temp folder
-        $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse -Force | Where-Object { $_.FullName -like "*al.exe" } | Select-Object -First 1
-        LoadDLL -path $codeanalysisdll.FullName
+        $alExe = Get-ChildItem -Path $tempFolder -Recurse -Force | Where-Object { $_.FullName -like "*al.exe" } | Select-Object -First 1
 
         foreach ($app in $AllInstallApps) {
             if (Test-Path -Path $app) {
