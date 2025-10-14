@@ -26,6 +26,7 @@ function Test-InstallApps() {
     Param(
         [string[]] $AllInstallApps,
         [string] $ProjectPath,
+        [string] $DevelopmentToolsPackage = "Microsoft.Dynamics.BusinessCentral.Development.Tools",
         [string] $RunnerTempFolder = $ENV:RUNNER_TEMP
     )
 
@@ -39,11 +40,13 @@ function Test-InstallApps() {
         $tempFolder = Join-Path $RunnerTempFolder "DevelopmentTools-$(Get-Random)"
 
         # Download the Microsoft.Dynamics.BusinessCentral.Development.Tools package
-        $version = GetPackageVersion -PackageName "Microsoft.Dynamics.BusinessCentral.Development.Tools"
-        dotnet tool install "Microsoft.Dynamics.BusinessCentral.Development.Tools" --version $version --tool-path $tempFolder | Out-Host
+        dotnet tool install $DevelopmentToolsPackage `
+                    --version (GetPackageVersion -PackageName $DevelopmentToolsPackage) `
+                    --tool-path $tempFolder `
+                    | Out-Host
 
         # Load the DLL from the temp folder
-        $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse -Force | Where-Object { $_.FullName -like "*Microsoft.Dynamics.Nav.CodeAnalysis.dll" } | Select-Object -Last 1
+        $codeanalysisdll = Get-ChildItem -Path $tempFolder -Recurse -Force | Where-Object { $_.FullName -like "*al.exe" } | Select-Object -First 1
         LoadDLL -path $codeanalysisdll.FullName
 
         foreach ($app in $AllInstallApps) {
@@ -57,8 +60,7 @@ function Test-InstallApps() {
                 $appFile = Get-Item -Path $appFilePath
                 $appFileName = $appFile.Name
                 Write-Host "Analyzing app file $appFileName"
-                $package = [Microsoft.Dynamics.Nav.CodeAnalysis.Packaging.NavAppPackageReader]::Create([System.IO.File]::OpenRead($appFile), $true)
-                if ((($null -eq $package.ReadSourceCodeFilePaths()) -or ("" -eq $package.ReadSourceCodeFilePaths())) -and (-not $package.IsRuntimePackage)) {
+                if (IsSymbolsOnlyPackage -AppFilePath $appFile -AlExePath $alExe) {
                     # If package is not a runtime package and has no source code files, it is a symbols package
                     # Symbols packages are not meant to be published to a BC Environment
                     OutputWarning -Message "App $appFileName is a symbols package and should not be published. The workflow may fail if you try to publish it."
@@ -77,6 +79,15 @@ function Test-InstallApps() {
             Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
+}
+
+function IsSymbolsOnlyPackage {
+    param(
+        [string] $AppFilePath,
+        [string] $AlExePath
+    )
+    . $AlExePath IsSymbolOnly
+    return $LASTEXITCODE -eq 0
 }
 
 Export-ModuleMember -Function Test-InstallApps
