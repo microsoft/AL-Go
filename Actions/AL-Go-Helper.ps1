@@ -1578,7 +1578,8 @@ function CreateDevEnv {
             "enablePerTenantExtensionCop",
             "enableUICop",
             "enableCodeAnalyzersOnTestApps",
-            "useCompilerFolder" | ForEach-Object {
+            "useCompilerFolder",
+            "reportSuppressedDiagnostics" | ForEach-Object {
                 if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
             }
 
