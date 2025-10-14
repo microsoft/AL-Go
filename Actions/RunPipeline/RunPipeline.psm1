@@ -73,10 +73,8 @@ function Test-InstallApps() {
         }
     }
     catch {
-        # Temporarily throw
-        #Trace-Warning -Message "Something went wrong while analyzing install apps."
-        #OutputDebug -message "Error: $_"
-        throw "$_"
+        Trace-Warning -Message "Something went wrong while analyzing install apps."
+        OutputDebug -message "Error: $_"
     } finally {
         # Clean up the temporary folder
         if (Test-Path -Path $tempFolder) {
