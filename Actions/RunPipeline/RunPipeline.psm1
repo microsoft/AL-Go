@@ -86,7 +86,7 @@ function IsSymbolsOnlyPackage {
         [string] $AppFilePath,
         [string] $AlExePath
     )
-    . $AlExePath IsSymbolOnly
+    . $AlExePath IsSymbolOnly $AppFilePath | Out-Null
     return $LASTEXITCODE -eq 0
 }
 
