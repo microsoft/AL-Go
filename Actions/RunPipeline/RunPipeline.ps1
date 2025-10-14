@@ -241,21 +241,8 @@ try {
     # Analyze InstallApps and InstallTestApps before launching pipeline
     if ((-not $settings.doNotPublishApps)) {
         # Test that InstallApps are not symbols packages
-        $scriptBlock = {
-            param (
-                [string]$ScriptRoot,
-                [array]$AllInstallApps,
-                [string]$ProjectPath,
-                [string]$RunnerTempFolder
-            )
-
-            Import-Module (Join-Path -Path $ScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
-            Test-InstallApps -AllInstallApps $AllInstallApps -ProjectPath $ProjectPath -RunnerTempFolder $RunnerTempFolder
-        }
-        # Filter out URLs and non-existing files
-        $allInstallApps = ($install.Apps + $install.TestApps) | Where-Object { $_ -notlike 'http*://*' }
-
-        pwsh -NoProfile -Command $scriptBlock -args $PSScriptRoot, $allInstallApps, $projectPath, $ENV:RUNNER_TEMP
+        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
+        Test-InstallApps -AllInstallApps $allInstallApps -ProjectPath $projectPath -RunnerTempFolder $ENV:RUNNER_TEMP
     }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
