@@ -12,6 +12,7 @@
         Write-Host "Found artifactUrl: $artifactUrl"
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
+        OutputDebug -message "Downloaded artifacts to $folder"
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         OutputDebug -message "Copying $alLanguageVsix to $($tempFolder).zip"
