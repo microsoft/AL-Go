@@ -1,3 +1,5 @@
+## v8.0
+
 ### Mechanism to overwrite complex settings type
 
 By default, AL-Go merges settings from various places (see [settings levels](https://aka.ms/algosettings#where-are-the-settings-located)). Basic setting types such as `string` and `integer` are overwritten, but settings with complex types such as `array` and `object` are merged.
