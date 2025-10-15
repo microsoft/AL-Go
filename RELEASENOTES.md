@@ -1,3 +1,7 @@
+### Issues
+
+- Discussion 1911 Add support for reportSuppressedDiagnostics
+
 ## v8.0
 
 ### Mechanism to overwrite complex settings type
@@ -18,7 +22,6 @@ Please note that some automated features are premium and require the use of [Git
 
 - Discussion 1885 Conditional settings for CI/CD are not applied
 - Discussion 1899 Remove optional properties from "required" list in settings.schema.json
-- Discussion 1911 Add support for reportSuppressedDiagnostics
 - Issue 1905 AL-Go system files update fails (Get Workflow Multi-Run Branches action fails when there are tags with same value but different casing)
 - Issue 1926 Deployment fails when using build modes
 - Issue 1898 GetDependencies in localDevEnv does not fallback to github token
