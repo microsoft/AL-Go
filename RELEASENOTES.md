@@ -1,3 +1,7 @@
+### Issues
+
+- Discussion 1911 Add support for reportSuppressedDiagnostics
+
 ## v8.0
 
 ### Mechanism to overwrite complex settings type
