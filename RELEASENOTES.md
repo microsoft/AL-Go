@@ -1,5 +1,6 @@
 ### Issues
 
+- Discussion 1911 Add support for reportSuppressedDiagnostics
 - Issue 1961 KeyVault access in PR pipeline
 
 ## v8.0
