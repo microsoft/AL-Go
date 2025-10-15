@@ -347,7 +347,7 @@ function ReadSettings {
         }
     }
 
-    # Read settings from repository settings file
+    # Read settings from the custom template repository settings file
     $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
     $settingsObjects += @{
         "Source" = "$CustomTemplateRepoSettingsFile"
