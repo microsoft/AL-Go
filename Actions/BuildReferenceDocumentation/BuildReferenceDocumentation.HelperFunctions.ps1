@@ -10,7 +10,7 @@
             $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
         } else {
             # Change country to core as aldoc is not shipped in country specific artifacts
-            $artifactUrlCountry = $artifactUrl.Split('/')[0]
+            $artifactUrlCountry = $artifactUrl.Split('/')[-1]
             $artifactUrl = $artifactUrl.Replace("/$artifactUrlCountry",'/core')
         }
         Write-Host "Found artifactUrl: $artifactUrl"
