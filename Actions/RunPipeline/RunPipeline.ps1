@@ -240,7 +240,7 @@ try {
     if ((-not $settings.doNotPublishApps)) {
         # Test that InstallApps are not symbols packages
         Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
-        Test-InstallApps -AllInstallApps $allInstallApps -ProjectPath $projectPath -RunnerTempFolder $ENV:RUNNER_TEMP
+        Test-InstallApps -AllInstallApps ($install.Apps + $install.TestApps) -ProjectPath $projectPath -RunnerTempFolder $ENV:RUNNER_TEMP
     }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
