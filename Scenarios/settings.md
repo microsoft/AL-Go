@@ -231,6 +231,7 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="memoryLimit"></a>memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | 8G |
 | <a id="BcContainerHelperVersion"></a>BcContainerHelperVersion | This setting can be set to a specific version (ex. 3.0.8) of BcContainerHelper to force AL-Go to use this version. **latest** means that AL-Go will use the latest released version. **preview** means that AL-Go will use the latest preview version. **dev** means that AL-Go will use the dev branch of containerhelper. | latest (or preview for AL-Go preview) |
 | <a id="unusedALGoSystemFiles"></a>unusedALGoSystemFiles | An array of AL-Go System Files, which won't be updated during Update AL-Go System Files. They will instead be removed.<br />Use this setting with care, as this can break the AL-Go for GitHub functionality and potentially leave your repo no longer functional. | [ ] |
+| <a id="reportsuppresseddiagnostics"></a>reportSuppressedDiagnostics | If this setting is set to true, the AL compiler will report diagnostics which are suppressed in the code using the pragma `#pragma warning disable <id>`. This can be useful if you want to ensure that no warnings are suppressed in your code. | false |
 
 ## Overwrite settings <a id="overwriteSettings"></a>
 
