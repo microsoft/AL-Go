@@ -283,6 +283,8 @@ function GetDefaultSettings
         The value of the current GitHub environment settings variable, based on workflow context. Default is $ENV:ALGoEnvSettings.
     .PARAMETER environmentName
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
+    .PARAMETER customSettings
+        Custom settings JSON string that will be applied last to override any other settings. These settings have the highest precedence.
 #>
 function ReadSettings {
     Param(
@@ -296,7 +298,8 @@ function ReadSettings {
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
-        [string] $environmentName = "$ENV:ALGoEnvName"
+        [string] $environmentName = "$ENV:ALGoEnvName",
+        [string] $customSettings = ""
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -436,6 +439,16 @@ function ReadSettings {
             "Source" = "ALGoEnvSettings for $environmentName"
             "Type" = "Variable"
             "Settings" = $environmentVariableObject
+        }
+    }
+
+    # Read custom settings (parameter)
+    if ($customSettings) {
+        $customSettingsObject = $customSettings | ConvertFrom-Json
+        $settingsObjects += @{
+            "Source" = "CustomSettings"
+            "Type" = "Parameter"
+            "Settings" = $customSettingsObject
         }
     }
 
