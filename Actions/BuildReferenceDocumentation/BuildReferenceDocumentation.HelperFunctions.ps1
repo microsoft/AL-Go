@@ -11,7 +11,7 @@
         } else {
             # Change country to core as aldoc is not shipped in country specific artifacts
             $artifactUrlCountry = $artifactUrl.Split('/')[0]
-            $artifactUrl.Replace("/$artifactUrlCountry",'/core')
+            $artifactUrl = $artifactUrl.Replace("/$artifactUrlCountry",'/core')
         }
         Write-Host "Found artifactUrl: $artifactUrl"
         Write-Host "Downloading aldoc"
