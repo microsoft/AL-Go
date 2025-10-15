@@ -14,6 +14,7 @@
         $folder = Download-Artifacts $artifactUrl
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        OutputDebug -message "Copying $alLanguageVsix to $($tempFolder).zip"
         Copy-Item -Path $alLanguageVsix -Destination "$($tempFolder).zip"
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
         Write-Host "Extracting aldoc"
