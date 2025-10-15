@@ -156,7 +156,7 @@ function GenerateDocsSite {
         [switch] $hostIt,
         [string] $artifactUrl = ''
     )
-
+    OutputDebugFunctionCall
     function ReplacePlaceHolders {
         Param(
             [string] $str,
