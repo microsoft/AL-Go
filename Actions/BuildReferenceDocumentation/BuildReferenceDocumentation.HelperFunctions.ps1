@@ -183,7 +183,7 @@ function GenerateDocsSite {
     }
     $indexContent = ReplacePlaceHolders -str $indexTemplate -version $version -releaseNotes $releaseNotes -indexTemplateRelativePath $thisTemplateRelativePath
 
-    $aldocPath, $aldocCommand = DownloadAlDoc
+    $aldocPath, $aldocCommand = DownloadAlDoc -artifactUrl $artifactUrl
     if ($aldocCommand) {
         $aldocArguments = @($aldocPath)
     }
