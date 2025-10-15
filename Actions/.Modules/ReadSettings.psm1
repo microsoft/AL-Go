@@ -444,7 +444,12 @@ function ReadSettings {
 
     # Read custom settings (parameter)
     if ($customSettings) {
-        $customSettingsObject = $customSettings | ConvertFrom-Json
+        try {
+            $customSettingsObject = $customSettings | ConvertFrom-Json
+        }
+        catch {
+            throw "Failed to parse customSettings JSON: $($_.Exception.Message)"
+        }
         $settingsObjects += @{
             "Source" = "CustomSettings"
             "Type" = "Parameter"
