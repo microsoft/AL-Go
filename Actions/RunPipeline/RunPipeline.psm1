@@ -30,14 +30,11 @@ function Install-ALTool {
     The list of all install apps to analyze.
     .PARAMETER ProjectPath
     The path to the project where the apps are located.
-    .PARAMETER RunnerTempFolder
-    The temporary folder used by the runner (default is $ENV:RUNNER_TEMP).
 #>
 function Test-InstallApps() {
     Param(
         [string[]] $AllInstallApps,
-        [string] $ProjectPath,
-        [string] $RunnerTempFolder = $ENV:RUNNER_TEMP
+        [string] $ProjectPath
     )
 
     if ($AllInstallApps.Count -eq 0) {
