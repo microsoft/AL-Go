@@ -921,7 +921,7 @@ Setting the repo setting "runs-on" to "Ubuntu-latest", followed by running Updat
 ### Issues
 
 - Issue #143 Commit Message for **Increment Version Number** workflow
-- Issue #160 Create local DevEnv aith appDependencyProbingPaths
+- Issue #160 Create local DevEnv with appDependencyProbingPaths
 - Issue #156 Versioningstrategy 2 doesn't use 24h format
 - Issue #155 Initial Add existing app fails with "Cannot find path"
 - Issue #152 Error when loading dependencies from releases
