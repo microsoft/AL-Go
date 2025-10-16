@@ -4,6 +4,9 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Describe "BuildReferenceDocumentation Action Tests" {
     BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+
         $actionName = "BuildReferenceDocumentation"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         $scriptName = "$actionName.ps1"
