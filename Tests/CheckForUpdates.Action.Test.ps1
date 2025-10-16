@@ -268,3 +268,157 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $modifiedContent."`$schema" | Should -Be "someSchema"
     }
 }
+
+Describe "ResolveFilePaths" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = $PSScriptRoot
+
+        $sourcePath = "sourcePath"
+        $sourceFolder = Join-Path $rootFolder $sourcePath
+        if (-not (Test-Path $sourceFolder)) {
+            New-Item -Path $sourceFolder -ItemType Directory | Out-Null
+        }
+        # Create a source folder structure
+        New-Item -Path (Join-Path $sourceFolder "folder/File1.txt") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $sourceFolder "folder/File2.log") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $sourceFolder "folder/File3.txt") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $sourceFolder "folder/File4.md") -ItemType File -Force | Out-Null
+
+        $originalSourceFolder = Join-Path $rootFolder "originalSourceFolder"
+        if (-not (Test-Path $originalSourceFolder)) {
+            New-Item -Path $originalSourceFolder -ItemType Directory | Out-Null
+        }
+        New-Item -Path (Join-Path $originalSourceFolder "folder/File1.txt") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $originalSourceFolder "folder/File2.log") -ItemType File -Force | Out-Null
+    }
+
+    AfterAll {
+        # Clean up
+        if (Test-Path $sourceFolder) {
+            Remove-Item -Path $sourceFolder -Recurse -Force
+        }
+
+        if (Test-Path $originalSourceFolder) {
+            Remove-Item -Path $originalSourceFolder -Recurse -Force
+        }
+    }
+
+    It 'ResolveFilePaths with specific files extensions' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $rootFolder $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = 'newFolder'; "destinationName" = "" }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = 'newFolder'; "destinationName" = "" }
+        )
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+        $fullFilePaths[0].type | Should -Be $null
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[1].type | Should -Be $null
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+        $fullFilePaths[2].type | Should -Be $null
+    }
+
+    It 'ResolveFilePaths with specific destination names' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $rootFolder $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "File1.txt"; "destinationPath" = 'newFolder'; "destinationName" = "CustomFile1.txt" }
+            @{ "sourcePath" = "folder"; "filter" = "File2.log"; "destinationPath" = 'newFolder'; "destinationName" = "CustomFile2.log" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile1.txt")
+        $fullFilePaths[0].type | Should -Be $null
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile2.log")
+        $fullFilePaths[1].type | Should -Be $null
+    }
+
+    It 'ResolveFilePaths with type' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "folder"; "destinationName" = ""; type = "text" }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "folder"; "destinationName" = ""; type = "markdown" }
+        )
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # Verify destinationFullPath is not filled
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File3.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths with original source folder' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "text" }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "markdown" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt") # File3.txt doesn't exist in original source folder, so it should still point to the source folder
+        $fullFilePaths[1].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md") # File4.md doesn't exist in original source folder, so it should still point to the source folder
+        $fullFilePaths[2].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths returns unique file paths' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; }
+            @{ "sourcePath" = "folder"; "filter" = "*"; "destinationPath" = "newFolder"; "destinationName" = ""; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 4
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+    }
+}

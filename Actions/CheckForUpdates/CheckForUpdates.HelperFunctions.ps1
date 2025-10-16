@@ -560,3 +560,144 @@ function UpdateSettingsFile {
     }
     return $modified
 }
+
+function ResolveFilePaths {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $sourceFolder,
+        [string] $originalSourceFolder = $null,
+        [string] $destinationFolder = $null,
+        [Parameter(Mandatory=$true)]
+        [array] $files,
+        [string[]] $projects = @()
+    )
+
+    $fullFilePaths = @()
+    foreach($file in $files) {
+        if(-not $file.sourcePath) {
+            throw "sourcePath is required for action $action"
+        }
+        # All files are relative to the template folder
+        Write-Host "Resolving files for sourcePath '$($file.sourcePath)' and filter '$($file.filter)'"
+        $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+
+        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to template folder '$sourceFolder')"
+        if(-not $sourceFiles) {
+            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to template folder '$sourceFolder')"
+            continue
+        }
+
+        foreach($srcFile in $sourceFiles) {
+            $fullFilePath = @{
+                'sourceFullPath' = $srcFile
+                'originalSourceFullPath' = $null
+                'type' = $null
+                'destinationFullPath' = $null
+            }
+
+            # Try to find the same files in the original template folder if it is specified
+            if ($originalSourceFolder) {
+                Push-Location $sourceFolder
+                $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
+                Pop-Location
+                if (Test-Path (Join-Path $originalSourceFolder $relativePath) -PathType Leaf) {
+                    # If the file exists in the original template folder, use that file instead
+                    $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
+                }
+            }
+
+            if($file.Keys -contains 'type') {
+                $fullFilePath.type = $file.type # propagate the type if it exists
+            }
+
+            if(-not $destinationFolder) {
+                # Destination folder is not specified, so we only return the source full path
+               $fullFilePaths += $fullFilePath
+               continue
+            }
+
+            $dstFileName = $file.destinationName
+            if(-not $dstFileName) {
+                # If destinationName is not specified, use the source file name
+                $dstFileName = Split-Path -Path $srcFile -Leaf
+            }
+
+            if($file.Keys -contains 'perProject' -and $file.perProject -eq $true) {
+                # Multiple file entries, one for each project
+                # Destination full path is the destination base folder + project + destinationPath + destinationName
+
+                foreach($project in $projects) {
+                    $projectFile = $fullFilePath.Clone()
+
+                    $projectFile.destinationFullPath = Join-Path $destinationFolder $project
+                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $file.destinationPath
+                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $dstFileName
+
+                    $fullFilePaths += $projectFile
+                }
+            }
+            else {
+                # Single file entry
+                # Destination full path is the destination base folder + destinationPath + destinationName
+
+                $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationPath
+                $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $dstFileName
+
+                $fullFilePaths += $fullFilePath
+            }
+        }
+    }
+    # Remove duplicates (when sourceFullPath and destinationFullPath are the same)
+    $fullFilePaths = $fullFilePaths | Sort-Object sourceFullPath, destinationFullPath -Unique
+
+    return $fullFilePaths
+}
+
+# TODO Add tests for GetFilesToUpdate
+function GetFilesToUpdate {
+    Param(
+        $settings,
+        $projects,
+        $baseFolder,
+        $templateFolder,
+        $originalTemplateFolder = $null
+    )
+
+    $filesToUpdate = $settings.updateALGoFiles.filesToUpdate
+    $filesToUpdate = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToUpdate -projects $projects
+    Write-Host "Files to update:"
+    $filesToUpdate | ForEach-Object { Write-Host "  $(ConvertTo-Json $_)"}
+
+    $filesToIgnore = $settings.updateALGoFiles.filesToIgnore
+    $filesToIgnore = ResolveFilePaths -sourceFolder $baseFolder -files $filesToIgnore -projects $projects
+    Write-Host "Files to ignore:"
+    $filesToIgnore | ForEach-Object { Write-Host "  $(ConvertTo-Json $_)" }
+
+    $filesToRemove = $settings.updateALGoFiles.filesToRemove
+    $filesToRemove = ResolveFilePaths -sourceFolder $baseFolder -files $filesToRemove -projects $projects
+    Write-Host "Files to remove:"
+    $filesToRemove | ForEach-Object { Write-Host "  $(ConvertTo-Json $_)" }
+
+    # Exclude files to ignore from files to update
+    $filesToUpdate = $filesToUpdate | Where-Object {
+        $fileToUpdate = $_
+        $include = -not ($filesToIgnore | Where-Object { $_.sourceFullPath -eq $fileToUpdate.sourceFullPath })
+        if(-not $include) {
+            Write-Host "Excluding file $($fileToUpdate.sourceFullPath) from update as it is in the ignore list"
+        }
+        return $include
+    }
+
+    # Exclude files to remove from files to update
+    $filesToUpdate = $filesToUpdate | Where-Object {
+        $fileToUpdate = $_
+        $include = -not ($filesToRemove | Where-Object { $_.sourceFullPath -eq $fileToUpdate.destinationFullPath }) # Note: comparing sourceFullPath of files to remove with destinationFullPath of files to update
+        if(-not $include) {
+            Write-Host "Excluding file $($fileToUpdate.sourceFullPath) from update as it is in the remove list"
+        }
+        return $include
+    }
+
+    return $filesToUpdate, $filesToRemove
+}
+

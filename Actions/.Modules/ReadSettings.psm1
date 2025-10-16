@@ -240,6 +240,22 @@ function GetDefaultSettings
         "useGitSubmodules"                              = "false"
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
+        "updateALGoFiles" = [ordered]@{
+            "filesToUpdate"                            = @(
+                [ordered]@{ 'destinationPath' = (Join-Path '.github' 'workflows'); 'destinationName' = ''; 'sourcePath' = (Join-Path '.github' 'workflows'); 'filter' = '*'; 'type' = 'workflow'; 'perProject' = $false }
+                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = '*.copy.md'; 'type' = 'releasenotes'; 'perProject' = $false }
+                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $false }
+                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings'; 'perProject' = $false }
+                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings'; 'perProject' = $false }
+                [ordered]@{ 'destinationPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateRepoSettingsFile)); 'destinationName' = ([system.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile)); 'sourcePath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'filter' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings'; 'perProject' = $false }
+                [ordered]@{ 'destinationPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateProjectSettingsFile)); 'destinationName' = ([system.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile)); 'sourcePath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'filter' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); 'type' = 'template project settings'; 'perProject' = $false }
+
+                [ordered]@{ 'destinationPath' = '.AL-Go'; 'destinationName' = ''; 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
+                [ordered]@{ 'destinationPath' = '.AL-Go'; 'destinationName' = ''; 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }
+            )
+            "filesToIgnore"                            = @()
+            "filesToRemove"                            = @()
+        }
     }
 }
 
