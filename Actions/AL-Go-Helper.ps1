@@ -2196,7 +2196,12 @@ function Install-DotNetTool {
     if (-not $ToolPath) {
         $ToolPath = [System.IO.Path]::GetTempPath()
     }
-    $installationFolder = Join-Path -Path $ToolPath "$PackageName-$(Get-Random)"
+    $installationFolder = Join-Path -Path $ToolPath $PackageName
+    if (Test-Path -Path $installationFolder) {
+        # Tool is already installed
+        Write-Host "$PackageName is already installed in $installationFolder"
+        return $installationFolder
+    }
 
     # Get version of the package
     $version = GetPackageVersion -PackageName $PackageName
