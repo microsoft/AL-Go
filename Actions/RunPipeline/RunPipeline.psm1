@@ -1,12 +1,23 @@
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-function LoadDLL {
-    Param(
-        [string] $path
-    )
-    $bytes = [System.IO.File]::ReadAllBytes($path)
-    [System.Reflection.Assembly]::Load($bytes) | Out-Null
+<#
+    .SYNOPSIS
+    Installs the AL tool.
+    .DESCRIPTION
+    Installs the AL tool from the Microsoft.Dynamics.BusinessCentral.Development.Tools package.
+    .RETURNS
+    The path to the al.exe tool.
+#>
+function Install-ALTool {
+    $DevelopmentToolsPackage = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
+    $alToolFolder = Install-DotNetTool -PackageName $DevelopmentToolsPackage
+    # Load the AL tool from the downloaded package
+    $alExe = Get-ChildItem -Path $alToolFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1 -ExpandProperty FullName
+    if (-not $alExe) {
+        throw "Could not find al.exe in the $DevelopmentToolsPackage package."
+    }
+    return $alExe
 }
 
 <#
@@ -26,7 +37,6 @@ function Test-InstallApps() {
     Param(
         [string[]] $AllInstallApps,
         [string] $ProjectPath,
-        [string] $DevelopmentToolsPackage = "Microsoft.Dynamics.BusinessCentral.Development.Tools",
         [string] $RunnerTempFolder = $ENV:RUNNER_TEMP
     )
 
@@ -36,20 +46,8 @@ function Test-InstallApps() {
     }
 
     try {
-        # Create folder in temp directory with a unique name
-        $tempFolder = Join-Path $RunnerTempFolder "DevelopmentTools-$(Get-Random)"
-
-        # Download the Microsoft.Dynamics.BusinessCentral.Development.Tools package
-        dotnet tool install $DevelopmentToolsPackage `
-                    --version (GetPackageVersion -PackageName $DevelopmentToolsPackage) `
-                    --tool-path $tempFolder `
-                    | Out-Host
-
-        # Load the AL tool from the downloaded package
-        $alExe = Get-ChildItem -Path $tempFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1 -ExpandProperty FullName
-        if (-not $alExe) {
-            throw "Could not find al.exe in the $DevelopmentToolsPackage package."
-        }
+        # Install the AL tool and get the path to al.exe
+        $alExe = Install-ALTool
 
         foreach ($app in $AllInstallApps) {
             if (Test-Path -Path $app) {
@@ -75,11 +73,6 @@ function Test-InstallApps() {
     catch {
         Trace-Warning -Message "Something went wrong while analyzing install apps."
         OutputDebug -message "Error: $_"
-    } finally {
-        # Clean up the temporary folder
-        if (Test-Path -Path $tempFolder) {
-            Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
-        }
     }
 }
 
