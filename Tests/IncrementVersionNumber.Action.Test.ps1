@@ -389,12 +389,12 @@ Describe 'Set-VersionInAppManifests tests' {
         $appFolders = @('App1', 'App2', 'Test1', 'BCPTTest1')
         foreach ($folder in $appFolders) {
             New-Item -ItemType Directory -Path (Join-Path $testProjectPath $folder) -Force | Out-Null
-            New-Item -ItemType File -Path (Join-Path $testProjectPath $folder 'app.json') -Force | Out-Null
+            New-Item -ItemType File -Path (Join-Path (Join-Path $testProjectPath $folder) 'app.json') -Force | Out-Null
             $appJsonContent = @{
                 "version" = "0.1"
                 "name" = $folder
             }
-            $appJsonContent | ConvertTo-Json | Set-Content (Join-Path $testProjectPath $folder 'app.json') -Encoding UTF8
+            $appJsonContent | ConvertTo-Json | Set-Content (Join-Path (Join-Path $testProjectPath $folder) 'app.json') -Encoding UTF8
         }
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testProjectSettings', Justification = 'False positive.')]
@@ -418,12 +418,12 @@ Describe 'Set-VersionInAppManifests tests' {
 
         $anotherTestProjectAppFolder = 'Another TestProjectApp'
         New-Item -ItemType Directory -Path (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder) -Force | Out-Null
-        New-Item -ItemType File -Path (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder 'app.json') -Force | Out-Null
+        New-Item -ItemType File -Path (Join-Path (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder) 'app.json') -Force | Out-Null
         $anotherTestProjectAppJsonContent = @{
             "version" = "0.2"
             "name" = $anotherTestProjectAppFolder
         }
-        $anotherTestProjectAppJsonContent | ConvertTo-Json | Set-Content (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder 'app.json') -Encoding UTF8
+        $anotherTestProjectAppJsonContent | ConvertTo-Json | Set-Content (Join-Path (Join-Path $anotherTestProjectPath $anotherTestProjectAppFolder) 'app.json') -Encoding UTF8
 
         Pop-Location
     }

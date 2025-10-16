@@ -240,6 +240,7 @@ function GetDefaultSettings
         "useGitSubmodules"                              = "false"
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
+        "reportSuppressedDiagnostics"                   = $false
         "updateALGoFiles" = [ordered]@{
             "filesToUpdate"                            = @(
                 [ordered]@{ 'destinationPath' = (Join-Path '.github' 'workflows'); 'destinationName' = ''; 'sourcePath' = (Join-Path '.github' 'workflows'); 'filter' = '*'; 'type' = 'workflow'; 'perProject' = $false }
