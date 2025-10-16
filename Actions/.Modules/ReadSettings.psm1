@@ -247,10 +247,10 @@ function GetDefaultSettings
 
 <#
     .SYNOPSIS
-        Read settings from the settings files and merge them into an ordered dictionary.
+        Read settings from the settings files and merge them into an ordered dictionary, with optional custom settings override.
     .DESCRIPTION
         This function reads settings from various files and merges them into an ordered dictionary.
-        The settings are read from the following files:
+        The settings are read from the following files (in order of precedence):
         - ALGoOrgSettings (github Variable)                    = Organization settings variable
         - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
         - .github/AL-Go-Settings.json                          = Repository Settings file
@@ -261,6 +261,7 @@ function GetDefaultSettings
         - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
         - <project>/.AL-Go/<userName>.settings.json            = User settings file
         - ALGoEnvSettings (github Variable)                    = Deployment Environment settings variable
+        - customSettings parameter (JSON string)               = Custom settings with highest precedence
     .PARAMETER baseFolder
         The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
     .PARAMETER repoName
@@ -284,7 +285,7 @@ function GetDefaultSettings
     .PARAMETER environmentName
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
     .PARAMETER customSettings
-        Custom settings JSON string that will be applied last to override any other settings. These settings have the highest precedence.
+        JSON formatted string that will be applied last to override any other settings. These settings have the highest precedence.
 #>
 function ReadSettings {
     Param(
