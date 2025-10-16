@@ -60,4 +60,45 @@ Describe "BuildReferenceDocumentation Action Tests" {
         $allApps[0]."P2".Count | Should -be 2
         $allApps[0]."P4".Count | Should -be 4
     }
+
+    It 'Artifact URL generated if not provided' {
+        . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+        Mock Get-BCArtifactUrl { return 'https://example.com/artifact.zip' }
+        Mock Copy-Item { }
+        Mock New-Item { }
+        Mock Expand-Archive { }
+        Mock Remove-Item { }
+        Mock Download-Artifacts { return 'c:/a/b/c'}
+        Mock Join-Path { return 'c:/a/b/c' }
+        Mock Test-Path { return $true }
+        Mock CmdDo { }
+
+        $ENV:aldocPath = ""
+        DownloadAlDoc
+
+        Assert-MockCalled -CommandName Get-BCArtifactUrl -Exactly 1 -Scope It
+    }
+
+    It 'Artifact URL country replaced if not core' {
+        . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+        Mock Get-BCArtifactUrl { return 'https://example.com/artifact.zip' }
+        Mock Copy-Item { }
+        Mock New-Item { }
+        Mock Expand-Archive { }
+        Mock Remove-Item { }
+        Mock Download-Artifacts { return 'c:/a/b/c'}
+        Mock Join-Path { return 'c:/a/b/c' }
+        Mock Test-Path { return $true }
+        Mock CmdDo { }
+
+        $ENV:aldocPath = ""
+        DownloadAlDoc -artifactUrl "https://example.com/sandbox/us"
+
+        Assert-MockCalled -CommandName Get-BCArtifactUrl -Exactly 0 -Scope It
+        Assert-MockCalled -CommandName Download-Artifacts -ParameterFilter { $artifactUrl -eq "https://example.com/sandbox/core" }
+    }
 }
