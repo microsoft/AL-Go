@@ -700,4 +700,3 @@ function GetFilesToUpdate {
 
     return $filesToUpdate, $filesToRemove
 }
-
