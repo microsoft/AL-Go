@@ -381,7 +381,7 @@ function ApplyWorkflowInputDefaults {
                             }
                         }
                         'choice' {
-                            # Choice inputs accept strings and must match one of the available options
+                            # Choice inputs accept strings and must match one of the available options (case-sensitive)
                             if ($defaultValue -isnot [string]) {
                                 $validationError = "Workflow '$workflowName', input '$inputName': Expected string value for choice input, but got $($defaultValue.GetType().Name)."
                             }
@@ -399,8 +399,8 @@ function ApplyWorkflowInputDefaults {
                                         }
                                     }
                                     
-                                    if ($availableOptions.Count -gt 0 -and $availableOptions -notcontains $defaultValue) {
-                                        $validationError = "Workflow '$workflowName', input '$inputName': Value '$defaultValue' is not a valid choice. Available options: $($availableOptions -join ', ')."
+                                    if ($availableOptions.Count -gt 0 -and $availableOptions -cnotcontains $defaultValue) {
+                                        $validationError = "Workflow '$workflowName', input '$inputName': Value '$defaultValue' is not a valid choice (case-sensitive match required). Available options: $($availableOptions -join ', ')."
                                     }
                                 }
                             }
