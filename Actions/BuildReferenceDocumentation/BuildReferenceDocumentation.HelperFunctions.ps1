@@ -131,6 +131,7 @@ function GenerateDocsSite {
         [string] $version,
         [string[]] $allVersions,
         [hashtable] $allApps,
+        [hashtable] $allDependencies,
         [string] $repoName,
         [string] $releaseNotes,
         [string] $header,
@@ -195,6 +196,19 @@ function GenerateDocsSite {
         foreach($value in $allApps.Values) {
             $apps += @($value)
         }
+
+        # Include dependencies for ALDoc to resolve symbols correctly
+        $dependencies = @()
+        foreach($value in $allDependencies.Values) {
+            $dependencies += @($value)
+        }
+
+        Write-Host "Apps to document:"
+        $apps | ForEach-Object { Write-Host "- $_" }
+
+        Write-Host "Dependencies to use for symbols:"
+        $dependencies | ForEach-Object { Write-Host "- $_" }
+
         $apps = @($apps | Select-Object -Unique)
 
         $arguments = $aldocArguments + @(
@@ -235,6 +249,7 @@ function GenerateDocsSite {
                 "--output ""$docfxpath"""
                 "--loglevel $loglevel"
                 "--source ""$_"""
+                "--packagecache ""$($dependencies -join '","')"""
                 )
             Write-Host "invoke $aldocCommand $arguments"
             CmdDo -command $aldocCommand -arguments $arguments

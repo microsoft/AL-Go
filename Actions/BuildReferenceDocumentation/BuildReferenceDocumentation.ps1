@@ -34,6 +34,22 @@ if ($artifacts -ne ".artifacts") {
         }
     }
     Write-Host "::endgroup::"
+
+    # TODO Remove code duplication
+    Write-Host "::group::Downloading dependencies artifacts"
+    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Dependencies" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
+    if ($allArtifacts) {
+        $allArtifacts | ForEach-Object {
+            $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+            if (!(Test-Path $filename)) {
+                throw "Unable to download artifact $($_.name)"
+            }
+            $destFolder = Join-Path $artifactsFolder ([System.IO.Path]::GetFileNameWithoutExtension($filename))
+            Expand-Archive -Path $filename -DestinationPath $destFolder -Force
+            Remove-Item -Path $filename -Force
+        }
+    }
+    Write-Host "::endgroup::"
 }
 
 $header = $settings.alDoc.header
@@ -67,7 +83,7 @@ foreach($release in $releases) {
         $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -allDependencies $allDependencies -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
         do {
             try {
                 $retry = $false
@@ -107,7 +123,7 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
+GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -allDependencies $allDependencies -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
 
 Write-Host "::endgroup::"
 
