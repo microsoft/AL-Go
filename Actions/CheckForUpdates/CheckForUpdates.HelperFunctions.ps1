@@ -349,7 +349,7 @@ function ApplyWorkflowInputDefaults {
             return $value.ToString().ToLower()
         }
 
-        if ($value -is [int] -or $value -is [long] -or $value -is [short] -or $value -is [byte] -or $value -is [sbyte] -or $value -is [uint16] -or $value -is [uint32] -or $value -is [uint64]) {
+        if ($value -is [int] -or $value -is [long] -or $value -is [System.Int16] -or $value -is [byte] -or $value -is [System.SByte] -or $value -is [System.UInt16] -or $value -is [System.UInt32] -or $value -is [System.UInt64]) {
             return $value.ToString()
         }
 
