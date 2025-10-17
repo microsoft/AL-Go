@@ -1238,7 +1238,8 @@ function CreateDevEnv {
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
         [switch] $accept_insiderEula,
-        [switch] $clean
+        [switch] $clean,
+        [string] $customSettings = ""
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1280,6 +1281,7 @@ function CreateDevEnv {
             "baseFolder"   = $baseFolder
             "project"      = $project
             "workflowName" = $workflowName
+            "customSettings" = $customSettings
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params
