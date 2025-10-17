@@ -815,4 +815,3 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $yaml.Get('on:/workflow_dispatch:/inputs:/nameInput:/default:').content -join '' | Should -Be "default: 'O''Brien'"
     }
 }
-
