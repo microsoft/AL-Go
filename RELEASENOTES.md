@@ -1,6 +1,7 @@
 ### Issues
 
 - Discussion 1911 Add support for reportSuppressedDiagnostics
+- Discussion 1968 Parameter for settings passed to CreateDevEnv
 
 ## v8.0
 
