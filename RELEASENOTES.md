@@ -4,7 +4,7 @@
 A new setting `workflowInputDefaults` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
 
 When you add this setting to your AL-Go settings file and run the "Update AL-Go System Files" workflow, the default values will be automatically applied to the workflow YAML files in your repository.
-The default values must match the input types (boolean, number, string, or choice) defined in the workflow YAML files.
+The default values must match the input types (boolean, number, string, or choice) defined in the workflow YAML files. You can also set `"hide": true` for an input to remove it from the manual workflow form. When an input is hidden, all usages of `github.event.inputs.<name>` or `inputs.<name>` in the workflow file are replaced with the configured value when the "Update AL-Go System Files" workflow runs.
 
 Example configuration:
 
@@ -15,7 +15,7 @@ Example configuration:
       "workflow": "Create Release",
       "defaults": [
         { "name": "directCommit", "value": true },
-        { "name": "useGhTokenWorkflow", "value": true },
+        { "name": "useGhTokenWorkflow", "value": true, "hide": true },
         { "name": "updateVersionNumber", "value": "+0.1" }
       ]
     },
