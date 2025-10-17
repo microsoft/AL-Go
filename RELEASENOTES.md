@@ -1,4 +1,3 @@
-
 ### Set default values for workflow inputs
 
 A new setting `workflowInputDefaults` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.

@@ -1373,7 +1373,3 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $content | Should -Not -Match "`\$\{\{ inputs\.outputs \}\}"
     }
 }
-
-
-
-
