@@ -81,7 +81,7 @@
 .EXAMPLE
     # Programmatic setup with credentials and custom settings
     $Username = "SUPER"
-    $Password = "P@ssword1"
+    $Password = "<some password>"
     $cred = New-Object System.Management.Automation.PSCredential ($Username, (ConvertTo-SecureString $Password -AsPlainText -Force))
     $containerName = "bcserver"
     $settings = '{"artifact": "////nextminor"}'
