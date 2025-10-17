@@ -13,14 +13,14 @@
     If Docker setup fails, users can alternatively run cloudDevEnv.ps1 for cloud-based development.
 
     RECOMMENDED USAGE:
-    Instead of modifying this script directly (which will be overwritten during AL-Go updates), 
-    create a custom script that calls this one with your preferred parameters. For example, 
+    Instead of modifying this script directly (which will be overwritten during AL-Go updates),
+    create a custom script that calls this one with your preferred parameters. For example,
     create a file named after yourself (e.g., 'john-devenv.ps1') that contains:
-    
+
     # My personal development environment script
     $mySettings = '{"country":"us","artifact":"////nextminor"}'
     . .\.AL-Go\localDevEnv.ps1 -containerName "mydevenv" -auth UserPassword -customSettings $mySettings
-    
+
     This approach allows you to:
     - Maintain your personal preferences without losing them during updates
     - Share your setup with team members
@@ -85,9 +85,9 @@
     $cred = New-Object System.Management.Automation.PSCredential ($Username, (ConvertTo-SecureString $Password -AsPlainText -Force))
     $containerName = "bcserver"
     $settings = '{"artifact": "////nextminor"}'
-    
+
     . ./localDevEnv.ps1 -containerName $containerName -auth UserPassword -credential $cred -accept_insiderEula -licenseFileUrl "none" -customSettings $settings
-    
+
     Creates a development environment with predefined credentials, using next minor version artifact, accepting insider EULA, and no license file.
 
 .NOTES

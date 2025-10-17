@@ -226,7 +226,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             { ReadSettings -baseFolder $tempName -project 'Project' -customSettings 'invalid json' } | Should -Throw
 
             # Test customSettings with complex object
-            $customComplexSettingsJson = @{ 
+            $customComplexSettingsJson = @{
                 "deliverToAppSource" = @{
                     "mainAppFolder" = "CustomApp"
                     "productId" = "CustomProductId"
