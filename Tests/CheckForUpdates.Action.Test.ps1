@@ -277,8 +277,7 @@ Describe "ResolveFilePaths" {
 
         $rootFolder = $PSScriptRoot
 
-        $sourcePath = "sourcePath"
-        $sourceFolder = Join-Path $rootFolder $sourcePath
+        $sourceFolder = Join-Path $rootFolder "sourcePath"
         if (-not (Test-Path $sourceFolder)) {
             New-Item -Path $sourceFolder -ItemType Directory | Out-Null
         }
@@ -314,6 +313,7 @@ Describe "ResolveFilePaths" {
             @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = 'newFolder'; "destinationName" = "" }
             @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = 'newFolder'; "destinationName" = "" }
         )
+
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
         $fullFilePaths | Should -Not -BeNullOrEmpty
