@@ -35,6 +35,7 @@ Read more at [workflowInputDefaults](https://aka.ms/algosettings#workflowInputDe
 
 - Discussion 1911 Add support for reportSuppressedDiagnostics
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
+- Issue 1945 Deploy Reference Documentation fails for CI/CD
 - Discussion 1952 Set default values on workflow_dispatch input
 
 ## v8.0

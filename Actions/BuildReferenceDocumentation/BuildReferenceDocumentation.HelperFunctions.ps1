@@ -1,12 +1,25 @@
 ﻿function DownloadAlDoc {
+    Param(
+        [string] $artifactUrl = ''
+    )
     if ("$ENV:aldocPath" -eq "") {
         $ENV:aldocCommand = ''
         Write-Host "Locating aldoc"
-        $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
+        if ($artifactUrl -notlike "https://*") {
+            Write-Host "ArtifactUrl provided, but not in the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
+            $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
+        } elseif ($artifactUrl -notlike "*/core") {
+            # Change country to core as aldoc is not shipped in country specific artifacts
+            $artifactUrlCountry = $artifactUrl.Split('/')[-1]
+            $artifactUrl = $artifactUrl.Replace("/$artifactUrlCountry",'/core')
+        }
+        Write-Host "Found artifactUrl: $artifactUrl"
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
+        OutputDebug -message "Downloaded artifacts to $folder"
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
         $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        OutputDebug -message "Copying $alLanguageVsix to $($tempFolder).zip"
         Copy-Item -Path $alLanguageVsix -Destination "$($tempFolder).zip"
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
         Write-Host "Extracting aldoc"
@@ -140,9 +153,10 @@ function GenerateDocsSite {
         [string] $docsPath,
         [string] $logLevel,
         [switch] $groupByProject,
-        [switch] $hostIt
+        [switch] $hostIt,
+        [string] $artifactUrl = ''
     )
-
+    OutputDebugFunctionCall
     function ReplacePlaceHolders {
         Param(
             [string] $str,
@@ -175,7 +189,7 @@ function GenerateDocsSite {
     }
     $indexContent = ReplacePlaceHolders -str $indexTemplate -version $version -releaseNotes $releaseNotes -indexTemplateRelativePath $thisTemplateRelativePath
 
-    $aldocPath, $aldocCommand = DownloadAlDoc
+    $aldocPath, $aldocCommand = DownloadAlDoc -artifactUrl $artifactUrl
     if ($aldocCommand) {
         $aldocArguments = @($aldocPath)
     }
