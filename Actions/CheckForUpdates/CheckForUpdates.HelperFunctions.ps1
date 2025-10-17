@@ -424,8 +424,9 @@ function ApplyWorkflowInputDefaults {
                     $yamlValue = $defaultValue.ToString().ToLower()
                 }
                 elseif ($defaultValue -is [string]) {
-                    # Quote strings
-                    $yamlValue = "'$defaultValue'"
+                    # Quote strings and escape single quotes per YAML spec
+                    $escapedValue = $defaultValue.Replace("'", "''")
+                    $yamlValue = "'$escapedValue'"
                 }
                 
                 # Find and replace the default: line in the input section

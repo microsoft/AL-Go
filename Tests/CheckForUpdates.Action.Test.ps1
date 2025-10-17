@@ -705,5 +705,43 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
         $yaml.Get('on:/workflow_dispatch:/inputs:/noTypeInput:/default:').content -join '' | Should -Be "default: 'string value'"
     }
+
+    It 'ApplyWorkflowInputDefaults escapes single quotes in string values' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+        
+        # Create a test workflow YAML with string input
+        $yamlContent = @(
+            "name: 'Test Workflow'",
+            "on:",
+            "  workflow_dispatch:",
+            "    inputs:",
+            "      nameInput:",
+            "        type: string",
+            "        default: ''",
+            "jobs:",
+            "  test:",
+            "    runs-on: ubuntu-latest"
+        )
+        
+        $yaml = [Yaml]::new($yamlContent)
+        
+        # Create settings with string value containing single quote
+        $repoSettings = @{
+            "workflowInputDefaults" = @(
+                @{
+                    "workflow" = "Test Workflow"
+                    "defaults" = @(
+                        @{ "name" = "nameInput"; "value" = "O'Brien" }
+                    )
+                }
+            )
+        }
+        
+        # Apply the defaults
+        ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        
+        # Verify single quote is escaped per YAML spec (doubled)
+        $yaml.Get('on:/workflow_dispatch:/inputs:/nameInput:/default:').content -join '' | Should -Be "default: 'O''Brien'"
+    }
 }
 
