@@ -5,6 +5,9 @@ A vital part of your development processes is reference documentation. AL-Go for
 > [!NOTE]
 > The [ALDoc tool](https://learn.microsoft.com/dynamics365/business-central/dev-itpro/help/help-aldoc-generate-help) generates content based on the source code. Generating content based on source code has many advantages such as accuracy, 100% reflection of the current codebase, less error-prone documentation, and it saves time. The ALDoc tool generates documentation from symbolic and syntactical information, code comments, and overall application structure based on input .app file(s). The tool also generates a help site with these reference articles, sorted by the application structure, based on the provided template.
 
+> [!NOTE]
+> AlDoc is included in bc core artifacts. The tool is automatically downloaded from the bc artifact matching your [artifact](https://aka.ms/algosettings#artifact) AL-Go setting. Please be aware that if this setting is not set, or only set in project settings within a multiproject repo, AlDoc will instead be taken from the latest non-insider BC artifact.
+
 AL-Go for GitHub supports deploying the reference documentation to GitHub Pages. GitHub Pages is websites for you and your projects, hosted directly from your GitHub repository. It is also possible to deploy the reference documentation to other static HTML hosting providers, but this requires some scripting and is not included here.
 
 ## GitHub Pages
