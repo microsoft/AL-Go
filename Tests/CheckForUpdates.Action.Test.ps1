@@ -1,4 +1,4 @@
-﻿Get-Module TestActionsHelper | Remove-Module -Force
+Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Import-Module (Join-Path $PSScriptRoot "..\Actions\TelemetryHelper.psm1")
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -271,7 +271,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
     It 'ApplyWorkflowInputDefaults applies default values to workflow inputs' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with workflow_dispatch inputs
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -296,9 +296,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "    steps:",
             "      - run: echo test"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with workflow input defaults
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -312,10 +312,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults
         ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
-        
+
         # Verify the defaults were applied
         $yaml.Get('on:/workflow_dispatch:/inputs:/directCommit:/default:').content -join '' | Should -Be 'default: true'
         $yaml.Get('on:/workflow_dispatch:/inputs:/useGhTokenWorkflow:/default:').content -join '' | Should -Be 'default: true'
@@ -324,7 +324,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
     It 'ApplyWorkflowInputDefaults handles workflows without workflow_dispatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML without workflow_dispatch
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -337,9 +337,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "    steps:",
             "      - run: echo test"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with workflow input defaults
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -351,14 +351,14 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should not throw
         { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
     }
 
     It 'ApplyWorkflowInputDefaults handles non-matching workflow names' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -373,9 +373,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with workflow input defaults for a different workflow
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -387,17 +387,17 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults
         ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
-        
+
         # Verify the defaults were NOT applied (original value preserved)
         $yaml.Get('on:/workflow_dispatch:/inputs:/directCommit:/default:').content -join '' | Should -Be 'default: false'
     }
 
     It 'ApplyWorkflowInputDefaults handles inputs without existing default' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with input without default
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -411,9 +411,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with workflow input defaults
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -425,10 +425,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults
         ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
-        
+
         # Verify the default was added
         $defaultLine = $yaml.Get('on:/workflow_dispatch:/inputs:/myInput:/default:')
         $defaultLine | Should -Not -BeNullOrEmpty
@@ -437,7 +437,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
     It 'ApplyWorkflowInputDefaults handles different value types' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -457,9 +457,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with different value types
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -473,10 +473,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults
         ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
-        
+
         # Verify the defaults were applied with correct types
         $yaml.Get('on:/workflow_dispatch:/inputs:/boolInput:/default:').content -join '' | Should -Be 'default: true'
         $yaml.Get('on:/workflow_dispatch:/inputs:/stringInput:/default:').content -join '' | Should -Be "default: 'test'"
@@ -485,7 +485,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
     It 'ApplyWorkflowInputDefaults validates boolean type mismatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with boolean input
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -499,9 +499,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with wrong type (string instead of boolean)
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -513,15 +513,15 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | 
+        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
             Should -Throw "*Expected boolean value*"
     }
 
     It 'ApplyWorkflowInputDefaults validates number type mismatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with number input
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -535,9 +535,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with wrong type (string instead of number)
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -549,15 +549,15 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | 
+        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
             Should -Throw "*Expected number value*"
     }
 
     It 'ApplyWorkflowInputDefaults validates string type mismatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with string input
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -571,9 +571,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with wrong type (boolean instead of string)
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -585,15 +585,15 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | 
+        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
             Should -Throw "*Expected string value*"
     }
 
     It 'ApplyWorkflowInputDefaults validates choice type' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with choice input
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -610,9 +610,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with correct type (string for choice)
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -624,7 +624,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should succeed
         { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
         $yaml.Get('on:/workflow_dispatch:/inputs:/choiceInput:/default:').content -join '' | Should -Be "default: 'option2'"
@@ -632,7 +632,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
     It 'ApplyWorkflowInputDefaults validates choice value is in available options' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with choice input
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -650,9 +650,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with invalid choice value
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -664,15 +664,15 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | 
+        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
             Should -Throw "*not a valid choice*"
     }
 
     It 'ApplyWorkflowInputDefaults validates choice value with case-sensitive matching' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with choice input using mixed case options
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -690,9 +690,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Test 1: Exact case match should succeed
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -704,10 +704,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
         $yaml.Get('on:/workflow_dispatch:/inputs:/releaseTypeInput:/default:').content -join '' | Should -Be "default: 'Prerelease'"
-        
+
         # Test 2: Wrong case should fail with case-sensitive error message
         $yaml2 = [Yaml]::new($yamlContent)
         $repoSettings2 = @{
@@ -720,10 +720,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
-        { ApplyWorkflowInputDefaults -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } | 
+
+        { ApplyWorkflowInputDefaults -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } |
             Should -Throw "*case-sensitive match required*"
-        
+
         # Test 3: Uppercase version should also fail
         $yaml3 = [Yaml]::new($yamlContent)
         $repoSettings3 = @{
@@ -736,14 +736,14 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
-        { ApplyWorkflowInputDefaults -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } | 
+
+        { ApplyWorkflowInputDefaults -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } |
             Should -Throw "*case-sensitive match required*"
     }
 
     It 'ApplyWorkflowInputDefaults handles inputs without type specification' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML without type (defaults to string)
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -757,9 +757,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with string value (should work without warning)
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -771,7 +771,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults - should succeed
         { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
         $yaml.Get('on:/workflow_dispatch:/inputs:/noTypeInput:/default:').content -join '' | Should -Be "default: 'string value'"
@@ -779,7 +779,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
     It 'ApplyWorkflowInputDefaults escapes single quotes in string values' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
-        
+
         # Create a test workflow YAML with string input
         $yamlContent = @(
             "name: 'Test Workflow'",
@@ -793,9 +793,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             "  test:",
             "    runs-on: ubuntu-latest"
         )
-        
+
         $yaml = [Yaml]::new($yamlContent)
-        
+
         # Create settings with string value containing single quote
         $repoSettings = @{
             "workflowInputDefaults" = @(
@@ -807,10 +807,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 }
             )
         }
-        
+
         # Apply the defaults
         ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
-        
+
         # Verify single quote is escaped per YAML spec (doubled)
         $yaml.Get('on:/workflow_dispatch:/inputs:/nameInput:/default:').content -join '' | Should -Be "default: 'O''Brien'"
     }

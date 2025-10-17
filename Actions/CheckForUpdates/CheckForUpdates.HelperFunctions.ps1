@@ -398,7 +398,7 @@ function ApplyWorkflowInputDefaults {
                                             $availableOptions += $matches[1].Trim()
                                         }
                                     }
-                                    
+
                                     if ($availableOptions.Count -gt 0 -and $availableOptions -cnotcontains $defaultValue) {
                                         $validationError = "Workflow '$workflowName', input '$inputName': Value '$defaultValue' is not a valid choice (case-sensitive match required). Available options: $($availableOptions -join ', ')."
                                     }
@@ -428,7 +428,7 @@ function ApplyWorkflowInputDefaults {
                     $escapedValue = $defaultValue.Replace("'", "''")
                     $yamlValue = "'$escapedValue'"
                 }
-                
+
                 # Find and replace the default: line in the input section
                 $start = 0
                 $count = 0
@@ -446,7 +446,7 @@ function ApplyWorkflowInputDefaults {
                     $requiredCount = 0
                     $descLine = 0
                     $descCount = 0
-                    
+
                     if ($inputSection.Find('type:', [ref] $typeLine, [ref] $typeCount)) {
                         $insertAfter = $typeLine + $typeCount
                     }
@@ -460,15 +460,15 @@ function ApplyWorkflowInputDefaults {
                             $insertAfter = $descLine + $descCount
                         }
                     }
-                    
+
                     if ($insertAfter -eq -1) {
                         # No other properties, insert at position 1 (after the input name)
                         $insertAfter = 1
                     }
-                    
+
                     $inputSection.Insert($insertAfter, "default: $yamlValue")
                 }
-                
+
                 # Update the inputs section with the modified input
                 $inputs.Replace("$($inputName):/", $inputSection.content)
             }
@@ -477,7 +477,7 @@ function ApplyWorkflowInputDefaults {
 
     # Update the workflow_dispatch section with modified inputs
     $workflowDispatch.Replace('inputs:/', $inputs.content)
-    
+
     # Update the on: section with modified workflow_dispatch
     $yaml.Replace('on:/workflow_dispatch:/', $workflowDispatch.content)
 }
