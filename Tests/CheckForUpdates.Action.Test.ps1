@@ -769,6 +769,77 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             Should -Throw "*not a valid choice*"
     }
 
+    It 'ApplyWorkflowInputDefaults validates choice value with case-sensitive matching' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+        
+        # Create a test workflow YAML with choice input using mixed case options
+        $yamlContent = @(
+            "name: 'Test Workflow'",
+            "on:",
+            "  workflow_dispatch:",
+            "    inputs:",
+            "      releaseTypeInput:",
+            "        type: choice",
+            "        options:",
+            "          - Release",
+            "          - Prerelease",
+            "          - Draft",
+            "        default: Release",
+            "jobs:",
+            "  test:",
+            "    runs-on: ubuntu-latest"
+        )
+        
+        $yaml = [Yaml]::new($yamlContent)
+        
+        # Test 1: Exact case match should succeed
+        $repoSettings = @{
+            "workflowInputDefaults" = @(
+                @{
+                    "workflow" = "Test Workflow"
+                    "defaults" = @(
+                        @{ "name" = "releaseTypeInput"; "value" = "Prerelease" }
+                    )
+                }
+            )
+        }
+        
+        { ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
+        $yaml.Get('on:/workflow_dispatch:/inputs:/releaseTypeInput:/default:').content -join '' | Should -Be "default: 'Prerelease'"
+        
+        # Test 2: Wrong case should fail with case-sensitive error message
+        $yaml2 = [Yaml]::new($yamlContent)
+        $repoSettings2 = @{
+            "workflowInputDefaults" = @(
+                @{
+                    "workflow" = "Test Workflow"
+                    "defaults" = @(
+                        @{ "name" = "releaseTypeInput"; "value" = "prerelease" }
+                    )
+                }
+            )
+        }
+        
+        { ApplyWorkflowInputDefaults -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } | 
+            Should -Throw "*case-sensitive match required*"
+        
+        # Test 3: Uppercase version should also fail
+        $yaml3 = [Yaml]::new($yamlContent)
+        $repoSettings3 = @{
+            "workflowInputDefaults" = @(
+                @{
+                    "workflow" = "Test Workflow"
+                    "defaults" = @(
+                        @{ "name" = "releaseTypeInput"; "value" = "PRERELEASE" }
+                    )
+                }
+            )
+        }
+        
+        { ApplyWorkflowInputDefaults -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } | 
+            Should -Throw "*case-sensitive match required*"
+    }
+
     It 'ApplyWorkflowInputDefaults handles inputs without type specification' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
         
