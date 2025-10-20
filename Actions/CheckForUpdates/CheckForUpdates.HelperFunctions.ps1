@@ -648,7 +648,7 @@ function ResolveFilePaths {
         }
     }
     # Remove duplicates (when sourceFullPath and destinationFullPath are the same)
-    $fullFilePaths = $fullFilePaths | Sort-Object sourceFullPath, destinationFullPath -Unique
+    $fullFilePaths = $fullFilePaths | Sort-Object { $_.sourceFullPath}, { $_.destinationFullPath} -Unique
 
     return $fullFilePaths
 }

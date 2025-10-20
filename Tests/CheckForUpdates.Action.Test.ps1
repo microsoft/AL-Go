@@ -404,8 +404,8 @@ Describe "ResolveFilePaths" {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $PSScriptRoot $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; }
-            @{ "sourcePath" = "folder"; "filter" = "*"; "destinationPath" = "newFolder"; "destinationName" = ""; }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "text"; }
+            @{ "sourcePath" = "folder"; "filter" = "*"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "unknown"; }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
