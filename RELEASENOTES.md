@@ -3,6 +3,7 @@
 - Issue 1961 KeyVault access in PR pipeline
 - Discussion 1911 Add support for reportSuppressedDiagnostics
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
+- Issue 1945 Deploy Reference Documentation fails for CI/CD
 
 ## v8.0
 

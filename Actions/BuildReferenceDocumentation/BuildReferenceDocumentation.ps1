@@ -2,7 +2,9 @@
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "The artifacts to build documentation for or a folder in which the artifacts have been downloaded", Mandatory = $true)]
-    [string] $artifacts
+    [string] $artifacts,
+    [Parameter(HelpMessage = "The URL of the BC artifact to download which includes AlDoc", Mandatory = $false)]
+    [string] $artifactUrl = ''
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -107,8 +109,12 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
-
+if ($allApps.Count -gt 0) {
+    GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
+}
+else {
+    OutputWarning -message "No apps found to generate documentation for"
+}
 Write-Host "::endgroup::"
 
 if ($artifactsFolderCreated) {
