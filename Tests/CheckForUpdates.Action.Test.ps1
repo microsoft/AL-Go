@@ -1,6 +1,7 @@
 Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
-Import-Module (Join-Path $PSScriptRoot "..\Actions\TelemetryHelper.psm1")
+Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1")
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "CheckForUpdates Action Tests" {
@@ -309,7 +310,6 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
-        Import-Module (Join-Path $scriptRoot "..\.Modules\ReadSettings.psm1") -DisableNameChecking -Force
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $tmpSrcFile = Join-Path $PSScriptRoot "tempSrcFile.json"

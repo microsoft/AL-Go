@@ -609,6 +609,5 @@ function SanitizeWorkflowName {
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
-Export-ModuleMember -Function ReadSettings
-Export-ModuleMember -Function SanitizeWorkflowName
+Export-ModuleMember -Function ReadSettings, SanitizeWorkflowName
 Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile
