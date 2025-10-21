@@ -502,12 +502,12 @@ function ReadSettings {
                 "ppEnvironmentUrl" = ''                              
             }
             $settingsName = "DeployTo$envName"
-            if ($settings.ContainsKey($settingsName)) {
+            if ($settings.Contains($settingsName)) {
                 # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
                 $deployTo = $settings."$settingsName"
                 $keys = @($deployTo.Keys)
                 foreach($key in $keys) {
-                    if ($deploymentSettings.ContainsKey($key)) {
+                    if ($deploymentSettings.Contains($key)) {
                         if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
                             if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
                                 # Support setting runs-on as an array in settings to not break old settings
