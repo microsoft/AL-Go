@@ -477,6 +477,63 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
+    $ghEnvironments = @(GetGitHubEnvironments)
+    $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) + @($environmentName) | Select-Object -unique 
+
+    if ($environments) {
+        foreach ($environmentName in $environments) {
+            Write-Host "Using custom settings for environment $environmentName"
+            $envName = $environmentName.Split(' ')[0]
+            $deploymentSettings = @{
+                "EnvironmentType" = "SaaS"
+                "EnvironmentName" = $envName
+                "Branches" = @()
+                "Projects" = @('*')
+                "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
+                "includeTestAppsInSandboxEnvironment" = $false
+                "excludeAppIds" = @()         
+                "Scope" = $null
+                "SyncMode" = $null
+                "buildMode" = $null
+                "continuousDeployment" = $null
+                "runs-on" = $settings."runs-on"
+                "shell" = $settings."shell"
+                "companyId" = ''
+                "ppEnvironmentUrl" = ''                              
+            }
+            $settingsName = "DeployTo$envName"
+            if ($settings.ContainsKey($settingsName)) {
+                # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+                $deployTo = $settings."$settingsName"
+                $keys = @($deployTo.Keys)
+                foreach($key in $keys) {
+                    if ($deploymentSettings.ContainsKey($key)) {
+                        if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                            if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
+                                # Support setting runs-on as an array in settings to not break old settings
+                                # See https://github.com/microsoft/AL-Go/issues/1182
+                                $deployTo."$key" = $deployTo."$key" -join ','
+                            }
+                            else {
+                                Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                            }
+                        }
+                        $deploymentSettings."$key" = $deployTo."$key"
+                    }
+                }
+                if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
+                    throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
+                }
+                if ($deploymentSettings."runs-on" -like "*ubuntu-*" -and $deploymentSettings."shell" -eq "powershell") {
+                    Write-Host "Switching deployment shell to pwsh for ubuntu"
+                    $deploymentSettings."shell" = "pwsh"
+                }
+            }
+            OutputDebug -message "Deployment settings for environment $($envName): $($deploymentSettings | ConvertTo-Json -Depth 5 -Compress)"
+            $settings."$settingsName" = $deploymentSettings
+        }     
+    }
+
     $settings | ValidateSettings
 
     $settings
