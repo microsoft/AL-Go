@@ -478,7 +478,7 @@ function ReadSettings {
     }
 
     $ghEnvironments = @(GetGitHubEnvironments)
-    $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) + @($environmentName) | Select-Object -unique 
+    $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) + @($environmentName) | Select-Object -unique | Where-Object { $_ -ne "" }
 
     if ($environments) {
         foreach ($environmentName in $environments) {
