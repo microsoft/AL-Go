@@ -593,5 +593,21 @@ function SanitizeWorkflowName {
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
+function GetGitHubEnvironments() {
+    OutputDebugFunctionCall
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+    OutputDebug "Url: $url"
+    try {
+        Write-Host "Requesting environments from GitHub"
+        $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
+    }
+    catch {
+        $ghEnvironments = @()
+        Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
+    }
+    $ghEnvironments
+}
+
 Export-ModuleMember -Function ReadSettings
 Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile
