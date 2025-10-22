@@ -187,24 +187,24 @@ foreach($fileToUpdate in $filesToUpdate) {
 
     if ($dstFileExists) {
         if ($type -eq 'workflow') {
-            Write-Host "Apply customizations from current repository, file: $dstFile"
-            [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstFile)
+            Write-Host "Apply customizations from current repository, file: $dstPath"
+            [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
         }
 
         # file exists, compare and add to $updateFiles if different
-        $dstContent = Get-ContentLF -Path $dstFile
+        $dstContent = Get-ContentLF -Path $dstPath
         if ($dstContent -cne $srcContent) {
-            Write-Host "Updated $type ($(Join-Path $dstPath $filename)) available"
-            $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+            Write-Host "Updated $type ($dstPath) available"
+            $updateFiles += @{ "DstFile" = $dstPath; "content" = $srcContent }
         }
         else {
-            Write-Host "No changes in $type ($(Join-Path $dstPath $filename))"
+            Write-Host "No changes in $type ($dstPath)"
         }
     }
     else {
         # new file, add to $updateFiles
-        Write-Host "New $type ($(Join-Path $dstPath $filename)) available"
-        $updateFiles += @{ "DstFile" = Join-Path $dstPath $filename; "content" = $srcContent }
+        Write-Host "New $type ($dstPath) available"
+        $updateFiles += @{ "DstFile" = $dstPath; "content" = $srcContent }
     }
 }
 
