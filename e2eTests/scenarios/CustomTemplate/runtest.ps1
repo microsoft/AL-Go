@@ -55,7 +55,7 @@ $template = "https://github.com/$pteTemplate"
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
-# Create tempolate repository
+# Create template repository
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
@@ -143,6 +143,34 @@ $customJobs = @(
 $cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepository) # In the context of the template repository, these custom jobs are treated as final customizations
 $cicdYaml.Save($cicdWorkflow)
 
+# Add a custom workflow file in the template repository (to be copied to the final repository, as workflow files are always propagated)
+$customWorkflowFile = Join-Path $templateRepoPath '.github/workflows/CustomWorkflow.yaml'
+$customWorkflowContent = @"
+name: Custom Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  CustomJob:
+    runs-on: [ windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Run Custom Script
+        run: |
+          Write-Host 'Custom Workflow was triggered!'
+"@
+Set-Content -Path $customWorkflowFile -Value $customWorkflowContent
+
+# Add another custom file in the template repository (to be ignored unless specifically added via the settings)
+$customFileName = 'CustomTemplateFile.txt'
+$customFile = Join-Path $templateRepoPath $customFileName
+$customFileContent = "This is a custom file in the template repository."
+Set-Content -Path $customFile -Value $customFileContent
+
 # Push
 CommitAndPush -commitMessage 'Add template customizations'
 
@@ -226,6 +254,29 @@ Pull
 
 (Join-Path (Get-Location) $CustomTemplateRepoSettingsFile) | Should -Exist
 (Join-Path (Get-Location) $CustomTemplateProjectSettingsFile) | Should -Exist
+
+# Check that custom workflow file is present
+(Join-Path (Get-Location) $customWorkflowFile) | Should -Exist
+(Get-Content -Path (Join-Path (Get-Location) $customWorkflowFile)) | Should -Be $customWorkflowContent
+
+# Check that custom file is NOT present
+(Join-Path (Get-Location) $customFile) | Should -Not -Exist # Custom file should not be copied by default
+
+# Add custom file to be copied via settings
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "updateALGoFiles" = @{ "filesToUpdate" = @( @{ "sourcePath" = $customFile; "destinationPath" = '.' } ) } }
+
+# Push
+CommitAndPush -commitMessage 'Add custom file to be updated when updating AL-Go system files [skip ci]'
+
+# Update AL-Go System Files to uptake custom file
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
+
+# Pull changes
+Pull
+
+# Check that custom file is now present
+(Join-Path (Get-Location) $customFile) | Should -Exist
+(Get-Content -Path (Join-Path (Get-Location) $customFile)) | Should -Be $customFileContent
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
