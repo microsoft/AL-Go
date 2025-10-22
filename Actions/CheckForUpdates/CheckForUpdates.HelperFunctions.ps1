@@ -61,6 +61,7 @@ function DownloadTemplateRepository {
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
+
     return $tempName
 }
 
@@ -457,11 +458,9 @@ function GetSrcFolder {
         [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
-        [string] $srcPath
+        [string] $srcPath = ''
     )
-    Write-Host $templateUrl
-    Write-Host $templateFolder
-    Write-Host $srcPath
+
     if (!$templateUrl) {
         return ''
     }
