@@ -567,10 +567,13 @@ function ResolveFilePaths {
         [string] $sourceFolder,
         [string] $originalSourceFolder = $null,
         [string] $destinationFolder = $null,
-        [Parameter(Mandatory=$true)]
-        [array] $files,
+        [array] $files = @(),
         [string[]] $projects = @()
     )
+
+    if(-not $files) {
+        return @()
+    }
 
     $fullFilePaths = @()
     foreach($file in $files) {
