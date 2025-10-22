@@ -16,12 +16,17 @@ DownloadAndImportBcContainerHelper
 $envName = $environmentName.Split(' ')[0]
 $settings = $env:Settings | ConvertFrom-Json
 $settingsName = "deployTo$($envName)"
-$deploymentSettings = $settings."$settingsName"
+if($settings.PSObject.Properties.Name -contains $settingsName) {
+    $deploymentSettings = $settings."$settingsName"
+    OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+} else {
+    OutputError -message "No deployment settings found for environment $envName"
+}
 
 # Determine buildMode prefix for artifact names based on settings
 $buildModePrefix = 'default'
 $buildModeLabel = 'default'
-if ($deploymentSettings.Keys -contains "buildMode") {
+if ($deploymentSettings.PSObject.Properties.Name -contains "buildMode") {
     $buildModePrefix = $deploymentSettings.buildMode
 }
 

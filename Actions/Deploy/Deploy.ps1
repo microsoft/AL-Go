@@ -39,8 +39,12 @@ $settings = $env:Settings | ConvertFrom-Json
 
 # If there is a deployTo<environamentName> settings, overwrite the default settings
 $settingsName = "deployTo$($envName)"
-$deploymentSettings = $settings."$settingsName"
-OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+if($settings.PSObject.Properties.Name -contains $settingsName) {
+    $deploymentSettings = $settings."$settingsName"
+    OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+} else {
+    OutputError -message "No deployment settings found for environment $envName"
+}
 # if($settings.PSObject.Properties.Name -contains $settingsName) {
 #     Write-Host "Using custom settings for environment $environmentName"
 
