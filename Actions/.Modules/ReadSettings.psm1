@@ -484,6 +484,7 @@ function ReadSettings {
         foreach ($environmentName in $environments) {
             Write-Host "Using custom settings for environment $environmentName"
             $envName = $environmentName.Split(' ')[0]
+            # Default deployment settings
             $deploymentSettings = @{
                 "EnvironmentType" = "SaaS"
                 "EnvironmentName" = $envName
