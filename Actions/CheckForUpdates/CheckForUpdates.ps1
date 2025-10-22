@@ -174,7 +174,7 @@ foreach($fileToUpdate in $filesToUpdate) {
     # Replace static placeholders
     $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
 
-    if ($isFileDirectALGo) {
+    if ($isDirectALGo) {
         # If we are using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
         ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
     }
