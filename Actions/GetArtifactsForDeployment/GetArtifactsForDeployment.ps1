@@ -20,20 +20,22 @@ $deploymentSettings = $settings."$settingsName"
 
 # Determine buildMode prefix for artifact names based on settings
 $buildModePrefix = 'default'
+$buildModeLabel = 'default'
 if ($deploymentSettings.Keys -contains "buildMode") {
     $buildModePrefix = $deploymentSettings.buildMode
 }
 
 # If buildMode is not defined or is 'default', set it to empty string
-if ($null -eq $buildModePrefix -or $buildModePrefix -eq 'default') {
+if ($null -eq $buildModePrefix -or $buildModePrefix -eq 'default' -or $buildModePrefix -eq '') {
     $buildModePrefix = ''
+} else {
+    $buildModeLabel = $buildModePrefix
 }
 
 # Get artifacts for all projects
 $projects = "*"
 $artifactsToDownload = @("$($buildModePrefix)Apps","$($buildModePrefix)TestApps","$($buildModePrefix)Dependencies","$($buildModePrefix)PowerPlatformSolution")
 
-$buildModeLabel = $null -eq $buildModePrefix -or $buildModePrefix -eq "" ? "Default" : $buildModePrefix
 Write-Host "Get artifacts for version: '$artifactsVersion' with buildMode: '$buildModeLabel' for these projects: '$projects' to folder: '$artifactsFolder'"
 
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
