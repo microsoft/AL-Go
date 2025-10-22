@@ -4,18 +4,37 @@ Param(
     [Parameter(HelpMessage = "Artifacts version to download (current, prerelease, draft, latest or version number)", Mandatory = $true)]
     [string] $artifactsVersion,
     [Parameter(HelpMessage = "Folder in which the artifacts will be downloaded", Mandatory = $true)]
-    [string] $artifactsFolder
+    [string] $artifactsFolder,
+    [Parameter(HelpMessage = "Name of environment to deploy to", Mandatory = $true)]
+    [string] $environmentName
 )
 
 Import-Module (Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
+$envName = $environmentName.Split(' ')[0]
+$settings = $env:Settings | ConvertFrom-Json
+$settingsName = "deployTo$($envName)"
+$deploymentSettings = $settings."$settingsName"
+
+# Determine buildMode prefix for artifact names based on settings
+$buildModePrefix = 'default'
+if ($deploymentSettings.Keys -contains "buildMode") {
+    $buildModePrefix = $deploymentSettings.buildMode
+}
+
+# If buildMode is not defined or is 'default', set it to empty string
+if ($null -eq $buildModePrefix -or $buildModePrefix -eq 'default') {
+    $buildModePrefix = ''
+}
+
 # Get artifacts for all projects
 $projects = "*"
-$artifactsToDownload = @("Apps","TestApps","Dependencies","PowerPlatformSolution")
+$artifactsToDownload = @("$($buildModePrefix)Apps","$($buildModePrefix)TestApps","$($buildModePrefix)Dependencies","$($buildModePrefix)PowerPlatformSolution")
 
-Write-Host "Get artifacts for version: '$artifactsVersion' for these projects: '$projects' to folder: '$artifactsFolder'"
+$buildModeLabel = $null -eq $buildModePrefix -or $buildModePrefix -eq "" ? "Default" : $buildModePrefix
+Write-Host "Get artifacts for version: '$artifactsVersion' with buildMode: '$buildModeLabel' for these projects: '$projects' to folder: '$artifactsFolder'"
 
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (!(Test-Path $artifactsFolder)) {
