@@ -52,7 +52,9 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
         }
 
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings } | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
 
@@ -88,7 +90,9 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))}
         }
 
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings } | ConvertTo-Json -Compress
 
         $env:GITHUB_REF_NAME = 'main' # This is not a protected branch, so the _test_ environment should not be included, while _another_ environment should be included (no branch policy)
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
@@ -129,7 +133,9 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (@{ "branch_policies" = @( @{ "name" = "branch" }, @{ "name" = "branch2" } ) } | ConvertTo-Json -Depth 99 -Compress)}
         }
 
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings } | ConvertTo-Json -Compress
         # Only another environment should be included when deploying from main
 
         $env:GITHUB_REF_NAME = 'main' # This is not a protected branch, so the _test_ environment should not be included, while _another_ environment should be included (no branch policy)
@@ -174,11 +180,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
 
         # Add Branch policy to settings to only allow branch to deploy to test environment - now no environments should be included
-        $settings += @{
-            "DeployToTest" = @{
-                "Branches" = @("branch")
-            }
-        }
+        $settings.DeployToTest.branches = @('branch')
+
         $env:Settings = $settings | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
@@ -208,7 +211,10 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } ) })}
         }
 
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployTosettingsenvSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings; "DeployTosettingsenv" = $deployTosettingsenvSettings }
         $env:Settings = $settings | ConvertTo-Json -Compress
 
         # All 3 environments should be included
@@ -251,11 +257,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $deploymentEnvironments.environments[1].shell | Should -Be 'pwsh'
 
         # Add Branch policy to settings to only allow branch to deploy to _test_ environment
-        $settings += @{
-            "DeployToTest" = @{
-                "Branches" = @("branch")
-            }
-        }
+        $settings.DeployToTest.branches = @('branch')
         $settings.excludeEnvironments = @() # Clear exclude environments
         $env:GITHUB_REF_NAME = 'main'
         $env:Settings = $settings | ConvertTo-Json -Compress
@@ -295,7 +297,9 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         }
 
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings }
         $env:Settings = $settings | ConvertTo-Json -Compress
         . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
@@ -325,20 +329,13 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     }
 
     # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
-    It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+    It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {       
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $false; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $true; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }    
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings }
 
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
             throw "Not supported"
-        }
-
-        $settings += @{
-            "DeployToTest" = @{
-                "continuousDeployment" = $false
-            }
-            "DeployToAnother" = @{
-                "continuousDeployment" = $true
-            }
         }
 
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
