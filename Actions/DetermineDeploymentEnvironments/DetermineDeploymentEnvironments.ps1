@@ -144,6 +144,7 @@ else {
 
         # Check DeployTo<environmentName> setting
         $settingsName = "DeployTo$envName"
+        Write-Host ($settings | ConvertTo-Json -Depth 10)
         if($settings.PSObject.Properties.Name -contains $settingsName) {
             $deploymentSettings = $settings."$settingsName"
             OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
