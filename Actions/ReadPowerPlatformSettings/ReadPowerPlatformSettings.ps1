@@ -8,35 +8,17 @@ $envName = $environmentName.Split(' ')[0]
 
 $settings = $env:Settings | ConvertFrom-Json
 
-# Default deployment settings
-$deploymentSettings = @{
-    "EnvironmentType" = "SaaS"
-    "EnvironmentName" = $envName
-    "Projects" = @('*')
-    "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
-    "SyncMode" = $null
-    "Scope" = $null
-    "buildMode" = $null
-    "continuousDeployment" = $null
-    "companyId" = ''
-    "ppEnvironmentUrl" = ''
-    "includeTestAppsInSandboxEnvironment" = $false
-    "excludeAppIds" = @()
-}
-
 # If there is a deployTo<environamentName> settings, overwrite the default settings
 $settingsName = "deployTo$($envName)"
 if($settings.PSObject.Properties.Name -contains $settingsName) {
-    Write-Host "Using custom settings for environment $environmentName"
-
-    $customDeploymentSettings = $settings."$settingsName"
-    foreach ($key in $customDeploymentSettings.PSObject.Properties.Name) {
-        $deploymentSettings.$key = $customDeploymentSettings.$key
-    }
+    $deploymentSettings = $settings."$settingsName"
+    OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+} else {
+    OutputError -message "No deployment settings found for environment $envName"
 }
 
 foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
-    if ($deploymentSettings.Keys -contains $property) {
+    if ($deploymentSettings.PSObject.Properties.Name -contains $property) {
         Write-Host "Setting $property"
         Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$property=$($deploymentSettings."$property")"
     }

@@ -18,22 +18,6 @@ DownloadAndImportBcContainerHelper
 
 $envName = $environmentName.Split(' ')[0]
 
-# Default deployment settings
-# $deploymentSettings = @{
-#     "EnvironmentType" = "SaaS"
-#     "EnvironmentName" = $envName
-#     "Projects" = @('*')
-#     "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
-#     "SyncMode" = $null
-#     "Scope" = $null
-#     "buildMode" = $null
-#     "continuousDeployment" = $null
-#     "companyId" = ''
-#     "ppEnvironmentUrl" = ''
-#     "includeTestAppsInSandboxEnvironment" = $false
-#     "excludeAppIds" = @()
-# }
-
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json
 
@@ -45,14 +29,6 @@ if($settings.PSObject.Properties.Name -contains $settingsName) {
 } else {
     OutputError -message "No deployment settings found for environment $envName"
 }
-# if($settings.PSObject.Properties.Name -contains $settingsName) {
-#     Write-Host "Using custom settings for environment $environmentName"
-
-#     $customDeploymentSettings = $settings."$settingsName"
-#     foreach ($key in $customDeploymentSettings.PSObject.Properties.Name) {
-#         $deploymentSettings.$key = $customDeploymentSettings.$key
-#     }
-# }
 
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {

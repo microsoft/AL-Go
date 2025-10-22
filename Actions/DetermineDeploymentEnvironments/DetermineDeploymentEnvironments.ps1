@@ -144,39 +144,15 @@ else {
 
         # Check DeployTo<environmentName> setting
         $settingsName = "DeployTo$envName"
-        $deploymentSettings = $settings."$settingsName"
-        # if ($settings.ContainsKey($settingsName)) {
-        #     # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
-        #     Write-Host "Setting $settingsName"
-        #     $deployTo = $settings."$settingsName"
-        #     $keys = @($deployTo.Keys)
-        #     foreach($key in $keys) {
-        #         if ($deploymentSettings.ContainsKey($key)) {
-        #             if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
-        #                 if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
-        #                     # Support setting runs-on as an array in settings to not break old settings
-        #                     # See https://github.com/microsoft/AL-Go/issues/1182
-        #                     $deployTo."$key" = $deployTo."$key" -join ','
-        #                 }
-        #                 else {
-        #                     Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
-        #                 }
-        #             }
-        #             $deploymentSettings."$key" = $deployTo."$key"
-        #         }
-        #     }
-        #     if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
-        #         throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
-        #     }
-        #     if ($deploymentSettings."runs-on" -like "*ubuntu-*" -and $deploymentSettings."shell" -eq "powershell") {
-        #         Write-Host "Switching deployment shell to pwsh for ubuntu"
-        #         $deploymentSettings."shell" = "pwsh"
-        #     }
-        # }
+        if($settings.PSObject.Properties.Name -contains $settingsName) {
+            $deploymentSettings = $settings."$settingsName"
+            OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+        } else {
+            OutputError -message "No deployment settings found for environment $envName"
+        }
 
         # Get Branch policies on GitHub Environment
         $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
-        # $deploymentSettings.branchesFromPolicy = @(Get-BranchesFromPolicy -ghEnvironment $ghEnvironment)
         $branchesFromPolicy = @(Get-BranchesFromPolicy -ghEnvironment $ghEnvironment)
 
         # Include Environment if:
@@ -212,7 +188,6 @@ else {
         }
         elseif ($type -ne 'All') {
             # Check whether any GitHub policy disallows this branch to deploy to this environment
-            # if ($deploymentSettings.branchesFromPolicy) {
             if ($branchesFromPolicy) {
                 # Check whether GITHUB_REF_NAME is allowed to deploy to this environment
                 # $includeEnvironment = $deploymentSettings.branchesFromPolicy | Where-Object { $ENV:GITHUB_REF_NAME -like $_ }
