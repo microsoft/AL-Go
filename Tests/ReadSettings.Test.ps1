@@ -194,12 +194,57 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
+            # Test customSettings parameter - should have highest precedence
+            # customSettings overrides all other settings (including user settings)
+            $customSettingsJson = @{ "property1" = "custom1"; "property2" = "custom2"; "property9" = "custom9" } | ConvertTo-Json -Depth 99
+            $customSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings $customSettingsJson
+            $customSettings.property1 | Should -Be 'custom1'    # Overrides user setting
+            $customSettings.property2 | Should -Be 'custom2'    # Overrides workflow setting
+            $customSettings.property3 | Should -Be 'repo3'      # Unchanged (not in custom settings)
+            $customSettings.property4 | Should -Be 'branch4'    # Unchanged (not in custom settings)
+            $customSettings.property5 | Should -Be 'multi5'     # Unchanged (not in custom settings)
+            $customSettings.property6 | Should -Be 'user6'      # Unchanged (not in custom settings)
+            $customSettings.property9 | Should -Be 'custom9'    # New property from custom settings
+
+            # Test customSettings with empty string (should not affect existing behavior)
+            $emptyCustomSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings ''
+            $emptyCustomSettings.property1 | Should -Be 'user1'      # Same as without custom settings
+            $emptyCustomSettings.property2 | Should -Be 'workflow2'  # Same as without custom settings
+            $emptyCustomSettings.property3 | Should -Be 'repo3'      # Same as without custom settings
+
+            # Test customSettings with array merging
+            $customArraySettingsJson = @{ "arr1" = @("custom1", "custom2") } | ConvertTo-Json -Depth 99
+            $customArraySettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -orgSettingsVariableValue (@{ "arr1" = @("org3") } | ConvertTo-Json -Depth 99) -customSettings $customArraySettingsJson
+            $customArraySettings.arr1 | Should -Be @("org3", "repo1", "repo2", "custom1", "custom2")  # Custom values are merged at the end
+
+            # Test customSettings with overwriteSettings to replace arrays
+            $customOverwriteSettingsJson = @{ "overwriteSettings" = @("arr1"); "arr1" = @("customonly1", "customonly2") } | ConvertTo-Json -Depth 99
+            $customOverwriteSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -orgSettingsVariableValue (@{ "arr1" = @("org3") } | ConvertTo-Json -Depth 99) -customSettings $customOverwriteSettingsJson
+            $customOverwriteSettings.arr1 | Should -Be @("customonly1", "customonly2")  # Array completely replaced by custom settings
+
+            # Test invalid customSettings JSON should throw
+            { ReadSettings -baseFolder $tempName -project 'Project' -customSettings 'invalid json' } | Should -Throw
+
+            # Test customSettings with complex object
+            $customComplexSettingsJson = @{
+                "deliverToAppSource" = @{
+                    "mainAppFolder" = "CustomApp"
+                    "productId" = "CustomProductId"
+                    "customProperty" = "CustomValue"
+                }
+            } | ConvertTo-Json -Depth 99
+            $customComplexSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings $customComplexSettingsJson
+            $customComplexSettings.deliverToAppSource.mainAppFolder | Should -Be 'CustomApp'          # Overrides default empty string
+            $customComplexSettings.deliverToAppSource.productId | Should -Be 'CustomProductId'        # Overrides default empty string
+            $customComplexSettings.deliverToAppSource.customProperty | Should -Be 'CustomValue'       # New property added
+            $customComplexSettings.deliverToAppSource.continuousDelivery | Should -Be $false          # Default value preserved (not overridden)
+
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Settings schema is valid' {
+        It 'Settings schema is valid' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             Test-Json -json $schema | Should -Be $true
         }
 
@@ -214,12 +259,12 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
-        It 'Default settings match schema' {
+        It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
         }
 
-        It 'Shell setting can only be pwsh or powershell' {
+        It 'Shell setting can only be pwsh or powershell' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.shell = 42
             try {
@@ -238,7 +283,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
-        It 'Projects setting is an array of strings' {
+        It 'Projects setting is an array of strings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             # If the projects setting is not an array, it should throw an error
             $defaultSettings = GetDefaultSettings
             $defaultSettings.projects = "not an array"

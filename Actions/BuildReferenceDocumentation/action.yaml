@@ -12,6 +12,10 @@ inputs:
   artifacts:
     description: The artifacts to build documentation for or a folder in which the artifacts have been downloaded
     required: true
+  artifactUrl:
+    description: The URL of the BC artifact to download which includes AlDoc
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -20,9 +24,10 @@ runs:
       env:
         _token: ${{ inputs.token }}
         _artifacts: ${{ inputs.artifacts }}
+        _artifactUrl: ${{ inputs.artifactUrl }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "BuildReferenceDocumentation" -Action {
-          ${{ github.action_path }}/BuildReferenceDocumentation.ps1 -token $ENV:_token -artifacts $ENV:_artifacts
+          ${{ github.action_path }}/BuildReferenceDocumentation.ps1 -token $ENV:_token -artifacts $ENV:_artifacts -artifactUrl $ENV:_artifactUrl
         }
 branding:
   icon: terminal

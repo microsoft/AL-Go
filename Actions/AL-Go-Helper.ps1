@@ -1238,7 +1238,8 @@ function CreateDevEnv {
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
         [switch] $accept_insiderEula,
-        [switch] $clean
+        [switch] $clean,
+        [string] $customSettings = ""
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1280,6 +1281,7 @@ function CreateDevEnv {
             "baseFolder"   = $baseFolder
             "project"      = $project
             "workflowName" = $workflowName
+            "customSettings" = $customSettings
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params
@@ -1578,7 +1580,8 @@ function CreateDevEnv {
             "enablePerTenantExtensionCop",
             "enableUICop",
             "enableCodeAnalyzersOnTestApps",
-            "useCompilerFolder" | ForEach-Object {
+            "useCompilerFolder",
+            "reportSuppressedDiagnostics" | ForEach-Object {
                 if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
             }
 
@@ -2047,7 +2050,7 @@ function GetFoldersFromAllProjects {
         $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
         $folders = @()
         foreach($project in $projects) {
-            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
             ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
             $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
                 $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
