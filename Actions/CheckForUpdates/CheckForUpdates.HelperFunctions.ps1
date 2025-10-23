@@ -667,18 +667,18 @@ function GetFilesToUpdate {
 
     $filesToUpdate = $settings.updateALGoFiles.filesToUpdate
     $filesToUpdate = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToUpdate -projects $projects
-    Write-Host "Files to update:"
-    $filesToUpdate | ForEach-Object { Write-Host "  $(ConvertTo-Json $_)"}
+    OutputDebug "Files to update:"
+    $filesToUpdate | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)"}
 
     $filesToIgnore = $settings.updateALGoFiles.filesToIgnore
     $filesToIgnore = ResolveFilePaths -sourceFolder $baseFolder -files $filesToIgnore -projects $projects
-    Write-Host "Files to ignore:"
-    $filesToIgnore | ForEach-Object { Write-Host "  $(ConvertTo-Json $_)" }
+    OutputDebug "Files to ignore:"
+    $filesToIgnore | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)" }
 
     $filesToRemove = $settings.updateALGoFiles.filesToRemove
     $filesToRemove = ResolveFilePaths -sourceFolder $baseFolder -files $filesToRemove -projects $projects
-    Write-Host "Files to remove:"
-    $filesToRemove | ForEach-Object { Write-Host "  $(ConvertTo-Json $_)" }
+    OutputDebug "Files to remove:"
+    $filesToRemove | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)" }
 
     # Exclude files to ignore from files to update
     $filesToUpdate = $filesToUpdate | Where-Object {
