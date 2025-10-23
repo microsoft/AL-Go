@@ -329,9 +329,9 @@ Describe "DetermineDeploymentEnvironments Action Test" {
     }
 
     # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
-    It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {       
+    It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {
         $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $false; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
-        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $true; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }    
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $true; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
         $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings }
 
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {

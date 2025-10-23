@@ -492,7 +492,7 @@ function ReadSettings {
                 "Projects" = @('*')
                 "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
                 "includeTestAppsInSandboxEnvironment" = $false
-                "excludeAppIds" = @()         
+                "excludeAppIds" = @()
                 "Scope" = $null
                 "SyncMode" = $null
                 "buildMode" = $null
@@ -500,7 +500,7 @@ function ReadSettings {
                 "runs-on" = $settings."runs-on"
                 "shell" = $settings."shell"
                 "companyId" = ''
-                "ppEnvironmentUrl" = ''                              
+                "ppEnvironmentUrl" = ''
             }
             $settingsName = "DeployTo$envName"
             if ($settings.Contains($settingsName)) {
@@ -532,7 +532,7 @@ function ReadSettings {
             }
             OutputDebug -message "Deployment settings for environment $($envName): $($deploymentSettings | ConvertTo-Json -Depth 5 -Compress)"
             $settings."$settingsName" = $deploymentSettings
-        }     
+        }
     }
 
     $settings | ValidateSettings
