@@ -576,16 +576,34 @@ function ResolveFilePaths {
 
     $fullFilePaths = @()
     foreach($file in $files) {
-        if(-not $file.sourcePath) {
-            throw "sourcePath is required for action $action"
+        if($file.Keys -notcontains 'sourcePath') {
+            $file.sourcePath = '' # Default to current folder
         }
+
+        if($file.Keys -notcontains 'filter') {
+            $file.filter = '' # Default to all files
+        }
+
+        if($file.Keys -notcontains 'type') {
+            $file.type = $null # Default to null type
+        }
+
+        if($file.Keys -notcontains 'destinationPath') {
+            # If destinationPath is not specified, use the sourcePath, so that the file structure is preserved
+            $file.destinationPath = $file.sourcePath
+        }
+
+        if($file.Keys -notcontains 'perProject') {
+            $file.perProject = $false # Default to false
+        }
+
         # All files are relative to the template folder
         Write-Host "Resolving files for sourcePath '$($file.sourcePath)' and filter '$($file.filter)'"
         $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
 
-        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to template folder '$sourceFolder')"
+        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
         if(-not $sourceFiles) {
-            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to template folder '$sourceFolder')"
+            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
             continue
         }
 
@@ -608,20 +626,18 @@ function ResolveFilePaths {
                 }
             }
 
-            if($file.Keys -contains 'type') {
-                $fullFilePath.type = $file.type # propagate the type if it exists
-            }
+            # Set type
+            $fullFilePath.type = $file.type
 
             if(-not $destinationFolder) {
-                # Destination folder is not specified, so we only return the source full path
+                # Destination folder is not specified, no need to calculate destinationFullPath as it will not be used
                $fullFilePaths += $fullFilePath
                continue
             }
 
-            $dstFileName = $file.destinationName
-            if(-not $dstFileName) {
-                # If destinationName is not specified, use the source file name
-                $dstFileName = Split-Path -Path $srcFile -Leaf
+            $destinationName = $(Split-Path -Path $srcFile -Leaf)
+            if($file.Keys -contains 'destinationName' -and ($file.destinationName)) {
+                $destinationName = $file.destinationName
             }
 
             if($file.Keys -contains 'perProject' -and $file.perProject -eq $true) {
@@ -633,7 +649,7 @@ function ResolveFilePaths {
 
                     $projectFile.destinationFullPath = Join-Path $destinationFolder $project
                     $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $file.destinationPath
-                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $dstFileName
+                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $destinationName
 
                     $fullFilePaths += $projectFile
                 }
@@ -643,7 +659,7 @@ function ResolveFilePaths {
                 # Destination full path is the destination base folder + destinationPath + destinationName
 
                 $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationPath
-                $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $dstFileName
+                $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
 
                 $fullFilePaths += $fullFilePath
             }
@@ -671,7 +687,7 @@ function GetFilesToUpdate {
     $filesToUpdate | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)"}
 
     $filesToIgnore = $settings.updateALGoFiles.filesToIgnore
-    $filesToIgnore = ResolveFilePaths -sourceFolder $baseFolder -files $filesToIgnore -projects $projects
+    $filesToIgnore = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -files $filesToIgnore -projects $projects
     OutputDebug "Files to ignore:"
     $filesToIgnore | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)" }
 
@@ -700,5 +716,5 @@ function GetFilesToUpdate {
         return $include
     }
 
-    return $filesToUpdate, $filesToRemove
+    return @($filesToUpdate), @($filesToRemove)
 }

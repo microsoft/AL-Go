@@ -1,10 +1,17 @@
 Import-Module (Join-Path -Path $PSScriptRoot "DebugLogHelper.psm1")
 
 $ALGoFolderName = '.AL-Go'
-$ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
-$RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
-$CustomTemplateRepoSettingsFile = Join-Path '.github' 'AL-Go-TemplateRepoSettings.doNotEdit.json'
-$CustomTemplateProjectSettingsFile = Join-Path '.github' 'AL-Go-TemplateProjectSettings.doNotEdit.json'
+$ALFoSettingsFileName = 'settings.json'
+$ALGoSettingsFile = Join-Path '.AL-Go' $ALFoSettingsFileName
+
+$RepoSettingsFileName = 'AL-Go-Settings.json'
+$RepoSettingsFile = Join-Path '.github' $RepoSettingsFileName
+
+$CustomTemplateRepoSettingsFileName = 'AL-Go-TemplateRepoSettings.doNotEdit.json'
+$CustomTemplateRepoSettingsFile = Join-Path '.github' $CustomTemplateRepoSettingsFileName
+
+$CustomTemplateProjectSettingsFileName = 'AL-Go-TemplateProjectSettings.doNotEdit.json'
+$CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectSettingsFileName
 
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
@@ -243,16 +250,16 @@ function GetDefaultSettings
         "reportSuppressedDiagnostics"                   = $false
         "updateALGoFiles" = [ordered]@{
             "filesToUpdate"                            = @(
-                [ordered]@{ 'destinationPath' = (Join-Path '.github' 'workflows'); 'destinationName' = ''; 'sourcePath' = (Join-Path '.github' 'workflows'); 'filter' = '*'; 'type' = 'workflow'; 'perProject' = $false }
-                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = '*.copy.md'; 'type' = 'releasenotes'; 'perProject' = $false }
-                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $false }
-                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings'; 'perProject' = $false }
-                [ordered]@{ 'destinationPath' = '.github'; 'destinationName' = ''; 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings'; 'perProject' = $false }
-                [ordered]@{ 'destinationPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateRepoSettingsFile)); 'destinationName' = ([system.IO.Path]::GetFileName($CustomTemplateRepoSettingsFile)); 'sourcePath' = ([system.IO.Path]::GetDirectoryName($RepoSettingsFile)); 'filter' = ([system.IO.Path]::GetFileName($RepoSettingsFile)); 'type' = 'template repo settings'; 'perProject' = $false }
-                [ordered]@{ 'destinationPath' = ([system.IO.Path]::GetDirectoryName($CustomTemplateProjectSettingsFile)); 'destinationName' = ([system.IO.Path]::GetFileName($CustomTemplateProjectSettingsFile)); 'sourcePath' = ([system.IO.Path]::GetDirectoryName($ALGoSettingsFile)); 'filter' = ([system.IO.Path]::GetFileName($ALGoSettingsFile)); 'type' = 'template project settings'; 'perProject' = $false }
+                [ordered]@{ 'sourcePath' = (Join-Path '.github' 'workflows'); 'filter' = '*'; 'type' = 'workflow' }
+                [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md'; 'type' = 'releasenotes' }
+                [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1'; 'type' = 'script' }
+                [ordered]@{ 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings' }
+                [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
+                [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'type' = 'template repo settings' }
+                [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALFoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'template project settings' }
 
-                [ordered]@{ 'destinationPath' = '.AL-Go'; 'destinationName' = ''; 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
-                [ordered]@{ 'destinationPath' = '.AL-Go'; 'destinationName' = ''; 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }
+                [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
+                [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }
             )
             "filesToIgnore"                            = @()
             "filesToRemove"                            = @()
