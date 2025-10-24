@@ -209,7 +209,7 @@ foreach($fileToUpdate in $filesToUpdate) {
 }
 
 # Remove files that are in $filesToRemove and exist in the repository
-$removeFiles = $filesToRemove | ForEach-Object { $_.sourceFullPath } | Where-Object { Test-Path -Path $_ -PathType Leaf }
+$removeFiles = $filesToRemove | Where-Object { $_ -and (Test-Path -Path $_ -PathType Leaf) } | ForEach-Object { $_.sourceFullPath }
 
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
