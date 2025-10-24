@@ -585,7 +585,7 @@ function ResolveFilePaths {
         }
 
         if($file.Keys -notcontains 'type') {
-            $file.type = $null # Default to null type
+            $file.type = '' # Default to empty type
         }
 
         if($file.Keys -notcontains 'destinationPath') {
@@ -616,7 +616,7 @@ function ResolveFilePaths {
             }
 
             # Try to find the same files in the original template folder if it is specified
-            if ($originalSourceFolder) {
+            if ($originalSourceFolder -and $file.type -notcontains 'template') {
                 Push-Location $sourceFolder
                 $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
                 Pop-Location
