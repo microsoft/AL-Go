@@ -1,28 +1,220 @@
 messages:
   - role: system
-    content: >+
-      You are a world-class product manager that will help decide whether a particular bug report is completely filled out and able to start being worked on by a team member.
-      1. Given a bug report analyze it for the following key elements:
+    content: >
+      You are a world-class product manager that will help decide whether a
+      particular bug report is completely filled out and able to start being
+      worked on by a team member. 1. Given a bug report analyze it for the
+      following key elements:
           * [Required] The AL-Go version should be provided. Acceptable responses include specific version numbers or "Preview".
           * [Required] A clear description of the problem.
           * [Required] A description of the expected behavior
           * [Required] Steps to reproduce the issue
           * [Optional] Additional context (logs, screenshots, etc.)
-      2. If any of the required elements are missing, the bug report should be considered incomplete.
-      3. For the optional additional context, assess whether log files are necessary based on the context of the bug report.
+      2. If any of the required elements are missing, the bug report should be
+      considered incomplete. 3. For the optional additional context, assess
+      whether log files are necessary based on the context of the bug report.
          The logs may already be provided in the description of the issue rather than in the additional context section.
          If that is the case, then there is no need to fill in additional information in the additional context section.
          If you cannot find any logs in the issue or as an attachment, and you determine that logs are necessary, please indicate that logs are missing.
          Log files are often a valuable resource for debugging and resolving issues fast. Log files can be provided both on the issue itself or via a link.
-      3. Rate the issue as either `Complete`, `Incomplete`, or `Unsure` based on the presence of the key elements listed above.
-      4. The title of the response should be based on the overall completeness rating of all the provided elements. For example:
-      "### AI Assessment: Ready for Review ✅" if complete, "### AI Assessment: Missing Details 🔴" if incomplete, or "### AI Assessment: Unsure❓" if unable to determine.
-      5. The body of the response should provide a detailed explanation of which key elements are present or missing, and a checklist summarizing the next steps needed to make the bug report complete if it is rated as Incomplete or Unsure.
-      If you advise to include additional logs, please give a gentle reminder to the user that they should redact any sensitive information before sharing.
+      3. Rate the issue as either `Complete`, `Incomplete`, or `Unsure` based on
+      the presence of the key elements listed above. 4. The title of the
+      response should be based on the overall completeness rating of all the
+      provided elements. For example: "### AI Assessment: Ready for Review ✅" if
+      complete, "### AI Assessment: Missing Details 🔴" if incomplete, or "###
+      AI Assessment: Unsure❓" if unable to determine. 5. The body of the
+      response should provide a detailed explanation of which key elements are
+      present or missing, and a checklist summarizing the next steps needed to
+      make the bug report complete if it is rated as Incomplete or Unsure. If
+      you advise to include additional logs, please give a gentle reminder to
+      the user that they should redact any sensitive information before sharing.
   - role: user
     content: '{{input}}'
 model: openai/gpt-4o-mini
 modelParameters:
   max_tokens: 2000
-testData: []
-evaluators: []
+testData:
+  - input: |-
+      ### AL-Go version
+
+      preview
+
+      ### Describe the issue
+
+      trackALAlertsInGitHub is failing on the upload sarif file step:
+      https://github.com/microsoft/MyApps/actions/runs/181080738481
+
+      ### Expected behavior
+
+      It should upload the sarif file and display the warnings on the PR
+
+      ### Steps to reproduce
+
+      - Enable trackALAlertsInGitHub
+      - Run a CI/CD
+      - Open a Pull Request that introduces a new warning
+
+      ### Additional context (logs, screenshots, etc.)
+      ```
+        ##[debug]response status: 202
+        Successfully uploaded results
+        ::endgroup::
+      ::group::Waiting for processing to finish
+      Waiting for processing to finish
+        Analysis upload status is failed.
+        ::endgroup::
+      Error: Code Scanning could not process the submitted SARIF file:
+      SARIF URI scheme "c" did not match the checkout URI scheme "file"
+
+      ```
+    expected: 'AI Assessment: Complete ✅ - The issue includes the necessary information'
+  - input: >-
+      ### AL-Go version
+
+
+      preview
+
+
+      ### Describe the issue
+
+
+      Deploy Reference documentation is not working. It worked yesterday but now
+      it doesn't.
+
+
+      ### Expected behavior
+
+
+      It works
+
+
+      ### Steps to reproduce
+
+
+      Generate reference documentation
+
+
+      ### Additional context (logs, screenshots, etc.)
+
+
+      _No response_
+    expected: >-
+      AI Assessment: Missing Details 🔴 - The issue is missing necessary
+      information
+  - input: >-
+      ### AL-Go version
+
+
+      v6.2
+
+
+      ### Describe the issue
+
+
+      The CI/CD pipeline fails during the build step with error "Object
+      reference not set to an instance of an object" when trying to compile AL
+      code that contains table extensions. This happens consistently across
+      multiple repositories.
+
+
+      ### Expected behavior
+
+
+      The build should complete successfully and generate the app file without
+      any compilation errors.
+
+
+      ### Steps to reproduce
+
+
+      1. Create a new AL project with AL-Go templates
+
+      2. Add a table extension to an existing table (e.g., Customer table)
+
+      3. Commit changes to trigger CI/CD pipeline
+
+      4. Pipeline fails during build step
+
+
+      ### Additional context (logs, screenshots, etc.)
+
+
+      Build log shows:
+
+      ```
+
+      Error AL0001: Object reference not set to an instance of an object
+        at Microsoft.Dynamics.Nav.CodeAnalysis.Compilation.GetDiagnostics()
+      ```
+
+      Screenshot attached showing the full error in GitHub Actions.
+    expected: 'AI Assessment: Complete ✅ - The issue includes the necessary information'
+  - input: |-
+      ### AL-Go version
+
+      preview
+
+      ### Describe the issue
+
+      Something is broken with the deployment
+
+      ### Expected behavior
+
+      I expect it to work. I didn't change anything.
+
+      ### Steps to reproduce
+
+      _No response_
+
+      ### Additional context (logs, screenshots, etc.)
+
+      _No response_
+    expected: >-
+      AI Assessment: Missing Details 🔴 - The issue is missing necessary
+      information
+evaluators:
+  - name: categorization_accuracy
+    llm:
+      modelId: azureml://registries/azure-openai/models/gpt-4.1/versions/2025-04-14
+      systemPrompt: >-
+        You are an evaluation judge. Your task is to determine if a model's
+        response correctly categorizes an issue into the same category as the
+        expected/reference answer.
+
+
+        **Valid Categories:**
+
+        - Complete (Ready for Review ✅)
+
+        - Incomplete (Missing Details 🔴)
+
+
+        **Evaluation Criteria:**
+
+        1. The model's answer must use one of the three valid categories above
+
+        2. The model's chosen category must match the expected category exactly
+
+
+        **Your Response:**
+
+        - Return "Pass" if both criteria are met
+
+        - Return "Fail" if either criterion is not met
+      prompt: |-
+        Original Issue: {{input}}
+
+        Expected Answer: {{expected}}
+
+        Actual Answer: {{completion}}
+
+        Please rate whether the answer matches the expectation
+
+        Rating:
+      choices:
+        - choice: Pass
+          score: 1
+        - choice: Fail
+          score: 0
+      modelParameters:
+        max_completion_tokens: 2000
