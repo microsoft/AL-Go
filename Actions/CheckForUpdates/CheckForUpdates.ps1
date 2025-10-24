@@ -194,11 +194,11 @@ foreach($fileToUpdate in $filesToUpdate) {
         # file exists, compare and add to $updateFiles if different
         $dstContent = Get-ContentLF -Path $dstPath
         if ($dstContent -cne $srcContent) {
-            Write-Host "Updated $type ($dstPath) available"
+            Write-Host "Available updates for $type ($dstPath)"
             $updateFiles += @{ "DstFile" = $dstPath; "content" = $srcContent }
         }
         else {
-            Write-Host "No changes in $type ($dstPath)"
+            Write-Host "No updates for $type ($dstPath)"
         }
     }
     else {
