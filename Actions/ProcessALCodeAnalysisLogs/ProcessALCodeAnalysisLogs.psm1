@@ -127,6 +127,18 @@ function Get-IssueMessage {
     }
 }
 
+<#
+    .SYNOPSIS
+    Maps the issue severity from the AL code analysis log to a standardized severity level.
+    .DESCRIPTION
+    This function takes an issue object and checks its "severity" property.
+    It maps the severity levels "error", "warning", "info", and "hidden" to "error", "warning", "note", and "none" respectively.
+    If the severity is not recognized, it defaults to "none".
+    .PARAMETER issue
+    The issue object to extract the severity from.
+    .OUTPUTS
+    A string representing the standardized severity level.
+#>
 function Get-IssueSeverity {
     param(
         [Parameter(HelpMessage = "The issue object to extract the severity from.", Mandatory = $true)]
@@ -134,7 +146,7 @@ function Get-IssueSeverity {
     )
 
     if ($issue.properties.PSObject.Properties.Name -notcontains "severity") {
-        return $null
+        return "none"
     }
 
     $compilerSeverity = $issue.properties.severity
