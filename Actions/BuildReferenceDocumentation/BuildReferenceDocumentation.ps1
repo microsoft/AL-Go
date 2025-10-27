@@ -17,13 +17,33 @@ $excludeProjects = $settings.alDoc.excludeProjects
 $maxReleases = $settings.alDoc.maxReleases
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE ".artifacts"
 $artifactsFolderCreated = $false
+$buildModePrefixes = @()
+if ($settings.PSObject.Properties.Name -contains "buildModes") {
+    $buildModes = $settings.buildModes
+    foreach($buildMode in $buildModes) {
+        if ($buildMode -eq 'default') {
+            $buildMode = ''
+        }
+        if (-not ($buildModePrefixes -contains $buildMode)) {
+            $buildModePrefixes += $buildMode
+        }
+    }
+}
+if ($buildModePrefixes.Count -eq 0) {
+    $buildModePrefixes += ''
+}
+Write-Host $buildModePrefixes
 if (!(Test-Path $artifactsFolder)) {
     New-Item $artifactsFolder -ItemType Directory | Out-Null
     $artifactsFolderCreated = $true
 }
 if ($artifacts -ne ".artifacts") {
     Write-Host "::group::Downloading artifacts"
-    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
+    $allArtifacts = @()
+    $buildModePrefixes | ForEach-Object {
+        $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "$($_)Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
+    }
+    # $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
     if ($allArtifacts) {
         $allArtifacts | ForEach-Object {
             $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
