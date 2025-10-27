@@ -22,7 +22,7 @@ $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
 $settingsName = "deployTo$($envName)"
-if($settings.PSObject.Properties.Name -contains $settingsName) {
+if($settings.Keys -contains $settingsName) {
     $deploymentSettings = ($settings."$settingsName") | ConvertTo-HashTable -recurse
     OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
 } else {
