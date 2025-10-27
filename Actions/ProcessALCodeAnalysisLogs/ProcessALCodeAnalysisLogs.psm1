@@ -127,4 +127,25 @@ function Get-IssueMessage {
     }
 }
 
-Export-ModuleMember -Function Get-FileFromAbsolutePath, Get-IssueMessage
+function Get-IssueSeverity {
+    param(
+        [Parameter(HelpMessage = "The issue object to extract the severity from.", Mandatory = $true)]
+        [PSCustomObject] $issue
+    )
+
+    if ($issue.properties.PSObject.Properties.Name -notcontains "severity") {
+        return $null
+    }
+
+    $compilerSeverity = $issue.properties.severity
+
+    switch ($compilerSeverity.ToLower()) {
+        "error"   { return "error" }
+        "warning" { return "warning" }
+        "info"    { return "note" }
+        "hidden"  { return "none" }
+        default    { return "none" }
+    }
+}
+
+Export-ModuleMember -Function Get-FileFromAbsolutePath, Get-IssueMessage, Get-IssueSeverity

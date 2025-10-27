@@ -40,6 +40,7 @@ function GenerateSARIFJson {
         $newResult = $null
         $relativePath = Get-FileFromAbsolutePath -AbsolutePath $issue.locations[0].analysisTarget[0].uri
         $message = Get-IssueMessage -issue $issue
+        $issueSeverity = Get-IssueSeverity -issue $issue
 
         # Skip issues if we cannot find a message
         if ($null -eq $message) {
@@ -57,7 +58,7 @@ function GenerateSARIFJson {
         $existingResults = $sarif.runs[0].results | Where-Object {
             $_.ruleId -eq $issue.ruleId -and
             $_.message.text -eq $message -and
-            $_.level -eq ($issue.properties.severity).ToLower() -and
+            $_.level -eq ($issueSeverity).ToLower() -and
             ($_.locations[0].physicalLocation.artifactLocation.uri -eq $relativePath) -and
             ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json)
         }
@@ -81,7 +82,7 @@ function GenerateSARIFJson {
                 helpUri = $issue.properties.helpLink
                 properties = @{
                     category = $issue.properties.category
-                    severity = $issue.properties.severity
+                    severity = $issueSeverity
                 }
             }
         }
@@ -96,7 +97,7 @@ function GenerateSARIFJson {
                     region = $issue.locations[0].analysisTarget[0].region
                 }
             })
-            level = ($issue.properties.severity).ToLower()
+            level = ($issueSeverity).ToLower()
         }
 
         # Add the new result if it was created
