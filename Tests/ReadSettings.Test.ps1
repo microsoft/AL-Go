@@ -5,6 +5,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         BeforeAll {
             [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
             $schema = Get-Content -Path (Join-Path $PSScriptRoot '../Actions/.Modules/settings.schema.json') -Raw
+            Mock GetGitHubEnvironments { }
         }
 
         It 'Reads settings from all settings locations' {
@@ -458,6 +459,64 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # overwriteSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'DeployTo default settings are created for all environments' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+            Mock GetGitHubEnvironments { return @( @{ "name" = "ghEnv1" }, @{ "name" = "ghEnv2" } ) }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $ALGoFolder = Join-Path $tempName $ALGoFolderName
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $ALGoFolder -ItemType Directory | Out-Null
+
+            # Create settings files
+            @{ "environments" = @( "settingsEnv1", "settingsEnv2" ) } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+            @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $ALGoFolder "settings.json") -encoding utf8 -Force
+
+            # No settings variables
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Repo only
+            $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -environmentName 'inputEnv1'
+            $deployToCount = @($repoSettings.Keys | Where-Object { $_ -like 'deployTo*' }).Count
+            $deployToCount | Should -Be 5
+        }
+
+        It 'DeployTo settings are not duplicated' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+            Mock GetGitHubEnvironments { return @( @{ "name" = "env1" }, @{ "name" = "env2" } ) }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $ALGoFolder = Join-Path $tempName $ALGoFolderName
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $ALGoFolder -ItemType Directory | Out-Null
+
+            # Create settings files
+            @{ "environments" = @( "env1", "env3" ) } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+            @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $ALGoFolder "settings.json") -encoding utf8 -Force
+
+            # No settings variables
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Repo only
+            $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -environmentName 'env3'
+            $deployToCount = @($repoSettings.Keys | Where-Object { $_ -like 'deployTo*' }).Count
+            $deployToCount | Should -Be 3
         }
     }
 }

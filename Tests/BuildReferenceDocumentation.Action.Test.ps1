@@ -104,4 +104,28 @@ Describe "BuildReferenceDocumentation Action Tests" {
         Assert-MockCalled -CommandName Get-BCArtifactUrl -Exactly 0 -Scope It
         Assert-MockCalled -CommandName Download-Artifacts -ParameterFilter { $artifactUrl -eq "https://example.com/sandbox/core" }
     }
+
+    It 'Build modes handles correctly' {
+        . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+        $settings = @{ "buildModes" = @('default','custom1','custom2','default','custom1'); "alDoc" = @{ "includeProjects" = @(); "excludeProjects" = @(); "maxReleases" = 2; "header" = ""; "footer" = ""; "defaultIndexMD" = ""; "defaultReleaseMD" = ""; "groupByProject" = $true } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $ENV:GITHUB_WORKSPACE = ([System.IO.Path]::GetTempPath())
+
+        Mock GetArtifacts { param($mask) return $null }
+        Mock DownloadArtifact { return ([System.IO.Path]::GetTempPath()) }
+        Mock Expand-Archive { }
+        Mock Remove-Item { }
+        Mock GetReleases { return @() }
+        Mock New-Item { }
+        Mock Get-ChildItem { }
+        Mock CalculateProjectsAndApps { return @(), @() }
+
+        . (Join-Path $scriptRoot $scriptName) -token 'token' -artifacts 'placeholder'
+
+        Assert-MockCalled -CommandName GetArtifacts -Exactly 1 -Scope It -ParameterFilter { $mask -eq 'Apps'}
+        Assert-MockCalled -CommandName GetArtifacts -Exactly 1 -Scope It -ParameterFilter { $mask -eq 'custom1Apps'}
+        Assert-MockCalled -CommandName GetArtifacts -Exactly 1 -Scope It -ParameterFilter { $mask -eq 'custom2Apps'}
+    }
 }
