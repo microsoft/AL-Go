@@ -549,12 +549,13 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
+    # Environments can come from three places: GitHub repo environments, settings.environments and the environmentName input of the PublishToEnvironment action
     $ghEnvironments = @(GetGitHubEnvironments)
     $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) + @($environmentName) | Select-Object -unique | Where-Object { $_ -ne "" }
 
     if ($environments) {
+        OutputDebug "$($environments.Count) Environment(s) defined: $($environments -join ', ')"
         foreach ($environmentName in $environments) {
-            Write-Host "Using custom settings for environment $environmentName"
             $envName = $environmentName.Split(' ')[0]
             # Default deployment settings
             $deploymentSettings = @{
@@ -577,6 +578,7 @@ function ReadSettings {
             $settingsName = "DeployTo$envName"
             if ($settings.Contains($settingsName)) {
                 # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+                Write-Host "Using custom settings for environment $environmentName"
                 $deployTo = $settings."$settingsName"
                 $keys = @($deployTo.Keys)
                 foreach($key in $keys) {
@@ -588,7 +590,7 @@ function ReadSettings {
                                 $deployTo."$key" = $deployTo."$key" -join ','
                             }
                             else {
-                                Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                                OutputWarning -message "The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
                             }
                         }
                         $deploymentSettings."$key" = $deployTo."$key"
@@ -605,6 +607,8 @@ function ReadSettings {
             OutputDebug -message "Deployment settings for environment $($envName): $($deploymentSettings | ConvertTo-Json -Depth 5 -Compress)"
             $settings."$settingsName" = $deploymentSettings
         }
+    } else {
+        OutputDebug "No environments defined"
     }
 
     $settings | ValidateSettings
