@@ -14,5 +14,13 @@ catch {
     Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
 }
 
+Write-Host "Found $($ghEnvironments.Count) environment(s) in GitHub repository:"
+if ($ghEnvironments.Count -gt 0) {
+    $ghEnvironments | ForEach-Object {
+        Write-Host "- $($_.name)"
+    }
+} else {
+    Write-Host "- None"
+}
 Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "GitHubEnvironments=$($ghEnvironments | ConvertTo-Json -Depth 99 -Compress)"
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "GitHubEnvironments=$($ghEnvironments | ConvertTo-Json -Depth 99 -Compress)"
