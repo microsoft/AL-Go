@@ -77,7 +77,7 @@ $templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
-    $templateRepoSettingsFile = Join-Path $templateFolder "*/$RepoSettingsFile"
+    $templateRepoSettingsFile = Join-Path $templateFolder $RepoSettingsFile
     if (Test-Path -Path $templateRepoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
