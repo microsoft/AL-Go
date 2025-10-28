@@ -320,13 +320,13 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 3
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
-        $fullFilePaths[0].type | Should -Be $null
+        $fullFilePaths[0].type | Should -Be ""
         $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
         $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
-        $fullFilePaths[1].type | Should -Be $null
+        $fullFilePaths[1].type | Should -Be ""
         $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
         $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
-        $fullFilePaths[2].type | Should -Be $null
+        $fullFilePaths[2].type | Should -Be ""
     }
 
     It 'ResolveFilePaths with specific destination names' {
@@ -343,10 +343,10 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 2
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile1.txt")
-        $fullFilePaths[0].type | Should -Be $null
+        $fullFilePaths[0].type | Should -Be ""
         $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
         $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile2.log")
-        $fullFilePaths[1].type | Should -Be $null
+        $fullFilePaths[1].type | Should -Be ""
     }
 
     It 'ResolveFilePaths with type' {
@@ -422,6 +422,35 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
     }
 
+    It 'ResolveFilePaths populates the originalSourceFullPath property only if the type does not contain "template"' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "text template"; }
+            @{ "sourcePath" = "folder"; "filter" = "*.log"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "log"; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+
+        # First file has type containing "template", so originalSourceFullPath should be $null
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+
+
+        # Second file has type not containing "template", so originalSourceFullPath should be populated
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[1].originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File2.log")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
+
+        # Third file has is not present in original source folder, so originalSourceFullPath should be $null
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[2].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+    }
 }
 
 Describe "ReplaceOwnerRepoAndBranch" {

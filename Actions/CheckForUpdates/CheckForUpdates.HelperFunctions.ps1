@@ -611,12 +611,12 @@ function ResolveFilePaths {
             $fullFilePath = @{
                 'sourceFullPath' = $srcFile
                 'originalSourceFullPath' = $null
-                'type' = $null
+                'type' = $file.type
                 'destinationFullPath' = $null
             }
 
             # Try to find the same files in the original template folder if it is specified
-            if ($originalSourceFolder -and $file.type -notcontains 'template') {
+            if ($originalSourceFolder -and (-not $file.type.Contains('template'))) {
                 Push-Location $sourceFolder
                 $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
                 Pop-Location
@@ -625,9 +625,6 @@ function ResolveFilePaths {
                     $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
                 }
             }
-
-            # Set type
-            $fullFilePath.type = $file.type
 
             if(-not $destinationFolder) {
                 # Destination folder is not specified, no need to calculate destinationFullPath as it will not be used
