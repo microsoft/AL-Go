@@ -1,0 +1,29 @@
+name: Get GitHub Environments
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+outputs:
+  GitHubEnvironments:
+    description: GitHub Environments in compressed Json format
+    value: ${{ steps.readsettings.outputs.GitHubEnvironments }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _token: ${{ inputs.token }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetGitHubEnvironments" -Action {
+          ${{ github.action_path }}/GetGitHubEnvironments.ps1 -token $ENV:_token
+        }
+branding:
+  icon: terminal
+  color: blue

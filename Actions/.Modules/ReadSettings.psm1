@@ -300,7 +300,8 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
         [string] $environmentName = "$ENV:ALGoEnvName",
-        [string] $customSettings = ""
+        [string] $customSettings = "",
+        [string] $githubEnvironmentsJson = ""
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -550,7 +551,13 @@ function ReadSettings {
     }
 
     # Environments can come from three places: GitHub repo environments, settings.environments and the environmentName input of the PublishToEnvironment action
-    $ghEnvironments = @(GetGitHubEnvironments)
+    if ($githubEnvironmentsJson) {
+        $ghEnvironments = $githubEnvironmentsJson | ConvertFrom-Json
+    } else {
+        $ghEnvironments = @()
+    }
+
+    # $ghEnvironments = @(GetGitHubEnvironments)
     $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) + @($environmentName) | Select-Object -unique | Where-Object { $_ -ne "" }
 
     if ($environments) {

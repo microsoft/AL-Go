@@ -1,4 +1,6 @@
 ﻿Param(
+    [Parameter(HelpMessage = "GitHub repo environments in Json format", Mandatory = $true)]
+    [string] $ghEnvironmentsJson,
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
     [string] $getEnvironments,
     [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
@@ -22,21 +24,21 @@ function IsGitHubPagesAvailable() {
     }
 }
 
-function GetGitHubEnvironments() {
-    OutputDebugFunctionCall
-    $headers = GetHeaders -token $env:GITHUB_TOKEN
-    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-    OutputDebug "Url: $url"
-    try {
-        Write-Host "Requesting environments from GitHub"
-        $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
-    }
-    catch {
-        $ghEnvironments = @()
-        Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
-    }
-    $ghEnvironments
-}
+# function GetGitHubEnvironments() {
+#     OutputDebugFunctionCall
+#     $headers = GetHeaders -token $env:GITHUB_TOKEN
+#     $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+#     OutputDebug "Url: $url"
+#     try {
+#         Write-Host "Requesting environments from GitHub"
+#         $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
+#     }
+#     catch {
+#         $ghEnvironments = @()
+#         Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
+#     }
+#     $ghEnvironments
+# }
 
 function Get-BranchesFromPolicy($ghEnvironment) {
     OutputDebugFunctionCall
@@ -87,7 +89,7 @@ if ($getEnvironments -eq 'github-pages') {
 }
 
 Write-Host "Environment pattern to use: $getEnvironments"
-$ghEnvironments = @(GetGitHubEnvironments)
+$ghEnvironments = $ghEnvironmentsJson | ConvertFrom-Json # @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')

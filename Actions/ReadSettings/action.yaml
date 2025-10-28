@@ -21,6 +21,10 @@ inputs:
     description: Specifies which properties to get from the settings file, default is all
     required: false
     default: ''
+  githubEnvironmentsJson:
+    description: GitHub Environments in compressed Json format
+    required: false
+    default: ''
 outputs:
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format
@@ -39,9 +43,10 @@ runs:
         _buildMode: ${{ inputs.buildMode }}
         _workflowName: ${{ inputs.workflowName }}
         _get: ${{ inputs.get }}
+        _githubEnvironmentsJson: ${{ inputs.githubEnvironmentsJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadSettings" -Action {
-          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -workflowName $ENV:_workflowName -get $ENV:_get
+          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -workflowName $ENV:_workflowName -get $ENV:_get -githubEnvironmentsJson $ENV:_githubEnvironmentsJson
         }
 branding:
   icon: terminal

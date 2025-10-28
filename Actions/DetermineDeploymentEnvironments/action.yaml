@@ -5,6 +5,9 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  githubEnvironmentsJson:
+    description: GitHub repo environments in Json format
+    required: true
   getEnvironments:
     description: Specifies the pattern of the environments you want to retreive (* for all)
     required: true
@@ -31,11 +34,12 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineDeploymentEnvironments
       env:
+        _githubEnvironmentsJson: ${{ inputs.githubEnvironmentsJson }}
         _getEnvironments: ${{ inputs.getEnvironments }}
         _type: ${{ inputs.type }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineDeploymentEnvironments" -Action {
-          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -getEnvironments $ENV:_getEnvironments -type $ENV:_type
+          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -githubEnvironmentsJson $ENV:_githubEnvironmentsJson -getEnvironments $ENV:_getEnvironments -type $ENV:_type
         }
 branding:
   icon: terminal
