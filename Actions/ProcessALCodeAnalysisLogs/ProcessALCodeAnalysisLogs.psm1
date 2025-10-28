@@ -127,4 +127,37 @@ function Get-IssueMessage {
     }
 }
 
-Export-ModuleMember -Function Get-FileFromAbsolutePath, Get-IssueMessage
+<#
+    .SYNOPSIS
+    Maps the issue severity from the AL code analysis log to a standardized severity level.
+    .DESCRIPTION
+    This function takes an issue object and checks its "severity" property.
+    It maps the severity levels "error", "warning", "info", and "hidden" to "error", "warning", "note", and "none" respectively.
+    If the severity is not recognized, it defaults to "none".
+    .PARAMETER issue
+    The issue object to extract the severity from.
+    .OUTPUTS
+    A string representing the standardized severity level.
+#>
+function Get-IssueSeverity {
+    param(
+        [Parameter(HelpMessage = "The issue object to extract the severity from.", Mandatory = $true)]
+        [PSCustomObject] $issue
+    )
+
+    if ($issue.properties.PSObject.Properties.Name -notcontains "severity") {
+        return "none"
+    }
+
+    $compilerSeverity = $issue.properties.severity
+
+    switch ($compilerSeverity.ToLower()) {
+        "error"   { return "error" }
+        "warning" { return "warning" }
+        "info"    { return "note" }
+        "hidden"  { return "none" }
+        default    { return "none" }
+    }
+}
+
+Export-ModuleMember -Function Get-FileFromAbsolutePath, Get-IssueMessage, Get-IssueSeverity
