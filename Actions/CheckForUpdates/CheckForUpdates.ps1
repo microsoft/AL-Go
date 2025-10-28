@@ -185,31 +185,42 @@ foreach($fileToUpdate in $filesToUpdate) {
         [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcPath)
     }
 
+    # Get the relative path for the dstPath from the base folder
+    Push-Location -Path $baseFolder
+    $relativeDstPath = Resolve-Path -Path $dstPath -Relative
+    Pop-Location
+
     if ($dstFileExists) {
         if ($type -eq 'workflow') {
-            Write-Host "Apply customizations from current repository, file: $dstPath"
+            Write-Host "Apply customizations from current repository, file: $relativeDstPath"
             [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
         }
 
         # file exists, compare and add to $updateFiles if different
         $dstContent = Get-ContentLF -Path $dstPath
         if ($dstContent -cne $srcContent) {
-            Write-Host "Available updates for $type ($dstPath)"
-            $updateFiles += @{ "DstFile" = $dstPath; "content" = $srcContent }
+            Write-Host "Available updates for $type ($relativeDstPath)"
+            $updateFiles += @{ "DstFile" = $relativeDstPath; "content" = $srcContent }
         }
         else {
-            Write-Host "No updates for $type ($dstPath)"
+            Write-Host "No updates for $type ($relativeDstPath)"
         }
     }
     else {
         # new file, add to $updateFiles
-        Write-Host "New $type ($dstPath) available"
-        $updateFiles += @{ "DstFile" = $dstPath; "content" = $srcContent }
+        Write-Host "New $type ($relativeDstPath) available"
+        $updateFiles += @{ "DstFile" = $relativeDstPath; "content" = $srcContent }
     }
 }
 
+Push-Location -Path $baseFolder
 # Remove files that are in $filesToRemove and exist in the repository
-$removeFiles = $filesToRemove | Where-Object { $_ -and (Test-Path -Path $_ -PathType Leaf) } | ForEach-Object { $_.sourceFullPath }
+$removeFiles = $filesToRemove | Where-Object { $_ -and (Test-Path -Path $_ -PathType Leaf) } | ForEach-Object {
+    $relativePath = Resolve-Path -Path $_ -Relative
+    Write-Host "File marked for removal: $relativePath"
+    $relativePath
+}
+Pop-Location
 
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available
@@ -246,7 +257,7 @@ else {
             exit
         }
 
-        # If $directCommit, then changes are made directly to the default branch
+        # Clone into a new folder, create a new branch (if not direct commit), and set the location to the new folder
         $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $repoWriteToken -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix 'update-al-go-system-files'
 
         invoke-git status
