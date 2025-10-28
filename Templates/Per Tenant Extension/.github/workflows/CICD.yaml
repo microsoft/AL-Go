@@ -78,7 +78,7 @@ jobs:
         with:
           shell: powershell
           get: type,powerPlatformSolutionFolder,useGitSubmodules,trackALAlertsInGitHub
-          githubEnvironmentsJson: ${{ steps.GetGitHubEnvironments.outputs.GitHubEnvironments }}
+          githubEnvironmentsJson: ${{ env.GithubEnvironments }}
 
       - name: Set AL Code Analysis Var output
         id: SetALCodeAnalysisVar
@@ -154,7 +154,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
-          githubEnvironmentsJson: '${{ steps.GetGitHubEnvironments.outputs.GitHubEnvironments }}'
+          githubEnvironmentsJson: ${{ env.GithubEnvironments }}
           getEnvironments: '*'
           type: 'CD'
 
