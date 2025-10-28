@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
@@ -86,7 +86,7 @@ try {
 
     $appBuild = $settings.appBuild
     $appRevision = $settings.appRevision
-    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -94,9 +94,8 @@ try {
         else {
             $value = ""
         }
-        # Secrets preceded by an asterisk are returned encrypted.
-        # Variable name should not include the asterisk
-        Set-Variable -Name $_.TrimStart('*') -Value $value
+
+        Set-Variable -Name $_ -Value $value
     }
 
     $analyzeRepoParams = @{}
@@ -235,6 +234,8 @@ try {
     }
 
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
+        Trace-Information -Message "Enabling key vault access for apps"
+
         $runAlPipelineParams += @{
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
             "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword
