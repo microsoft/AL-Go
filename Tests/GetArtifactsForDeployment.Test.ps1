@@ -17,7 +17,7 @@ Describe "GetArtifactsForDeployment Action Tests" {
 
         $ENV:GITHUB_API_URL = "apiForGitHub"
 
-        Mock GetHeaders { return @{} }           
+        Mock GetHeaders { return @{} }
         Mock InvokeWebRequest {
             param($headers, $Uri)
             if ($Uri -like "ggez*") {
@@ -58,7 +58,7 @@ Describe "GetArtifactsForDeployment Action Tests" {
     It 'Version is current, releases exist' {
         $settings = @{ "DeployToenv1" = @{ "buildMode" = '' } }
         $env:Settings = $settings | ConvertTo-Json -Compress
-        
+
         . (Join-Path $scriptRoot $scriptName) -artifactsVersion 'current' -artifactsFolder '.artifacts' -environmentName 'env1'
 
         # DownloadRelease called 4 times (Apps, TestApps, Dependencies, PowerPlatformSolution)
@@ -68,11 +68,12 @@ Describe "GetArtifactsForDeployment Action Tests" {
     It 'Version is current, releases does not exist' {
         $settings = @{ "DeployToenv1" = @{ "buildMode" = '' } }
         $env:Settings = $settings | ConvertTo-Json -Compress
+        $ENV:GITHUB_REPOSITORY = "repo"
 
         Mock GetReleases {
             return @()
         }
-        
+
         . (Join-Path $scriptRoot $scriptName) -token 'token' -artifactsVersion 'current' -artifactsFolder '.artifacts' -environmentName 'env1'
 
         Assert-MockCalled -CommandName DownloadRelease -Exactly 0
