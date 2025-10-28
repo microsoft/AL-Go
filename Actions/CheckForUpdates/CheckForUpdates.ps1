@@ -186,9 +186,7 @@ foreach($fileToUpdate in $filesToUpdate) {
     }
 
     # Get the relative path for the dstPath from the base folder
-    Push-Location -Path $baseFolder
-    $relativeDstPath = Resolve-Path -Path $dstPath -Relative
-    Pop-Location
+    $relativeDstPath = $dstPath.Substring($baseFolder.Length + 1)
 
     if ($dstFileExists) {
         if ($type -eq 'workflow') {
