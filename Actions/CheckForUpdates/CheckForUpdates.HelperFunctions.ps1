@@ -597,6 +597,12 @@ function ResolveFilePaths {
             $file.perProject = $false # Default to false
         }
 
+        # If originalSourceFolder is not specified and the file type is 'template', skip the file
+        # This is the case when the file is from the original template folder, but no original template folder is specified (there is no original template)
+        if(!$originalSourceFolder -and $file.type -eq 'original template') {
+            continue;
+        }
+
         # All files are relative to the template folder
         Write-Host "Resolving files for sourcePath '$($file.sourcePath)' and filter '$($file.filter)'"
         $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
@@ -605,12 +611,6 @@ function ResolveFilePaths {
         if(-not $sourceFiles) {
             Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
             continue
-        }
-
-        # If originalSourceFolder is not specified and the file type is 'template', skip the file
-        # This is the case when the file is from the original template folder, but no original template folder is specified (there is no original template)
-        if(!$originalSourceFolder -and $file.type.Contains('template')) {
-            continue;
         }
 
         foreach($srcFile in $sourceFiles) {
@@ -622,7 +622,7 @@ function ResolveFilePaths {
             }
 
             # Try to find the same files in the original template folder if it is specified
-            if ($originalSourceFolder -and (-not $file.type.Contains('template'))) {
+            if ($originalSourceFolder -and ($file.type -ne 'original template')) {
                 Push-Location $sourceFolder
                 $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
                 Pop-Location
