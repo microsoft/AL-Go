@@ -676,7 +676,6 @@ function ResolveFilePaths {
 
 function GetDefaultFilesToUpdate {
     Param(
-        $settings,
         [switch] $includeCustomTemplateFiles
     )
 
@@ -749,7 +748,7 @@ function GetFilesToUpdate {
         $originalTemplateFolder = $null
     )
 
-    $filesToUpdate = GetDefaultFilesToUpdate -settings $settings -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
+    $filesToUpdate = GetDefaultFilesToUpdate -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
     $filesToUpdate += $settings.updateALGoFiles.filesToUpdate
     $filesToUpdate = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToUpdate -projects $projects
 
