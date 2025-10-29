@@ -599,6 +599,7 @@ function ResolveFilePaths {
 
         # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
         if(!$originalSourceFolder -and $file.type -eq 'custom template') {
+            Write-Host "Skipping custom template file with sourcePath '$($file.sourcePath)' as there is no original source folder specified"
             continue;
         }
 
