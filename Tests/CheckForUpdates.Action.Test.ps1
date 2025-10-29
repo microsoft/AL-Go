@@ -80,11 +80,11 @@ Describe('YamlClass Tests') {
         $count | Should -be 19
 
         # Replace all occurances of 'shell: powershell' with 'shell: pwsh'
-        $yaml.ReplaceAll('shell: powershell','shell: pwsh')
+        $yaml.ReplaceAll('shell: powershell', 'shell: pwsh')
         $yaml.content[46].Trim() | Should -be 'shell: pwsh'
 
         # Replace Permissions
-        $yaml.Replace('Permissions:/',@('contents: write','actions: read'))
+        $yaml.Replace('Permissions:/', @('contents: write', 'actions: read'))
         $yaml.content[44].Trim() | Should -be 'shell: pwsh'
         $yaml.content.Count | Should -be 72
 
@@ -293,6 +293,14 @@ Describe "ResolveFilePaths" {
         }
         New-Item -Path (Join-Path $originalSourceFolder "folder/File1.txt") -ItemType File -Force | Out-Null
         New-Item -Path (Join-Path $originalSourceFolder "folder/File2.log") -ItemType File -Force | Out-Null
+
+        # File tree:
+        # sourceFolder
+        # └── folder
+        #     ├── File1.txt
+        #     ├── File2.log
+        #     ├── File3.txt
+        #     └── File4.md
     }
 
     AfterAll {
@@ -451,6 +459,68 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[2].originalSourceFullPath | Should -Be $null
         $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
     }
+
+    It 'ResolveFilePaths with a single project' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; type = "markdown"; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("SomeProject")
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File3.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths with multiple projects' {
+        $destinationPath = "destinationPath"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $files = @(
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; type = "markdown"; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA", "ProjectB")
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 5
+
+        # ProjectA files
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File1.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+
+        # ProjectB files
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File3.txt")
+        $fullFilePaths[2].type | Should -Be "text"
+
+        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File3.txt")
+        $fullFilePaths[3].type | Should -Be "text"
+
+        # Non-per-project file
+        $fullFilePaths[4].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[4].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[4].type | Should -Be "markdown"
+    }
 }
 
 Describe "ReplaceOwnerRepoAndBranch" {
@@ -491,7 +561,7 @@ Describe "IsDirectALGo" {
     }
 }
 
-Describe "GetFilesToUpdate" {
+Describe "GetFilesToUpdate (general files to update logic)" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
@@ -535,14 +605,15 @@ Describe "GetFilesToUpdate" {
 
     It "Returns the correct files to update with filters" {
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.ps1" })
-                filesToIgnore = @()
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*.ps1" })
+                filesToExclude = @()
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 1
@@ -550,17 +621,18 @@ Describe "GetFilesToUpdate" {
         $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
 
         # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.txt" })
-                filesToIgnore = @()
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*.txt" })
+                filesToExclude = @()
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 2
         $filesToUpdate[0].sourceFullPath | Should -Be $testTxtFile
@@ -569,96 +641,20 @@ Describe "GetFilesToUpdate" {
         $filesToUpdate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
 
         # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
-    }
-
-    It 'Returns the correct files when there are files to ignore' {
-        $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.*" })
-                filesToIgnore = @(@{ filter = "test.txt" })
-                filesToRemove = @()
-            }
-        }
-
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
-
-        $filesToUpdate | Should -Not -BeNullOrEmpty
-        $filesToUpdate.Count | Should -Be 2
-        $filesToUpdate[0].sourceFullPath | Should -Be $testPSFile
-        $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
-        $filesToUpdate[1].sourceFullPath | Should -Be $testTxtFile2
-        $filesToUpdate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
-
-        # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
-
-        $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.txt" })
-                filesToIgnore = @(@{ filter = "*" })
-                filesToRemove = @()
-            }
-        }
-
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
-
-        # No files to update
-        $filesToUpdate | Should -BeNullOrEmpty
-        # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
-    }
-
-    It 'Returns the correct files within subfolders' {
-        $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ sourcePath = 'subfolder'; filter = "*.txt" })
-                filesToIgnore = @()
-                filesToRemove = @()
-            }
-        }
-
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
-
-        $filesToUpdate | Should -Not -BeNullOrEmpty
-        $filesToUpdate.Count | Should -Be 2
-        $filesToUpdate[0].sourceFullPath | Should -Be $testSubfolderFile
-        $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'subfolder/testsub.txt')
-        $filesToUpdate[1].sourceFullPath | Should -Be $testSubfolderFile2
-        $filesToUpdate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'subfolder/testsub2.txt')
-
-        # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
-
-        $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ sourcePath = 'subfolder'; filter = "*.txt" })
-                filesToIgnore = @(@{ sourcePath = 'subfolder'; filter = "testsub2.txt" })
-                filesToRemove = @()
-            }
-        }
-
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
-
-        $filesToUpdate | Should -Not -BeNullOrEmpty
-        $filesToUpdate.Count | Should -Be 1
-        $filesToUpdate[0].sourceFullPath | Should -Be $testSubfolderFile
-        $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'subfolder/testsub.txt')
-
-        # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
     }
 
     It 'Returns the correct files with destinationPath' {
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
-                filesToIgnore = @()
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
+                filesToExclude = @()
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 2
@@ -668,37 +664,42 @@ Describe "GetFilesToUpdate" {
         $filesToUpdate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test2.txt')
 
         # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
-                filesToIgnore = @(@{ filter = "test2.txt" })
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
+                filesToExclude = @(@{ filter = "test2.txt" })
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 1
         $filesToUpdate[0].sourceFullPath | Should -Be $testTxtFile
         $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test.txt')
 
-        # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        # One file to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testTxtFile2
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
     }
 
     It 'Returns the correct files with destinationName' {
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "test.ps1"; destinationName = "renamed.txt" })
-                filesToIgnore = @()
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "test.ps1"; destinationName = "renamed.txt" })
+                filesToExclude = @()
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 1
@@ -706,17 +707,18 @@ Describe "GetFilesToUpdate" {
         $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'renamed.txt')
 
         # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "test.ps1"; destinationPath = 'dstPath'; destinationName = "renamed.txt" })
-                filesToIgnore = @()
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "test.ps1"; destinationPath = 'dstPath'; destinationName = "renamed.txt" })
+                filesToExclude = @()
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 1
@@ -726,14 +728,15 @@ Describe "GetFilesToUpdate" {
 
     It 'Return the correct files with types' {
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.ps1"; type = "script" })
-                filesToIgnore = @()
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*.ps1"; type = "script" })
+                filesToExclude = @()
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 1
@@ -742,17 +745,18 @@ Describe "GetFilesToUpdate" {
         $filesToUpdate[0].type | Should -Be "script"
 
         # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
-            updateALGoFiles = @{
-                filesToUpdate = @(@{ filter = "*.txt"; type = "text" })
-                filesToIgnore = @(@{ filter = "test.txt" })
-                filesToRemove = @()
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*.txt"; type = "text" })
+                filesToExclude = @(@{ filter = "test.txt" })
             }
         }
 
-        $filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
         $filesToUpdate.Count | Should -Be 1
@@ -760,7 +764,155 @@ Describe "GetFilesToUpdate" {
         $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
         $filesToUpdate[0].type | Should -Be "text"
 
+        # One file to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+    }
+
+    It 'Return the correct files when unusedALGoSystemFiles is specified' {
+        $settings = @{
+            type                  = "nonPTE"
+            unusedALGoSystemFiles = @("test.ps1")
+            updateALGoFiles       = @{
+                filesToUpdate  = @(@{ filter = "*" })
+                filesToExclude = @()
+            }
+        }
+
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        $filesToUpdate | Should -Not -BeNullOrEmpty
+        $filesToUpdate.Count | Should -Be 2
+        $filesToUpdate[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToUpdate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToUpdate[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToUpdate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+
+        # One file to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+    }
+}
+
+Describe 'GetFilesToUpdate (real template)' {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realPTETemplateFolder', Justification = 'False positive.')]
+        $realPTETemplateFolder = Join-Path $PSScriptRoot "../Templates/Per Tenant Extension" -Resolve
+    }
+
+    It 'Return the correct files to exclude when type is PTE and powerPlatformSolutionFolder is not empty' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @()
+            updateALGoFiles             = @{
+                filesToUpdate  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToUpdate | Should -Not -BeNullOrEmpty
+        $filesToUpdate.Count | Should -Be 24
+        $filesToUpdate.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToUpdate.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToUpdate.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+
         # No files to remove
-        $filesToRemove | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'Return PP files in filesToExclude when type is PTE but powerPlatformSolutionFolder is empty' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ""
+            unusedALGoSystemFiles       = @()
+            updateALGoFiles             = @{
+                filesToUpdate  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToUpdate | Should -Not -BeNullOrEmpty
+        $filesToUpdate.Count | Should -Be 21
+
+        $filesToUpdate | ForEach-Object {
+            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        }
+
+        # All PP files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 3
+
+        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/_BuildPowerPlatformSolution.yaml")
+
+        $filesToExclude[1].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PullPowerPlatformChanges.yaml")
+
+        $filesToExclude[2].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToExclude[2].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PushPowerPlatformChanges.yaml")
+    }
+
+    It 'Return the correct files when unusedALGoSystemFiles is specified' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @("Test Next Major.settings.json")
+            updateALGoFiles             = @{
+                filesToUpdate  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToUpdate | Should -Not -BeNullOrEmpty
+        $filesToUpdate.Count | Should -Be 23
+
+        # Two files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/Test Next Major.settings.json')
+    }
+
+    It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ""
+            unusedALGoSystemFiles       = @("Test Next Major.settings.json", "_BuildPowerPlatformSolution.yaml")
+            updateALGoFiles             = @{
+                filesToUpdate  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToUpdate | Should -Not -BeNullOrEmpty
+        $filesToUpdate.Count | Should -Be 20
+
+        # Four files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 4
+
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
     }
 }

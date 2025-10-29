@@ -54,12 +54,6 @@ if ($token) {
 # Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
 $repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
-$unusedALGoSystemFiles = $repoSettings.unusedALGoSystemFiles
-$includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
-if (!$includeBuildPP) {
-    # Remove PowerPlatform workflows if no PowerPlatformSolution exists
-    $unusedALGoSystemFiles += @('_BuildPowerPlatformSolution.yaml','PushPowerPlatformChanges.yaml','PullPowerPlatformChanges.yaml')
-}
 
 # If templateUrl has changed, download latest version of the template repository (ignore templateSha)
 if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
@@ -121,17 +115,7 @@ if (-not $isDirectALGo) {
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
-$filesToUpdate, $filesToRemove = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
-
-#Exclude unusedALGoSystemFiles from $filesToUpdate and add them to $filesToRemove
-$unusedFilesToRemove = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
-if ($unusedFilesToRemove) {
-    Write-Host "The following files are marked as unused and will be removed if they exist:"
-    $unusedFilesToRemove | ForEach-Object { Write-Host "- $($_.destinationFullPath)" }
-
-    $filesToUpdate = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) }
-    $filesToRemove += @($unusedFilesToRemove | ForEach-Object { @{ 'sourceFullPath' = $_.destinationFullPath } })
-}
+$filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
 
 # $updateFiles will hold an array of files, which needs to be updated
 $updateFiles = @()
@@ -217,9 +201,9 @@ foreach($fileToUpdate in $filesToUpdate) {
 }
 
 Push-Location -Path $baseFolder
-# Remove files that are in $filesToRemove and exist in the repository
-$removeFiles = $filesToRemove | Where-Object { $_ -and (Test-Path -Path $_ -PathType Leaf) } | ForEach-Object {
-    $relativePath = Resolve-Path -Path $_ -Relative
+# Remove files that are in $filesToExclude and exist in the repository
+$removeFiles = $filesToExclude | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
+    $relativePath = Resolve-Path -Path $_.destinationFullPath -Relative
     Write-Host "File marked for removal: $relativePath"
     $relativePath
 }

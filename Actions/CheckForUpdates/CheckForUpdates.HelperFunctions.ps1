@@ -674,7 +674,72 @@ function ResolveFilePaths {
     return $fullFilePaths
 }
 
-# TODO Add tests for GetFilesToUpdate
+function GetDefaultFilesToUpdate {
+    Param(
+        $settings,
+        [switch] $includeCustomTemplateFiles
+    )
+
+    $filesToUpdate = @(
+        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*'; 'type' = 'workflow' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md'; 'type' = 'releasenotes' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1'; 'type' = 'script' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
+
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }
+    )
+
+    if($includeCustomTemplateFiles) {
+        # If there is an original template folder, we also need to include custom template files (RepoSettings and ProjectSettings)
+        $filesToUpdate += @(
+            [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'type' = 'custom template' }
+            [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'custom template' }
+        )
+    }
+
+    return $filesToUpdate
+}
+
+function GetDefaultFilesToExclude {
+    Param(
+        $settings
+    )
+    $filesToExclude = @()
+
+    $includeBuildPP = $settings.type -eq 'PTE' -and $settings.powerPlatformSolutionFolder -ne ''
+    if (!$includeBuildPP) {
+        # Remove PowerPlatform workflows if no PowerPlatformSolution exists
+        $filesToExclude += @(
+            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
+            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
+            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+        )
+    }
+
+    return @($filesToExclude)
+}
+
+<#
+.SYNOPSIS
+    Get the list of files to update and exclude based on settings
+.DESCRIPTION
+    This function gets the list of files to update and exclude based on the provided settings.
+    The unusedALGoSystemFiles setting is also applied to exclude files from the update list and add them to the exclude list.
+.PARAMETER settings
+    The settings object containing the updateALGoFiles configuration.
+.PARAMETER projects
+    The list of projects in the repository.
+.PARAMETER baseFolder
+    The base folder of the repository.
+.PARAMETER templateFolder
+    The folder where the template files are located.
+.PARAMETER originalTemplateFolder
+    The folder where the original template files are located (if any). In case of custom templates.
+.OUTPUTS
+    An array containing two elements: the list of files to update and the list of files to exclude.
+#>
 function GetFilesToUpdate {
     Param(
         $settings,
@@ -684,40 +749,38 @@ function GetFilesToUpdate {
         $originalTemplateFolder = $null
     )
 
-    $filesToUpdate = $settings.updateALGoFiles.filesToUpdate
+    $filesToUpdate = GetDefaultFilesToUpdate -settings $settings -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
+    $filesToUpdate += $settings.updateALGoFiles.filesToUpdate
     $filesToUpdate = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToUpdate -projects $projects
-    OutputDebug "Files to update:"
-    $filesToUpdate | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)"}
 
-    $filesToIgnore = $settings.updateALGoFiles.filesToIgnore
-    $filesToIgnore = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -files $filesToIgnore -projects $projects
-    OutputDebug "Files to ignore:"
-    $filesToIgnore | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)" }
+    $filesToExclude = GetDefaultFilesToExclude -settings $settings
+    $filesToExclude += $settings.updateALGoFiles.filesToExclude
+    $filesToExclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects
 
-    $filesToRemove = $settings.updateALGoFiles.filesToRemove
-    $filesToRemove = ResolveFilePaths -sourceFolder $baseFolder -files $filesToRemove -projects $projects
-    OutputDebug "Files to remove:"
-    $filesToRemove | ForEach-Object { OutputDebug "  $(ConvertTo-Json $_)" }
-
-    # Exclude files to ignore from files to update
+    # Exclude files from filesToUpdate that are in filesToExclude
     $filesToUpdate = $filesToUpdate | Where-Object {
         $fileToUpdate = $_
-        $include = -not ($filesToIgnore | Where-Object { $_.sourceFullPath -eq $fileToUpdate.sourceFullPath })
+        $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToUpdate.sourceFullPath })
         if(-not $include) {
-            Write-Host "Excluding file $($fileToUpdate.sourceFullPath) from update as it is in the ignore list"
+            Write-Host "Excluding file $($fileToUpdate.sourceFullPath) from update as it is in the exclude list"
         }
         return $include
     }
 
-    # Exclude files to remove from files to update
-    $filesToUpdate = $filesToUpdate | Where-Object {
-        $fileToUpdate = $_
-        $include = -not ($filesToRemove | Where-Object { $_.sourceFullPath -eq $fileToUpdate.destinationFullPath }) # Note: comparing sourceFullPath of files to remove with destinationFullPath of files to update
-        if(-not $include) {
-            Write-Host "Excluding file $($fileToUpdate.sourceFullPath) from update as it is in the remove list"
-        }
-        return $include
+    # Apply unusedALGoSystemFiles logic
+    $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
+
+    # Exclude unusedALGoSystemFiles from $filesToUpdate and add them to $filesToExclude
+    $unusedFilesToExclude = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
+    if ($unusedFilesToExclude) {
+        # TODO: Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions. Please use 'updateALGoFiles.filesToExclude' instead." -DeprecationTag "unusedALGoSystemFiles"
+
+        Write-Host "The following files are marked as unused and will be removed if they exist:"
+        $unusedFilesToExclude | ForEach-Object { Write-Host "- $($_.destinationFullPath)" }
+
+        $filesToUpdate = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) }
+        $filesToExclude += @($unusedFilesToExclude)
     }
 
-    return @($filesToUpdate), @($filesToRemove)
+    return @($filesToUpdate), @($filesToExclude)
 }
