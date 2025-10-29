@@ -1,6 +1,6 @@
 ﻿Param(
-    [Parameter(HelpMessage = "GitHub repo environments in Json format", Mandatory = $true)]
-    [string] $githubEnvironmentsJson,
+    [Parameter(HelpMessage = "GitHub repo environments in Json format", Mandatory = $false)]
+    [string] $githubEnvironmentsJson = '',
     [Parameter(HelpMessage = "Specifies the pattern of the environments you want to retreive (* for all)", Mandatory = $true)]
     [string] $getEnvironments,
     [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
@@ -89,7 +89,15 @@ if ($getEnvironments -eq 'github-pages') {
 }
 
 Write-Host "Environment pattern to use: $getEnvironments"
-$ghEnvironments = $githubEnvironmentsJson | ConvertFrom-Json # @(GetGitHubEnvironments)
+try {
+    if ($githubEnvironmentsJson -eq '') {
+        $ghEnvironments = @()
+    } else {
+        $ghEnvironments = $githubEnvironmentsJson | ConvertFrom-Json
+    }
+} catch {
+    $ghEnvironments = @()
+}
 
 Write-Host "Reading environments from settings"
 $settings.excludeEnvironments += @('github-pages')

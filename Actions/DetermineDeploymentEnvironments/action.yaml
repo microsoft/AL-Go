@@ -7,7 +7,8 @@ inputs:
     default: powershell
   githubEnvironmentsJson:
     description: GitHub repo environments in Json format
-    required: true
+    required: false
+    default: ''
   getEnvironments:
     description: Specifies the pattern of the environments you want to retreive (* for all)
     required: true
