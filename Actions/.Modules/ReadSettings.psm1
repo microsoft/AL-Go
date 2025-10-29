@@ -255,8 +255,8 @@ function GetDefaultSettings
                 [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1'; 'type' = 'script' }
                 [ordered]@{ 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings' }
                 [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
-                [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'type' = 'original template' }
-                [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'original template' }
+                [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'type' = 'custom template' }
+                [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'custom template' }
 
                 [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
                 [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }

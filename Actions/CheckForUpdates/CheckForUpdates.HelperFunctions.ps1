@@ -597,9 +597,8 @@ function ResolveFilePaths {
             $file.perProject = $false # Default to false
         }
 
-        # If originalSourceFolder is not specified and the file type is 'template', skip the file
-        # This is the case when the file is from the original template folder, but no original template folder is specified (there is no original template)
-        if(!$originalSourceFolder -and $file.type -eq 'original template') {
+        # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
+        if(!$originalSourceFolder -and $file.type -eq 'custom template') {
             continue;
         }
 
@@ -621,8 +620,8 @@ function ResolveFilePaths {
                 'destinationFullPath' = $null
             }
 
-            # Try to find the same files in the original template folder if it is specified
-            if ($originalSourceFolder -and ($file.type -ne 'original template')) {
+            # Try to find the same files in the original template folder if it is specified. Exclude custom template files
+            if ($originalSourceFolder -and ($file.type -ne 'custom template')) {
                 Push-Location $sourceFolder
                 $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
                 Pop-Location
