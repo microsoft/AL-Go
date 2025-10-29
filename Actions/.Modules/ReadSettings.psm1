@@ -1,8 +1,8 @@
 Import-Module (Join-Path -Path $PSScriptRoot "DebugLogHelper.psm1")
 
 $ALGoFolderName = '.AL-Go'
-$ALFoSettingsFileName = 'settings.json'
-$ALGoSettingsFile = Join-Path '.AL-Go' $ALFoSettingsFileName
+$ALGoSettingsFileName = 'settings.json'
+$ALGoSettingsFile = Join-Path '.AL-Go' $ALGoSettingsFileName
 
 $RepoSettingsFileName = 'AL-Go-Settings.json'
 $RepoSettingsFile = Join-Path '.github' $RepoSettingsFileName
@@ -256,7 +256,7 @@ function GetDefaultSettings
                 [ordered]@{ 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings' }
                 [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
                 [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'type' = 'template repo settings' }
-                [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALFoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'template project settings' }
+                [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'template project settings' }
 
                 [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
                 [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }
