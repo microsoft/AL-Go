@@ -464,7 +464,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'DeployTo default settings are created for all environments' {
             Mock Write-Host { }
             Mock Out-Host { }
-            
+
             $githubEnvironmentsJson = @( @{ "name" = "env1" }, @{ "name" = "env2" } ) | ConvertTo-Json -Depth 99
 
             Push-Location
@@ -503,7 +503,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ALGoFolder = Join-Path $tempName $ALGoFolderName
 
             New-Item $githubFolder -ItemType Directory | Out-Null
-            New-Item $ALGoFolder -ItemType Directory | Out-Null 
+            New-Item $ALGoFolder -ItemType Directory | Out-Null
 
             # Create settings files
             @{ "environments" = @( "env1", "env3" ) } | ConvertTo-Json -Depth 99 |
