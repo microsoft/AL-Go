@@ -190,7 +190,7 @@ foreach($fileToUpdate in $filesToUpdate) {
         [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcPath)
     }
 
-    # Get the relative path for the dstPath from the base folder
+    # Get the relative path for the dstPath from the base folder. Don't use Resolve-Path as it will fail if the destination file doesn't exist
     $relativeDstPath = $dstPath.Substring($baseFolder.Length + 1)
 
     if ($dstFileExists) {
