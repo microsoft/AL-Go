@@ -607,6 +607,12 @@ function ResolveFilePaths {
             continue
         }
 
+        # If originalSourceFolder is not specified and the file type is 'template', skip the file
+        # This is the case when the file is from the original template folder, but no original template folder is specified (there is no original template)
+        if(!$originalSourceFolder -and $file.type.Contains('template')) {
+            continue;
+        }
+
         foreach($srcFile in $sourceFiles) {
             $fullFilePath = @{
                 'sourceFullPath' = $srcFile
