@@ -108,6 +108,11 @@ if (-not $isDirectALGo) {
             # Keep TemplateUrl and TemplateSha pointing to the custom template repository
             $templateBranch = $originalTemplateUrl.Split('@')[1]
             $templateOwner = $originalTemplateUrl.Split('/')[3]
+
+            $isDirectALGo = IsDirectALGo -templateUrl $originalTemplateUrl
+            if ($isDirectALGo) {
+                Trace-Information -Message "Original template repository is direct AL-Go"
+            }
         }
     }
 }
