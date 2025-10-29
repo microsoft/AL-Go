@@ -18,25 +18,6 @@ Describe "GetArtifactsForDeployment Action Tests" {
         $ENV:GITHUB_API_URL = "apiForGitHub"
 
         Mock GetHeaders { return @{} }
-        Mock InvokeWebRequest {
-            param($headers, $Uri)
-            if ($Uri -like "ggez*") {
-                return @{
-                    Content = @{
-                        head = @{
-                            ref = "feature/test-branch"
-                        }
-                    } | ConvertTo-Json
-                }
-            } elseif ($Uri -like "*/releases") {
-                return @(
-                    @{ "pre-release" = $false; "draft" = $false }
-                )
-            } else {
-                throw 'nah..'
-            }
-            return @{ Content = "{}" }
-        } -ModuleName Github-Helper
         Mock GetReleases {
             return @(
                 @{ "prerelease" = $false; "draft" = $false; "tag_name" = "v1.0.0"; "id" = 1 }

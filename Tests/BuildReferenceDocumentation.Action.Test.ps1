@@ -113,7 +113,7 @@ Describe "BuildReferenceDocumentation Action Tests" {
         $env:Settings = $settings | ConvertTo-Json -Compress
         $ENV:GITHUB_WORKSPACE = ([System.IO.Path]::GetTempPath())
 
-        Mock GetArtifacts { param($mask) return $null }
+        Mock GetArtifacts { return $null }
         Mock DownloadArtifact { return ([System.IO.Path]::GetTempPath()) }
         Mock Expand-Archive { }
         Mock Remove-Item { }
