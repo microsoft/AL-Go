@@ -68,11 +68,11 @@ When contributing to AL-Go, you should add unit tests for your changes. Unit tes
 **Creating a new unit test file:**
 
 1. Create a new `.Test.ps1` file in the `Tests` folder. The file name should describe what you're testing (e.g., `MyFeature.Test.ps1`)
-2. Import the module or script you want to test at the beginning of your test file
-3. Use `Describe` blocks to group related tests
-4. Use `It` blocks for individual test cases
-5. Use `BeforeAll` for setup that runs once before all tests in a `Describe` block
-6. Use `Mock` to mock external dependencies and function calls
+1. Import the module or script you want to test at the beginning of your test file
+1. Use `Describe` blocks to group related tests
+1. Use `It` blocks for individual test cases
+1. Use `BeforeAll` for setup that runs once before all tests in a `Describe` block
+1. Use `Mock` to mock external dependencies and function calls
 
 **Example test structure:**
 
@@ -85,13 +85,10 @@ Describe "MyFeature tests" {
     }
 
     It 'Should do something specific' {
-        # Arrange
         Mock Write-Host { }
-        
-        # Act
+
         $result = MyFunction -Parameter "value"
-        
-        # Assert
+
         $result | Should -Be "expected"
     }
 }
@@ -175,9 +172,9 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 
 ## GitHub Codespaces
 
-AL-Go supports developing from GitHub Codespaces. You can create codespaces by going to: [https://github.com/codespaces/new](https://github.com/codespaces/new?skip_quickstart=true&repo=413794983&ref=main). From here you can create codespace either for microsoft/AL-Go or for your fork of AL-Go.
+AL-Go supports developing from GitHub Codespaces. Codespaces come pre-configured with Pre-Commit, Pester and latest BCContainerHelper version installed. Simply click the button below to get started or go to https://github.com/codespaces/new/microsoft/AL-Go
 
-Codespaces come pre-configured with Pre-Commit and with latest BCContainerHelper version installed.
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/AL-Go?quickstart=1)
 
 ______________________________________________________________________
 
