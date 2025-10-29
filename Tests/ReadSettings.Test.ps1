@@ -464,7 +464,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'DeployTo default settings are created for all environments' {
             Mock Write-Host { }
             Mock Out-Host { }
-            Mock GetGitHubEnvironments { return @( @{ "name" = "ghEnv1" }, @{ "name" = "ghEnv2" } ) }
+            
+            $githubEnvironmentsJson = @( @{ "name" = "env1" }, @{ "name" = "env2" } ) | ConvertTo-Json -Depth 99
 
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -485,7 +486,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoRepoSettings = ''
 
             # Repo only
-            $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -environmentName 'inputEnv1'
+            $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -environmentName 'inputEnv1' -githubEnvironmentsJson $githubEnvironmentsJson
             $deployToCount = @($repoSettings.Keys | Where-Object { $_ -like 'deployTo*' }).Count
             $deployToCount | Should -Be 5
         }
@@ -493,7 +494,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'DeployTo settings are not duplicated' {
             Mock Write-Host { }
             Mock Out-Host { }
-            Mock GetGitHubEnvironments { return @( @{ "name" = "env1" }, @{ "name" = "env2" } ) }
+
+            $githubEnvironmentsJson = @( @{ "name" = "env1" }, @{ "name" = "env2" } ) | ConvertTo-Json -Depth 99
 
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -501,7 +503,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ALGoFolder = Join-Path $tempName $ALGoFolderName
 
             New-Item $githubFolder -ItemType Directory | Out-Null
-            New-Item $ALGoFolder -ItemType Directory | Out-Null
+            New-Item $ALGoFolder -ItemType Directory | Out-Null 
 
             # Create settings files
             @{ "environments" = @( "env1", "env3" ) } | ConvertTo-Json -Depth 99 |
@@ -514,7 +516,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoRepoSettings = ''
 
             # Repo only
-            $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -environmentName 'env3'
+            $repoSettings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -environmentName 'env3' -githubEnvironmentsJson $githubEnvironmentsJson
             $deployToCount = @($repoSettings.Keys | Where-Object { $_ -like 'deployTo*' }).Count
             $deployToCount | Should -Be 3
         }
