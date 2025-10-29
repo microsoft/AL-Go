@@ -426,7 +426,7 @@ Describe "ResolveFilePaths" {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $PSScriptRoot $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "text template"; }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "custom template"; }
             @{ "sourcePath" = "folder"; "filter" = "*.log"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "log"; }
         )
 
