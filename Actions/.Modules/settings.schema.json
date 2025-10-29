@@ -760,21 +760,7 @@
                         }
                     }
                 },
-                "filesToIgnore": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "sourcePath": {
-                                "type": "string"
-                            },
-                            "filter": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "filesToRemove": {
+                "filesToExclude": {
                     "type": "array",
                     "items": {
                         "type": "object",
