@@ -806,6 +806,9 @@ Describe 'GetFilesToUpdate (real template)' {
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realPTETemplateFolder', Justification = 'False positive.')]
         $realPTETemplateFolder = Join-Path $PSScriptRoot "../Templates/Per Tenant Extension" -Resolve
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realAppSourceAppTemplateFolder', Justification = 'False positive.')]
+        $realAppSourceAppTemplateFolder = Join-Path $PSScriptRoot "../Templates/AppSource App" -Resolve
     }
 
     It 'Return the correct files to exclude when type is PTE and powerPlatformSolutionFolder is not empty' {
@@ -914,5 +917,37 @@ Describe 'GetFilesToUpdate (real template)' {
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+    }
+
+    It 'Returns the custom template settings files when there is a custom template' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @()
+            updateALGoFiles             = @{
+                filesToUpdate  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -originalTemplateFolder $realAppSourceAppTemplateFolder # Indicate custom template
+
+        $filesToUpdate | Should -Not -BeNullOrEmpty
+        $filesToUpdate.Count | Should -Be 26
+
+        $repoSettingsFiles = $filesToUpdate | Where-Object { $_.sourceFullPath -eq (Join-Path $realPTETemplateFolder ".github/AL-Go-Settings.json") }
+        $repoSettingsFiles | Should -Not -BeNullOrEmpty
+        $repoSettingsFiles.Count | Should -Be 2
+
+        $repoSettingsFiles[0].originalSourceFullPath | Should -Be (Join-Path $realAppSourceAppTemplateFolder ".github/AL-Go-Settings.json")
+        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-Settings.json')
+        $repoSettingsFiles[0].type | Should -Be 'settings'
+
+        $repoSettingsFiles[1].originalSourceFullPath | Should -Be $null # Because type is 'custom template', originalSourceFullPath should be $null
+        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
+        $repoSettingsFiles[1].type | Should -Be 'custom template'
+
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
     }
 }

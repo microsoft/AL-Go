@@ -620,4 +620,4 @@ function SanitizeWorkflowName {
 }
 
 Export-ModuleMember -Function ReadSettings
-Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile
+Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile, RepoSettingsFileName, ALGoSettingsFileName,CustomTemplateRepoSettingsFileName, CustomTemplateProjectSettingsFileName
