@@ -738,7 +738,7 @@ function GetDefaultFilesToExclude {
     This function gets the list of files to update and exclude based on the provided settings.
     The unusedALGoSystemFiles setting is also applied to exclude files from the update list and add them to the exclude list.
 .PARAMETER settings
-    The settings object containing the updateALGoFiles configuration.
+    The settings object containing the customALGoFiles configuration.
 .PARAMETER baseFolder
     The base folder of the repository.
 .PARAMETER templateFolder
@@ -763,11 +763,11 @@ function GetFilesToUpdate {
     )
 
     $filesToUpdate = GetDefaultFilesToUpdate -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
-    $filesToUpdate += $settings.updateALGoFiles.filesToUpdate
+    $filesToUpdate += $settings.customALGoFiles.filesToUpdate
     $filesToUpdate = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToUpdate -projects $projects
 
     $filesToExclude = GetDefaultFilesToExclude -settings $settings
-    $filesToExclude += $settings.updateALGoFiles.filesToExclude
+    $filesToExclude += $settings.customALGoFiles.filesToExclude
     $filesToExclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects
 
     # Exclude files from filesToUpdate that are in filesToExclude
@@ -786,7 +786,7 @@ function GetFilesToUpdate {
     # Exclude unusedALGoSystemFiles from $filesToUpdate and add them to $filesToExclude
     $unusedFilesToExclude = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
     if ($unusedFilesToExclude) {
-        # TODO: Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions. Please use 'updateALGoFiles.filesToExclude' instead." -DeprecationTag "unusedALGoSystemFiles"
+        # TODO: Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions. Please use 'customALGoFiles.filesToExclude' instead." -DeprecationTag "unusedALGoSystemFiles"
 
         Write-Host "The following files are marked as unused and will be removed if they exist:"
         $unusedFilesToExclude | ForEach-Object { Write-Host "- $($_.destinationFullPath)" }

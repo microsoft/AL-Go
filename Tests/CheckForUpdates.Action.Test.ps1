@@ -633,7 +633,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*.ps1" })
                 filesToExclude = @()
             }
@@ -652,7 +652,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*.txt" })
                 filesToExclude = @()
             }
@@ -674,7 +674,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
                 filesToExclude = @()
             }
@@ -695,7 +695,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
                 filesToExclude = @(@{ filter = "test2.txt" })
             }
@@ -719,7 +719,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "test.ps1"; destinationName = "renamed.txt" })
                 filesToExclude = @()
             }
@@ -738,7 +738,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "test.ps1"; destinationPath = 'dstPath'; destinationName = "renamed.txt" })
                 filesToExclude = @()
             }
@@ -756,7 +756,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*.ps1"; type = "script" })
                 filesToExclude = @()
             }
@@ -776,7 +776,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*.txt"; type = "text" })
                 filesToExclude = @(@{ filter = "test.txt" })
             }
@@ -801,7 +801,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $settings = @{
             type                  = "nonPTE"
             unusedALGoSystemFiles = @("test.ps1")
-            updateALGoFiles       = @{
+            customALGoFiles       = @{
                 filesToUpdate  = @(@{ filter = "*" })
                 filesToExclude = @()
             }
@@ -842,7 +842,7 @@ Describe 'GetFilesToUpdate (real template)' {
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
             unusedALGoSystemFiles       = @()
-            updateALGoFiles             = @{
+            customALGoFiles             = @{
                 filesToUpdate  = @()
                 filesToExclude = @()
             }
@@ -865,7 +865,7 @@ Describe 'GetFilesToUpdate (real template)' {
             type                        = "PTE"
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
-            updateALGoFiles             = @{
+            customALGoFiles             = @{
                 filesToUpdate  = @()
                 filesToExclude = @()
             }
@@ -901,7 +901,7 @@ Describe 'GetFilesToUpdate (real template)' {
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
             unusedALGoSystemFiles       = @("Test Next Major.settings.json")
-            updateALGoFiles             = @{
+            customALGoFiles             = @{
                 filesToUpdate  = @()
                 filesToExclude = @()
             }
@@ -924,7 +924,7 @@ Describe 'GetFilesToUpdate (real template)' {
             type                        = "PTE"
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @("Test Next Major.settings.json", "_BuildPowerPlatformSolution.yaml")
-            updateALGoFiles             = @{
+            customALGoFiles             = @{
                 filesToUpdate  = @()
                 filesToExclude = @()
             }
@@ -950,7 +950,7 @@ Describe 'GetFilesToUpdate (real template)' {
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
             unusedALGoSystemFiles       = @()
-            updateALGoFiles             = @{
+            customALGoFiles             = @{
                 filesToUpdate  = @()
                 filesToExclude = @()
             }

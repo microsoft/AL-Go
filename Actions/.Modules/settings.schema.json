@@ -694,7 +694,7 @@
             "type": "boolean",
             "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
         },
-        "updateALGoFiles": {
+        "customALGoFiles": {
             "type": "object",
             "properties": {
                 "filesToUpdate": {
