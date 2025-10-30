@@ -605,7 +605,7 @@ function ResolveFilePaths {
 
         # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
         if(!$originalSourceFolder -and $file.origin -eq 'custom template') {
-            Write-Host "Skipping custom template file with sourcePath '$($file.sourcePath)' as there is no original source folder specified"
+            Write-Host "Skipping custom template file(s) with sourcePath '$($file.sourcePath)' as there is no original source folder specified"
             continue;
         }
 
@@ -693,11 +693,11 @@ function GetDefaultFilesToUpdate {
         [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*'; 'type' = 'workflow' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
 
         [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
-        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'perProject' = $true; 'type' = 'settings' }
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = "$ALGoSettingsFileName"; 'perProject' = $true; 'type' = 'settings' }
     )
 
     if($includeCustomTemplateFiles) {
