@@ -567,7 +567,8 @@ function ResolveFilePaths {
         [Parameter(Mandatory=$true)]
         [string] $sourceFolder,
         [string] $originalSourceFolder = $null,
-        [string] $destinationFolder = $null,
+        [Parameter(Mandatory=$true)]
+        [string] $destinationFolder,
         [array] $files = @(),
         [string[]] $projects = @()
     )
@@ -639,13 +640,6 @@ function ResolveFilePaths {
                     # If the file exists in the original template folder, use that file instead
                     $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
                 }
-            }
-
-            if(-not $destinationFolder) {
-                # Destination folder is not specified, no need to calculate destinationFullPath as it will not be used
-                Write-Host "No destination folder specified, skipping destinationFullPath calculation. Adding sourceFullPath '$($fullFilePath.sourceFullPath)' and originalSourceFullPath '$($fullFilePath.originalSourceFullPath)' to the list."
-                $fullFilePaths += $fullFilePath
-                continue
             }
 
             $destinationName = $(Split-Path -Path $srcFile -Leaf)
