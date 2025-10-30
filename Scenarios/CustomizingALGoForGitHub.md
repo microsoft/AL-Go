@@ -201,6 +201,24 @@ Repositories based on your custom template will notify you that changes are avai
 > [!TIP]
 > You can setup the Update AL-Go System Files workflow to run on a schedule to uptake new releases of AL-Go for GitHub regularly.
 
+## Using custom template files
+
+When using custom template repositories, often you need to add custom files that are related to AL-Go for GitHub, but are not part of the official AL-Go templates. Such files can be script overrides for certain AL-Go functionality, workflows that complement AL-Go capabilities or workflows that easier to manage centrally.
+
+In order to instruct AL-Go to sync such files, you need to define setting `customALGoFiles`. The setting is an object that can contain two properties: `filesToUpdate` and `filesToExclude`.
+
+`filesToUpdate`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to update. Every item in the array may contain the following properties:
+
+- `sourcePath`: A path, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
+- `filter`: A string to use for filtering in the specified source path. _Example_: `*.ps1`.
+- `destinationPath`: A path, relative to repository that is being updated, where the files should be placed. _Example_: `src/templateScripts`.
+- `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationPath` is relative to the project folder. _Example_: `.AL-Go/scripts`.
+
+`filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (ignore) during the update. Every item in the array may contain the following properties:
+
+- `sourcePath`: A path, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
+- `filter`: A string to use for filtering in the specified source path. _Example_: `notRelevantScript.ps1`.
+
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
 Using a fork of AL-Go for GitHub to have your "own" public version of AL-Go for GitHub gives you the maximum customization capabilities. It does however also come with the most work.

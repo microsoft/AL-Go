@@ -1,3 +1,7 @@
+### Custom AL-Go files
+
+AL-Go for GitHub now supports updating files from your custom templates via the new `customALGoFiles` setting. Read more at [customALGoFiles](https://aka.ms/algosettings#customALGoFiles).
+
 ### Issues
 
 - Issue 1961 KeyVault access in PR pipeline

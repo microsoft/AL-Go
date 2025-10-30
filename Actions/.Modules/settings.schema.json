@@ -695,6 +695,7 @@
             "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
         },
         "customALGoFiles": {
+            "description": "An object containing the custom AL-Go files configuration. See https://aka.ms/ALGoSettings#customALGoFiles",
             "type": "object",
             "properties": {
                 "filesToUpdate": {
@@ -703,9 +704,6 @@
                         "type": "object",
                         "properties": {
                             "destinationPath": {
-                                "type": "string"
-                            },
-                            "destinationName": {
                                 "type": "string"
                             },
                             "sourcePath": {
