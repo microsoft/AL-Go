@@ -614,6 +614,7 @@ function ResolveFilePaths {
         $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
 
         Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
+
         if(-not $sourceFiles) {
             Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
             continue
@@ -626,6 +627,8 @@ function ResolveFilePaths {
                 'type' = $file.type
                 'destinationFullPath' = $null
             }
+
+            Write-Host "Processing file '$($srcFile)'"
 
             # Try to find the same files in the original template folder if it is specified. Exclude custom template files
             if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
@@ -640,8 +643,9 @@ function ResolveFilePaths {
 
             if(-not $destinationFolder) {
                 # Destination folder is not specified, no need to calculate destinationFullPath as it will not be used
-               $fullFilePaths += $fullFilePath
-               continue
+                Write-Host "No destination folder specified, skipping destinationFullPath calculation. Adding sourceFullPath '$($fullFilePath.sourceFullPath)' and originalSourceFullPath '$($fullFilePath.originalSourceFullPath)' to the list."
+                $fullFilePaths += $fullFilePath
+                continue
             }
 
             $destinationName = $(Split-Path -Path $srcFile -Leaf)
@@ -664,6 +668,7 @@ function ResolveFilePaths {
                     $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $file.destinationPath
                     $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $destinationName
 
+                    Write-Host "Adding per-project file for project '$project': sourceFullPath '$($projectFile.sourceFullPath)', originalSourceFullPath '$($projectFile.originalSourceFullPath)', destinationFullPath '$($projectFile.destinationFullPath)'"
                     $fullFilePaths += $projectFile
                 }
             }
@@ -674,6 +679,7 @@ function ResolveFilePaths {
                 $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationPath
                 $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
 
+                Write-Host "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
                 $fullFilePaths += $fullFilePath
             }
         }
