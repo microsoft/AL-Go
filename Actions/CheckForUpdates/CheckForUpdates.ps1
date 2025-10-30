@@ -149,7 +149,7 @@ foreach($fileToUpdate in $filesToUpdate) {
     switch ($type) {
         "workflow" {
             # For workflow files, we might need to modify the file based on the settings
-            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth -includeBuildPP $includeBuildPP
+            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth
         }
         "settings" {
             # For settings files, we need to modify the file based on the settings

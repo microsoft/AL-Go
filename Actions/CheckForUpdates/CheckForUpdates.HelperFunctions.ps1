@@ -308,8 +308,7 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth,
-        [bool] $includeBuildPP
+        [int] $depth
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -390,6 +389,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
+        $includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
         ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP $includeBuildPP
     }
 
