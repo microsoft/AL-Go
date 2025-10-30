@@ -263,7 +263,7 @@ Pull
 (Join-Path (Get-Location) $customFile) | Should -Not -Exist # Custom file should not be copied by default
 
 # Add custom file to be copied via settings
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "updateALGoFiles" = @{ "filesToUpdate" = @( @{ "sourcePath" = $customFile; "destinationPath" = '.' } ) } }
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "updateALGoFiles" = @{ "filesToUpdate" = @( @{ "filter" = $customFile } ) } }
 
 # Push
 CommitAndPush -commitMessage 'Add custom file to be updated when updating AL-Go system files [skip ci]'
