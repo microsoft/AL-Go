@@ -144,7 +144,8 @@ $cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepositor
 $cicdYaml.Save($cicdWorkflow)
 
 # Add a custom workflow file in the template repository (to be copied to the final repository, as workflow files are always propagated)
-$customWorkflowFile = Join-Path $templateRepoPath '.github/workflows/CustomWorkflow.yaml'
+$customWorkflowfileRelativePath = '.github/workflows/CustomWorkflow.yaml'
+$customWorkflowFile = Join-Path $templateRepoPath $customWorkflowfileRelativePath
 $customWorkflowContent = @"
 name: Custom Workflow
 
@@ -256,14 +257,14 @@ Pull
 (Join-Path (Get-Location) $CustomTemplateProjectSettingsFile) | Should -Exist
 
 # Check that custom workflow file is present
-(Join-Path (Get-Location) $customWorkflowFile) | Should -Exist
-(Get-Content -Path (Join-Path (Get-Location) $customWorkflowFile)) | Should -Be $customWorkflowContent
+(Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
+(Get-Content -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath)) | Should -Be $customWorkflowContent
 
 # Check that custom file is NOT present
-(Join-Path (Get-Location) $customFile) | Should -Not -Exist # Custom file should not be copied by default
+(Join-Path (Get-Location) $customFileName) | Should -Not -Exist # Custom file should not be copied by default
 
 # Add custom file to be copied via settings
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "customALGoFiles" = @{ "filesToUpdate" = @( @{ "filter" = $customFile } ) } }
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "customALGoFiles" = @{ "filesToUpdate" = @( @{ "filter" = $customFileName } ) } }
 
 # Push
 CommitAndPush -commitMessage 'Add custom file to be updated when updating AL-Go system files [skip ci]'
@@ -275,8 +276,8 @@ RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -g
 Pull
 
 # Check that custom file is now present
-(Join-Path (Get-Location) $customFile) | Should -Exist
-(Get-Content -Path (Join-Path (Get-Location) $customFile)) | Should -Be $customFileContent
+(Join-Path (Get-Location) $customFileName) | Should -Exist
+(Get-Content -Path (Join-Path (Get-Location) $customFileName)) | Should -Be $customFileContent
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
