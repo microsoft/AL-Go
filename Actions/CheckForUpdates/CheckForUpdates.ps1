@@ -255,7 +255,7 @@ else {
         $updateFiles | ForEach-Object {
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
-            if (-not (Test-Path -path $path -PathType Container)) {
+            if ($path -and -not (Test-Path -path $path -PathType Container)) {
                 New-Item -Path $path -ItemType Directory | Out-Null
             }
             if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
