@@ -690,7 +690,8 @@ function GetDefaultFilesToUpdate {
     )
 
     $filesToUpdate = @(
-        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*'; 'type' = 'workflow' }
+        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
@@ -738,24 +739,27 @@ function GetDefaultFilesToExclude {
     The unusedALGoSystemFiles setting is also applied to exclude files from the update list and add them to the exclude list.
 .PARAMETER settings
     The settings object containing the updateALGoFiles configuration.
-.PARAMETER projects
-    The list of projects in the repository.
 .PARAMETER baseFolder
     The base folder of the repository.
 .PARAMETER templateFolder
     The folder where the template files are located.
 .PARAMETER originalTemplateFolder
     The folder where the original template files are located (if any). In case of custom templates.
+.PARAMETER projects
+    The list of projects in the repository.
 .OUTPUTS
     An array containing two elements: the list of files to update and the list of files to exclude.
 #>
 function GetFilesToUpdate {
     Param(
+        [Parameter(Mandatory=$true)]
         $settings,
-        $projects,
+        [Parameter(Mandatory=$true)]
         $baseFolder,
+        [Parameter(Mandatory=$true)]
         $templateFolder,
-        $originalTemplateFolder = $null
+        $originalTemplateFolder = $null,
+        $projects = @()
     )
 
     $filesToUpdate = GetDefaultFilesToUpdate -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
