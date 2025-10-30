@@ -375,9 +375,7 @@
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": [
-                            "includeDependencies"
-                        ]
+                        "enum": ["includeDependencies"]
                     },
                     "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
@@ -610,10 +608,7 @@
                 "type": "array",
                 "items": {
                     "type": "string",
-                    "enum": [
-                        "includeProjects",
-                        "excludeProjects"
-                    ]
+                    "enum": ["includeProjects", "excludeProjects"]
                 },
                 "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
             }
@@ -629,10 +624,7 @@
                 },
                 "pullRequestMergeMethod": {
                     "type": "string",
-                    "enum": [
-                        "merge",
-                        "squash"
-                    ],
+                    "enum": ["merge", "squash"],
                     "default": "squash"
                 },
                 "pullRequestLabels": {
@@ -646,9 +638,7 @@
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": [
-                            "pullRequestLabels"
-                        ]
+                        "enum": ["pullRequestLabels"]
                     },
                     "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
@@ -696,34 +686,7 @@
             "type": "array",
             "items": {
                 "type": "string",
-                "enum": [
-                    "unusedALGoSystemFiles",
-                    "projects",
-                    "additionalCountries",
-                    "appDependencies",
-                    "appFolders",
-                    "testDependencies",
-                    "testFolders",
-                    "bcptTestFolders",
-                    "pageScriptingTests",
-                    "restoreDatabases",
-                    "installApps",
-                    "installTestApps",
-                    "customCodeCops",
-                    "configPackages",
-                    "appSourceCopMandatoryAffixes",
-                    "deliverToAppSource",
-                    "appDependencyProbingPaths",
-                    "incrementalBuilds",
-                    "environments",
-                    "buildModes",
-                    "bcptThresholds",
-                    "fullBuildPatterns",
-                    "excludeEnvironments",
-                    "alDoc",
-                    "commitOptions",
-                    "trustedSigning"
-                ]
+                "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
             },
             "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
         },
