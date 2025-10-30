@@ -318,8 +318,8 @@ Describe "ResolveFilePaths" {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $rootFolder $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = 'newFolder'; "destinationName" = "" }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = 'newFolder'; "destinationName" = "" }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = 'newFolder'; "destinationName" = '' }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = 'newFolder'; "destinationName" = '' }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
@@ -328,13 +328,13 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 3
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
-        $fullFilePaths[0].type | Should -Be ""
+        $fullFilePaths[0].type | Should -Be ''
         $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
         $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
-        $fullFilePaths[1].type | Should -Be ""
+        $fullFilePaths[1].type | Should -Be ''
         $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
         $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
-        $fullFilePaths[2].type | Should -Be ""
+        $fullFilePaths[2].type | Should -Be ''
     }
 
     It 'ResolveFilePaths with specific destination names' {
@@ -351,18 +351,18 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 2
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile1.txt")
-        $fullFilePaths[0].type | Should -Be ""
+        $fullFilePaths[0].type | Should -Be ''
         $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
         $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile2.log")
-        $fullFilePaths[1].type | Should -Be ""
+        $fullFilePaths[1].type | Should -Be ''
     }
 
     It 'ResolveFilePaths with type' {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $PSScriptRoot $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "folder"; "destinationName" = ""; type = "text" }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "folder"; "destinationName" = ""; type = "markdown" }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "folder"; "destinationName" = ''; type = "text" }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "folder"; "destinationName" = ''; type = "markdown" }
         )
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
@@ -384,8 +384,8 @@ Describe "ResolveFilePaths" {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $PSScriptRoot $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "text" }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "markdown" }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ''; type = "text" }
+            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "newFolder"; "destinationName" = ''; type = "markdown" }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
@@ -408,34 +408,60 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[2].type | Should -Be "markdown"
     }
 
-    It 'ResolveFilePaths returns unique file paths' {
+    It 'ResolveFilePaths returns unique file paths based on the file type' {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $PSScriptRoot $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "text"; }
-            @{ "sourcePath" = "folder"; "filter" = "*"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "unknown"; }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ''; type = "text"; }
+            @{ "sourcePath" = "folder"; "filter" = "*"; "destinationPath" = "newFolder"; "destinationName" = ''; type = "unknown"; }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
         $fullFilePaths | Should -Not -BeNullOrEmpty
-        $fullFilePaths.Count | Should -Be 4
+        $fullFilePaths.Count | Should -Be 6
+
+        # File1.txt is matched twice, so it should appear twice with different types
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
-        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
-        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
-        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
-        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
-        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
-        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+        $fullFilePaths[0].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[0].type | Should -Be "text"
+
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+        $fullFilePaths[1].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[1].type | Should -Be "unknown"
+
+        # File2.log is matched only once, so it should appear only once with type "unknown"
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
+        $fullFilePaths[2].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[2].type | Should -Be "unknown"
+
+        # File3.txt is matched twice, so it should appear twice with different types
+        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[3].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[3].type | Should -Be "text"
+
+        $fullFilePaths[4].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[4].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[4].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[4].type | Should -Be "unknown"
+
+        # File4.md is matched only once, so it should appear only once with type "unknown"
+        $fullFilePaths[5].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[5].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+        $fullFilePaths[5].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[5].type | Should -Be "unknown"
     }
 
-    It 'ResolveFilePaths populates the originalSourceFullPath property only if the type does not contain "template"' {
+    It 'ResolveFilePaths populates the originalSourceFullPath property only if the origin is not a custom template' {
         $destinationPath = "destinationPath"
         $destinationFolder = Join-Path $PSScriptRoot $destinationPath
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "custom template"; }
-            @{ "sourcePath" = "folder"; "filter" = "*.log"; "destinationPath" = "newFolder"; "destinationName" = ""; type = "log"; }
+            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ''; "origin" = "custom template"; }
+            @{ "sourcePath" = "folder"; "filter" = "*.log"; "destinationPath" = "newFolder"; "destinationName" = ''; }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
@@ -837,7 +863,7 @@ Describe 'GetFilesToUpdate (real template)' {
     It 'Return PP files in filesToExclude when type is PTE but powerPlatformSolutionFolder is empty' {
         $settings = @{
             type                        = "PTE"
-            powerPlatformSolutionFolder = ""
+            powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
             updateALGoFiles             = @{
                 filesToUpdate  = @()
@@ -896,7 +922,7 @@ Describe 'GetFilesToUpdate (real template)' {
     It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
         $settings = @{
             type                        = "PTE"
-            powerPlatformSolutionFolder = ""
+            powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @("Test Next Major.settings.json", "_BuildPowerPlatformSolution.yaml")
             updateALGoFiles             = @{
                 filesToUpdate  = @()
@@ -930,24 +956,41 @@ Describe 'GetFilesToUpdate (real template)' {
             }
         }
 
-        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -originalTemplateFolder $realAppSourceAppTemplateFolder # Indicate custom template
+        $customTemplateFolder = $realPTETemplateFolder
+        $originalTemplateFolder = $realAppSourceAppTemplateFolder
+        $filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
 
         $filesToUpdate | Should -Not -BeNullOrEmpty
-        $filesToUpdate.Count | Should -Be 26
 
-        $repoSettingsFiles = $filesToUpdate | Where-Object { $_.sourceFullPath -eq (Join-Path $realPTETemplateFolder ".github/AL-Go-Settings.json") }
+        # Check repo settings files
+        $repoSettingsFiles = $filesToUpdate | Where-Object { $_.sourceFullPath -eq (Join-Path $customTemplateFolder ".github/AL-Go-Settings.json") }
         $repoSettingsFiles | Should -Not -BeNullOrEmpty
         $repoSettingsFiles.Count | Should -Be 2
 
-        $repoSettingsFiles[0].originalSourceFullPath | Should -Be (Join-Path $realAppSourceAppTemplateFolder ".github/AL-Go-Settings.json")
-        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-Settings.json')
-        $repoSettingsFiles[0].type | Should -Be 'settings'
+        $repoSettingsFiles[0].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
+        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
+        $repoSettingsFiles[0].type | Should -Be ''
 
-        $repoSettingsFiles[1].originalSourceFullPath | Should -Be $null # Because type is 'custom template', originalSourceFullPath should be $null
-        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
-        $repoSettingsFiles[1].type | Should -Be 'custom template'
+        $repoSettingsFiles[1].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".github/AL-Go-Settings.json")
+        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-Settings.json')
+        $repoSettingsFiles[1].type | Should -Be 'settings'
 
-        # No files to remove
+        # Check project settings files
+        $projectSettingsFilesFromCustomTemplate = @($filesToUpdate | Where-Object { $_.sourceFullPath -eq (Join-Path $customTemplateFolder ".AL-Go/settings.json") })
+
+        $projectSettingsFilesFromCustomTemplate | Should -Not -BeNullOrEmpty
+        $projectSettingsFilesFromCustomTemplate.Count | Should -Be 2
+
+        $projectSettingsFilesFromCustomTemplate[0].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
+        $projectSettingsFilesFromCustomTemplate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateProjectSettings.doNotEdit.json')
+        $projectSettingsFilesFromCustomTemplate[0].type | Should -Be ''
+
+
+        $projectSettingsFilesFromCustomTemplate[1].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".AL-Go/settings.json")
+        $projectSettingsFilesFromCustomTemplate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.AL-Go/settings.json')
+        $projectSettingsFilesFromCustomTemplate[1].type | Should -Be 'settings'
+
+        # No files to exclude
         $filesToExclude | Should -BeNullOrEmpty
     }
 }

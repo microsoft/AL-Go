@@ -586,8 +586,12 @@ function ResolveFilePaths {
             $file.filter = '' # Default to all files
         }
 
+        if($file.Keys -notcontains 'origin') {
+            $file.origin = 'template' # Default to template
+        }
+
         if($file.Keys -notcontains 'type') {
-            $file.type = '' # Default to empty type
+            $file.type = '' # Default to empty
         }
 
         if($file.Keys -notcontains 'destinationPath') {
@@ -600,7 +604,7 @@ function ResolveFilePaths {
         }
 
         # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
-        if(!$originalSourceFolder -and $file.type -eq 'custom template') {
+        if(!$originalSourceFolder -and $file.origin -eq 'custom template') {
             Write-Host "Skipping custom template file with sourcePath '$($file.sourcePath)' as there is no original source folder specified"
             continue;
         }
@@ -609,7 +613,7 @@ function ResolveFilePaths {
         Write-Host "Resolving files for sourcePath '$($file.sourcePath)' and filter '$($file.filter)'"
         $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
 
-        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
+        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
         if(-not $sourceFiles) {
             Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
             continue
@@ -624,7 +628,7 @@ function ResolveFilePaths {
             }
 
             # Try to find the same files in the original template folder if it is specified. Exclude custom template files
-            if ($originalSourceFolder -and ($file.type -ne 'custom template')) {
+            if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
                 Push-Location $sourceFolder
                 $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
                 Pop-Location
@@ -650,6 +654,10 @@ function ResolveFilePaths {
                 # Destination full path is the destination base folder + project + destinationPath + destinationName
 
                 foreach($project in $projects) {
+                    if($project -eq '.') {
+                        $project = '' # If project is '.', it means the root folder, so we use an empty string
+                    }
+
                     $projectFile = $fullFilePath.Clone()
 
                     $projectFile.destinationFullPath = Join-Path $destinationFolder $project
@@ -670,8 +678,8 @@ function ResolveFilePaths {
             }
         }
     }
-    # Remove duplicates (when sourceFullPath and destinationFullPath are the same)
-    $fullFilePaths = $fullFilePaths | Sort-Object { $_.sourceFullPath}, { $_.destinationFullPath} -Unique
+    # Remove duplicates
+    $fullFilePaths = $fullFilePaths | Sort-Object { $_.sourceFullPath}, { $_.originalSourceFullPath}, { $_.destinationFullPath}, { $_.type } -Unique
 
     return $fullFilePaths
 }
@@ -683,20 +691,20 @@ function GetDefaultFilesToUpdate {
 
     $filesToUpdate = @(
         [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*'; 'type' = 'workflow' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md'; 'type' = 'releasenotes' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1'; 'type' = 'script' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = 'AL-Go-Settings.json'; 'type' = 'settings' }
         [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
 
-        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'type' = 'script'; 'perProject' = $true },
-        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'type' = 'settings'; 'perProject' = $true }
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = 'settings.json'; 'perProject' = $true; 'type' = 'settings' }
     )
 
     if($includeCustomTemplateFiles) {
         # If there is an original template folder, we also need to include custom template files (RepoSettings and ProjectSettings)
         $filesToUpdate += @(
-            [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'type' = 'custom template' }
-            [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'type' = 'custom template' }
+            [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'origin' = 'custom template' }
+            [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'origin' = 'custom template' }
         )
     }
 

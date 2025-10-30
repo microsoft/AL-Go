@@ -751,9 +751,6 @@
                             "filter": {
                                 "type": "string"
                             },
-                            "type": {
-                                "type": "string"
-                            },
                             "perProject": {
                                 "type": "boolean"
                             }
