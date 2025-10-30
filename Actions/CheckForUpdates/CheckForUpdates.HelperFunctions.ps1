@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot '../.Modules/ReadSettings.psm1') -DisableNameChecking -Force
+Import-Module (Join-Path $PSScriptRoot '../.Modules/ReadSettings.psm1') -DisableNameChecking
 
 <#
 .SYNOPSIS
