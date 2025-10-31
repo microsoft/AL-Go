@@ -203,7 +203,7 @@ Repositories based on your custom template will notify you that changes are avai
 
 ## Using custom template files
 
-When using custom template repositories, often you need to add custom files that are related to AL-Go for GitHub, but are not part of the official AL-Go templates. Such files can be script overrides for certain AL-Go functionality, workflows that complement AL-Go capabilities or workflows that easier to manage centrally.
+When using custom template repositories, often you need to add custom files that are related to AL-Go for GitHub, but are not part of the official AL-Go templates. Such files can be script overrides for certain AL-Go functionality, workflows that complement AL-Go capabilities or workflows that are easier to manage centrally.
 
 In order to instruct AL-Go to sync such files, you need to define setting `customALGoFiles`. The setting is an object that can contain two properties: `filesToUpdate` and `filesToExclude`.
 
