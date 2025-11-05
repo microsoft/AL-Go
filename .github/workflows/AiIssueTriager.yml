@@ -1,0 +1,32 @@
+name: AI Issue Triager
+on:
+  issues:
+    types: [labeled]
+jobs:
+  ai-assessment:
+    if: github.event.label.name == 'AI Review'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      models: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+
+      - name: Run AI assessment
+        id: ai-assessment
+        uses: github/ai-assessment-comment-labeler@e3bedc38cfffa9179fe4cee8f7ecc93bffb3fee7 # v1.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue_number: ${{ github.event.issue.number }}
+          issue_body: ${{ github.event.issue.body }}
+          repo_name: ${{ github.event.repository.name }}
+          owner: ${{ github.repository_owner }}
+          ai_review_label: 'AI Review'
+          prompts_directory: '.github/GitHubActionsPrompts'
+          labels_to_prompts_mapping: 'bug,bug-review.prompt.yml'
+          suppress_labels: true
