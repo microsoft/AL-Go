@@ -137,7 +137,7 @@ Unlike GitHub Packages, NuGet feeds configured with `NuGetContext` are not autom
 **Organizational Secret**: `GitHubPackagesContext`
 
 ```json
-{"token":"ghp_1234567890abcdef","serverUrl":"https://nuget.pkg.github.com/contoso/index.json"}
+{"token":"ghp_<your_token>","serverUrl":"https://nuget.pkg.github.com/contoso/index.json"}
 ```
 
 **AL-Go-Settings.json** (optional):

@@ -1,17 +1,5 @@
 <#
     .SYNOPSIS
-    Checks whether nuget.org is added as a nuget source.
-#>
-function AssertNugetSourceIsAdded() {
-    $nugetSource = "https://api.nuget.org/v3/index.json"
-    $nugetSourceExists = dotnet nuget list source | Select-String -Pattern $nugetSource
-    if (-not $nugetSourceExists) {
-        throw "Nuget source $nugetSource is not added. Please add the source using 'dotnet nuget add source $nugetSource' or add another source with nuget.org as an upstream source."
-    }
-}
-
-<#
-    .SYNOPSIS
     Installs the dotnet signing tool.
     .DESCRIPTION
     Installs the dotnet signing tool.
@@ -19,26 +7,10 @@ function AssertNugetSourceIsAdded() {
 function Install-SigningTool() {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-    # Create folder in temp directory with a unique name
-    $tempFolder = Join-Path -Path ([System.IO.Path]::GetTempPath()) "SigningTool-$(Get-Random)"
-
-    # Get version of the signing tool
-    $version = GetPackageVersion -PackageName "sign"
-
-    # Install the signing tool in the temp folder
-    Write-Host "Installing signing tool version $version in $tempFolder"
-    New-Item -ItemType Directory -Path $tempFolder | Out-Null
-    dotnet tool install sign --version $version --tool-path $tempFolder | Out-Host
+    $signToolFolder = Install-DotNetTool -PackageName sign
 
     # Return the path to the signing tool
-    $signingTool = Join-Path -Path $tempFolder "sign.exe"
-    if (-not (Test-Path -Path $signingTool)) {
-        # Check if nuget.org is added as a nuget source
-        AssertNugetSourceIsAdded
-
-        # If the tool is not found, throw an error
-        throw "Failed to install signing tool. If you are using a self-hosted runner please make sure you've followed all the steps described in https://aka.ms/algosettings#runs-on."
-    }
+    $signingTool = Join-Path -Path $signToolFolder "sign.exe"
     return $signingTool
 }
 
@@ -159,4 +131,4 @@ function Invoke-SigningTool() {
     }
 }
 
-Export-ModuleMember -Function Invoke-SigningTool
+Export-ModuleMember -Function *-*
