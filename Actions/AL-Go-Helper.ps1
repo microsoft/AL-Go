@@ -932,7 +932,7 @@ function GetTemporaryPath {
 
 <#
     Function to create a new temporary folder.
-    It generates a unique folder name using a GUID and creates the directory in the temporary path.
+    It generates a unique folder name using a random file name and creates the directory in the temporary path.
     Returns the path of the newly created temporary folder.
 #>
 function NewTemporaryFolder {
