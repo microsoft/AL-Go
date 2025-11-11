@@ -926,7 +926,7 @@ function GetTemporaryPath {
     if ($env:RUNNER_TEMP) {
         return $env:RUNNER_TEMP
     } else {
-        return ([System.IO.Path]::GetTempPath())
+        return ([System.IO.Path]::GetRandomFileName())
     }
 }
 
