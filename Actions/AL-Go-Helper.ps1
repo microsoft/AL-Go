@@ -926,7 +926,7 @@ function GetTemporaryPath {
     if ($env:RUNNER_TEMP) {
         return $env:RUNNER_TEMP
     } else {
-        return ([System.IO.Path]::GetRandomFileName())
+        return ([System.IO.Path]::GetTempPath())
     }
 }
 
@@ -936,7 +936,7 @@ function GetTemporaryPath {
     Returns the path of the newly created temporary folder.
 #>
 function NewTemporaryFolder {
-    $tempFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
+    $tempFolder = Join-Path (GetTemporaryPath) ([System.IO.Path]::GetRandomFileName())
     New-Item -Path $tempFolder -ItemType Directory | Out-Null
     return $tempFolder
 }
