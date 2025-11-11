@@ -215,7 +215,7 @@ function GenerateDocsSite {
             "init"
             "--output ""$docfxpath"""
             "--loglevel $loglevel"
-            "--targetpackages ""$($apps -join '","')"""
+            "--targetpackageslist ""$($apps -join '" "')"""
             )
         Write-Host "invoke $aldocCommand $arguments"
         CmdDo -command $aldocCommand -arguments $arguments
