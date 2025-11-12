@@ -150,6 +150,8 @@ foreach($fileToUpdate in $filesToUpdate) {
         "workflow" {
             # For workflow files, we might need to modify the file based on the settings
             $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth
+            # Replace static placeholders
+            $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
         }
         "settings" {
             # For settings files, we need to modify the file based on the settings
@@ -160,8 +162,6 @@ foreach($fileToUpdate in $filesToUpdate) {
             $srcContent = Get-ContentLF -Path $originalSrcPath
         }
     }
-    # Replace static placeholders
-    $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
 
     if ($isDirectALGo) {
         # If we are using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
