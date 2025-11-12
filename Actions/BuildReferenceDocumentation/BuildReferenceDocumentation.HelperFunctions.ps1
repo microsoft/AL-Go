@@ -6,7 +6,7 @@
         $ENV:aldocCommand = ''
         Write-Host "Locating aldoc"
         if ($artifactUrl -notlike "https://*") {
-            Write-Host "ArtifactUrl provided, but not in the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
+            Write-Host "ArtifactUrl ($artifactUrl) provided, but not in the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
             $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
         } elseif ($artifactUrl -notlike "*/core") {
             # Change country to core as aldoc is not shipped in country specific artifacts
@@ -215,7 +215,7 @@ function GenerateDocsSite {
             "init"
             "--output ""$docfxpath"""
             "--loglevel $loglevel"
-            "--targetpackages ""$($apps -join '","')"""
+            "--targetpackageslist ""$($apps -join '" "')"""
             )
         Write-Host "invoke $aldocCommand $arguments"
         CmdDo -command $aldocCommand -arguments $arguments
