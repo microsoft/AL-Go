@@ -34,7 +34,7 @@ if (-not $branchPatterns) {
 Write-Host "Filtering branches by: $($branchPatterns -join ', ')"
 
 invoke-git fetch --quiet --no-tags
-$allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)" refs/remotes/origin | Where-Object { $_ -ne 'origin' } | ForEach-Object { $_.Substring('origin/'.Length) }) # Get all remote branches except 'origin' itself, stripping the 'origin/' prefix
+$allBranches = @(invoke-git -returnValue for-each-ref --format="%(refname:short)" refs/remotes/origin | Where-Object { $_.StartsWith('origin/') } | ForEach-Object { $_.Substring('origin/'.Length) } | Where-Object { $_ -ne 'HEAD' }) # Get all remote branches except symbolic 'HEAD', stripping the 'origin/' prefix
 $branches = @()
 
 foreach ($branchPattern in $branchPatterns) {
