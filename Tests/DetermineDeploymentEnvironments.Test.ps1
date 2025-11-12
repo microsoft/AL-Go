@@ -38,9 +38,7 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     It 'Test action.yaml matches script' {
         $outputs = [ordered]@{
-            "EnvironmentsMatrixJson" = "The Environment matrix to use for the Deploy step in compressed JSON format"
-            "DeploymentEnvironmentsJson" = "Deployment Environments with settings in compressed JSON format"
-            "EnvironmentCount" = "Number of Deployment Environments"
+            "DeploymentEnvironmentsJson" = "The JSON representation of the environment that are suitable for deployment"
             "UnknownEnvironment" = "Flag determining whether the environment is unknown"
             "GenerateALDocArtifact" = "Flag determining whether to generate the ALDoc artifact"
             "DeployALDocArtifact" = "Flag determining whether to deploy the ALDoc artifact to GitHub Pages"
@@ -50,44 +48,79 @@ Describe "DetermineDeploymentEnvironments Action Test" {
 
     # 2 environments defined in GitHub - no branch policy
     It 'Test calling action directly - 2 environments defined in GitHub - no branch policy' {
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
-        }
+        # Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+        #     return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
+        # }
+        $githubEnvironmentsJson = ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } )
 
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings } | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"};@{"environment"="test";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"="";"includeTestAppsInSandboxEnvironment"=$false;"excludeAppIds"=@()};"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"="";"includeTestAppsInSandboxEnvironment"=$false;"excludeAppIds"=@()}}
-        $EnvironmentCount | Should -Be 2
 
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'CD'
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 2
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        $deploymentEnvironments.environments[1].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[1].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[1].shell | Should -Be 'pwsh'
+
+         . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments 'test' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="test";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"test"=@{"EnvironmentType"="SaaS";"EnvironmentName"="test";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"="";"includeTestAppsInSandboxEnvironment"=$false;"excludeAppIds"=@()}}
-        $EnvironmentCount | Should -Be 1
+
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
     }
 
     # 2 environments defined in GitHub - one with branch policy = protected branches
     It 'Test calling action directly - 2 environments defined in GitHub - one with branch policy = protected branches' {
-        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
-            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true; "custom_branch_policies" = $false } }, @{ "name" = "another"; "protection_rules" = @() } ) })}
-        }
+        # Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+        #     return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true; "custom_branch_policies" = $false } }, @{ "name" = "another"; "protection_rules" = @() } ) })}
+        # }
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/branches' } -MockWith {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "branch"; "protected" = $true }, @{ "name" = "main"; "protected" = $false } ))}
         }
 
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
-        PassGeneratedOutput
-        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"="";"includeTestAppsInSandboxEnvironment"=$false;"excludeAppIds"=@()}}
-        $EnvironmentCount | Should -Be 1
+        $githubEnvironmentsJson = ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $true; "custom_branch_policies" = $false } }, @{ "name" = "another"; "protection_rules" = @() } )
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings } | ConvertTo-Json -Compress
 
-        $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        $env:GITHUB_REF_NAME = 'main' # This is not a protected branch, so the _test_ environment should not be included, while _another_ environment should be included (no branch policy)
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
+
+        $env:GITHUB_REF_NAME = 'branch' # This is a protected branch, so the _test_ environment should be included. _another_ environment should not be included as it has no branch policy (in that case deployment is only allowed from _main_ branch)
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
     }
 
     # 2 environments defined in GitHub - one with branch policy = branch. the other with no branch policy
@@ -102,46 +135,77 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (@{ "branch_policies" = @( @{ "name" = "branch" }, @{ "name" = "branch2" } ) } | ConvertTo-Json -Depth 99 -Compress)}
         }
 
-        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } } | ConvertTo-Json -Compress
+        $githubEnvironmentsJson = ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } }, @{ "name" = "another"; "protection_rules" = @() } )
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings } | ConvertTo-Json -Compress
         # Only another environment should be included when deploying from main
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
-        PassGeneratedOutput
-        $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"matrix"=@{"include"=@(@{"environment"="another";"os"="[""ubuntu-latest""]";"shell"="pwsh"})};"fail-fast"=$false}
-        $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse | Should -MatchHashtable @{"another"=@{"EnvironmentType"="SaaS";"EnvironmentName"="another";"Branches"=@();"BranchesFromPolicy"=@();"Projects"="*";"DependencyInstallMode"="install";"Scope"=$null;"syncMode"=$null;"buildMode"=$null;"continuousDeployment"=$null;"runs-on"=@("ubuntu-latest");"shell"="pwsh";"ppEnvironmentUrl"="";"companyId"="";"includeTestAppsInSandboxEnvironment"=$false;"excludeAppIds"=@()}}
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
 
-        # Change branch to branch - now only test environment should be included (due to branch policy)
-        $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        $env:GITHUB_REF_NAME = 'main' # This is not a protected branch, so the _test_ environment should not be included, while _another_ environment should be included (no branch policy)
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
 
-        # Change branch to branch2 - test environment should still be included (due to branch policy)
-        $env:GITHUB_REF_NAME = 'branch2'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+
+        $env:GITHUB_REF_NAME = 'branch' # Change branch to _branch_ - now only test environment should be included (due to branch policy)
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
+
+
+        $env:GITHUB_REF_NAME = 'branch2' # Change branch to branch2 - test environment should still be included (due to branch policy)
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
 
         # Add Branch policy to settings to only allow branch to deploy to test environment - now no environments should be included
-        $settings += @{
-            "DeployToTest" = @{
-                "Branches" = @("branch")
-            }
-        }
+        $settings.DeployToTest.branches = @('branch')
+
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 0
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 0
+        $deploymentEnvironments.environments | Should -BeNullOrEmpty
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
 
         # Change branch to branch - test environment should still be included (due to branch policy)
         $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
     }
 
     # 2 environments defined in GitHub, 1 in settings - exclude another environment
@@ -150,38 +214,84 @@ Describe "DetermineDeploymentEnvironments Action Test" {
             return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } ) })}
         }
 
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $githubEnvironmentsJson = ConvertTo-Json -Compress -Depth 99 -InputObject @( @{ "name" = "test"; "protection_rules" = @() }; @{ "name" = "another"; "protection_rules" = @() } )
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployTosettingsenvSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("settingsenv"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings; "DeployTosettingsenv" = $deployTosettingsenvSettings }
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
-        PassGeneratedOutput
-        $EnvironmentCount | Should -Be 3
 
-        # Exclude another environment
+        # All 3 environments should be included
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 3
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 3
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        $deploymentEnvironments.environments[1].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[1].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[1].shell | Should -Be 'pwsh'
+        $deploymentEnvironments.environments[2].environmentName | Should -Be 'settingsenv'
+        $deploymentEnvironments.environments[2].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[2].shell | Should -Be 'pwsh'
+        Set-Variable -Name deploymentEnvironments -Value $null # clean up variable
+
+
+        # Exclude _another_ environment
         $settings.excludeEnvironments += @('another')
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 2
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Not -Contain "another"
 
-        # Add Branch policy to settings to only allow branch to deploy to test environment
-        $settings += @{
-            "DeployToTest" = @{
-                "Branches" = @("branch")
-            }
-        }
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 2
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 2
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        $deploymentEnvironments.environments[1].environmentName | Should -Be 'settingsenv'
+        $deploymentEnvironments.environments[1].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[1].shell | Should -Be 'pwsh'
+
+        # Add Branch policy to settings to only allow branch to deploy to _test_ environment
+        $settings.DeployToTest.branches = @('branch')
+        $settings.excludeEnvironments = @() # Clear exclude environments
+        $env:GITHUB_REF_NAME = 'main'
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "settingsenv"
+
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 2
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 2
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
+        $deploymentEnvironments.environments[1].environmentName | Should -Be 'settingsenv'
+        $deploymentEnvironments.environments[1].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[1].shell | Should -Be 'pwsh'
 
         # Changing branch to branch - now only test environment should be included (due to settings branch policy)
         $env:GITHUB_REF_NAME = 'branch'
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
     }
 
     # 2 environments defined in Settings - one PROD and one non-PROD (name based)
@@ -189,52 +299,75 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
             throw "Not supported"
         }
+        $githubEnvironmentsJson = ''
 
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $null; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings }
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
+
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
 
         # Publish to test environment - test is included
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments 'test' -type 'Publish'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
+
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test (PROD)'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
     }
 
     # 2 environments defined in Settings - one PROD and one non-PROD (settings based)
     It 'Test calling action directly - 2 environments defined in Settings - one PROD and one non-PROD (settings based)' {
-        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
-
+        $deployToTestSettings = @{ "branches" = @(); "continuousDeployment" = $false; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $deployToAnotherSettings = @{ "branches" = @(); "continuousDeployment" = $true; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @("test (PROD)","another"); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }; "DeployTotest" = $deployToTestSettings; "DeployToAnother" = $deployToAnotherSettings }
+        $githubEnvironmentsJson = ''
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
             throw "Not supported"
         }
 
-        $settings += @{
-            "DeployToTest" = @{
-                "continuousDeployment" = $false
-            }
-            "DeployToAnother" = @{
-                "continuousDeployment" = $true
-            }
-        }
-
         # One PROD environment and one non-PROD environment - only non-PROD environment is selected for CD
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments '*' -type 'CD'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
+
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'another'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
 
         # Publish to test environment - test is included
         $env:Settings = $settings | ConvertTo-Json -Compress
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
+        . (Join-Path $scriptRoot $scriptName) -githubEnvironmentsJson $githubEnvironmentsJson -getEnvironments 'test' -type 'Publish'
         PassGeneratedOutput
-        $EnvironmentCount | Should -Be 1
-        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
+        $deploymentEnvironments = $DeploymentEnvironmentsJson | ConvertFrom-Json
+        $deploymentEnvironments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environmentCount | Should -Be 1
+        $deploymentEnvironments.environments | Should -Not -BeNullOrEmpty
+        $deploymentEnvironments.environments.Count | Should -Be 1
+        $deploymentEnvironments.environments[0].environmentName | Should -Be 'test (PROD)'
+        $deploymentEnvironments.environments[0].'runs-on' | Should -Be '["ubuntu-latest"]'
+        $deploymentEnvironments.environments[0].shell | Should -Be 'pwsh'
     }
 }

@@ -300,7 +300,8 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
         [string] $environmentName = "$ENV:ALGoEnvName",
-        [string] $customSettings = ""
+        [string] $customSettings = "",
+        [string] $githubEnvironmentsJson = ""
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -549,6 +550,74 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
+    # Environments can come from three places: GitHub repo environments, settings.environments and the environmentName input of the PublishToEnvironment action
+    if ($githubEnvironmentsJson) {
+        $ghEnvironments = $githubEnvironmentsJson | ConvertFrom-Json
+    } else {
+        $ghEnvironments = @()
+    }
+
+    # $ghEnvironments = @(GetGitHubEnvironments)
+    $environments = @($ghEnvironments | ForEach-Object { $_.name }) + @($settings.environments) + @($environmentName) | Select-Object -unique | Where-Object { $_ -ne "" }
+
+    if ($environments) {
+        OutputDebug "$($environments.Count) Environment(s) defined: $($environments -join ', ')"
+        foreach ($environmentName in $environments) {
+            $envName = $environmentName.Split(' ')[0]
+            # Default deployment settings
+            $deploymentSettings = @{
+                "EnvironmentType" = "SaaS"
+                "EnvironmentName" = $envName
+                "Branches" = @()
+                "Projects" = @('*')
+                "DependencyInstallMode" = "install"  # ignore, install, upgrade or forceUpgrade
+                "includeTestAppsInSandboxEnvironment" = $false
+                "excludeAppIds" = @()
+                "Scope" = $null
+                "SyncMode" = $null
+                "buildMode" = $null
+                "continuousDeployment" = $null
+                "runs-on" = $settings."runs-on"
+                "shell" = $settings."shell"
+                "companyId" = ''
+                "ppEnvironmentUrl" = ''
+            }
+            $settingsName = "DeployTo$envName"
+            if ($settings.Contains($settingsName)) {
+                # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+                Write-Host "Using custom settings for environment $environmentName"
+                $deployTo = $settings."$settingsName"
+                $keys = @($deployTo.Keys)
+                foreach($key in $keys) {
+                    if ($deploymentSettings.Contains($key)) {
+                        if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                            if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
+                                # Support setting runs-on as an array in settings to not break old settings
+                                # See https://github.com/microsoft/AL-Go/issues/1182
+                                $deployTo."$key" = $deployTo."$key" -join ','
+                            }
+                            else {
+                                OutputWarning -message "The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                            }
+                        }
+                        $deploymentSettings."$key" = $deployTo."$key"
+                    }
+                }
+                if ($deploymentSettings."shell" -ne 'pwsh' -and $deploymentSettings."shell" -ne 'powershell') {
+                    throw "The shell setting in $settingsName must be either 'pwsh' or 'powershell'"
+                }
+                if ($deploymentSettings."runs-on" -like "*ubuntu-*" -and $deploymentSettings."shell" -eq "powershell") {
+                    Write-Host "Switching deployment shell to pwsh for ubuntu"
+                    $deploymentSettings."shell" = "pwsh"
+                }
+            }
+            OutputDebug -message "Deployment settings for environment $($envName): $($deploymentSettings | ConvertTo-Json -Depth 5 -Compress)"
+            $settings."$settingsName" = $deploymentSettings
+        }
+    } else {
+        OutputDebug "No environments defined"
+    }
+
     $settings | ValidateSettings
 
     $settings
@@ -606,6 +675,22 @@ function SanitizeWorkflowName {
         [string] $workflowName
     )
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+}
+
+function GetGitHubEnvironments() {
+    OutputDebugFunctionCall
+    $headers = GetHeaders -token $env:GITHUB_TOKEN
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
+    OutputDebug "Url: $url"
+    try {
+        Write-Host "Requesting environments from GitHub"
+        $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
+    }
+    catch {
+        $ghEnvironments = @()
+        Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
+    }
+    $ghEnvironments
 }
 
 Export-ModuleMember -Function ReadSettings

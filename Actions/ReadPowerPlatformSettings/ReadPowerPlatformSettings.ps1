@@ -1,24 +1,36 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $deploymentEnvironmentsJson,
-    [Parameter(Mandatory = $true)]
     [string] $environmentName
 )
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 $envName = $environmentName.Split(' ')[0]
 
-# Read the deployment settings
-$deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json
-$deploymentSettings = $deploymentEnvironments."$environmentName"
+$settings = $env:Settings | ConvertFrom-Json
+
+# If there is a deployTo<environamentName> settings, overwrite the default settings
+$settingsName = "deployTo$($envName)"
+if($settings.PSObject.Properties.Name -contains $settingsName) {
+    $deploymentSettings = $settings."$settingsName"
+    OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+} else {
+    OutputError -message "No deployment settings found for environment $envName"
+}
 
 foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
-    if ($deploymentSettings | Get-Member -MemberType Properties -name $property) {
+    if ($deploymentSettings.PSObject.Properties.Name -contains $property) {
         Write-Host "Setting $property"
         Add-Content -Encoding utf8 -Path $env:GITHUB_OUTPUT -Value "$property=$($deploymentSettings."$property")"
     }
     else {
-        throw "$envName setting must contain '$property' property"
+        throw "DeployTo$envName setting must contain '$property' property" # Defensive check
+    }
+}
+
+# Make sure required settings are not empty
+foreach($property in 'ppEnvironmentUrl','companyId','environmentName') {
+    if ([string]::IsNullOrWhiteSpace($deploymentSettings."$property")) {
+        throw "DeployTo$envName setting must contain '$property' property"
     }
 }
 
@@ -27,7 +39,7 @@ $secrets = $env:Secrets | ConvertFrom-Json
 # Read the authentication context from secrets
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
-    if ($secrets."$secretName") {
+    if ($secrets.PSObject.Properties.Name -contains "$secretName") {
         Write-Host "Setting authentication context from secret $secretName"
         $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")) | ConvertFrom-Json
         'ppTenantId','ppApplicationId','ppClientSecret','ppUserName','ppPassword' | ForEach-Object {
