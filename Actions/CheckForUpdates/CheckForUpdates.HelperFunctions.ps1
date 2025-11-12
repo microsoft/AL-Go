@@ -1,3 +1,5 @@
+Import-Module (Join-Path $PSScriptRoot '../.Modules/ReadSettings.psm1') -DisableNameChecking
+
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
@@ -61,6 +63,7 @@ function DownloadTemplateRepository {
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
+
     return $tempName
 }
 
@@ -305,8 +308,7 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth,
-        [bool] $includeBuildPP
+        [int] $depth
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -387,6 +389,7 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
+        $includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
         ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP $includeBuildPP
     }
 
@@ -457,11 +460,9 @@ function GetSrcFolder {
         [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
-        [string] $srcPath
+        [string] $srcPath = ''
     )
-    Write-Host $templateUrl
-    Write-Host $templateFolder
-    Write-Host $srcPath
+
     if (!$templateUrl) {
         return ''
     }
@@ -559,4 +560,240 @@ function UpdateSettingsFile {
         $settings | Set-JsonContentLF -path $settingsFile
     }
     return $modified
+}
+
+function ResolveFilePaths {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $sourceFolder,
+        [string] $originalSourceFolder = $null,
+        [Parameter(Mandatory=$true)]
+        [string] $destinationFolder,
+        [array] $files = @(),
+        [string[]] $projects = @()
+    )
+
+    if(-not $files) {
+        return @()
+    }
+
+    $fullFilePaths = @()
+    foreach($file in $files) {
+        if($file.Keys -notcontains 'sourcePath') {
+            $file.sourcePath = '' # Default to current folder
+        }
+
+        if($file.Keys -notcontains 'filter') {
+            $file.filter = '' # Default to all files
+        }
+
+        if($file.Keys -notcontains 'origin') {
+            $file.origin = 'template' # Default to template
+        }
+
+        if($file.Keys -notcontains 'type') {
+            $file.type = '' # Default to empty
+        }
+
+        if($file.Keys -notcontains 'destinationPath') {
+            # If destinationPath is not specified, use the sourcePath, so that the file structure is preserved
+            $file.destinationPath = $file.sourcePath
+        }
+
+        if($file.Keys -notcontains 'perProject') {
+            $file.perProject = $false # Default to false
+        }
+
+        # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
+        if(!$originalSourceFolder -and $file.origin -eq 'custom template') {
+            Write-Host "Skipping custom template file(s) with sourcePath '$($file.sourcePath)' as there is no original source folder specified"
+            continue;
+        }
+
+        # All files are relative to the template folder
+        Write-Host "Resolving files for sourcePath '$($file.sourcePath)' and filter '$($file.filter)'"
+        $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+
+        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
+
+        if(-not $sourceFiles) {
+            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
+            continue
+        }
+
+        foreach($srcFile in $sourceFiles) {
+            $fullFilePath = @{
+                'sourceFullPath' = $srcFile
+                'originalSourceFullPath' = $null
+                'type' = $file.type
+                'destinationFullPath' = $null
+            }
+
+            Write-Host "Processing file '$($srcFile)'"
+
+            # Try to find the same files in the original template folder if it is specified. Exclude custom template files
+            if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
+                Push-Location $sourceFolder
+                $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
+                Pop-Location
+                if (Test-Path (Join-Path $originalSourceFolder $relativePath) -PathType Leaf) {
+                    # If the file exists in the original template folder, use that file instead
+                    $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
+                }
+            }
+
+            $destinationName = $(Split-Path -Path $srcFile -Leaf)
+            if($file.Keys -contains 'destinationName' -and ($file.destinationName)) {
+                $destinationName = $file.destinationName
+            }
+
+            if($file.Keys -contains 'perProject' -and $file.perProject -eq $true) {
+                # Multiple file entries, one for each project
+                # Destination full path is the destination base folder + project + destinationPath + destinationName
+
+                foreach($project in $projects) {
+                    if($project -eq '.') {
+                        $project = '' # If project is '.', it means the root folder, so we use an empty string
+                    }
+
+                    $projectFile = $fullFilePath.Clone()
+
+                    $projectFile.destinationFullPath = Join-Path $destinationFolder $project
+                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $file.destinationPath
+                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $destinationName
+
+                    Write-Host "Adding per-project file for project '$project': sourceFullPath '$($projectFile.sourceFullPath)', originalSourceFullPath '$($projectFile.originalSourceFullPath)', destinationFullPath '$($projectFile.destinationFullPath)'"
+                    $fullFilePaths += $projectFile
+                }
+            }
+            else {
+                # Single file entry
+                # Destination full path is the destination base folder + destinationPath + destinationName
+
+                $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationPath
+                $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
+
+                Write-Host "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
+                $fullFilePaths += $fullFilePath
+            }
+        }
+    }
+    # Remove duplicates
+    $fullFilePaths = $fullFilePaths | Sort-Object { $_.sourceFullPath}, { $_.originalSourceFullPath}, { $_.destinationFullPath}, { $_.type } -Unique
+
+    return $fullFilePaths
+}
+
+function GetDefaultFilesToUpdate {
+    Param(
+        [switch] $includeCustomTemplateFiles
+    )
+
+    $filesToUpdate = @(
+        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
+        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
+
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
+        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = "$ALGoSettingsFileName"; 'perProject' = $true; 'type' = 'settings' }
+    )
+
+    if($includeCustomTemplateFiles) {
+        # If there is an original template folder, we also need to include custom template files (RepoSettings and ProjectSettings)
+        $filesToUpdate += @(
+            [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'origin' = 'custom template' }
+            [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'origin' = 'custom template' }
+        )
+    }
+
+    return $filesToUpdate
+}
+
+function GetDefaultFilesToExclude {
+    Param(
+        $settings
+    )
+    $filesToExclude = @()
+
+    $includeBuildPP = $settings.type -eq 'PTE' -and $settings.powerPlatformSolutionFolder -ne ''
+    if (!$includeBuildPP) {
+        # Remove PowerPlatform workflows if no PowerPlatformSolution exists
+        $filesToExclude += @(
+            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
+            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
+            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+        )
+    }
+
+    return @($filesToExclude)
+}
+
+<#
+.SYNOPSIS
+    Get the list of files to update and exclude based on settings
+.DESCRIPTION
+    This function gets the list of files to update and exclude based on the provided settings.
+    The unusedALGoSystemFiles setting is also applied to exclude files from the update list and add them to the exclude list.
+.PARAMETER settings
+    The settings object containing the customALGoFiles configuration.
+.PARAMETER baseFolder
+    The base folder of the repository.
+.PARAMETER templateFolder
+    The folder where the template files are located.
+.PARAMETER originalTemplateFolder
+    The folder where the original template files are located (if any). In case of custom templates.
+.PARAMETER projects
+    The list of projects in the repository.
+.OUTPUTS
+    An array containing two elements: the list of files to update and the list of files to exclude.
+#>
+function GetFilesToUpdate {
+    Param(
+        [Parameter(Mandatory=$true)]
+        $settings,
+        [Parameter(Mandatory=$true)]
+        $baseFolder,
+        [Parameter(Mandatory=$true)]
+        $templateFolder,
+        $originalTemplateFolder = $null,
+        $projects = @()
+    )
+
+    $filesToUpdate = GetDefaultFilesToUpdate -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
+    $filesToUpdate += $settings.customALGoFiles.filesToUpdate
+    $filesToUpdate = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToUpdate -projects $projects
+
+    $filesToExclude = GetDefaultFilesToExclude -settings $settings
+    $filesToExclude += $settings.customALGoFiles.filesToExclude
+    $filesToExclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects
+
+    # Exclude files from filesToUpdate that are in filesToExclude
+    $filesToUpdate = $filesToUpdate | Where-Object {
+        $fileToUpdate = $_
+        $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToUpdate.sourceFullPath })
+        if(-not $include) {
+            Write-Host "Excluding file $($fileToUpdate.sourceFullPath) from update as it is in the exclude list"
+        }
+        return $include
+    }
+
+    # Apply unusedALGoSystemFiles logic
+    $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
+
+    # Exclude unusedALGoSystemFiles from $filesToUpdate and add them to $filesToExclude
+    $unusedFilesToExclude = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
+    if ($unusedFilesToExclude) {
+        # TODO: Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions. Please use 'customALGoFiles.filesToExclude' instead." -DeprecationTag "unusedALGoSystemFiles"
+
+        Write-Host "The following files are marked as unused and will be removed if they exist:"
+        $unusedFilesToExclude | ForEach-Object { Write-Host "- $($_.destinationFullPath)" }
+
+        $filesToUpdate = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) }
+        $filesToExclude += @($unusedFilesToExclude)
+    }
+
+    return @($filesToUpdate), @($filesToExclude)
 }
