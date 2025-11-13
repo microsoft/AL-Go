@@ -301,7 +301,7 @@ function ModifyUpdateALGoSystemFiles {
     $yaml.Replace('jobs:/UpdateALGoSystemFiles:/', $updateALGoSystemFilesJob.content)
 }
 
-function ApplyWorkflowInputDefaults {
+function ApplyWorkflowDefaultInputs {
     Param(
         [Yaml] $yaml,
         [hashtable] $repoSettings,
@@ -326,7 +326,7 @@ function ApplyWorkflowInputDefaults {
 
     # Find matching workflow input defaults
     $matchingDefaults = @()
-    foreach ($workflowInputDefault in $repoSettings.workflowInputDefaults) {
+    foreach ($workflowInputDefault in $repoSettings.workflowDefaultInputs) {
         if ($workflowInputDefault.workflow) {
             # Sanitize the workflow name in the setting for comparison
             $settingWorkflowName = SanitizeWorkflowName -workflowName $workflowInputDefault.workflow
@@ -576,8 +576,8 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     # Apply workflow input defaults from settings
-    if ($repoSettings.Keys -contains 'workflowInputDefaults') {
-        ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName $workflowName
+    if ($repoSettings.Keys -contains 'workflowDefaultInputs') {
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName $workflowName
     }
 
     # combine all the yaml file lines into a single string with LF line endings

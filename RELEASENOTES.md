@@ -1,6 +1,6 @@
 ### Set default values for workflow inputs
 
-A new setting `workflowInputDefaults` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
+A new setting `workflowDefaultInputs` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
 
 When you add this setting to your AL-Go settings file and run the "Update AL-Go System Files" workflow, the default values will be automatically applied to the workflow YAML files in your repository.
 The default values must match the input types (boolean, number, string, or choice) defined in the workflow YAML files.
@@ -9,7 +9,7 @@ Example configuration:
 
 ```json
 {
-  "workflowInputDefaults": [
+  "workflowDefaultInputs": [
     {
       "workflow": "Create Release",
       "defaults": [
@@ -28,7 +28,7 @@ Example configuration:
 }
 ```
 
-Read more at [workflowInputDefaults](https://aka.ms/algosettings#workflowInputDefaults).
+Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
 ### Issues
 
