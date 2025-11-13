@@ -1,3 +1,35 @@
+### Set default values for workflow inputs
+
+A new setting `workflowDefaultInputs` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
+
+When you add this setting to your AL-Go settings file and run the "Update AL-Go System Files" workflow, the default values will be automatically applied to the workflow YAML files in your repository.
+The default values must match the input types (boolean, number, string, or choice) defined in the workflow YAML files.
+
+Example configuration:
+
+```json
+{
+  "workflowDefaultInputs": [
+    {
+      "workflow": "Create Release",
+      "defaults": [
+        { "name": "directCommit", "value": true },
+        { "name": "useGhTokenWorkflow", "value": true },
+        { "name": "updateVersionNumber", "value": "+0.1" }
+      ]
+    },
+    {
+      "workflow": "Update AL-Go System Files",
+      "defaults": [
+        { "name": "directCommit", "value": true }
+      ]
+    }
+  ]
+}
+```
+
+Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
+
 ### Issues
 
 - Issue 1961 KeyVault access in PR pipeline
@@ -5,6 +37,7 @@
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
 - Issue 1945 Deploy Reference Documentation fails for CI/CD
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
+- Discussion 1952 Set default values on workflow_dispatch input
 
 ## v8.0
 

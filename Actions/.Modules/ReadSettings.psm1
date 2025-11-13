@@ -241,6 +241,7 @@ function GetDefaultSettings
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
         "reportSuppressedDiagnostics"                   = $false
+        "workflowDefaultInputs"                         = @()
     }
 }
 
@@ -608,5 +609,5 @@ function SanitizeWorkflowName {
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
-Export-ModuleMember -Function ReadSettings
+Export-ModuleMember -Function ReadSettings, SanitizeWorkflowName
 Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile
