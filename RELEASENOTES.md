@@ -5,6 +5,7 @@
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
 - Issue 1945 Deploy Reference Documentation fails for CI/CD
 - Use Runner_Temp instead of GetTempFolder whenever possible
+- Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 
 ## v8.0
 
