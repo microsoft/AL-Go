@@ -24,10 +24,10 @@
     [bool] $directCommit
 )
 
-$tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+$tmpFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
 
 try {
-    . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     $serverUrl, $branch = CloneIntoNewFolder -actor $actor -token $token -updateBranch $updateBranch -DirectCommit $directCommit -newBranchPrefix "create-$($type.replace(' ','-').ToLowerInvariant())"
     $baseFolder = (Get-Location).Path
     DownloadAndImportBcContainerHelper -baseFolder $baseFolder

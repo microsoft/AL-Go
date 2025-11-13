@@ -18,7 +18,7 @@
         $folder = Download-Artifacts $artifactUrl
         OutputDebug -message "Downloaded artifacts to $folder"
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
-        $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        $tempFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
         OutputDebug -message "Copying $alLanguageVsix to $($tempFolder).zip"
         Copy-Item -Path $alLanguageVsix -Destination "$($tempFolder).zip"
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
@@ -59,7 +59,7 @@ function GetAppNameAndFolder {
         [string] $appFile
     )
 
-    $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $tmpFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     Extract-AppFileToFolder -appFilename $appFile -appFolder $tmpFolder -generateAppJson
     $appJson = Get-Content -Path (Join-Path $tmpFolder 'app.json') -Encoding utf8 | ConvertFrom-Json
     $appJson.name
@@ -198,7 +198,7 @@ function GenerateDocsSite {
         $aldocCommand = $aldocPath
     }
 
-    $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $docfxPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     New-Item -Path $docfxPath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps

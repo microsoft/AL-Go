@@ -20,7 +20,7 @@ function Install-SigningTool() {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
     # Create folder in temp directory with a unique name
-    $tempFolder = Join-Path -Path ([System.IO.Path]::GetTempPath()) "SigningTool-$(Get-Random)"
+    $tempFolder = Join-Path -Path (GetTemporaryPath) "SigningTool-$(Get-Random)"
 
     # Get version of the signing tool
     $version = GetPackageVersion -PackageName "sign"

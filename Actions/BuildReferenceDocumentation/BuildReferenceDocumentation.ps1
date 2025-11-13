@@ -58,8 +58,7 @@ $versions = @($releases | ForEach-Object { $_.Name })
 $latestReleaseTag = $releases | Select-Object -First 1 -ExpandProperty tag_name
 
 foreach($release in $releases) {
-    $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item -Path $tempFolder -ItemType Directory | Out-Null
+    $tempFolder = NewTemporaryFolder
     try {
         Write-Host "::group::Release $($release.Name)"
         foreach($mask in 'Apps', 'Dependencies') {

@@ -474,8 +474,7 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
         }
         if ($downloads) {
             Write-Host "Downloading from $mask"
-            $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-            New-Item $tempFolder -ItemType Directory | Out-Null
+            $tempFolder = NewTemporaryFolder
             if ($buildMode -eq 'Default') {
                 $artifactMask = $mask
             }
