@@ -31,6 +31,7 @@ function SetTokenAndRepository {
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
         invoke-git config --global core.autocrlf false
+        invoke-git config --global core.longpaths true
     }
 
     if (-not $github) {

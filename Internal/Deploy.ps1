@@ -50,6 +50,7 @@ try {
     invoke-git config --global user.name "$($config.githubOwner)"
     invoke-git config --global hub.protocol https
     invoke-git config --global core.autocrlf false
+    invoke-git config --global core.longpaths true
     invoke-gh auth setup-git
 
     # All references inside microsoft/AL-Go and forks of it are to microsoft/AL-Go-Actions@main, microsoft/AL-Go-PTE@main and microsoft/AL-Go-AppSource@main
