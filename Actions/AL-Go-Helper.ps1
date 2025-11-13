@@ -942,6 +942,7 @@ function CloneIntoNewFolder {
     invoke-git config --global user.name "$actor"
     invoke-git config --global hub.protocol https
     invoke-git config --global core.autocrlf false
+    invoke-git config --global core.longpaths true
 
     invoke-git clone $serverUrl
 
