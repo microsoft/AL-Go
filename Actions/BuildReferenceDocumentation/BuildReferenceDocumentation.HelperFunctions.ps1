@@ -211,14 +211,27 @@ function GenerateDocsSite {
         }
         $apps = @($apps | Select-Object -Unique)
 
-        $arguments = $aldocArguments + @(
-            "init"
-            "--output ""$docfxpath"""
-            "--loglevel $loglevel"
-            "--targetpackageslist $(( $apps | ForEach-Object { '"' + $_ + '"' } ) -join ' ')"
-            )
-        Write-Host "invoke $aldocCommand $arguments"
-        CmdDo -command $aldocCommand -arguments $arguments
+        try {
+            $arguments = $aldocArguments + @(
+                "init"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--targetpackageslist $(( $apps | ForEach-Object { '"' + $_ + '"' } ) -join ' ')"
+                )
+            Write-Host "invoke $aldocCommand $arguments"
+            CmdDo -command $aldocCommand -arguments $arguments
+        }
+        catch {
+            # Retrying with --targetpackages as --targetpackageslist is only available from BC 27 and forward
+            $arguments = $aldocArguments + @(
+                "init"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--targetpackages ""$($apps -join '","')"""
+                )
+            Write-Host "invoke $aldocCommand $arguments"
+            CmdDo -command $aldocCommand -arguments $arguments
+        }
 
         # Update docfx.json
         Write-Host "Update docfx.json"
