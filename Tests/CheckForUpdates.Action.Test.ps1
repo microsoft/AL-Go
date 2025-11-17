@@ -1026,4 +1026,45 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Verify single quote is escaped per YAML spec (doubled)
         $yaml.Get('on:/workflow_dispatch:/inputs:/nameInput:/default:').content -join '' | Should -Be "default: 'O''Brien'"
     }
+
+    It 'ApplyWorkflowDefaultInputs applies last value when multiple entries have same input name' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        # Create a test workflow YAML
+        $yamlContent = @(
+            "name: 'Test Workflow'",
+            "on:",
+            "  workflow_dispatch:",
+            "    inputs:",
+            "      input1:",
+            "        type: string",
+            "        default: ''",
+            "      input2:",
+            "        type: boolean",
+            "        default: false",
+            "jobs:",
+            "  test:",
+            "    runs-on: ubuntu-latest"
+        )
+
+        $yaml = [Yaml]::new($yamlContent)
+
+        # Create settings with duplicate entries for input1 - simulating merged conditional settings
+        # This can happen when multiple conditionalSettings blocks both match and both define the same input
+        $repoSettings = @{
+            "workflowDefaultInputs" = @(
+                @{ "name" = "input1"; "value" = "first-value" },
+                @{ "name" = "input2"; "value" = $false },
+                @{ "name" = "input1"; "value" = "second-value" },  # Duplicate input1
+                @{ "name" = "input1"; "value" = "final-value" }    # Another duplicate input1
+            )
+        }
+
+        # Apply the defaults
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+
+        # Verify "last wins" - the final value for input1 should be applied
+        $yaml.Get('on:/workflow_dispatch:/inputs:/input1:/default:').content -join '' | Should -Be "default: 'final-value'"
+        $yaml.Get('on:/workflow_dispatch:/inputs:/input2:/default:').content -join '' | Should -Be 'default: false'
+    }
 }
