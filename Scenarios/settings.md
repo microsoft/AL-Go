@@ -184,13 +184,7 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 
 **Note:** You can use `workflowDefaultInputs` within conditional settings to apply workflow input defaults only when certain conditions are met. For example, you could set different default values for specific workflows or branches.
 
-<a id="workflow-name-sanitization"></a>
-
-### Workflow Name Sanitization
-
-When matching workflow names for conditional settings, AL-Go sanitizes the actual workflow name before comparison. Sanitization removes invalid filename characters such as leading spaces, quotes, colons, slashes, and other special characters. For example, a workflow named `" CI/CD"` would be sanitized to `"CICD"` for matching purposes.
-
-You could imagine that you could have and organizational settings variable containing:
+You could imagine that you could have an organizational settings variable containing:
 
 ```json
     "ConditionalSettings": [
@@ -212,6 +206,12 @@ Which will ensure that for all repositories named `bcsamples-*` in this organiza
 
 > [!NOTE]
 > You can have conditional settings on any level and all conditional settings which has all conditions met will be applied in the order of settings file + appearance.
+
+<a id="workflow-name-sanitization"></a>
+
+### Workflow Name Sanitization
+
+When matching workflow names for conditional settings, AL-Go sanitizes the actual workflow name before comparison. Sanitization removes invalid filename characters such as leading spaces, quotes, colons, slashes, and other special characters. For example, a workflow named `" CI/CD"` would be sanitized to `"CICD"` for matching purposes.
 
 <a id="expert"></a>
 
