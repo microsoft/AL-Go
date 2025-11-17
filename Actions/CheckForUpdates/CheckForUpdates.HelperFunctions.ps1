@@ -679,7 +679,7 @@ function ResolveFilePaths {
         }
     }
     # Remove duplicates
-    $fullFilePaths = $fullFilePaths | Sort-Object { $_.sourceFullPath}, { $_.originalSourceFullPath}, { $_.destinationFullPath}, { $_.type } -Unique
+    $fullFilePaths = $fullFilePaths | Sort-Object { $_.destinationFullPath } -Unique
 
     return $fullFilePaths
 }
@@ -733,20 +733,22 @@ function GetDefaultFilesToExclude {
 
 <#
 .SYNOPSIS
-    Get the list of files to update and exclude based on settings
+    Get the list of files from the template repository to update and exclude based on the provided settings.
 .DESCRIPTION
     This function gets the list of files to update and exclude based on the provided settings.
     The unusedALGoSystemFiles setting is also applied to exclude files from the update list and add them to the exclude list.
 .PARAMETER settings
     The settings object containing the customALGoFiles configuration.
 .PARAMETER baseFolder
-    The base folder of the repository.
+    The base folder of the repository. This is the target folder where the files will be updated.
 .PARAMETER templateFolder
     The folder where the template files are located.
 .PARAMETER originalTemplateFolder
-    The folder where the original template files are located (if any). In case of custom templates.
+    The folder where the original template files are located (if any).
+    If originalTemplateFolder is provided, it means that there is a custom template in use and custom template files should be included.
 .PARAMETER projects
     The list of projects in the repository.
+    The projects are used to resolve per-project files.
 .OUTPUTS
     An array containing two elements: the list of files to update and the list of files to exclude.
 #>
