@@ -319,7 +319,7 @@ foreach ($thisProject in $projectList) {
                 if ($type -eq "Release") {
                     $versions += @($version, "latest")
                 }
-                $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::newguid().ToString()).zip"
+                $tempFile = Join-Path (GetTemporaryPath) "$([Guid]::newguid().ToString()).zip"
                 try {
                     Write-Host "Compressing"
                     Compress-Archive -Path (Join-Path $artfolder '*') -DestinationPath $tempFile -Force
