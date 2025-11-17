@@ -203,9 +203,9 @@ Repositories based on your custom template will notify you that changes are avai
 
 ## Using custom template files
 
-When using custom template repositories, often you need to add custom files that are related to AL-Go for GitHub, but are not part of the official AL-Go templates. Such files can be script overrides for certain AL-Go functionality, workflows that complement AL-Go capabilities or workflows that are easier to manage centrally.
+When updating AL-Go for GitHub, only specific system files from the template repository are synced to your end repository by default. Files such as `README.md`, `.gitignore`, and other documentation or non-system files are not updated by AL-Go for GitHub. By default, AL-Go syncs workflow files in `.github/workflows`, PowerShell scripts in `.github` and `.AL-Go`, and configuration files required for AL-Go operations. When using custom template repositories, you may need to add additional files related to AL-Go for GitHub, such as script overrides, complementary workflows, or centrally managed files not part of the official AL-Go templates.
 
-In order to instruct AL-Go to sync such files, you need to define setting `customALGoFiles`. The setting is an object that can contain two properties: `filesToUpdate` and `filesToExclude`.
+In order to instruct AL-Go which files to look for at the template repository, you need to define the `customALGoFiles` setting. The setting is an object that can contain two properties: `filesToUpdate` and `filesToExclude`.
 
 `filesToUpdate`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to update. Every item in the array may contain the following properties:
 
@@ -214,10 +214,20 @@ In order to instruct AL-Go to sync such files, you need to define setting `custo
 - `destinationPath`: A path, relative to repository that is being updated, where the files should be placed. _Example_: `src/templateScripts`.
 - `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationPath` is relative to the project folder. _Example_: `.AL-Go/scripts`.
 
-`filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (ignore) during the update. Every item in the array may contain the following properties:
+> [!NOTE]
+> `filesToUpdate` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToUpdate`, AL-Go for GitHub will ignore them and you might have to remove them manually.
+
+`filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) during the update. Every item in the array may contain the following properties:
 
 - `sourcePath`: A path, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
 - `filter`: A string to use for filtering in the specified source path. _Example_: `notRelevantScript.ps1`.
+
+> [!NOTE] `filesToExclude` is an array containing a subset of files from `filesToUpdate`. These files are specifically marked to be excluded from the update process. During the AL-Go update:
+> - Any file matched in `filesToExclude` will not be updated.
+> - If a file matched by `filesToExclude` exists in the destination (end) repository, it will be removed as part of the update.
+>
+> This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
+
 
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
