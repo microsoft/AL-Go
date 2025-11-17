@@ -10,23 +10,33 @@ Example configuration:
 ```json
 {
   "workflowDefaultInputs": [
+    { "name": "directCommit", "value": true },
+    { "name": "useGhTokenWorkflow", "value": true }
+  ]
+}
+```
+
+This setting can be used on its own in repository settings to apply defaults to all workflows with matching input names. Alternatively, you can use it within [conditional settings](https://aka.ms/algosettings#conditional-settings) to apply defaults only to specific workflows, branches, or other conditions.
+
+Example using conditional settings to target specific workflows:
+
+```json
+{
+  "conditionalSettings": [
     {
-      "workflow": "Create Release",
-      "defaults": [
-        { "name": "directCommit", "value": true },
-        { "name": "useGhTokenWorkflow", "value": true },
-        { "name": "updateVersionNumber", "value": "+0.1" }
-      ]
-    },
-    {
-      "workflow": "Update AL-Go System Files",
-      "defaults": [
-        { "name": "directCommit", "value": true }
-      ]
+      "workflows": ["Create Release"],
+      "settings": {
+        "workflowDefaultInputs": [
+          { "name": "directCommit", "value": true },
+          { "name": "releaseType", "value": "Prerelease" }
+        ]
+      }
     }
   ]
 }
 ```
+
+**Important:** When multiple conditional settings blocks match and both define `workflowDefaultInputs`, the arrays are merged (all entries are kept). When the defaults are applied to workflows, the last matching entry for each input name wins.
 
 Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
