@@ -699,28 +699,15 @@
             "items": {
                 "type": "object",
                 "properties": {
-                    "workflow": {
+                    "name": {
                         "type": "string",
-                        "description": "The workflow name to apply default values to (must match exactly)"
+                        "description": "The name of the workflow input"
                     },
-                    "defaults": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": "The name of the workflow input"
-                                },
-                                "value": {
-                                    "description": "The default value for the workflow input (can be string, boolean, or number)"
-                                }
-                            },
-                            "required": ["name", "value"]
-                        }
+                    "value": {
+                        "description": "The default value for the workflow input (can be string, boolean, or number)"
                     }
                 },
-                "required": ["workflow", "defaults"]
+                "required": ["name", "value"]
             },
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
