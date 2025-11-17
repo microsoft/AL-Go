@@ -36,6 +36,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Discussion 1911 Add support for reportSuppressedDiagnostics
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
 - Issue 1945 Deploy Reference Documentation fails for CI/CD
+- Use Runner_Temp instead of GetTempFolder whenever possible
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Discussion 1952 Set default values on workflow_dispatch input
 
