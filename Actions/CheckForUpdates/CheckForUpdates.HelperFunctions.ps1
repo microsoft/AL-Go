@@ -536,8 +536,12 @@ function ApplyWorkflowDefaultInputs {
 
             # Replace references in expressions: ${{ github.event.inputs.name }} and ${{ inputs.name }}
             # These use the expression literal format (true/false for boolean, unquoted number, 'quoted' string)
-            $yaml.ReplaceAll("`${{ github.event.inputs.$inputName }}", $expressionValue)
-            $yaml.ReplaceAll("`${{ inputs.$inputName }}", $expressionValue)
+            # Use regex to match any whitespace variations: ${{inputs.name}}, ${{ inputs.name }}, ${{ inputs.name}}, ${{inputs.name }}
+            # Replace the entire ${{ ... }} expression with just the value
+            $pattern = "`\$\{\{\s*github\.event\.inputs\.$inputName\s*\}\}"
+            $yaml.ReplaceAll($pattern, $expressionValue, $true)
+            $pattern = "`\$\{\{\s*inputs\.$inputName\s*\}\}"
+            $yaml.ReplaceAll($pattern, $expressionValue, $true)
 
             # Replace references in if conditions: github.event.inputs.name and inputs.name (without ${{ }})
             # In if conditions, bare references are always treated as strings, so we need to use string literal format
@@ -558,8 +562,8 @@ function ApplyWorkflowDefaultInputs {
             # - needs.inputs.outputs.NAME (where a job is named "inputs")
             # - steps.CreateInputs.outputs.NAME (where "inputs" is part of a word)
             # Use negative lookbehind (?<!\.) to ensure "inputs" is not preceded by a dot
-            # Use negative lookahead (?!\.) to ensure the match is not followed by a dot
             # Use word boundary \b after inputName to avoid partial matches
+            # Don't match if followed by a dot (to avoid matching outputs references)
             $pattern = "(?<!\.)inputs\.$inputName\b(?!\.)"
             $yaml.ReplaceAll($pattern, $stringLiteral, $true)
         }
