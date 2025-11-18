@@ -36,7 +36,7 @@ Example using conditional settings to target specific workflows:
 }
 ```
 
-**Important:** When multiple conditional settings blocks match and both define `workflowDefaultInputs`, the arrays are merged (all entries are kept). When the defaults are applied to workflows, the last matching entry for each input name wins.
+**Important:** When multiple conditional settings blocks match and both define `workflowDefaultInputs`, the arrays are merged following AL-Go's standard behavior for complex setting types (all entries are kept). If the same input name appears in multiple entries, the last matching entry takes precedence.
 
 Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
