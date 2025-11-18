@@ -1195,18 +1195,13 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "visibleInput"; "value" = "test" },
-                        @{ "name" = "hiddenInput"; "value" = $true; "hide" = $true }
-                    )
-                }
+                @{ "name" = "visibleInput"; "value" = "test" },
+                @{ "name" = "hiddenInput"; "value" = $true; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Boolean"
 
         # Verify the hidden input was removed from inputs
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1248,17 +1243,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "versionInput"; "value" = "+0.1"; "hide" = $true }
-                    )
-                }
+                @{ "name" = "versionInput"; "value" = "+0.1"; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide String"
 
         # Verify the hidden input was removed
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1296,17 +1286,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "countInput"; "value" = 10; "hide" = $true }
-                    )
-                }
+                @{ "name" = "countInput"; "value" = 10; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Number"
 
         # Verify the hidden input was removed
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1343,17 +1328,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "runTests"; "value" = $true; "hide" = $true }
-                    )
-                }
+                @{ "name" = "runTests"; "value" = $true; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide If Condition"
 
         # Verify the hidden input was removed
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1403,17 +1383,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag for the branch input
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "branch"; "value" = "production"; "hide" = $true }
-                    )
-                }
+                @{ "name" = "branch"; "value" = "production"; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Job Output"
 
         # Verify the hidden input was removed
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1467,17 +1442,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag for the "output" input
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "output"; "value" = "hidden"; "hide" = $true }
-                    )
-                }
+                @{ "name" = "output"; "value" = "hidden"; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Input Named Output"
 
         # Verify the hidden input was removed
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1531,17 +1501,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag for the "outputs" input
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "outputs"; "value" = "hidden-value"; "hide" = $true }
-                    )
-                }
+                @{ "name" = "outputs"; "value" = "hidden-value"; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Input Named Outputs"
 
         # Verify the hidden input was removed
         $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1598,17 +1563,12 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Create settings with hide flag for the "outputs" input
         $repoSettings = @{
             "workflowDefaultInputs" = @(
-                @{
-                    "workflow" = "Test Workflow"
-                    "defaults" = @(
-                        @{ "name" = "outputs"; "value" = "hidden-input-value"; "hide" = $true }
-                    )
-                }
+                @{ "name" = "outputs"; "value" = "hidden-input-value"; "hide" = $true }
             )
         }
 
         # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Job Named Inputs"
 
         # Verify the hidden input was removed
         $inputsSection = $yaml.Get('on:/workflow_dispatch:/inputs:/')
@@ -1624,5 +1584,54 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         # Verify that inputs.outputs WAS replaced with the hidden value
         $content | Should -Match "echo Input is 'hidden-input-value'"
         $content | Should -Not -Match "`\$\{\{ inputs\.outputs \}\}"
+    }
+
+    It 'ApplyWorkflowDefaultInputs silently skips hiding non-existent input' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        # Create a test workflow YAML with only one input
+        $yamlContent = @(
+            "name: 'Test Workflow'",
+            "on:",
+            "  workflow_dispatch:",
+            "    inputs:",
+            "      existingInput:",
+            "        type: string",
+            "        default: ''",
+            "jobs:",
+            "  test:",
+            "    runs-on: ubuntu-latest",
+            "    steps:",
+            "      - name: Test",
+            "        run: echo `${{ inputs.existingInput }}"
+        )
+
+        $yaml = [Yaml]::new($yamlContent)
+
+        # Create settings trying to hide an input that doesn't exist
+        $repoSettings = @{
+            "workflowDefaultInputs" = @(
+                @{ "name" = "existingInput"; "value" = "test-value" },
+                @{ "name" = "nonExistentInput"; "value" = "hidden-value"; "hide" = $true }
+            )
+        }
+
+        # Mock OutputWarning to verify no warning is issued
+        Mock OutputWarning { }
+
+        # Apply the defaults - should not throw
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Non-Existent" } | Should -Not -Throw
+
+        # Verify no warning was issued
+        Assert-MockCalled OutputWarning -Times 0
+
+        # Verify the existing input was updated but not hidden
+        $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+        $inputs.Find('existingInput:', [ref] $null, [ref] $null) | Should -Be $true
+        $yaml.Get('on:/workflow_dispatch:/inputs:/existingInput:/default:').content -join '' | Should -Be "default: 'test-value'"
+
+        # Verify the workflow content was not affected by the non-existent input
+        $content = $yaml.content -join "`n"
+        $content | Should -Match "`\$\{\{ inputs\.existingInput \}\}"
     }
 }
