@@ -229,6 +229,15 @@ In order to instruct AL-Go which files to look for at the template repository, y
 >
 > This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
 
+The following table summarizes how AL-Go for GitHub manages file updates and exclusions when using custom template files:
+
+| File name | In template repo | In end repo | Matched by `filesToUpdate` | Matched by `filesToExclude` | Result |
+|---|---|---|---|---|---|
+|  file.ps1  | Yes | Yes/No | Yes |  No | The file is **updated/created** in the end repo |
+|  file.ps1  | Yes | Yes | Yes/No|  Yes | The file is **removed** from the end repo, as it's matched for exclusion |
+|  file.ps1  | Yes | No | Yes/No |  Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
+|  file.ps1  | No | Yes/No | Yes/No |  Yes/No  | No action. The file is **_not_ updated/created/removed** in the end repo, as it's not present in the template repo  |
+
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
 Using a fork of AL-Go for GitHub to have your "own" public version of AL-Go for GitHub gives you the maximum customization capabilities. It does however also come with the most work.
