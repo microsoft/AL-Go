@@ -229,12 +229,12 @@ jobs:
           Write-Host "releases=$releasesJson"
 
           $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-          $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1")
-          $filteredScenarios = $allScenarios | Where-Object { $scenariosFilter | ForEach-Object { $_.Directory.Name -like $_ } }
+          $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
+          $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
 
           $scenariosJson = @{
             "matrix" = @{
-              "include" = $filteredScenarios | ForEach-Object { @{ "Scenario" = $_.Directory.Name } }
+              "include" = $filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } }
             };
             "max-parallel" = $maxParallel
             "fail-fast" = $false
