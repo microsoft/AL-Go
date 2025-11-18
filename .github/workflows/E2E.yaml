@@ -25,6 +25,11 @@ on:
         description: Run the end to end scenario tests
         type: boolean
         default: true
+      scenariosFilter:
+        description: Filter to run specific scenarios (separated by comma)
+        required: false
+        type: string
+        default: '*'
       runUpgradeTests:
         description: Run the end to end upgrade tests
         type: boolean
@@ -169,6 +174,7 @@ jobs:
         id: Analyze
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          _scenariosFilter: ${{ github.event.inputs.scenariosFilter }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
@@ -222,9 +228,13 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
 
+          $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+          $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1")
+          $filteredScenarios = $allScenarios | Where-Object { $scenariosFilter | ForEach-Object { $_.Directory.Name -like $_ } }
+
           $scenariosJson = @{
             "matrix" = @{
-              "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
+              "include" = $filteredScenarios | ForEach-Object { @{ "Scenario" = $_.Directory.Name } }
             };
             "max-parallel" = $maxParallel
             "fail-fast" = $false
