@@ -436,6 +436,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             )
 
             $yaml = [Yaml]::new($yamlContent)
+            $originalContent = $yaml.content -join "`n"
 
             # Create settings with empty workflowDefaultInputs array
             $repoSettings = @{
@@ -444,6 +445,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
             # Apply the defaults - should not throw and should not modify workflow
             { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
+            $yaml.content -join "`n" | Should -Be $originalContent
             $yaml.Get('on:/workflow_dispatch:/inputs:/myInput:/default:').content -join '' | Should -Be 'default: false'
         }
 
@@ -464,6 +466,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             )
 
             $yaml = [Yaml]::new($yamlContent)
+            $originalContent = $yaml.content -join "`n"
 
             # Create settings with workflow input defaults
             $repoSettings = @{
@@ -472,8 +475,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should not throw
+            # Apply the defaults - should not throw or modify YAML
             { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
+            $yaml.content -join "`n" | Should -Be $originalContent
         }
 
         It 'handles workflow_dispatch without inputs section' {
@@ -490,6 +494,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             )
 
             $yaml = [Yaml]::new($yamlContent)
+            $originalContent = $yaml.content -join "`n"
 
             # Create settings with workflow input defaults
             $repoSettings = @{
@@ -498,9 +503,10 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should not throw
+            # Apply the defaults - should not throw or modify YAML
             { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
-        }
+            $yaml.content -join "`n" | Should -Be $originalContent
+    }
 
         It 'applies multiple defaults to same workflow' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -622,6 +628,39 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         It 'ignores defaults for non-existent inputs' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      existingInput:",
+                "        type: boolean",
+                "        default: false",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+            $originalContent = $yaml.content -join "`n"
+
+            # Create settings with only non-existent input names
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "nonExistentInput"; "value" = "ignored" },
+                    @{ "name" = "anotherMissingInput"; "value" = 42 }
+                )
+            }
+
+            # Apply defaults for non-existent inputs - should not throw or modify YAML
+            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Not -Throw
+            $yaml.content -join "`n" | Should -Be $originalContent
+        }
+
+        It 'ApplyWorkflowDefaultInputs applies only existing inputs when mixed with non-existent inputs' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
 
             # Create a test workflow YAML
