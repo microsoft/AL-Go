@@ -791,6 +791,11 @@ function GetDefaultFilesToExclude {
     The projects are used to resolve per-project files.
 .OUTPUTS
     An array containing two elements: the list of files to update and the list of files to exclude.
+    Files are represented as hashtables with the following keys:
+    - sourceFullPath: The full path to the source file in the template repository.
+    - originalSourceFullPath: The full path to the original source file in the original template repository (if any).
+    - type: The type of the file (e.g., workflow, settings).
+    - destinationFullPath: The full path to the destination file in the target repository.
 #>
 function GetFilesToUpdate {
     Param(
