@@ -6,7 +6,7 @@
         $ENV:aldocCommand = ''
         Write-Host "Locating aldoc"
         if ($artifactUrl -notlike "https://*") {
-            Write-Host "ArtifactUrl provided, but not in the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
+            Write-Host "ArtifactUrl ($artifactUrl) provided, but not in the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
             $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
         } elseif ($artifactUrl -notlike "*/core") {
             # Change country to core as aldoc is not shipped in country specific artifacts
@@ -211,14 +211,27 @@ function GenerateDocsSite {
         }
         $apps = @($apps | Select-Object -Unique)
 
-        $arguments = $aldocArguments + @(
-            "init"
-            "--output ""$docfxpath"""
-            "--loglevel $loglevel"
-            "--targetpackages ""$($apps -join '","')"""
-            )
-        Write-Host "invoke $aldocCommand $arguments"
-        CmdDo -command $aldocCommand -arguments $arguments
+        try {
+            $arguments = $aldocArguments + @(
+                "init"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--targetpackageslist $(( $apps | ForEach-Object { '"' + $_ + '"' } ) -join ' ')"
+                )
+            Write-Host "invoke $aldocCommand $arguments"
+            CmdDo -command $aldocCommand -arguments $arguments
+        }
+        catch {
+            # Retrying with --targetpackages as --targetpackageslist is only available from BC 27 and forward
+            $arguments = $aldocArguments + @(
+                "init"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--targetpackages ""$($apps -join '","')"""
+                )
+            Write-Host "invoke $aldocCommand $arguments"
+            CmdDo -command $aldocCommand -arguments $arguments
+        }
 
         # Update docfx.json
         Write-Host "Update docfx.json"
