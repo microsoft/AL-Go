@@ -8,7 +8,9 @@ AL-Go for GitHub now supports updating files from your custom templates via the 
 - Discussion 1911 Add support for reportSuppressedDiagnostics
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
 - Issue 1945 Deploy Reference Documentation fails for CI/CD
+- Use Runner_Temp instead of GetTempFolder whenever possible
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
+- Issue 1960 Deploy Reference Documentation fails
 
 ## v8.0
 

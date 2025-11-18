@@ -58,8 +58,7 @@ $versions = @($releases | ForEach-Object { $_.Name })
 $latestReleaseTag = $releases | Select-Object -First 1 -ExpandProperty tag_name
 
 foreach($release in $releases) {
-    $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item -Path $tempFolder -ItemType Directory | Out-Null
+    $tempFolder = NewTemporaryFolder
     try {
         Write-Host "::group::Release $($release.Name)"
         foreach($mask in 'Apps', 'Dependencies') {
@@ -69,7 +68,7 @@ foreach($release in $releases) {
         $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
         do {
             try {
                 $retry = $false
