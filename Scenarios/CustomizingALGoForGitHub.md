@@ -223,11 +223,11 @@ In order to instruct AL-Go which files to look for at the template repository, y
 - `filter`: A string to use for filtering in the specified source path. _Example_: `notRelevantScript.ps1`.
 
 > [!NOTE] `filesToExclude` is an array containing a subset of files from `filesToUpdate`. These files are specifically marked to be excluded from the update process. During the AL-Go update:
+>
 > - Any file matched in `filesToExclude` will not be updated.
 > - If a file matched by `filesToExclude` exists in the destination (end) repository, it will be removed as part of the update.
 >
 > This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
-
 
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
