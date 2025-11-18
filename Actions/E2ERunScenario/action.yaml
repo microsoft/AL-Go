@@ -1,0 +1,70 @@
+name: E2E Run Scenario
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  scenario:
+    description: Scenario name
+    required: true
+  linux:
+    description: Run on Linux
+    required: false
+    default: 'false'
+  githubOwner:
+    description: GitHub owner
+    required: true
+  repoName:
+    description: Repository name
+    required: true
+  e2eAppId:
+    description: E2E App ID
+    required: true
+  e2eAppKey:
+    description: E2E App Key
+    required: true
+  algoAuthApp:
+    description: ALGO Auth App
+    required: true
+  pteTemplate:
+    description: PTE template
+    required: true
+  appSourceTemplate:
+    description: AppSource template
+    required: true
+  adminCenterApiCredentials:
+    description: Admin center API credentials
+    required: true
+  azureCredentials:
+    description: Azure credentials
+    required: true
+  githubPackagesToken:
+    description: GitHub packages token
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _scenario: ${{ inputs.scenario }}
+        _linux: ${{ inputs.linux }}
+        _githubOwner: ${{ inputs.githubOwner }}
+        _repoName: ${{ inputs.repoName }}
+        _e2eAppId: ${{ inputs.e2eAppId }}
+        _e2eAppKey: ${{ inputs.e2eAppKey }}
+        _algoAuthApp: ${{ inputs.algoAuthApp }}
+        _pteTemplate: ${{ inputs.pteTemplate }}
+        _appSourceTemplate: ${{ inputs.appSourceTemplate }}
+        _adminCenterApiCredentials: ${{ inputs.adminCenterApiCredentials }}
+        _azureCredentials: ${{ inputs.azureCredentials }}
+        _githubPackagesToken: ${{ inputs.githubPackagesToken }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2ERunScenario" -Action {
+          ${{ github.action_path }}/E2ERunScenario.ps1 -scenario $ENV:_scenario -linux ($ENV:_linux -eq 'true') -githubOwner $ENV:_githubOwner -repoName $ENV:_repoName -e2eAppId $ENV:_e2eAppId -e2eAppKey $ENV:_e2eAppKey -algoAuthApp $ENV:_algoAuthApp -pteTemplate $ENV:_pteTemplate -appSourceTemplate $ENV:_appSourceTemplate -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -azureCredentials $ENV:_azureCredentials -githubPackagesToken $ENV:_githubPackagesToken
+        }
+branding:
+  icon: play
+  color: blue

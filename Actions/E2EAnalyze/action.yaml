@@ -1,0 +1,47 @@
+name: E2E Analyze
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  maxParallel:
+    description: Maximum parallel jobs
+    required: true
+  testUpgradesFromVersion:
+    description: Test upgrades from version
+    required: false
+    default: 'v5.0'
+  token:
+    description: GitHub token with permissions to read releases
+    required: true
+outputs:
+  publictestruns:
+    description: Public test runs matrix
+    value: ${{ steps.run.outputs.publictestruns }}
+  privatetestruns:
+    description: Private test runs matrix
+    value: ${{ steps.run.outputs.privatetestruns }}
+  releases:
+    description: Releases matrix
+    value: ${{ steps.run.outputs.releases }}
+  scenarios:
+    description: Scenarios matrix
+    value: ${{ steps.run.outputs.scenarios }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _maxParallel: ${{ inputs.maxParallel }}
+        _testUpgradesFromVersion: ${{ inputs.testUpgradesFromVersion }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2EAnalyze" -Action {
+          ${{ github.action_path }}/E2EAnalyze.ps1 -maxParallel ([int]$ENV:_maxParallel) -testUpgradesFromVersion $ENV:_testUpgradesFromVersion
+        }
+branding:
+  icon: activity
+  color: blue

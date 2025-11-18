@@ -1,0 +1,71 @@
+name: E2E Calculate Test Parameters
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  githubOwner:
+    description: GitHub owner for test repositories
+    required: true
+  matrixType:
+    description: Matrix type (PTE or appSourceApp)
+    required: false
+    default: ''
+  matrixStyle:
+    description: Matrix style (singleProject or multiProject)
+    required: false
+    default: ''
+  matrixOs:
+    description: Matrix OS (windows or linux)
+    required: false
+    default: ''
+  adminCenterApiCredentialsSecret:
+    description: Admin center API credentials secret
+    required: false
+    default: ''
+  appSourceAppRepo:
+    description: AppSource app repository template
+    required: true
+  perTenantExtensionRepo:
+    description: Per-tenant extension repository template
+    required: true
+  contentPath:
+    description: Content path (for upgrade tests)
+    required: false
+    default: ''
+outputs:
+  adminCenterApiCredentials:
+    description: Calculated admin center API credentials
+    value: ${{ steps.run.outputs.adminCenterApiCredentials }}
+  template:
+    description: Calculated template repository
+    value: ${{ steps.run.outputs.template }}
+  repoName:
+    description: Generated repository name
+    value: ${{ steps.run.outputs.repoName }}
+  contentPath:
+    description: Content path (for upgrade tests)
+    value: ${{ steps.run.outputs.contentPath }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _githubOwner: ${{ inputs.githubOwner }}
+        _matrixType: ${{ inputs.matrixType }}
+        _matrixStyle: ${{ inputs.matrixStyle }}
+        _matrixOs: ${{ inputs.matrixOs }}
+        _adminCenterApiCredentialsSecret: ${{ inputs.adminCenterApiCredentialsSecret }}
+        _appSourceAppRepo: ${{ inputs.appSourceAppRepo }}
+        _perTenantExtensionRepo: ${{ inputs.perTenantExtensionRepo }}
+        _contentPath: ${{ inputs.contentPath }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2ECalculateTestParams" -Action {
+          ${{ github.action_path }}/E2ECalculateTestParams.ps1 -githubOwner $ENV:_githubOwner -matrixType $ENV:_matrixType -matrixStyle $ENV:_matrixStyle -matrixOs $ENV:_matrixOs -adminCenterApiCredentialsSecret $ENV:_adminCenterApiCredentialsSecret -appSourceAppRepo $ENV:_appSourceAppRepo -perTenantExtensionRepo $ENV:_perTenantExtensionRepo -contentPath $ENV:_contentPath
+        }
+branding:
+  icon: settings
+  color: blue
