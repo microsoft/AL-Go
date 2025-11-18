@@ -562,6 +562,46 @@ function UpdateSettingsFile {
     return $modified
 }
 
+<#
+.SYNOPSIS
+Resolves file paths based on the provided source folder, destination folder, and file specifications.
+
+.DESCRIPTION
+This function takes a source folder, an optional original source folder, a destination folder, and an array of file specifications. It resolves the full paths for each specified file, considering their origin (template or custom template), type, and whether they are per-project files.
+The function returns an array of hashtables containing the resolved source and destination file paths.
+The function is used to determine which files need to be copied from the template repository to the target repository during the AL-Go update process.
+sourceFolder: The base folder of the template used to resolve the source file paths.
+originalSourceFolder: The base folder of the original template used to check for original files (can be $null). This is in the case of custom templates, where if the file exists in the original template, it should be used instead of the custom template file.
+destinationFolder: The base folder used to construct the destination file paths. This is typically the root folder of the target repository.
+
+.PARAMETER sourceFolder
+The base folder where the source files are located.
+
+.PARAMETER originalSourceFolder
+The original source folder to check for original files (can be $null). All files of origin 'custom template' are skipped if this parameter is $null.
+
+.PARAMETER destinationFolder
+The base folder used to construct the destination file paths.
+
+.PARAMETER files
+An array of hashtables specifying the files to resolve. Each hashtable can contain the following keys:
+- sourceFolder: The subfolder within the source folder to search for files (default is current folder).
+- filter: The file filter to apply when searching for files (default is all files).
+- origin: The origin of the files, either 'template' or 'custom template' (default is 'template').
+- type: The type of the files (default is empty).
+- destinationFolder: The subfolder within the destination folder where the files should be placed (default is the same as sourceFolder).
+- perProject: A boolean indicating whether the files are per project (default is false).
+
+.PARAMETER projects
+An array of project names used when resolving per-project file paths.
+
+.OUTPUTS
+An array of hashtables, each containing:
+- sourceFullPath: The full path to the source file.
+- originalSourceFullPath: The full path to the original source file (if found, otherwise $null).
+- type: The type of the file.
+- destinationFullPath: The full path to the destination file.
+#>
 function ResolveFilePaths {
     Param(
         [Parameter(Mandatory=$true)]
