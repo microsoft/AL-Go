@@ -277,7 +277,7 @@ Describe "ResolveFilePaths" {
 
         $rootFolder = $PSScriptRoot
 
-        $sourceFolder = Join-Path $rootFolder "sourcePath"
+        $sourceFolder = Join-Path $rootFolder "sourceFolder"
         if (-not (Test-Path $sourceFolder)) {
             New-Item -Path $sourceFolder -ItemType Directory | Out-Null
         }
@@ -315,11 +315,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths with specific files extensions' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $rootFolder $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $rootFolder $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = 'newFolder'; "destinationName" = '' }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = 'newFolder'; "destinationName" = '' }
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = 'newFolder'; "destinationName" = '' }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; "destinationFolder" = 'newFolder'; "destinationName" = '' }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
@@ -338,11 +338,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths with specific destination names' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $rootFolder $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $rootFolder $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "File1.txt"; "destinationPath" = 'newFolder'; "destinationName" = "CustomFile1.txt" }
-            @{ "sourcePath" = "folder"; "filter" = "File2.log"; "destinationPath" = 'newFolder'; "destinationName" = "CustomFile2.log" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = 'newFolder'; "destinationName" = "CustomFile1.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "destinationFolder" = 'newFolder'; "destinationName" = "CustomFile2.log" }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
@@ -358,11 +358,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths with type' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "folder"; "destinationName" = ''; type = "text" }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "folder"; "destinationName" = ''; type = "markdown" }
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = "folder"; "destinationName" = ''; type = "text" }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; "destinationFolder" = "folder"; "destinationName" = ''; type = "markdown" }
         )
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
@@ -381,11 +381,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths with original source folder' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ''; type = "text" }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; "destinationPath" = "newFolder"; "destinationName" = ''; type = "markdown" }
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = "newFolder"; "destinationName" = ''; type = "text" }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; "destinationFolder" = "newFolder"; "destinationName" = ''; type = "markdown" }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
@@ -409,11 +409,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths populates the originalSourceFullPath property only if the origin is not a custom template' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; "destinationPath" = "newFolder"; "destinationName" = ''; "origin" = "custom template"; }
-            @{ "sourcePath" = "folder"; "filter" = "*.log"; "destinationPath" = "newFolder"; "destinationName" = ''; }
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = "newFolder"; "destinationName" = ''; "origin" = "custom template"; }
+            @{ "sourceFolder" = "folder"; "filter" = "*.log"; "destinationFolder" = "newFolder"; "destinationName" = ''; }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
@@ -439,11 +439,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths with a single project' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; type = "markdown"; }
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; type = "markdown"; }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("SomeProject")
@@ -465,11 +465,11 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths with multiple projects' {
-        $destinationPath = "destinationPath"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationPath
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
         $files = @(
-            @{ "sourcePath" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
-            @{ "sourcePath" = "folder"; "filter" = "*.md"; type = "markdown"; }
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; type = "markdown"; }
         )
 
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA", "ProjectB")
@@ -623,12 +623,12 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $filesToExclude | Should -BeNullOrEmpty
     }
 
-    It 'Returns the correct files with destinationPath' {
+    It 'Returns the correct files with destinationFolder' {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToUpdate  = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
+                filesToUpdate  = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
                 filesToExclude = @()
             }
         }
@@ -649,7 +649,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToUpdate  = @(@{ filter = "*.txt"; destinationPath = "customFolder" })
+                filesToUpdate  = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
                 filesToExclude = @(@{ filter = "test2.txt" })
             }
         }
@@ -692,7 +692,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToUpdate  = @(@{ filter = "test.ps1"; destinationPath = 'dstPath'; destinationName = "renamed.txt" })
+                filesToUpdate  = @(@{ filter = "test.ps1"; destinationFolder = 'dstPath'; destinationName = "renamed.txt" })
                 filesToExclude = @()
             }
         }

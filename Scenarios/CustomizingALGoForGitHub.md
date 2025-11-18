@@ -209,17 +209,17 @@ In order to instruct AL-Go which files to look for at the template repository, y
 
 `filesToUpdate`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to update. Every item in the array may contain the following properties:
 
-- `sourcePath`: A path, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
+- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
 - `filter`: A string to use for filtering in the specified source path. _Example_: `*.ps1`.
-- `destinationPath`: A path, relative to repository that is being updated, where the files should be placed. _Example_: `src/templateScripts`.
-- `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationPath` is relative to the project folder. _Example_: `.AL-Go/scripts`.
+- `destinationFolder`: A path to a folder, relative to repository that is being updated, where the files should be placed. _Example_: `src/templateScripts`.
+- `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
 
 > [!NOTE]
 > `filesToUpdate` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToUpdate`, AL-Go for GitHub will ignore them and you might have to remove them manually.
 
 `filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) during the update. Every item in the array may contain the following properties:
 
-- `sourcePath`: A path, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
+- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
 - `filter`: A string to use for filtering in the specified source path. _Example_: `notRelevantScript.ps1`.
 
 > [!NOTE] `filesToExclude` is an array containing a subset of files from `filesToUpdate`. These files are specifically marked to be excluded from the update process. During the AL-Go update:

@@ -579,8 +579,8 @@ function ResolveFilePaths {
 
     $fullFilePaths = @()
     foreach($file in $files) {
-        if($file.Keys -notcontains 'sourcePath') {
-            $file.sourcePath = '' # Default to current folder
+        if($file.Keys -notcontains 'sourceFolder') {
+            $file.sourceFolder = '' # Default to current folder
         }
 
         if($file.Keys -notcontains 'filter') {
@@ -595,9 +595,9 @@ function ResolveFilePaths {
             $file.type = '' # Default to empty
         }
 
-        if($file.Keys -notcontains 'destinationPath') {
-            # If destinationPath is not specified, use the sourcePath, so that the file structure is preserved
-            $file.destinationPath = $file.sourcePath
+        if($file.Keys -notcontains 'destinationFolder') {
+            # If destinationFolder is not specified, use the sourceFolder, so that the file structure is preserved
+            $file.destinationFolder = $file.sourceFolder
         }
 
         if($file.Keys -notcontains 'perProject') {
@@ -606,18 +606,18 @@ function ResolveFilePaths {
 
         # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
         if(!$originalSourceFolder -and $file.origin -eq 'custom template') {
-            Write-Host "Skipping custom template file(s) with sourcePath '$($file.sourcePath)' as there is no original source folder specified"
+            Write-Host "Skipping custom template file(s) with source folder '$($file.sourceFolder)' as there is no original source folder specified"
             continue;
         }
 
         # All files are relative to the template folder
-        Write-Host "Resolving files for sourcePath '$($file.sourcePath)' and filter '$($file.filter)'"
-        $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourcePath) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+        Write-Host "Resolving files for source folder '$($file.sourceFolder)' and filter '$($file.filter)'"
+        $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourceFolder) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
 
-        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
+        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
 
         if(-not $sourceFiles) {
-            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourcePath)' (relative to folder '$sourceFolder')"
+            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder')"
             continue
         }
 
@@ -649,7 +649,7 @@ function ResolveFilePaths {
 
             if($file.Keys -contains 'perProject' -and $file.perProject -eq $true) {
                 # Multiple file entries, one for each project
-                # Destination full path is the destination base folder + project + destinationPath + destinationName
+                # Destination full path is the destination base folder + project + destinationFolder + destinationName
 
                 foreach($project in $projects) {
                     if($project -eq '.') {
@@ -659,7 +659,7 @@ function ResolveFilePaths {
                     $fullProjectFilePath = $fullFilePath.Clone()
 
                     $fullProjectFilePath.destinationFullPath = Join-Path $destinationFolder $project
-                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationPath
+                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationFolder
                     $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
 
                     Write-Host "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
@@ -668,9 +668,9 @@ function ResolveFilePaths {
             }
             else {
                 # Single file entry
-                # Destination full path is the destination base folder + destinationPath + destinationName
+                # Destination full path is the destination base folder + destinationFolder + destinationName
 
-                $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationPath
+                $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationFolder
                 $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
 
                 Write-Host "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
@@ -690,22 +690,22 @@ function GetDefaultFilesToUpdate {
     )
 
     $filesToUpdate = @(
-        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
-        [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.copy.md' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.ps1' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
-        [ordered]@{ 'sourcePath' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
+        [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.copy.md' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.ps1' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
 
-        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
-        [ordered]@{ 'sourcePath' = '.AL-Go'; 'filter' = "$ALGoSettingsFileName"; 'perProject' = $true; 'type' = 'settings' }
+        [ordered]@{ 'sourceFolder' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
+        [ordered]@{ 'sourceFolder' = '.AL-Go'; 'filter' = "$ALGoSettingsFileName"; 'perProject' = $true; 'type' = 'settings' }
     )
 
     if($includeCustomTemplateFiles) {
         # If there is an original template folder, we also need to include custom template files (RepoSettings and ProjectSettings)
         $filesToUpdate += @(
-            [ordered]@{ 'sourcePath' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'origin' = 'custom template' }
-            [ordered]@{ 'sourcePath' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationPath' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'origin' = 'custom template' }
+            [ordered]@{ 'sourceFolder' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'origin' = 'custom template' }
+            [ordered]@{ 'sourceFolder' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationFolder' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'origin' = 'custom template' }
         )
     }
 
@@ -722,9 +722,9 @@ function GetDefaultFilesToExclude {
     if (!$includeBuildPP) {
         # Remove PowerPlatform workflows if no PowerPlatformSolution exists
         $filesToExclude += @(
-            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
-            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
-            [ordered]@{ 'sourcePath' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
         )
     }
 

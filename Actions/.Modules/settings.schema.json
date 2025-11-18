@@ -703,10 +703,10 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "destinationPath": {
+                            "destinationFolder": {
                                 "type": "string"
                             },
-                            "sourcePath": {
+                            "sourceFolder": {
                                 "type": "string"
                             },
                             "filter": {
@@ -723,7 +723,7 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "sourcePath": {
+                            "sourceFolder": {
                                 "type": "string"
                             },
                             "filter": {
