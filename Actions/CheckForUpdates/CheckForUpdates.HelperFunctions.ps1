@@ -821,14 +821,13 @@ function GetFilesToUpdate {
         }
         return $include
     }
-
     # Apply unusedALGoSystemFiles logic
     $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
 
     # Exclude unusedALGoSystemFiles from $filesToUpdate and add them to $filesToExclude
     $unusedFilesToExclude = $filesToUpdate | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
     if ($unusedFilesToExclude) {
-        # TODO: Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions. Please use 'customALGoFiles.filesToExclude' instead." -DeprecationTag "unusedALGoSystemFiles"
+        Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions." -DeprecationTag "unusedALGoSystemFiles"
 
         Write-Host "The following files are marked as unused and will be removed if they exist:"
         $unusedFilesToExclude | ForEach-Object { Write-Host "- $($_.destinationFullPath)" }
