@@ -57,7 +57,7 @@ function DownloadTemplateRepository {
     Write-Host "Using ArchiveUrl: $archiveUrl"
 
     # Download template repository
-    $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $tempName = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
@@ -301,7 +301,7 @@ function ModifyUpdateALGoSystemFiles {
     $yaml.Replace('jobs:/UpdateALGoSystemFiles:/', $updateALGoSystemFilesJob.content)
 }
 
-function ApplyWorkflowInputDefaults {
+function ApplyWorkflowDefaultInputs {
     Param(
         [Yaml] $yaml,
         [hashtable] $repoSettings,
@@ -321,23 +321,8 @@ function ApplyWorkflowInputDefaults {
         return
     }
 
-    # Sanitize the workflow name for matching
-    $sanitizedWorkflowName = SanitizeWorkflowName -workflowName $workflowName
-
-    # Find matching workflow input defaults
-    $matchingDefaults = @()
-    foreach ($workflowInputDefault in $repoSettings.workflowInputDefaults) {
-        if ($workflowInputDefault.workflow) {
-            # Sanitize the workflow name in the setting for comparison
-            $settingWorkflowName = SanitizeWorkflowName -workflowName $workflowInputDefault.workflow
-            if ($sanitizedWorkflowName -eq $settingWorkflowName) {
-                $matchingDefaults += $workflowInputDefault
-            }
-        }
-    }
-
-    if ($matchingDefaults.Count -eq 0) {
-        # No matching defaults for this workflow
+    if ($repoSettings.workflowDefaultInputs.Count -eq 0) {
+        # No defaults for this workflow
         return
     }
 
@@ -364,149 +349,175 @@ function ApplyWorkflowInputDefaults {
     $inputsToHide = @{}
 
     # Apply defaults to matching inputs
-    foreach ($workflowInputDefault in $matchingDefaults) {
-        foreach ($default in $workflowInputDefault.defaults) {
-            $inputName = $default.name
-            $defaultValue = $default.value
+    foreach ($default in $repoSettings.workflowDefaultInputs) {
+        $inputName = $default.name
+        $defaultValue = $default.value
             $hideInput = $false
             if ($default['hide']) {
                 $hideInput = [bool]$default.hide
             }
 
-            # Check if this input exists in the workflow
-            $inputSection = $inputs.Get("$($inputName):/")
-            if ($inputSection) {
-                # Get the input type from the YAML if specified
-                $inputType = $null
-                $typeStart = 0
-                $typeCount = 0
-                if ($inputSection.Find('type:', [ref] $typeStart, [ref] $typeCount)) {
-                    $typeLine = $inputSection.content[$typeStart].Trim()
-                    if ($typeLine -match 'type:\s*(.+)') {
-                        $inputType = $matches[1].Trim()
-                    }
+        # Check if this input exists in the workflow
+        $inputSection = $inputs.Get("$($inputName):/")
+        if ($inputSection) {
+            # Get the input type from the YAML if specified
+            $inputType = $null
+            $typeStart = 0
+            $typeCount = 0
+            if ($inputSection.Find('type:', [ref] $typeStart, [ref] $typeCount)) {
+                $typeLine = $inputSection.content[$typeStart].Trim()
+                if ($typeLine -match 'type:\s*(.+)') {
+                    $inputType = $matches[1].Trim()
                 }
+            }
 
-                # Validate that the value type matches the input type
-                $validationError = $null
-                if ($inputType) {
-                    switch ($inputType) {
-                        'boolean' {
-                            if ($defaultValue -isnot [bool]) {
-                                $validationError = "Workflow '$workflowName', input '$inputName': Expected boolean value, but got $($defaultValue.GetType().Name). Please use `$true or `$false."
-                            }
+            # Validate that the value type matches the input type
+            $validationError = $null
+            if ($inputType) {
+                switch ($inputType) {
+                    'boolean' {
+                        if ($defaultValue -isnot [bool]) {
+                            $validationError = "Workflow '$workflowName', input '$inputName': Expected boolean value, but got $($defaultValue.GetType().Name). Please use `$true or `$false."
                         }
-                        'number' {
-                            if ($defaultValue -isnot [int] -and $defaultValue -isnot [long] -and $defaultValue -isnot [double]) {
-                                $validationError = "Workflow '$workflowName', input '$inputName': Expected number value, but got $($defaultValue.GetType().Name)."
-                            }
+                    }
+                    'number' {
+                        if ($defaultValue -isnot [int] -and $defaultValue -isnot [long] -and $defaultValue -isnot [double]) {
+                            $validationError = "Workflow '$workflowName', input '$inputName': Expected number value, but got $($defaultValue.GetType().Name)."
                         }
-                        'string' {
-                            if ($defaultValue -isnot [string]) {
-                                $validationError = "Workflow '$workflowName', input '$inputName': Expected string value, but got $($defaultValue.GetType().Name)."
-                            }
+                    }
+                    'string' {
+                        if ($defaultValue -isnot [string]) {
+                            $validationError = "Workflow '$workflowName', input '$inputName': Expected string value, but got $($defaultValue.GetType().Name)."
                         }
-                        'choice' {
-                            # Choice inputs accept strings and must match one of the available options (case-sensitive)
-                            if ($defaultValue -isnot [string]) {
-                                $validationError = "Workflow '$workflowName', input '$inputName': Expected string value for choice input, but got $($defaultValue.GetType().Name)."
-                            }
-                            else {
-                                # Validate that the value is one of the available options
-                                $optionsStart = 0
-                                $optionsCount = 0
-                                if ($inputSection.Find('options:', [ref] $optionsStart, [ref] $optionsCount)) {
-                                    $availableOptions = @()
-                                    # Parse the options from the YAML (they are indented list items starting with "- ")
-                                    for ($i = $optionsStart + 1; $i -lt ($optionsStart + $optionsCount); $i++) {
-                                        $optionLine = $inputSection.content[$i].Trim()
-                                        if ($optionLine -match '^-\s*(.+)$') {
-                                            $availableOptions += $matches[1].Trim()
-                                        }
+                    }
+                    'choice' {
+                        # Choice inputs accept strings and must match one of the available options (case-sensitive)
+                        if ($defaultValue -isnot [string]) {
+                            $validationError = "Workflow '$workflowName', input '$inputName': Expected string value for choice input, but got $($defaultValue.GetType().Name)."
+                        }
+                        else {
+                            # Validate that the value is one of the available options
+                            $optionsStart = 0
+                            $optionsCount = 0
+                            if ($inputSection.Find('options:', [ref] $optionsStart, [ref] $optionsCount)) {
+                                $availableOptions = @()
+                                # Parse the options from the YAML (they are indented list items starting with "- ")
+                                for ($i = $optionsStart + 1; $i -lt ($optionsStart + $optionsCount); $i++) {
+                                    $optionLine = $inputSection.content[$i].Trim()
+                                    if ($optionLine -match '^-\s*(.+)$') {
+                                        $availableOptions += $matches[1].Trim()
                                     }
+                                }
 
-                                    if ($availableOptions.Count -gt 0 -and $availableOptions -cnotcontains $defaultValue) {
-                                        $validationError = "Workflow '$workflowName', input '$inputName': Value '$defaultValue' is not a valid choice (case-sensitive match required). Available options: $($availableOptions -join ', ')."
-                                    }
+                                if ($availableOptions.Count -gt 0 -and $availableOptions -cnotcontains $defaultValue) {
+                                    $validationError = "Workflow '$workflowName', input '$inputName': Value '$defaultValue' is not a valid choice (case-sensitive match required). Available options: $($availableOptions -join ', ')."
                                 }
                             }
                         }
                     }
                 }
-                else {
-                    # If no type is specified in the workflow, it defaults to string
-                    if ($defaultValue -isnot [string]) {
-                        OutputWarning "Workflow '$workflowName', input '$inputName': No type specified in workflow (defaults to string), but configured value is $($defaultValue.GetType().Name). This may cause issues."
-                    }
-                }
-
-                if ($validationError) {
-                    throw $validationError
-                }
-
-                if ($hideInput) {
-                    # Store this input to hide it later
-                    $inputsToHide[$inputName] = [pscustomobject]@{
-                        value = $defaultValue
-                        expression = & $convertToExpressionLiteral $defaultValue
-                    }
-                    continue
-                }
-
-                # Convert the default value to the appropriate YAML format
-                $yamlValue = $defaultValue
-                if ($defaultValue -is [bool]) {
-                    $yamlValue = $defaultValue.ToString().ToLower()
-                }
-                elseif ($defaultValue -is [string]) {
-                    # Quote strings and escape single quotes per YAML spec
-                    $escapedValue = $defaultValue.Replace("'", "''")
-                    $yamlValue = "'$escapedValue'"
-                }
-
-                # Find and replace the default: line in the input section
-                $start = 0
-                $count = 0
-                if ($inputSection.Find('default:', [ref] $start, [ref] $count)) {
-                    # Replace existing default value
-                    $inputSection.Replace('default:', "default: $yamlValue")
-                }
-                else {
-                    # Add default value - find the best place to insert it
-                    # Insert after type, required, or description (whichever comes last)
-                    $insertAfter = -1
-                    $typeLine = 0
-                    $typeCount = 0
-                    $requiredLine = 0
-                    $requiredCount = 0
-                    $descLine = 0
-                    $descCount = 0
-
-                    if ($inputSection.Find('type:', [ref] $typeLine, [ref] $typeCount)) {
-                        $insertAfter = $typeLine + $typeCount
-                    }
-                    if ($inputSection.Find('required:', [ref] $requiredLine, [ref] $requiredCount)) {
-                        if (($requiredLine + $requiredCount) -gt $insertAfter) {
-                            $insertAfter = $requiredLine + $requiredCount
-                        }
-                    }
-                    if ($inputSection.Find('description:', [ref] $descLine, [ref] $descCount)) {
-                        if (($descLine + $descCount) -gt $insertAfter) {
-                            $insertAfter = $descLine + $descCount
-                        }
-                    }
-
-                    if ($insertAfter -eq -1) {
-                        # No other properties, insert at position 1 (after the input name)
-                        $insertAfter = 1
-                    }
-
-                    $inputSection.Insert($insertAfter, "default: $yamlValue")
-                }
-
-                # Update the inputs section with the modified input
-                $inputs.Replace("$($inputName):/", $inputSection.content)
             }
+            else {
+                # If no type is specified in the workflow, it defaults to string
+                if ($defaultValue -isnot [string]) {
+                    OutputWarning "Workflow '$workflowName', input '$inputName': No type specified in workflow (defaults to string), but configured value is $($defaultValue.GetType().Name). This may cause issues."
+                }
+            }
+
+            if ($validationError) {
+                throw $validationError
+            }
+
+            if ($hideInput) {
+                # Store this input to hide it later
+                $inputsToHide[$inputName] = [pscustomobject]@{
+                    value = $defaultValue
+                    expression = & $convertToExpressionLiteral $defaultValue
+                }
+                continue
+            }
+
+            # Convert the default value to the appropriate YAML format
+            $yamlValue = $defaultValue
+            if ($defaultValue -is [bool]) {
+                $yamlValue = $defaultValue.ToString().ToLower()
+            }
+            elseif ($defaultValue -is [string]) {
+                # Quote strings and escape single quotes per YAML spec
+                $escapedValue = $defaultValue.Replace("'", "''")
+                $yamlValue = "'$escapedValue'"
+            }
+
+            # Find and replace the default: line in the input section
+            $start = 0
+            $count = 0
+            if ($inputSection.Find('default:', [ref] $start, [ref] $count)) {
+                # Replace existing default value
+                $inputSection.Replace('default:', "default: $yamlValue")
+            }
+            else {
+                # Add default value - find the best place to insert it
+                # Insert after type, required, or description (whichever comes last)
+                $insertAfter = -1
+                $typeLine = 0
+                $typeCount = 0
+                $requiredLine = 0
+                $requiredCount = 0
+                $descLine = 0
+                $descCount = 0
+
+                if ($inputSection.Find('type:', [ref] $typeLine, [ref] $typeCount)) {
+                    $insertAfter = $typeLine + $typeCount
+                }
+                if ($inputSection.Find('required:', [ref] $requiredLine, [ref] $requiredCount)) {
+                    if (($requiredLine + $requiredCount) -gt $insertAfter) {
+                        $insertAfter = $requiredLine + $requiredCount
+                    }
+                }
+                if ($inputSection.Find('description:', [ref] $descLine, [ref] $descCount)) {
+                    if (($descLine + $descCount) -gt $insertAfter) {
+                        $insertAfter = $descLine + $descCount
+                    }
+                }
+
+                if ($insertAfter -eq -1) {
+                    # No other properties, insert at position 1 (after the input name)
+                    $insertAfter = 1
+                }
+
+                $inputSection.Insert($insertAfter, "default: $yamlValue")
+            }
+
+            # Update the inputs section with the modified input
+            $inputs.Replace("$($inputName):/", $inputSection.content)
+        }
+    }
+
+    # Remove hidden inputs from the inputs section
+    if ($inputsToHide.Count -gt 0) {
+        # Collect all inputs to remove with their positions
+        $inputsToRemove = @()
+        foreach ($entry in $inputsToHide.GetEnumerator()) {
+            $name = $entry.Key
+            $start = 0
+            $count = 0
+            # Find the input including all its content (type, default, etc.)
+            # Use the name with colon to match the full input section
+            if ($inputs.Find("$($name):", [ref] $start, [ref] $count)) {
+                $inputsToRemove += [pscustomobject]@{
+                    Name = $name
+                    Start = $start
+                    Count = $count
+                }
+            }
+            else {
+                OutputWarning "Workflow '$workflowName': Unable to hide input '$name' because it was not found in the workflow file."
+            }
+        }
+
+        # Remove inputs in reverse order to maintain correct indices
+        foreach ($item in $inputsToRemove | Sort-Object -Property Start -Descending) {
+            $inputs.Remove($item.Start, $item.Count)
         }
     }
 
@@ -677,8 +688,8 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     # Apply workflow input defaults from settings
-    if ($repoSettings.Keys -contains 'workflowInputDefaults') {
-        ApplyWorkflowInputDefaults -yaml $yaml -repoSettings $repoSettings -workflowName $workflowName
+    if ($repoSettings.Keys -contains 'workflowDefaultInputs') {
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName $workflowName
     }
 
     # combine all the yaml file lines into a single string with LF line endings

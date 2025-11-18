@@ -43,9 +43,75 @@ Please ensure that all unit tests run and create a Pull Request against [https:/
 
 In the AL-Go repository we use a number of precommit hooks to help us identify issues in the code. We run the precommit hooks locally but also as a PR check. In order to ensure this check passes please install pre-commit in your local AL-Go repository. Pre-Commit can be installed by following the instructions on https://pre-commit.com/#quick-start. Once the precommint hooks are installed you can run `pre-commit run --all-files` to verify your changes.
 
+## Testing your contributions
+
+When contributing to AL-Go, it's important to add tests for your changes to ensure code quality and prevent regressions.
+
+**When to add tests:**
+
+- **Always add unit tests** for new functions, modules, or bug fixes
+- **Update existing tests** if you modify existing functionality
+- **Ensure all tests pass** before submitting a pull request
+
+Unit tests in AL-Go are fast, isolated tests that verify individual functions and modules using the Pester testing framework.
+
+The section below provides detailed guidance on how to add unit tests.
+
 ## Unit tests
 
 The Tests folder, in the AL-Go repository, contains a number of unit-tests. Open Tests/runtests.ps1 in VS Code and select Run. Unit tests are quick and will run on every PR and every Push. We will be adding a lot of unit tests going forward.
+
+### How to add unit tests
+
+When contributing to AL-Go, you should add unit tests for your changes. Unit tests in AL-Go use the [Pester](https://pester.dev/) testing framework for PowerShell.
+
+**Creating a new unit test file:**
+
+1. Create a new `.Test.ps1` file in the `Tests` folder. The file name should describe what you're testing (e.g., `MyFeature.Test.ps1`)
+1. Import the module or script you want to test at the beginning of your test file
+1. Use `Describe` blocks to group related tests
+1. Use `It` blocks for individual test cases
+1. Use `BeforeAll` for setup that runs once before all tests in a `Describe` block
+1. Use `Mock` to mock external dependencies and function calls
+
+**Example test structure:**
+
+```powershell
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/MyModule.psm1') -Force
+
+Describe "MyFeature tests" {
+    BeforeAll {
+        # Setup code that runs once
+    }
+
+    It 'Should do something specific' {
+        Mock Write-Host { }
+
+        $result = MyFunction -Parameter "value"
+
+        $result | Should -Be "expected"
+    }
+}
+```
+
+**Best practices for unit tests:**
+
+- Test one thing per `It` block
+- Use descriptive test names that explain what is being tested
+- Mock external dependencies to isolate the code under test
+- Clean up temporary files and folders created during tests
+- Use `InModuleScope` when you need to test private functions within a module
+
+**Running unit tests locally:**
+
+```powershell
+# Run all unit tests
+pwsh -File Tests/runtests.ps1 -Path Tests
+
+# Or run from VS Code by opening Tests/runtests.ps1 and selecting Run
+```
+
+The CI workflow automatically runs all unit tests on both Windows (PowerShell 5) and Linux (PowerShell 7) when you create a pull request.
 
 ## End to End tests
 
@@ -106,9 +172,9 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 
 ## GitHub Codespaces
 
-AL-Go supports developing from GitHub Codespaces. You can create codespaces by going to: [https://github.com/codespaces/new](https://github.com/codespaces/new?skip_quickstart=true&repo=413794983&ref=main). From here you can create codespace either for microsoft/AL-Go or for your fork of AL-Go.
+AL-Go supports developing from GitHub Codespaces. Codespaces come pre-configured with Pre-Commit, Pester and latest BCContainerHelper version installed. Simply click the button below to get started or go to https://github.com/codespaces/new/microsoft/AL-Go
 
-Codespaces come pre-configured with Pre-Commit and with latest BCContainerHelper version installed.
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/AL-Go?quickstart=1)
 
 ______________________________________________________________________
 

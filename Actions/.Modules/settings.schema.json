@@ -694,39 +694,26 @@
             "type": "boolean",
             "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
         },
-        "workflowInputDefaults": {
+        "workflowDefaultInputs": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "workflow": {
+                    "name": {
                         "type": "string",
-                        "description": "The workflow name to apply default values to (must match exactly)"
+                        "description": "The name of the workflow input"
                     },
-                    "defaults": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": "The name of the workflow input"
+                    "value": {
+                        "description": "The default value for the workflow input (can be string, boolean, or number)"
                                 },
-                                "value": {
-                                    "description": "The default value for the workflow input (can be string, boolean, or number)"
-                                },
-                                "hide": {
-                                    "type": "boolean",
-                                    "description": "If true, the input is removed from the workflow and the configured value is used directly"
-                                }
-                            },
-                            "required": ["name", "value"]
-                        }
+                    "hide": {
+                        "type": "boolean",
+                        "description": "If true, the input is removed from the workflow and the configured value is used directly"
                     }
                 },
-                "required": ["workflow", "defaults"]
+                "required": ["name", "value"]
             },
-            "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowInputDefaults"
+            "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
     }
 }

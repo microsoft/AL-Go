@@ -1,6 +1,6 @@
 ### Set default values for workflow inputs
 
-A new setting `workflowInputDefaults` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
+A new setting `workflowDefaultInputs` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
 
 When you add this setting to your AL-Go settings file and run the "Update AL-Go System Files" workflow, the default values will be automatically applied to the workflow YAML files in your repository.
 The default values must match the input types (boolean, number, string, or choice) defined in the workflow YAML files. You can also set `"hide": true` for an input to remove it from the manual workflow form. When an input is hidden, all usages of `github.event.inputs.<name>` or `inputs.<name>` in the workflow file are replaced with the configured value when the "Update AL-Go System Files" workflow runs.
@@ -9,26 +9,36 @@ Example configuration:
 
 ```json
 {
-  "workflowInputDefaults": [
+  "workflowDefaultInputs": [
+    { "name": "directCommit", "value": true },
+    { "name": "useGhTokenWorkflow", "value": true, "hide": true }
+  ]
+}
+```
+
+This setting can be used on its own in repository settings to apply defaults to all workflows with matching input names. Alternatively, you can use it within [conditional settings](https://aka.ms/algosettings#conditional-settings) to apply defaults only to specific workflows, branches, or other conditions.
+
+Example using conditional settings to target specific workflows:
+
+```json
+{
+  "conditionalSettings": [
     {
-      "workflow": "Create Release",
-      "defaults": [
-        { "name": "directCommit", "value": true },
-        { "name": "useGhTokenWorkflow", "value": true, "hide": true },
-        { "name": "updateVersionNumber", "value": "+0.1" }
-      ]
-    },
-    {
-      "workflow": "Update AL-Go System Files",
-      "defaults": [
-        { "name": "directCommit", "value": true }
-      ]
+      "workflows": ["Create Release"],
+      "settings": {
+        "workflowDefaultInputs": [
+          { "name": "directCommit", "value": true },
+          { "name": "releaseType", "value": "Prerelease" }
+        ]
+      }
     }
   ]
 }
 ```
 
-Read more at [workflowInputDefaults](https://aka.ms/algosettings#workflowInputDefaults).
+**Important:** When multiple conditional settings blocks match and both define `workflowDefaultInputs`, the arrays are merged (all entries are kept). When the defaults are applied to workflows, the last matching entry for each input name wins.
+
+Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
 ### Issues
 
@@ -36,6 +46,8 @@ Read more at [workflowInputDefaults](https://aka.ms/algosettings#workflowInputDe
 - Discussion 1911 Add support for reportSuppressedDiagnostics
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
 - Issue 1945 Deploy Reference Documentation fails for CI/CD
+- Use Runner_Temp instead of GetTempFolder whenever possible
+- Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Discussion 1952 Set default values on workflow_dispatch input
 
 ## v8.0
