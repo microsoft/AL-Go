@@ -642,7 +642,7 @@ function ResolveFilePaths {
                 }
             }
 
-            $destinationName = $(Split-Path -Path $srcFile -Leaf)
+            $destinationName = Split-Path -Path $srcFile -Leaf
             if($file.Keys -contains 'destinationName' -and ($file.destinationName)) {
                 $destinationName = $file.destinationName
             }
