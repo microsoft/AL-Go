@@ -16,14 +16,13 @@ Determines the environments to be used for a build or a publish
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| githubEnvironmentsJson | | GitHub repo environments in Json format | |
 | getEnvironments | Yes | Specifies the pattern of the environments you want to retrieve (\* for all) | |
 | type | Yes | Type of deployment to get environments for (CD, Publish or All) | |
 
 ## OUTPUT
 
-| EnvironmentsMatrixJson | The Environment matrix to use for the Deploy step in compressed JSON format |
-| DeploymentEnvironmentsJson | Deployment Environments with settings in compressed JSON format |
-| EnvironmentCount | Number of Deployment Environments |
+| DeploymentEnvironmentsJson | The JSON representation of the environment that are suitable for deployment |
 | UnknownEnvironment | Flag determining whether we try to publish to an unknown environment (invoke device code flow) |
 | GenerateALDocArtifact | Flag determining whether to generate the ALDoc artifact |
 | DeployALDocArtifact | Flag determining whether to deploy the ALDoc artifact to GitHub Pages |

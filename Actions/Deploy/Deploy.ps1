@@ -8,8 +8,6 @@ Param(
     [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
     [ValidateSet('CD','Publish')]
     [string] $type = "CD",
-    [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
-    [string] $deploymentEnvironmentsJson,
     [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
     [string] $artifactsVersion = ''
 )
@@ -18,41 +16,17 @@ Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
-$deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
-$deploymentSettings = $deploymentEnvironments."$environmentName"
-
 $envName = $environmentName.Split(' ')[0]
+
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
-# Check DeployTo<environmentName> setting (it could have been added in the environment-specific settings)
-$settingsName = "DeployTo$envName"
-if ($settings.ContainsKey($settingsName)) {
-    # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
-    Write-Host "Setting $settingsName"
-    $deployTo = $settings."$settingsName"
-    $keys = @($deployTo.Keys)
-    foreach($key in $keys) {
-        if ($deploymentSettings.ContainsKey($key)) {
-            if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
-                if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
-                    # Support setting runs-on as an array in settings to not break old settings
-                    # See https://github.com/microsoft/AL-Go/issues/1182
-                    $deployTo."$key" = $deployTo."$key" -join ','
-                }
-                else {
-                    Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
-                }
-            }
-            Write-Host "Property $key = $($deployTo."$key")"
-            $deploymentSettings."$key" = $deployTo."$key"
-        }
-        else {
-            $deploymentSettings += @{
-                "$key" = $deployTo."$key"
-            }
-        }
-    }
+$settingsName = "deployTo$($envName)"
+if($settings.Keys -contains $settingsName) {
+    $deploymentSettings = ($settings."$settingsName") | ConvertTo-HashTable -recurse
+    OutputDebug -message "Using deployment settings: $($deploymentSettings | ConvertTo-Json -Depth 10)"
+} else {
+    OutputError -message "No deployment settings found for environment $envName"
 }
 
 $authContext = $null

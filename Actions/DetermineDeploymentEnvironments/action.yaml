@@ -5,6 +5,10 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  githubEnvironmentsJson:
+    description: GitHub repo environments in Json format
+    required: false
+    default: ''
   getEnvironments:
     description: Specifies the pattern of the environments you want to retreive (* for all)
     required: true
@@ -12,15 +16,9 @@ inputs:
     description: Type of deployment (CD, Publish or All)
     required: true
 outputs:
-  EnvironmentsMatrixJson:
-    description: The Environment matrix to use for the Deploy step in compressed JSON format
-    value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentsMatrixJson }}
   DeploymentEnvironmentsJson:
-    description: Deployment Environments with settings in compressed JSON format
+    description: The JSON representation of the environment that are suitable for deployment
     value: ${{ steps.determineDeploymentEnvironments.outputs.DeploymentEnvironmentsJson }}
-  EnvironmentCount:
-    description: Number of Deployment Environments
-    value: ${{ steps.determineDeploymentEnvironments.outputs.EnvironmentCount }}
   UnknownEnvironment:
     description: Flag determining whether the environment is unknown
     value: ${{ steps.determineDeploymentEnvironments.outputs.UnknownEnvironment }}
@@ -37,11 +35,12 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineDeploymentEnvironments
       env:
+        _githubEnvironmentsJson: ${{ inputs.githubEnvironmentsJson }}
         _getEnvironments: ${{ inputs.getEnvironments }}
         _type: ${{ inputs.type }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineDeploymentEnvironments" -Action {
-          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -getEnvironments $ENV:_getEnvironments -type $ENV:_type
+          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -githubEnvironmentsJson $ENV:_githubEnvironmentsJson -getEnvironments $ENV:_getEnvironments -type $ENV:_type
         }
 branding:
   icon: terminal

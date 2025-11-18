@@ -15,6 +15,9 @@ inputs:
   artifactsFolder:
     description: Folder in which the artifacts will be downloaded
     required: true
+  environmentName:
+    description: Name of environment to deploy to
+    required: true
 runs:
   using: composite
   steps:
@@ -24,9 +27,10 @@ runs:
         _token: ${{ inputs.token }}
         _artifactsVersion: ${{ inputs.artifactsVersion }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}
+        _environmentName: ${{ inputs.environmentName }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "GetArtifactsForDeployment" -Action {
-          ${{ github.action_path }}/GetArtifactsForDeployment.ps1 -token $ENV:_token -artifactsVersion $ENV:_artifactsVersion -artifactsFolder $ENV:_artifactsFolder
+          ${{ github.action_path }}/GetArtifactsForDeployment.ps1 -token $ENV:_token -artifactsVersion $ENV:_artifactsVersion -artifactsFolder $ENV:_artifactsFolder -environmentName $ENV:_environmentName
         }
 branding:
   icon: terminal

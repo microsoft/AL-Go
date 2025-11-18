@@ -98,7 +98,6 @@ jobs:
           directCommit: ${{ inputs.directCommit }}
           environmentName: ${{ inputs.environment }}
           solutionFolder: ${{ env.solutionFolder }}
-          deploymentEnvironmentsJson: ${{ steps.DetermineDeploymentEnvironments.outputs.deploymentEnvironmentsJson }}
 
       - name: Finalize the workflow
         if: always()

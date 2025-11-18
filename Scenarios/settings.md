@@ -473,8 +473,8 @@ In the `needs` property, you specify which jobs should be complete before this j
 ```
   Deploy:
     needs: [ Initialization, Build, CustomJob-PrepareDeploy ]
-    if: always() && needs.Build.result == 'Success' && needs.Initialization.outputs.environmentCount > 0
-    strategy: ${{ fromJson(needs.Initialization.outputs.environmentsMatrixJson) }}
+    if: always() && needs.Build.result == 'Success' && fromJson(needs.Initialization.outputs.deploymentEnvironmentsJson).environmentCount > 0
+    strategy: ...
 ```
 
 Custom jobs will be preserved when running Update AL-Go System Files.

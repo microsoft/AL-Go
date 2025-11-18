@@ -16,6 +16,7 @@ none
 | token | | The GitHub token running the action | github.token |
 | artifactsVersion | Yes | Artifacts version to download (current, prerelease, draft, latest or version number) | |
 | artifactsFolder | Yes | Folder in which the artifacts will be downloaded | |
+| environmentName | Yes | Name of environment to deploy to | |
 
 ## OUTPUT
 

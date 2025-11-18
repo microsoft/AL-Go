@@ -5,9 +5,6 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  deploymentEnvironmentsJson:
-    description: The settings for all Deployment Environments
-    required: true
   environmentName:
     description: Name of environment to deploy to
     required: true
@@ -43,11 +40,10 @@ runs:
       shell: ${{ inputs.shell }}
       id: ReadPowerPlatformSettings
       env:
-        _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         _environmentName: ${{ inputs.environmentName }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadPowerPlatformSettings" -Action {
-          ${{ github.action_path }}/ReadPowerPlatformSettings.ps1 -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -environmentName $ENV:_environmentName
+          ${{ github.action_path }}/ReadPowerPlatformSettings.ps1 -environmentName $ENV:_environmentName
         }
 branding:
   icon: terminal

@@ -16,9 +16,6 @@ inputs:
     description: Path to the unpacked solution to deploy (when deploying from branch)
     required: false
     default: ''
-  deploymentEnvironmentsJson:
-    description: The settings for all Deployment Environments
-    required: true
 runs:
   using: composite
   steps:
@@ -42,12 +39,16 @@ runs:
         ref: ${{ env.actionsRef }}
         path: ${{ env.actionsPath }}
 
+    - name: Read settings
+      uses: ./_AL-Go/Actions/ReadSettings@main
+      with:
+        shell: ${{ matrix.shell }}
+
     - name: Parse DeployToSettings and AuthContext
       id: ReadPowerPlatformSettings
       uses: ./_AL-Go/Actions/ReadPowerPlatformSettings
       with:
         shell: ${{ inputs.shell }}
-        deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         environmentName: ${{ inputs.environmentName }}
 
     - name: Determine Power Platform solution location
