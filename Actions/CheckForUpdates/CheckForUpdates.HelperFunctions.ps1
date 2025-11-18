@@ -432,21 +432,21 @@ function ApplyWorkflowDefaultInputs {
             throw $validationError
         }
 
-            if ($hideInput) {
-                # Store this input to hide it later
-                $inputsToHide[$inputName] = [pscustomobject]@{
-                    value = $defaultValue
-                    expression = & $convertToExpressionLiteral $defaultValue
-                }
-                continue
+        if ($hideInput) {
+            # Store this input to hide it later
+            $inputsToHide[$inputName] = [pscustomobject]@{
+                value = $defaultValue
+                expression = & $convertToExpressionLiteral $defaultValue
             }
-            else {
-                # If hide is false, ensure the input is not in the hide list
-                # This handles the case where a previous entry had hide=true but a later entry has hide=false
-                if ($inputsToHide.ContainsKey($inputName)) {
-                    $inputsToHide.Remove($inputName)
-                }
+            continue
+        }
+        else {
+            # If hide is false, ensure the input is not in the hide list
+            # This handles the case where a previous entry had hide=true but a later entry has hide=false
+            if ($inputsToHide.ContainsKey($inputName)) {
+                $inputsToHide.Remove($inputName)
             }
+        }
 
         # Convert the default value to the appropriate YAML format
         $yamlValue = $defaultValue
@@ -501,34 +501,6 @@ function ApplyWorkflowDefaultInputs {
 
         # Update the inputs section with the modified input
         $inputs.Replace("$($inputName):/", $inputSection.content)
-    }
-
-    # Remove hidden inputs from the inputs section
-    if ($inputsToHide.Count -gt 0) {
-        # Collect all inputs to remove with their positions
-        $inputsToRemove = @()
-        foreach ($entry in $inputsToHide.GetEnumerator()) {
-            $name = $entry.Key
-            $start = 0
-            $count = 0
-            # Find the input including all its content (type, default, etc.)
-            # Use the name with colon to match the full input section
-            if ($inputs.Find("$($name):", [ref] $start, [ref] $count)) {
-                $inputsToRemove += [pscustomobject]@{
-                    Name = $name
-                    Start = $start
-                    Count = $count
-                }
-            }
-            else {
-                OutputWarning "Workflow '$workflowName': Unable to hide input '$name' because it was not found in the workflow file."
-            }
-        }
-
-        # Remove inputs in reverse order to maintain correct indices
-        foreach ($item in $inputsToRemove | Sort-Object -Property Start -Descending) {
-            $inputs.Remove($item.Start, $item.Count)
-        }
     }
 
     # Remove hidden inputs from the inputs section
