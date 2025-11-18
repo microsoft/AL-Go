@@ -57,7 +57,7 @@ function DownloadTemplateRepository {
     Write-Host "Using ArchiveUrl: $archiveUrl"
 
     # Download template repository
-    $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $tempName = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
