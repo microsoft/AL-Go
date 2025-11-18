@@ -436,6 +436,13 @@ function ApplyWorkflowDefaultInputs {
                 }
                 continue
             }
+            else {
+                # If hide is false, ensure the input is not in the hide list
+                # This handles the case where a previous entry had hide=true but a later entry has hide=false
+                if ($inputsToHide.ContainsKey($inputName)) {
+                    $inputsToHide.Remove($inputName)
+                }
+            }
 
             # Convert the default value to the appropriate YAML format
             $yamlValue = $defaultValue
@@ -544,9 +551,11 @@ function ApplyWorkflowDefaultInputs {
             $yaml.ReplaceAll($pattern, $expressionValue, $true)
 
             # Replace references in if conditions: github.event.inputs.name and inputs.name (without ${{ }})
-            # In if conditions, bare references are always treated as strings, so we need to use string literal format
+            # github.event.inputs are always strings (user input from UI)
+            # inputs.* are typed values (boolean/number/string/choice)
+
+            # For github.event.inputs.NAME: always use string literal format
             # Convert the value to a string literal (always quoted) for comparisons
-            # For booleans, use lowercase to match GitHub Actions convention (case-sensitive)
             if ($rawValue -is [bool]) {
                 $stringValue = $rawValue.ToString().ToLower()
             }
@@ -554,10 +563,9 @@ function ApplyWorkflowDefaultInputs {
                 $stringValue = $rawValue.ToString().Replace("'", "''")
             }
             $stringLiteral = "'$stringValue'"
-
-            # Replace github.event.inputs.NAME (safe because it's a specific prefix)
             $yaml.ReplaceAll("github.event.inputs.$inputName", $stringLiteral)
 
+            # For inputs.NAME: use expression literal format (typed value)
             # Replace inputs.NAME but be careful not to match patterns like:
             # - needs.inputs.outputs.NAME (where a job is named "inputs")
             # - steps.CreateInputs.outputs.NAME (where "inputs" is part of a word)
@@ -565,7 +573,7 @@ function ApplyWorkflowDefaultInputs {
             # Use word boundary \b after inputName to avoid partial matches
             # Don't match if followed by a dot (to avoid matching outputs references)
             $pattern = "(?<!\.)inputs\.$inputName\b(?!\.)"
-            $yaml.ReplaceAll($pattern, $stringLiteral, $true)
+            $yaml.ReplaceAll($pattern, $expressionValue, $true)
         }
     }
 }
