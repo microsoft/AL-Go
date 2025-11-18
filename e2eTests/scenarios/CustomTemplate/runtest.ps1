@@ -258,7 +258,7 @@ Pull
 
 # Check that custom workflow file is present
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
-(Get-Content -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) -Raw) | Should -Be $customWorkflowContent
+(Get-Content -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) -Raw) | Should -Be $customWorkflowContent.Replace("`r", "").TrimEnd("`n")
 
 # Check that custom file is NOT present
 (Join-Path (Get-Location) $customFileName) | Should -Not -Exist # Custom file should not be copied by default
@@ -277,7 +277,7 @@ Pull
 
 # Check that custom file is now present
 (Join-Path (Get-Location) $customFileName) | Should -Exist
-(Get-Content -Path (Join-Path (Get-Location) $customFileName) -Raw) | Should -Be $customFileContent
+(Get-Content -Path (Join-Path (Get-Location) $customFileName)) | Should -Be $customFileContent.Replace("`r", "").TrimEnd("`n")
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
