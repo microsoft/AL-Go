@@ -245,6 +245,7 @@ Invoke-Pester -Path "Tests/CheckForUpdates.Action.Test.ps1" -Output Detailed
 8. **Use BeforeAll for Expensive Setup**: Import modules and load data once per Describe block
 9. **Test Error Paths**: Don't just test the happy path - test error handling too
 10. **Keep Tests Fast**: Mock expensive operations, use minimal test data
+11. **Run Tests After Changes**: Always run tests after creating or modifying them to verify they work correctly
 
 ## Common Patterns
 
