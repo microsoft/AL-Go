@@ -656,14 +656,14 @@ function ResolveFilePaths {
                         $project = '' # If project is '.', it means the root folder, so we use an empty string
                     }
 
-                    $projectFile = $fullFilePath.Clone()
+                    $fullProjectFilePath = $fullFilePath.Clone()
 
-                    $projectFile.destinationFullPath = Join-Path $destinationFolder $project
-                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $file.destinationPath
-                    $projectFile.destinationFullPath = Join-Path $projectFile.destinationFullPath $destinationName
+                    $fullProjectFilePath.destinationFullPath = Join-Path $destinationFolder $project
+                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationPath
+                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
 
-                    Write-Host "Adding per-project file for project '$project': sourceFullPath '$($projectFile.sourceFullPath)', originalSourceFullPath '$($projectFile.originalSourceFullPath)', destinationFullPath '$($projectFile.destinationFullPath)'"
-                    $fullFilePaths += $projectFile
+                    Write-Host "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
+                    $fullFilePaths += $fullProjectFilePath
                 }
             }
             else {
