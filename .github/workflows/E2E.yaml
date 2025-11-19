@@ -61,7 +61,7 @@ jobs:
 
       - name: Check secrets
         id: check
-        uses: ./Actions/E2ECheckSecrets
+        uses: ./.github/actions/E2ECheckSecrets
         with:
           shell: pwsh
           githubOwner: ${{ github.event.inputs.githubOwner }}
@@ -99,7 +99,7 @@ jobs:
 
       - name: Setup Repositories
         id: setup
-        uses: ./Actions/E2ESetupRepositories
+        uses: ./.github/actions/E2ESetupRepositories
         with:
           shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -134,7 +134,7 @@ jobs:
 
       - name: Analyze
         id: Analyze
-        uses: ./Actions/E2EAnalyze
+        uses: ./.github/actions/E2EAnalyze
         with:
           shell: pwsh
           maxParallel: ${{ needs.Check.outputs.maxParallel }}
@@ -159,13 +159,13 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        uses: ./Actions/E2ECalculateRepoName
+        uses: ./.github/actions/E2ECalculateRepoName
         with:
           shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
 
       - name: Run test on Windows
-        uses: ./Actions/E2ERunScenario
+        uses: ./.github/actions/E2ERunScenario
         with:
           shell: pwsh
           scenario: ${{ matrix.scenario }}
@@ -199,13 +199,13 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        uses: ./Actions/E2ECalculateRepoName
+        uses: ./.github/actions/E2ECalculateRepoName
         with:
           shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
 
       - name: Run tests
-        uses: ./Actions/E2ERunScenario
+        uses: ./.github/actions/E2ERunScenario
         with:
           shell: pwsh
           scenario: ${{ matrix.scenario }}
@@ -239,7 +239,7 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        uses: ./Actions/E2ECalculateTestParams
+        uses: ./.github/actions/E2ECalculateTestParams
         with:
           shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -251,7 +251,7 @@ jobs:
           perTenantExtensionRepo: ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
 
       - name: Run tests
-        uses: ./Actions/E2ERunTest
+        uses: ./.github/actions/E2ERunTest
         with:
           shell: pwsh
           testType: test
@@ -286,7 +286,7 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        uses: ./Actions/E2ECalculateTestParams
+        uses: ./.github/actions/E2ECalculateTestParams
         with:
           shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -298,7 +298,7 @@ jobs:
           perTenantExtensionRepo: ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
 
       - name: Run tests
-        uses: ./Actions/E2ERunTest
+        uses: ./.github/actions/E2ERunTest
         with:
           shell: pwsh
           testType: test
@@ -333,7 +333,7 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        uses: ./Actions/E2ECalculateTestParams
+        uses: ./.github/actions/E2ECalculateTestParams
         with:
           shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -343,7 +343,7 @@ jobs:
           contentPath: ${{ matrix.type == 'appSourceApp' && 'appsourceapp' || 'pte' }}
 
       - name: Run tests
-        uses: ./Actions/E2ERunTest
+        uses: ./.github/actions/E2ERunTest
         with:
           shell: pwsh
           testType: upgrade

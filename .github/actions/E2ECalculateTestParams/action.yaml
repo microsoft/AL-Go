@@ -63,7 +63,7 @@ runs:
         _perTenantExtensionRepo: ${{ inputs.perTenantExtensionRepo }}
         _contentPath: ${{ inputs.contentPath }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2ECalculateTestParams" -Action {
+        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2ECalculateTestParams" -Action {
           ${{ github.action_path }}/E2ECalculateTestParams.ps1 -githubOwner $ENV:_githubOwner -matrixType $ENV:_matrixType -matrixStyle $ENV:_matrixStyle -matrixOs $ENV:_matrixOs -adminCenterApiCredentialsSecret $ENV:_adminCenterApiCredentialsSecret -appSourceAppRepo $ENV:_appSourceAppRepo -perTenantExtensionRepo $ENV:_perTenantExtensionRepo -contentPath $ENV:_contentPath
         }
 branding:

@@ -82,7 +82,7 @@ runs:
         _release: ${{ inputs.release }}
         _contentPath: ${{ inputs.contentPath }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2ERunTest" -Action {
+        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2ERunTest" -Action {
           ${{ github.action_path }}/E2ERunTest.ps1 -testType $ENV:_testType -private ($ENV:_private -eq 'true') -githubOwner $ENV:_githubOwner -repoName $ENV:_repoName -e2eAppId $ENV:_e2eAppId -e2eAppKey $ENV:_e2eAppKey -algoAuthApp $ENV:_algoAuthApp -template $ENV:_template -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -multiProject ($ENV:_multiProject -eq 'true') -appSource ($ENV:_appSource -eq 'true') -linux ($ENV:_linux -eq 'true') -useCompilerFolder ($ENV:_useCompilerFolder -eq 'true') -release $ENV:_release -contentPath $ENV:_contentPath
         }
 branding:

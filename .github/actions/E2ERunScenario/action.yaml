@@ -62,7 +62,7 @@ runs:
         _azureCredentials: ${{ inputs.azureCredentials }}
         _githubPackagesToken: ${{ inputs.githubPackagesToken }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2ERunScenario" -Action {
+        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2ERunScenario" -Action {
           ${{ github.action_path }}/E2ERunScenario.ps1 -scenario $ENV:_scenario -linux ($ENV:_linux -eq 'true') -githubOwner $ENV:_githubOwner -repoName $ENV:_repoName -e2eAppId $ENV:_e2eAppId -e2eAppKey $ENV:_e2eAppKey -algoAuthApp $ENV:_algoAuthApp -pteTemplate $ENV:_pteTemplate -appSourceTemplate $ENV:_appSourceTemplate -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -azureCredentials $ENV:_azureCredentials -githubPackagesToken $ENV:_githubPackagesToken
         }
 branding:

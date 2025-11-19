@@ -39,7 +39,7 @@ runs:
         _testUpgradesFromVersion: ${{ inputs.testUpgradesFromVersion }}
         GH_TOKEN: ${{ inputs.token }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "E2EAnalyze" -Action {
+        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2EAnalyze" -Action {
           ${{ github.action_path }}/E2EAnalyze.ps1 -maxParallel ([int]$ENV:_maxParallel) -testUpgradesFromVersion $ENV:_testUpgradesFromVersion
         }
 branding:
