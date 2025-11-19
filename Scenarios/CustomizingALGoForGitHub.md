@@ -229,10 +229,10 @@ The following table summarizes how AL-Go for GitHub manages file updates and exc
 
 | File is present in end repo | File is matched by `filesToUpdate` | File is matched by `filesToExclude` | Result |
 |---|---|---|---|
-| Yes/No | Yes |  No | The file is **updated/created** in the end repo |
+| Yes/No | Yes | No | The file is **updated/created** in the end repo |
 | Yes | Yes | Yes | The file is **removed** from the end repo, as it's matched for exclusion |
 | Yes | No | Yes | The files is **_not_** removed as it was not matched as update |
-| No | Yes/No |  Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
+| No | Yes/No | Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
 
 ### Examples of using custom template files
 
@@ -252,6 +252,7 @@ Below are examples of how to use the `filesToUpdate` and `filesToExclude` settin
   ]
 }
 ```
+
 This configuration will copy all PowerShell scripts from `.github/customScripts` in your template repository to the `.AL-Go/scripts` folder in each project of your target repository.
 
 #### Example 2: Excluding a specific script from updates
@@ -274,6 +275,7 @@ This configuration will copy all PowerShell scripts from `.github/customScripts`
   ]
 }
 ```
+
 This will update all `.ps1` scripts except `DoNotPropagate.ps1`, which will be excluded from the update process.
 
 #### Example 3: Updating workflow files and excluding one
@@ -295,6 +297,7 @@ This will update all `.ps1` scripts except `DoNotPropagate.ps1`, which will be e
   ]
 }
 ```
+
 All workflow YAML files will be updated except `experimental-workflow.yaml`, which will be removed from the target repository if present.
 
 #### Example 4: Multiple update and exclude rules
@@ -321,6 +324,7 @@ All workflow YAML files will be updated except `experimental-workflow.yaml`, whi
   ]
 }
 ```
+
 This configuration updates all JSON files from `shared/config` and all PowerShell scripts from `.github/scripts`, but excludes `legacy-config.json` from being updated or created.
 
 These examples demonstrate how you can fine-tune which files are propagated from your template repository and which are excluded, giving you granular control over your AL-Go customization process.
