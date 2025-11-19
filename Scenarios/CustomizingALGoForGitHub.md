@@ -217,26 +217,113 @@ In order to instruct AL-Go which files to look for at the template repository, y
 > [!NOTE]
 > `filesToUpdate` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToUpdate`, AL-Go for GitHub will ignore them and you might have to remove them manually.
 
-`filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) during the update. Every item in the array may contain the following properties:
+`filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) from `filesToUpdate`. Every item in the array may contain the following properties:
 
 - `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
 - `filter`: A string to use for filtering in the specified source path. _Example_: `notRelevantScript.ps1`.
 
-> [!NOTE] `filesToExclude` is an array containing a subset of files from `filesToUpdate`. These files are specifically marked to be excluded from the update process. During the AL-Go update:
->
-> - Any file matched in `filesToExclude` will not be updated.
-> - If a file matched by `filesToExclude` exists in the destination (end) repository, it will be removed as part of the update.
->
+> [!NOTE] `filesToExclude` is an array of file configurations already included in `filesToUpdate`. These files are specifically marked to be excluded from the update process.
 > This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
 
-The following table summarizes how AL-Go for GitHub manages file updates and exclusions when using custom template files:
+The following table summarizes how AL-Go for GitHub manages file updates and exclusions when using custom template files. Say, there is a file (e.g. `file.ps1`) in the template repository.
 
-| File name | In template repo | In end repo | Matched by `filesToUpdate` | Matched by `filesToExclude` | Result |
-|---|---|---|---|---|---|
-|  file.ps1  | Yes | Yes/No | Yes |  No | The file is **updated/created** in the end repo |
-|  file.ps1  | Yes | Yes | Yes/No|  Yes | The file is **removed** from the end repo, as it's matched for exclusion |
-|  file.ps1  | Yes | No | Yes/No |  Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
-|  file.ps1  | No | Yes/No | Yes/No |  Yes/No  | No action. The file is **_not_ updated/created/removed** in the end repo, as it's not present in the template repo  |
+| File is present in end repo | File is matched by `filesToUpdate` | File is matched by `filesToExclude` | Result |
+|---|---|---|---|
+| Yes/No | Yes |  No | The file is **updated/created** in the end repo |
+| Yes | Yes | Yes | The file is **removed** from the end repo, as it's matched for exclusion |
+| Yes | No | Yes | The files is **_not_** removed as it was not matched as update |
+| No | Yes/No |  Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
+
+### Examples of using custom template files
+
+Below are examples of how to use the `filesToUpdate` and `filesToExclude` settings in your AL-Go configuration.
+
+#### Example 1: Updating specific scripts for all projects
+
+```json
+"customALGoFiles": {
+  "filesToUpdate": [
+    {
+      "sourceFolder": ".github/customScripts",
+      "filter": "*.ps1",
+      "destinationFolder": ".AL-Go/scripts",
+      "perProject": true
+    }
+  ]
+}
+```
+This configuration will copy all PowerShell scripts from `.github/customScripts` in your template repository to the `.AL-Go/scripts` folder in each project of your target repository.
+
+#### Example 2: Excluding a specific script from updates
+
+```json
+"customALGoFiles": {
+  "filesToUpdate": [
+    {
+      "sourceFolder": ".github/customScripts",
+      "filter": "*.ps1",
+      "destinationFolder": ".AL-Go/scripts",
+      "perProject": true
+    }
+  ],
+  "filesToExclude": [
+    {
+      "sourceFolder": ".github/customScripts",
+      "filter": "DoNotPropagate.ps1"
+    }
+  ]
+}
+```
+This will update all `.ps1` scripts except `DoNotPropagate.ps1`, which will be excluded from the update process.
+
+#### Example 3: Updating workflow files and excluding one
+
+```json
+"customALGoFiles": {
+  "filesToUpdate": [
+    {
+      "sourceFolder": ".github/workflows",
+      "filter": "*.yaml",
+      "destinationFolder": ".github/workflows"
+    }
+  ],
+  "filesToExclude": [
+    {
+      "sourceFolder": ".github/workflows",
+      "filter": "experimental-workflow.yaml"
+    }
+  ]
+}
+```
+All workflow YAML files will be updated except `experimental-workflow.yaml`, which will be removed from the target repository if present.
+
+#### Example 4: Multiple update and exclude rules
+
+```json
+"customALGoFiles": {
+  "filesToUpdate": [
+    {
+      "sourceFolder": "shared/config",
+      "filter": "*.json",
+      "destinationFolder": "config"
+    },
+    {
+      "sourceFolder": ".github/scripts",
+      "filter": "*.ps1",
+      "destinationFolder": ".github/scripts"
+    }
+  ],
+  "filesToExclude": [
+    {
+      "sourceFolder": "shared/config",
+      "filter": "legacy-config.json"
+    }
+  ]
+}
+```
+This configuration updates all JSON files from `shared/config` and all PowerShell scripts from `.github/scripts`, but excludes `legacy-config.json` from being updated or created.
+
+These examples demonstrate how you can fine-tune which files are propagated from your template repository and which are excluded, giving you granular control over your AL-Go customization process.
 
 ## Forking AL-Go for GitHub and making your "own" **public** version
 
