@@ -7,6 +7,7 @@
 - Use Runner_Temp instead of GetTempFolder whenever possible
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
+- Discussion 1855 Add trigger 'workflow_call' to workflow 'UpdateGitHubGoSystemFiles' for reusability
 
 ## v8.0
 
