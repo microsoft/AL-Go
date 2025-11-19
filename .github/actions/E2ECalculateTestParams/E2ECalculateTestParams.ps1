@@ -33,13 +33,14 @@ if ($matrixType -eq 'appSourceApp') {
 elseif ($matrixType -eq 'PTE') {
     $template = "$githubOwner/$perTenantExtensionRepo"
 }
-elseif ($matrixType) {
-    # For upgrade tests or other scenarios
+
+# Calculate contentPath if not provided
+if (-not $contentPath -and $matrixType) {
     if ($matrixType -eq 'appSourceApp') {
-        $template = "$githubOwner/$appSourceAppRepo"
+        $contentPath = 'appsourceapp'
     }
     else {
-        $template = "$githubOwner/$perTenantExtensionRepo"
+        $contentPath = 'pte'
     }
 }
 

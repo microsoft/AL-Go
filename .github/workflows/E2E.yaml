@@ -63,7 +63,6 @@ jobs:
         id: check
         uses: ./.github/actions/E2ECheckSecrets
         with:
-          shell: pwsh
           githubOwner: ${{ github.event.inputs.githubOwner }}
           e2eAppId: ${{ vars.E2E_APP_ID }}
           e2ePrivateKey: ${{ secrets.E2E_PRIVATE_KEY }}
@@ -101,7 +100,6 @@ jobs:
         id: setup
         uses: ./.github/actions/E2ESetupRepositories
         with:
-          shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
           bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
           token: ${{ steps.app-token.outputs.token }}
@@ -136,7 +134,6 @@ jobs:
         id: Analyze
         uses: ./.github/actions/E2EAnalyze
         with:
-          shell: pwsh
           maxParallel: ${{ needs.Check.outputs.maxParallel }}
           testUpgradesFromVersion: ${{ env.TestUpgradesFromVersion }}
           token: ${{ steps.app-token.outputs.token }}
@@ -161,13 +158,11 @@ jobs:
         id: calculateParams
         uses: ./.github/actions/E2ECalculateRepoName
         with:
-          shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
 
       - name: Run test on Windows
         uses: ./.github/actions/E2ERunScenario
         with:
-          shell: pwsh
           scenario: ${{ matrix.scenario }}
           linux: false
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -201,13 +196,11 @@ jobs:
         id: calculateParams
         uses: ./.github/actions/E2ECalculateRepoName
         with:
-          shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
 
       - name: Run tests
         uses: ./.github/actions/E2ERunScenario
         with:
-          shell: pwsh
           scenario: ${{ matrix.scenario }}
           linux: true
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -241,7 +234,6 @@ jobs:
         id: calculateParams
         uses: ./.github/actions/E2ECalculateTestParams
         with:
-          shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
           matrixType: ${{ matrix.type }}
           matrixStyle: ${{ matrix.style }}
@@ -253,7 +245,6 @@ jobs:
       - name: Run tests
         uses: ./.github/actions/E2ERunTest
         with:
-          shell: pwsh
           testType: test
           private: false
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -288,7 +279,6 @@ jobs:
         id: calculateParams
         uses: ./.github/actions/E2ECalculateTestParams
         with:
-          shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
           matrixType: ${{ matrix.type }}
           matrixStyle: ${{ matrix.style }}
@@ -300,7 +290,6 @@ jobs:
       - name: Run tests
         uses: ./.github/actions/E2ERunTest
         with:
-          shell: pwsh
           testType: test
           private: true
           githubOwner: ${{ needs.Check.outputs.githubowner }}
@@ -335,17 +324,14 @@ jobs:
         id: calculateParams
         uses: ./.github/actions/E2ECalculateTestParams
         with:
-          shell: pwsh
           githubOwner: ${{ needs.Check.outputs.githubowner }}
           matrixType: ${{ matrix.type }}
           appSourceAppRepo: ${{ needs.SetupRepositories.outputs.appSourceAppRepo }}
           perTenantExtensionRepo: ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
-          contentPath: ${{ matrix.type == 'appSourceApp' && 'appsourceapp' || 'pte' }}
 
       - name: Run tests
         uses: ./.github/actions/E2ERunTest
         with:
-          shell: pwsh
           testType: upgrade
           githubOwner: ${{ needs.Check.outputs.githubowner }}
           repoName: ${{ steps.calculateParams.outputs.repoName }}
