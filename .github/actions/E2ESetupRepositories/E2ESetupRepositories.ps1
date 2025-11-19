@@ -5,5 +5,5 @@ Param(
     [string] $bcContainerHelperVersion = ''
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner $githubOwner -bcContainerHelperVersion $bcContainerHelperVersion

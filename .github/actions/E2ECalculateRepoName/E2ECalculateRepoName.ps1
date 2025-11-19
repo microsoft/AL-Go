@@ -3,7 +3,7 @@ Param(
     [string] $githubOwner = ''
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
 Write-Host "repoName=$repoName"

@@ -25,6 +25,8 @@ Param(
     [string] $githubPackagesToken
 )
 
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 try {
     $params = @{
         'github' = $true
@@ -39,11 +41,11 @@ try {
         'azureCredentials' = $azureCredentials
         'githubPackagesToken' = $githubPackagesToken
     }
-    
+
     if ($linux) {
         $params['linux'] = $true
     }
-    
+
     . (Join-Path "." "e2eTests/scenarios/$scenario/runtest.ps1") @params
 }
 catch {

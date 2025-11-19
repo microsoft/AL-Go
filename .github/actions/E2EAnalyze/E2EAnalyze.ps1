@@ -5,8 +5,8 @@ Param(
     [string] $testUpgradesFromVersion = 'v5.0'
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-$modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+$modulePath = Join-Path "." "e2eTests/e2eTestHelper.psm1" -resolve
 Import-Module $modulePath -DisableNameChecking
 
 $publicTestruns = @{

@@ -17,7 +17,7 @@ Param(
     [string] $contentPath = ''
 )
 
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 # Calculate adminCenterApiCredentials
 $adminCenterApiCredentials = ''

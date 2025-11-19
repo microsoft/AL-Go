@@ -32,6 +32,8 @@ Param(
     [string] $contentPath = ''
 )
 
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 try {
     if ($testType -eq 'upgrade') {
         $params = @{
@@ -46,7 +48,7 @@ try {
             'release' = $release
             'contentPath' = $contentPath
         }
-        
+
         . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") @params
     }
     else {
@@ -64,11 +66,11 @@ try {
             'linux' = $linux
             'useCompilerFolder' = $useCompilerFolder
         }
-        
+
         if ($private) {
             $params['private'] = $true
         }
-        
+
         . (Join-Path "." "e2eTests/Test-AL-Go.ps1") @params
     }
 }

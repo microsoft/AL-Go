@@ -15,6 +15,8 @@ Param(
     [string] $e2eAzureCredentials = ''
 )
 
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 $err = $false
 if (($e2eAppId -eq '') -or ($e2ePrivateKey -eq '')){
     Write-Host "::Error::In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
@@ -41,9 +43,9 @@ if ($err) {
 }
 $maxParallel = 99
 if (!($githubOwner)) {
-    $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
+    $githubOwner = $ENV:GITHUB_REPOSITORY_OWNER
 }
-$orgmap = Get-Content -path (Join-Path "." "e2eTests\orgmap.json") -encoding UTF8 -raw | ConvertFrom-Json
+$orgmap = Get-Content -path (Join-Path "." "e2eTests/orgmap.json") -encoding UTF8 -raw | ConvertFrom-Json
 if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
     $githubOwner = $orgmap."$githubOwner"
 }
