@@ -817,6 +817,16 @@ function GetFilesToUpdate {
     $filesToExclude += $settings.customALGoFiles.filesToExclude
     $filesToExclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects
 
+    # Exclude files from filesToExclude that are not in filesToUpdate
+    $filesToExclude = $filesToExclude | Where-Object {
+        $fileToExclude = $_
+        $include = $filesToUpdate | Where-Object { $_.sourceFullPath -eq $fileToExclude.sourceFullPath }
+        if(-not $include) {
+            Write-Host "Excluding file $($fileToExclude.sourceFullPath) from exclude list as it is not in the update list"
+        }
+        return $include
+    }
+
     # Exclude files from filesToUpdate that are in filesToExclude
     $filesToUpdate = $filesToUpdate | Where-Object {
         $fileToUpdate = $_
@@ -826,6 +836,7 @@ function GetFilesToUpdate {
         }
         return $include
     }
+
     # Apply unusedALGoSystemFiles logic
     $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
 
