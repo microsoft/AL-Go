@@ -36,9 +36,7 @@ runs:
         _bcContainerHelperVersion: ${{ inputs.bcContainerHelperVersion }}
         GH_TOKEN: ${{ inputs.token }}
       run: |
-        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2ESetupRepositories" -Action {
-          ${{ github.action_path }}/E2ESetupRepositories.ps1 -githubOwner $ENV:_githubOwner -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
-        }
+        ${{ github.action_path }}/E2ESetupRepositories.ps1 -githubOwner $ENV:_githubOwner -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
 branding:
   icon: git-branch
   color: blue

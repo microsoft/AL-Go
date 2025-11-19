@@ -22,9 +22,7 @@ runs:
       env:
         _githubOwner: ${{ inputs.githubOwner }}
       run: |
-        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2ECalculateRepoName" -Action {
-          ${{ github.action_path }}/E2ECalculateRepoName.ps1 -githubOwner $ENV:_githubOwner
-        }
+        ${{ github.action_path }}/E2ECalculateRepoName.ps1 -githubOwner $ENV:_githubOwner
 branding:
   icon: hash
   color: blue

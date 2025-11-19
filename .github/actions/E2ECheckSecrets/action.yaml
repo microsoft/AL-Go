@@ -55,9 +55,7 @@ runs:
         _e2eGHPackagesPAT: ${{ inputs.e2eGHPackagesPAT }}
         _e2eAzureCredentials: ${{ inputs.e2eAzureCredentials }}
       run: |
-        ${{ github.action_path }}/../../../Actions/Invoke-AlGoAction.ps1 -ActionName "E2ECheckSecrets" -Action {
-          ${{ github.action_path }}/E2ECheckSecrets.ps1 -githubOwner $ENV:_githubOwner -e2eAppId $ENV:_e2eAppId -e2ePrivateKey $ENV:_e2ePrivateKey -algoAuthApp $ENV:_algoAuthApp -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -e2eGHPackagesPAT $ENV:_e2eGHPackagesPAT -e2eAzureCredentials $ENV:_e2eAzureCredentials
-        }
+        ${{ github.action_path }}/E2ECheckSecrets.ps1 -githubOwner $ENV:_githubOwner -e2eAppId $ENV:_e2eAppId -e2ePrivateKey $ENV:_e2ePrivateKey -algoAuthApp $ENV:_algoAuthApp -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -e2eGHPackagesPAT $ENV:_e2eGHPackagesPAT -e2eAzureCredentials $ENV:_e2eAzureCredentials
 branding:
   icon: check-circle
   color: blue
