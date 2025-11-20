@@ -282,13 +282,7 @@ This will update all `.ps1` scripts except `DoNotPropagate.ps1`, which will be e
 
 ```json
 "customALGoFiles": {
-  "filesToUpdate": [
-    {
-      "sourceFolder": ".github/workflows",
-      "filter": "*.yaml",
-      "destinationFolder": ".github/workflows"
-    }
-  ],
+  "filesToUpdate": [],
   "filesToExclude": [
     {
       "sourceFolder": ".github/workflows",
@@ -299,6 +293,7 @@ This will update all `.ps1` scripts except `DoNotPropagate.ps1`, which will be e
 ```
 
 All workflow YAML files will be updated except `experimental-workflow.yaml`, which will be removed from the target repository if present.
+Note that AL-Go for GitHub already syncs all workflow files under `.github/workflows` by default, so you don't need to specify `filesToUpdate`; however, any files matched by `filesToExclude` will be excluded from this default sync.
 
 #### Example 4: Multiple update and exclude rules
 
