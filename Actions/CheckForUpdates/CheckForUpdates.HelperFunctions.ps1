@@ -874,6 +874,10 @@ function ResolveFilePaths {
                     $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationFolder
                     $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
 
+                    if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullProjectFilePath.destinationFullPath) {
+                        Write-Host "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
+                        continue
+                    }
                     Write-Host "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
                     $fullFilePaths += $fullProjectFilePath
                 }
@@ -885,13 +889,15 @@ function ResolveFilePaths {
                 $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationFolder
                 $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
 
+                if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullFilePath.destinationFullPath) {
+                    Write-Host "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
+                    continue
+                }
                 Write-Host "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
                 $fullFilePaths += $fullFilePath
             }
         }
     }
-    # Remove duplicates
-    $fullFilePaths = $fullFilePaths | Sort-Object { $_.destinationFullPath } -Unique
 
     return $fullFilePaths
 }

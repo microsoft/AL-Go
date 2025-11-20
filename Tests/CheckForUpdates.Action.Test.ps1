@@ -427,16 +427,15 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].originalSourceFullPath | Should -Be $null
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
 
+        # Second file has is not present in original source folder, so originalSourceFullPath should be $null
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
 
-        # Second file has type not containing "template", so originalSourceFullPath should be populated
-        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
-        $fullFilePaths[1].originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File2.log")
-        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
-
-        # Third file has is not present in original source folder, so originalSourceFullPath should be $null
-        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
-        $fullFilePaths[2].originalSourceFullPath | Should -Be $null
-        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        # Third file has type not containing "template", so originalSourceFullPath should be populated
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[2].originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File2.log")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
     }
 
     It 'ResolveFilePaths with a single project' {
@@ -452,17 +451,17 @@ Describe "ResolveFilePaths" {
         $fullFilePaths | Should -Not -BeNullOrEmpty
         $fullFilePaths.Count | Should -Be 3
 
-        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
-        $fullFilePaths[0].type | Should -Be "markdown"
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
 
-        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
-        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File1.txt")
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File3.txt")
         $fullFilePaths[1].type | Should -Be "text"
 
-        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
-        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File3.txt")
-        $fullFilePaths[2].type | Should -Be "text"
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
     }
 
     It 'ResolveFilePaths with multiple projects' {
@@ -478,28 +477,30 @@ Describe "ResolveFilePaths" {
         $fullFilePaths | Should -Not -BeNullOrEmpty
         $fullFilePaths.Count | Should -Be 5
 
-        # Non-per-project file
-        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
-        $fullFilePaths[0].type | Should -Be "markdown"
+        # ProjectA files: File1.txt
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
 
-        # ProjectA files
+        # ProjectB files: File1.txt
         $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
-        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File1.txt")
         $fullFilePaths[1].type | Should -Be "text"
 
+        # ProjectA files: File3.txt
         $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
         $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File3.txt")
         $fullFilePaths[2].type | Should -Be "text"
 
-        # ProjectB files
-        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
-        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File1.txt")
+        # ProjectB files: File3.txt
+        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File3.txt")
         $fullFilePaths[3].type | Should -Be "text"
 
-        $fullFilePaths[4].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
-        $fullFilePaths[4].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File3.txt")
-        $fullFilePaths[4].type | Should -Be "text"
+        # Non-per-project file
+        $fullFilePaths[4].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[4].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[4].type | Should -Be "markdown"
     }
 }
 
@@ -843,11 +844,12 @@ Describe 'GetFilesToUpdate (real template)' {
         $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
         $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/_BuildPowerPlatformSolution.yaml")
 
-        $filesToExclude[1].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-        $filesToExclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude[1].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToExclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PushPowerPlatformChanges.yaml")
 
-        $filesToExclude[2].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
-        $filesToExclude[2].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToExclude[2].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude[2].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PullPowerPlatformChanges.yaml")
+
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified' {
