@@ -248,6 +248,7 @@ function GetDefaultSettings
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
         "reportSuppressedDiagnostics"                   = $false
+        "workflowDefaultInputs"                         = @()
         "customALGoFiles" = [ordered]@{
             "filesToUpdate"                             = @()
             "filesToExclude"                            = @()

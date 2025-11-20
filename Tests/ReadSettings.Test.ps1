@@ -459,5 +459,65 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # overwriteSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
+
+        It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            New-Item $githubFolder -ItemType Directory | Out-Null
+
+            # Create conditional settings with two blocks that both match and both have workflowDefaultInputs
+            $conditionalSettings = [ordered]@{
+                "conditionalSettings" = @(
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value1" }
+                            )
+                        }
+                    }
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value2" },
+                                @{ "name" = "input2"; "value" = "value3" }
+                            )
+                        }
+                    }
+                )
+            }
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
+
+            # Both conditional blocks match branch 'main', so both should be applied
+            $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName 'main' -userName 'user'
+
+            # Verify array was merged - should have 3 entries total
+            $settings.workflowDefaultInputs | Should -Not -BeNullOrEmpty
+            $settings.workflowDefaultInputs.Count | Should -Be 3
+
+            # First entry from first conditional block
+            $settings.workflowDefaultInputs[0].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[0].value | Should -Be 'value1'
+
+            # Second entry from second conditional block
+            $settings.workflowDefaultInputs[1].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[1].value | Should -Be 'value2'
+
+            # Third entry from second conditional block
+            $settings.workflowDefaultInputs[2].name | Should -Be 'input2'
+            $settings.workflowDefaultInputs[2].value | Should -Be 'value3'
+
+            $ENV:ALGoRepoSettings = ''
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
     }
 }
