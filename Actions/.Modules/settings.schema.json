@@ -693,6 +693,23 @@
         "reportSuppressedDiagnostics": {
             "type": "boolean",
             "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
+        },
+        "workflowDefaultInputs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the workflow input"
+                    },
+                    "value": {
+                        "description": "The default value for the workflow input (can be string, boolean, or number)"
+                    }
+                },
+                "required": ["name", "value"]
+            },
+            "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
     }
 }
