@@ -841,6 +841,12 @@ function ResolveFilePaths {
                 'destinationFullPath' = $null
             }
 
+            # Check if the source file is under the source folder
+            if ($srcFile -notlike "$sourceFolder*") {
+                Write-Host "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
+                continue
+            }
+
             Write-Host "Processing file '$($srcFile)'"
 
             # Try to find the same files in the original template folder if it is specified. Exclude custom template files

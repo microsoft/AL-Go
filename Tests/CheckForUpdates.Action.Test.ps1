@@ -502,6 +502,31 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[4].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
         $fullFilePaths[4].type | Should -Be "markdown"
     }
+
+    It 'ResolveFilePaths skips files outside the source folder' {
+        # Create an external file outside the source folder
+        $externalFolder = Join-Path $PSScriptRoot "external"
+        if (-not (Test-Path $externalFolder)) { New-Item -Path $externalFolder -ItemType Directory | Out-Null }
+        $externalFile = Join-Path $externalFolder "outside.txt"
+        Set-Content -Path $externalFile -Value "outside"
+
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "../external"; "filter" = "*.txt" }
+        )
+
+        # Intentionally call ResolveFilePaths with the real sourceFolder (so external file should not be included)
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # Ensure none of the returned sourceFullPath entries point to the external file
+        $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -Be $externalFile }
+
+        # Cleanup
+        if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
+        if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+    }
 }
 
 Describe "ReplaceOwnerRepoAndBranch" {
