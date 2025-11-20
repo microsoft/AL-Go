@@ -703,17 +703,21 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "destinationFolder": {
-                                "type": "string"
-                            },
                             "sourceFolder": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "The source folder from which to update files, relative to the template repository root."
                             },
                             "filter": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "A filter string to select which files to update. It can contain '*' and '?' wildcards."
+                            },
+                            "destinationFolder": {
+                                "type": "string",
+                                "description": "The destination folder where the files should be updated, relative to the repository root. If not specified, defaults to the same as the source file folder."
                             },
                             "perProject": {
-                                "type": "boolean"
+                                "type": "boolean",
+                                "description": "Indicates whether the file update should be applied per project. In that case, the destinationFolder is considered relative to each project folder."
                             }
                         }
                     }
@@ -724,10 +728,12 @@
                         "type": "object",
                         "properties": {
                             "sourceFolder": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "The source folder from which to exclude files, relative to the template repository root."
                             },
                             "filter": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "A filter string to select which files to exclude. It can contain '*' and '?' wildcards."
                             }
                         }
                     }

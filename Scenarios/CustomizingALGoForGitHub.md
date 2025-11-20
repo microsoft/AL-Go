@@ -209,9 +209,9 @@ In order to instruct AL-Go which files to look for at the template repository, y
 
 `filesToUpdate`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to update. Every item in the array may contain the following properties:
 
-- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
-- `filter`: A string to use for filtering in the specified source path. _Example_: `*.ps1`.
-- `destinationFolder`: A path to a folder, relative to repository that is being updated, where the files should be placed. _Example_: `src/templateScripts`.
+- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. `*` characters are not supported. _Example_: `src/scripts`.
+- `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `*.ps1` or `fileToUpdate.ps1`.
+- `destinationFolder`: A path to a folder, relative to repository that is being updated, where the files should be placed. If not specified, defaults to the same as the source file folder. _Example_: `src/templateScripts`.
 - `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
 
 > [!NOTE]
@@ -220,7 +220,7 @@ In order to instruct AL-Go which files to look for at the template repository, y
 `filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) from `filesToUpdate`. Every item in the array may contain the following properties:
 
 - `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
-- `filter`: A string to use for filtering in the specified source path. _Example_: `notRelevantScript.ps1`.
+- `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `notRelevantScript.ps1` or `*-internal.ps1`
 
 > [!NOTE] `filesToExclude` is an array of file configurations already included in `filesToUpdate`. These files are specifically marked to be excluded from the update process.
 > This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
