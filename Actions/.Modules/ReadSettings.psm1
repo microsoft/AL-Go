@@ -250,7 +250,7 @@ function GetDefaultSettings
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
         "customALGoFiles" = [ordered]@{
-            "filesToUpdate"                             = @()
+            "filesToInclude"                             = @()
             "filesToExclude"                            = @()
         }
     }

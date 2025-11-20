@@ -269,7 +269,7 @@ Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) |
 (Join-Path (Get-Location) $customFileName) | Should -Not -Exist # Custom file should not be copied by default
 
 # Add custom file to be copied via settings
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "customALGoFiles" = @{ "filesToUpdate" = @( @{ "filter" = $customFileName } ) } }
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "customALGoFiles" = @{ "filesToInclude" = @( @{ "filter" = $customFileName } ) } }
 
 # Push
 CommitAndPush -commitMessage 'Add custom file to be updated when updating AL-Go system files [skip ci]'

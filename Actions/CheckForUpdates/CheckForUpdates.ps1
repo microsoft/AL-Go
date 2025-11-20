@@ -115,7 +115,7 @@ if (-not $isDirectALGo) {
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
-$filesToUpdate, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+$filesToInclude, $filesToExclude = GetFilesToInclude -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
 
 # $updateFiles will hold an array of files, which needs to be updated
 $updateFiles = @()
@@ -134,15 +134,15 @@ if ($projects.Count -gt 1) {
 }
 
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
-foreach($fileToUpdate in $filesToUpdate) {
-    $type = $fileToUpdate.type
-    $srcPath = $fileToUpdate.sourceFullPath
-    $originalSrcPath = $fileToUpdate.originalSourceFullPath
+foreach($fileToInclude in $filesToInclude) {
+    $type = $fileToInclude.type
+    $srcPath = $fileToInclude.sourceFullPath
+    $originalSrcPath = $fileToInclude.originalSourceFullPath
     if(-not $originalSrcPath) {
         $originalSrcPath = $srcPath
     }
 
-    $dstPath = $fileToUpdate.destinationFullPath
+    $dstPath = $fileToInclude.destinationFullPath
 
     $dstFileExists = Test-Path -Path $dstPath -PathType Leaf
 
