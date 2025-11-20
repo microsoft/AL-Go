@@ -527,6 +527,35 @@ Describe "ResolveFilePaths" {
         if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
         if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
     }
+
+    It 'ResolveFilePaths returns empty when no files match filter' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $rootFolder $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.doesnotexist"; "destinationFolder" = "newFolder" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # No matching files should be returned
+        $fullFilePaths | Should -BeNullOrEmpty
+    }
+
+    It 'ResolveFilePaths with perProject true and empty projects returns no per-project entries' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+        )
+
+        # Intentionally pass an empty projects array
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @()
+
+        # Behavior: when projects is empty, no per-project entries should be created
+        $fullFilePaths | Should -BeNullOrEmpty
+    }
 }
 
 Describe "ReplaceOwnerRepoAndBranch" {
@@ -801,6 +830,47 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be $testPSFile
         $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+    }
+
+    It 'GetFilesToUpdate with perProject true and empty projects returns no per-project entries' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude  = @(@{ filter = "*.txt"; type = "text"; perProject = $true })
+                filesToExclude = @()
+            }
+        }
+
+        # Pass empty projects array
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder -projects @()
+
+        # Behavior: when projects is empty, no per-project entries should be created
+        $filesToInclude | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate ignores filesToExclude patterns that do not match any file' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude  = @(@{ filter = "*.txt" })
+                filesToExclude = @(@{ filter = "no-match-*.none" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        # All txt files should be included, no files to exclude
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 2
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+
+        $filesToExclude | Should -BeNullOrEmpty
     }
 }
 
