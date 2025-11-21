@@ -186,9 +186,13 @@ try {
         })
     }
 
+    $installTestAppDependencies = @($installTestAppsJson | ConvertFrom-Json)
+    if ($installTestAppDependencies.Count -gt 0) {
+        $installTestAppDependencies = @($installTestAppDependencies.Trim('()'))
+    }
     $install = @{
         "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+        "TestApps" = $settings.installTestApps + $installTestAppDependencies
     }
 
     # Replace secret names in install.apps and install.testApps
