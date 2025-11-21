@@ -187,8 +187,10 @@ try {
     }
 
     $installTestAppDependencies = @($installTestAppsJson | ConvertFrom-Json)
+    Write-Host "Install test apps from input: $($installTestAppDependencies -join ',')"
     if ($installTestAppDependencies.Count -gt 0) {
-        $installTestAppDependencies = @($installTestAppDependencies | ForEach-Object { $_.Trim('()') })
+        Write-Host "Trimming parentheses from test app dependencies"
+        $installTestAppDependencies = @($installTestAppDependencies | ForEach-Object { Write-Host $_ ; $_.Trim('()') })
     }
     $install = @{
         "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
