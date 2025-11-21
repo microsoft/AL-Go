@@ -187,7 +187,7 @@ try {
     }
 
     Write-Host "installTestAppsJson - $installTestAppsJson"
-    $installTestAppDependencies = @($installTestAppsJson | ConvertFrom-Json)
+    $installTestAppDependencies = $installTestAppsJson | ConvertFrom-Json
     Write-Host "Install test apps from input: $($installTestAppDependencies -join ',')"
     if ($installTestAppDependencies.Count -gt 0) {
         Write-Host "Trimming parentheses from test app dependencies"
