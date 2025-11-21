@@ -908,7 +908,7 @@ function ResolveFilePaths {
     return @($fullFilePaths)
 }
 
-function GetDefaultFilesToUpdate {
+function GetDefaultFilesToInclude {
     Param(
         [switch] $includeCustomTemplateFiles
     )
@@ -995,7 +995,7 @@ function GetFilesToUpdate {
 
     OutputDebug "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
 
-    $filesToInclude = GetDefaultFilesToUpdate -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
+    $filesToInclude = GetDefaultFilesToInclude -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
     $filesToInclude += $settings.customALGoFiles.filesToInclude
     $filesToInclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects
 
