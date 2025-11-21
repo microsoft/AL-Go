@@ -556,6 +556,59 @@ Describe "ResolveFilePaths" {
         # Behavior: when projects is empty, no per-project entries should be created
         $fullFilePaths | Should -BeNullOrEmpty
     }
+
+    It 'ResolveFilePaths returns empty array when files parameter is null or empty' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+
+        # Explicitly pass $null and @() to verify both code paths behave the same
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $null -destinationFolder $destinationFolder
+        $fullFilePaths | Should -BeNullOrEmpty
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files @() -destinationFolder $destinationFolder
+        $fullFilePaths | Should -BeNullOrEmpty
+    }
+
+    It 'ResolveFilePaths defaults destination folder when none is provided' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths avoids duplicate destination entries' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = "folder" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths treats dot project as repository root for per-project files' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true; "destinationFolder" = "custom" }
+        )
+
+        $projects = @('.', 'ProjectAlpha')
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects $projects
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "custom/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectAlpha/custom/File1.txt")
+    }
 }
 
 Describe "ReplaceOwnerRepoAndBranch" {
@@ -871,6 +924,107 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
 
         $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate duplicates per-project includes for each project including the repository root' {
+        $perProjectFile = Join-Path $templateFolder "perProjectFile.algo"
+        Set-Content -Path $perProjectFile -Value "per project"
+
+        try {
+            $settings = @{
+                type                  = "NotPTE"
+                unusedALGoSystemFiles = @()
+                customALGoFiles       = @{
+                    filesToInclude  = @(@{ filter = "perProjectFile.algo"; perProject = $true; destinationFolder = 'custom' })
+                    filesToExclude = @()
+                }
+            }
+
+            $projects = @('.', 'ProjectOne')
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder -projects $projects
+
+            $filesToInclude | Should -Not -BeNullOrEmpty
+            $filesToInclude.Count | Should -Be 2
+
+            $rootDestination = Join-Path 'baseFolder' 'custom/perProjectFile.algo'
+            $projectDestination = Join-Path 'baseFolder' 'ProjectOne/custom/perProjectFile.algo'
+
+            $filesToInclude.destinationFullPath | Should -Contain $rootDestination
+            $filesToInclude.destinationFullPath | Should -Contain $projectDestination
+
+            $filesToExclude | Should -BeNullOrEmpty
+        }
+        finally {
+            if (Test-Path $perProjectFile) {
+                Remove-Item -Path $perProjectFile -Force
+            }
+        }
+    }
+
+    It 'GetFilesToUpdate adds custom template settings only when original template folder is provided' {
+        $customTemplateFolder = Join-Path $PSScriptRoot "customTemplateFolder"
+        $originalTemplateFolder = Join-Path $PSScriptRoot "originalTemplateFolder"
+
+    New-Item -ItemType Directory -Path $customTemplateFolder -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.github') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.AL-Go') -Force | Out-Null
+        Set-Content -Path (Join-Path $customTemplateFolder (Join-Path '.github' $RepoSettingsFileName)) -Value '{}' -Encoding UTF8
+        Set-Content -Path (Join-Path $customTemplateFolder (Join-Path '.AL-Go' $ALGoSettingsFileName)) -Value '{}' -Encoding UTF8
+
+    New-Item -ItemType Directory -Path $originalTemplateFolder -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.github') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.AL-Go') -Force | Out-Null
+        Set-Content -Path (Join-Path $originalTemplateFolder (Join-Path '.github' $RepoSettingsFileName)) -Value '{"original":true}' -Encoding UTF8
+        Set-Content -Path (Join-Path $originalTemplateFolder (Join-Path '.AL-Go' $ALGoSettingsFileName)) -Value '{"original":true}' -Encoding UTF8
+
+        try {
+            $settings = @{
+                type                        = "PTE"
+                powerPlatformSolutionFolder = ''
+                unusedALGoSystemFiles       = @()
+                customALGoFiles             = @{
+                    filesToInclude  = @()
+                    filesToExclude = @()
+                }
+            }
+
+            $baseFolder = 'baseFolder'
+            $projects = @('ProjectA')
+
+            $filesWithoutOriginal, $excludesWithoutOriginal = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $customTemplateFolder -projects $projects
+
+            $filesWithoutOriginal | Should -Not -BeNullOrEmpty
+
+            $repoSettingsDestination = Join-Path $baseFolder (Join-Path '.github' $RepoSettingsFileName)
+            $projectSettingsRelative = Join-Path 'ProjectA' '.AL-Go'
+            $projectSettingsRelative = Join-Path $projectSettingsRelative $ALGoSettingsFileName
+            $projectSettingsDestination = Join-Path $baseFolder $projectSettingsRelative
+
+            $filesWithoutOriginal.destinationFullPath | Should -Contain $repoSettingsDestination
+            $filesWithoutOriginal.destinationFullPath | Should -Contain $projectSettingsDestination
+            $filesWithoutOriginal.destinationFullPath | Should -Not -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateRepoSettingsFileName))
+            $filesWithoutOriginal.destinationFullPath | Should -Not -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateProjectSettingsFileName))
+
+            $filesWithOriginal, $excludesWithOriginal = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder -projects $projects
+
+            $filesWithOriginal | Should -Not -BeNullOrEmpty
+
+            $filesWithOriginal.destinationFullPath | Should -Contain $repoSettingsDestination
+            $filesWithOriginal.destinationFullPath | Should -Contain $projectSettingsDestination
+            $filesWithOriginal.destinationFullPath | Should -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateRepoSettingsFileName))
+            $filesWithOriginal.destinationFullPath | Should -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateProjectSettingsFileName))
+
+            $excludesWithoutOriginal | Should -BeNullOrEmpty
+            $excludesWithOriginal | Should -BeNullOrEmpty
+        }
+        finally {
+            if (Test-Path $customTemplateFolder) {
+                Remove-Item -Path $customTemplateFolder -Recurse -Force
+            }
+            if (Test-Path $originalTemplateFolder) {
+                Remove-Item -Path $originalTemplateFolder -Recurse -Force
+            }
+        }
     }
 }
 

@@ -905,7 +905,7 @@ function ResolveFilePaths {
         }
     }
 
-    return $fullFilePaths
+    return @($fullFilePaths)
 }
 
 function GetDefaultFilesToUpdate {
