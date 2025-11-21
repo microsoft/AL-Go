@@ -609,6 +609,257 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "custom/File1.txt")
         $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectAlpha/custom/File1.txt")
     }
+
+    It 'ResolveFilePaths handles sourceFolder with trailing slashes' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder/"; "filter" = "File1.txt" }
+            @{ "sourceFolder" = "folder\"; "filter" = "File2.log" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+    }
+
+    It 'ResolveFilePaths handles deeply nested folder structures' {
+        # Create a deeply nested folder structure
+        $deepFolder = Join-Path $sourceFolder "level1/level2/level3"
+        New-Item -Path $deepFolder -ItemType Directory -Force | Out-Null
+        $deepFile = Join-Path $deepFolder "deep.txt"
+        Set-Content -Path $deepFile -Value "deep file"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "level1/level2/level3"; "filter" = "deep.txt"; "destinationFolder" = "output" }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $deepFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "output/deep.txt")
+        }
+        finally {
+            if (Test-Path $deepFile) { Remove-Item -Path $deepFile -Force }
+            if (Test-Path (Join-Path $sourceFolder "level1")) { Remove-Item -Path (Join-Path $sourceFolder "level1") -Recurse -Force }
+        }
+    }
+
+    It 'ResolveFilePaths handles mixed perProject true and false in same call' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; perProject = $false }
+            @{ "sourceFolder" = "folder"; "filter" = "File3.txt"; perProject = $true }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA")
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+
+        # File1.txt is per-project
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+
+        # File2.log is not per-project
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File2.log")
+
+        # File3.txt is per-project
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File3.txt")
+    }
+
+    It 'ResolveFilePaths handles files with no extension' {
+        $noExtFile = Join-Path $sourceFolder "folder/README"
+        Set-Content -Path $noExtFile -Value "readme content"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "README" }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $noExtFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/README")
+        }
+        finally {
+            if (Test-Path $noExtFile) { Remove-Item -Path $noExtFile -Force }
+        }
+    }
+
+    It 'ResolveFilePaths handles special characters in filenames' {
+        $specialFile = Join-Path $sourceFolder "folder/File-With-Dashes_And_Underscores.txt"
+        Set-Content -Path $specialFile -Value "special chars"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "File-With-Dashes_And_Underscores.txt" }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $specialFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File-With-Dashes_And_Underscores.txt")
+        }
+        finally {
+            if (Test-Path $specialFile) { Remove-Item -Path $specialFile -Force }
+        }
+    }
+
+    It 'ResolveFilePaths handles wildcard filters correctly' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File*.txt" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+    }
+
+    It 'ResolveFilePaths with perProject skips duplicate files across projects' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true; "destinationFolder" = "folder" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA"))
+
+        # Should only have one entry per project since both resolve to the same destination
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths handles empty sourceFolder value' {
+        # Create a file in the root of the sourceFolder
+        $rootFile = Join-Path $sourceFolder "RootFile.txt"
+        Set-Content -Path $rootFile -Value "root file content"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = ""; "filter" = "RootFile.txt" }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $rootFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "RootFile.txt")
+        }
+        finally {
+            if (Test-Path $rootFile) { Remove-Item -Path $rootFile -Force }
+        }
+    }
+
+    It 'ResolveFilePaths handles multiple filters matching same file' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.*" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        # File1.txt should only appear once even though both filters match it
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $file1Matches = @($fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File1.txt") })
+        $file1Matches.Count | Should -Be 1
+    }
+
+    It 'ResolveFilePaths correctly resolves originalSourceFullPath only when file exists in original folder' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+
+        # Create an additional file only in the source folder (not in original)
+        $onlyInSourceFile = Join-Path $sourceFolder "folder/OnlyInSource.txt"
+        Set-Content -Path $onlyInSourceFile -Value "only in source"
+
+        try {
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "*.txt" }
+                @{ "sourceFolder" = "folder"; "filter" = "*.log" }
+            )
+
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
+
+            # Files that exist in original source should have originalSourceFullPath set
+            $file1 = $fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File1.txt") }
+            $file1.originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File1.txt")
+
+            $file2 = $fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File2.log") }
+            $file2.originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File2.log")
+
+            # Files that don't exist in original source should have originalSourceFullPath as $null
+            $fileOnlyInSource = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $onlyInSourceFile }
+            $fileOnlyInSource | Should -Not -BeNullOrEmpty
+            $fileOnlyInSource.originalSourceFullPath | Should -Be $null
+        }
+        finally {
+            if (Test-Path $onlyInSourceFile) { Remove-Item -Path $onlyInSourceFile -Force }
+        }
+    }
+
+    It 'ResolveFilePaths with origin custom template and no originalSourceFolder skips files' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "origin" = "custom template" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log" }
+        )
+
+        # Don't pass originalSourceFolder - custom template files should be skipped
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        # Only File2.log should be included
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+    }
+
+    It 'ResolveFilePaths handles case-insensitive filter matching on Windows' {
+        # Create files with different case
+        $upperFile = Join-Path $sourceFolder "folder/UPPER.TXT"
+        $lowerFile = Join-Path $sourceFolder "folder/lower.txt"
+        Set-Content -Path $upperFile -Value "upper"
+        Set-Content -Path $lowerFile -Value "lower"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "*.txt" }
+            )
+
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+            # On Windows, both should match due to case-insensitive file system
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $upperMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $upperFile }
+            $lowerMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $lowerFile }
+            $upperMatch | Should -Not -BeNullOrEmpty
+            $lowerMatch | Should -Not -BeNullOrEmpty
+        }
+        finally {
+            if (Test-Path $upperFile) { Remove-Item -Path $upperFile -Force }
+            if (Test-Path $lowerFile) { Remove-Item -Path $lowerFile -Force }
+        }
+    }
 }
 
 Describe "ReplaceOwnerRepoAndBranch" {
@@ -965,15 +1216,15 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $customTemplateFolder = Join-Path $PSScriptRoot "customTemplateFolder"
         $originalTemplateFolder = Join-Path $PSScriptRoot "originalTemplateFolder"
 
-    New-Item -ItemType Directory -Path $customTemplateFolder -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.github') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.AL-Go') -Force | Out-Null
+        New-Item -ItemType Directory -Path $customTemplateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.AL-Go') -Force | Out-Null
         Set-Content -Path (Join-Path $customTemplateFolder (Join-Path '.github' $RepoSettingsFileName)) -Value '{}' -Encoding UTF8
         Set-Content -Path (Join-Path $customTemplateFolder (Join-Path '.AL-Go' $ALGoSettingsFileName)) -Value '{}' -Encoding UTF8
 
-    New-Item -ItemType Directory -Path $originalTemplateFolder -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.github') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.AL-Go') -Force | Out-Null
+        New-Item -ItemType Directory -Path $originalTemplateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.AL-Go') -Force | Out-Null
         Set-Content -Path (Join-Path $originalTemplateFolder (Join-Path '.github' $RepoSettingsFileName)) -Value '{"original":true}' -Encoding UTF8
         Set-Content -Path (Join-Path $originalTemplateFolder (Join-Path '.AL-Go' $ALGoSettingsFileName)) -Value '{"original":true}' -Encoding UTF8
 
@@ -1026,6 +1277,71 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
     }
+
+    It 'GetFilesToUpdate excludes files that match both include and exclude patterns' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @(@{ filter = "*.txt" })
+                filesToExclude = @(@{ filter = "test.txt" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        # test.txt should not be in filesToInclude
+        $includedTestTxt = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $includedTestTxt | Should -BeNullOrEmpty
+
+        # test.txt should be in filesToExclude
+        $excludedTestTxt = $filesToExclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $excludedTestTxt | Should -Not -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate ignores exclude patterns that do not match any included file' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @(@{ filter = "*.txt" })
+                filesToExclude = @(@{ filter = "nonexistent.xyz" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        # All txt files should be included
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $txtFiles = $filesToInclude | Where-Object { $_.sourceFullPath -like "*.txt" }
+        $txtFiles.Count | Should -BeGreaterThan 0
+
+        # Exclude list should not contain the non-matching pattern
+        $excludedNonExistent = $filesToExclude | Where-Object { $_.sourceFullPath -like "*.xyz" }
+        $excludedNonExistent | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate handles overlapping include patterns with different destinations' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @(
+                    @{ filter = "test.txt"; destinationFolder = "folder1" }
+                    @{ filter = "test.txt"; destinationFolder = "folder2" }
+                )
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        # Should have two entries for test.txt with different destinations
+        $testTxtFiles = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $testTxtFiles.Count | Should -Be 2
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder1/test.txt')
+        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder2/test.txt')
+    }
 }
 
 Describe 'GetFilesToUpdate (real template)' {
@@ -1052,14 +1368,13 @@ Describe 'GetFilesToUpdate (real template)' {
             }
         }
 
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
-    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
-
-    $filesToInclude | Should -Not -BeNullOrEmpty
-    $filesToInclude.Count | Should -Be 24
-    $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
-    $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-    $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 24
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
 
         # No files to remove
         $filesToExclude | Should -BeNullOrEmpty
@@ -1198,6 +1513,118 @@ Describe 'GetFilesToUpdate (real template)' {
 
         # No files to exclude
         $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate handles AppSource template type correctly' {
+        $settings = @{
+            type                        = "AppSource App"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realAppSourceAppTemplateFolder
+
+        # PowerPlatform files should be excluded for AppSource App too (same as PTE)
+        $filesToInclude | Should -Not -BeNullOrEmpty
+
+        $ppFiles = $filesToInclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
+        $ppFiles | Should -BeNullOrEmpty
+
+        # No files to remove that match PP files as they are not in the template
+        $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
+        $ppExcludes | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate with empty unusedALGoSystemFiles array does not exclude any files' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        # No additional files should be excluded due to unusedALGoSystemFiles
+        $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*_BuildPowerPlatformSolution.yaml" -or $_.sourceFullPath -like "*PullPowerPlatformChanges.yaml" -or $_.sourceFullPath -like "*PushPowerPlatformChanges.yaml" }
+        $ppExcludes.Count | Should -Be 3 # Only PP files should be excluded by default
+    }
+
+    It 'GetFilesToUpdate marks settings files with correct type' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects @('Project1')
+
+        # Check that settings files have type = 'settings'
+        $repoSettingsFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -like "*$RepoSettingsFileName" -and $_.destinationFullPath -like "*.github*$RepoSettingsFileName" })
+        $repoSettingsFiles | Should -Not -BeNullOrEmpty
+        $repoSettingsFiles[0].type | Should -Be 'settings'
+
+        $projectSettingsFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -like "*$ALGoSettingsFileName" -and $_.destinationFullPath -like "*Project1*.AL-Go*" })
+        $projectSettingsFiles | Should -Not -BeNullOrEmpty
+        $projectSettingsFiles[0].type | Should -Be 'settings'
+    }
+
+    It 'GetFilesToUpdate handles multiple projects correctly' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude  = @()
+                filesToExclude = @()
+            }
+        }
+
+        $projects = @('ProjectA', 'ProjectB', 'ProjectC')
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects $projects
+
+        # Each project should have its own settings file
+        $projectASettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectA*.AL-Go*" }
+        $projectBSettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectB*.AL-Go*" }
+        $projectCSettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectC*.AL-Go*" }
+
+        $projectASettings | Should -Not -BeNullOrEmpty
+        $projectBSettings | Should -Not -BeNullOrEmpty
+        $projectCSettings | Should -Not -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate excludes files correctly when in both unusedALGoSystemFiles and filesToExclude' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @("Test Next Major.settings.json")
+            customALGoFiles             = @{
+                filesToInclude  = @()
+                filesToExclude = @(@{ filter = "Test Next Major.settings.json" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        # Test Next Major.settings.json should be excluded
+        $testNextMajor = $filesToInclude | Where-Object { $_.sourceFullPath -like "*Test Next Major.settings.json" }
+        $testNextMajor | Should -BeNullOrEmpty
+
+        # Should be in exclude list
+        $excludedTestNextMajor = @($filesToExclude | Where-Object { $_.sourceFullPath -like "*Test Next Major.settings.json" })
+        $excludedTestNextMajor | Should -Not -BeNullOrEmpty
+        $excludedTestNextMajor.Count | Should -Be 1
     }
 }
 
