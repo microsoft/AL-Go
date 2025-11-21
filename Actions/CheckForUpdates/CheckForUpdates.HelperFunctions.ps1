@@ -818,18 +818,18 @@ function ResolveFilePaths {
 
         # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
         if(!$originalSourceFolder -and $file.origin -eq 'custom template') {
-            Write-Host "Skipping custom template file(s) with source folder '$($file.sourceFolder)' as there is no original source folder specified"
+            OutputDebug "Skipping custom template file(s) with source folder '$($file.sourceFolder)' as there is no original source folder specified"
             continue;
         }
 
         # All files are relative to the template folder
-        Write-Host "Resolving files for source folder '$($file.sourceFolder)' and filter '$($file.filter)'"
+        OutputDebug "Resolving files for source folder '$($file.sourceFolder)' and filter '$($file.filter)'"
         $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourceFolder) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
 
-        Write-Host "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
+        OutputDebug "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
 
         if(-not $sourceFiles) {
-            Write-Debug "No files found for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder')"
+            OutputDebug "No files found for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder')"
             continue
         }
 
@@ -843,11 +843,11 @@ function ResolveFilePaths {
 
             # Check if the source file is under the source folder
             if ($srcFile -notlike "$sourceFolder*") {
-                Write-Host "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
+                OutputDebug "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
                 continue
             }
 
-            Write-Host "Processing file '$($srcFile)'"
+            OutputDebug "Processing file '$($srcFile)'"
 
             # Try to find the same files in the original template folder if it is specified. Exclude custom template files
             if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
@@ -881,10 +881,10 @@ function ResolveFilePaths {
                     $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
 
                     if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullProjectFilePath.destinationFullPath) {
-                        Write-Host "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
+                        OutputDebug "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
                         continue
                     }
-                    Write-Host "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
+                    OutputDebug "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
                     $fullFilePaths += $fullProjectFilePath
                 }
             }
@@ -896,10 +896,10 @@ function ResolveFilePaths {
                 $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
 
                 if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullFilePath.destinationFullPath) {
-                    Write-Host "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
+                    OutputDebug "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
                     continue
                 }
-                Write-Host "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
+                OutputDebug "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
                 $fullFilePaths += $fullFilePath
             }
         }
@@ -993,6 +993,8 @@ function GetFilesToUpdate {
         $projects = @()
     )
 
+    OutputDebug "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
+
     $filesToInclude = GetDefaultFilesToUpdate -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
     $filesToInclude += $settings.customALGoFiles.filesToInclude
     $filesToInclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects
@@ -1006,7 +1008,7 @@ function GetFilesToUpdate {
         $fileToExclude = $_
         $include = $filesToInclude | Where-Object { $_.sourceFullPath -eq $fileToExclude.sourceFullPath }
         if(-not $include) {
-            Write-Host "Excluding file $($fileToExclude.sourceFullPath) from exclude list as it is not in the include list"
+            OutputDebug "Excluding file $($fileToExclude.sourceFullPath) from exclude list as it is not in the include list"
         }
         return $include
     }
@@ -1016,7 +1018,7 @@ function GetFilesToUpdate {
         $fileToInclude = $_
         $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToInclude.sourceFullPath })
         if(-not $include) {
-            Write-Host "Excluding file $($fileToInclude.sourceFullPath) from include as it is in the exclude list"
+            OutputDebug "Excluding file $($fileToInclude.sourceFullPath) from include as it is in the exclude list"
         }
         return $include
     }
@@ -1029,12 +1031,19 @@ function GetFilesToUpdate {
     if ($unusedFilesToExclude) {
         Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions." -DeprecationTag "unusedALGoSystemFiles"
 
-        Write-Host "The following files are marked as unused and will be removed if they exist:"
-        $unusedFilesToExclude | ForEach-Object { Write-Host "- $($_.destinationFullPath)" }
+        OutputDebug "The following files are marked as unused and will be removed if they exist:"
+        $unusedFilesToExclude | ForEach-Object { OutputDebug "- $($_.destinationFullPath)" }
 
         $filesToInclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) }
         $filesToExclude += @($unusedFilesToExclude)
     }
+
+    # List all files to be included and excluded with their source and destination paths, type and original source path (if any)
+    OutputDebug "Files to include:"
+    $filesToInclude | ForEach-Object { OutputDebug "  -Source: $($_.sourceFullPath), Destination: $($_.destinationFullPath), Type: $($_.type), Original Source: $($_.originalSourceFullPath)" }
+
+    OutputDebug "Files to exclude:"
+    $filesToExclude | ForEach-Object { OutputDebug "  -Source: $($_.sourceFullPath), Destination: $($_.destinationFullPath), Type: $($_.type), Original Source: $($_.originalSourceFullPath)" }
 
     return @($filesToInclude), @($filesToExclude)
 }

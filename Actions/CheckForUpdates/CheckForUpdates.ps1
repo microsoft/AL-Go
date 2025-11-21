@@ -115,7 +115,7 @@ if (-not $isDirectALGo) {
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
-$filesToInclude, $filesToExclude = GetFilesToInclude -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+$filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
 
 # $updateFiles will hold an array of files, which needs to be updated
 $updateFiles = @()
@@ -145,6 +145,8 @@ foreach($fileToInclude in $filesToInclude) {
     $dstPath = $fileToInclude.destinationFullPath
 
     $dstFileExists = Test-Path -Path $dstPath -PathType Leaf
+
+    Write-Host "Processing file: $srcPath -> $dstPath (type: $type)"
 
     switch ($type) {
         "workflow" {
