@@ -261,14 +261,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
         }
 
         It 'Shell setting can only be pwsh or powershell' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.shell = 42
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/shell'"
@@ -276,7 +276,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $defaultSettings.shell = "random"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: The string value is not a match for the indicated regular expression at '/shell'"
@@ -288,7 +288,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings = GetDefaultSettings
             $defaultSettings.projects = "not an array"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"string`" but should be `"array`" at '/projects'"
@@ -297,7 +297,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # If the projects setting is an array, but contains non-string values, it should throw an error
             $defaultSettings.projects = @("project1", 42)
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/projects/1'"
@@ -305,9 +305,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # If the projects setting is an array of strings, it should pass the schema validation
             $defaultSettings.projects = @("project1")
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
             $defaultSettings.projects = @("project1", "project2")
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
         }
 
         It 'overwriteSettings property resets settings from destination object (simple types)' {

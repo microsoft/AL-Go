@@ -10,6 +10,14 @@ Old versions of AL-Go for GitHub uses old and unsupported versions of GitHub act
 
 When handling support requests, we will request that you to use the latest version of AL-Go for GitHub and in general, fixes will only be made available in a preview version of AL-Go for GitHub and subsequently in the next version released.
 
+## Changes in effect after October 1st 2026
+
+<a id="unusedALGoSystemFiles"></a>
+
+### Setting `unusedALGoSystemFiles` will no longer be supported
+
+The recommended approach is to use the [`customALGoFiles.filesToExclude`](http://aka.ms/algosettings#customALGoFiles) setting to specify files from the AL-Go template that should be excluded from your repositories.
+
 ## Changes in effect after October 1st 2025
 
 <a id="alwaysBuildAllProjects"></a>

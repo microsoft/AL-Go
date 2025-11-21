@@ -1,10 +1,17 @@
 Import-Module (Join-Path -Path $PSScriptRoot "DebugLogHelper.psm1")
 
 $ALGoFolderName = '.AL-Go'
-$ALGoSettingsFile = Join-Path '.AL-Go' 'settings.json'
-$RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
-$CustomTemplateRepoSettingsFile = Join-Path '.github' 'AL-Go-TemplateRepoSettings.doNotEdit.json'
-$CustomTemplateProjectSettingsFile = Join-Path '.github' 'AL-Go-TemplateProjectSettings.doNotEdit.json'
+$ALGoSettingsFileName = 'settings.json'
+$ALGoSettingsFile = Join-Path '.AL-Go' $ALGoSettingsFileName
+
+$RepoSettingsFileName = 'AL-Go-Settings.json'
+$RepoSettingsFile = Join-Path '.github' $RepoSettingsFileName
+
+$CustomTemplateRepoSettingsFileName = 'AL-Go-TemplateRepoSettings.doNotEdit.json'
+$CustomTemplateRepoSettingsFile = Join-Path '.github' $CustomTemplateRepoSettingsFileName
+
+$CustomTemplateProjectSettingsFileName = 'AL-Go-TemplateProjectSettings.doNotEdit.json'
+$CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectSettingsFileName
 
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
@@ -242,6 +249,10 @@ function GetDefaultSettings
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
+        "customALGoFiles" = [ordered]@{
+            "filesToInclude"                             = @()
+            "filesToExclude"                            = @()
+        }
     }
 }
 
@@ -610,4 +621,4 @@ function SanitizeWorkflowName {
 }
 
 Export-ModuleMember -Function ReadSettings
-Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile
+Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile, RepoSettingsFileName, ALGoSettingsFileName, CustomTemplateRepoSettingsFileName, CustomTemplateProjectSettingsFileName
