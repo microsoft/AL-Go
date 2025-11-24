@@ -16,7 +16,7 @@ When handling support requests, we will request that you to use the latest versi
 
 ### Setting `unusedALGoSystemFiles` will no longer be supported
 
-The recommended approach is to use the [`customALGoFiles.filesToExclude`](http://aka.ms/algosettings#customALGoFiles) setting to specify files from the AL-Go template that should be excluded from your repositories.
+The recommended approach is to use the [`customALGoFiles.filesToExclude`](https://aka.ms/algosettings#customALGoFiles) setting to specify files from the AL-Go template that should be excluded from your repositories.
 
 ## Changes in effect after October 1st 2025
 

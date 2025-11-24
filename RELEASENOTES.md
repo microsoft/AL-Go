@@ -57,7 +57,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 
 ### Deprecations
 
-- `unusedALGoSystemFiles` will be removed after October 1st 2026. Please use [`customALGoFiles.filesToExclude`](http://aka.ms/algosettings#customALGoFiles) instead.
+- `unusedALGoSystemFiles` will be removed after October 1st 2026. Please use [`customALGoFiles.filesToExclude`](https://aka.ms/algosettings#customALGoFiles) instead.
 
 ## v8.0
 
