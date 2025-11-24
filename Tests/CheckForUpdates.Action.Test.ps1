@@ -1,4 +1,4 @@
-Get-Module TestActionsHelper | Remove-Module -Force
+﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1")
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
