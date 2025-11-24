@@ -913,7 +913,7 @@ function GetDefaultFilesToInclude {
         [switch] $includeCustomTemplateFiles
     )
 
-    $filesToUpdate = @(
+    $filesToInclude = @(
         [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
         [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.copy.md' }
@@ -927,13 +927,13 @@ function GetDefaultFilesToInclude {
 
     if($includeCustomTemplateFiles) {
         # If there is an original template folder, we also need to include custom template files (RepoSettings and ProjectSettings)
-        $filesToUpdate += @(
+        $filesToInclude += @(
             [ordered]@{ 'sourceFolder' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'origin' = 'custom template' }
             [ordered]@{ 'sourceFolder' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationFolder' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'origin' = 'custom template' }
         )
     }
 
-    return $filesToUpdate
+    return $filesToInclude
 }
 
 function GetDefaultFilesToExclude {
