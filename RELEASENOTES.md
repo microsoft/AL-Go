@@ -55,6 +55,10 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
 
+### Deprecations
+
+- `unusedALGoSystemFiles` will be removed after October 1st 2026. Please use [`customALGoFiles.filesToExclude`](http://aka.ms/algosettings#customALGoFiles) instead.
+
 ## v8.0
 
 ### Mechanism to overwrite complex settings type
