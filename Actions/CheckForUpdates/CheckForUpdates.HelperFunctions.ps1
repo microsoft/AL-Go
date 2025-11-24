@@ -996,6 +996,14 @@ function GetFilesToUpdate {
 
     Write-Host "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
 
+    # Send telemetery about customALGoFiles usage
+    if ($settings.customALGoFiles.filesToInclude.Count -gt 0) {
+        Trace-Information -Message "Usage: Custom AL-Go Files (Include)"
+    }
+    if ($settings.customALGoFiles.filesToExclude.Count -gt 0) {
+        Trace-Information -Message "Usage: Custom AL-Go Files (Exclude)"
+    }
+
     $filesToInclude = GetDefaultFilesToInclude -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
     $filesToInclude += $settings.customALGoFiles.filesToInclude
     $filesToInclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects)
