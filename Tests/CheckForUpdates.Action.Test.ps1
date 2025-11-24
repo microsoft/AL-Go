@@ -702,8 +702,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*not a valid choice*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*not a valid choice*"
     }
 
     It 'ApplyWorkflowDefaultInputs handles inputs without existing default' {
@@ -811,8 +810,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*Expected boolean value*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*Expected boolean value*"
     }
 
     It 'ApplyWorkflowDefaultInputs validates number type mismatch' {
@@ -842,8 +840,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*Expected number value*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*Expected number value*"
     }
 
     It 'ApplyWorkflowDefaultInputs validates string type mismatch' {
@@ -873,8 +870,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*Expected string value*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*Expected string value*"
     }
 
     It 'ApplyWorkflowDefaultInputs validates choice type' {
@@ -942,8 +938,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         # Apply the defaults - should throw validation error
-        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*not a valid choice*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*not a valid choice*"
     }
 
     It 'ApplyWorkflowDefaultInputs validates choice value with case-sensitive matching' {
@@ -987,8 +982,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             )
         }
 
-        { ApplyWorkflowDefaultInputs -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } |
-            Should -Throw "*case-sensitive match required*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } | Should -Throw "*case-sensitive match required*"
 
         # Test 3: Uppercase version should also fail
         $yaml3 = [Yaml]::new($yamlContent)
@@ -998,8 +992,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             )
         }
 
-        { ApplyWorkflowDefaultInputs -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } |
-            Should -Throw "*case-sensitive match required*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } | Should -Throw "*case-sensitive match required*"
     }
 
     It 'ApplyWorkflowDefaultInputs handles inputs without type specification' {
@@ -1785,7 +1778,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.ps1" })
+                filesToInclude = @(@{ filter = "*.ps1" })
                 filesToExclude = @()
             }
         }
@@ -1804,7 +1797,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.txt" })
+                filesToInclude = @(@{ filter = "*.txt" })
                 filesToExclude = @()
             }
         }
@@ -1826,7 +1819,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
+                filesToInclude = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
                 filesToExclude = @()
             }
         }
@@ -1847,12 +1840,12 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
+                filesToInclude = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
                 filesToExclude = @(@{ filter = "test2.txt" })
             }
         }
 
-    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
@@ -1871,12 +1864,12 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "test.ps1"; destinationName = "renamed.txt" })
+                filesToInclude = @(@{ filter = "test.ps1"; destinationName = "renamed.txt" })
                 filesToExclude = @()
             }
         }
 
-    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
@@ -1890,7 +1883,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "test.ps1"; destinationFolder = 'dstPath'; destinationName = "renamed.txt" })
+                filesToInclude = @(@{ filter = "test.ps1"; destinationFolder = 'dstPath'; destinationName = "renamed.txt" })
                 filesToExclude = @()
             }
         }
@@ -1908,7 +1901,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.ps1"; type = "script" })
+                filesToInclude = @(@{ filter = "*.ps1"; type = "script" })
                 filesToExclude = @()
             }
         }
@@ -1928,7 +1921,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.txt"; type = "text" })
+                filesToInclude = @(@{ filter = "*.txt"; type = "text" })
                 filesToExclude = @(@{ filter = "test.txt" })
             }
         }
@@ -1953,19 +1946,19 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "nonPTE"
             unusedALGoSystemFiles = @("test.ps1")
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*" })
+                filesToInclude = @(@{ filter = "*" })
                 filesToExclude = @()
             }
         }
 
-    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-    $filesToInclude | Should -Not -BeNullOrEmpty
-    $filesToInclude.Count | Should -Be 2
-    $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
-    $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
-    $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
-    $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 2
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
 
         # One file to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
@@ -1979,7 +1972,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.txt"; type = "text"; perProject = $true })
+                filesToInclude = @(@{ filter = "*.txt"; type = "text"; perProject = $true })
                 filesToExclude = @()
             }
         }
@@ -1997,7 +1990,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude  = @(@{ filter = "*.txt" })
+                filesToInclude = @(@{ filter = "*.txt" })
                 filesToExclude = @(@{ filter = "no-match-*.none" })
             }
         }
@@ -2024,7 +2017,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
                 type                  = "NotPTE"
                 unusedALGoSystemFiles = @()
                 customALGoFiles       = @{
-                    filesToInclude  = @(@{ filter = "perProjectFile.algo"; perProject = $true; destinationFolder = 'custom' })
+                    filesToInclude = @(@{ filter = "perProjectFile.algo"; perProject = $true; destinationFolder = 'custom' })
                     filesToExclude = @()
                 }
             }
@@ -2072,7 +2065,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
                 powerPlatformSolutionFolder = ''
                 unusedALGoSystemFiles       = @()
                 customALGoFiles             = @{
-                    filesToInclude  = @()
+                    filesToInclude = @()
                     filesToExclude = @()
                 }
             }
@@ -2118,10 +2111,10 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
     It 'GetFilesToUpdate excludes files that match both include and exclude patterns' {
         $settings = @{
-            type                        = "NotPTE"
-            unusedALGoSystemFiles       = @()
-            customALGoFiles             = @{
-                filesToInclude  = @(@{ filter = "*.txt" })
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt" })
                 filesToExclude = @(@{ filter = "test.txt" })
             }
         }
@@ -2139,10 +2132,10 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
     It 'GetFilesToUpdate ignores exclude patterns that do not match any included file' {
         $settings = @{
-            type                        = "NotPTE"
-            unusedALGoSystemFiles       = @()
-            customALGoFiles             = @{
-                filesToInclude  = @(@{ filter = "*.txt" })
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt" })
                 filesToExclude = @(@{ filter = "nonexistent.xyz" })
             }
         }
@@ -2161,10 +2154,10 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
     It 'GetFilesToUpdate handles overlapping include patterns with different destinations' {
         $settings = @{
-            type                        = "NotPTE"
-            unusedALGoSystemFiles       = @()
-            customALGoFiles             = @{
-                filesToInclude  = @(
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
                     @{ filter = "test.txt"; destinationFolder = "folder1" }
                     @{ filter = "test.txt"; destinationFolder = "folder2" }
                 )
@@ -2201,7 +2194,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = "PowerPlatformSolution"
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2224,7 +2217,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2261,21 +2254,21 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = "PowerPlatformSolution"
             unusedALGoSystemFiles       = @("Test Next Major.settings.json")
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
 
-    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
-    $filesToInclude | Should -Not -BeNullOrEmpty
-    $filesToInclude.Count | Should -Be 23
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 23
 
-    # Two files to remove
-    $filesToExclude | Should -Not -BeNullOrEmpty
-    $filesToExclude.Count | Should -Be 1
-    $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-    $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/Test Next Major.settings.json')
+        # Two files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/Test Next Major.settings.json')
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
@@ -2284,24 +2277,24 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @("Test Next Major.settings.json", "_BuildPowerPlatformSolution.yaml")
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
 
-    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
-    $filesToInclude | Should -Not -BeNullOrEmpty
-    $filesToInclude.Count | Should -Be 20
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 20
 
-    # Four files to remove
-    $filesToExclude | Should -Not -BeNullOrEmpty
-    $filesToExclude.Count | Should -Be 4
+        # Four files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 4
 
-    $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-    $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
-    $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-    $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
     }
 
     It 'Returns the custom template settings files when there is a custom template' {
@@ -2310,7 +2303,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = "PowerPlatformSolution"
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2359,7 +2352,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2383,7 +2376,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2401,7 +2394,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2424,7 +2417,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @()
             }
         }
@@ -2448,7 +2441,7 @@ Describe 'GetFilesToUpdate (real template)' {
             powerPlatformSolutionFolder = ''
             unusedALGoSystemFiles       = @("Test Next Major.settings.json")
             customALGoFiles             = @{
-                filesToInclude  = @()
+                filesToInclude = @()
                 filesToExclude = @(@{ filter = "Test Next Major.settings.json" })
             }
         }
