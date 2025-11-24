@@ -33,7 +33,7 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
-Describe('YamlClass Tests') {
+Describe "YamlClass Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptRoot', Justification = 'False positive.')]
@@ -2175,7 +2175,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
     }
 }
 
-Describe 'GetFilesToUpdate (real template)' {
+Describe "GetFilesToUpdate (real template)" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
