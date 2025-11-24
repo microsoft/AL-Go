@@ -698,7 +698,7 @@
             "description": "An object containing the custom AL-Go files configuration. See https://aka.ms/ALGoSettings#customALGoFiles",
             "type": "object",
             "properties": {
-                    "filesToInclude": {
+                "filesToInclude": {
                     "type": "array",
                     "items": {
                         "type": "object",
