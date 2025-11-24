@@ -1,4 +1,5 @@
 Import-Module (Join-Path $PSScriptRoot '../.Modules/ReadSettings.psm1') -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot '../.Modules/DebugLogHelper.psm1') -DisableNameChecking
 
 <#
 .SYNOPSIS
@@ -993,35 +994,35 @@ function GetFilesToUpdate {
         $projects = @()
     )
 
-    OutputDebug "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
+    Write-Host "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
 
     $filesToInclude = GetDefaultFilesToInclude -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
     $filesToInclude += $settings.customALGoFiles.filesToInclude
-    $filesToInclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects
+    $filesToInclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects)
 
     $filesToExclude = GetDefaultFilesToExclude -settings $settings
     $filesToExclude += $settings.customALGoFiles.filesToExclude
-    $filesToExclude = ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects
+    $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects)
 
     # Exclude files from filesToExclude that are not in filesToInclude
-    $filesToExclude = $filesToExclude | Where-Object {
+    $filesToExclude = @($filesToExclude | Where-Object {
         $fileToExclude = $_
         $include = $filesToInclude | Where-Object { $_.sourceFullPath -eq $fileToExclude.sourceFullPath }
         if(-not $include) {
             OutputDebug "Excluding file $($fileToExclude.sourceFullPath) from exclude list as it is not in the include list"
         }
         return $include
-    }
+    })
 
     # Exclude files from filesToInclude that are in filesToExclude
-    $filesToInclude = $filesToInclude | Where-Object {
+    $filesToInclude = @($filesToInclude | Where-Object {
         $fileToInclude = $_
         $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToInclude.sourceFullPath })
         if(-not $include) {
             OutputDebug "Excluding file $($fileToInclude.sourceFullPath) from include as it is in the exclude list"
         }
         return $include
-    }
+    })
 
     # Apply unusedALGoSystemFiles logic
     $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
@@ -1034,16 +1035,14 @@ function GetFilesToUpdate {
         OutputDebug "The following files are marked as unused and will be removed if they exist:"
         $unusedFilesToExclude | ForEach-Object { OutputDebug "- $($_.destinationFullPath)" }
 
-        $filesToInclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) }
+        $filesToInclude = @($filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) })
         $filesToExclude += @($unusedFilesToExclude)
     }
 
     # List all files to be included and excluded with their source and destination paths, type and original source path (if any)
-    OutputDebug "Files to include:"
-    $filesToInclude | ForEach-Object { OutputDebug "  -Source: $($_.sourceFullPath), Destination: $($_.destinationFullPath), Type: $($_.type), Original Source: $($_.originalSourceFullPath)" }
-
-    OutputDebug "Files to exclude:"
-    $filesToExclude | ForEach-Object { OutputDebug "  -Source: $($_.sourceFullPath), Destination: $($_.destinationFullPath), Type: $($_.type), Original Source: $($_.originalSourceFullPath)" }
+    $fileFormatter = { param($file) "  -Source: $($file.sourceFullPath), Destination: $($file.destinationFullPath), Type: $($file.type), Original Source: $($file.originalSourceFullPath)"}
+    OutputArray -Message "Files to include: $($filesToInclude.Count)" -Array $filesToInclude -Formatter $fileFormatter
+    OutputArray -Message "Files to exclude: $($filesToExclude.Count)" -Array $filesToExclude -Formatter $fileFormatter
 
     return @($filesToInclude), @($filesToExclude)
 }
