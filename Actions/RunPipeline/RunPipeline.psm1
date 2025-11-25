@@ -97,7 +97,7 @@ function IsSymbolsOnlyPackage {
     The URL of the app file to download.
     .PARAMETER DownloadPath
     The path where the app file should be downloaded.
-    .RETURNS
+    .OUTPUTS
     The path to the downloaded app file.
 #>
 function Get-AppFileFromUrl {
