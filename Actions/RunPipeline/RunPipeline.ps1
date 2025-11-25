@@ -203,13 +203,9 @@ try {
             else {
                 $finalUrl = $url
             }
-
             if ($finalUrl -like 'http*://*') {
                 # Try downloading the app file
                 try {
-                    if (-not (Test-Path $tempDependenciesLocation)) {
-                        New-Item -Path $tempDependenciesLocation -ItemType Directory | Out-Null
-                    }
                     $urlWithoutQuery = $finalUrl.Split('?')[0].TrimEnd('/')
                     $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
                     $decodedFileName = [Uri]::UnescapeDataString($rawFileName)

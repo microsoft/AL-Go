@@ -131,4 +131,4 @@ function Invoke-SigningTool() {
     }
 }
 
-Export-ModuleMember -Function *-*
+Export-ModuleMember -Function Invoke-SigningTool
