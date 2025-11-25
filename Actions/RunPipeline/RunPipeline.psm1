@@ -118,6 +118,7 @@ function Get-AppFileFromUrl {
     # Get the final app file path
     $appFile = Join-Path $DownloadPath $sanitizedFileName
     Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    return $appFile
 }
 
 Export-ModuleMember -Function Test-InstallApps, Get-AppFileFromUrl
