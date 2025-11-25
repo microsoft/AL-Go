@@ -55,6 +55,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
+- Issue 1512: Throw a warning before trying to publish symbols packages
 
 ### Deprecations
 
@@ -87,7 +88,6 @@ Please note that some automated features are premium and require the use of [Git
 - Issue 1937 trackALAlertsInGitHub is failing in preview
 - DeployTo settings from environment-specific AL-Go settings are not applied when deploying
 - `ReadSettings` action outputs too much information that is mainly used for debugging
-- Issue 1512: Throw a warning before trying to publish symbols packages
 
 ## v7.3
 
