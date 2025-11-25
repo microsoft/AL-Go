@@ -1,12 +1,25 @@
 ﻿function DownloadAlDoc {
+    Param(
+        [string] $artifactUrl = ''
+    )
     if ("$ENV:aldocPath" -eq "") {
         $ENV:aldocCommand = ''
         Write-Host "Locating aldoc"
-        $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
+        if ($artifactUrl -notlike "https://*") {
+            Write-Host "ArtifactUrl ($artifactUrl) provided, but not in the format of a URL, ignoring it and using latest non-insider sandbox artifact instead."
+            $artifactUrl = Get-BCArtifactUrl -type sandbox -country core -select Latest -accept_insiderEula
+        } elseif ($artifactUrl -notlike "*/core") {
+            # Change country to core as aldoc is not shipped in country specific artifacts
+            $artifactUrlCountry = $artifactUrl.Split('/')[-1]
+            $artifactUrl = $artifactUrl.Replace("/$artifactUrlCountry",'/core')
+        }
+        Write-Host "Found artifactUrl: $artifactUrl"
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
+        OutputDebug -message "Downloaded artifacts to $folder"
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
-        $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        $tempFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
+        OutputDebug -message "Copying $alLanguageVsix to $($tempFolder).zip"
         Copy-Item -Path $alLanguageVsix -Destination "$($tempFolder).zip"
         New-Item -Path $tempFolder -ItemType Directory | Out-Null
         Write-Host "Extracting aldoc"
@@ -46,7 +59,7 @@ function GetAppNameAndFolder {
         [string] $appFile
     )
 
-    $tmpFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $tmpFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     Extract-AppFileToFolder -appFilename $appFile -appFolder $tmpFolder -generateAppJson
     $appJson = Get-Content -Path (Join-Path $tmpFolder 'app.json') -Encoding utf8 | ConvertFrom-Json
     $appJson.name
@@ -140,9 +153,10 @@ function GenerateDocsSite {
         [string] $docsPath,
         [string] $logLevel,
         [switch] $groupByProject,
-        [switch] $hostIt
+        [switch] $hostIt,
+        [string] $artifactUrl = ''
     )
-
+    OutputDebugFunctionCall
     function ReplacePlaceHolders {
         Param(
             [string] $str,
@@ -175,7 +189,7 @@ function GenerateDocsSite {
     }
     $indexContent = ReplacePlaceHolders -str $indexTemplate -version $version -releaseNotes $releaseNotes -indexTemplateRelativePath $thisTemplateRelativePath
 
-    $aldocPath, $aldocCommand = DownloadAlDoc
+    $aldocPath, $aldocCommand = DownloadAlDoc -artifactUrl $artifactUrl
     if ($aldocCommand) {
         $aldocArguments = @($aldocPath)
     }
@@ -184,7 +198,7 @@ function GenerateDocsSite {
         $aldocCommand = $aldocPath
     }
 
-    $docfxPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $docfxPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     New-Item -Path $docfxPath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps
@@ -197,14 +211,27 @@ function GenerateDocsSite {
         }
         $apps = @($apps | Select-Object -Unique)
 
-        $arguments = $aldocArguments + @(
-            "init"
-            "--output ""$docfxpath"""
-            "--loglevel $loglevel"
-            "--targetpackages ""$($apps -join '","')"""
-            )
-        Write-Host "invoke $aldocCommand $arguments"
-        CmdDo -command $aldocCommand -arguments $arguments
+        try {
+            $arguments = $aldocArguments + @(
+                "init"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--targetpackageslist $(( $apps | ForEach-Object { '"' + $_ + '"' } ) -join ' ')"
+                )
+            Write-Host "invoke $aldocCommand $arguments"
+            CmdDo -command $aldocCommand -arguments $arguments
+        }
+        catch {
+            # Retrying with --targetpackages as --targetpackageslist is only available from BC 27 and forward
+            $arguments = $aldocArguments + @(
+                "init"
+                "--output ""$docfxpath"""
+                "--loglevel $loglevel"
+                "--targetpackages ""$($apps -join '","')"""
+                )
+            Write-Host "invoke $aldocCommand $arguments"
+            CmdDo -command $aldocCommand -arguments $arguments
+        }
 
         # Update docfx.json
         Write-Host "Update docfx.json"

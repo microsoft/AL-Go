@@ -123,9 +123,9 @@ function GetDefaultSettings
         "ghTokenWorkflowSecretName"                     = "ghTokenWorkflow"
         "adminCenterApiCredentialsSecretName"           = "adminCenterApiCredentials"
         "applicationInsightsConnectionStringSecretName" = "applicationInsightsConnectionString"
-        "keyVaultCertificateUrlSecretName"              = ""
-        "keyVaultCertificatePasswordSecretName"         = ""
-        "keyVaultClientIdSecretName"                    = ""
+        "keyVaultCertificateUrlSecretName"              = "keyVaultCertificateUrl"
+        "keyVaultCertificatePasswordSecretName"         = "keyVaultCertificatePassword"
+        "keyVaultClientIdSecretName"                    = "keyVaultClientId"
         "keyVaultCodesignCertificateName"               = ""
         "codeSignCertificateUrlSecretName"              = "codeSignCertificateUrl"
         "codeSignCertificatePasswordSecretName"         = "codeSignCertificatePassword"
@@ -241,16 +241,17 @@ function GetDefaultSettings
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
         "reportSuppressedDiagnostics"                   = $false
+        "workflowDefaultInputs"                         = @()
     }
 }
 
 
 <#
     .SYNOPSIS
-        Read settings from the settings files and merge them into an ordered dictionary.
+        Read settings from the settings files and merge them into an ordered dictionary, with optional custom settings override.
     .DESCRIPTION
         This function reads settings from various files and merges them into an ordered dictionary.
-        The settings are read from the following files:
+        The settings are read from the following files (in order of precedence):
         - ALGoOrgSettings (github Variable)                    = Organization settings variable
         - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
         - .github/AL-Go-Settings.json                          = Repository Settings file
@@ -261,6 +262,7 @@ function GetDefaultSettings
         - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
         - <project>/.AL-Go/<userName>.settings.json            = User settings file
         - ALGoEnvSettings (github Variable)                    = Deployment Environment settings variable
+        - customSettings parameter (JSON string)               = Custom settings with highest precedence
     .PARAMETER baseFolder
         The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
     .PARAMETER repoName
@@ -283,6 +285,8 @@ function GetDefaultSettings
         The value of the current GitHub environment settings variable, based on workflow context. Default is $ENV:ALGoEnvSettings.
     .PARAMETER environmentName
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
+    .PARAMETER customSettings
+        JSON formatted string that will be applied last to override any other settings. These settings have the highest precedence.
 #>
 function ReadSettings {
     Param(
@@ -296,7 +300,8 @@ function ReadSettings {
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
-        [string] $environmentName = "$ENV:ALGoEnvName"
+        [string] $environmentName = "$ENV:ALGoEnvName",
+        [string] $customSettings = ""
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -344,7 +349,7 @@ function ReadSettings {
         }
     }
 
-    # Read settings from repository settings file
+    # Read settings from the custom template repository settings file
     $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
     $settingsObjects += @{
         "Source" = "$CustomTemplateRepoSettingsFile"
@@ -436,6 +441,21 @@ function ReadSettings {
             "Source" = "ALGoEnvSettings for $environmentName"
             "Type" = "Variable"
             "Settings" = $environmentVariableObject
+        }
+    }
+
+    # Read custom settings (parameter)
+    if ($customSettings) {
+        try {
+            $customSettingsObject = $customSettings | ConvertFrom-Json
+        }
+        catch {
+            throw "Failed to parse customSettings JSON: $($_.Exception.Message)"
+        }
+        $settingsObjects += @{
+            "Source" = "CustomSettings"
+            "Type" = "Parameter"
+            "Settings" = $customSettingsObject
         }
     }
 

@@ -39,6 +39,12 @@ jobs:
         with:
           shell: powershell
 
+      - name: Determine ArtifactUrl
+        id: determineArtifactUrl
+        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
+        with:
+          shell: powershell
+
       - name: Determine Deployment Environments
         id: DetermineDeploymentEnvironments
         uses: microsoft/AL-Go-Actions/DetermineDeploymentEnvironments@main
@@ -58,6 +64,7 @@ jobs:
         with:
           shell: powershell
           artifacts: 'latest'
+          artifactUrl: ${{ env.artifact }}
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0

@@ -194,6 +194,51 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
+            # Test customSettings parameter - should have highest precedence
+            # customSettings overrides all other settings (including user settings)
+            $customSettingsJson = @{ "property1" = "custom1"; "property2" = "custom2"; "property9" = "custom9" } | ConvertTo-Json -Depth 99
+            $customSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings $customSettingsJson
+            $customSettings.property1 | Should -Be 'custom1'    # Overrides user setting
+            $customSettings.property2 | Should -Be 'custom2'    # Overrides workflow setting
+            $customSettings.property3 | Should -Be 'repo3'      # Unchanged (not in custom settings)
+            $customSettings.property4 | Should -Be 'branch4'    # Unchanged (not in custom settings)
+            $customSettings.property5 | Should -Be 'multi5'     # Unchanged (not in custom settings)
+            $customSettings.property6 | Should -Be 'user6'      # Unchanged (not in custom settings)
+            $customSettings.property9 | Should -Be 'custom9'    # New property from custom settings
+
+            # Test customSettings with empty string (should not affect existing behavior)
+            $emptyCustomSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings ''
+            $emptyCustomSettings.property1 | Should -Be 'user1'      # Same as without custom settings
+            $emptyCustomSettings.property2 | Should -Be 'workflow2'  # Same as without custom settings
+            $emptyCustomSettings.property3 | Should -Be 'repo3'      # Same as without custom settings
+
+            # Test customSettings with array merging
+            $customArraySettingsJson = @{ "arr1" = @("custom1", "custom2") } | ConvertTo-Json -Depth 99
+            $customArraySettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -orgSettingsVariableValue (@{ "arr1" = @("org3") } | ConvertTo-Json -Depth 99) -customSettings $customArraySettingsJson
+            $customArraySettings.arr1 | Should -Be @("org3", "repo1", "repo2", "custom1", "custom2")  # Custom values are merged at the end
+
+            # Test customSettings with overwriteSettings to replace arrays
+            $customOverwriteSettingsJson = @{ "overwriteSettings" = @("arr1"); "arr1" = @("customonly1", "customonly2") } | ConvertTo-Json -Depth 99
+            $customOverwriteSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -orgSettingsVariableValue (@{ "arr1" = @("org3") } | ConvertTo-Json -Depth 99) -customSettings $customOverwriteSettingsJson
+            $customOverwriteSettings.arr1 | Should -Be @("customonly1", "customonly2")  # Array completely replaced by custom settings
+
+            # Test invalid customSettings JSON should throw
+            { ReadSettings -baseFolder $tempName -project 'Project' -customSettings 'invalid json' } | Should -Throw
+
+            # Test customSettings with complex object
+            $customComplexSettingsJson = @{
+                "deliverToAppSource" = @{
+                    "mainAppFolder" = "CustomApp"
+                    "productId" = "CustomProductId"
+                    "customProperty" = "CustomValue"
+                }
+            } | ConvertTo-Json -Depth 99
+            $customComplexSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings $customComplexSettingsJson
+            $customComplexSettings.deliverToAppSource.mainAppFolder | Should -Be 'CustomApp'          # Overrides default empty string
+            $customComplexSettings.deliverToAppSource.productId | Should -Be 'CustomProductId'        # Overrides default empty string
+            $customComplexSettings.deliverToAppSource.customProperty | Should -Be 'CustomValue'       # New property added
+            $customComplexSettings.deliverToAppSource.continuousDelivery | Should -Be $false          # Default value preserved (not overridden)
+
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
@@ -413,6 +458,66 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # overwriteSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            New-Item $githubFolder -ItemType Directory | Out-Null
+
+            # Create conditional settings with two blocks that both match and both have workflowDefaultInputs
+            $conditionalSettings = [ordered]@{
+                "conditionalSettings" = @(
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value1" }
+                            )
+                        }
+                    }
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value2" },
+                                @{ "name" = "input2"; "value" = "value3" }
+                            )
+                        }
+                    }
+                )
+            }
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
+
+            # Both conditional blocks match branch 'main', so both should be applied
+            $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName 'main' -userName 'user'
+
+            # Verify array was merged - should have 3 entries total
+            $settings.workflowDefaultInputs | Should -Not -BeNullOrEmpty
+            $settings.workflowDefaultInputs.Count | Should -Be 3
+
+            # First entry from first conditional block
+            $settings.workflowDefaultInputs[0].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[0].value | Should -Be 'value1'
+
+            # Second entry from second conditional block
+            $settings.workflowDefaultInputs[1].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[1].value | Should -Be 'value2'
+
+            # Third entry from second conditional block
+            $settings.workflowDefaultInputs[2].name | Should -Be 'input2'
+            $settings.workflowDefaultInputs[2].value | Should -Be 'value3'
+
+            $ENV:ALGoRepoSettings = ''
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
         }
     }
 }

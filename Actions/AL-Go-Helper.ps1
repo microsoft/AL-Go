@@ -296,7 +296,7 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         $webclient = New-Object System.Net.WebClient
         if ($bcContainerHelperVersion -like "https://*") {
             # Use temp space for private versions
-            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $tempName = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
             Write-Host "Downloading BcContainerHelper developer version from $bcContainerHelperVersion"
             try {
                 $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
@@ -369,7 +369,7 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
     $bcContainerHelperVersion = $defaultBcContainerHelperVersion
 
     if ("$env:Settings" -ne "") {
-        $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
+        $repoSettingsPath = Join-Path (GetTemporaryPath) "$([Guid]::NewGuid().ToString()).json"
         $env:Settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
     }
     else {
@@ -917,6 +917,30 @@ function InstallModule {
     Import-Module -Name $name -MinimumVersion $minimumVersion -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
+<#
+    Function to get the temporary path.
+    In the context of GitHub Actions, it uses the RUNNER_TEMP environment variable if available. This directory is emptied at the beginning and end of each job.
+    Otherwise, it falls back to the system's default temporary path.
+#>
+function GetTemporaryPath {
+    if ($env:RUNNER_TEMP) {
+        return $env:RUNNER_TEMP
+    } else {
+        return ([System.IO.Path]::GetTempPath())
+    }
+}
+
+<#
+    Function to create a new temporary folder.
+    It generates a unique folder name using a random file name and creates the directory in the temporary path.
+    Returns the path of the newly created temporary folder.
+#>
+function NewTemporaryFolder {
+    $tempFolder = Join-Path (GetTemporaryPath) ([System.IO.Path]::GetRandomFileName())
+    New-Item -Path $tempFolder -ItemType Directory | Out-Null
+    return $tempFolder
+}
+
 function CloneIntoNewFolder {
     Param(
         [string] $actor,
@@ -926,8 +950,7 @@ function CloneIntoNewFolder {
         [bool] $directCommit
     )
 
-    $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item $baseFolder -ItemType Directory | Out-Null
+    $baseFolder = NewTemporaryFolder
     Set-Location $baseFolder
 
     # Environment variables for hub commands
@@ -1238,7 +1261,8 @@ function CreateDevEnv {
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
         [switch] $accept_insiderEula,
-        [switch] $clean
+        [switch] $clean,
+        [string] $customSettings = ""
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1280,6 +1304,7 @@ function CreateDevEnv {
             "baseFolder"   = $baseFolder
             "project"      = $project
             "workflowName" = $workflowName
+            "customSettings" = $customSettings
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params

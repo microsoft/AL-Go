@@ -2,7 +2,9 @@
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "The artifacts to build documentation for or a folder in which the artifacts have been downloaded", Mandatory = $true)]
-    [string] $artifacts
+    [string] $artifacts,
+    [Parameter(HelpMessage = "The URL of the BC artifact to download which includes AlDoc", Mandatory = $false)]
+    [string] $artifactUrl = ''
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -56,8 +58,7 @@ $versions = @($releases | ForEach-Object { $_.Name })
 $latestReleaseTag = $releases | Select-Object -First 1 -ExpandProperty tag_name
 
 foreach($release in $releases) {
-    $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item -Path $tempFolder -ItemType Directory | Out-Null
+    $tempFolder = NewTemporaryFolder
     try {
         Write-Host "::group::Release $($release.Name)"
         foreach($mask in 'Apps', 'Dependencies') {
@@ -67,7 +68,7 @@ foreach($release in $releases) {
         $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
         do {
             try {
                 $retry = $false
@@ -107,8 +108,12 @@ if ($latestReleaseTag) {
 else {
     $releaseNotes = ''
 }
-GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject
-
+if ($allApps.Count -gt 0) {
+    GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
+}
+else {
+    OutputWarning -message "No apps found to generate documentation for"
+}
 Write-Host "::endgroup::"
 
 if ($artifactsFolderCreated) {
