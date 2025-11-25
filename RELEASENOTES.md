@@ -1,3 +1,7 @@
+### Custom AL-Go files
+
+AL-Go for GitHub now supports updating files from your custom templates via the new `customALGoFiles` setting. Read more at [customALGoFiles](https://aka.ms/algosettings#customALGoFiles).
+
 ### Set default values for workflow inputs
 
 A new setting `workflowDefaultInputs` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
@@ -51,6 +55,10 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
+
+### Deprecations
+
+- `unusedALGoSystemFiles` will be removed after October 1st 2026. Please use [`customALGoFiles.filesToExclude`](https://aka.ms/algosettings#customALGoFiles) instead.
 
 ## v8.0
 
