@@ -195,29 +195,22 @@ try {
     $tempDependenciesLocation = NewTemporaryFolder
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
+            $appFile = $_
+
+            # If the app file is not a URL, return it as is
+            if ($appFile -notlike 'http*://*') {
+                return $appFile
+            }
+
+            # Else, check for secrets in the URL and replace them
+            $appFileUrl = $appFile
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            $url = $_
-            if ($url -match $pattern) {
-                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            if ($appFile -match $pattern) {
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
             }
-            else {
-                $finalUrl = $url
-            }
-            if ($finalUrl -like 'http*://*') {
-                # Try downloading the app file
-                try {
-                    $urlWithoutQuery = $finalUrl.Split('?')[0].TrimEnd('/')
-                    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
-                    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
-                    $appFile = Join-Path $tempDependenciesLocation $decodedFileName
-                    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $finalUrl -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
-                }
-                catch {
-                    throw "Could not download app from URL: $($url). Error was: $($_.Exception.Message)"
-                }
-            } else {
-                $appFile = $_
-            }
+
+            # Download the app file to a temporary location
+            $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $tempDependenciesLocation
             return $appFile
         })
     }

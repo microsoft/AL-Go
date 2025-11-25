@@ -87,4 +87,42 @@ function IsSymbolsOnlyPackage {
     return $LASTEXITCODE -eq 0
 }
 
-Export-ModuleMember -Function Test-InstallApps
+<#
+    .SYNOPSIS
+    Downloads an app file from a URL to a specified download path.
+    .DESCRIPTION
+    Downloads an app file from a URL to a specified download path.
+    It handles URL decoding and sanitizes the file name.
+    .PARAMETER Url
+    The URL of the app file to download.
+    .PARAMETER DownloadPath
+    The path where the app file should be downloaded.
+    .RETURNS
+    The path to the downloaded app file.
+#>
+function Get-AppFileFromUrl {
+    Param(
+        [string] $Url,
+        [string] $DownloadPath
+    )
+    try {
+        # Get the file name from the URL
+        $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
+        $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
+        $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
+        $decodedFileName = [System.IO.Path]::GetFileName($decodedFileName)
+
+        # Sanitize file name by removing invalid characters
+        $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+        $sanitizedFileName = $sanitizedFileName.Trim()
+
+        # Get the final app file path
+        $appFile = Join-Path $DownloadPath $sanitizedFileName
+        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    }
+    catch {
+        throw "Could not download app from URL: $($url). Error was: $($_.Exception.Message)"
+    }
+}
+
+Export-ModuleMember -Function Test-InstallApps, Get-AppFileFromUrl
