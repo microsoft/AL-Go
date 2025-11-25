@@ -199,7 +199,7 @@ try {
     }
 
     # Replace secret names in install.apps and install.testApps
-    $tempDependenciesLocation = Join-Path $ENV:RUNNER_TEMP "Dependencies-$(Get-Random)"
+    $tempDependenciesLocation = NewTemporaryFolder
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
