@@ -10,12 +10,11 @@ Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     The path to the al.exe tool.
 #>
 function Install-ALTool {
-    $DevelopmentToolsPackage = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
-    $alToolFolder = Install-DotNetTool -PackageName $DevelopmentToolsPackage
+    $alToolFolder = Install-DotNetTool -PackageName "Microsoft.Dynamics.BusinessCentral.Development.Tools"
     # Load the AL tool from the downloaded package
     $alExe = Get-ChildItem -Path $alToolFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1 -ExpandProperty FullName
     if (-not $alExe) {
-        throw "Could not find al.exe in the $DevelopmentToolsPackage package."
+        throw "Could not find al.exe in the development tools package."
     }
     return $alExe
 }

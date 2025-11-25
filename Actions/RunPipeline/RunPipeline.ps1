@@ -212,13 +212,6 @@ try {
             }
 
             if ($finalUrl -like 'http*://*') {
-                # Check validity of URL
-                try {
-                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
-                } catch {
-                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
-                }
-
                 # Try downloading the app file
                 try {
                     if (-not (Test-Path $tempDependenciesLocation)) {
