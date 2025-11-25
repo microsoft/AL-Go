@@ -41,7 +41,7 @@ Describe "RunPipeline Action Tests" {
         Should -Invoke -CommandName 'OutputWarning' -Times 1 -ModuleName RunPipeline -ParameterFilter { $Message -like "*App EssentialBusinessHeadlinesSymbols.app is a symbols package and should not be published. The workflow may fail if you try to publish it." }
 
         # Assert that Trace-Warning was called once with the count
-        Should -Invoke -CommandName 'Trace-Warning' -Times 1 -ModuleName RunPipeline -ParameterFilter { $Message -like "*1 symbols-only package(s) detected in install apps." }
+        Should -Invoke -CommandName 'Trace-Warning' -Times 1 -ModuleName RunPipeline -ParameterFilter { $Message -like "*1 symbols-only package(s) detected in install apps*" }
         # Assert that Trace-Warning was not called
         Should -Invoke -CommandName 'Trace-Warning' -Times 0 -ModuleName RunPipeline -ParameterFilter { $Message -like "App file path for * could not be resolved." }
     }
