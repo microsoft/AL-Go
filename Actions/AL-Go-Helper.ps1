@@ -2203,24 +2203,17 @@ function AssertNugetSourceIsAdded() {
     This function installs a .NET tool using 'dotnet tool install' in a temporary folder and returns the path to the folder where the tool is installed.
     .PARAMETER PackageName
     The name of the package to install
-    .PARAMETER ToolPath
-    The path where the tool should be installed. If not specified, the tool is installed in a temporary folder.
     .RETURNS
     The path to the folder where the tool is installed.
 #>
 function Install-DotNetTool {
     param(
         [Parameter(Mandatory = $true)]
-        [string] $PackageName,
-        [Parameter(Mandatory = $false)]
-        [string] $ToolPath = $ENV:RUNNER_TEMP
+        [string] $PackageName
     )
     AssertNugetSourceIsAdded
+    $ToolPath = GetTemporaryPath
 
-    # Use GetTempPath if RunnerTemp is not set (e.g. when running locally)
-    if (-not $ToolPath) {
-        $ToolPath = [System.IO.Path]::GetTempPath()
-    }
     $installationFolder = Join-Path -Path $ToolPath $PackageName
     if (Test-Path -Path $installationFolder) {
         # Tool is already installed
