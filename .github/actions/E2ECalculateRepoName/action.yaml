@@ -4,7 +4,7 @@ inputs:
   shell:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
-    default: powershell
+    default: pwsh
   githubOwner:
     description: GitHub owner for test repositories (optional, for logging purposes)
     required: false
