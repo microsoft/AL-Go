@@ -14,8 +14,8 @@ Param(
     [string] $artifactsVersion = ''
 )
 
-Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
 DownloadAndImportBcContainerHelper
 
 $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
