@@ -45,6 +45,7 @@ function Test-InstallApps() {
         # Install the AL tool and get the path to al.exe
         $alExe = Install-ALTool
 
+        $symbolsOnlyCount = 0
         foreach ($app in $AllInstallApps) {
             if (Test-Path -Path $app) {
                 $appFilePath = (Get-Item -Path $app).FullName
@@ -59,11 +60,16 @@ function Test-InstallApps() {
                 if (IsSymbolsOnlyPackage -AppFilePath $appFile -AlExePath $alExe) {
                     # If package is not a runtime package and has no source code files, it is a symbols package
                     # Symbols packages are not meant to be published to a BC Environment
+                    $symbolsOnlyCount++
                     OutputWarning -Message "App $appFileName is a symbols package and should not be published. The workflow may fail if you try to publish it."
                 }
             } else {
                 Write-Host "App file path for $app could not be resolved. Skipping symbols check."
             }
+        }
+
+        if ($symbolsOnlyCount -gt 0) {
+            Trace-Warning -Message "$symbolsOnlyCount symbols-only package(s) detected in install apps. These packages should not be published."
         }
     }
     catch {
