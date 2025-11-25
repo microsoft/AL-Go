@@ -105,24 +105,19 @@ function Get-AppFileFromUrl {
         [string] $Url,
         [string] $DownloadPath
     )
-    try {
-        # Get the file name from the URL
-        $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
-        $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
-        $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
-        $decodedFileName = [System.IO.Path]::GetFileName($decodedFileName)
+    # Get the file name from the URL
+    $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
+    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
+    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
+    $decodedFileName = [System.IO.Path]::GetFileName($decodedFileName)
 
-        # Sanitize file name by removing invalid characters
-        $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
-        $sanitizedFileName = $sanitizedFileName.Trim()
+    # Sanitize file name by removing invalid characters
+    $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+    $sanitizedFileName = $sanitizedFileName.Trim()
 
-        # Get the final app file path
-        $appFile = Join-Path $DownloadPath $sanitizedFileName
-        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
-    }
-    catch {
-        throw "Could not download app from URL: $($url). Error was: $($_.Exception.Message)"
-    }
+    # Get the final app file path
+    $appFile = Join-Path $DownloadPath $sanitizedFileName
+    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
 }
 
 Export-ModuleMember -Function Test-InstallApps, Get-AppFileFromUrl

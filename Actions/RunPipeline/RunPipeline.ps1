@@ -206,11 +206,16 @@ try {
             $appFileUrl = $appFile
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($appFile -match $pattern) {
-                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+                $appFileFinalUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
             }
 
             # Download the app file to a temporary location
-            $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $tempDependenciesLocation
+            try {
+                $appFile = Get-AppFileFromUrl -Url $appFileFinalUrl -DownloadPath $tempDependenciesLocation
+            } catch {
+                OutputError -message "Failed to download app from URL: $($appFileUrl). Please check that the URL is valid. Error was: $($_.Exception.Message)"
+            }
+
             return $appFile
         })
     }
