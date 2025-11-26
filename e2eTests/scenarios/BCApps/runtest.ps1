@@ -90,3 +90,45 @@ $appCount = @(Get-ChildItem -Path '.artifacts/*-Apps-*/*.app'  -Recurse).Count
 $testAppCount = @(Get-ChildItem -Path '.artifacts/*-TestApps-*/*.app'  -Recurse).Count
 $appCount | Should -BeGreaterThan 0
 $testAppCount | Should -BeGreaterThan 0
+
+# Modify a file in the repository and create a Pull Request
+$branch = "e2etest"
+$title = "End 2 end test"
+invoke-git checkout -b $branch
+
+$fileToChange = Join-Path $repoPath "src/Tools/Performance Toolkit/App/src/BCPTTestSuite.Codeunit.al"
+$fileContent = Get-Content -Path $fileToChange -Encoding UTF8
+$fileContent[0] = $fileContent[0] + "// $title"
+Set-Content -Path $fileToChange -Value $fileContent -Encoding UTF8
+
+invoke-git add $fileToChange
+invoke-git commit -m $title
+invoke-git push --set-upstream origin $branch
+
+invoke-gh pr create --fill --head $branch --repo $repository --base main --body $title
+
+Start-Sleep -Seconds 60
+
+$prs = @(invoke-gh -returnValue pr list --repo $repository | Where-Object { $_.Contains($title) })
+if ($prs.Count -eq 0) {
+    throw "No Pull Request was created"
+}
+elseif ($prs.Count -gt 1) {
+    throw "More than one Pull Request exists"
+}
+
+$headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
+$url = "https://api.github.com/repos/$repository/actions/runs"
+$run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'pull_request' } | Where-Object { $_.name -eq 'Pull Request Build' }
+if (-not $run) {
+    throw "No Pull Request Build workflow run was found"
+}
+WaitWorkflow -repository $repository -runid $run.id
+
+# There should be only 1 app rebuilt
+Test-ArtifactsFromRun -runid $run.id -folder '.prartifacts' -repoVersion '*.*' -appVersion '*.*'
+$appCount = @(Get-ChildItem -Path '.prartifacts/*-Apps-*/*.app'  -Recurse).Count
+$appCount | Should -Be 1
+
+Pop-Location
+RemoveRepository -repository $repository -path $repoPath
