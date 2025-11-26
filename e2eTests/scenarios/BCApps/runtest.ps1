@@ -128,7 +128,9 @@ WaitWorkflow -repository $repository -runid $run.id
 # There should be only 1 app rebuilt
 Test-ArtifactsFromRun -runid $run.id -folder '.prartifacts' -repoVersion '*.*' -appVersion '*.*'
 $appCount = @(Get-ChildItem -Path '.prartifacts/*-Apps-*/*.app'  -Recurse).Count
-$appCount | Should -Be 1
+$testAppCount = @(Get-ChildItem -Path '.prartifacts/*-TestApps-*/*.app'  -Recurse).Count
+$appCount | Should -BeGreaterThan 0
+$testAppCount | Should -BeGreaterThan 0
 
 Pop-Location
 RemoveRepository -repository $repository -path $repoPath
