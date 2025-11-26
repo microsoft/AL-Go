@@ -66,16 +66,24 @@ $artifacts = $artifacts.Replace('/', ([System.IO.Path]::DirectorySeparatorChar))
 
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
+
+# Get the sorted list of projects
 $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+$projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projectList
+$sortedProjectList = @()
+foreach($BuildOrder in $projectBuildInfo.FullProjectsOrder) {
+    $sortedProjectList += $BuildOrder.projects
+}
+
 if ($deliveryTarget -eq "AppSource") {
     $atypes = "Apps,Dependencies"
 }
 Write-Host "Artifacts $artifacts"
 Write-Host "Projects:"
-$projectList | Out-Host
+$sortedProjectList | Out-Host
 
 $secrets = $env:Secrets | ConvertFrom-Json
-foreach ($thisProject in $projectList) {
+foreach ($thisProject in $sortedProjectList) {
     # $project should be the project part of the artifact name generated from the build
     if ($thisProject -and ($thisProject -ne '.')) {
         $project = $thisProject.Replace('\', '_').Replace('/', '_')
