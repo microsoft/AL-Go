@@ -74,6 +74,9 @@ function GenerateSARIFJson {
             if ($issue.PSObject.Properties.Name -contains "fullMessage") {
                 $fullMessage = $issue.fullMessage
             }
+            if ($issue.PSObject.Properties.Name -contains "ruleId") {
+                $fullMessage = "$($issue.ruleId): $fullMessage"
+            }
 
             # Use only full message for rules if possible. The messages from the al compiler looks like this:
             # "shortMessage": "Variable 'InvalidDate' is unused in 'CustomerListExtTwo'.",
