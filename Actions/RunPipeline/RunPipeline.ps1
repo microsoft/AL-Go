@@ -8,9 +8,9 @@ Param(
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [string] $buildMode = 'Default',
     [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
-    [string] $installAppsJson = '[]',
+    [string] $installAppsJson = '',
     [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]',
+    [string] $installTestAppsJson = '',
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
@@ -187,8 +187,16 @@ try {
     }
 
     $install = @{
-        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+        "Apps" = $settings.installApps
+        "TestApps" = $settings.installTestApps
+    }
+
+    if ($installAppsJson -and (Test-Path $installAppsJson)) {
+        $install.Apps += @($installAppsJson | Get-Content -Raw | ConvertFrom-Json)
+    }
+
+    if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+        $install.TestApps += @($installTestAppsJson | Get-Content -Raw | ConvertFrom-Json)
     }
 
     # Replace secret names in install.apps and install.testApps
