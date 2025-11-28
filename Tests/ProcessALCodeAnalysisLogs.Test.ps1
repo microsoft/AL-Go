@@ -156,6 +156,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
     }
 
     It 'All issues added from single error log file' {
+        Mock Get-FileFromAbsolutePath { return "path" }
         # Create 1 error log file with 2 issues
         $errorLogFile = Join-Path $errorLogsFolder "sample.errorLog.json"
         $baseIssueContent = $alErrorLogSchema
@@ -171,6 +172,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
     }
 
     It 'All issues added from multiple error log files' {
+        Mock Get-FileFromAbsolutePath { return "path" }
         # Create 2 error log file with 2 issues
         $errorLogFile1 = Join-Path $errorLogsFolder "sample1.errorLog.json"
         $baseIssueContent1 = $alErrorLogSchema.clone()
@@ -190,6 +192,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
     }
 
     It 'Multiple issues with same ruleId results in SARIF with single rule' {
+        Mock Get-FileFromAbsolutePath { return "path" }
         # Create 2 error log file with 2 issues
         $errorLogFile = Join-Path $errorLogsFolder "sample.errorLog.json"
         $baseIssueContent = $alErrorLogSchema
@@ -206,6 +209,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
     }
 
     It 'Duplicate issues are only included once' {
+        Mock Get-FileFromAbsolutePath { return "path" }
         # Create 1 error log file with 3 issues where 2 are duplicates
         $errorLogFile = Join-Path $errorLogsFolder "sample.errorLog.json"
         $baseIssueContent = $alErrorLogSchema
@@ -221,6 +225,23 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
         $sarifContent = Get-Content -Path $sarifFile -Raw | ConvertFrom-Json
         $sarifContent.runs[0].tool.driver.rules.Count | Should -Be 1
         $sarifContent.runs[0].results.Count | Should -Be 2
+    }
+
+    It 'Rule descriptions are set correctly' {
+        Mock Get-FileFromAbsolutePath { return "path" }
+        # Create 1 error log file with 1 issue
+        $errorLogFile = Join-Path $errorLogsFolder "sample.errorLog.json"
+        $baseIssueContent = $alErrorLogSchema
+        $baseIssueContent.issues += $sampleIssue1
+        $baseIssueContent | ConvertTo-Json -Depth 10 | Set-Content -Path $errorLogFile
+
+        & $scriptPath
+
+        $sarifFile = Join-Path $errorLogsFolder "output.sarif.json"
+        $sarifContent = Get-Content -Path $sarifFile -Raw | ConvertFrom-Json
+        $rule = $sarifContent.runs[0].tool.driver.rules | Where-Object { $_.id -eq $sampleIssue1.ruleId }
+        $rule.shortDescription.text | Should -Be "$($sampleIssue1.ruleId): $($sampleIssue1.fullMessage)"
+        $rule.fullDescription.text | Should -Be "$($sampleIssue1.ruleId): $($sampleIssue1.fullMessage)"
     }
 
     It 'Compile Action' {
