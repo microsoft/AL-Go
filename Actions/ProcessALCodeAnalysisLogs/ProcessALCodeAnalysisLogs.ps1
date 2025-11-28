@@ -33,7 +33,7 @@ function GenerateSARIFJson {
 
     foreach ($issue in $errorLogContent.issues) {
         # Skip issues without locations as GitHub expects at least one location
-        if (($issue.PSObject.Properties.Name -notcontains "locations" ) -or ($issue.locations.Count -eq 0)) {
+        if (($issue.PSObject.Properties.Name -notcontains "locations" ) -or ($issue.locations.Count -eq 0) -or $issue.PSObject.Properties.Name -notcontains "ruleId") {
             continue
         }
 
@@ -74,9 +74,7 @@ function GenerateSARIFJson {
             if ($issue.PSObject.Properties.Name -contains "fullMessage") {
                 $fullMessage = $issue.fullMessage
             }
-            if ($issue.PSObject.Properties.Name -contains "ruleId") {
-                $fullMessage = "$($issue.ruleId): $fullMessage"
-            }
+            $fullMessage = "$($issue.ruleId): $fullMessage"
 
             # Use only full message for rules if possible. The messages from the AL compiler look like this:
             # "shortMessage": "Variable 'InvalidDate' is unused in 'CustomerListExtTwo'.",
