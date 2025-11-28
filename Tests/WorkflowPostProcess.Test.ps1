@@ -35,11 +35,19 @@ Describe "WorkflowPostProcess Action Tests" {
         # Simulate what WorkflowPostProcess does - deserialize the datetime
         $telemetryScope = $scopeJson | ConvertFrom-Json
 
-        # This should not throw regardless of culture settings
-        $parsedDateTime = [DateTime]::Parse($telemetryScope.workflowStartTime, [System.Globalization.CultureInfo]::InvariantCulture)
+        # ConvertFrom-Json automatically parses ISO 8601 dates to DateTime with UTC Kind
+        $startTime = $telemetryScope.workflowStartTime
+        if ($startTime -is [DateTime]) {
+            $startTimeUtc = $startTime.ToUniversalTime()
+        } else {
+            $startTimeUtc = [DateTime]::Parse($startTime, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+        }
+
+        # Verify the parsed datetime is in UTC
+        $startTimeUtc.Kind | Should -Be 'Utc'
 
         # Verify the parsed datetime is close to the original (within 1 second to account for execution time)
-        $timeDiff = [Math]::Abs(($parsedDateTime - $utcNow).TotalSeconds)
+        $timeDiff = [Math]::Abs(($startTimeUtc - $utcNow).TotalSeconds)
         $timeDiff | Should -BeLessThan 1
     }
 
