@@ -9,6 +9,7 @@ $statusSkipped = " :question:"
 # Returns both a summary part and a failures part
 $mdHelperPath = Join-Path -Path $PSScriptRoot -ChildPath "..\MarkDownHelper.psm1"
 Import-Module $mdHelperPath
+Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 
 #Helper function to build a markdown table.
 #Headers are an array of strings with format "label;alignment" where alignment is 'left', 'right' or 'center'
@@ -132,12 +133,15 @@ function GetTestResultSummaryMD {
 
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
+    $totalTests = 0
+    $totalTime = 0.0
+    $totalFailed = 0
+    $totalSkipped = 0
+    $totalPassed = 0
+
     if (Test-Path -Path $testResultsFile -PathType Leaf) {
         $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
-        $totalTests = 0
-        $totalTime = 0.0
-        $totalFailed = 0
-        $totalSkipped = 0
+
         if ($testResults.testsuites) {
             $appNames = @($testResults.testsuites.testsuite | ForEach-Object { $_.Properties.property | Where-Object { $_.Name -eq "appName" } | ForEach-Object { $_.Value } } | Select-Object -Unique)
             if (-not $appNames) {
@@ -219,6 +223,17 @@ function GetTestResultSummaryMD {
     else {
         $failuresSummaryMD = ''
     }
+
+    # Log test metrics to telemetry
+    $totalPassed = $totalTests - $totalFailed - $totalSkipped
+    $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
+    Trace-Information -Message "Test results analyzed" -AdditionalData $telemetryData
+
     $summarySb.ToString()
     $failuresSb.ToString()
     $failuresSummaryMD
@@ -449,13 +464,14 @@ function GetPageScriptingTestResultSummaryMD {
 
     $summarySb = [System.Text.StringBuilder]::new()
     $failuresSb = [System.Text.StringBuilder]::new()
+    $totalTests = 0
+    $totalTime = 0.0
+    $totalFailed = 0
+    $totalSkipped = 0
+    $totalPassed = 0
 
     if (Test-Path -Path $testResultsFile -PathType Leaf) {
         $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
-        $totalTests = 0
-        $totalTime = 0.0
-        $totalFailed = 0
-        $totalSkipped = 0
 
         $rootFailureNode = [FailureNode]::new($false)
         if ($testResults.testsuites) {
@@ -523,6 +539,15 @@ function GetPageScriptingTestResultSummaryMD {
         Write-Host "Did not find test results file"
         $failuresSummaryMD = ''
     }
+
+    # Log test metrics to telemetry
+    $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
+    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
+    Trace-Information -Message "Page scripting test results analyzed" -AdditionalData $telemetryData
 
     return @{
         SummaryMD = $summarySb.ToString()
