@@ -78,7 +78,7 @@ function GenerateSARIFJson {
                 $fullMessage = "$($issue.ruleId): $fullMessage"
             }
 
-            # Use only full message for rules if possible. The messages from the al compiler looks like this:
+            # Use only full message for rules if possible. The messages from the AL compiler look like this:
             # "shortMessage": "Variable 'InvalidDate' is unused in 'CustomerListExtTwo'.",
             # "fullMessage": "Do not declare variables that are unused."
             # So if shortMessage is used, the rule description will not be generic, but specific to a certain alert result.
