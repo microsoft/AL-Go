@@ -12,6 +12,10 @@ inputs:
     description: Test upgrades from version
     required: false
     default: 'v5.0'
+  scenariosFilter:
+    description: Filter to run specific scenarios (separated by comma, supports wildcards)
+    required: false
+    default: '*'
   token:
     description: GitHub token with permissions to read releases
     required: true
@@ -37,9 +41,10 @@ runs:
       env:
         _maxParallel: ${{ inputs.maxParallel }}
         _testUpgradesFromVersion: ${{ inputs.testUpgradesFromVersion }}
+        _scenariosFilter: ${{ inputs.scenariosFilter }}
         GH_TOKEN: ${{ inputs.token }}
       run: |
-        ${{ github.action_path }}/E2EAnalyze.ps1 -maxParallel ([int]$ENV:_maxParallel) -testUpgradesFromVersion $ENV:_testUpgradesFromVersion
+        ${{ github.action_path }}/E2EAnalyze.ps1 -maxParallel ([int]$ENV:_maxParallel) -testUpgradesFromVersion $ENV:_testUpgradesFromVersion -scenariosFilter $ENV:_scenariosFilter
 branding:
   icon: activity
   color: blue

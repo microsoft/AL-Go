@@ -2,7 +2,9 @@ Param(
     [Parameter(HelpMessage = "Maximum parallel jobs", Mandatory = $true)]
     [int] $maxParallel,
     [Parameter(HelpMessage = "Test upgrades from version", Mandatory = $false)]
-    [string] $testUpgradesFromVersion = 'v5.0'
+    [string] $testUpgradesFromVersion = 'v5.0',
+    [Parameter(HelpMessage = "Filter to run specific scenarios (separated by comma, supports wildcards)", Mandatory = $false)]
+    [string] $scenariosFilter = '*'
 )
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -56,9 +58,13 @@ $releasesJson = @{
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
 Write-Host "releases=$releasesJson"
 
+$scenariosFilterArr = $scenariosFilter -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+$allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
+$filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilterArr | ForEach-Object { $scenario -like $_ } }
+
 $scenariosJson = @{
     "matrix" = @{
-        "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
+        "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
     };
     "max-parallel" = $maxParallel
     "fail-fast" = $false
