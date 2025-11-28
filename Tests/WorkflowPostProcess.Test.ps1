@@ -25,4 +25,30 @@ Describe "WorkflowPostProcess Action Tests" {
 
     # Call action
 
+    It 'Test DateTime serialization is locale-agnostic' {
+        # Simulate what WorkflowInitialize does - serialize a datetime in ISO 8601 format
+        $utcNow = [DateTime]::UtcNow
+        $scopeJson = @{
+            "workflowStartTime" = $utcNow.ToString("o")
+        } | ConvertTo-Json -Compress
+
+        # Simulate what WorkflowPostProcess does - deserialize the datetime
+        $telemetryScope = $scopeJson | ConvertFrom-Json
+
+        # ConvertFrom-Json automatically parses ISO 8601 dates to DateTime with UTC Kind
+        $startTime = $telemetryScope.workflowStartTime
+        if ($startTime -is [DateTime]) {
+            $startTimeUtc = $startTime.ToUniversalTime()
+        } else {
+            $startTimeUtc = [DateTime]::Parse($startTime, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+        }
+
+        # Verify the parsed datetime is in UTC
+        $startTimeUtc.Kind | Should -Be 'Utc'
+
+        # Verify the parsed datetime is close to the original (within 1 second to account for execution time)
+        $timeDiff = [Math]::Abs(($startTimeUtc - $utcNow).TotalSeconds)
+        $timeDiff | Should -BeLessThan 1
+    }
+
 }

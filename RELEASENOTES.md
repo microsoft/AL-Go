@@ -46,6 +46,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 
 ### Issues
 
+- Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
 - Issue 2039 Error when deploy to environment: NewTemporaryFolder is not recognized
 - Issue 1961 KeyVault access in PR pipeline
 - Discussion 1911 Add support for reportSuppressedDiagnostics
