@@ -242,7 +242,7 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
         $rule = $sarifContent.runs[0].tool.driver.rules | Where-Object { $_.id -eq $sampleIssue1.ruleId }
         $rule.shortDescription.text | Should -Be "$($sampleIssue1.ruleId): $($sampleIssue1.fullMessage)"
         $rule.fullDescription.text | Should -Be "$($sampleIssue1.ruleId): $($sampleIssue1.fullMessage)"
-    } 
+    }
 
     It 'Compile Action' {
         Invoke-Expression $actionScript
