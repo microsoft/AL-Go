@@ -68,7 +68,7 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
     # Calculate the workflow duration using the github api
     if ($telemetryScope -and ($null -ne $telemetryScope.workflowStartTime)) {
         Write-Host "Calculating workflow duration..."
-        $workflowTiming= [DateTime]::UtcNow.Subtract([DateTime]::Parse($telemetryScope.workflowStartTime, [System.Globalization.CultureInfo]::InvariantCulture)).TotalSeconds
+        $workflowTiming = [DateTime]::UtcNow.Subtract([DateTime]::Parse($telemetryScope.workflowStartTime, [System.Globalization.CultureInfo]::InvariantCulture)).TotalSeconds
         Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowTiming
     }
 
