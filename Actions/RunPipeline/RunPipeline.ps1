@@ -192,11 +192,11 @@ try {
     }
 
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
-        $install.Apps += @($installAppsJson | Get-Content -Raw | ConvertFrom-Json)
+        $install.Apps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
     }
 
     if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
-        $install.TestApps += @($installTestAppsJson | Get-Content -Raw | ConvertFrom-Json)
+        $install.TestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
     }
 
     # Replace secret names in install.apps and install.testApps
