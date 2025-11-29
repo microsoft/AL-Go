@@ -7,9 +7,9 @@ Param(
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [string] $buildMode = 'Default',
-    [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of apps to install", Mandatory = $false)]
     [string] $installAppsJson = '',
-    [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to install", Mandatory = $false)]
     [string] $installTestAppsJson = '',
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
