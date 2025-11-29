@@ -226,13 +226,15 @@ function GetTestResultSummaryMD {
 
     # Log test metrics to telemetry
     $totalPassed = $totalTests - $totalFailed - $totalSkipped
-    $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
-    Trace-Information -Message "Test results analyzed" -AdditionalData $telemetryData
+    if ($totalTests -gt 0) {
+        $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
+        Trace-Information -Message "Test results analyzed" -AdditionalData $telemetryData
+    }
 
     $summarySb.ToString()
     $failuresSb.ToString()
@@ -334,6 +336,11 @@ function GetBcptSummaryMD {
     $lastCodeunitID = ''
     $lastCodeunitName = ''
     $lastOperationName = ''
+
+    $totalTests = 0
+    $totalPassed = 0
+    $totalFailed = 0
+    $totalSkipped = 0
 
     # calculate statistics on measurements, skipping the $skipMeasurements longest measurements
     foreach($suiteName in $bcpt.Keys) {
@@ -437,6 +444,14 @@ function GetBcptSummaryMD {
                 }
                 $mdTableRows.Add($mdTableRow) | Out-Null
 
+                # Update test counts
+                switch ($statusStr) {
+                    $statusOK { $totalPassed++ }
+                    $statusWarning { $totalFailed++ }
+                    $statusError { $totalFailed++ }
+                    $statusSkipped { $totalSkipped++ }
+                }
+
                 $lastSuiteName = $suiteName
                 $lastCodeunitID = $codeUnitID
                 $lastCodeunitName = $codeUnitName
@@ -451,6 +466,17 @@ function GetBcptSummaryMD {
     }
     else {
         $summarySb.AppendLine("\n<i>No baseline provided. Copy a set of BCPT results to $([System.IO.Path]::GetFileName($baseLinePath)) in the project folder in order to establish a baseline.</i>") | Out-Null
+    }
+
+    # Log BCPT metrics to telemetry
+    $totalTests = $totalPassed + $totalFailed + $totalSkipped
+    if ($totalTests -gt 0) {
+        $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
+        Trace-Information -Message "BCPT results analyzed" -AdditionalData $telemetryData
     }
 
     $summarySb.ToString()
@@ -541,13 +567,15 @@ function GetPageScriptingTestResultSummaryMD {
     }
 
     # Log test metrics to telemetry
-    $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
-    Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
-    Trace-Information -Message "Page scripting test results analyzed" -AdditionalData $telemetryData
+    if ($totalTests -gt 0) {
+        $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
+        Trace-Information -Message "Page scripting test results analyzed" -AdditionalData $telemetryData
+    }
 
     return @{
         SummaryMD = $summarySb.ToString()
