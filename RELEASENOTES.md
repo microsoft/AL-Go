@@ -44,6 +44,10 @@ Example using conditional settings to target specific workflows:
 
 Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
+## AL-Go Telemetry updates
+
+AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
+
 ### Issues
 
 - Issue 2039 Error when deploy to environment: NewTemporaryFolder is not recognized
