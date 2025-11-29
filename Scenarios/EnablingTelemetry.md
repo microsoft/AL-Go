@@ -86,6 +86,29 @@ traces
 | where message contains "AL-Go action"
 ```
 
+The following query gets all telemetry emitted for test results
+
+```
+traces
+| where timestamp between (_startTime_short .. _endTime_short)
+| project   timestamp,
+            message,
+            severityLevel,
+            RepositoryOwner = tostring(customDimensions.RepositoryOwner),
+            RepositoryName = tostring(customDimensions.RepositoryName),
+            RunId = tostring(customDimensions.RunId),
+            RunNumber = tostring(customDimensions.RunNumber),
+            RunAttempt = tostring(customDimensions.RunAttempt),
+            RefName = tostring(customDimensions.RefName),
+            TotalTests = todouble(customDimensions.TotalTests),
+            TotalFailed = todouble(customDimensions.TotalFailed),
+            TotalSkipped = todouble(customDimensions.TotalSkipped),
+            TotalPassed = todouble(customDimensions.TotalPassed),
+            TotalTime = todouble(customDimensions.TotalTime)
+| extend HtmlUrl = strcat("https://github.com/", RepositoryName, "/actions/runs/", RunId)
+| where message contains "AL-Go Test Results"
+```
+
 ## Telemetry events and data
 
 AL-Go logs four different types of telemetry events: AL-Go action ran/failed and AL-Go workflow ran/failed. Each of those telemetry events provide slightly different telemetry but common dimensions for all of them are:
@@ -158,6 +181,26 @@ Additional Dimensions:
 | GitHubRunner | Value of the GitHubRunner setting |
 | RunsOn | Value of the RunsOn setting |
 | ALGoVersion | The AL-Go version used for the workflow run |
+
+### Test results
+
+Telemetry messages:
+
+- `Test results`
+- `Page scripting test results`
+- `BCPT test results`
+
+SeverityLevel: 1
+
+Additional Dimensions:
+
+| Dimension | Description |
+|-----------|-------------|
+| TotalTests | The total number of tests executed |
+| TotalFailed | The number of tests that failed |
+| TotalSkipped | The number of tests that were skipped |
+| TotalPassed | The number of tests that passed |
+| TotalTime | The total time taken to execute all tests |
 
 ______________________________________________________________________
 

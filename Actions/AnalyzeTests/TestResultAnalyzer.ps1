@@ -233,7 +233,7 @@ function GetTestResultSummaryMD {
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
-        Trace-Information -Message "Test results" -AdditionalData $telemetryData
+        Trace-Information -Message "AL-Go Test Results - Tests" -AdditionalData $telemetryData
     }
 
     $summarySb.ToString()
@@ -476,7 +476,7 @@ function GetBcptSummaryMD {
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
-        Trace-Information -Message "BCPT test results" -AdditionalData $telemetryData
+        Trace-Information -Message "AL-Go Test Results - BCPT Tests" -AdditionalData $telemetryData
     }
 
     $summarySb.ToString()
@@ -574,7 +574,7 @@ function GetPageScriptingTestResultSummaryMD {
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
-        Trace-Information -Message "Page scripting test results" -AdditionalData $telemetryData
+        Trace-Information -Message "AL-Go Test Results - Page scripting Tests" -AdditionalData $telemetryData
     }
 
     return @{
