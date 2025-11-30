@@ -192,11 +192,21 @@ try {
     }
 
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
-        $install.Apps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+        try {
+            $install.Apps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
+        }
     }
 
     if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
-        $install.TestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+        try {
+            $install.TestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
+        }
     }
 
     # Replace secret names in install.apps and install.testApps
