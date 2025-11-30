@@ -494,6 +494,7 @@ function GetPageScriptingTestResultSummaryMD {
     $totalTime = 0.0
     $totalFailed = 0
     $totalSkipped = 0
+    $totalPassed = 0
 
     if (Test-Path -Path $testResultsFile -PathType Leaf) {
         $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
