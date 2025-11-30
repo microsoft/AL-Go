@@ -137,7 +137,6 @@ function GetTestResultSummaryMD {
     $totalTime = 0.0
     $totalFailed = 0
     $totalSkipped = 0
-    $totalPassed = 0
 
     if (Test-Path -Path $testResultsFile -PathType Leaf) {
         $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)
@@ -229,9 +228,9 @@ function GetTestResultSummaryMD {
     if ($totalTests -gt 0) {
         $telemetryData = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTests' -Value $totalTests.ToString()
+        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalFailed' -Value $totalFailed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalSkipped' -Value $totalSkipped.ToString()
-        Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalPassed' -Value $totalPassed.ToString()
         Add-TelemetryProperty -Hashtable $telemetryData -Key 'TotalTime' -Value $totalTime.ToString()
         Trace-Information -Message "AL-Go Test Results - Tests" -AdditionalData $telemetryData
     }
@@ -337,7 +336,6 @@ function GetBcptSummaryMD {
     $lastCodeunitName = ''
     $lastOperationName = ''
 
-    $totalTests = 0
     $totalPassed = 0
     $totalFailed = 0
     $totalSkipped = 0
@@ -496,7 +494,6 @@ function GetPageScriptingTestResultSummaryMD {
     $totalTime = 0.0
     $totalFailed = 0
     $totalSkipped = 0
-    $totalPassed = 0
 
     if (Test-Path -Path $testResultsFile -PathType Leaf) {
         $testResults = [xml](Get-Content -path $testResultsFile -Encoding UTF8)

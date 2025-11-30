@@ -90,7 +90,7 @@ The following query gets all telemetry emitted for test results
 
 ```
 traces
-| where timestamp between (_startTime_short .. _endTime_short)
+| where timestamp > ago(7d)
 | project   timestamp,
             message,
             severityLevel,
@@ -186,9 +186,9 @@ Additional Dimensions:
 
 Telemetry messages:
 
-- `Test results`
-- `Page scripting test results`
-- `BCPT test results`
+- `AL-Go Test Results - Tests`
+- `AL-Go Test Results - Page scripting Tests`
+- `AL-Go Test Results - BCPT Tests`
 
 SeverityLevel: 1
 
@@ -201,6 +201,8 @@ Additional Dimensions:
 | TotalSkipped | The number of tests that were skipped |
 | TotalPassed | The number of tests that passed |
 | TotalTime | The total time taken to execute all tests |
+
+**Note:** The `TotalTime` dimension is not tracked for BCPT test results. For BCPT tests, only `TotalTests`, `TotalPassed`, `TotalFailed`, and `TotalSkipped` are available.
 
 ______________________________________________________________________
 
