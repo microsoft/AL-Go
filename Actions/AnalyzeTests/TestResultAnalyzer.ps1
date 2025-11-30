@@ -440,17 +440,19 @@ function GetBcptSummaryMD {
                             }
                         }
                         $mdTableRow = @($thisSuiteName, $thisCodeunitID, $thisCodeunitName, $thisOperationName, $statusStr, $durationMinStr, $baseDurationMinStr, $diffDurationMinStr, $diffDurationMinPctStr, $numberOfSQLStmtsStr, $baseNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsStr, $diffNumberOfSQLStmtsPctStr)
+
+                        # Update test counts
+                        if ($statusStr) {
+                            switch ($statusStr) {
+                                $statusOK { $totalPassed++ }
+                                $statusWarning { $totalFailed++ }
+                                $statusError { $totalFailed++ }
+                                $statusSkipped { $totalSkipped++ }
+                            }
+                        }
                     }
                 }
                 $mdTableRows.Add($mdTableRow) | Out-Null
-
-                # Update test counts
-                switch ($statusStr) {
-                    $statusOK { $totalPassed++ }
-                    $statusWarning { $totalFailed++ }
-                    $statusError { $totalFailed++ }
-                    $statusSkipped { $totalSkipped++ }
-                }
 
                 $lastSuiteName = $suiteName
                 $lastCodeunitID = $codeUnitID
