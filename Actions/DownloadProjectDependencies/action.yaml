@@ -21,10 +21,10 @@ inputs:
     default: '0'
 outputs:
   DownloadedApps:
-    description: A JSON-formatted array of paths to .app files of the apps that were downloaded
+    description: A path to a JSON-formatted list of apps to install
     value: ${{ steps.DownloadDependencies.outputs.DownloadedApps }}
   DownloadedTestApps:
-    description: A JSON-formatted array of paths to .app files of the test apps that were downloaded
+    description: A path to a JSON-formatted list of test apps to install
     value: ${{ steps.DownloadDependencies.outputs.DownloadedTestApps }}
 runs:
   using: composite
