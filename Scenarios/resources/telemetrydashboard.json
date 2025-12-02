@@ -706,7 +706,7 @@
         },
         {
             "id": "1c2d334f-99bc-4f5a-8fa1-87cf0c705268",
-            "title": "Runner Environments",
+            "title": " ",
             "visualType": "markdownCard",
             "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
             "layout": {
@@ -715,12 +715,12 @@
                 "width": 20,
                 "height": 3
             },
-            "markdownText": "AL-Go supports both GitHub-hosted runners and self-hosted runners. In the tiles below you can get an overview over which environments AL-Go actions are running in. ",
+            "markdownText": "## Runner Environments\r\nAL-Go supports both GitHub-hosted runners and self-hosted runners. In the tiles below you can get an overview over which environments AL-Go actions are running in. ",
             "visualOptions": {}
         },
         {
             "id": "c8af28ce-330d-4a3c-9e6e-9d011f67648c",
-            "title": "New tile",
+            "title": " ",
             "visualType": "markdownCard",
             "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
             "layout": {
