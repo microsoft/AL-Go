@@ -58,6 +58,7 @@ function ConnectAzStorageAccount {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "Deliver.psm1") -DisableNameChecking
 DownloadAndImportBcContainerHelper
 
 $refname = "$ENV:GITHUB_REF_NAME".Replace('/', '_')
@@ -68,12 +69,7 @@ $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
 
 # Get the sorted list of projects
-$projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
-$projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projectList
-$sortedProjectList = @()
-foreach($buildOrder in $projectBuildInfo.FullProjectsOrder) {
-    $sortedProjectList += $buildOrder.projects
-}
+$sortedProjectList = @(Get-ProjectsInDeliveryOrder -BaseFolder $baseFolder -ProjectsFromSettings $settings.projects -SelectProjects $projects)
 
 if ($deliveryTarget -eq "AppSource") {
     $atypes = "Apps,Dependencies"
