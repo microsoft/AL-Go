@@ -71,8 +71,8 @@ $settings = ReadSettings -baseFolder $baseFolder
 $projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
 $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projectList
 $sortedProjectList = @()
-foreach($BuildOrder in $projectBuildInfo.FullProjectsOrder) {
-    $sortedProjectList += $BuildOrder.projects
+foreach($buildOrder in $projectBuildInfo.FullProjectsOrder) {
+    $sortedProjectList += $buildOrder.projects
 }
 
 if ($deliveryTarget -eq "AppSource") {
