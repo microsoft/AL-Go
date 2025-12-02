@@ -261,14 +261,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
         }
 
         It 'Shell setting can only be pwsh or powershell' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.shell = 42
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/shell'"
@@ -276,7 +276,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $defaultSettings.shell = "random"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: The string value is not a match for the indicated regular expression at '/shell'"
@@ -288,7 +288,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings = GetDefaultSettings
             $defaultSettings.projects = "not an array"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"string`" but should be `"array`" at '/projects'"
@@ -297,7 +297,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # If the projects setting is an array, but contains non-string values, it should throw an error
             $defaultSettings.projects = @("project1", 42)
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/projects/1'"
@@ -305,9 +305,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # If the projects setting is an array of strings, it should pass the schema validation
             $defaultSettings.projects = @("project1")
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
             $defaultSettings.projects = @("project1", "project2")
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
         }
 
         It 'overwriteSettings property resets settings from destination object (simple types)' {
@@ -458,6 +458,66 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # overwriteSettings should never be added to the destination object
             $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            New-Item $githubFolder -ItemType Directory | Out-Null
+
+            # Create conditional settings with two blocks that both match and both have workflowDefaultInputs
+            $conditionalSettings = [ordered]@{
+                "conditionalSettings" = @(
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value1" }
+                            )
+                        }
+                    }
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value2" },
+                                @{ "name" = "input2"; "value" = "value3" }
+                            )
+                        }
+                    }
+                )
+            }
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
+
+            # Both conditional blocks match branch 'main', so both should be applied
+            $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName 'main' -userName 'user'
+
+            # Verify array was merged - should have 3 entries total
+            $settings.workflowDefaultInputs | Should -Not -BeNullOrEmpty
+            $settings.workflowDefaultInputs.Count | Should -Be 3
+
+            # First entry from first conditional block
+            $settings.workflowDefaultInputs[0].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[0].value | Should -Be 'value1'
+
+            # Second entry from second conditional block
+            $settings.workflowDefaultInputs[1].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[1].value | Should -Be 'value2'
+
+            # Third entry from second conditional block
+            $settings.workflowDefaultInputs[2].name | Should -Be 'input2'
+            $settings.workflowDefaultInputs[2].value | Should -Be 'value3'
+
+            $ENV:ALGoRepoSettings = ''
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
         }
     }
 }

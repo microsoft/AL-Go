@@ -18,7 +18,7 @@ function getfiles {
         [string] $url
     )
 
-    $path = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).app"
+    $path = Join-Path (GetTemporaryPath) "$([Guid]::NewGuid().ToString()).app"
     Download-File -sourceUrl $url -destinationFile $path
     if (!(Test-Path -Path $path)) {
         throw "could not download the file."
@@ -35,7 +35,7 @@ function expandfile {
 
     if ([string]::new([char[]](Get-Content $path @byteEncodingParam -TotalCount 2)) -eq "PK") {
         # .zip file
-        $destinationPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString())"
+        $destinationPath = Join-Path (GetTemporaryPath) "$([Guid]::NewGuid().ToString())"
         Expand-7zipArchive -path $path -destinationPath $destinationPath
 
         $directoryInfo = Get-ChildItem $destinationPath | Measure-Object
@@ -53,7 +53,7 @@ function expandfile {
             }
         }
         $appFolders | ForEach-Object {
-            $newFolder = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString())"
+            $newFolder = Join-Path (GetTemporaryPath) "$([Guid]::NewGuid().ToString())"
             write-Host "$_ -> $newFolder"
             Move-Item -Path $_ -Destination $newFolder -Force
             Write-Host "done"
@@ -67,7 +67,7 @@ function expandfile {
         }
     }
     elseif ([string]::new([char[]](Get-Content $path @byteEncodingParam -TotalCount 4)) -eq "NAVX") {
-        $destinationPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString())"
+        $destinationPath = Join-Path (GetTemporaryPath) "$([Guid]::NewGuid().ToString())"
         Extract-AppFileToFolder -appFilename $path -appFolder $destinationPath -generateAppJson
         $destinationPath
     }

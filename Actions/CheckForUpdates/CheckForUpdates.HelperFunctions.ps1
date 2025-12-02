@@ -1,3 +1,6 @@
+Import-Module (Join-Path $PSScriptRoot '../.Modules/ReadSettings.psm1') -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot '../.Modules/DebugLogHelper.psm1') -DisableNameChecking
+
 <#
 .SYNOPSIS
 Downloads a template repository and returns the path to the downloaded folder
@@ -57,10 +60,11 @@ function DownloadTemplateRepository {
     Write-Host "Using ArchiveUrl: $archiveUrl"
 
     # Download template repository
-    $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    $tempName = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     InvokeWebRequest -Headers $headers -Uri $archiveUrl -OutFile "$tempName.zip"
     Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
     Remove-Item -Path "$tempName.zip"
+
     return $tempName
 }
 
@@ -301,12 +305,178 @@ function ModifyUpdateALGoSystemFiles {
     $yaml.Replace('jobs:/UpdateALGoSystemFiles:/', $updateALGoSystemFilesJob.content)
 }
 
+function ApplyWorkflowDefaultInputs {
+    Param(
+        [Yaml] $yaml,
+        [hashtable] $repoSettings,
+        [string] $workflowName
+    )
+
+    # Check if workflow_dispatch inputs exist
+    $workflowDispatch = $yaml.Get('on:/workflow_dispatch:/')
+    if (-not $workflowDispatch) {
+        # No workflow_dispatch section, nothing to do
+        return
+    }
+
+    $inputs = $workflowDispatch.Get('inputs:/')
+    if (-not $inputs) {
+        # No inputs section, nothing to do
+        return
+    }
+
+    if ($repoSettings.workflowDefaultInputs.Count -eq 0) {
+        # No defaults for this workflow
+        return
+    }
+
+    # Apply defaults to matching inputs
+    foreach ($default in $repoSettings.workflowDefaultInputs) {
+        $inputName = $default.name
+        $defaultValue = $default.value
+
+        # Check if this input exists in the workflow
+        $inputSection = $inputs.Get("$($inputName):/")
+        if (-not $inputSection) {
+            # Input is not present in the workflow
+            continue
+        }
+
+        # Get the input type from the YAML if specified
+        $inputType = $null
+        $typeStart = 0
+        $typeCount = 0
+        if ($inputSection.Find('type:', [ref] $typeStart, [ref] $typeCount)) {
+            $typeLine = $inputSection.content[$typeStart].Trim()
+            if ($typeLine -match 'type:\s*(.+)') {
+                $inputType = $matches[1].Trim()
+            }
+        }
+
+        # Validate that the value type matches the input type
+        $validationError = $null
+        if ($inputType) {
+            switch ($inputType) {
+                'boolean' {
+                    if ($defaultValue -isnot [bool]) {
+                        $validationError = "Workflow '$workflowName', input '$inputName': Expected boolean value, but got $($defaultValue.GetType().Name). Please use `$true or `$false."
+                    }
+                }
+                'number' {
+                    if ($defaultValue -isnot [int] -and $defaultValue -isnot [long] -and $defaultValue -isnot [double]) {
+                        $validationError = "Workflow '$workflowName', input '$inputName': Expected number value, but got $($defaultValue.GetType().Name)."
+                    }
+                }
+                'string' {
+                    if ($defaultValue -isnot [string]) {
+                        $validationError = "Workflow '$workflowName', input '$inputName': Expected string value, but got $($defaultValue.GetType().Name)."
+                    }
+                }
+                'choice' {
+                    # Choice inputs accept strings and must match one of the available options (case-sensitive)
+                    if ($defaultValue -isnot [string]) {
+                        $validationError = "Workflow '$workflowName', input '$inputName': Expected string value for choice input, but got $($defaultValue.GetType().Name)."
+                    }
+                    else {
+                        # Validate that the value is one of the available options
+                        $optionsStart = 0
+                        $optionsCount = 0
+                        if ($inputSection.Find('options:', [ref] $optionsStart, [ref] $optionsCount)) {
+                            $availableOptions = @()
+                            # Parse the options from the YAML (they are indented list items starting with "- ")
+                            for ($i = $optionsStart + 1; $i -lt ($optionsStart + $optionsCount); $i++) {
+                                $optionLine = $inputSection.content[$i].Trim()
+                                if ($optionLine -match '^-\s*(.+)$') {
+                                    $availableOptions += $matches[1].Trim()
+                                }
+                            }
+
+                            if ($availableOptions.Count -gt 0 -and $availableOptions -cnotcontains $defaultValue) {
+                                $validationError = "Workflow '$workflowName', input '$inputName': Value '$defaultValue' is not a valid choice (case-sensitive match required). Available options: $($availableOptions -join ', ')."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            # If no type is specified in the workflow, it defaults to string
+            if ($defaultValue -isnot [string]) {
+                OutputWarning "Workflow '$workflowName', input '$inputName': No type specified in workflow (defaults to string), but configured value is $($defaultValue.GetType().Name). This may cause issues."
+            }
+        }
+
+        if ($validationError) {
+            throw $validationError
+        }
+
+        # Convert the default value to the appropriate YAML format
+        $yamlValue = $defaultValue
+        if ($defaultValue -is [bool]) {
+            $yamlValue = $defaultValue.ToString().ToLower()
+        }
+        elseif ($defaultValue -is [string]) {
+            # Quote strings and escape single quotes per YAML spec
+            $escapedValue = $defaultValue.Replace("'", "''")
+            $yamlValue = "'$escapedValue'"
+        }
+
+        # Find and replace the default: line in the input section
+        $start = 0
+        $count = 0
+        if ($inputSection.Find('default:', [ref] $start, [ref] $count)) {
+            # Replace existing default value
+            $inputSection.Replace('default:', "default: $yamlValue")
+        }
+        else {
+            # Add default value - find the best place to insert it
+            # Insert after type, required, or description (whichever comes last)
+            $insertAfter = -1
+            $typeLine = 0
+            $typeCount = 0
+            $requiredLine = 0
+            $requiredCount = 0
+            $descLine = 0
+            $descCount = 0
+
+            if ($inputSection.Find('type:', [ref] $typeLine, [ref] $typeCount)) {
+                $insertAfter = $typeLine + $typeCount
+            }
+            if ($inputSection.Find('required:', [ref] $requiredLine, [ref] $requiredCount)) {
+                if (($requiredLine + $requiredCount) -gt $insertAfter) {
+                    $insertAfter = $requiredLine + $requiredCount
+                }
+            }
+            if ($inputSection.Find('description:', [ref] $descLine, [ref] $descCount)) {
+                if (($descLine + $descCount) -gt $insertAfter) {
+                    $insertAfter = $descLine + $descCount
+                }
+            }
+
+            if ($insertAfter -eq -1) {
+                # No other properties, insert at position 1 (after the input name)
+                $insertAfter = 1
+            }
+
+            $inputSection.Insert($insertAfter, "default: $yamlValue")
+        }
+
+        # Update the inputs section with the modified input
+        $inputs.Replace("$($inputName):/", $inputSection.content)
+    }
+
+    # Update the workflow_dispatch section with modified inputs
+    $workflowDispatch.Replace('inputs:/', $inputs.content)
+
+    # Update the on: section with modified workflow_dispatch
+    $yaml.Replace('on:/workflow_dispatch:/', $workflowDispatch.content)
+}
+
 function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth,
-        [bool] $includeBuildPP
+        [int] $depth
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -387,11 +557,17 @@ function GetWorkflowContentWithChangesFromSettings {
     # PullRequestHandler, CICD, Current, NextMinor and NextMajor workflows all include a build step.
     # If the dependency depth is higher than 1, we need to add multiple dependent build jobs to the workflow
     if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
+        $includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
         ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP $includeBuildPP
     }
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {
         ModifyUpdateALGoSystemFiles -yaml $yaml -repoSettings $repoSettings
+    }
+
+    # Apply workflow input defaults from settings
+    if ($repoSettings.Keys -contains 'workflowDefaultInputs') {
+        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName $workflowName
     }
 
     # combine all the yaml file lines into a single string with LF line endings
@@ -457,11 +633,9 @@ function GetSrcFolder {
         [string] $repoType,
         [string] $templateUrl,
         [string] $templateFolder,
-        [string] $srcPath
+        [string] $srcPath = ''
     )
-    Write-Host $templateUrl
-    Write-Host $templateFolder
-    Write-Host $srcPath
+
     if (!$templateUrl) {
         return ''
     }
@@ -559,4 +733,324 @@ function UpdateSettingsFile {
         $settings | Set-JsonContentLF -path $settingsFile
     }
     return $modified
+}
+
+<#
+.SYNOPSIS
+Resolves file paths based on the provided source folder, destination folder, and file specifications.
+
+.DESCRIPTION
+This function takes a source folder, an optional original source folder, a destination folder, and an array of file specifications. It resolves the full paths for each specified file, considering their origin (template or custom template), type, and whether they are per-project files.
+The function returns an array of hashtables containing the resolved source and destination file paths.
+The function is used to determine which files need to be copied from the template repository to the target repository during the AL-Go update process.
+sourceFolder: The base folder of the template used to resolve the source file paths.
+originalSourceFolder: The base folder of the original template used to check for original files (can be $null). This is in the case of custom templates, where if the file exists in the original template, it should be used instead of the custom template file.
+destinationFolder: The base folder used to construct the destination file paths. This is typically the root folder of the target repository.
+
+.PARAMETER sourceFolder
+The base folder where the source files are located.
+
+.PARAMETER originalSourceFolder
+The original source folder to check for original files (can be $null). All files of origin 'custom template' are skipped if this parameter is $null.
+
+.PARAMETER destinationFolder
+The base folder used to construct the destination file paths.
+
+.PARAMETER files
+An array of hashtables specifying the files to resolve. Each hashtable can contain the following keys:
+- sourceFolder: The subfolder within the source folder to search for files (default is current folder).
+- filter: The file filter to apply when searching for files (default is all files).
+- origin: The origin of the files, either 'template' or 'custom template' (default is 'template').
+- type: The type of the files (default is empty).
+- destinationFolder: The subfolder within the destination folder where the files should be placed (default is the same as sourceFolder).
+- perProject: A boolean indicating whether the files are per project (default is false).
+
+.PARAMETER projects
+An array of project names used when resolving per-project file paths.
+
+.OUTPUTS
+An array of hashtables, each containing:
+- sourceFullPath: The full path to the source file.
+- originalSourceFullPath: The full path to the original source file (if found, otherwise $null).
+- type: The type of the file.
+- destinationFullPath: The full path to the destination file.
+#>
+function ResolveFilePaths {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $sourceFolder,
+        [string] $originalSourceFolder = $null,
+        [Parameter(Mandatory=$true)]
+        [string] $destinationFolder,
+        [array] $files = @(),
+        [string[]] $projects = @()
+    )
+
+    if(-not $files) {
+        return @()
+    }
+
+    $fullFilePaths = @()
+    foreach($file in $files) {
+        if($file.Keys -notcontains 'sourceFolder') {
+            $file.sourceFolder = '' # Default to current folder
+        }
+
+        if($file.Keys -notcontains 'filter') {
+            $file.filter = '' # Default to all files
+        }
+
+        if($file.Keys -notcontains 'origin') {
+            $file.origin = 'template' # Default to template
+        }
+
+        if($file.Keys -notcontains 'type') {
+            $file.type = '' # Default to empty
+        }
+
+        if($file.Keys -notcontains 'destinationFolder') {
+            # If destinationFolder is not specified, use the sourceFolder, so that the file structure is preserved
+            $file.destinationFolder = $file.sourceFolder
+        }
+
+        if($file.Keys -notcontains 'perProject') {
+            $file.perProject = $false # Default to false
+        }
+
+        # If originalSourceFolder is not specified, it means there is no custom template, so skip custom template files
+        if(!$originalSourceFolder -and $file.origin -eq 'custom template') {
+            OutputDebug "Skipping custom template file(s) with source folder '$($file.sourceFolder)' as there is no original source folder specified"
+            continue;
+        }
+
+        # All files are relative to the template folder
+        OutputDebug "Resolving files for source folder '$($file.sourceFolder)' and filter '$($file.filter)'"
+        $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourceFolder) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+
+        OutputDebug "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
+
+        if(-not $sourceFiles) {
+            OutputDebug "No files found for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder')"
+            continue
+        }
+
+        foreach($srcFile in $sourceFiles) {
+            $fullFilePath = @{
+                'sourceFullPath' = $srcFile
+                'originalSourceFullPath' = $null
+                'type' = $file.type
+                'destinationFullPath' = $null
+            }
+
+            # Check if the source file is under the source folder
+            if ($srcFile -notlike "$sourceFolder*") {
+                OutputDebug "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
+                continue
+            }
+
+            OutputDebug "Processing file '$($srcFile)'"
+
+            # Try to find the same files in the original template folder if it is specified. Exclude custom template files
+            if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
+                Push-Location $sourceFolder
+                $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
+                Pop-Location
+                if (Test-Path (Join-Path $originalSourceFolder $relativePath) -PathType Leaf) {
+                    # If the file exists in the original template folder, use that file instead
+                    $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
+                }
+            }
+
+            $destinationName = Split-Path -Path $srcFile -Leaf
+            if($file.Keys -contains 'destinationName' -and ($file.destinationName)) {
+                $destinationName = $file.destinationName
+            }
+
+            if($file.Keys -contains 'perProject' -and $file.perProject -eq $true) {
+                # Multiple file entries, one for each project
+                # Destination full path is the destination base folder + project + destinationFolder + destinationName
+
+                foreach($project in $projects) {
+                    if($project -eq '.') {
+                        $project = '' # If project is '.', it means the root folder, so we use an empty string
+                    }
+
+                    $fullProjectFilePath = $fullFilePath.Clone()
+
+                    $fullProjectFilePath.destinationFullPath = Join-Path $destinationFolder $project
+                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationFolder
+                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
+
+                    if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullProjectFilePath.destinationFullPath) {
+                        OutputDebug "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
+                        continue
+                    }
+                    OutputDebug "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
+                    $fullFilePaths += $fullProjectFilePath
+                }
+            }
+            else {
+                # Single file entry
+                # Destination full path is the destination base folder + destinationFolder + destinationName
+
+                $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationFolder
+                $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
+
+                if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullFilePath.destinationFullPath) {
+                    OutputDebug "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
+                    continue
+                }
+                OutputDebug "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
+                $fullFilePaths += $fullFilePath
+            }
+        }
+    }
+
+    return @($fullFilePaths)
+}
+
+function GetDefaultFilesToInclude {
+    Param(
+        [switch] $includeCustomTemplateFiles
+    )
+
+    $filesToInclude = @(
+        [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.copy.md' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.ps1' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
+        [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
+
+        [ordered]@{ 'sourceFolder' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
+        [ordered]@{ 'sourceFolder' = '.AL-Go'; 'filter' = "$ALGoSettingsFileName"; 'perProject' = $true; 'type' = 'settings' }
+    )
+
+    if($includeCustomTemplateFiles) {
+        # If there is an original template folder, we also need to include custom template files (RepoSettings and ProjectSettings)
+        $filesToInclude += @(
+            [ordered]@{ 'sourceFolder' = ".github"; 'filter' = "$RepoSettingsFileName"; 'destinationName' = "$CustomTemplateRepoSettingsFileName"; 'origin' = 'custom template' }
+            [ordered]@{ 'sourceFolder' = ".AL-Go"; 'filter' = "$ALGoSettingsFileName"; 'destinationFolder' = '.github'; 'destinationName' = "$CustomTemplateProjectSettingsFileName"; 'origin' = 'custom template' }
+        )
+    }
+
+    return $filesToInclude
+}
+
+function GetDefaultFilesToExclude {
+    Param(
+        $settings
+    )
+    $filesToExclude = @()
+
+    $includeBuildPP = $settings.type -eq 'PTE' -and $settings.powerPlatformSolutionFolder -ne ''
+    if (!$includeBuildPP) {
+        # Remove PowerPlatform workflows if no PowerPlatformSolution exists
+        $filesToExclude += @(
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+        )
+    }
+
+    return @($filesToExclude)
+}
+
+<#
+.SYNOPSIS
+    Get the list of files from the template repository to include and exclude based on the provided settings.
+.DESCRIPTION
+    This function gets the list of files to include and exclude based on the provided settings.
+    The unusedALGoSystemFiles setting is also applied to exclude files from the include list and add them to the exclude list.
+.PARAMETER settings
+    The settings object containing the customALGoFiles configuration.
+.PARAMETER baseFolder
+    The base folder of the repository. This is the target folder where the files will be updated.
+.PARAMETER templateFolder
+    The folder where the template files are located.
+.PARAMETER originalTemplateFolder
+    The folder where the original template files are located (if any).
+    If originalTemplateFolder is provided, it means that there is a custom template in use and custom template files should be included.
+.PARAMETER projects
+    The list of projects in the repository.
+    The projects are used to resolve per-project files.
+.OUTPUTS
+    An array containing two elements: the list of files to include and the list of files to exclude.
+    Files are represented as hashtables with the following keys:
+    - sourceFullPath: The full path to the source file in the template repository.
+    - originalSourceFullPath: The full path to the original source file in the original template repository (if any).
+    - type: The type of the file (e.g., workflow, settings).
+    - destinationFullPath: The full path to the destination file in the target repository.
+#>
+function GetFilesToUpdate {
+    Param(
+        [Parameter(Mandatory=$true)]
+        $settings,
+        [Parameter(Mandatory=$true)]
+        $baseFolder,
+        [Parameter(Mandatory=$true)]
+        $templateFolder,
+        $originalTemplateFolder = $null,
+        $projects = @()
+    )
+
+    Write-Host "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
+
+    # Send telemetery about customALGoFiles usage
+    if ($settings.customALGoFiles.filesToInclude.Count -gt 0) {
+        Trace-Information -Message "Usage: Custom AL-Go Files (Include)"
+    }
+    if ($settings.customALGoFiles.filesToExclude.Count -gt 0) {
+        Trace-Information -Message "Usage: Custom AL-Go Files (Exclude)"
+    }
+
+    $filesToInclude = GetDefaultFilesToInclude -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
+    $filesToInclude += $settings.customALGoFiles.filesToInclude
+    $filesToInclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects)
+
+    $filesToExclude = GetDefaultFilesToExclude -settings $settings
+    $filesToExclude += $settings.customALGoFiles.filesToExclude
+    $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects)
+
+    # Exclude files from filesToExclude that are not in filesToInclude
+    $filesToExclude = @($filesToExclude | Where-Object {
+        $fileToExclude = $_
+        $include = $filesToInclude | Where-Object { $_.sourceFullPath -eq $fileToExclude.sourceFullPath }
+        if(-not $include) {
+            OutputDebug "Excluding file $($fileToExclude.sourceFullPath) from exclude list as it is not in the include list"
+        }
+        return $include
+    })
+
+    # Exclude files from filesToInclude that are in filesToExclude
+    $filesToInclude = @($filesToInclude | Where-Object {
+        $fileToInclude = $_
+        $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToInclude.sourceFullPath })
+        if(-not $include) {
+            OutputDebug "Excluding file $($fileToInclude.sourceFullPath) from include as it is in the exclude list"
+        }
+        return $include
+    })
+
+    # Apply unusedALGoSystemFiles logic
+    $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
+
+    # Exclude unusedALGoSystemFiles from $filesToInclude and add them to $filesToExclude
+    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
+    if ($unusedFilesToExclude) {
+        Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions." -DeprecationTag "unusedALGoSystemFiles"
+
+        OutputDebug "The following files are marked as unused and will be removed if they exist:"
+        $unusedFilesToExclude | ForEach-Object { OutputDebug "- $($_.destinationFullPath)" }
+
+        $filesToInclude = @($filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) })
+        $filesToExclude += @($unusedFilesToExclude)
+    }
+
+    # List all files to be included and excluded with their source and destination paths, type and original source path (if any)
+    $fileFormatter = { param($file) "  -Source: $($file.sourceFullPath), Destination: $($file.destinationFullPath), Type: $($file.type), Original Source: $($file.originalSourceFullPath)"}
+    OutputArray -Message "Files to include: $($filesToInclude.Count)" -Array $filesToInclude -Formatter $fileFormatter
+    OutputArray -Message "Files to exclude: $($filesToExclude.Count)" -Array $filesToExclude -Formatter $fileFormatter
+
+    return @($filesToInclude), @($filesToExclude)
 }

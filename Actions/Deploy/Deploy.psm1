@@ -1,3 +1,5 @@
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
 <#
     .SYNOPSIS
         Get the head ref from a PR
@@ -267,8 +269,7 @@ function InstallOrUpgradeApps {
         $installMode = 'upgrade'
     }
 
-    $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([GUID]::NewGuid().ToString())
-    New-Item -ItemType Directory -Path $tempPath | Out-Null
+    $tempPath = NewTemporaryFolder
     try {
         Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
         $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })

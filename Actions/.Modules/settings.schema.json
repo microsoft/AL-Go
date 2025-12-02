@@ -693,6 +693,69 @@
         "reportSuppressedDiagnostics": {
             "type": "boolean",
             "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
+        },
+        "customALGoFiles": {
+            "description": "An object containing the custom AL-Go files configuration. See https://aka.ms/ALGoSettings#customALGoFiles",
+            "type": "object",
+            "properties": {
+                "filesToInclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sourceFolder": {
+                                "type": "string",
+                                "description": "The source folder from which to update files, relative to the template repository root."
+                            },
+                            "filter": {
+                                "type": "string",
+                                "description": "A filter string to select which files to update. It can contain '*' and '?' wildcards."
+                            },
+                            "destinationFolder": {
+                                "type": "string",
+                                "description": "The destination folder where the files should be updated, relative to the repository root. If not specified, defaults to the same as the source file folder."
+                            },
+                            "perProject": {
+                                "type": "boolean",
+                                "description": "Indicates whether the file update should be applied per project. In that case, the destinationFolder is considered relative to each project folder."
+                            }
+                        }
+                    }
+                },
+                "filesToExclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sourceFolder": {
+                                "type": "string",
+                                "description": "The source folder from which to exclude files, relative to the template repository root."
+                            },
+                            "filter": {
+                                "type": "string",
+                                "description": "A filter string to select which files to exclude. It can contain '*' and '?' wildcards."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "workflowDefaultInputs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the workflow input"
+                    },
+                    "value": {
+                        "description": "The default value for the workflow input (can be string, boolean, or number)"
+                    }
+                },
+                "required": ["name", "value"]
+            },
+            "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
     }
 }

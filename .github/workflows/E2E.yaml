@@ -25,6 +25,11 @@ on:
         description: Run the end to end scenario tests
         type: boolean
         default: true
+      scenariosFilter:
+        description: Filter to run specific scenarios (separated by comma)
+        required: false
+        type: string
+        default: '*'
       runUpgradeTests:
         description: Run the end to end upgrade tests
         type: boolean
@@ -53,11 +58,11 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Check secrets
         id: check
@@ -115,15 +120,15 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+      - uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
         id: app-token
         with:
           app-id: ${{ vars.E2E_APP_ID }}
@@ -150,15 +155,15 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+      - uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
         id: app-token
         with:
           app-id: ${{ vars.E2E_APP_ID }}
@@ -169,6 +174,7 @@ jobs:
         id: Analyze
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          _scenariosFilter: ${{ github.event.inputs.scenariosFilter }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
@@ -222,9 +228,13 @@ jobs:
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
           Write-Host "releases=$releasesJson"
 
+          $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+          $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
+          $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
+
           $scenariosJson = @{
             "matrix" = @{
-              "include" = @(Get-ChildItem -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { @{ "Scenario" = $_.Directory.Name } } )
+              "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
             };
             "max-parallel" = $maxParallel
             "fail-fast" = $false
@@ -240,11 +250,11 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -277,11 +287,11 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -314,11 +324,11 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -363,11 +373,11 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
@@ -412,11 +422,11 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: ${{ github.event.inputs.ref }}
 
