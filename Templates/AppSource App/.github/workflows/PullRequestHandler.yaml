@@ -103,7 +103,7 @@ jobs:
     with:
       shell: ${{ matrix.githubRunnerShell }}
       runsOn: ${{ matrix.githubRunner }}
-      checkoutRef: ${{ github.event_name == 'pull_request' && github.sha || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
+      checkoutRef: ${{ github.event_name == 'pull_request' && github.sha || github.event_name == 'merge_group' && github.ref || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
@@ -118,7 +118,7 @@ jobs:
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Initialization.outputs.trackALAlertsInGitHub == 'True')
+    if: (!cancelled()) && (needs.Initialization.outputs.trackALAlertsInGitHub == 'True') && (github.event_name != 'merge_group')
     runs-on: [ windows-latest ]
     name: Code Analysis Processing
     steps:
