@@ -1613,6 +1613,31 @@ function CreateDevEnv {
                 $sharedFolder = $baseFolder
             }
 
+            if ($settings.useWorkspaceCompilation) {
+                $scriptPath = Join-Path $PSScriptRoot ".Modules/CompileFromWorkspace.psm1"
+                $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "compilerFolderTemp"
+                $buildVersion = "$($runAlPipelineParams.appVersion).$($runAlPipelineParams.appBuild).$($runAlPipelineParams.appRevision)"
+
+                $appFiles = Build-AppsInWorkspace `
+                            -Folders $appFolders `
+                            -CompilerFolder $compilerFolder `
+                            -OutputFolder (Join-Path $projectFolder ".output") `
+                            -RulesetFile $settings.rulesetFile `
+                            -BuildVersion $buildVersion `
+
+
+                # Add appfiles to installApps
+                $installApps += $appFiles
+                $testAppFiles = Build-TestAppsInWorkspace `
+                                -Folders $testFolders `
+                                -CompilerFolder $compilerFolder
+                $installTestApps += $testAppFiles
+
+                $appFolders = @()
+                $testFolders = @()
+
+            }
+
             Run-AlPipeline @runAlPipelineParams `
                 -accept_insiderEula:$accept_insiderEula `
                 -vsixFile $settings.vsixFile `

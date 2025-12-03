@@ -209,6 +209,7 @@ function GetDefaultSettings
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
+        "useWorkspaceCompilation"                       = $false
         "pullRequestTrigger"                            = "pull_request_target"
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10

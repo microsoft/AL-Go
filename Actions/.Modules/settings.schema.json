@@ -507,6 +507,10 @@
             "type": "boolean",
             "description": "Use the compiler folder instead of a BC container. See https://aka.ms/ALGoSettings#usecompilerfolder"
         },
+        "useWorkspaceCompilation": {
+            "type": "boolean",
+            "description": "PREVIEW: Use workspace compilation"
+        },
         "pullRequestTrigger": {
             "type": "string",
             "pattern": "^(pull_request|pull_request_target)$",
