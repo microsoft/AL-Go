@@ -1,3 +1,6 @@
+### Issues
+- AL-Go repositories with large amounts of projects may run into issues with too large environment variables
+
 ## v8.1
 
 ### Custom AL-Go files
