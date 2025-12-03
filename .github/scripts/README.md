@@ -8,6 +8,18 @@ This PowerShell script adds a reminder comment to all open PRs that modify the `
 
 ### Usage
 
+**Option 1: Use the GitHub Workflow (Recommended)**
+
+The easiest way to add comments to existing PRs is to use the manual workflow:
+
+1. Go to the Actions tab in the repository
+2. Select "Comment on Existing Release Notes PRs" workflow
+3. Click "Run workflow"
+4. Choose whether to run in dry-run mode (to preview which PRs will be commented)
+5. Click "Run workflow"
+
+**Option 2: Run the PowerShell Script Locally**
+
 ```powershell
 # Set your GitHub token as an environment variable
 $env:GITHUB_TOKEN = "your-github-token-here"
@@ -37,4 +49,4 @@ pwsh .github/scripts/comment-on-existing-release-notes-prs.ps1
 
 ### Note
 
-For new PRs, the automated workflow `.github/workflows/check-release-notes-prs.yml` will automatically add the comment. This script is only needed to handle existing open PRs at the time of deployment.
+For new PRs, the automated workflow `.github/workflows/check-release-notes-prs.yml` will automatically add the comment. This script/workflow is only needed to handle existing open PRs at the time of deployment.

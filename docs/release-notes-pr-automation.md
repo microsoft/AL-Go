@@ -32,18 +32,27 @@ This workflow automatically triggers when a PR is opened, updated, or reopened i
 
 ### 2. One-Time Script for Existing PRs
 
-**File**: `.github/scripts/comment-on-existing-release-notes-prs.ps1`
+**Files**: 
+- `.github/scripts/comment-on-existing-release-notes-prs.ps1` (PowerShell script)
+- `.github/workflows/comment-on-existing-release-notes-prs.yml` (Manual workflow)
 
-This PowerShell script is designed to be run once to add comments to all currently open PRs that modify `RELEASENOTES.md`. After the initial run, the automated workflow handles new PRs.
+These are designed to be run once to add comments to all currently open PRs that modify `RELEASENOTES.md`. After the initial run, the automated workflow handles new PRs.
 
-**Usage:**
+**Usage (Recommended - Manual Workflow):**
+1. Go to the Actions tab in the repository
+2. Select "Comment on Existing Release Notes PRs" workflow
+3. Click "Run workflow"
+4. Choose whether to run in dry-run mode (preview only)
+5. Click "Run workflow" to execute
+
+**Usage (Alternative - PowerShell Script):**
 ```powershell
 $env:GITHUB_TOKEN = "your-token-here"
 pwsh .github/scripts/comment-on-existing-release-notes-prs.ps1
 ```
 
-The script:
-1. Fetches all open PRs
+What it does:
+1. Fetches all open PRs (or uses a predefined list)
 2. Checks which ones modify `RELEASENOTES.md`
 3. Adds the reminder comment (if not already present)
 
