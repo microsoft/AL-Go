@@ -79,9 +79,14 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-$prsJson = if ($prsJsonOutput) { $prsJsonOutput | ConvertFrom-Json } else { @() }
+$prsJson = if ($prsJsonOutput) { 
+    $result = $prsJsonOutput | ConvertFrom-Json
+    if ($null -eq $result) { @() } else { $result }
+} else { 
+    @() 
+}
 
-Write-Host "Found $($prsJson.Count) open PRs. Checking which ones modify RELEASENOTES.md..."
+Write-Host "Found $(@($prsJson).Count) open PRs. Checking which ones modify RELEASENOTES.md..."
 
 $prsWithReleaseNotes = @()
 
