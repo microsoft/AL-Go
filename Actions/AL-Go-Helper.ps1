@@ -1618,26 +1618,29 @@ function CreateDevEnv {
                 $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "compilerFolderTemp"
                 $buildVersion = "28.0.0.0"
                 #$buildVersion = "$($runAlPipelineParams.appVersion).$($runAlPipelineParams.appBuild).$($runAlPipelineParams.appRevision)"
-
+                
+                # Compile apps
+                $appFiles = @()
                 $appFiles = Build-AppsInWorkspace `
                             -Folders $appFolders `
                             -CompilerFolder $compilerFolder `
                             -OutFolder (Join-Path $projectFolder ".output") `
                             -Ruleset $settings.rulesetFile `
-                            -BuildVersion $buildVersion `
+                            -BuildVersion $buildVersion
 
-
-                # Add appfiles to installApps
                 $installApps += $appFiles
+                $appFolders = @()
+
+                # Compile test apps
+                $testAppFiles = @()
                 $testAppFiles = Build-AppsInWorkspace `
                                 -Folders $testFolders `
                                 -CompilerFolder $compilerFolder `
                                 -OutFolder (Join-Path $projectFolder ".output") `
                                 -Ruleset $settings.rulesetFile `
-                                -BuildVersion $buildVersion `
-                $installTestApps += $testAppFiles
+                                -BuildVersion $buildVersion
 
-                $appFolders = @()
+                $installTestApps += $testAppFiles
                 $testFolders = @()
 
             }
