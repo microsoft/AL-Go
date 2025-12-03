@@ -1,7 +1,7 @@
-Get-Module TestActionsHelper | Remove-Module -Force
+﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1")
-Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "CheckForUpdates Action Tests" {
@@ -33,7 +33,7 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
-Describe('YamlClass Tests') {
+Describe "YamlClass Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptRoot', Justification = 'False positive.')]
@@ -81,11 +81,11 @@ Describe('YamlClass Tests') {
         $count | Should -be 19
 
         # Replace all occurances of 'shell: powershell' with 'shell: pwsh'
-        $yaml.ReplaceAll('shell: powershell','shell: pwsh')
+        $yaml.ReplaceAll('shell: powershell', 'shell: pwsh')
         $yaml.content[46].Trim() | Should -be 'shell: pwsh'
 
         # Replace Permissions
-        $yaml.Replace('Permissions:/',@('contents: write','actions: read'))
+        $yaml.Replace('Permissions:/', @('contents: write', 'actions: read'))
         $yaml.content[44].Trim() | Should -be 'shell: pwsh'
         $yaml.content.Count | Should -be 72
 
@@ -311,9 +311,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'tmpSrcFile', Justification = 'False positive.')]
         $tmpSrcFile = Join-Path $PSScriptRoot "tempSrcFile.json"
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'tmpDstFile', Justification = 'False positive.')]
         $tmpDstFile = Join-Path $PSScriptRoot "tempDestFile.json"
     }
 
@@ -802,10 +802,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should throw validation error
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*not a valid choice*"
-        }
+        # Apply the defaults - should throw validation error
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*not a valid choice*"
+    }
 
         It 'handles inputs without existing default' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -911,10 +910,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should throw validation error
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*Expected boolean value*"
-        }
+        # Apply the defaults - should throw validation error
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*Expected boolean value*"
+    }
 
         It 'validates number type mismatch' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -942,10 +940,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should throw validation error
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*Expected number value*"
-        }
+        # Apply the defaults - should throw validation error
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*Expected number value*"
+    }
 
         It 'validates string type mismatch' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -973,10 +970,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should throw validation error
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*Expected string value*"
-        }
+        # Apply the defaults - should throw validation error
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*Expected string value*"
+    }
 
         It 'validates choice type' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -1042,10 +1038,9 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            # Apply the defaults - should throw validation error
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } |
-            Should -Throw "*not a valid choice*"
-        }
+        # Apply the defaults - should throw validation error
+        { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow" } | Should -Throw "*not a valid choice*"
+    }
 
         It 'validates choice value with case-sensitive matching' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -1088,8 +1083,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            { ApplyWorkflowDefaultInputs -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } |
-            Should -Throw "*case-sensitive match required*"
+        { ApplyWorkflowDefaultInputs -yaml $yaml2 -repoSettings $repoSettings2 -workflowName "Test Workflow" } | Should -Throw "*case-sensitive match required*"
 
             # Test 3: Uppercase version should also fail
             $yaml3 = [Yaml]::new($yamlContent)
@@ -1099,9 +1093,8 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
                 )
             }
 
-            { ApplyWorkflowDefaultInputs -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } |
-            Should -Throw "*case-sensitive match required*"
-        }
+        { ApplyWorkflowDefaultInputs -yaml $yaml3 -repoSettings $repoSettings3 -workflowName "Test Workflow" } | Should -Throw "*case-sensitive match required*"
+    }
 
         It 'handles inputs without type specification' {
             . (Join-Path $scriptRoot "yamlclass.ps1")
@@ -1203,1152 +1196,1366 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             # Apply the defaults
             ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
 
-            # Verify "last wins" - the final value for input1 should be applied
-            $yaml.Get('on:/workflow_dispatch:/inputs:/input1:/default:').content -join '' | Should -Be "default: 'final-value'"
-            $yaml.Get('on:/workflow_dispatch:/inputs:/input2:/default:').content -join '' | Should -Be 'default: false'
+        # Verify "last wins" - the final value for input1 should be applied
+        $yaml.Get('on:/workflow_dispatch:/inputs:/input1:/default:').content -join '' | Should -Be "default: 'final-value'"
+        $yaml.Get('on:/workflow_dispatch:/inputs:/input2:/default:').content -join '' | Should -Be 'default: false'
+    }
+}
+
+Describe "ResolveFilePaths" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = $PSScriptRoot
+
+        $sourceFolder = Join-Path $rootFolder "sourceFolder"
+        if (-not (Test-Path $sourceFolder)) {
+            New-Item -Path $sourceFolder -ItemType Directory | Out-Null
+        }
+        # Create a source folder structure
+        New-Item -Path (Join-Path $sourceFolder "folder/File1.txt") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $sourceFolder "folder/File2.log") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $sourceFolder "folder/File3.txt") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $sourceFolder "folder/File4.md") -ItemType File -Force | Out-Null
+
+        $originalSourceFolder = Join-Path $rootFolder "originalSourceFolder"
+        if (-not (Test-Path $originalSourceFolder)) {
+            New-Item -Path $originalSourceFolder -ItemType Directory | Out-Null
+        }
+        New-Item -Path (Join-Path $originalSourceFolder "folder/File1.txt") -ItemType File -Force | Out-Null
+        New-Item -Path (Join-Path $originalSourceFolder "folder/File2.log") -ItemType File -Force | Out-Null
+
+        # File tree:
+        # sourceFolder
+        # └── folder
+        #     ├── File1.txt
+        #     ├── File2.log
+        #     ├── File3.txt
+        #     └── File4.md
+    }
+
+    AfterAll {
+        # Clean up
+        if (Test-Path $sourceFolder) {
+            Remove-Item -Path $sourceFolder -Recurse -Force
         }
 
-    } # End of Context 'ApplyWorkflowDefaultInputs'
+        if (Test-Path $originalSourceFolder) {
+            Remove-Item -Path $originalSourceFolder -Recurse -Force
+        }
+    }
 
-    Context 'ApplyWorkflowDefaultInputs - Hide Feature' {
+    It 'ResolveFilePaths with specific files extensions' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $rootFolder $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = 'newFolder'; "destinationName" = '' }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; "destinationFolder" = 'newFolder'; "destinationName" = '' }
+        )
 
-        It 'hides boolean inputs when hide is true' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
-            # Create a test workflow YAML with boolean input
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      visibleInput:",
-                "        type: string",
-                "        default: ''",
-                "      hiddenInput:",
-                "        type: boolean",
-                "        default: false",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Use input",
-                "        run: echo `${{ github.event.inputs.hiddenInput }}"
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+        $fullFilePaths[0].type | Should -Be ''
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[1].type | Should -Be ''
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+        $fullFilePaths[2].type | Should -Be ''
+    }
+
+    It 'ResolveFilePaths with specific destination names' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $rootFolder $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = 'newFolder'; "destinationName" = "CustomFile1.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "destinationFolder" = 'newFolder'; "destinationName" = "CustomFile2.log" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile1.txt")
+        $fullFilePaths[0].type | Should -Be ''
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/CustomFile2.log")
+        $fullFilePaths[1].type | Should -Be ''
+    }
+
+    It 'ResolveFilePaths with type' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = "folder"; "destinationName" = ''; type = "text" }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; "destinationFolder" = "folder"; "destinationName" = ''; type = "markdown" }
+        )
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # Verify destinationFullPath is not filled
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File3.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths with original source folder' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = "newFolder"; "destinationName" = ''; type = "text" }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; "destinationFolder" = "newFolder"; "destinationName" = ''; type = "markdown" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt") # File3.txt doesn't exist in original source folder, so it should still point to the source folder
+        $fullFilePaths[1].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md") # File4.md doesn't exist in original source folder, so it should still point to the source folder
+        $fullFilePaths[2].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths populates the originalSourceFullPath property only if the origin is not a custom template' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; "destinationFolder" = "newFolder"; "destinationName" = ''; "origin" = "custom template"; }
+            @{ "sourceFolder" = "folder"; "filter" = "*.log"; "destinationFolder" = "newFolder"; "destinationName" = ''; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+
+        # First file has type containing "template", so originalSourceFullPath should be $null
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File1.txt")
+
+        # Second file has is not present in original source folder, so originalSourceFullPath should be $null
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].originalSourceFullPath | Should -Be $null
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File3.txt")
+
+        # Third file has type not containing "template", so originalSourceFullPath should be populated
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[2].originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File2.log")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "newFolder/File2.log")
+    }
+
+    It 'ResolveFilePaths with a single project' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; type = "markdown"; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("SomeProject")
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "SomeProject/folder/File3.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[2].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths with multiple projects' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "*.md"; type = "markdown"; }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA", "ProjectB")
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 5
+
+        # ProjectA files: File1.txt
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+        $fullFilePaths[0].type | Should -Be "text"
+
+        # ProjectB files: File1.txt
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File1.txt")
+        $fullFilePaths[1].type | Should -Be "text"
+
+        # ProjectA files: File3.txt
+        $fullFilePaths[2].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File3.txt")
+        $fullFilePaths[2].type | Should -Be "text"
+
+        # ProjectB files: File3.txt
+        $fullFilePaths[3].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+        $fullFilePaths[3].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectB/folder/File3.txt")
+        $fullFilePaths[3].type | Should -Be "text"
+
+        # Non-per-project file
+        $fullFilePaths[4].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[4].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        $fullFilePaths[4].type | Should -Be "markdown"
+    }
+
+    It 'ResolveFilePaths skips files outside the source folder' {
+        # Create an external file outside the source folder
+        $externalFolder = Join-Path $PSScriptRoot "external"
+        if (-not (Test-Path $externalFolder)) { New-Item -Path $externalFolder -ItemType Directory | Out-Null }
+        $externalFile = Join-Path $externalFolder "outside.txt"
+        Set-Content -Path $externalFile -Value "outside"
+
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "../external"; "filter" = "*.txt" }
+        )
+
+        # Intentionally call ResolveFilePaths with the real sourceFolder (so external file should not be included)
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # Ensure none of the returned sourceFullPath entries point to the external file
+        $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -Be $externalFile }
+
+        # Cleanup
+        if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
+        if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+    }
+
+    It 'ResolveFilePaths returns empty when no files match filter' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $rootFolder $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.doesnotexist"; "destinationFolder" = "newFolder" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # No matching files should be returned
+        $fullFilePaths | Should -BeNullOrEmpty
+    }
+
+    It 'ResolveFilePaths with perProject true and empty projects returns no per-project entries' {
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt"; type = "text"; perProject = $true }
+        )
+
+        # Intentionally pass an empty projects array
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @()
+
+        # Behavior: when projects is empty, no per-project entries should be created
+        $fullFilePaths | Should -BeNullOrEmpty
+    }
+
+    It 'ResolveFilePaths returns empty array when files parameter is null or empty' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+
+        # Explicitly pass $null and @() to verify both code paths behave the same
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $null -destinationFolder $destinationFolder
+        $fullFilePaths | Should -BeNullOrEmpty
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files @() -destinationFolder $destinationFolder
+        $fullFilePaths | Should -BeNullOrEmpty
+    }
+
+    It 'ResolveFilePaths defaults destination folder when none is provided' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths avoids duplicate destination entries' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = "folder" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths treats dot project as repository root for per-project files' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true; "destinationFolder" = "custom" }
+        )
+
+        $projects = @('.', 'ProjectAlpha')
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects $projects
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "custom/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectAlpha/custom/File1.txt")
+    }
+
+    It 'ResolveFilePaths handles sourceFolder with trailing slashes' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder/"; "filter" = "File1.txt" }
+            @{ "sourceFolder" = "folder\"; "filter" = "File2.log" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+    }
+
+    It 'ResolveFilePaths handles deeply nested folder structures' {
+        # Create a deeply nested folder structure
+        $deepFolder = Join-Path $sourceFolder "level1/level2/level3"
+        New-Item -Path $deepFolder -ItemType Directory -Force | Out-Null
+        $deepFile = Join-Path $deepFolder "deep.txt"
+        Set-Content -Path $deepFile -Value "deep file"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "level1/level2/level3"; "filter" = "deep.txt"; "destinationFolder" = "output" }
             )
 
-            $yaml = [Yaml]::new($yamlContent)
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
-            # Create settings with hide flag
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "visibleInput"; "value" = "test" },
-                    @{ "name" = "hiddenInput"; "value" = $true; "hide" = $true }
-                )
-            }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Boolean"
-
-            # Verify the hidden input was removed from inputs
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('hiddenInput:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify the visible input still exists with updated default
-            $inputs.Find('visibleInput:', [ref] $null, [ref] $null) | Should -Be $true
-            $yaml.Get('on:/workflow_dispatch:/inputs:/visibleInput:/default:').content -join '' | Should -Be "default: 'test'"
-
-            # Verify the reference was replaced with literal value
-            $yaml.content -join "`n" | Should -Match "echo true"
-            $yaml.content -join "`n" | Should -Not -Match "github\.event\.inputs\.hiddenInput"
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $deepFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "output/deep.txt")
         }
+        finally {
+            if (Test-Path $deepFile) { Remove-Item -Path $deepFile -Force }
+            if (Test-Path (Join-Path $sourceFolder "level1")) { Remove-Item -Path (Join-Path $sourceFolder "level1") -Recurse -Force }
+        }
+    }
 
-        It 'hides string inputs and replaces references correctly' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+    It 'ResolveFilePaths handles mixed perProject true and false in same call' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; perProject = $false }
+            @{ "sourceFolder" = "folder"; "filter" = "File3.txt"; perProject = $true }
+        )
 
-            # Create a test workflow YAML with string input
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      versionInput:",
-                "        type: string",
-                "        default: '+0.0'",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Use version",
-                "        run: echo `${{ inputs.versionInput }}",
-                "      - name: Use version again",
-                "        run: echo `${{ github.event.inputs.versionInput }}"
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA")
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 3
+
+        # File1.txt is per-project
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+
+        # File2.log is not per-project
+        $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File2.log")
+
+        # File3.txt is per-project
+        $fullFilePaths[2].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File3.txt")
+    }
+
+    It 'ResolveFilePaths handles files with no extension' {
+        $noExtFile = Join-Path $sourceFolder "folder/README"
+        Set-Content -Path $noExtFile -Value "readme content"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "README" }
             )
 
-            $yaml = [Yaml]::new($yamlContent)
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
-            # Create settings with hide flag
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "versionInput"; "value" = "+0.1"; "hide" = $true }
-                )
-            }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide String"
-
-            # Verify the hidden input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('versionInput:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify both references were replaced with quoted string
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo '\+0\.1'"
-            $content | Should -Not -Match "inputs\.versionInput"
-            $content | Should -Not -Match "github\.event\.inputs\.versionInput"
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $noExtFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/README")
         }
+        finally {
+            if (Test-Path $noExtFile) { Remove-Item -Path $noExtFile -Force }
+        }
+    }
 
-        It 'hides number inputs and replaces references correctly' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+    It 'ResolveFilePaths handles special characters in filenames' {
+        $specialFile = Join-Path $sourceFolder "folder/File-With-Dashes_And_Underscores.txt"
+        Set-Content -Path $specialFile -Value "special chars"
 
-            # Create a test workflow YAML with number input
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      countInput:",
-                "        type: number",
-                "        default: 5",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Use count",
-                "        run: echo `${{ inputs.countInput }}"
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "File-With-Dashes_And_Underscores.txt" }
             )
 
-            $yaml = [Yaml]::new($yamlContent)
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
-            # Create settings with hide flag
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "countInput"; "value" = 10; "hide" = $true }
-                )
-            }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Number"
-
-            # Verify the hidden input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('countInput:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify the reference was replaced with number (unquoted)
-            $yaml.content -join "`n" | Should -Match "echo 10"
-            $yaml.content -join "`n" | Should -Not -Match "inputs\.countInput"
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $specialFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File-With-Dashes_And_Underscores.txt")
         }
+        finally {
+            if (Test-Path $specialFile) { Remove-Item -Path $specialFile -Force }
+        }
+    }
 
-        It 'replaces hidden input references in if conditions' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+    It 'ResolveFilePaths handles wildcard filters correctly' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File*.txt" }
+        )
 
-            # Create a test workflow YAML with input used in if condition (without ${{ }})
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      runTests:",
-                "        type: boolean",
-                "        default: false",
-                "jobs:",
-                "  test:",
-                "    runs-on: windows-latest",
-                "    if: github.event.inputs.runTests == 'true'",
-                "    steps:",
-                "      - name: Run",
-                "        run: echo Running"
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File1.txt")
+        $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
+    }
+
+    It 'ResolveFilePaths with perProject skips duplicate files across projects' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true; "destinationFolder" = "folder" }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA"))
+
+        # Should only have one entry per project since both resolve to the same destination
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths handles empty sourceFolder value' {
+        # Create a file in the root of the sourceFolder
+        $rootFile = Join-Path $sourceFolder "RootFile.txt"
+        Set-Content -Path $rootFile -Value "root file content"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = ""; "filter" = "RootFile.txt" }
             )
 
-            $yaml = [Yaml]::new($yamlContent)
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
-            # Create settings with hide flag
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "runTests"; "value" = $true; "hide" = $true }
-                )
-            }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide If Condition"
-
-            # Verify the hidden input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('runTests:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify the reference in if condition was replaced with string literal
-            # Bare references in if conditions are always treated as strings in GitHub Actions
-            # GitHub Actions comparisons are case-sensitive, so we use lowercase 'true'
-            $yaml.content -join "`n" | Should -Match "if: 'true' == 'true'"
-            $yaml.content -join "`n" | Should -Not -Match "github\.event\.inputs\.runTests"
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $rootFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "RootFile.txt")
         }
+        finally {
+            if (Test-Path $rootFile) { Remove-Item -Path $rootFile -Force }
+        }
+    }
 
-        It 'does not replace job output references' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+    It 'ResolveFilePaths handles multiple filters matching same file' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "*.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.*" }
+        )
 
-            # Create a test workflow YAML with needs.JobName.outputs.inputName pattern
-            # This should NOT be replaced even if an input with the same name exists and is hidden
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      branch:",
-                "        type: string",
-                "        default: 'main'",
-                "jobs:",
-                "  Inputs:",
-                "    runs-on: ubuntu-latest",
-                "    outputs:",
-                "      branch: `${{ steps.CreateInputs.outputs.branch }}",
-                "    steps:",
-                "      - name: Create inputs",
-                "        id: CreateInputs",
-                "        run: echo 'branch=main' >> `$GITHUB_OUTPUT",
-                "  Deploy:",
-                "    runs-on: ubuntu-latest",
-                "    needs: [ Inputs ]",
-                "    steps:",
-                "      - name: Deploy",
-                "        env:",
-                "          branch: `${{ needs.Inputs.outputs.branch }}",
-                "        run: echo Deploying to `$branch"
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        # File1.txt should only appear once even though both filters match it
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        $file1Matches = @($fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File1.txt") })
+        $file1Matches.Count | Should -Be 1
+    }
+
+    It 'ResolveFilePaths correctly resolves originalSourceFullPath only when file exists in original folder' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+
+        # Create an additional file only in the source folder (not in original)
+        $onlyInSourceFile = Join-Path $sourceFolder "folder/OnlyInSource.txt"
+        Set-Content -Path $onlyInSourceFile -Value "only in source"
+
+        try {
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "*.txt" }
+                @{ "sourceFolder" = "folder"; "filter" = "*.log" }
             )
 
-            $yaml = [Yaml]::new($yamlContent)
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder
 
-            # Create settings with hide flag for the branch input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "branch"; "value" = "production"; "hide" = $true }
-                )
-            }
+            # Files that exist in original source should have originalSourceFullPath set
+            $file1 = $fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File1.txt") }
+            $file1.originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File1.txt")
 
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Job Output"
+            $file2 = $fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File2.log") }
+            $file2.originalSourceFullPath | Should -Be (Join-Path $originalSourceFolder "folder/File2.log")
 
-            # Verify the hidden input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('branch:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify that needs.Inputs.outputs.branch is NOT replaced
-            # This is a job output reference, not a workflow input reference
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "needs\.Inputs\.outputs\.branch"
-
-            # Verify that direct input references would be replaced if they existed
-            # (but they don't exist in this workflow, so we just verify the job reference remains)
-            $content | Should -Not -Match "github\.event\.inputs\.branch"
-            $content | Should -Not -Match "`\$\{\{ inputs\.branch \}\}"
+            # Files that don't exist in original source should have originalSourceFullPath as $null
+            $fileOnlyInSource = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $onlyInSourceFile }
+            $fileOnlyInSource | Should -Not -BeNullOrEmpty
+            $fileOnlyInSource.originalSourceFullPath | Should -Be $null
         }
+        finally {
+            if (Test-Path $onlyInSourceFile) { Remove-Item -Path $onlyInSourceFile -Force }
+        }
+    }
 
-        It 'does not replace parts of job output references with input names like output' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+    It 'ResolveFilePaths with origin custom template and no originalSourceFolder skips files' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "origin" = "custom template" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log" }
+        )
 
-            # Edge case: input named "output" should not replace "inputs.outputs.output" or "outputs.output"
-            # Using lowercase "inputs" as job name to test the problematic case
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      output:",
-                "        type: string",
-                "        default: 'default'",
-                "jobs:",
-                "  inputs:",
-                "    runs-on: ubuntu-latest",
-                "    outputs:",
-                "      output: `${{ steps.CreateInputs.outputs.output }}",
-                "    steps:",
-                "      - name: Create inputs",
-                "        id: CreateInputs",
-                "        run: echo 'output=test' >> `$GITHUB_OUTPUT",
-                "  Deploy:",
-                "    runs-on: ubuntu-latest",
-                "    needs: [ inputs ]",
-                "    steps:",
-                "      - name: Deploy",
-                "        env:",
-                "          myOutput: `${{ needs.inputs.outputs.output }}",
-                "        run: echo Using `$myOutput"
+        # Don't pass originalSourceFolder - custom template files should be skipped
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -Not -BeNullOrEmpty
+        # Only File2.log should be included
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+    }
+
+    It 'ResolveFilePaths handles case-insensitive filter matching on Windows' {
+        # Create files with different case
+        $upperFile = Join-Path $sourceFolder "folder/UPPER.TXT"
+        $lowerFile = Join-Path $sourceFolder "folder/lower.txt"
+        Set-Content -Path $upperFile -Value "upper"
+        Set-Content -Path $lowerFile -Value "lower"
+
+        try {
+            $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+            $files = @(
+                @{ "sourceFolder" = "folder"; "filter" = "*.txt" }
             )
 
-            $yaml = [Yaml]::new($yamlContent)
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
-            # Create settings with hide flag for the "output" input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "output"; "value" = "hidden"; "hide" = $true }
-                )
+            # On Windows, both should match due to case-insensitive file system
+            $fullFilePaths | Should -Not -BeNullOrEmpty
+            $upperMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $upperFile }
+            $lowerMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $lowerFile }
+            $upperMatch | Should -Not -BeNullOrEmpty
+            $lowerMatch | Should -Not -BeNullOrEmpty
+        }
+        finally {
+            if (Test-Path $upperFile) { Remove-Item -Path $upperFile -Force }
+            if (Test-Path $lowerFile) { Remove-Item -Path $lowerFile -Force }
+        }
+    }
+}
+
+Describe "ReplaceOwnerRepoAndBranch" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+    }
+
+    It "Replaces owner, repo, and branch in workflow content" {
+        $srcContent = [ref]@"
+jobs:
+  build:
+    uses: microsoft/AL-Go-Actions@main
+"@
+        $templateOwner = "contoso"
+        $templateBranch = "dev"
+        ReplaceOwnerRepoAndBranch -srcContent $srcContent -templateOwner $templateOwner -templateBranch $templateBranch
+        $srcContent.Value | Should -Be @"
+jobs:
+  build:
+    uses: contoso/AL-Go/Actions@dev
+"@
+    }
+}
+
+Describe "IsDirectALGo" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+    }
+    It "Returns true for direct AL-Go repo URL" {
+        IsDirectALGo -templateUrl "https://github.com/contoso/AL-Go@main" | Should -Be True
+    }
+    It "Returns false for non-direct AL-Go repo URL" {
+        IsDirectALGo -templateUrl "https://github.com/contoso/OtherRepo@main" | Should -Be False
+    }
+}
+
+Describe "GetFilesToUpdate (general files to update logic)" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        # Create template folder with test files
+        $templateFolder = Join-Path $PSScriptRoot "template"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder "subfolder") -Force | Out-Null
+
+        $testPSFile = Join-Path $templateFolder "test.ps1"
+        Set-Content -Path $testPSFile -Value "# test ps file"
+
+        $testTxtFile = Join-Path $templateFolder "test.txt"
+        Set-Content -Path $testTxtFile -Value "test txt file"
+
+        $testTxtFile2 = Join-Path $templateFolder "test2.txt"
+        Set-Content -Path $testTxtFile2 -Value "test txt file 2"
+
+        $testSubfolderFile = Join-Path $templateFolder "subfolder/testsub.txt"
+        Set-Content -Path $testSubfolderFile -Value "test subfolder txt file"
+
+        $testSubfolderFile2 = Join-Path $templateFolder "subfolder/testsub2.txt"
+        Set-Content -Path $testSubfolderFile2 -Value "test subfolder txt file 2"
+
+        # Display the created files structure for template folder
+        # .
+        # ├── test.ps1
+        # ├── test.txt
+        # └── test2.txt
+        # └── subfolder
+        #     └── testsub.txt
+    }
+
+    AfterAll {
+        if (Test-Path $templateFolder) {
+            Remove-Item -Path $templateFolder -Recurse -Force
+        }
+    }
+
+    It "Returns the correct files to update with filters" {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.ps1" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Input Named Output"
-
-            # Verify the hidden input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('output:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify that needs.inputs.outputs.output is NOT replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "needs\.inputs\.outputs\.output"
-            $content | Should -Match "steps\.CreateInputs\.outputs\.output"
-
-            # Verify that direct input references would be replaced if they existed
-            $content | Should -Not -Match "github\.event\.inputs\.output"
-            $content | Should -Not -Match "`\$\{\{ inputs\.output \}\}"
         }
 
-        It 'does not replace job output references when input is named outputs' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Edge case: input named "outputs" should not replace "inputs.outputs" in job output contexts
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      outputs:",
-                "        type: string",
-                "        default: 'default'",
-                "jobs:",
-                "  Initialization:",
-                "    runs-on: ubuntu-latest",
-                "    outputs:",
-                "      telemetryScopeJson: `${{ steps.init.outputs.telemetryScopeJson }}",
-                "    steps:",
-                "      - name: Initialize",
-                "        id: init",
-                "        run: echo 'telemetryScopeJson={}' >> `$GITHUB_OUTPUT",
-                "  Deploy:",
-                "    runs-on: ubuntu-latest",
-                "    needs: [ Initialization ]",
-                "    steps:",
-                "      - name: Deploy",
-                "        env:",
-                "          telemetryScope: `${{ needs.Initialization.outputs.telemetryScopeJson }}",
-                "        run: echo Using `$telemetryScope",
-                "      - name: Use input",
-                "        run: echo `${{ inputs.outputs }}"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
 
-            $yaml = [Yaml]::new($yamlContent)
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
 
-            # Create settings with hide flag for the "outputs" input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "outputs"; "value" = "hidden-value"; "hide" = $true }
-                )
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Input Named Outputs"
-
-            # Verify the hidden input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('outputs:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify that needs.Initialization.outputs.telemetryScopeJson is NOT replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "needs\.Initialization\.outputs\.telemetryScopeJson"
-            $content | Should -Match "steps\.init\.outputs\.telemetryScopeJson"
-
-            # Verify that the actual input reference WAS replaced
-            $content | Should -Match "echo 'hidden-value'"
-            $content | Should -Not -Match "github\.event\.inputs\.outputs"
-            $content | Should -Not -Match "`\$\{\{ inputs\.outputs \}\}"
         }
 
-        It 'does not replace job outputs when job is named inputs and input is named outputs' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 2
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
 
-            # This is the real edge case: job named "inputs" (lowercase) with outputs, and an input also named "outputs"
-            # needs.inputs.outputs.something should NOT be replaced (it's a job output reference)
-            # but ${{ inputs.outputs }} should be replaced (it's a workflow input reference)
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      outputs:",
-                "        type: string",
-                "        default: 'default'",
-                "jobs:",
-                "  inputs:",
-                "    runs-on: ubuntu-latest",
-                "    outputs:",
-                "      myValue: `${{ steps.init.outputs.myValue }}",
-                "    steps:",
-                "      - name: Initialize",
-                "        id: init",
-                "        run: echo 'myValue=test' >> `$GITHUB_OUTPUT",
-                "  Deploy:",
-                "    runs-on: ubuntu-latest",
-                "    needs: [ inputs ]",
-                "    steps:",
-                "      - name: Use job output",
-                "        env:",
-                "          value: `${{ needs.inputs.outputs.myValue }}",
-                "        run: echo Job output is `$value",
-                "      - name: Use input",
-                "        run: echo Input is `${{ inputs.outputs }}"
-            )
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
+    }
 
-            $yaml = [Yaml]::new($yamlContent)
-
-            # Create settings with hide flag for the "outputs" input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "outputs"; "value" = "hidden-input-value"; "hide" = $true }
-                )
+    It 'Returns the correct files with destinationFolder' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Job Named Inputs"
-
-            # Verify the hidden input was removed
-            $inputsSection = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputsSection.Find('outputs:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify that needs.inputs.outputs.myValue is NOT replaced (job output reference)
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "needs\.inputs\.outputs\.myValue"
-
-            # Verify that steps.init.outputs.myValue is NOT replaced (step output reference)
-            $content | Should -Match "steps\.init\.outputs\.myValue"
-
-            # Verify that inputs.outputs WAS replaced with the hidden value
-            $content | Should -Match "echo Input is 'hidden-input-value'"
-            $content | Should -Not -Match "`\$\{\{ inputs\.outputs \}\}"
         }
 
-        It 'silently skips hiding non-existent input' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with only one input
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      existingInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.existingInput }}"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 2
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test.txt')
+        $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test2.txt')
 
-            $yaml = [Yaml]::new($yamlContent)
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
 
-            # Create settings trying to hide an input that doesn't exist
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "existingInput"; "value" = "test-value" },
-                    @{ "name" = "nonExistentInput"; "value" = "hidden-value"; "hide" = $true }
-                )
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt"; destinationFolder = "customFolder" })
+                filesToExclude = @(@{ filter = "test2.txt" })
             }
-
-            # Mock OutputWarning to verify no warning is issued
-            Mock OutputWarning { }
-
-            # Apply the defaults - should not throw
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Non-Existent" } | Should -Not -Throw
-
-            # Verify no warning was issued
-            Assert-MockCalled OutputWarning -Times 0
-
-            # Verify the existing input was updated but not hidden
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('existingInput:', [ref] $null, [ref] $null) | Should -Be $true
-            $yaml.Get('on:/workflow_dispatch:/inputs:/existingInput:/default:').content -join '' | Should -Be "default: 'test-value'"
-
-            # Verify the workflow content was not affected by the non-existent input
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "`\$\{\{ inputs\.existingInput \}\}"
         }
 
-        It 'hides multiple inputs in the same workflow' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with multiple inputs to hide
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      visibleInput:",
-                "        type: string",
-                "        default: ''",
-                "      hiddenInput1:",
-                "        type: boolean",
-                "        default: false",
-                "      hiddenInput2:",
-                "        type: string",
-                "        default: ''",
-                "      hiddenInput3:",
-                "        type: number",
-                "        default: 0",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Use inputs",
-                "        run: echo `${{ inputs.hiddenInput1 }} `${{ inputs.hiddenInput2 }} `${{ inputs.hiddenInput3 }}",
-                "      - name: Use visible",
-                "        run: echo `${{ inputs.visibleInput }}"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test.txt')
 
-            $yaml = [Yaml]::new($yamlContent)
+        # One file to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testTxtFile2
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+    }
 
-            # Create settings with multiple hidden inputs
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "visibleInput"; "value" = "visible" },
-                    @{ "name" = "hiddenInput1"; "value" = $true; "hide" = $true },
-                    @{ "name" = "hiddenInput2"; "value" = "hidden-string"; "hide" = $true },
-                    @{ "name" = "hiddenInput3"; "value" = 42; "hide" = $true }
-                )
+    It 'Returns the correct files with destinationName' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "test.ps1"; destinationName = "renamed.txt" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Multiple Hidden"
-
-            # Verify all hidden inputs were removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('hiddenInput1:', [ref] $null, [ref] $null) | Should -Be $false
-            $inputs.Find('hiddenInput2:', [ref] $null, [ref] $null) | Should -Be $false
-            $inputs.Find('hiddenInput3:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify visible input still exists
-            $inputs.Find('visibleInput:', [ref] $null, [ref] $null) | Should -Be $true
-
-            # Verify all references were replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo true 'hidden-string' 42"
-            $content | Should -Match "echo `\$\{\{ inputs\.visibleInput \}\}"
-            $content | Should -Not -Match "inputs\.hiddenInput1"
-            $content | Should -Not -Match "inputs\.hiddenInput2"
-            $content | Should -Not -Match "inputs\.hiddenInput3"
         }
 
-        It 'replaces hidden input references in different expression contexts' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with inputs used in various contexts
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      hiddenBool:",
-                "        type: boolean",
-                "        default: false",
-                "      hiddenString:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    if: inputs.hiddenBool == true",
-                "    env:",
-                "      MY_VAR: `${{ inputs.hiddenString }}",
-                "    steps:",
-                "      - name: Checkout",
-                "        uses: actions/checkout@v4",
-                "        with:",
-                "          ref: `${{ inputs.hiddenString }}",
-                "      - name: Step with if",
-                "        if: inputs.hiddenBool",
-                "        run: echo Running",
-                "      - name: Step with env",
-                "        env:",
-                "          BRANCH: `${{ inputs.hiddenString }}",
-                "        run: echo `$BRANCH"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'renamed.txt')
 
-            $yaml = [Yaml]::new($yamlContent)
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
 
-            # Create settings with hide flags
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "hiddenBool"; "value" = $true; "hide" = $true },
-                    @{ "name" = "hiddenString"; "value" = "main"; "hide" = $true }
-                )
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "test.ps1"; destinationFolder = 'dstPath'; destinationName = "renamed.txt" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Expression Contexts"
-
-            # Verify all references were replaced correctly in different contexts
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "if: true == true"  # Job-level if
-            $content | Should -Match "MY_VAR: 'main'"    # Job-level env
-            $content | Should -Match "ref: 'main'"       # Action with parameter
-            $content | Should -Match "if: true"          # Step-level if
-            $content | Should -Match "BRANCH: 'main'"    # Step-level env
-            $content | Should -Not -Match "inputs\.hiddenBool"
-            $content | Should -Not -Match "inputs\.hiddenString"
         }
 
-        It 'does not replace partial input name matches' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with inputs that have overlapping names
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      test:",
-                "        type: string",
-                "        default: ''",
-                "      testInput:",
-                "        type: string",
-                "        default: ''",
-                "      mytest:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  run:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Use inputs",
-                "        run: echo `${{ inputs.test }} `${{ inputs.testInput }} `${{ inputs.mytest }}"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'dstPath/renamed.txt')
+    }
 
-            $yaml = [Yaml]::new($yamlContent)
-
-            # Hide only the "test" input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "test"; "value" = "hidden-test"; "hide" = $true },
-                    @{ "name" = "testInput"; "value" = "visible-testInput" },
-                    @{ "name" = "mytest"; "value" = "visible-mytest" }
-                )
+    It 'Return the correct files with types' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.ps1"; type = "script" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Partial Match"
-
-            # Verify only "test" was hidden, not "testInput" or "mytest"
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('test:', [ref] $null, [ref] $null) | Should -Be $false
-            $inputs.Find('testInput:', [ref] $null, [ref] $null) | Should -Be $true
-            $inputs.Find('mytest:', [ref] $null, [ref] $null) | Should -Be $true
-
-            # Verify only inputs.test was replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo 'hidden-test' `\$\{\{ inputs\.testInput \}\} `\$\{\{ inputs\.mytest \}\}"
         }
 
-        It 'hides choice type inputs correctly' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with choice input
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      releaseType:",
-                "        type: choice",
-                "        options:",
-                "          - Release",
-                "          - Prerelease",
-                "          - Draft",
-                "        default: Release",
-                "jobs:",
-                "  release:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Create release",
-                "        run: echo Creating `${{ inputs.releaseType }} release"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+        $filesToInclude[0].type | Should -Be "script"
 
-            $yaml = [Yaml]::new($yamlContent)
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
 
-            # Hide the choice input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "releaseType"; "value" = "Prerelease"; "hide" = $true }
-                )
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt"; type = "text" })
+                filesToExclude = @(@{ filter = "test.txt" })
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Choice"
-
-            # Verify the choice input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('releaseType:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify the reference was replaced with the choice value
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo Creating 'Prerelease' release"
-            $content | Should -Not -Match "inputs\.releaseType"
         }
 
-        It 'hides environment type inputs correctly' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with environment input
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      environment:",
-                "        type: environment",
-                "        default: ''",
-                "jobs:",
-                "  deploy:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Deploy",
-                "        run: echo Deploying to `${{ inputs.environment }}"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToInclude[0].type | Should -Be "text"
 
-            $yaml = [Yaml]::new($yamlContent)
+        # One file to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+    }
 
-            # Hide the environment input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "environment"; "value" = "production"; "hide" = $true }
-                )
+    It 'Return the correct files when unusedALGoSystemFiles is specified' {
+        $settings = @{
+            type                  = "nonPTE"
+            unusedALGoSystemFiles = @("test.ps1")
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*" })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Environment"
-
-            # Verify the environment input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('environment:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify the reference was replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo Deploying to 'production'"
-            $content | Should -Not -Match "inputs\.environment"
         }
 
-        It 'handles input references without whitespace' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with various spacing patterns
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      myInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: No spaces",
-                "        run: echo `${{inputs.myInput}}",
-                "      - name: Normal spaces",
-                "        run: echo `${{ inputs.myInput }}",
-                "      - name: Asymmetric left",
-                "        run: echo `${{ inputs.myInput}}",
-                "      - name: Asymmetric right",
-                "        run: echo `${{inputs.myInput }}",
-                "      - name: Multiple on same line",
-                "        run: echo `${{inputs.myInput}} and `${{ inputs.myInput }}"
-            )
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 2
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
 
-            $yaml = [Yaml]::new($yamlContent)
+        # One file to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+    }
 
-            # Hide the input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "myInput"; "value" = "test-value"; "hide" = $true }
-                )
+    It 'GetFilesToUpdate with perProject true and empty projects returns no per-project entries' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt"; type = "text"; perProject = $true })
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Spacing"
-
-            # Verify all variations were replaced with the same normalized output
-            $content = $yaml.content -join "`n"
-
-            # All spacing variations should be replaced with just the value (in quotes for strings)
-            # Verify the four single-value lines all got replaced the same way
-            ($content -split "`n" | Where-Object { $_ -match "^\s+run: echo 'test-value'`$" }).Count | Should -Be 4 -Because "Four lines with single value should all be normalized"
-
-            # Verify the multiple-on-same-line case
-            $content -match "(?m)^\s+run: echo 'test-value' and 'test-value'`$" | Should -Be $true -Because "Multiple on same line should both be replaced"
-
-            # Verify no input references remain
-            $content | Should -Not -Match "inputs\.myInput"
         }
 
-        It 'replaces hidden input references in complex expressions' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        # Pass empty projects array
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder -projects @()
 
-            # Create a test workflow YAML with complex expressions
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      enableTests:",
-                "        type: boolean",
-                "        default: false",
-                "      branch:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    if: inputs.enableTests == true && inputs.branch != ''",
-                "    steps:",
-                "      - name: Conditional",
-                "        if: inputs.enableTests && needs.job.outputs.value",
-                "        run: echo Testing",
-                "      - name: Fallback",
-                "        run: echo `${{ inputs.branch || 'main' }}"
-            )
+        # Behavior: when projects is empty, no per-project entries should be created
+        $filesToInclude | Should -BeNullOrEmpty
+        $filesToExclude | Should -BeNullOrEmpty
+    }
 
-            $yaml = [Yaml]::new($yamlContent)
-
-            # Hide both inputs
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "enableTests"; "value" = $true; "hide" = $true },
-                    @{ "name" = "branch"; "value" = "develop"; "hide" = $true }
-                )
+    It 'GetFilesToUpdate ignores filesToExclude patterns that do not match any file' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt" })
+                filesToExclude = @(@{ filter = "no-match-*.none" })
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Complex Expressions"
-
-            # Verify complex expressions were handled correctly
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "if: true == true && 'develop' != ''"
-            $content | Should -Match "if: true && needs\.job\.outputs\.value"
-            $content | Should -Match "echo `\$\{\{ 'develop' \|\| 'main' \}\}"
-            $content | Should -Not -Match "inputs\.enableTests"
-            $content | Should -Not -Match "inputs\.branch"
         }
 
-        It 'handles case-insensitive input references' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML with mixed case references
-            # Note: GitHub Actions itself is case-sensitive for input references in workflows
-            # This test verifies our hide feature respects the actual case used
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      myInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Lower case",
-                "        run: echo `${{ inputs.myInput }}"
-            )
+        # All txt files should be included, no files to exclude
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 2
+        $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
 
-            $yaml = [Yaml]::new($yamlContent)
+        $filesToExclude | Should -BeNullOrEmpty
+    }
 
-            # Hide the input (case should not matter for input name matching)
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "MYINPUT"; "value" = "test-value"; "hide" = $true }
-                )
+    It 'GetFilesToUpdate duplicates per-project includes for each project including the repository root' {
+        $perProjectFile = Join-Path $templateFolder "perProjectFile.algo"
+        Set-Content -Path $perProjectFile -Value "per project"
+
+        try {
+            $settings = @{
+                type                  = "NotPTE"
+                unusedALGoSystemFiles = @()
+                customALGoFiles       = @{
+                    filesToInclude = @(@{ filter = "perProjectFile.algo"; perProject = $true; destinationFolder = 'custom' })
+                    filesToExclude = @()
+                }
             }
 
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Case Sensitivity"
+            $projects = @('.', 'ProjectOne')
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder -projects $projects
 
-            # Verify the input was hidden (case-insensitive matching for input names)
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('myInput:', [ref] $null, [ref] $null) | Should -Be $false
+            $filesToInclude | Should -Not -BeNullOrEmpty
+            $filesToInclude.Count | Should -Be 2
 
-            # Verify the reference was replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo 'test-value'"
+            $rootDestination = Join-Path 'baseFolder' 'custom/perProjectFile.algo'
+            $projectDestination = Join-Path 'baseFolder' 'ProjectOne/custom/perProjectFile.algo'
+
+            $filesToInclude.destinationFullPath | Should -Contain $rootDestination
+            $filesToInclude.destinationFullPath | Should -Contain $projectDestination
+
+            $filesToExclude | Should -BeNullOrEmpty
         }
+        finally {
+            if (Test-Path $perProjectFile) {
+                Remove-Item -Path $perProjectFile -Force
+            }
+        }
+    }
 
-        It 'handles empty string values when hiding' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+    It 'GetFilesToUpdate adds custom template settings only when original template folder is provided' {
+        $customTemplateFolder = Join-Path $PSScriptRoot "customTemplateFolder"
+        $originalTemplateFolder = Join-Path $PSScriptRoot "originalTemplateFolder"
 
-            # Create a test workflow YAML
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      emptyInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.emptyInput }}"
-            )
+        New-Item -ItemType Directory -Path $customTemplateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $customTemplateFolder '.AL-Go') -Force | Out-Null
+        Set-Content -Path (Join-Path $customTemplateFolder (Join-Path '.github' $RepoSettingsFileName)) -Value '{}' -Encoding UTF8
+        Set-Content -Path (Join-Path $customTemplateFolder (Join-Path '.AL-Go' $ALGoSettingsFileName)) -Value '{}' -Encoding UTF8
 
-            $yaml = [Yaml]::new($yamlContent)
+        New-Item -ItemType Directory -Path $originalTemplateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $originalTemplateFolder '.AL-Go') -Force | Out-Null
+        Set-Content -Path (Join-Path $originalTemplateFolder (Join-Path '.github' $RepoSettingsFileName)) -Value '{"original":true}' -Encoding UTF8
+        Set-Content -Path (Join-Path $originalTemplateFolder (Join-Path '.AL-Go' $ALGoSettingsFileName)) -Value '{"original":true}' -Encoding UTF8
 
-            # Hide with empty string value
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "emptyInput"; "value" = ""; "hide" = $true }
-                )
+        try {
+            $settings = @{
+                type                        = "PTE"
+                powerPlatformSolutionFolder = ''
+                unusedALGoSystemFiles       = @()
+                customALGoFiles             = @{
+                    filesToInclude = @()
+                    filesToExclude = @()
+                }
             }
 
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Empty Value"
+            $baseFolder = 'baseFolder'
+            $projects = @('ProjectA')
 
-            # Verify the input was removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('emptyInput:', [ref] $null, [ref] $null) | Should -Be $false
+            $filesWithoutOriginal, $excludesWithoutOriginal = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $customTemplateFolder -projects $projects
 
-            # Verify the reference was replaced with empty quoted string
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo ''"
-            $content | Should -Not -Match "inputs\.emptyInput"
+            $filesWithoutOriginal | Should -Not -BeNullOrEmpty
+
+            $repoSettingsDestination = Join-Path $baseFolder (Join-Path '.github' $RepoSettingsFileName)
+            $projectSettingsRelative = Join-Path 'ProjectA' '.AL-Go'
+            $projectSettingsRelative = Join-Path $projectSettingsRelative $ALGoSettingsFileName
+            $projectSettingsDestination = Join-Path $baseFolder $projectSettingsRelative
+
+            $filesWithoutOriginal.destinationFullPath | Should -Contain $repoSettingsDestination
+            $filesWithoutOriginal.destinationFullPath | Should -Contain $projectSettingsDestination
+            $filesWithoutOriginal.destinationFullPath | Should -Not -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateRepoSettingsFileName))
+            $filesWithoutOriginal.destinationFullPath | Should -Not -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateProjectSettingsFileName))
+
+            $filesWithOriginal, $excludesWithOriginal = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder -projects $projects
+
+            $filesWithOriginal | Should -Not -BeNullOrEmpty
+
+            $filesWithOriginal.destinationFullPath | Should -Contain $repoSettingsDestination
+            $filesWithOriginal.destinationFullPath | Should -Contain $projectSettingsDestination
+            $filesWithOriginal.destinationFullPath | Should -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateRepoSettingsFileName))
+            $filesWithOriginal.destinationFullPath | Should -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateProjectSettingsFileName))
+
+            $excludesWithoutOriginal | Should -BeNullOrEmpty
+            $excludesWithOriginal | Should -BeNullOrEmpty
         }
-
-        It 'handles special characters in hidden values' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
-
-            # Create a test workflow YAML
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      input1:",
-                "        type: string",
-                "        default: ''",
-                "      input2:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.input1 }} and `${{ inputs.input2 }}"
-            )
-
-            $yaml = [Yaml]::new($yamlContent)
-
-            # Hide with values containing special characters
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "input1"; "value" = "value with 'quotes'"; "hide" = $true },
-                    @{ "name" = "input2"; "value" = "+0.1"; "hide" = $true }
-                )
+        finally {
+            if (Test-Path $customTemplateFolder) {
+                Remove-Item -Path $customTemplateFolder -Recurse -Force
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Special Chars"
-
-            # Verify values are properly escaped
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo 'value with ''quotes''' and '\+0\.1'"
-            $content | Should -Not -Match "inputs\.input1"
-            $content | Should -Not -Match "inputs\.input2"
-        }
-
-        It 'handles hidden input with no references in workflow' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
-
-            # Create a test workflow YAML where input is defined but never referenced
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      unusedInput:",
-                "        type: string",
-                "        default: ''",
-                "      usedInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.usedInput }}"
-            )
-
-            $yaml = [Yaml]::new($yamlContent)
-
-            # Hide the unused input
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "unusedInput"; "value" = "hidden-unused"; "hide" = $true },
-                    @{ "name" = "usedInput"; "value" = "visible" }
-                )
+            if (Test-Path $originalTemplateFolder) {
+                Remove-Item -Path $originalTemplateFolder -Recurse -Force
             }
-
-            # Apply the defaults - should not throw
-            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Unused Input" } | Should -Not -Throw
-
-            # Verify the unused input was still removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('unusedInput:', [ref] $null, [ref] $null) | Should -Be $false
-            $inputs.Find('usedInput:', [ref] $null, [ref] $null) | Should -Be $true
         }
+    }
 
-        It 'handles workflow with all inputs hidden' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
-
-            # Create a test workflow YAML with only inputs that will be hidden
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      input1:",
-                "        type: string",
-                "        default: ''",
-                "      input2:",
-                "        type: boolean",
-                "        default: false",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.input1 }} `${{ inputs.input2 }}"
-            )
-
-            $yaml = [Yaml]::new($yamlContent)
-
-            # Hide all inputs
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "input1"; "value" = "hidden1"; "hide" = $true },
-                    @{ "name" = "input2"; "value" = $true; "hide" = $true }
-                )
+    It 'GetFilesToUpdate excludes files that match both include and exclude patterns' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt" })
+                filesToExclude = @(@{ filter = "test.txt" })
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - All Hidden"
-
-            # Verify all inputs were removed
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('input1:', [ref] $null, [ref] $null) | Should -Be $false
-            $inputs.Find('input2:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify references were replaced
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo 'hidden1' true"
         }
 
-        It 'applies last value when duplicate entries have different hide flags' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      myInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.myInput }}"
-            )
+        # test.txt should not be in filesToInclude
+        $includedTestTxt = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $includedTestTxt | Should -BeNullOrEmpty
 
-            $yaml = [Yaml]::new($yamlContent)
+        # test.txt should be in filesToExclude
+        $excludedTestTxt = $filesToExclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $excludedTestTxt | Should -Not -BeNullOrEmpty
+    }
 
-            # Create settings with duplicate entries where first has hide=false, last has hide=true
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "myInput"; "value" = "first-value"; "hide" = $false },
-                    @{ "name" = "myInput"; "value" = "final-value"; "hide" = $true }
-                )
+    It 'GetFilesToUpdate ignores exclude patterns that do not match any included file' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "*.txt" })
+                filesToExclude = @(@{ filter = "nonexistent.xyz" })
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Duplicate Hide"
-
-            # Verify last entry wins - input should be hidden
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('myInput:', [ref] $null, [ref] $null) | Should -Be $false
-
-            # Verify the final hidden value was used
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo 'final-value'"
-            $content | Should -Not -Match "inputs\.myInput"
         }
 
-        It 'applies last value when duplicate entries have hide reversed' {
-            . (Join-Path $scriptRoot "yamlclass.ps1")
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
 
-            # Create a test workflow YAML
-            $yamlContent = @(
-                "name: 'Test Workflow'",
-                "on:",
-                "  workflow_dispatch:",
-                "    inputs:",
-                "      myInput:",
-                "        type: string",
-                "        default: ''",
-                "jobs:",
-                "  test:",
-                "    runs-on: ubuntu-latest",
-                "    steps:",
-                "      - name: Test",
-                "        run: echo `${{ inputs.myInput }}"
-            )
+        # All txt files should be included
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $txtFiles = $filesToInclude | Where-Object { $_.sourceFullPath -like "*.txt" }
+        $txtFiles.Count | Should -BeGreaterThan 0
 
-            $yaml = [Yaml]::new($yamlContent)
+        # Exclude list should not contain the non-matching pattern
+        $excludedNonExistent = $filesToExclude | Where-Object { $_.sourceFullPath -like "*.xyz" }
+        $excludedNonExistent | Should -BeNullOrEmpty
+    }
 
-            # Create settings with duplicate entries where first has hide=true, last has hide=false
-            $repoSettings = @{
-                "workflowDefaultInputs" = @(
-                    @{ "name" = "myInput"; "value" = "first-value"; "hide" = $true },
-                    @{ "name" = "myInput"; "value" = "final-value"; "hide" = $false }
+    It 'GetFilesToUpdate handles overlapping include patterns with different destinations' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = "test.txt"; destinationFolder = "folder1" }
+                    @{ filter = "test.txt"; destinationFolder = "folder2" }
                 )
+                filesToExclude = @()
             }
-
-            # Apply the defaults
-            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Duplicate Hide Reversed"
-
-            # Verify last entry wins - input should NOT be hidden
-            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
-            $inputs.Find('myInput:', [ref] $null, [ref] $null) | Should -Be $true
-
-            # Verify the final value was applied to the default
-            $yaml.Get('on:/workflow_dispatch:/inputs:/myInput:/default:').content -join '' | Should -Be "default: 'final-value'"
-
-            # Verify the reference was NOT replaced (input is visible)
-            $content = $yaml.content -join "`n"
-            $content | Should -Match "echo `\$\{\{ inputs\.myInput \}\}"
-            $content | Should -Not -Match "echo 'final-value'"
         }
 
-    } # End of Context 'ApplyWorkflowDefaultInputs - Hide Feature'
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        # Should have two entries for test.txt with different destinations
+        $testTxtFiles = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $testTxtFiles.Count | Should -Be 2
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder1/test.txt')
+        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder2/test.txt')
+    }
+}
+
+Describe "GetFilesToUpdate (real template)" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realPTETemplateFolder', Justification = 'False positive.')]
+        $realPTETemplateFolder = Join-Path $PSScriptRoot "../Templates/Per Tenant Extension" -Resolve
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realAppSourceAppTemplateFolder', Justification = 'False positive.')]
+        $realAppSourceAppTemplateFolder = Join-Path $PSScriptRoot "../Templates/AppSource App" -Resolve
+    }
+
+    It 'Return the correct files to exclude when type is PTE and powerPlatformSolutionFolder is not empty' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 24
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+
+        # No files to remove
+        $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'Return PP files in filesToExclude when type is PTE but powerPlatformSolutionFolder is empty' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 21
+
+        $filesToInclude | ForEach-Object {
+            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        }
+
+        # All PP files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 3
+
+        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/_BuildPowerPlatformSolution.yaml")
+
+        $filesToExclude[1].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToExclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PushPowerPlatformChanges.yaml")
+
+        $filesToExclude[2].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude[2].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PullPowerPlatformChanges.yaml")
+
+    }
+
+    It 'Return the correct files when unusedALGoSystemFiles is specified' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @("Test Next Major.settings.json")
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 23
+
+        # Two files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/Test Next Major.settings.json')
+    }
+
+    It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @("Test Next Major.settings.json", "_BuildPowerPlatformSolution.yaml")
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToInclude.Count | Should -Be 20
+
+        # Four files to remove
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 4
+
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+    }
+
+    It 'Returns the custom template settings files when there is a custom template' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $customTemplateFolder = $realPTETemplateFolder
+        $originalTemplateFolder = $realAppSourceAppTemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+
+        # Check repo settings files
+        $repoSettingsFiles = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $customTemplateFolder ".github/AL-Go-Settings.json") }
+
+        $repoSettingsFiles | Should -Not -BeNullOrEmpty
+        $repoSettingsFiles.Count | Should -Be 2
+
+        $repoSettingsFiles[0].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".github/AL-Go-Settings.json")
+        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-Settings.json')
+        $repoSettingsFiles[0].type | Should -Be 'settings'
+
+        $repoSettingsFiles[1].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
+        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
+        $repoSettingsFiles[1].type | Should -Be ''
+
+        # Check project settings files
+        $projectSettingsFilesFromCustomTemplate = @($filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $customTemplateFolder ".AL-Go/settings.json") })
+
+        $projectSettingsFilesFromCustomTemplate | Should -Not -BeNullOrEmpty
+        $projectSettingsFilesFromCustomTemplate.Count | Should -Be 2
+
+        $projectSettingsFilesFromCustomTemplate[0].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".AL-Go/settings.json")
+        $projectSettingsFilesFromCustomTemplate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.AL-Go/settings.json')
+        $projectSettingsFilesFromCustomTemplate[0].type | Should -Be 'settings'
+
+        $projectSettingsFilesFromCustomTemplate[1].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
+        $projectSettingsFilesFromCustomTemplate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateProjectSettings.doNotEdit.json')
+        $projectSettingsFilesFromCustomTemplate[1].type | Should -Be ''
+
+        # No files to exclude
+        $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate handles AppSource template type correctly' {
+        $settings = @{
+            type                        = "AppSource App"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realAppSourceAppTemplateFolder
+
+        # PowerPlatform files should be excluded for AppSource App too (same as PTE)
+        $filesToInclude | Should -Not -BeNullOrEmpty
+
+        $ppFiles = $filesToInclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
+        $ppFiles | Should -BeNullOrEmpty
+
+        # No files to remove that match PP files as they are not in the template
+        $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
+        $ppExcludes | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate with empty unusedALGoSystemFiles array does not exclude any files' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        # No additional files should be excluded due to unusedALGoSystemFiles
+        $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*_BuildPowerPlatformSolution.yaml" -or $_.sourceFullPath -like "*PullPowerPlatformChanges.yaml" -or $_.sourceFullPath -like "*PushPowerPlatformChanges.yaml" }
+        $ppExcludes.Count | Should -Be 3 # Only PP files should be excluded by default
+    }
+
+    It 'GetFilesToUpdate marks settings files with correct type' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects @('Project1')
+
+        # Check that settings files have type = 'settings'
+        $repoSettingsFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -like "*$RepoSettingsFileName" -and $_.destinationFullPath -like "*.github*$RepoSettingsFileName" })
+        $repoSettingsFiles | Should -Not -BeNullOrEmpty
+        $repoSettingsFiles[0].type | Should -Be 'settings'
+
+        $projectSettingsFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -like "*$ALGoSettingsFileName" -and $_.destinationFullPath -like "*Project1*.AL-Go*" })
+        $projectSettingsFiles | Should -Not -BeNullOrEmpty
+        $projectSettingsFiles[0].type | Should -Be 'settings'
+    }
+
+    It 'GetFilesToUpdate handles multiple projects correctly' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $projects = @('ProjectA', 'ProjectB', 'ProjectC')
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects $projects
+
+        # Each project should have its own settings file
+        $projectASettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectA*.AL-Go*" }
+        $projectBSettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectB*.AL-Go*" }
+        $projectCSettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectC*.AL-Go*" }
+
+        $projectASettings | Should -Not -BeNullOrEmpty
+        $projectBSettings | Should -Not -BeNullOrEmpty
+        $projectCSettings | Should -Not -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate excludes files correctly when in both unusedALGoSystemFiles and filesToExclude' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @("Test Next Major.settings.json")
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @(@{ filter = "Test Next Major.settings.json" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+
+        # Test Next Major.settings.json should be excluded
+        $testNextMajor = $filesToInclude | Where-Object { $_.sourceFullPath -like "*Test Next Major.settings.json" }
+        $testNextMajor | Should -BeNullOrEmpty
+
+        # Should be in exclude list
+        $excludedTestNextMajor = @($filesToExclude | Where-Object { $_.sourceFullPath -like "*Test Next Major.settings.json" })
+        $excludedTestNextMajor | Should -Not -BeNullOrEmpty
+        $excludedTestNextMajor.Count | Should -Be 1
+    }
 }

@@ -214,5 +214,55 @@ function OutputDebug {
     }
 }
 
-Export-ModuleMember -Function OutputColor, OutputDebugFunctionCall, OutputGroupStart, OutputGroupEnd, OutputError, OutputWarning, OutputNotice, MaskValueInLog, OutputDebug
+<#
+    .SYNOPSIS
+        Outputs each item in an array to the console with optional formatting.
+    .DESCRIPTION
+        Outputs each item in an array to the console. An optional formatter script block can be provided to customize the output format of each item.
+        If a message is provided, it is output before the array items. If the array is empty or null, it outputs "- None".
+    .PARAMETER Message
+        An optional message to output before the array items.
+    .PARAMETER Array
+        The array of items to output.
+    .PARAMETER Formatter
+        An optional script block to format each item in the array.
+    .PARAMETER Debug
+        A switch indicating whether to output messages as debug messages.
+#>
+function OutputArray {
+    Param(
+        [string] $Message,
+        [object[]] $Array,
+        [scriptblock] $Formatter = { "- $_" },
+        [switch] $Debug
+    )
+
+    function OutputMessage {
+        Param(
+            [string] $Message,
+            [switch] $Debug
+        )
+
+        if ($Debug) {
+            OutputDebug $Message
+        }
+        else {
+            Write-Host $Message
+        }
+    }
+
+    if($Message) {
+        OutputMessage $Message -Debug:$Debug
+    }
+    if (!$Array) {
+        OutputMessage "- None" -Debug:$Debug
+    }
+    else {
+        $Array | ForEach-Object {
+            OutputMessage "$(& $Formatter $_)" -Debug:$Debug
+        }
+    }
+}
+
+Export-ModuleMember -Function OutputColor, OutputDebugFunctionCall, OutputGroupStart, OutputGroupEnd, OutputError, OutputWarning, OutputNotice, MaskValueInLog, OutputDebug, OutputArray
 Export-ModuleMember -Variable debugLoggingEnabled
