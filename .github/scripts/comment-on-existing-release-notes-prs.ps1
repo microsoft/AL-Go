@@ -92,27 +92,26 @@ foreach ($pr in $prs) {
     }
 }
 
-Write-Host "`nFound $($prsWithReleaseNotes.Count) PRs that modify RELEASENOTES.md"
-
 if ($prsWithReleaseNotes.Count -eq 0) {
-    Write-Host "No PRs found that modify RELEASENOTES.md. Exiting."
+    Write-Host "`nNo PRs found that modify RELEASENOTES.md. Exiting."
     exit 0
 }
 
+Write-Host "`nFound $($prsWithReleaseNotes.Count) PRs that modify RELEASENOTES.md"
 Write-Host "`nAdding comments to PRs..."
 
 foreach ($pr in $prsWithReleaseNotes) {
     $prNumber = $pr.number
     $prTitle = $pr.title
     
-    Write-Host "`nProcessing PR #$prNumber: $prTitle"
+    Write-Host "`nProcessing PR #${prNumber}: $prTitle"
     
     # Check if we've already commented
     $commentsUrl = "https://api.github.com/repos/$Owner/$Repo/issues/$prNumber/comments"
     $existingComments = Invoke-RestMethod -Uri $commentsUrl -Headers $headers -Method Get
     
     $alreadyCommented = $existingComments | Where-Object { 
-        $_.user.type -eq "Bot" -and $_.body -like "*Release Notes Update Reminder*"
+        $_.body -like "*Release Notes Update Reminder*"
     }
     
     if ($alreadyCommented) {
@@ -130,7 +129,7 @@ foreach ($pr in $prsWithReleaseNotes) {
         Write-Host "  ✓ Comment added to PR #$prNumber"
     }
     catch {
-        Write-Error "  ✗ Failed to add comment to PR #$prNumber: $_"
+        Write-Error "  ✗ Failed to add comment to PR #${prNumber}: $_"
     }
 }
 
