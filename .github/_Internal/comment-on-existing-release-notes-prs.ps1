@@ -89,13 +89,11 @@ if ($releaseNotesContent -match '(?m)^##\s*v(\d+\.\d+)') {
 }
 
 $comment = @"
-### ⚠️ Release Notes Update Reminder
+A new version of AL-Go ($currentVersion) has been released.
 
-Thank you for updating the release notes! 
+Please move your release notes changes to above the ``## $currentVersion`` section in the RELEASENOTES.md file.
 
-Please ensure that your changes are placed **above the new version section** (currently ``## $currentVersion``) in the RELEASENOTES.md file.
-
-This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.
+This ensures your changes are included in the next release rather than being listed under an already-released version.
 "@
 
 Write-Host "Fetching open pull requests for $Owner/$Repo..."
@@ -147,39 +145,51 @@ foreach ($pr in $prsWithReleaseNotes) {
     
     Write-Host "`nProcessing PR #${prNumber}: $prTitle"
     
-    # Check if we've already commented (check for active/open comments)
-    $existingCommentsOutput = gh api "/repos/$Owner/$Repo/issues/$prNumber/comments" --jq '[.[] | select(.body | contains("Release Notes Update Reminder"))]'
+    # Check if we've already commented (check for review comments on RELEASENOTES.md)
+    $existingReviewCommentsOutput = gh api "/repos/$Owner/$Repo/pulls/$prNumber/comments" --jq '[.[] | select(.path == "RELEASENOTES.md" and (.body | contains("new version of AL-Go")))]'
     
-    if ($LASTEXITCODE -eq 0 -and $existingCommentsOutput) {
-        $existingComments = $existingCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
+    if ($LASTEXITCODE -eq 0 -and $existingReviewCommentsOutput) {
+        $existingReviewComments = $existingReviewCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
         
-        if ($existingComments -and $existingComments.Count -gt 0) {
-            Write-Host "  ℹ️  Comment already exists on PR #$prNumber, skipping..."
+        if ($existingReviewComments -and $existingReviewComments.Count -gt 0) {
+            Write-Host "  ℹ️  Review comment already exists on RELEASENOTES.md in PR #$prNumber, skipping..."
             $skipCount++
             continue
         }
     }
     
-    # Add comment using gh CLI
+    # Add review comment on RELEASENOTES.md file
     $tempFile = $null
     try {
-        # Save comment to temp file to avoid escaping issues
-        $tempFile = [System.IO.Path]::GetTempFileName()
-        Set-Content -Path $tempFile -Value $comment -NoNewline
+        # Get the commit SHA for the PR
+        $prDetails = gh api "/repos/$Owner/$Repo/pulls/$prNumber" | ConvertFrom-Json
+        $commitSha = $prDetails.head.sha
         
-        gh pr comment $prNumber --repo "$Owner/$Repo" --body-file $tempFile
+        # Create review comment payload
+        $reviewCommentBody = @{
+            body = $comment
+            path = "RELEASENOTES.md"
+            commit_id = $commitSha
+        } | ConvertTo-Json -Compress
+        
+        # Save to temp file
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        Set-Content -Path $tempFile -Value $reviewCommentBody -NoNewline
+        
+        # Post the review comment
+        $response = gh api -X POST "/repos/$Owner/$Repo/pulls/$prNumber/comments" --input $tempFile
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  ✓ Comment added to PR #$prNumber"
+            Write-Host "  ✓ Review comment added to RELEASENOTES.md in PR #$prNumber"
             $successCount++
         } else {
-            Write-Warning "  ✗ Failed to add comment to PR #${prNumber}"
+            Write-Warning "  ✗ Failed to add review comment to PR #${prNumber}"
             $failCount++
             $failedPRs += $prNumber
         }
     }
     catch {
-        Write-Warning "  ✗ Failed to add comment to PR #${prNumber}: $_"
+        Write-Warning "  ✗ Failed to add review comment to PR #${prNumber}: $_"
         $failCount++
         $failedPRs += $prNumber
     }
