@@ -1623,7 +1623,7 @@ function CreateDevEnv {
                             -Folders $appFolders `
                             -CompilerFolder $compilerFolder `
                             -OutFolder (Join-Path $projectFolder ".output") `
-                            -RulesetFile $settings.rulesetFile `
+                            -Ruleset $settings.rulesetFile `
                             -BuildVersion $buildVersion `
 
 
