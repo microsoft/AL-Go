@@ -52,11 +52,11 @@ if (-not (Test-Path $releaseNotesPath)) {
 }
 
 $releaseNotesContent = Get-Content -Path $releaseNotesPath -Raw
-if ($releaseNotesContent -match '(?m)^##\s*v(\d+\.\d+(?:\.\d+)?)') {
+if ($releaseNotesContent -match '(?m)^##\s*v(\d+\.\d+)') {
     $currentVersion = "v$($matches[1])"
     Write-Host "Detected current version: $currentVersion"
 } else {
-    Write-Error "Could not detect version from RELEASENOTES.md. Expected to find a line matching '## vX.Y' or '## vX.Y.Z'"
+    Write-Error "Could not detect version from RELEASENOTES.md. Expected to find a line matching '## vX.Y'"
     exit 1
 }
 
