@@ -8,14 +8,42 @@
     and adds a reminder comment about placing changes above the new version section.
     
     Uses GitHub CLI (gh) for better readability and maintainability.
+    
+    The script will:
+    1. Verify GitHub CLI is installed and authenticated
+    2. Automatically detect the current version from RELEASENOTES.md
+    3. Fetch all open pull requests using 'gh pr list'
+    4. Check each PR to see if it modifies RELEASENOTES.md
+    5. For PRs that modify the release notes:
+       - Check if an active reminder comment already exists
+       - If not, add a comment reminding contributors to place changes above the new version section
+    6. Provide a detailed summary with success/skip/fail counts
+    7. List any PRs where comment addition failed
 .PARAMETER Owner
     The repository owner (default: microsoft)
 .PARAMETER Repo
     The repository name (default: AL-Go)
 .EXAMPLE
-    # Set GH_TOKEN or GITHUB_TOKEN environment variable
+    # Recommended: Use gh auth login (more secure)
+    gh auth login
+    ./comment-on-existing-release-notes-prs.ps1
+.EXAMPLE
+    # Alternative: Set GH_TOKEN or GITHUB_TOKEN environment variable
+    # Note: Tokens may be visible in shell history
     $env:GH_TOKEN = "your-token-here"
     ./comment-on-existing-release-notes-prs.ps1
+.NOTES
+    Requirements:
+    - GitHub CLI (gh) installed: https://cli.github.com/
+    - GitHub authentication (via 'gh auth login' or GH_TOKEN/GITHUB_TOKEN environment variable)
+    - PowerShell 7 or later
+    
+    Error Handling:
+    - Errors out if GitHub CLI is not installed
+    - Errors out if not authenticated
+    - Errors out if version cannot be detected from RELEASENOTES.md
+    - Tracks and reports failed comment additions
+    - Exit code 1 if any comments fail, 0 if all successful
 #>
 
 param(
