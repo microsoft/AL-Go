@@ -192,32 +192,42 @@ try {
     }
 
     # Replace secret names in install.apps and install.testApps
+    $tempDependenciesLocation = NewTemporaryFolder
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
+            $appFile = $_
+
+            # If the app file is not a URL, return it as is
+            if ($appFile -notlike 'http*://*') {
+                return $appFile
+            }
+
+            # Else, check for secrets in the URL and replace them
+            $appFileUrl = $appFile
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            $url = $_
-            if ($url -match $pattern) {
-                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            if ($appFile -match $pattern) {
+                $appFileFinalUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
             }
-            else {
-                $finalUrl = $url
+
+            # Download the app file to a temporary location
+            try {
+                $appFile = Get-AppFileFromUrl -Url $appFileFinalUrl -DownloadPath $tempDependenciesLocation
+            } catch {
+                OutputError -message "Failed to download app from URL: $($appFileUrl). Please check that the URL is valid. Error was: $($_.Exception.Message)"
             }
-            # Check validity of URL
-            if ($finalUrl -like 'http*://*') {
-                try {
-                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
-                }
-                catch {
-                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
-                }
-            }
-            return $finalUrl
+
+            return $appFile
         })
     }
 
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+    if ((-not $settings.doNotPublishApps)) {
+        # Test that InstallApps are not symbols packages
+        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ".\RunPipeline.psm1" -Resolve)
+        Test-InstallApps -AllInstallApps ($install.Apps + $install.TestApps) -ProjectPath $projectPath
+    }
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
