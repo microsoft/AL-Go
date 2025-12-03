@@ -1622,7 +1622,7 @@ function CreateDevEnv {
                 $appFiles = Build-AppsInWorkspace `
                             -Folders $appFolders `
                             -CompilerFolder $compilerFolder `
-                            -OutputFolder (Join-Path $projectFolder ".output") `
+                            -OutFolder (Join-Path $projectFolder ".output") `
                             -RulesetFile $settings.rulesetFile `
                             -BuildVersion $buildVersion `
 
