@@ -1,0 +1,55 @@
+name: Check Release Notes PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'RELEASENOTES.md'
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Release Notes and Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.payload.pull_request.number;
+            const repo = context.repo;
+            
+            // Comment to add
+            const comment = `### ⚠️ Release Notes Update Reminder
+
+Thank you for updating the release notes! 
+
+Please ensure that your changes are placed **above the new version section** (currently \`## v8.1\`) in the RELEASENOTES.md file.
+
+This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.`;
+
+            // Check if we've already commented
+            const comments = await github.rest.issues.listComments({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: issue_number,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Release Notes Update Reminder')
+            );
+            
+            if (!botComment) {
+              await github.rest.issues.createComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                issue_number: issue_number,
+                body: comment
+              });
+              console.log('Comment added to PR #' + issue_number);
+            } else {
+              console.log('Comment already exists on PR #' + issue_number);
+            }
