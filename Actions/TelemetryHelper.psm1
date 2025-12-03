@@ -269,6 +269,8 @@ function Trace-DeprecationWarning {
         [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     )
 
+    $Message = $Message.TrimEnd('.') # Ensure no trailing period
+
     # Show deprecation warning in GitHub
     $warningMessage = "$Message. See https://aka.ms/ALGoDeprecations#$($DeprecationTag) for more information."
     if ($WillBecomeError) {
