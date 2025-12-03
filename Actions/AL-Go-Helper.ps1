@@ -1629,9 +1629,12 @@ function CreateDevEnv {
 
                 # Add appfiles to installApps
                 $installApps += $appFiles
-                $testAppFiles = Build-TestAppsInWorkspace `
+                $testAppFiles = Build-AppsInWorkspace `
                                 -Folders $testFolders `
-                                -CompilerFolder $compilerFolder
+                                -CompilerFolder $compilerFolder `
+                                -OutFolder (Join-Path $projectFolder ".output") `
+                                -Ruleset $settings.rulesetFile `
+                                -BuildVersion $buildVersion `
                 $installTestApps += $testAppFiles
 
                 $appFolders = @()
