@@ -18,7 +18,11 @@ This PowerShell script can be run manually to add reminder comments to all curre
 
 **Usage:**
 ```powershell
-# Set GitHub token
+# Option 1: Use gh auth login (recommended - more secure)
+gh auth login
+
+# Option 2: Set GitHub token as environment variable
+# Note: Tokens set this way may be visible in shell history
 $env:GH_TOKEN = "your-token-here"
 # or
 $env:GITHUB_TOKEN = "your-token-here"
@@ -26,6 +30,8 @@ $env:GITHUB_TOKEN = "your-token-here"
 # Run the script
 pwsh .github/scripts/comment-on-existing-release-notes-prs.ps1
 ```
+
+**Security Note:** When setting tokens directly in the shell, they may be visible in your shell history. Consider using `gh auth login` or a secure credential manager for production use.
 
 **Key Features:**
 - Uses GitHub CLI (`gh`) for better readability and maintainability

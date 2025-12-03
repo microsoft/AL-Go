@@ -73,7 +73,13 @@ This helps maintain a clear changelog structure where new changes are grouped un
 Write-Host "Fetching open pull requests for $Owner/$Repo..."
 
 # Get all open PRs using gh CLI
-$prsJson = gh pr list --repo "$Owner/$Repo" --state open --limit 100 --json number,title,files | ConvertFrom-Json
+$prsJsonOutput = gh pr list --repo "$Owner/$Repo" --state open --limit 100 --json number,title,files
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to fetch pull requests from GitHub"
+    exit 1
+}
+
+$prsJson = if ($prsJsonOutput) { $prsJsonOutput | ConvertFrom-Json } else { @() }
 
 Write-Host "Found $($prsJson.Count) open PRs. Checking which ones modify RELEASENOTES.md..."
 
@@ -114,14 +120,12 @@ foreach ($pr in $prsWithReleaseNotes) {
     Write-Host "`nProcessing PR #${prNumber}: $prTitle"
     
     # Check if we've already commented (check for active/open comments)
-    $existingCommentsJson = gh api "/repos/$Owner/$Repo/issues/$prNumber/comments" --jq '.[] | select(.body | contains("Release Notes Update Reminder")) | {id: .id, body: .body}' | ConvertFrom-Json -ErrorAction SilentlyContinue
+    $existingCommentsOutput = gh api "/repos/$Owner/$Repo/issues/$prNumber/comments" --jq '[.[] | select(.body | contains("Release Notes Update Reminder")) | {id: .id}]'
     
-    # Check if there's an existing active comment
-    if ($existingCommentsJson) {
-        # Convert to array if single object
-        $existingComments = @($existingCommentsJson)
+    if ($LASTEXITCODE -eq 0 -and $existingCommentsOutput) {
+        $existingComments = $existingCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
         
-        if ($existingComments.Count -gt 0) {
+        if ($existingComments -and $existingComments.Count -gt 0) {
             Write-Host "  ℹ️  Comment already exists on PR #$prNumber, skipping..."
             $skipCount++
             continue

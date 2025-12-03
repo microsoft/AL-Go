@@ -9,7 +9,11 @@ This PowerShell script adds a reminder comment to all open PRs that modify the `
 ### Usage
 
 ```powershell
-# Set your GitHub token as an environment variable
+# Option 1: Use gh auth login (recommended - more secure)
+gh auth login
+
+# Option 2: Set GitHub token as environment variable
+# Note: Tokens may be visible in shell history
 $env:GH_TOKEN = "your-github-token-here"
 # or
 $env:GITHUB_TOKEN = "your-github-token-here"
@@ -17,6 +21,8 @@ $env:GITHUB_TOKEN = "your-github-token-here"
 # Run the script
 pwsh .github/scripts/comment-on-existing-release-notes-prs.ps1
 ```
+
+**Security Note:** When setting tokens directly, they may be visible in your shell history. Use `gh auth login` for better security.
 
 ### Parameters
 
