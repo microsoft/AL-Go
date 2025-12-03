@@ -229,7 +229,7 @@ function CompileAppsInWorkspace {
                 foreach ($file in $outputFiles) {
                     $destinationPath = Join-Path $OutFolder $file.Name
                     Copy-Item -Path $file.FullName -Destination $destinationPath -Force
-                    Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
+                    #Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
                     $generatedAppFiles += $destinationPath
                 }
             }
