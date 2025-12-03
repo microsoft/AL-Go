@@ -34,12 +34,25 @@ if (-not $GitHubToken) {
     exit 1
 }
 
+# Detect current version from RELEASENOTES.md
+$currentVersion = "v8.1" # fallback
+$releaseNotesPath = Join-Path $PSScriptRoot "../../RELEASENOTES.md"
+if (Test-Path $releaseNotesPath) {
+    $releaseNotesContent = Get-Content -Path $releaseNotesPath -Raw
+    if ($releaseNotesContent -match '^##\s+(v\d+\.\d+)') {
+        $currentVersion = $matches[1]
+        Write-Host "Detected current version: $currentVersion"
+    }
+} else {
+    Write-Host "Could not find RELEASENOTES.md, using fallback version: $currentVersion"
+}
+
 $comment = @"
 ### ⚠️ Release Notes Update Reminder
 
 Thank you for updating the release notes! 
 
-Please ensure that your changes are placed **above the new version section** (currently ``## v8.1``) in the RELEASENOTES.md file.
+Please ensure that your changes are placed **above the new version section** (currently ``## $currentVersion``) in the RELEASENOTES.md file.
 
 This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.
 "@

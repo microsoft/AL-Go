@@ -70,12 +70,14 @@ Please ensure that your changes are placed **above the new version section** (cu
 This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.
 ```
 
-## Customization
+## Automatic Version Detection
 
-To update the comment for a new version:
+The workflows and script automatically detect the current version from `RELEASENOTES.md` by:
+- Reading the file and finding the first line matching the pattern `## vX.Y`
+- Using the detected version in the comment message
+- Falling back to `v8.1` if the file cannot be read or the pattern is not found
 
-1. **Workflow**: Edit `.github/workflows/check-release-notes-prs.yml` and update the version number in the comment
-2. **Script**: Edit `.github/scripts/comment-on-existing-release-notes-prs.ps1` and update the version number in the `$comment` variable
+This means no manual updates are needed when a new version is released - the comment will automatically reference the correct version.
 
 ## Implementation Details
 
@@ -84,10 +86,11 @@ To update the comment for a new version:
 The workflow uses `actions/github-script@v7` which provides:
 - GitHub API access via `github` object
 - Context information via `context` object
-- No need for checkout or separate authentication
+- Checkout step to read `RELEASENOTES.md` for version detection
 
 **Key Features:**
 - Only triggers on `RELEASENOTES.md` changes (path filter)
+- Automatically detects current version from RELEASENOTES.md
 - Checks for existing comments to avoid duplicates
 - Uses Bot user type to identify its own comments
 - Minimal permissions (read content, write comments)
@@ -97,17 +100,16 @@ The workflow uses `actions/github-script@v7` which provides:
 The PowerShell script:
 - Uses GitHub REST API directly
 - Requires a GitHub token with PR comment permissions
+- Automatically detects current version from RELEASENOTES.md
 - Implements duplicate detection
 - Provides detailed progress output
 - Handles errors gracefully
 
 ## Maintenance
 
-### When to Update
+### Automatic Updates
 
-Update the version number in both files when:
-- A new major/minor version is released
-- The current version section in `RELEASENOTES.md` changes
+The version number is automatically detected from `RELEASENOTES.md`, so no manual updates are needed when a new version is released. The workflows and script will automatically use the current version found in the file.
 
 ### Monitoring
 

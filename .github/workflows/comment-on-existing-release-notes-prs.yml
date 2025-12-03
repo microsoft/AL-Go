@@ -21,20 +21,36 @@ jobs:
   comment-on-prs:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Add Comments to Existing PRs
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const dryRun = '${{ inputs.dryRun }}' === 'true';
             
             // PRs that modify RELEASENOTES.md
             const prs = [2056, 2049, 2048, 2047, 2041, 2033, 2031, 2029, 2010, 1994, 1882, 1828, 1824, 1795];
             
+            // Read RELEASENOTES.md to detect current version
+            let currentVersion = 'v8.1'; // fallback
+            try {
+              const releaseNotes = fs.readFileSync('RELEASENOTES.md', 'utf8');
+              const versionMatch = releaseNotes.match(/^##\s+(v\d+\.\d+)/m);
+              if (versionMatch) {
+                currentVersion = versionMatch[1];
+              }
+            } catch (error) {
+              console.log('Could not read RELEASENOTES.md, using fallback version');
+            }
+            
             const comment = `### ⚠️ Release Notes Update Reminder
 
 Thank you for updating the release notes! 
 
-Please ensure that your changes are placed **above the new version section** (currently \`## v8.1\`) in the RELEASENOTES.md file.
+Please ensure that your changes are placed **above the new version section** (currently \`## ${currentVersion}\`) in the RELEASENOTES.md file.
 
 This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.`;
             

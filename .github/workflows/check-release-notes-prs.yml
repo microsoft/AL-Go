@@ -14,19 +14,35 @@ jobs:
   check-release-notes:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Check Release Notes and Comment
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const issue_number = context.payload.pull_request.number;
             const repo = context.repo;
+            
+            // Read RELEASENOTES.md to detect current version
+            let currentVersion = 'v8.1'; // fallback
+            try {
+              const releaseNotes = fs.readFileSync('RELEASENOTES.md', 'utf8');
+              const versionMatch = releaseNotes.match(/^##\s+(v\d+\.\d+)/m);
+              if (versionMatch) {
+                currentVersion = versionMatch[1];
+              }
+            } catch (error) {
+              console.log('Could not read RELEASENOTES.md, using fallback version');
+            }
             
             // Comment to add
             const comment = `### ⚠️ Release Notes Update Reminder
 
 Thank you for updating the release notes! 
 
-Please ensure that your changes are placed **above the new version section** (currently \`## v8.1\`) in the RELEASENOTES.md file.
+Please ensure that your changes are placed **above the new version section** (currently \`## ${currentVersion}\`) in the RELEASENOTES.md file.
 
 This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.`;
 
