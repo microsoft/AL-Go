@@ -120,7 +120,7 @@ foreach ($pr in $prsWithReleaseNotes) {
     Write-Host "`nProcessing PR #${prNumber}: $prTitle"
     
     # Check if we've already commented (check for active/open comments)
-    $existingCommentsOutput = gh api "/repos/$Owner/$Repo/issues/$prNumber/comments" --jq '[.[] | select(.body | contains("Release Notes Update Reminder")) | {id: .id}]'
+    $existingCommentsOutput = gh api "/repos/$Owner/$Repo/issues/$prNumber/comments" --jq '[.[] | select(.body | contains("Release Notes Update Reminder"))]'
     
     if ($LASTEXITCODE -eq 0 -and $existingCommentsOutput) {
         $existingComments = $existingCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -133,14 +133,13 @@ foreach ($pr in $prsWithReleaseNotes) {
     }
     
     # Add comment using gh CLI
+    $tempFile = $null
     try {
         # Save comment to temp file to avoid escaping issues
         $tempFile = [System.IO.Path]::GetTempFileName()
         Set-Content -Path $tempFile -Value $comment -NoNewline
         
         gh pr comment $prNumber --repo "$Owner/$Repo" --body-file $tempFile
-        
-        Remove-Item -Path $tempFile -Force
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  ✓ Comment added to PR #$prNumber"
@@ -155,6 +154,12 @@ foreach ($pr in $prsWithReleaseNotes) {
         Write-Warning "  ✗ Failed to add comment to PR #${prNumber}: $_"
         $failCount++
         $failedPRs += $prNumber
+    }
+    finally {
+        # Always clean up temp file
+        if ($tempFile -and (Test-Path $tempFile)) {
+            Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
