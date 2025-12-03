@@ -52,7 +52,7 @@ if (-not (Test-Path $releaseNotesPath)) {
 }
 
 $releaseNotesContent = Get-Content -Path $releaseNotesPath -Raw
-if ($releaseNotesContent -match '^##\s*v(\d+\.\d+(?:\.\d+)?)') {
+if ($releaseNotesContent -match '(?m)^##\s*v(\d+\.\d+(?:\.\d+)?)') {
     $currentVersion = "v$($matches[1])"
     Write-Host "Detected current version: $currentVersion"
 } else {
