@@ -73,11 +73,11 @@ This helps maintain a clear changelog structure where new changes are grouped un
 ## Automatic Version Detection
 
 The workflows and script automatically detect the current version from `RELEASENOTES.md` by:
-- Reading the file and finding the first line matching the pattern `## vX.Y`
+- Reading the file and finding the first line matching the pattern `## vX.Y` or `## vX.Y.Z`
 - Using the detected version in the comment message
-- Falling back to `v8.1` if the file cannot be read or the pattern is not found
+- **Failing with an error if the version cannot be detected** (ensures the automation is working correctly)
 
-This means no manual updates are needed when a new version is released - the comment will automatically reference the correct version.
+This means no manual updates are needed when a new version is released - the comment will automatically reference the correct version. If version detection fails, it indicates an issue that needs to be addressed.
 
 ## Implementation Details
 

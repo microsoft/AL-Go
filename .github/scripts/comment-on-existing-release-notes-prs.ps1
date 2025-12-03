@@ -35,16 +35,19 @@ if (-not $GitHubToken) {
 }
 
 # Detect current version from RELEASENOTES.md
-$currentVersion = "v8.1" # fallback
 $releaseNotesPath = Join-Path $PSScriptRoot "../../RELEASENOTES.md"
-if (Test-Path $releaseNotesPath) {
-    $releaseNotesContent = Get-Content -Path $releaseNotesPath -Raw
-    if ($releaseNotesContent -match '^##\s*v(\d+\.\d+(?:\.\d+)?)') {
-        $currentVersion = "v$($matches[1])"
-        Write-Host "Detected current version: $currentVersion"
-    }
+if (-not (Test-Path $releaseNotesPath)) {
+    Write-Error "RELEASENOTES.md not found at $releaseNotesPath"
+    exit 1
+}
+
+$releaseNotesContent = Get-Content -Path $releaseNotesPath -Raw
+if ($releaseNotesContent -match '^##\s*v(\d+\.\d+(?:\.\d+)?)') {
+    $currentVersion = "v$($matches[1])"
+    Write-Host "Detected current version: $currentVersion"
 } else {
-    Write-Host "Could not find RELEASENOTES.md, using fallback version: $currentVersion"
+    Write-Error "Could not detect version from RELEASENOTES.md. Expected to find a line matching '## vX.Y' or '## vX.Y.Z'"
+    exit 1
 }
 
 $comment = @"

@@ -26,15 +26,19 @@ jobs:
             const repo = context.repo;
             
             // Read RELEASENOTES.md to detect current version
-            let currentVersion = 'v8.1'; // fallback
+            let currentVersion;
             try {
               const releaseNotes = fs.readFileSync('RELEASENOTES.md', 'utf8');
               const versionMatch = releaseNotes.match(/^##\s*v(\d+\.\d+(?:\.\d+)?)/m);
               if (versionMatch) {
                 currentVersion = 'v' + versionMatch[1];
+                console.log('Detected current version: ' + currentVersion);
+              } else {
+                throw new Error("Could not detect version from RELEASENOTES.md. Expected to find a line matching '## vX.Y' or '## vX.Y.Z'");
               }
             } catch (error) {
-              console.log('Could not read RELEASENOTES.md, using fallback version');
+              console.error('Error reading version from RELEASENOTES.md: ' + error.message);
+              throw error;
             }
             
             // Comment to add

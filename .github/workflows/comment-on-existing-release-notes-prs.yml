@@ -35,15 +35,19 @@ jobs:
             const prs = [2056, 2049, 2048, 2047, 2041, 2033, 2031, 2029, 2010, 1994, 1882, 1828, 1824, 1795];
             
             // Read RELEASENOTES.md to detect current version
-            let currentVersion = 'v8.1'; // fallback
+            let currentVersion;
             try {
               const releaseNotes = fs.readFileSync('RELEASENOTES.md', 'utf8');
               const versionMatch = releaseNotes.match(/^##\s*v(\d+\.\d+(?:\.\d+)?)/m);
               if (versionMatch) {
                 currentVersion = 'v' + versionMatch[1];
+                console.log('Detected current version: ' + currentVersion);
+              } else {
+                throw new Error("Could not detect version from RELEASENOTES.md. Expected to find a line matching '## vX.Y' or '## vX.Y.Z'");
               }
             } catch (error) {
-              console.log('Could not read RELEASENOTES.md, using fallback version');
+              console.error('Error reading version from RELEASENOTES.md: ' + error.message);
+              throw error;
             }
             
             const comment = `### ⚠️ Release Notes Update Reminder
