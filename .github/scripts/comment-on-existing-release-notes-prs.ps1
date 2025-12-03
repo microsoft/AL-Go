@@ -39,8 +39,8 @@ $currentVersion = "v8.1" # fallback
 $releaseNotesPath = Join-Path $PSScriptRoot "../../RELEASENOTES.md"
 if (Test-Path $releaseNotesPath) {
     $releaseNotesContent = Get-Content -Path $releaseNotesPath -Raw
-    if ($releaseNotesContent -match '^##\s+(v\d+\.\d+)') {
-        $currentVersion = $matches[1]
+    if ($releaseNotesContent -match '^##\s*v(\d+\.\d+)') {
+        $currentVersion = "v$($matches[1])"
         Write-Host "Detected current version: $currentVersion"
     }
 } else {

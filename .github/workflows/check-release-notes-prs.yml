@@ -29,9 +29,9 @@ jobs:
             let currentVersion = 'v8.1'; // fallback
             try {
               const releaseNotes = fs.readFileSync('RELEASENOTES.md', 'utf8');
-              const versionMatch = releaseNotes.match(/^##\s+(v\d+\.\d+)/m);
+              const versionMatch = releaseNotes.match(/^##\s*v(\d+\.\d+)/m);
               if (versionMatch) {
-                currentVersion = versionMatch[1];
+                currentVersion = 'v' + versionMatch[1];
               }
             } catch (error) {
               console.log('Could not read RELEASENOTES.md, using fallback version');
