@@ -46,6 +46,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 
 ### Issues
 
+- Issue 2055 When using versioningStrategy 3+16, you get an error when building
 - Issue 2039 Error when deploy to environment: NewTemporaryFolder is not recognized
 - Issue 1961 KeyVault access in PR pipeline
 - Discussion 1911 Add support for reportSuppressedDiagnostics
