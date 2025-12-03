@@ -7,30 +7,40 @@
     This script searches for all open PRs that have changes to RELEASENOTES.md
     and adds a reminder comment about placing changes above the new version section.
     
-    This is a one-time script to handle existing PRs. New PRs will be handled
-    by the check-release-notes-prs.yml workflow.
+    Uses GitHub CLI (gh) for better readability and maintainability.
 .PARAMETER Owner
     The repository owner (default: microsoft)
 .PARAMETER Repo
     The repository name (default: AL-Go)
-.PARAMETER GitHubToken
-    GitHub token with permissions to comment on PRs
 .EXAMPLE
-    $env:GITHUB_TOKEN = "your-token-here"
+    # Set GH_TOKEN or GITHUB_TOKEN environment variable
+    $env:GH_TOKEN = "your-token-here"
     ./comment-on-existing-release-notes-prs.ps1
 #>
 
 param(
     [string]$Owner = "microsoft",
-    [string]$Repo = "AL-Go",
-    [string]$GitHubToken = $env:GITHUB_TOKEN
+    [string]$Repo = "AL-Go"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-if (-not $GitHubToken) {
-    Write-Error "GitHub token is required. Set GITHUB_TOKEN environment variable or pass -GitHubToken parameter."
+# Check if gh CLI is available
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Error "GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/"
+    exit 1
+}
+
+# Verify authentication
+try {
+    $null = gh auth status 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "GitHub CLI is not authenticated. Run 'gh auth login' or set GH_TOKEN/GITHUB_TOKEN environment variable."
+        exit 1
+    }
+} catch {
+    Write-Error "Failed to verify GitHub CLI authentication: $_"
     exit 1
 }
 
@@ -60,32 +70,21 @@ Please ensure that your changes are placed **above the new version section** (cu
 This helps maintain a clear changelog structure where new changes are grouped under the latest unreleased version.
 "@
 
-$headers = @{
-    "Authorization" = "Bearer $GitHubToken"
-    "Accept" = "application/vnd.github+json"
-    "X-GitHub-Api-Version" = "2022-11-28"
-}
-
 Write-Host "Fetching open pull requests for $Owner/$Repo..."
 
-# Get all open PRs
-$prsUrl = "https://api.github.com/repos/$Owner/$Repo/pulls?state=open&per_page=100"
-$prs = Invoke-RestMethod -Uri $prsUrl -Headers $headers -Method Get
+# Get all open PRs using gh CLI
+$prsJson = gh pr list --repo "$Owner/$Repo" --state open --limit 100 --json number,title,files | ConvertFrom-Json
 
-Write-Host "Found $($prs.Count) open PRs. Checking which ones modify RELEASENOTES.md..."
+Write-Host "Found $($prsJson.Count) open PRs. Checking which ones modify RELEASENOTES.md..."
 
 $prsWithReleaseNotes = @()
 
-foreach ($pr in $prs) {
+foreach ($pr in $prsJson) {
     $prNumber = $pr.number
     Write-Host "Checking PR #$prNumber..."
     
-    # Get files changed in this PR
-    $filesUrl = "https://api.github.com/repos/$Owner/$Repo/pulls/$prNumber/files"
-    $files = Invoke-RestMethod -Uri $filesUrl -Headers $headers -Method Get
-    
     # Check if RELEASENOTES.md was modified
-    $releaseNotesModified = $files | Where-Object { $_.filename -eq "RELEASENOTES.md" }
+    $releaseNotesModified = $pr.files | Where-Object { $_.path -eq "RELEASENOTES.md" }
     
     if ($releaseNotesModified) {
         Write-Host "  ✓ PR #$prNumber modifies RELEASENOTES.md"
@@ -103,37 +102,74 @@ if ($prsWithReleaseNotes.Count -eq 0) {
 Write-Host "`nFound $($prsWithReleaseNotes.Count) PRs that modify RELEASENOTES.md"
 Write-Host "`nAdding comments to PRs..."
 
+$successCount = 0
+$skipCount = 0
+$failCount = 0
+$failedPRs = @()
+
 foreach ($pr in $prsWithReleaseNotes) {
     $prNumber = $pr.number
     $prTitle = $pr.title
     
     Write-Host "`nProcessing PR #${prNumber}: $prTitle"
     
-    # Check if we've already commented
-    $commentsUrl = "https://api.github.com/repos/$Owner/$Repo/issues/$prNumber/comments"
-    $existingComments = Invoke-RestMethod -Uri $commentsUrl -Headers $headers -Method Get
+    # Check if we've already commented (check for active/open comments)
+    $existingCommentsJson = gh api "/repos/$Owner/$Repo/issues/$prNumber/comments" --jq '.[] | select(.body | contains("Release Notes Update Reminder")) | {id: .id, body: .body}' | ConvertFrom-Json -ErrorAction SilentlyContinue
     
-    $alreadyCommented = $existingComments | Where-Object { 
-        $_.body -like "*Release Notes Update Reminder*"
-    }
-    
-    if ($alreadyCommented) {
-        Write-Host "  ℹ️  Comment already exists on PR #$prNumber, skipping..."
-        continue
-    }
-    
-    # Add comment
-    try {
-        $body = @{
-            body = $comment
-        } | ConvertTo-Json
+    # Check if there's an existing active comment
+    if ($existingCommentsJson) {
+        # Convert to array if single object
+        $existingComments = @($existingCommentsJson)
         
-        $response = Invoke-RestMethod -Uri $commentsUrl -Headers $headers -Method Post -Body $body -ContentType "application/json"
-        Write-Host "  ✓ Comment added to PR #$prNumber"
+        if ($existingComments.Count -gt 0) {
+            Write-Host "  ℹ️  Comment already exists on PR #$prNumber, skipping..."
+            $skipCount++
+            continue
+        }
+    }
+    
+    # Add comment using gh CLI
+    try {
+        # Save comment to temp file to avoid escaping issues
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        Set-Content -Path $tempFile -Value $comment -NoNewline
+        
+        gh pr comment $prNumber --repo "$Owner/$Repo" --body-file $tempFile
+        
+        Remove-Item -Path $tempFile -Force
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  ✓ Comment added to PR #$prNumber"
+            $successCount++
+        } else {
+            Write-Warning "  ✗ Failed to add comment to PR #${prNumber}"
+            $failCount++
+            $failedPRs += $prNumber
+        }
     }
     catch {
-        Write-Error "  ✗ Failed to add comment to PR #${prNumber}: $_"
+        Write-Warning "  ✗ Failed to add comment to PR #${prNumber}: $_"
+        $failCount++
+        $failedPRs += $prNumber
     }
 }
 
-Write-Host "`n✓ Done! Comments have been added to $($prsWithReleaseNotes.Count) PRs."
+# Final summary
+Write-Host "`n========================================="
+Write-Host "Summary:"
+Write-Host "  Total PRs with RELEASENOTES.md changes: $($prsWithReleaseNotes.Count)"
+Write-Host "  Comments added: $successCount"
+Write-Host "  Skipped (already commented): $skipCount"
+Write-Host "  Failed: $failCount"
+
+if ($failCount -gt 0) {
+    Write-Host "`n⚠️  Failed to add comments to the following PRs:"
+    foreach ($prNum in $failedPRs) {
+        Write-Host "  - PR #$prNum"
+    }
+    Write-Host "`nPlease review these PRs manually."
+    exit 1
+} else {
+    Write-Host "`n✓ Done! All comments have been processed successfully."
+    exit 0
+}

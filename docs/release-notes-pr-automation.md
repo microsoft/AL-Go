@@ -10,51 +10,40 @@ When multiple contributors update the release notes, there's a risk that changes
 
 ## Solution
 
-The solution consists of two components:
+### PowerShell Script for Adding Comments
 
-### 1. Automated Workflow for New PRs
+**File**: `.github/scripts/comment-on-existing-release-notes-prs.ps1`
 
-**File**: `.github/workflows/check-release-notes-prs.yml`
+This PowerShell script can be run manually to add reminder comments to all currently open PRs that modify `RELEASENOTES.md`.
 
-This workflow automatically triggers when a PR is opened, updated, or reopened if it modifies the `RELEASENOTES.md` file. It:
-
-- Detects when `RELEASENOTES.md` has been changed in a PR
-- Checks if a reminder comment already exists
-- If not, adds a friendly comment reminding the contributor to place changes above the new version section
-
-**Trigger Conditions:**
-- `pull_request` events: `opened`, `synchronize`, `reopened`
-- Only when `RELEASENOTES.md` is modified
-
-**Permissions Required:**
-- `pull-requests: write` - to add comments
-- `contents: read` - to read the repository content
-
-### 2. One-Time Script for Existing PRs
-
-**Files**: 
-- `.github/scripts/comment-on-existing-release-notes-prs.ps1` (PowerShell script)
-- `.github/workflows/comment-on-existing-release-notes-prs.yml` (Manual workflow)
-
-These are designed to be run once to add comments to all currently open PRs that modify `RELEASENOTES.md`. After the initial run, the automated workflow handles new PRs.
-
-**Usage (Recommended - Manual Workflow):**
-1. Go to the Actions tab in the repository
-2. Select "Comment on Existing Release Notes PRs" workflow
-3. Click "Run workflow"
-4. Choose whether to run in dry-run mode (preview only)
-5. Click "Run workflow" to execute
-
-**Usage (Alternative - PowerShell Script):**
+**Usage:**
 ```powershell
+# Set GitHub token
+$env:GH_TOKEN = "your-token-here"
+# or
 $env:GITHUB_TOKEN = "your-token-here"
+
+# Run the script
 pwsh .github/scripts/comment-on-existing-release-notes-prs.ps1
 ```
 
-What it does:
-1. Fetches all open PRs (or uses a predefined list)
-2. Checks which ones modify `RELEASENOTES.md`
-3. Adds the reminder comment (if not already present)
+**Key Features:**
+- Uses GitHub CLI (`gh`) for better readability and maintainability
+- Automatically detects current version from `RELEASENOTES.md`
+- Checks for existing active comments to avoid duplicates
+- Provides detailed summary with success/skip/fail counts
+- Exits with error if any comments fail to add
+- Lists failed PRs for manual review
+
+**What it does:**
+1. Verifies GitHub CLI is installed and authenticated
+2. Automatically detects the current version from `RELEASENOTES.md`
+3. Fetches all open pull requests using `gh pr list`
+4. Checks each PR to see if it modifies `RELEASENOTES.md`
+5. For PRs that modify release notes:
+   - Checks if an active reminder comment already exists
+   - If not, adds the reminder comment
+6. Provides a detailed summary report
 
 ## Comment Content
 
@@ -81,29 +70,16 @@ This means no manual updates are needed when a new version is released - the com
 
 ## Implementation Details
 
-### Workflow Implementation
-
-The workflow uses `actions/github-script@v7` which provides:
-- GitHub API access via `github` object
-- Context information via `context` object
-- Checkout step to read `RELEASENOTES.md` for version detection
-
-**Key Features:**
-- Only triggers on `RELEASENOTES.md` changes (path filter)
-- Automatically detects current version from RELEASENOTES.md
-- Checks for existing comments to avoid duplicates
-- Uses Bot user type to identify its own comments
-- Minimal permissions (read content, write comments)
-
 ### Script Implementation
 
 The PowerShell script:
-- Uses GitHub REST API directly
-- Requires a GitHub token with PR comment permissions
+- Uses GitHub CLI (`gh`) for better readability and maintainability
+- Requires GitHub CLI to be installed and authenticated
 - Automatically detects current version from RELEASENOTES.md
 - Implements duplicate detection
-- Provides detailed progress output
-- Handles errors gracefully
+- Tracks success, skip, and fail counts
+- Provides detailed progress output and summary
+- Handles errors gracefully and reports failures
 
 ## Maintenance
 
@@ -120,15 +96,13 @@ You can monitor the automation by:
 
 ### Troubleshooting
 
-**Workflow doesn't trigger:**
-- Verify the PR modifies `RELEASENOTES.md`
-- Check workflow permissions are correct
-- Review the workflow run logs in Actions tab
-
 **Script fails:**
-- Ensure `GITHUB_TOKEN` is set and valid
+- Ensure GitHub CLI (`gh`) is installed: https://cli.github.com/
+- Verify authentication: run `gh auth status`
+- Set `GH_TOKEN` or `GITHUB_TOKEN` environment variable
 - Verify token has `pull-requests: write` permission
 - Check API rate limits aren't exceeded
+- Ensure `RELEASENOTES.md` exists and contains a version header
 
 **Duplicate comments:**
 - The automation checks for existing comments
@@ -144,14 +118,14 @@ Potential enhancements:
 
 ## Testing
 
-To test the automation:
+To test the script:
 
-1. **Test Workflow**: Create a test PR that modifies `RELEASENOTES.md`
-2. **Test Script**: Run the script with a test token in a fork
-3. **Verify**: Check that comments are added correctly and duplicates are avoided
+1. **Test Script**: Run the script with authentication in a fork or test repository
+2. **Verify**: Check that comments are added correctly and duplicates are avoided
+3. **Review**: Check the summary report for success/skip/fail counts
 
 ## References
 
-- [GitHub Actions - actions/github-script](https://github.com/actions/github-script)
+- [GitHub CLI Documentation](https://cli.github.com/manual/)
 - [GitHub REST API - Issues Comments](https://docs.github.com/en/rest/issues/comments)
 - [AL-Go Release Notes](../RELEASENOTES.md)
