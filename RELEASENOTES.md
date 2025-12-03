@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
+
 ## v8.1
 
 ### Custom AL-Go files
