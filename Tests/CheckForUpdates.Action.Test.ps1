@@ -1196,10 +1196,1154 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             # Apply the defaults
             ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
 
-        # Verify "last wins" - the final value for input1 should be applied
-        $yaml.Get('on:/workflow_dispatch:/inputs:/input1:/default:').content -join '' | Should -Be "default: 'final-value'"
-        $yaml.Get('on:/workflow_dispatch:/inputs:/input2:/default:').content -join '' | Should -Be 'default: false'
-    }
+            # Verify "last wins" - the final value for input1 should be applied
+            $yaml.Get('on:/workflow_dispatch:/inputs:/input1:/default:').content -join '' | Should -Be "default: 'final-value'"
+            $yaml.Get('on:/workflow_dispatch:/inputs:/input2:/default:').content -join '' | Should -Be 'default: false'
+        }
+
+    } # End of Context 'ApplyWorkflowDefaultInputs'
+
+    Context 'ApplyWorkflowDefaultInputs - Hide Feature' {
+
+        It 'hides boolean inputs when hide is true' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with boolean input
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      visibleInput:",
+                "        type: string",
+                "        default: ''",
+                "      hiddenInput:",
+                "        type: boolean",
+                "        default: false",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Use input",
+                "        run: echo `${{ github.event.inputs.hiddenInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "visibleInput"; "value" = "test" },
+                    @{ "name" = "hiddenInput"; "value" = $true; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Boolean"
+
+            # Verify the hidden input was removed from inputs
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('hiddenInput:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the visible input still exists with updated default
+            $inputs.Find('visibleInput:', [ref] $null, [ref] $null) | Should -Be $true
+            $yaml.Get('on:/workflow_dispatch:/inputs:/visibleInput:/default:').content -join '' | Should -Be "default: 'test'"
+
+            # Verify the reference was replaced with literal value
+            $yaml.content -join "`n" | Should -Match "echo true"
+            $yaml.content -join "`n" | Should -Not -Match "github\.event\.inputs\.hiddenInput"
+        }
+
+        It 'hides string inputs and replaces references correctly' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with string input
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      versionInput:",
+                "        type: string",
+                "        default: '+0.0'",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Use version",
+                "        run: echo `${{ inputs.versionInput }}",
+                "      - name: Use version again",
+                "        run: echo `${{ github.event.inputs.versionInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "versionInput"; "value" = "+0.1"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide String"
+
+            # Verify the hidden input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('versionInput:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify both references were replaced with quoted string
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo '\+0\.1'"
+            $content | Should -Not -Match "inputs\.versionInput"
+            $content | Should -Not -Match "github\.event\.inputs\.versionInput"
+        }
+
+        It 'hides number inputs and replaces references correctly' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with number input
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      countInput:",
+                "        type: number",
+                "        default: 5",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Use count",
+                "        run: echo `${{ inputs.countInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "countInput"; "value" = 10; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Number"
+
+            # Verify the hidden input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('countInput:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the reference was replaced with number (unquoted)
+            $yaml.content -join "`n" | Should -Match "echo 10"
+            $yaml.content -join "`n" | Should -Not -Match "inputs\.countInput"
+        }
+
+        It 'replaces hidden input references in if conditions' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with input used in if condition (without ${{ }})
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      runTests:",
+                "        type: boolean",
+                "        default: false",
+                "jobs:",
+                "  test:",
+                "    runs-on: windows-latest",
+                "    if: github.event.inputs.runTests == 'true'",
+                "    steps:",
+                "      - name: Run",
+                "        run: echo Running"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "runTests"; "value" = $true; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide If Condition"
+
+            # Verify the hidden input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('runTests:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the reference in if condition was replaced with string literal
+            # Bare references in if conditions are always treated as strings in GitHub Actions
+            # GitHub Actions comparisons are case-sensitive, so we use lowercase 'true'
+            $yaml.content -join "`n" | Should -Match "if: 'true' == 'true'"
+            $yaml.content -join "`n" | Should -Not -Match "github\.event\.inputs\.runTests"
+        }
+
+        It 'does not replace job output references' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with needs.JobName.outputs.inputName pattern
+            # This should NOT be replaced even if an input with the same name exists and is hidden
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      branch:",
+                "        type: string",
+                "        default: 'main'",
+                "jobs:",
+                "  Inputs:",
+                "    runs-on: ubuntu-latest",
+                "    outputs:",
+                "      branch: `${{ steps.CreateInputs.outputs.branch }}",
+                "    steps:",
+                "      - name: Create inputs",
+                "        id: CreateInputs",
+                "        run: echo 'branch=main' >> `$GITHUB_OUTPUT",
+                "  Deploy:",
+                "    runs-on: ubuntu-latest",
+                "    needs: [ Inputs ]",
+                "    steps:",
+                "      - name: Deploy",
+                "        env:",
+                "          branch: `${{ needs.Inputs.outputs.branch }}",
+                "        run: echo Deploying to `$branch"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag for the branch input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "branch"; "value" = "production"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Job Output"
+
+            # Verify the hidden input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('branch:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify that needs.Inputs.outputs.branch is NOT replaced
+            # This is a job output reference, not a workflow input reference
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "needs\.Inputs\.outputs\.branch"
+
+            # Verify that direct input references would be replaced if they existed
+            # (but they don't exist in this workflow, so we just verify the job reference remains)
+            $content | Should -Not -Match "github\.event\.inputs\.branch"
+            $content | Should -Not -Match "`\$\{\{ inputs\.branch \}\}"
+        }
+
+        It 'does not replace parts of job output references with input names like output' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Edge case: input named "output" should not replace "inputs.outputs.output" or "outputs.output"
+            # Using lowercase "inputs" as job name to test the problematic case
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      output:",
+                "        type: string",
+                "        default: 'default'",
+                "jobs:",
+                "  inputs:",
+                "    runs-on: ubuntu-latest",
+                "    outputs:",
+                "      output: `${{ steps.CreateInputs.outputs.output }}",
+                "    steps:",
+                "      - name: Create inputs",
+                "        id: CreateInputs",
+                "        run: echo 'output=test' >> `$GITHUB_OUTPUT",
+                "  Deploy:",
+                "    runs-on: ubuntu-latest",
+                "    needs: [ inputs ]",
+                "    steps:",
+                "      - name: Deploy",
+                "        env:",
+                "          myOutput: `${{ needs.inputs.outputs.output }}",
+                "        run: echo Using `$myOutput"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag for the "output" input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "output"; "value" = "hidden"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Input Named Output"
+
+            # Verify the hidden input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('output:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify that needs.inputs.outputs.output is NOT replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "needs\.inputs\.outputs\.output"
+            $content | Should -Match "steps\.CreateInputs\.outputs\.output"
+
+            # Verify that direct input references would be replaced if they existed
+            $content | Should -Not -Match "github\.event\.inputs\.output"
+            $content | Should -Not -Match "`\$\{\{ inputs\.output \}\}"
+        }
+
+        It 'does not replace job output references when input is named outputs' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Edge case: input named "outputs" should not replace "inputs.outputs" in job output contexts
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      outputs:",
+                "        type: string",
+                "        default: 'default'",
+                "jobs:",
+                "  Initialization:",
+                "    runs-on: ubuntu-latest",
+                "    outputs:",
+                "      telemetryScopeJson: `${{ steps.init.outputs.telemetryScopeJson }}",
+                "    steps:",
+                "      - name: Initialize",
+                "        id: init",
+                "        run: echo 'telemetryScopeJson={}' >> `$GITHUB_OUTPUT",
+                "  Deploy:",
+                "    runs-on: ubuntu-latest",
+                "    needs: [ Initialization ]",
+                "    steps:",
+                "      - name: Deploy",
+                "        env:",
+                "          telemetryScope: `${{ needs.Initialization.outputs.telemetryScopeJson }}",
+                "        run: echo Using `$telemetryScope",
+                "      - name: Use input",
+                "        run: echo `${{ inputs.outputs }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag for the "outputs" input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "outputs"; "value" = "hidden-value"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Input Named Outputs"
+
+            # Verify the hidden input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('outputs:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify that needs.Initialization.outputs.telemetryScopeJson is NOT replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "needs\.Initialization\.outputs\.telemetryScopeJson"
+            $content | Should -Match "steps\.init\.outputs\.telemetryScopeJson"
+
+            # Verify that the actual input reference WAS replaced
+            $content | Should -Match "echo 'hidden-value'"
+            $content | Should -Not -Match "github\.event\.inputs\.outputs"
+            $content | Should -Not -Match "`\$\{\{ inputs\.outputs \}\}"
+        }
+
+        It 'does not replace job outputs when job is named inputs and input is named outputs' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # This is the real edge case: job named "inputs" (lowercase) with outputs, and an input also named "outputs"
+            # needs.inputs.outputs.something should NOT be replaced (it's a job output reference)
+            # but ${{ inputs.outputs }} should be replaced (it's a workflow input reference)
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      outputs:",
+                "        type: string",
+                "        default: 'default'",
+                "jobs:",
+                "  inputs:",
+                "    runs-on: ubuntu-latest",
+                "    outputs:",
+                "      myValue: `${{ steps.init.outputs.myValue }}",
+                "    steps:",
+                "      - name: Initialize",
+                "        id: init",
+                "        run: echo 'myValue=test' >> `$GITHUB_OUTPUT",
+                "  Deploy:",
+                "    runs-on: ubuntu-latest",
+                "    needs: [ inputs ]",
+                "    steps:",
+                "      - name: Use job output",
+                "        env:",
+                "          value: `${{ needs.inputs.outputs.myValue }}",
+                "        run: echo Job output is `$value",
+                "      - name: Use input",
+                "        run: echo Input is `${{ inputs.outputs }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flag for the "outputs" input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "outputs"; "value" = "hidden-input-value"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Job Named Inputs"
+
+            # Verify the hidden input was removed
+            $inputsSection = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputsSection.Find('outputs:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify that needs.inputs.outputs.myValue is NOT replaced (job output reference)
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "needs\.inputs\.outputs\.myValue"
+
+            # Verify that steps.init.outputs.myValue is NOT replaced (step output reference)
+            $content | Should -Match "steps\.init\.outputs\.myValue"
+
+            # Verify that inputs.outputs WAS replaced with the hidden value
+            $content | Should -Match "echo Input is 'hidden-input-value'"
+            $content | Should -Not -Match "`\$\{\{ inputs\.outputs \}\}"
+        }
+
+        It 'silently skips hiding non-existent input' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with only one input
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      existingInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.existingInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings trying to hide an input that doesn't exist
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "existingInput"; "value" = "test-value" },
+                    @{ "name" = "nonExistentInput"; "value" = "hidden-value"; "hide" = $true }
+                )
+            }
+
+            # Mock OutputWarning to verify no warning is issued
+            Mock OutputWarning { }
+
+            # Apply the defaults - should not throw
+            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Non-Existent" } | Should -Not -Throw
+
+            # Verify no warning was issued
+            Assert-MockCalled OutputWarning -Times 0
+
+            # Verify the existing input was updated but not hidden
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('existingInput:', [ref] $null, [ref] $null) | Should -Be $true
+            $yaml.Get('on:/workflow_dispatch:/inputs:/existingInput:/default:').content -join '' | Should -Be "default: 'test-value'"
+
+            # Verify the workflow content was not affected by the non-existent input
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "`\$\{\{ inputs\.existingInput \}\}"
+        }
+
+        It 'hides multiple inputs in the same workflow' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with multiple inputs to hide
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      visibleInput:",
+                "        type: string",
+                "        default: ''",
+                "      hiddenInput1:",
+                "        type: boolean",
+                "        default: false",
+                "      hiddenInput2:",
+                "        type: string",
+                "        default: ''",
+                "      hiddenInput3:",
+                "        type: number",
+                "        default: 0",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Use inputs",
+                "        run: echo `${{ inputs.hiddenInput1 }} `${{ inputs.hiddenInput2 }} `${{ inputs.hiddenInput3 }}",
+                "      - name: Use visible",
+                "        run: echo `${{ inputs.visibleInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with multiple hidden inputs
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "visibleInput"; "value" = "visible" },
+                    @{ "name" = "hiddenInput1"; "value" = $true; "hide" = $true },
+                    @{ "name" = "hiddenInput2"; "value" = "hidden-string"; "hide" = $true },
+                    @{ "name" = "hiddenInput3"; "value" = 42; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Multiple Hidden"
+
+            # Verify all hidden inputs were removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('hiddenInput1:', [ref] $null, [ref] $null) | Should -Be $false
+            $inputs.Find('hiddenInput2:', [ref] $null, [ref] $null) | Should -Be $false
+            $inputs.Find('hiddenInput3:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify visible input still exists
+            $inputs.Find('visibleInput:', [ref] $null, [ref] $null) | Should -Be $true
+
+            # Verify all references were replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo true 'hidden-string' 42"
+            $content | Should -Match "echo `\$\{\{ inputs\.visibleInput \}\}"
+            $content | Should -Not -Match "inputs\.hiddenInput1"
+            $content | Should -Not -Match "inputs\.hiddenInput2"
+            $content | Should -Not -Match "inputs\.hiddenInput3"
+        }
+
+        It 'replaces hidden input references in different expression contexts' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with inputs used in various contexts
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      hiddenBool:",
+                "        type: boolean",
+                "        default: false",
+                "      hiddenString:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    if: inputs.hiddenBool == true",
+                "    env:",
+                "      MY_VAR: `${{ inputs.hiddenString }}",
+                "    steps:",
+                "      - name: Checkout",
+                "        uses: actions/checkout@v4",
+                "        with:",
+                "          ref: `${{ inputs.hiddenString }}",
+                "      - name: Step with if",
+                "        if: inputs.hiddenBool",
+                "        run: echo Running",
+                "      - name: Step with env",
+                "        env:",
+                "          BRANCH: `${{ inputs.hiddenString }}",
+                "        run: echo `$BRANCH"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with hide flags
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "hiddenBool"; "value" = $true; "hide" = $true },
+                    @{ "name" = "hiddenString"; "value" = "main"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Expression Contexts"
+
+            # Verify all references were replaced correctly in different contexts
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "if: true == true"  # Job-level if
+            $content | Should -Match "MY_VAR: 'main'"    # Job-level env
+            $content | Should -Match "ref: 'main'"       # Action with parameter
+            $content | Should -Match "if: true"          # Step-level if
+            $content | Should -Match "BRANCH: 'main'"    # Step-level env
+            $content | Should -Not -Match "inputs\.hiddenBool"
+            $content | Should -Not -Match "inputs\.hiddenString"
+        }
+
+        It 'does not replace partial input name matches' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with inputs that have overlapping names
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      test:",
+                "        type: string",
+                "        default: ''",
+                "      testInput:",
+                "        type: string",
+                "        default: ''",
+                "      mytest:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  run:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Use inputs",
+                "        run: echo `${{ inputs.test }} `${{ inputs.testInput }} `${{ inputs.mytest }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide only the "test" input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "test"; "value" = "hidden-test"; "hide" = $true },
+                    @{ "name" = "testInput"; "value" = "visible-testInput" },
+                    @{ "name" = "mytest"; "value" = "visible-mytest" }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Partial Match"
+
+            # Verify only "test" was hidden, not "testInput" or "mytest"
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('test:', [ref] $null, [ref] $null) | Should -Be $false
+            $inputs.Find('testInput:', [ref] $null, [ref] $null) | Should -Be $true
+            $inputs.Find('mytest:', [ref] $null, [ref] $null) | Should -Be $true
+
+            # Verify only inputs.test was replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo 'hidden-test' `\$\{\{ inputs\.testInput \}\} `\$\{\{ inputs\.mytest \}\}"
+        }
+
+        It 'hides choice type inputs correctly' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with choice input
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      releaseType:",
+                "        type: choice",
+                "        options:",
+                "          - Release",
+                "          - Prerelease",
+                "          - Draft",
+                "        default: Release",
+                "jobs:",
+                "  release:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Create release",
+                "        run: echo Creating `${{ inputs.releaseType }} release"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide the choice input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "releaseType"; "value" = "Prerelease"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Choice"
+
+            # Verify the choice input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('releaseType:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the reference was replaced with the choice value
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo Creating 'Prerelease' release"
+            $content | Should -Not -Match "inputs\.releaseType"
+        }
+
+        It 'hides environment type inputs correctly' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with environment input
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      environment:",
+                "        type: environment",
+                "        default: ''",
+                "jobs:",
+                "  deploy:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy",
+                "        run: echo Deploying to `${{ inputs.environment }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide the environment input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "environment"; "value" = "production"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Hide Environment"
+
+            # Verify the environment input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('environment:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the reference was replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo Deploying to 'production'"
+            $content | Should -Not -Match "inputs\.environment"
+        }
+
+        It 'handles input references without whitespace' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with various spacing patterns
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      myInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: No spaces",
+                "        run: echo `${{inputs.myInput}}",
+                "      - name: Normal spaces",
+                "        run: echo `${{ inputs.myInput }}",
+                "      - name: Asymmetric left",
+                "        run: echo `${{ inputs.myInput}}",
+                "      - name: Asymmetric right",
+                "        run: echo `${{inputs.myInput }}",
+                "      - name: Multiple on same line",
+                "        run: echo `${{inputs.myInput}} and `${{ inputs.myInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide the input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "myInput"; "value" = "test-value"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Spacing"
+
+            # Verify all variations were replaced with the same normalized output
+            $content = $yaml.content -join "`n"
+
+            # All spacing variations should be replaced with just the value (in quotes for strings)
+            # Verify the four single-value lines all got replaced the same way
+            ($content -split "`n" | Where-Object { $_ -match "^\s+run: echo 'test-value'`$" }).Count | Should -Be 4 -Because "Four lines with single value should all be normalized"
+
+            # Verify the multiple-on-same-line case
+            $content -match "(?m)^\s+run: echo 'test-value' and 'test-value'`$" | Should -Be $true -Because "Multiple on same line should both be replaced"
+
+            # Verify no input references remain
+            $content | Should -Not -Match "inputs\.myInput"
+        }
+
+        It 'replaces hidden input references in complex expressions' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with complex expressions
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      enableTests:",
+                "        type: boolean",
+                "        default: false",
+                "      branch:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    if: inputs.enableTests == true && inputs.branch != ''",
+                "    steps:",
+                "      - name: Conditional",
+                "        if: inputs.enableTests && needs.job.outputs.value",
+                "        run: echo Testing",
+                "      - name: Fallback",
+                "        run: echo `${{ inputs.branch || 'main' }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide both inputs
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "enableTests"; "value" = $true; "hide" = $true },
+                    @{ "name" = "branch"; "value" = "develop"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Complex Expressions"
+
+            # Verify complex expressions were handled correctly
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "if: true == true && 'develop' != ''"
+            $content | Should -Match "if: true && needs\.job\.outputs\.value"
+            $content | Should -Match "echo `\$\{\{ 'develop' \|\| 'main' \}\}"
+            $content | Should -Not -Match "inputs\.enableTests"
+            $content | Should -Not -Match "inputs\.branch"
+        }
+
+        It 'handles case-insensitive input references' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with mixed case references
+            # Note: GitHub Actions itself is case-sensitive for input references in workflows
+            # This test verifies our hide feature respects the actual case used
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      myInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Lower case",
+                "        run: echo `${{ inputs.myInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide the input (case should not matter for input name matching)
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "MYINPUT"; "value" = "test-value"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Case Sensitivity"
+
+            # Verify the input was hidden (case-insensitive matching for input names)
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('myInput:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the reference was replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo 'test-value'"
+        }
+
+        It 'handles empty string values when hiding' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      emptyInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.emptyInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide with empty string value
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "emptyInput"; "value" = ""; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Empty Value"
+
+            # Verify the input was removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('emptyInput:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the reference was replaced with empty quoted string
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo ''"
+            $content | Should -Not -Match "inputs\.emptyInput"
+        }
+
+        It 'handles special characters in hidden values' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      input1:",
+                "        type: string",
+                "        default: ''",
+                "      input2:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.input1 }} and `${{ inputs.input2 }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide with values containing special characters
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "input1"; "value" = "value with 'quotes'"; "hide" = $true },
+                    @{ "name" = "input2"; "value" = "+0.1"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Special Chars"
+
+            # Verify values are properly escaped
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo 'value with ''quotes''' and '\+0\.1'"
+            $content | Should -Not -Match "inputs\.input1"
+            $content | Should -Not -Match "inputs\.input2"
+        }
+
+        It 'handles hidden input with no references in workflow' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML where input is defined but never referenced
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      unusedInput:",
+                "        type: string",
+                "        default: ''",
+                "      usedInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.usedInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide the unused input
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "unusedInput"; "value" = "hidden-unused"; "hide" = $true },
+                    @{ "name" = "usedInput"; "value" = "visible" }
+                )
+            }
+
+            # Apply the defaults - should not throw
+            { ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Unused Input" } | Should -Not -Throw
+
+            # Verify the unused input was still removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('unusedInput:', [ref] $null, [ref] $null) | Should -Be $false
+            $inputs.Find('usedInput:', [ref] $null, [ref] $null) | Should -Be $true
+        }
+
+        It 'handles workflow with all inputs hidden' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML with only inputs that will be hidden
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      input1:",
+                "        type: string",
+                "        default: ''",
+                "      input2:",
+                "        type: boolean",
+                "        default: false",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.input1 }} `${{ inputs.input2 }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Hide all inputs
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "input1"; "value" = "hidden1"; "hide" = $true },
+                    @{ "name" = "input2"; "value" = $true; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - All Hidden"
+
+            # Verify all inputs were removed
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('input1:', [ref] $null, [ref] $null) | Should -Be $false
+            $inputs.Find('input2:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify references were replaced
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo 'hidden1' true"
+        }
+
+        It 'applies last value when duplicate entries have different hide flags' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      myInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.myInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with duplicate entries where first has hide=false, last has hide=true
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "myInput"; "value" = "first-value"; "hide" = $false },
+                    @{ "name" = "myInput"; "value" = "final-value"; "hide" = $true }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Duplicate Hide"
+
+            # Verify last entry wins - input should be hidden
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('myInput:', [ref] $null, [ref] $null) | Should -Be $false
+
+            # Verify the final hidden value was used
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo 'final-value'"
+            $content | Should -Not -Match "inputs\.myInput"
+        }
+
+        It 'applies last value when duplicate entries have hide reversed' {
+            . (Join-Path $scriptRoot "yamlclass.ps1")
+
+            # Create a test workflow YAML
+            $yamlContent = @(
+                "name: 'Test Workflow'",
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      myInput:",
+                "        type: string",
+                "        default: ''",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Test",
+                "        run: echo `${{ inputs.myInput }}"
+            )
+
+            $yaml = [Yaml]::new($yamlContent)
+
+            # Create settings with duplicate entries where first has hide=true, last has hide=false
+            $repoSettings = @{
+                "workflowDefaultInputs" = @(
+                    @{ "name" = "myInput"; "value" = "first-value"; "hide" = $true },
+                    @{ "name" = "myInput"; "value" = "final-value"; "hide" = $false }
+                )
+            }
+
+            # Apply the defaults
+            ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow - Duplicate Hide Reversed"
+
+            # Verify last entry wins - input should NOT be hidden
+            $inputs = $yaml.Get('on:/workflow_dispatch:/inputs:/')
+            $inputs.Find('myInput:', [ref] $null, [ref] $null) | Should -Be $true
+
+            # Verify the final value was applied to the default
+            $yaml.Get('on:/workflow_dispatch:/inputs:/myInput:/default:').content -join '' | Should -Be "default: 'final-value'"
+
+            # Verify the reference was NOT replaced (input is visible)
+            $content = $yaml.content -join "`n"
+            $content | Should -Match "echo `\$\{\{ inputs\.myInput \}\}"
+            $content | Should -Not -Match "echo 'final-value'"
+        }
+
+    } # End of Context 'ApplyWorkflowDefaultInputs - Hide Feature'
 }
 
 Describe "ResolveFilePaths" {
