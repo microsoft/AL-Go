@@ -222,7 +222,7 @@ function CompileAppsInWorkspace {
     
     try {
         Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
-        & $script:alTool @arguments
+        & $script:alTool @arguments | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
             throw "AL compilation failed with exit code $LASTEXITCODE"
@@ -317,7 +317,6 @@ function New-WorkspaceFromFolders() {
     }
 
     Write-Host "Workspace created at $WorkspaceFile"
-    return $WorkspaceFile
 }
 
 function Get-PackageCacheFolder() {
