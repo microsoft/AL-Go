@@ -1,3 +1,7 @@
+## AL-Go Telemetry updates
+
+AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
+
 ### Issues
 
 - Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
