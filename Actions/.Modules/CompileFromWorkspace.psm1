@@ -38,15 +38,14 @@ function Build-AppsInWorkspace() {
         [scriptblock]$PostCompileApp
     )
 
-    # Update the app jsons with version number (and other properties) from the app manifest files
-    # Version
-    Update-AppJsonProperties -Folders $Folders -BuildVersion $BuildVersion
-
     # Get asembly probing paths
     $assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
 
     # Get the package cache path
     $PackageCachePath = Join-Path $CompilerFolder "symbols"
+
+    # Update the app jsons with version number (and other properties) from the app manifest files
+    Update-AppJsonProperties -Folders $Folders -BuildVersion $BuildVersion
 
     # Create workspace file from AL-Go folders
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
@@ -338,7 +337,10 @@ function Update-AppJsonProperties() {
         [string[]]$Folders,
         
         [Parameter(Mandatory = $false)]
-        [System.Version]$BuildVersion
+        [System.Version]$BuildVersion,
+
+        [Parameter(Mandatory = $true)]
+        [string]$OutputFolder
     )
 
     foreach ($folder in $Folders) {
@@ -355,6 +357,16 @@ function Update-AppJsonProperties() {
             # Save the updated app.json file
             $appJsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $appJsonFile.FullName -Encoding UTF8
             Write-Host "Updated app.json at $($appJsonFile.FullName)"
+
+            # Generate app file name
+            $appFileName = "$($appJsonContent.Publisher)_$($appJsonContent.Name)_$($appJsonContent.Version).app".Split([System.IO.Path]::GetInvalidFileNameChars()) -join ''
+
+            # Delete existing app file in output folder if it exists
+            $existingAppFilePath = Join-Path $OutputFolder $appFileName
+            if (Test-Path $existingAppFilePath) {
+                Remove-Item -Path $existingAppFilePath -Force
+                Write-Host "Deleted existing app file at $existingAppFilePath"
+            }
         }
     }
 }
