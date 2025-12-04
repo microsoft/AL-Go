@@ -49,7 +49,8 @@ function Build-AppsInWorkspace() {
     $PackageCachePath = Join-Path $CompilerFolder "symbols"
 
     # Create workspace file from AL-Go folders
-    $workspaceFile = Join-Path $PSScriptRoot "tempWorkspace.code-workspace"
+    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
+    $workspaceFile = Join-Path $PSScriptRoot "tempWorkspace$datetimeStamp.code-workspace"
     New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile
 
     $compilationParameters = @{
@@ -83,6 +84,8 @@ function Build-AppsInWorkspace() {
 
     # Clean up 
     Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
+
+    return $appFiles
 }
 
 function CompileAppsInWorkspace {
@@ -128,7 +131,7 @@ function CompileAppsInWorkspace {
         [string]$LogDirectory,
         
         [Parameter(Mandatory = $false)]
-        [string]$OutFolder = $PackageCachePath
+        [string]$OutFolder
     )
 
     # Build the command arguments dynamically
@@ -138,6 +141,13 @@ function CompileAppsInWorkspace {
     $filesInPackageCache = @()
     if ($PackageCachePath -and (Test-Path $PackageCachePath)) {
         $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File | Select-Object -ExpandProperty FullName
+    }
+
+    # Determine the final output folder
+    if (-not $OutFolder) {
+        $OutputFolder = $PackageCachePath
+    } else {
+        $OutputFolder = $OutFolder
     }
 
     # Check if the workspace file exists
@@ -205,36 +215,47 @@ function CompileAppsInWorkspace {
         $arguments += $LogDirectory
     }
 
-    if ($OutFolder) {
-        $arguments += "--outfolder"
-        $arguments += $PackageCachePath
-    }
+    $arguments += "--outfolder"
+    $arguments += $PackageCachePath
+
     $generatedAppFiles = @()
     
     try {
         Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
         & $script:alTool @arguments
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "AL compilation failed with exit code $LASTEXITCODE"
+        }
     } catch {
         throw $_
     } finally {
         # if package cache path and output folder are the same then no need to copy files
-        if ($PackageCachePath -ne $OutFolder) {
-            # Copy the output files from the package cache to the output folder 
-            if ($OutFolder -and (Test-Path $PackageCachePath)) {
-                if (-not (Test-Path $OutFolder)) {
-                    New-Item -Path $OutFolder -ItemType Directory -Force | Out-Null
-                }
+        # Copy the output files from the package cache to the output folder 
+        Write-Host "Copying generated app files to output folder..."
+        if (Test-Path $PackageCachePath) {
+            if (-not (Test-Path $OutputFolder)) {
+                New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
+            }
+            Write-Host "Copying generated app files from package cache '$PackageCachePath' to output folder '$OutputFolder'"
+            $files = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
+            Write-Host "Found $($files.Count) app files in package cache."
+            Write-Host "$($files | ForEach-Object { $_.FullName } | Out-String)"
+            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { $filesInPackageCache -notcontains $_.FullName }
 
-                $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { $filesInPackageCache -notcontains $_.FullName }
-                foreach ($file in $outputFiles) {
-                    $destinationPath = Join-Path $OutFolder $file.Name
-                    Copy-Item -Path $file.FullName -Destination $destinationPath -Force
-                    #Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
-                    $generatedAppFiles += $destinationPath
+            foreach ($file in $outputFiles) {
+                Write-Host "Copying generated app file $($file.FullName) to $OutputFolder"
+                $destinationPath = Join-Path $OutputFolder $file.Name
+                $generatedAppFiles += $destinationPath
+                if ($OutputFolder -eq $PackageCachePath) {
+                    continue
                 }
+                Copy-Item -Path $file.FullName -Destination $destinationPath -Force -Verbose
             }
         }
     }
+
+    Write-Host "Generated app files: $($generatedAppFiles | Out-String)"
 
     return $generatedAppFiles
 }
@@ -290,7 +311,7 @@ function New-WorkspaceFromFolders() {
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
     try {
         Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
-        & $script:alTool @arguments
+        & $script:alTool @arguments | Out-Null
     } catch {
         throw $_
     }
