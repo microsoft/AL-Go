@@ -146,7 +146,8 @@ foreach ($pr in $prsWithReleaseNotes) {
     Write-Host "`nProcessing PR #${prNumber}: $prTitle"
     
     # Check if we've already commented (check for review comments on RELEASENOTES.md)
-    $existingReviewCommentsOutput = gh api "/repos/$Owner/$Repo/pulls/$prNumber/comments" --jq '[.[] | select(.path == "RELEASENOTES.md" and (.body | contains("new version of AL-Go")))]'
+    $searchText = "A new version of AL-Go ($currentVersion) has been released."
+    $existingReviewCommentsOutput = gh api "/repos/$Owner/$Repo/pulls/$prNumber/comments" --jq "[.[] | select(.path == `"RELEASENOTES.md`" and (.body | contains(`"$searchText`")))]"
     
     if ($LASTEXITCODE -eq 0 -and $existingReviewCommentsOutput) {
         $existingReviewComments = $existingReviewCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
