@@ -45,7 +45,7 @@ function Build-AppsInWorkspace() {
     $PackageCachePath = Join-Path $CompilerFolder "symbols"
 
     # Update the app jsons with version number (and other properties) from the app manifest files
-    Update-AppJsonProperties -Folders $Folders -BuildVersion $BuildVersion
+    Update-AppJsonProperties -Folders $Folders -BuildVersion $BuildVersion -OutputFolder $PackageCachePath
 
     # Create workspace file from AL-Go folders
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
