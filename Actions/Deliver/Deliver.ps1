@@ -58,6 +58,7 @@ function ConnectAzStorageAccount {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "Deliver.psm1") -DisableNameChecking
 DownloadAndImportBcContainerHelper
 
 $refname = "$ENV:GITHUB_REF_NAME".Replace('/', '_')
@@ -66,16 +67,19 @@ $artifacts = $artifacts.Replace('/', ([System.IO.Path]::DirectorySeparatorChar))
 
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
-$projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+
+# Get the sorted list of projects
+$sortedProjectList = @(Get-ProjectsInDeliveryOrder -BaseFolder $baseFolder -ProjectsFromSettings $settings.projects -SelectProjects $projects)
+
 if ($deliveryTarget -eq "AppSource") {
     $atypes = "Apps,Dependencies"
 }
 Write-Host "Artifacts $artifacts"
 Write-Host "Projects:"
-$projectList | Out-Host
+$sortedProjectList | Out-Host
 
 $secrets = $env:Secrets | ConvertFrom-Json
-foreach ($thisProject in $projectList) {
+foreach ($thisProject in $sortedProjectList) {
     # $project should be the project part of the artifact name generated from the build
     if ($thisProject -and ($thisProject -ne '.')) {
         $project = $thisProject.Replace('\', '_').Replace('/', '_')
