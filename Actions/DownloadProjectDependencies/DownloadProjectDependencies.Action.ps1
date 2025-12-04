@@ -130,18 +130,22 @@ $downloadedTestApps = @()
 $downloadedDependencies | ForEach-Object {
     # naming convention: app, (testapp)
     if ($_.startswith('(')) {
-        $DownloadedTestApps += $_
+        $downloadedTestApps += $_
     }
     else {
-        $DownloadedApps += $_
+        $downloadedApps += $_
     }
 }
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
 
-$DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
-$DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
+# Write the downloaded apps and test apps to temporary JSON files and set them as GitHub Action outputs
+$tempPath = NewTemporaryFolder
+$downloadedAppsJson = Join-Path $tempPath "DownloadedApps.json"
+$downloadedTestAppsJson = Join-Path $tempPath "DownloadedTestApps.json"
+ConvertTo-Json $downloadedApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedAppsJson
+ConvertTo-Json $downloadedTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedTestAppsJson
 
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$downloadedAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$downloadedTestAppsJson"

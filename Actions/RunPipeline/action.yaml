@@ -22,13 +22,13 @@ inputs:
     required: false
     default: 'Default'
   installAppsJson:
-    description: A JSON-formatted list of apps to install
+    description: A path to a JSON-formatted list of apps to install
     required: false
-    default: '[]'
+    default: ''
   installTestAppsJson:
-    description: A JSON-formatted list of test apps to install
+    description: A path to a JSON-formatted list of test apps to install
     required: false
-    default: '[]'
+    default: ''
   baselineWorkflowRunId:
     description: RunId of the baseline workflow run
     required: false
