@@ -6,9 +6,9 @@
 .DESCRIPTION
     This script searches for all open PRs that have changes to RELEASENOTES.md
     and adds a reminder comment about placing changes above the new version section.
-    
+
     Uses GitHub CLI (gh) for better readability and maintainability.
-    
+
     The script will:
     1. Verify GitHub CLI is installed and authenticated
     2. Automatically detect the current version from RELEASENOTES.md
@@ -37,7 +37,7 @@
     - GitHub CLI (gh) installed: https://cli.github.com/
     - GitHub authentication (via 'gh auth login' or GH_TOKEN/GITHUB_TOKEN environment variable)
     - PowerShell 7 or later
-    
+
     Error Handling:
     - Errors out if GitHub CLI is not installed
     - Errors out if not authenticated
@@ -114,10 +114,10 @@ $prsWithReleaseNotes = @()
 foreach ($pr in $prsJson) {
     $prNumber = $pr.number
     Write-Host "Checking PR #$prNumber..."
-    
+
     # Check if RELEASENOTES.md was modified
     $releaseNotesModified = $pr.files | Where-Object { $_.path -eq "RELEASENOTES.md" }
-    
+
     if ($releaseNotesModified) {
         Write-Host "  ✓ PR #$prNumber modifies RELEASENOTES.md"
         $prsWithReleaseNotes += $pr
@@ -142,44 +142,44 @@ $failedPRs = @()
 foreach ($pr in $prsWithReleaseNotes) {
     $prNumber = $pr.number
     $prTitle = $pr.title
-    
+
     Write-Host "`nProcessing PR #${prNumber}: $prTitle"
-    
+
     # Check if we've already commented (check for review comments on RELEASENOTES.md)
     $searchText = "A new version of AL-Go ($currentVersion) has been released."
     $existingReviewCommentsOutput = gh api "/repos/$Owner/$Repo/pulls/$prNumber/comments" --jq "[.[] | select(.path == `"RELEASENOTES.md`" and (.body | contains(`"$searchText`")))]"
-    
+
     if ($LASTEXITCODE -eq 0 -and $existingReviewCommentsOutput) {
         $existingReviewComments = $existingReviewCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
-        
+
         if ($existingReviewComments -and $existingReviewComments.Count -gt 0) {
             Write-Host "  ℹ️  Review comment already exists on RELEASENOTES.md in PR #$prNumber, skipping..."
             $skipCount++
             continue
         }
     }
-    
+
     # Add review comment on RELEASENOTES.md file
     $tempFile = $null
     try {
         # Get the commit SHA for the PR
         $prDetails = gh api "/repos/$Owner/$Repo/pulls/$prNumber" | ConvertFrom-Json
         $commitSha = $prDetails.head.sha
-        
+
         # Create review comment payload
         $reviewCommentBody = @{
             body = $comment
             path = "RELEASENOTES.md"
             commit_id = $commitSha
         } | ConvertTo-Json -Compress
-        
+
         # Save to temp file
         $tempFile = [System.IO.Path]::GetTempFileName()
         Set-Content -Path $tempFile -Value $reviewCommentBody -NoNewline
-        
+
         # Post the review comment
         $response = gh api -X POST "/repos/$Owner/$Repo/pulls/$prNumber/comments" --input $tempFile
-        
+
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  ✓ Review comment added to RELEASENOTES.md in PR #$prNumber"
             $successCount++
