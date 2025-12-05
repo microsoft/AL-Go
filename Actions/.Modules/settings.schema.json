@@ -751,6 +751,10 @@
                     },
                     "value": {
                         "description": "The default value for the workflow input (can be string, boolean, or number)"
+                                },
+                    "hide": {
+                        "type": "boolean",
+                        "description": "If true, the input is removed from the workflow and the configured value is used directly"
                     }
                 },
                 "required": ["name", "value"]
