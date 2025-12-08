@@ -1625,7 +1625,7 @@ function CreateDevEnv {
                             -Folders $appFolders `
                             -CompilerFolder $compilerFolder `
                             -OutFolder (Join-Path $projectFolder ".output") `
-                            -Ruleset $settings.rulesetFile `
+                            -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
                             -BuildVersion $buildVersion
 
                 $installApps += $appFiles
@@ -1637,7 +1637,7 @@ function CreateDevEnv {
                                 -Folders $testFolders `
                                 -CompilerFolder $compilerFolder `
                                 -OutFolder (Join-Path $projectFolder ".output") `
-                                -Ruleset $settings.rulesetFile `
+                                -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
                                 -BuildVersion $buildVersion
 
                 $installTestApps += $testAppFiles
