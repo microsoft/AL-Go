@@ -1615,7 +1615,7 @@ function CreateDevEnv {
 
             if ($settings.useWorkspaceCompilation) {
                 $scriptPath = Join-Path $PSScriptRoot ".Modules/CompileFromWorkspace.psm1"
-                $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "compilerFolderTemp"
+                $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "$($containerName)compiler"
                 $buildVersion = "28.0.0.0"
                 #$buildVersion = "$($runAlPipelineParams.appVersion).$($runAlPipelineParams.appBuild).$($runAlPipelineParams.appRevision)"
                 
