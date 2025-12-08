@@ -2184,6 +2184,12 @@ function ConnectAz {
     }
 }
 
+<#
+    .SYNOPSIS
+    Output a message and an array of strings in a formatted way.
+
+    Deprecated: Use OutputArray function from DebugLogHelper module.
+#>
 function OutputMessageAndArray {
     Param(
         [string] $message,

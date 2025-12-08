@@ -1,3 +1,17 @@
+### Issues
+
+- AL-Go repositories with large amounts of projects may run into issues with too large environment variables
+
+## AL-Go Telemetry updates
+
+AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
+
+## v8.1
+
+### Custom AL-Go files
+
+AL-Go for GitHub now supports updating files from your custom templates via the new `customALGoFiles` setting. Read more at [customALGoFiles](https://aka.ms/algosettings#customALGoFiles).
+
 ### Set default values for workflow inputs
 
 A new setting `workflowDefaultInputs` allows you to configure default values for workflow_dispatch inputs. This makes it easier to run workflows manually with consistent settings across your team.
@@ -42,6 +56,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 
 ### Issues
 
+- Issue 2039 Error when deploy to environment: NewTemporaryFolder is not recognized
 - Issue 1961 KeyVault access in PR pipeline
 - Discussion 1911 Add support for reportSuppressedDiagnostics
 - Discussion 1968 Parameter for settings passed to CreateDevEnv
@@ -51,6 +66,10 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'UpdateGitHubGoSystemFiles' for reusability
+
+### Deprecations
+
+- `unusedALGoSystemFiles` will be removed after October 1st 2026. Please use [`customALGoFiles.filesToExclude`](https://aka.ms/algosettings#customALGoFiles) instead.
 
 ## v8.0
 

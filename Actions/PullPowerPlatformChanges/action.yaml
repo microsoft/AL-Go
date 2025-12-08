@@ -48,7 +48,7 @@ runs:
         }
 
     - name: Check out AL-Go Actions
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         repository: ${{ env.actionsRepo }}
         ref: ${{ env.actionsRef }}
