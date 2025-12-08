@@ -921,6 +921,7 @@ function GetDefaultFilesToInclude {
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.ps1' }
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.settings.json'; 'type' = 'settings' }
+        [ordered]@{ 'sourceFolder' = '.github/.agents'; 'filter' = '*.agent.md' }
 
         [ordered]@{ 'sourceFolder' = '.AL-Go'; 'filter' = '*.ps1'; 'perProject' = $true },
         [ordered]@{ 'sourceFolder' = '.AL-Go'; 'filter' = "$ALGoSettingsFileName"; 'perProject' = $true; 'type' = 'settings' }
@@ -1054,3 +1055,4 @@ function GetFilesToUpdate {
 
     return @($filesToInclude), @($filesToExclude)
 }
+
