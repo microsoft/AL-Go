@@ -108,14 +108,6 @@ Describe "Deliver Module - Get-ProjectsInDeliveryOrder Tests" {
         $result[0] | Should -BeExactly 'Project1'
         $result[1] | Should -BeExactly 'Project2'
         $result[2] | Should -BeExactly 'Project3'
-
-        # Verify that Project1 comes before Project2 and Project3
-        $project1Index = [array]::IndexOf($result, 'Project1')
-        $project2Index = [array]::IndexOf($result, 'Project2')
-        $project3Index = [array]::IndexOf($result, 'Project3')
-
-        $project1Index | Should -BeLessThan $project2Index
-        $project2Index | Should -BeLessThan $project3Index
     }
 
     AfterEach {
