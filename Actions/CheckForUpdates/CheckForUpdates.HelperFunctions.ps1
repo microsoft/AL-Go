@@ -1055,4 +1055,3 @@ function GetFilesToUpdate {
 
     return @($filesToInclude), @($filesToExclude)
 }
-
