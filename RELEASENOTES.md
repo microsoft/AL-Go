@@ -2,6 +2,10 @@
 
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 
+### Breaking changes
+
+`merge_group` trigger added to Pull Request workflow. If you are not using the GitHub merge queue feature, this will not affect you. If you do have the merge queue feature enabled, this change will make the Pull Request workflow run automatically on any items added to your queue. This could potentially break or slow down your setup if you rely on a custom Gate/Validation workflow for your merge queues.
+
 ## AL-Go Telemetry updates
 
 AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
