@@ -51,8 +51,7 @@ param(
     [string]$Repo = "AL-Go"
 )
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version 2.0
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 # Check if gh CLI is available
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
@@ -99,7 +98,8 @@ This ensures your changes are included in the next release rather than being lis
 Write-Host "Fetching open pull requests for $Owner/$Repo..."
 
 # Get all open PRs using gh CLI
-$prsJsonOutput = gh pr list --repo "$Owner/$Repo" --state open --limit 100 --json number,title,files
+# NOTE: The maximum limit for 'gh pr list' is 1000. If the repository has more than 1000 open PRs, some may be missed.
+$prsJsonOutput = gh pr list --repo "$Owner/$Repo" --state open --limit 1000 --json number,title,files
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to fetch pull requests from GitHub"
     exit 1
@@ -147,12 +147,13 @@ foreach ($pr in $prsWithReleaseNotes) {
 
     # Check if we've already commented (check for review comments on RELEASENOTES.md)
     $searchText = "A new version of AL-Go ($currentVersion) has been released."
-    $existingReviewCommentsOutput = gh api "/repos/$Owner/$Repo/pulls/$prNumber/comments" --jq "[.[] | select(.path == `"RELEASENOTES.md`" and (.body | contains(`"$searchText`")))]"
+    $escapedSearchText = $searchText -replace '\\', '\\\\' -replace '"', '\"'
+    $existingReviewCommentsOutput = gh api "/repos/$Owner/$Repo/pulls/$prNumber/comments" --jq "[.[] | select(.path == `"RELEASENOTES.md`" and (.body | contains(`"$escapedSearchText`")))]"
 
-    if ($LASTEXITCODE -eq 0 -and $existingReviewCommentsOutput) {
+    if ($LASTEXITCODE -eq 0) {
         $existingReviewComments = $existingReviewCommentsOutput | ConvertFrom-Json -ErrorAction SilentlyContinue
 
-        if ($existingReviewComments -and $existingReviewComments.Count -gt 0) {
+        if ($existingReviewComments -and @($existingReviewComments).Count -gt 0) {
             Write-Host "  ℹ️  Review comment already exists on RELEASENOTES.md in PR #$prNumber, skipping..."
             $skipCount++
             continue
@@ -171,6 +172,7 @@ foreach ($pr in $prsWithReleaseNotes) {
             body = $comment
             path = "RELEASENOTES.md"
             commit_id = $commitSha
+            line = 1
         } | ConvertTo-Json -Compress
 
         # Save to temp file
@@ -184,13 +186,13 @@ foreach ($pr in $prsWithReleaseNotes) {
             Write-Host "  ✓ Review comment added to RELEASENOTES.md in PR #$prNumber"
             $successCount++
         } else {
-            Write-Warning "  ✗ Failed to add review comment to PR #${prNumber}"
+            Write-Host "  ✗ Failed to add review comment to PR #${prNumber}"
             $failCount++
             $failedPRs += $prNumber
         }
     }
     catch {
-        Write-Warning "  ✗ Failed to add review comment to PR #${prNumber}: $_"
+        Write-Host "  ✗ Failed to add review comment to PR #${prNumber}: $_"
         $failCount++
         $failedPRs += $prNumber
     }
