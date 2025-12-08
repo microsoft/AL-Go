@@ -212,6 +212,10 @@ function CompileAppsInWorkspace {
     if ($LogDirectory) {
         $arguments += "--logdirectory"
         $arguments += $LogDirectory
+    } else {
+        $defaultLogDir = Join-Path $OutFolder "Logs"
+        $arguments += "--logdirectory"
+        $arguments += $defaultLogDir
     }
 
     $arguments += "--outfolder"
