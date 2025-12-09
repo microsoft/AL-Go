@@ -298,7 +298,7 @@ try {
             # For versioning strategy 3, we need to get the build number from repoVersion setting
             $appBuild = $repoVersion.Build
             if ($appBuild -eq -1) {
-                Write-Host "WARNING: RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
                 $appBuild = 0
             }
         }
