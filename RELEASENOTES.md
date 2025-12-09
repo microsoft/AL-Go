@@ -4,7 +4,7 @@
 
 ### Breaking changes
 
-`merge_group` trigger added to Pull Request workflow. If you are not using the GitHub merge queue feature, this will not affect you. If you do have the merge queue feature enabled, this change will make the Pull Request workflow run automatically on any items added to your queue. This could potentially break or slow down your setup if you rely on a custom Gate/Validation workflow for your merge queues.
+`merge_group` trigger added to Pull Request Build workflow. If you are not using the GitHub merge queue feature, this will not affect you. If you do have the merge queue feature enabled, this change will make the Pull Request Build workflow run automatically on any items added to your merge queue. If you rely on a custom workflow for merge queue validation, you may need to adjust your setup to avoid duplicate builds.
 
 ## AL-Go Telemetry updates
 
