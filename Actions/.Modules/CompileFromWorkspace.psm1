@@ -225,9 +225,13 @@ function CompileAppsInWorkspace {
     $arguments += $PackageCachePath
 
     $generatedAppFiles = @()
+    $originalEncoding = [Console]::OutputEncoding
     
     try {
         Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
+        
+        # Temporarily set console encoding to UTF-8 to handle emojis properly
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         & $script:alTool @arguments | Out-Host
 
         if ($LASTEXITCODE -ne 0) {
@@ -236,6 +240,9 @@ function CompileAppsInWorkspace {
     } catch {
         throw $_
     } finally {
+        # Restore original encoding
+        [Console]::OutputEncoding = $originalEncoding
+
         # if package cache path and output folder are the same then no need to copy files
         # Copy the output files from the package cache to the output folder 
         Write-Host "Copying generated app files to output folder..."
