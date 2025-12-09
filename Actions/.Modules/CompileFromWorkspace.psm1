@@ -16,7 +16,10 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string]$OutFolder,
         # Optional parameters
+        [Parameter(Mandatory = $false)]
         [System.Version]$BuildVersion,
+        [Parameter(Mandatory = $false)]
+        [int]$MaxCpuCount = 10, #[System.Environment]::ProcessorCount,
         # Optional compiler parameters
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
@@ -225,7 +228,7 @@ function CompileAppsInWorkspace {
     
     try {
         Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
-        & $script:alTool @arguments | Out-Null
+        & $script:alTool @arguments | Out-Host
 
         if ($LASTEXITCODE -ne 0) {
             throw "AL compilation failed with exit code $LASTEXITCODE"
