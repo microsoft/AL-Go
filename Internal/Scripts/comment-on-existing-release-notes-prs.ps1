@@ -180,7 +180,7 @@ foreach ($pr in $prsWithReleaseNotes) {
         Set-Content -Path $tempFile -Value $reviewCommentBody -NoNewline
 
         # Post the review comment
-        $response = gh api -X POST "/repos/$Owner/$Repo/pulls/$prNumber/comments" --input $tempFile
+        gh api -X POST "/repos/$Owner/$Repo/pulls/$prNumber/comments" --input $tempFile | Out-Null
 
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  ✓ Review comment added to RELEASENOTES.md in PR #$prNumber"
