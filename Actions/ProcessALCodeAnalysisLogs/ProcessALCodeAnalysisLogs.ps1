@@ -33,7 +33,7 @@ function GenerateSARIFJson {
 
     foreach ($issue in $errorLogContent.issues) {
         # Skip issues without locations as GitHub expects at least one location
-        if (($issue.PSObject.Properties.Name -notcontains "locations" ) -or ($issue.locations.Count -eq 0)) {
+        if (($issue.PSObject.Properties.Name -notcontains "locations" ) -or ($issue.locations.Count -eq 0) -or $issue.PSObject.Properties.Name -notcontains "ruleId") {
             continue
         }
 
@@ -74,10 +74,15 @@ function GenerateSARIFJson {
             if ($issue.PSObject.Properties.Name -contains "fullMessage") {
                 $fullMessage = $issue.fullMessage
             }
+            $fullMessage = "$($issue.ruleId): $fullMessage"
 
+            # Use only full message for rules if possible. The messages from the AL compiler look like this:
+            # "shortMessage": "Variable 'InvalidDate' is unused in 'CustomerListExtTwo'.",
+            # "fullMessage": "Do not declare variables that are unused."
+            # So if shortMessage is used, the rule description will not be generic, but specific to a certain alert result.
             $sarif.runs[0].tool.driver.rules += @{
                 id = $issue.ruleId
-                shortDescription = @{ text = $message }
+                shortDescription = @{ text = $fullMessage }
                 fullDescription = @{ text = $fullMessage }
                 helpUri = $issue.properties.helpLink
                 properties = @{
