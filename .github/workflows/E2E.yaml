@@ -141,6 +141,7 @@ jobs:
         with:
           maxParallel: ${{ needs.Check.outputs.maxParallel }}
           testUpgradesFromVersion: ${{ env.TestUpgradesFromVersion }}
+          scenariosFilter: ${{ github.event.inputs.scenariosFilter }}
           token: ${{ steps.app-token.outputs.token }}
 
   ScenariosOnWindows:
