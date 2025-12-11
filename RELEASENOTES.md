@@ -5,7 +5,8 @@
 
 ### Set default values for workflow inputs
 
-The setting `workflowDefaultInputs` now also applies the default values to workflow_call inputs if a input with the same name exists for workflow_dispatch.
+The `workflowDefaultInputs` setting now also applies to `workflow_call` inputs when an input with the same name exists for `workflow_dispatch`.
+This ensures consistent default values across both manual workflow runs and reusable workflow calls.
 
 Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
