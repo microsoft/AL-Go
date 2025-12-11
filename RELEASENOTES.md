@@ -1,6 +1,13 @@
 ### Issues
 
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
+- Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
+
+### Set default values for workflow inputs
+
+The setting `workflowDefaultInputs` now also applies the default values to workflow_call inputs if a input with the same name exists for workflow_dispatch.
+
+Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
 ## AL-Go Telemetry updates
 
@@ -65,7 +72,6 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
-- Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
 ### Deprecations
 
