@@ -508,47 +508,6 @@ Describe "CheckForUpdates Action: ApplyWorkflowDefaultInputs Tests" {
         $yaml.Get('on:/workflow_call:/inputs:/input4:/default:').content -join '' | Should -Be "default: 'optionB'"
     }
 
-    It 'ApplyWorkflowDefaultInputs is case-insensitive for input names' {
-        . (Join-Path $scriptRoot "yamlclass.ps1")
-
-        # Create a test workflow YAML with specific casing in both workflow_dispatch and workflow_call
-        $yamlContent = @(
-            "name: 'Test Workflow'",
-            "on:",
-            "  workflow_dispatch:",
-            "    inputs:",
-            "      MyInput:",
-            "        type: boolean",
-            "        default: false",
-            "  workflow_call:",
-            "    inputs:",
-            "      MyInput:",
-            "        type: boolean",
-            "        default: false",
-            "jobs:",
-            "  test:",
-            "    runs-on: ubuntu-latest"
-        )
-
-        $yaml = [Yaml]::new($yamlContent)
-
-        # Create settings with different casing
-        $repoSettings = @{
-            "workflowDefaultInputs" = @(
-                @{ "name" = "myInput"; "value" = $true }
-            )
-        }
-
-        # Apply the defaults
-        ApplyWorkflowDefaultInputs -yaml $yaml -repoSettings $repoSettings -workflowName "Test Workflow"
-
-        # Verify default WAS applied despite case difference (case-insensitive matching) to workflow_dispatch
-        $yaml.Get('on:/workflow_dispatch:/inputs:/MyInput:/default:').content -join '' | Should -Be 'default: true'
-
-        # Verify default WAS also applied to workflow_call
-        $yaml.Get('on:/workflow_call:/inputs:/MyInput:/default:').content -join '' | Should -Be 'default: true'
-    }
-
     It 'ApplyWorkflowDefaultInputs ignores defaults for non-existent inputs' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
@@ -812,293 +771,448 @@ Describe "CheckForUpdates Action: ApplyWorkflowDefaultInputs Tests" {
     }
 }
 
-Describe "CheckForUpdates Action: ApplyWorkflowInputDefaultValue Tests" {
+Describe "CheckForUpdates Action: ApplyWorkflowDefaultInput Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
     }
 
-    It 'ApplyWorkflowInputDefaultValue inserts default line when missing' {
+    It 'ApplyWorkflowDefaultInput ignores default when input with same name does not exist' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
-        # Create just the input section without default line
+        # Create workflow with input
         $yamlContent = @(
-            "myInput:",
-            "  description: 'My input without default'",
-            "  type: string"
+            "inputs:",
+            "  myInput:",
+            "    description: 'My input'",
+            "    type: boolean",
+            "    default: false"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('myInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+
+        $originalContent = $yaml.content -join "`n"
 
         # Apply default value
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "new-default"
+        $defaultInput = @{ 'name' = 'otherInput'; 'value' = $true }
+        $result = ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
 
-        # Verify default line was inserted
+        # Verify no changes were made and function returned false
+        $result | Should -Be $false
+        $yaml.content -join "`n" | Should -Be $originalContent
+    }
+
+    It 'ApplyWorkflowDefaultInput updates only input with matching name' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        # Create workflow with input
+        $yamlContent = @(
+            "inputs:",
+            "  input1:",
+            "    description: 'Input 1'",
+            "    type: boolean",
+            "    default: false",
+            "  input2:",
+            "    description: 'Input 2'",
+            "    type: boolean",
+            "    default: false"
+        )
+
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+
+        # Apply default value
+        $defaultInput = @{ 'name' = 'input1'; 'value' = $true }
+        $result = ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+
+        # Verify no changes were made and function returned false
+        $result | Should -Be $true
+        $inputs.Get('input1:/default:').content -join '' | Should -Be "default: true"
+        $inputs.Get('input2:/default:').content -join '' | Should -Be "default: false"
+    }
+
+    It 'ApplyWorkflowDefaultInput is case-insensitive for input names' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        # Create workflow with specific casing
+        $yamlContent = @(
+            "inputs:",
+            "  MyInput:",
+            "    description: 'My input'",
+            "    type: boolean",
+            "    default: false"
+        )
+
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+
+        # Apply default value with different casing
+        $defaultInput = @{ 'name' = 'myInput'; 'value' = $true }
+        $result = ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+
+        # Verify default was applied despite case difference (case-insensitive matching)
+        $result | Should -Be $true
+        $inputs.Get('MyInput:/default:').content -join '' | Should -Be 'default: true'
+    }
+
+    It 'ApplyWorkflowDefaultInput inserts default line when missing' {
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+
+        # Create workflow with input without default line
+        $yamlContent = @(
+            "inputs:",
+            "  myInput:",
+            "    description: 'My input without default'",
+            "    type: string"
+        )
+
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+
+        # Apply default value
+        $defaultInput = @{ 'name' = 'myInput'; 'value' = 'new-default' }
+        $result = ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+
+        # Verify default line was inserted and function returned true
+        $result | Should -Be $true
+        $inputSection = $inputs.Get('myInput:/')
         $inputSection.content -join '' | Should -BeLike "*default: 'new-default'*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue handles special YAML characters in string values' {
+    It 'ApplyWorkflowDefaultInput handles special YAML characters in string values' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         # Test colon
-        $yamlContent = @("input1:", "  type: string", "  default: ''")
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('input1:/')
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "value: with colon"
+        $yamlContent = @(
+            "inputs:",
+            "  input1:",
+            "    type: string",
+            "    default: ''"
+        )
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'input1'; 'value' = 'value: with colon' }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+        $inputSection = $inputs.Get('input1:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'value: with colon'"
 
         # Test hash/comment
-        $yamlContent = @("input2:", "  type: string", "  default: ''")
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('input2:/')
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "value # with comment"
+        $yamlContent = @(
+            "inputs:",
+            "  input2:",
+            "    type: string",
+            "    default: ''"
+        )
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'input2'; 'value' = 'value # with comment' }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+        $inputSection = $inputs.Get('input2:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'value # with comment'"
 
         # Test quotes
-        $yamlContent = @("input3:", "  type: string", "  default: ''")
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('input3:/')
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "value with 'quotes' inside"
+        $yamlContent = @(
+            "inputs:",
+            "  input3:",
+            "    type: string",
+            "    default: ''"
+        )
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'input3'; 'value' = "value with 'quotes' inside" }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+        $inputSection = $inputs.Get('input3:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'value with ''quotes'' inside'"
     }
 
-    It 'ApplyWorkflowInputDefaultValue handles environment input type' {
+    It 'ApplyWorkflowDefaultInput handles environment input type' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "environmentName:",
-            "  description: Environment to deploy to",
-            "  type: environment",
-            "  default: ''"
+            "inputs:",
+            "  environmentName:",
+            "    description: Environment to deploy to",
+            "    type: environment",
+            "    default: ''"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('environmentName:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply environment value (should be treated as string)
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "production"
+        $defaultInput = @{ 'name' = 'environmentName'; 'value' = 'production' }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
 
         # Verify environment value is set as string
+        $inputSection = $inputs.Get('environmentName:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'production'"
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates invalid choice value not in options' {
+    It 'ApplyWorkflowDefaultInput validates invalid choice value not in options' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "deploymentType:",
-            "  type: choice",
-            "  options:",
-            "    - Development",
-            "    - Staging",
-            "    - Production",
-            "  default: Development"
+            "inputs:",
+            "  deploymentType:",
+            "    type: choice",
+            "    options:",
+            "      - Development",
+            "      - Staging",
+            "      - Production",
+            "    default: Development"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('deploymentType:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply invalid choice value - should throw
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "Testing" } | Should -Throw "*not a valid choice*"
+        $defaultInput = @{ 'name' = 'deploymentType'; 'value' = 'Testing' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Throw "*not a valid choice*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue handles different value types' {
+    It 'ApplyWorkflowDefaultInput handles different value types' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         # Test boolean
-        $yamlContent = @("boolInput:", "  type: boolean", "  default: false")
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('boolInput:/')
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue $true
+        $yamlContent = @(
+            "inputs:",
+            "  boolInput:",
+            "    type: boolean",
+            "    default: false"
+        )
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'boolInput'; 'value' = $true }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+        $inputSection = $inputs.Get('boolInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be 'default: true'
 
         # Test string
-        $yamlContent = @("stringInput:", "  type: string", "  default: ''")
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('stringInput:/')
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "test"
+        $yamlContent = @(
+            "inputs:",
+            "  stringInput:",
+            "    type: string",
+            "    default: ''"
+        )
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'stringInput'; 'value' = 'test' }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+        $inputSection = $inputs.Get('stringInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'test'"
 
         # Test number
-        $yamlContent = @("numberInput:", "  type: number", "  default: 0")
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('numberInput:/')
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue 42
+        $yamlContent = @(
+            "inputs:",
+            "  numberInput:",
+            "    type: number",
+            "    default: 0"
+        )
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'numberInput'; 'value' = 42 }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
+        $inputSection = $inputs.Get('numberInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be 'default: 42'
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates boolean type mismatch' {
+    It 'ApplyWorkflowDefaultInput validates boolean type mismatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "boolInput:",
-            "  type: boolean",
-            "  default: false"
+            "inputs:",
+            "  boolInput:",
+            "    type: boolean",
+            "    default: false"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('boolInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply wrong type - should throw
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "not a boolean" } | Should -Throw "*Expected boolean value*"
+        $defaultInput = @{ 'name' = 'boolInput'; 'value' = 'not a boolean' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Throw "*Expected boolean value*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates number type mismatch' {
+    It 'ApplyWorkflowDefaultInput validates number type mismatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "numberInput:",
-            "  type: number",
-            "  default: 0"
+            "inputs:",
+            "  numberInput:",
+            "    type: number",
+            "    default: 0"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('numberInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply wrong type - should throw
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "not a number" } | Should -Throw "*Expected number value*"
+        $defaultInput = @{ 'name' = 'numberInput'; 'value' = 'not a number' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Throw "*Expected number value*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates string type mismatch' {
+    It 'ApplyWorkflowDefaultInput validates string type mismatch' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "stringInput:",
-            "  type: string",
-            "  default: ''"
+            "inputs:",
+            "  stringInput:",
+            "    type: string",
+            "    default: ''"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('stringInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply wrong type - should throw
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue $true } | Should -Throw "*Expected string value*"
+        $defaultInput = @{ 'name' = 'stringInput'; 'value' = $true }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Throw "*Expected string value*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates choice type accepts valid option' {
+    It 'ApplyWorkflowDefaultInput validates choice type accepts valid option' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "choiceInput:",
-            "  type: choice",
-            "  options:",
-            "    - option1",
-            "    - option2",
-            "  default: option1"
+            "inputs:",
+            "  choiceInput:",
+            "    type: choice",
+            "    options:",
+            "      - option1",
+            "      - option2",
+            "    default: option1"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('choiceInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply valid choice - should succeed
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "option2" } | Should -Not -Throw
+        $defaultInput = @{ 'name' = 'choiceInput'; 'value' = 'option2' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Not -Throw
+        $inputSection = $inputs.Get('choiceInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'option2'"
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates choice value is in available options' {
+    It 'ApplyWorkflowDefaultInput validates choice value is in available options' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "choiceInput:",
-            "  type: choice",
-            "  options:",
-            "    - option1",
-            "    - option2",
-            "    - option3",
-            "  default: option1"
+            "inputs:",
+            "  choiceInput:",
+            "    type: choice",
+            "    options:",
+            "      - option1",
+            "      - option2",
+            "      - option3",
+            "    default: option1"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('choiceInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply invalid choice - should throw
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "invalidOption" } | Should -Throw "*not a valid choice*"
+        $defaultInput = @{ 'name' = 'choiceInput'; 'value' = 'invalidOption' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Throw "*not a valid choice*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue validates choice value with case-sensitive matching' {
+    It 'ApplyWorkflowDefaultInput validates choice value with case-sensitive matching' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "releaseTypeInput:",
-            "  type: choice",
-            "  options:",
-            "    - Release",
-            "    - Prerelease",
-            "    - Draft",
-            "  default: Release"
+            "inputs:",
+            "  releaseTypeInput:",
+            "    type: choice",
+            "    options:",
+            "      - Release",
+            "      - Prerelease",
+            "      - Draft",
+            "    default: Release"
         )
 
         # Test 1: Exact case match should succeed
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('releaseTypeInput:/')
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "Prerelease" } | Should -Not -Throw
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
+        $defaultInput = @{ 'name' = 'releaseTypeInput'; 'value' = 'Prerelease' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Not -Throw
+        $inputSection = $inputs.Get('releaseTypeInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'Prerelease'"
 
         # Test 2: Wrong case should fail
-        $inputYaml2 = [Yaml]::new($yamlContent)
-        $inputSection2 = $inputYaml2.Get('releaseTypeInput:/')
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection2 -defaultValue "prerelease" } | Should -Throw "*case-sensitive match required*"
+        $yaml2 = [Yaml]::new($yamlContent)
+        $inputs2 = $yaml2.Get('inputs:/')
+        $defaultInput2 = @{ 'name' = 'releaseTypeInput'; 'value' = 'prerelease' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs2 -defaultInput $defaultInput2 } | Should -Throw "*case-sensitive match required*"
 
         # Test 3: Uppercase should also fail
-        $inputYaml3 = [Yaml]::new($yamlContent)
-        $inputSection3 = $inputYaml3.Get('releaseTypeInput:/')
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection3 -defaultValue "PRERELEASE" } | Should -Throw "*case-sensitive match required*"
+        $yaml3 = [Yaml]::new($yamlContent)
+        $inputs3 = $yaml3.Get('inputs:/')
+        $defaultInput3 = @{ 'name' = 'releaseTypeInput'; 'value' = 'PRERELEASE' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs3 -defaultInput $defaultInput3 } | Should -Throw "*case-sensitive match required*"
     }
 
-    It 'ApplyWorkflowInputDefaultValue handles inputs without type specification' {
+    It 'ApplyWorkflowDefaultInput handles inputs without type specification' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "noTypeInput:",
-            "  description: Input without type",
-            "  default: ''"
+            "inputs:",
+            "  noTypeInput:",
+            "    description: Input without type",
+            "    default: ''"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('noTypeInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply string value (should work as type defaults to string)
-        { ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "string value" } | Should -Not -Throw
+        $defaultInput = @{ 'name' = 'noTypeInput'; 'value' = 'string value' }
+        { ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput } | Should -Not -Throw
+        $inputSection = $inputs.Get('noTypeInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'string value'"
     }
 
-    It 'ApplyWorkflowInputDefaultValue escapes single quotes in string values' {
+    It 'ApplyWorkflowDefaultInput escapes single quotes in string values' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "nameInput:",
-            "  type: string",
-            "  default: ''"
+            "inputs:",
+            "  nameInput:",
+            "    type: string",
+            "    default: ''"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('nameInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply value with single quote
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "O'Brien"
+        $defaultInput = @{ 'name' = 'nameInput'; 'value' = "O'Brien" }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
 
         # Verify single quote is escaped per YAML spec (doubled)
+        $inputSection = $inputs.Get('nameInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'O''Brien'"
     }
 
-    It 'ApplyWorkflowInputDefaultValue replaces existing default value' {
+    It 'ApplyWorkflowDefaultInput replaces existing default value' {
         . (Join-Path $scriptRoot "yamlclass.ps1")
 
         $yamlContent = @(
-            "myInput:",
-            "  type: string",
-            "  default: 'old-value'"
+            "inputs:",
+            "  myInput:",
+            "    type: string",
+            "    default: 'old-value'"
         )
 
-        $inputYaml = [Yaml]::new($yamlContent)
-        $inputSection = $inputYaml.Get('myInput:/')
+        $yaml = [Yaml]::new($yamlContent)
+        $inputs = $yaml.Get('inputs:/')
 
         # Apply new value
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue "new-value"
+        $defaultInput = @{ 'name' = 'myInput'; 'value' = 'new-value' }
+        ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
 
         # Verify default was replaced
+        $inputSection = $inputs.Get('myInput:/')
         $inputSection.Get('default:').content -join '' | Should -Be "default: 'new-value'"
     }
 }

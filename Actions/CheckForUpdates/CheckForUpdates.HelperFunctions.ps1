@@ -334,53 +334,51 @@ function ApplyWorkflowDefaultInputs {
     $workflowCallInputs = $yaml.Get('on:/workflow_call:/inputs:/')
 
     # Apply defaults to matching inputs
-    foreach ($default in $repoSettings.workflowDefaultInputs) {
-        $inputName = $default.name
-        $defaultValue = $default.value
+    $workflowDispatchInputsModified = $false
+    $workflowCallInputsModified = $false
 
-        # Check if this input exists in the workflow
-        $inputSection = $inputs.Get("$($inputName):/")
-        if (-not $inputSection) {
-            # Input is not present in the workflow
-            continue
-        }
+    foreach ($defaultInput in $repoSettings.workflowDefaultInputs) {
+        # Apply to workflow_dispatch inputs and only update workflow_call if dispatch was modified
+        if (ApplyWorkflowDefaultInput -workflowName $workflowName -inputs $inputs -defaultInput $defaultInput) {
+            $workflowDispatchInputsModified = $true
 
-        ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue $defaultValue
-
-        # Update the inputs section with the modified input
-        $inputs.Replace("$($inputName):/", $inputSection.content)
-
-        # Apply the default to workflow_call inputs if present
-        if ($workflowCallInputs) {
-            # Check if this input exists in the workflow_call section
-            $inputSection = $workflowCallInputs.Get("$($inputName):/")
-            if ($inputSection) {
-                ApplyWorkflowInputDefaultValue -inputSection $inputSection -defaultValue $defaultValue
-
-                # Update the workflow_call inputs section with the modified input
-                $workflowCallInputs.Replace("$($inputName):/", $inputSection.content)
+            # Only apply to workflow_call inputs if the workflow_dispatch input was modified
+            if ($workflowCallInputs) {
+                if (ApplyWorkflowDefaultInput -workflowName $workflowName -inputs $workflowCallInputs -defaultInput $defaultInput) {
+                    $workflowCallInputsModified = $true
+                }
             }
         }
     }
 
-    # Update the workflow_dispatch section with modified inputs
-    $workflowDispatch.Replace('inputs:/', $inputs.content)
+    # Update the workflow_dispatch section if modified
+    if ($workflowDispatchInputsModified) {
+        $workflowDispatch.Replace('inputs:/', $inputs.content)
+        $yaml.Replace('on:/workflow_dispatch:/', $workflowDispatch.content)
+    }
 
-    # Update the on: section with modified workflow_dispatch
-    $yaml.Replace('on:/workflow_dispatch:/', $workflowDispatch.content)
-
-    # Update workflow_call inputs if present
-    if ($workflowCallInputs) {
-        # Update the workflow_call section with modified inputs
+    # Update workflow_call inputs if modified
+    if ($workflowCallInputsModified) {
         $yaml.Replace('on:/workflow_call:/inputs:/', $workflowCallInputs.content)
     }
 }
 
-function ApplyWorkflowInputDefaultValue {
+function ApplyWorkflowDefaultInput {
     Param(
-        [Yaml] $inputSection,
-        [object] $defaultValue
+        [string] $workflowName,
+        [Yaml] $inputs,
+        [hashtable] $defaultInput
     )
+
+    $inputName = $defaultInput.name
+    $defaultValue = $defaultInput.value
+
+    # Check if this input exists in the inputs collection
+    $inputSection = $inputs.Get("$($inputName):/")
+    if (-not $inputSection) {
+        # Input is not present in the workflow
+        return $false
+    }
 
     # Get the input type from the YAML if specified
     $inputType = $null
@@ -464,6 +462,7 @@ function ApplyWorkflowInputDefaultValue {
     # Find and replace the default: line in the input section
     $start = 0
     $count = 0
+
     if ($inputSection.Find('default:', [ref] $start, [ref] $count)) {
         # Replace existing default value
         $inputSection.Replace('default:', "default: $yamlValue")
@@ -500,6 +499,11 @@ function ApplyWorkflowInputDefaultValue {
 
         $inputSection.Insert($insertAfter, "default: $yamlValue")
     }
+
+    # Update the inputs collection with the modified input section
+    $inputs.Replace("$($inputName):/", $inputSection.content)
+
+    return $true
 }
 
 function GetWorkflowContentWithChangesFromSettings {
