@@ -2204,7 +2204,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
-        $filesToInclude.Count | Should -Be 24
+        $filesToInclude.Count | Should -Be 25
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
@@ -2227,7 +2227,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
-        $filesToInclude.Count | Should -Be 21
+        $filesToInclude.Count | Should -Be 22
 
         $filesToInclude | ForEach-Object {
             $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
@@ -2264,7 +2264,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
-        $filesToInclude.Count | Should -Be 23
+        $filesToInclude.Count | Should -Be 24
 
         # Two files to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
@@ -2287,7 +2287,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
-        $filesToInclude.Count | Should -Be 20
+        $filesToInclude.Count | Should -Be 21
 
         # Four files to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
