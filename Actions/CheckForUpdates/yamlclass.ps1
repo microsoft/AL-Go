@@ -202,9 +202,19 @@ class Yaml {
         $this.Add($line, @($key) + @($content | ForEach-Object { "  $_" }))
     }
 
-    # Replace all occurrences of $from with $to throughout the Yaml content
+    # Replace all occurrences of $from with $to throughout the Yaml content (literal string replacement)
     [void] ReplaceAll([string] $from, [string] $to) {
         $this.content = $this.content | ForEach-Object { $_.replace($from, $to) }
+    }
+
+    # Replace all occurrences matching regex pattern with $replacement throughout the Yaml content
+    [void] ReplaceAll([string] $pattern, [string] $replacement, [bool] $isRegex) {
+        if ($isRegex) {
+            $this.content = $this.content | ForEach-Object { $_ -replace $pattern, $replacement }
+        }
+        else {
+            $this.ReplaceAll($pattern, $replacement)
+        }
     }
 
     # Remove lines in Yaml content
