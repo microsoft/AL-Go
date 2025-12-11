@@ -22,6 +22,7 @@ $projectPath = $null
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot 'RunPipeline.psm1' -Resolve)
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
@@ -236,6 +237,10 @@ try {
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+    if ($settings.runTestsInAllInstalledTestApps) {
+        $install.TestApps = ConvertTo-UnwrappedTestApps -TestApps $install.TestApps
+    }
+
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {

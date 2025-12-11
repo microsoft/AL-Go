@@ -148,6 +148,7 @@ function GetDefaultSettings
         "installApps"                                   = @()
         "installTestApps"                               = @()
         "installOnlyReferencedApps"                     = $true
+        "runTestsInAllInstalledTestApps"                = $false
         "generateDependencyArtifact"                    = $false
         "skipUpgrade"                                   = $false
         "applicationDependency"                         = "18.0.0.0"
