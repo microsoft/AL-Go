@@ -65,7 +65,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
-- Discussion 1855 Add trigger 'workflow_call' to workflow 'UpdateGitHubGoSystemFiles' for reusability
+- Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
 ### Deprecations
 
