@@ -827,7 +827,7 @@ Describe "CheckForUpdates Action: ApplyWorkflowDefaultInput Tests" {
         $defaultInput = @{ 'name' = 'input1'; 'value' = $true }
         $result = ApplyWorkflowDefaultInput -workflowName 'TestWorkflow' -inputs $inputs -defaultInput $defaultInput
 
-        # Verify no changes were made and function returned false
+        # Verify changes were made and function returned true
         $result | Should -Be $true
         $inputs.Get('input1:/default:').content -join '' | Should -Be "default: true"
         $inputs.Get('input2:/default:').content -join '' | Should -Be "default: false"
