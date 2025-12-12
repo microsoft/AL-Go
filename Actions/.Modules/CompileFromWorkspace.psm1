@@ -19,7 +19,7 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [System.Version]$BuildVersion,
         [Parameter(Mandatory = $false)]
-        [int]$MaxCpuCount = 10, #[System.Environment]::ProcessorCount,
+        [int]$MaxCpuCount = 5, #[System.Environment]::ProcessorCount,
         # Optional compiler parameters
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
