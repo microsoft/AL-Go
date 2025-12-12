@@ -26,15 +26,8 @@ Describe "WorkflowPostProcess Action Tests" {
     # Call action
 
     It 'Test DateTime serialization is locale-agnostic' {
-        # Define the ConvertToUtcDateTime function from WorkflowPostProcess for testing
-        # This is the actual function used in WorkflowPostProcess.ps1
-        function ConvertToUtcDateTime($DateTimeValue) {
-            if ($DateTimeValue -is [DateTime]) {
-                return $DateTimeValue.ToUniversalTime()
-            } else {
-                return [DateTime]::Parse($DateTimeValue, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
-            }
-        }
+        # Dot-source the WorkflowPostProcess script to load the ConvertToUtcDateTime function
+        . $scriptPath
         
         # Save the current culture to restore later
         $originalCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
