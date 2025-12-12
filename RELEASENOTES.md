@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 
 ## AL-Go Telemetry updates
