@@ -1634,7 +1634,7 @@ function CreateDevEnv {
                             -OutFolder (Join-Path $projectFolder ".output") `
                             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
                             -BuildVersion $buildVersion `
-                            -PrecompileOverride $precompileOverride
+                            -PreCompileApp $precompileOverride
 
                 $installApps += $appFiles
                 $appFolders = @()
@@ -1647,7 +1647,7 @@ function CreateDevEnv {
                                 -OutFolder (Join-Path $projectFolder ".output") `
                                 -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
                                 -BuildVersion $buildVersion `
-                                -PrecompileOverride $precompileOverride
+                                -PreCompileApp $precompileOverride
 
                 $installTestApps += $testAppFiles
                 $testFolders = @()
