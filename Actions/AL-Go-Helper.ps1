@@ -1618,7 +1618,14 @@ function CreateDevEnv {
                 $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "$($containerName)compiler"
                 $buildVersion = "28.0.0.0"
                 #$buildVersion = "$($runAlPipelineParams.appVersion).$($runAlPipelineParams.appBuild).$($runAlPipelineParams.appRevision)"
-                
+
+                # Check if precompile script exists
+                # create empty scriptblock
+                $precompileOverride = $null
+                if ($runAlPipelineParams.PreCompileApp) {
+                    $precompileOverride = $runAlPipelineParams.PreCompileApp
+                }
+
                 # Compile apps
                 $appFiles = @()
                 $appFiles = Build-AppsInWorkspace `
@@ -1626,7 +1633,8 @@ function CreateDevEnv {
                             -CompilerFolder $compilerFolder `
                             -OutFolder (Join-Path $projectFolder ".output") `
                             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-                            -BuildVersion $buildVersion
+                            -BuildVersion $buildVersion `
+                            -PrecompileOverride $precompileOverride
 
                 $installApps += $appFiles
                 $appFolders = @()
@@ -1638,7 +1646,8 @@ function CreateDevEnv {
                                 -CompilerFolder $compilerFolder `
                                 -OutFolder (Join-Path $projectFolder ".output") `
                                 -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-                                -BuildVersion $buildVersion
+                                -BuildVersion $buildVersion `
+                                -PrecompileOverride $precompileOverride
 
                 $installTestApps += $testAppFiles
                 $testFolders = @()
