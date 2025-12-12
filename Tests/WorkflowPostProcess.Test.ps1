@@ -1,5 +1,6 @@
 ﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+Import-Module (Join-Path $PSScriptRoot '..\Actions\.Modules\WorkflowPostProcessHelper.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Describe "WorkflowPostProcess Action Tests" {
@@ -25,47 +26,24 @@ Describe "WorkflowPostProcess Action Tests" {
 
     # Call action
 
-    It 'Test DateTime serialization is locale-agnostic' {
-        # Dot-source the WorkflowPostProcess script to load the ConvertToUtcDateTime function
-        . $scriptPath
+    It 'GetWorkflowDuration handles different culture formats correctly' {
+        $endTimeUTC = [DateTime]::Parse("2025-12-12T10:00:01.0000000Z")
 
-        # Save the current culture to restore later
-        $originalCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
+        # Test UTC start time
+        $workflowDuration = GetWorkflowDuration -StartTime "2025-12-12T10:00:00.0000000Z" -EndTime $endTimeUTC
+        $workflowDuration | Should -Be 1
 
-        try {
-            # Test with different locales to ensure the fix works regardless of culture
-            # This simulates the scenario where WorkflowInitialize runs on one machine with one locale
-            # and WorkflowPostProcess runs on another machine with a different locale
-            $testCultures = @('en-US', 'en-AU', 'de-DE', 'ja-JP')
+        # Test en-US culture format
+        $workflowDuration = GetWorkflowDuration -StartTime "12/12/2025 10:00:00 AM" -EndTime $endTimeUTC
+        $workflowDuration | Should -Be 1
 
-            foreach ($cultureName in $testCultures) {
-                # Set the culture to simulate different locale machines
-                [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::new($cultureName)
+        # Test de-DE culture format
+        $workflowDuration = GetWorkflowDuration -StartTime "12.12.2025 10:00:00" -EndTime $endTimeUTC
+        $workflowDuration | Should -Be 1
 
-                # Simulate what WorkflowInitialize does - serialize a datetime in ISO 8601 format
-                $utcNow = [DateTime]::UtcNow
-                $scopeJson = @{
-                    "workflowStartTime" = $utcNow.ToString("o")
-                } | ConvertTo-Json -Compress
-
-                # Simulate what WorkflowPostProcess does - deserialize the datetime
-                $telemetryScope = $scopeJson | ConvertFrom-Json
-
-                # Use the ConvertToUtcDateTime function (same logic as in WorkflowPostProcess.ps1)
-                $startTimeUtc = ConvertToUtcDateTime -DateTimeValue $telemetryScope.workflowStartTime
-
-                # Verify the parsed datetime is in UTC
-                $startTimeUtc.Kind | Should -Be 'Utc' -Because "DateTime should be in UTC regardless of culture ($cultureName)"
-
-                # Verify the parsed datetime is close to the original (within 1 second to account for execution time)
-                $timeDiff = [Math]::Abs(($startTimeUtc - $utcNow).TotalSeconds)
-                $timeDiff | Should -BeLessThan 1 -Because "Parsed datetime should match original for culture $cultureName"
-            }
-        }
-        finally {
-            # Restore the original culture
-            [System.Threading.Thread]::CurrentThread.CurrentCulture = $originalCulture
-        }
+        # Test da-DK culture format
+        $workflowDuration = GetWorkflowDuration -StartTime "12-12-2025 10:00:00" -EndTime $endTimeUTC
+        $workflowDuration | Should -Be 1
     }
 
 }

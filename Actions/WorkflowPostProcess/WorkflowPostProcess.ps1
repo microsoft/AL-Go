@@ -54,16 +54,6 @@ function GetAlGoVersion($ActionsRepo, $ActionRef) {
     }
 }
 
-function ConvertToUtcDateTime($DateTimeValue) {
-    # Convert a datetime value to UTC, handling both DateTime objects and strings
-    # This function ensures locale-agnostic datetime parsing
-    if ($DateTimeValue -is [DateTime]) {
-        return $DateTimeValue.ToUniversalTime()
-    } else {
-        return [DateTime]::Parse($DateTimeValue, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
-    }
-}
-
 function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
     [System.Collections.Generic.Dictionary[[System.String], [System.String]]] $AdditionalData = @{}
     $telemetryScope = $null
@@ -78,9 +68,9 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
     # Calculate the workflow duration using the github api
     if ($telemetryScope -and ($null -ne $telemetryScope.workflowStartTime)) {
         Write-Host "Calculating workflow duration..."
-        $startTimeUtc = ConvertToUtcDateTime -DateTimeValue $telemetryScope.workflowStartTime
-        $workflowTiming = [DateTime]::UtcNow.Subtract($startTimeUtc).TotalSeconds
-        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowTiming
+
+        $workflowDuration = GetWorkflowDuration -StartTime $telemetryScope.workflowStartTime
+        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowDuration
     }
 
     # Log additional telemetry from AL-Go settings
@@ -113,6 +103,7 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
 }
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\WorkflowPostProcessHelper.psm1" -Resolve)
 
 try {
     LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionsRepo $actionsRepo -ActionRef $actionsRef)
