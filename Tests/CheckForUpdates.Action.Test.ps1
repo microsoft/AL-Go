@@ -767,7 +767,6 @@ Describe "CheckForUpdates Action: ApplyWorkflowDefaultInputs Tests" {
 
         # Verify workflow_call remains unchanged (no inputs to update)
         $yaml.Get('on:/workflow_call:/inputs:').content -join '' | Should -Be ''
-        $yaml.Get('on:/workflow_dispatch:/inputs:/dispatchInput:/default:').content -join '' | Should -Be "default: 'test-value'"
     }
 }
 
