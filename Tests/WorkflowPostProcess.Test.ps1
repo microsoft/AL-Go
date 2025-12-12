@@ -28,20 +28,20 @@ Describe "WorkflowPostProcess Action Tests" {
     It 'Test DateTime serialization is locale-agnostic' {
         # Dot-source the WorkflowPostProcess script to load the ConvertToUtcDateTime function
         . $scriptPath
-        
+
         # Save the current culture to restore later
         $originalCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
-        
+
         try {
             # Test with different locales to ensure the fix works regardless of culture
             # This simulates the scenario where WorkflowInitialize runs on one machine with one locale
             # and WorkflowPostProcess runs on another machine with a different locale
             $testCultures = @('en-US', 'en-AU', 'de-DE', 'ja-JP')
-            
+
             foreach ($cultureName in $testCultures) {
                 # Set the culture to simulate different locale machines
                 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::new($cultureName)
-                
+
                 # Simulate what WorkflowInitialize does - serialize a datetime in ISO 8601 format
                 $utcNow = [DateTime]::UtcNow
                 $scopeJson = @{
