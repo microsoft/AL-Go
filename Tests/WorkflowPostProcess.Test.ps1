@@ -26,29 +26,53 @@ Describe "WorkflowPostProcess Action Tests" {
     # Call action
 
     It 'Test DateTime serialization is locale-agnostic' {
-        # Simulate what WorkflowInitialize does - serialize a datetime in ISO 8601 format
-        $utcNow = [DateTime]::UtcNow
-        $scopeJson = @{
-            "workflowStartTime" = $utcNow.ToString("o")
-        } | ConvertTo-Json -Compress
-
-        # Simulate what WorkflowPostProcess does - deserialize the datetime
-        $telemetryScope = $scopeJson | ConvertFrom-Json
-
-        # ConvertFrom-Json automatically parses ISO 8601 dates to DateTime with UTC Kind
-        $startTime = $telemetryScope.workflowStartTime
-        if ($startTime -is [DateTime]) {
-            $startTimeUtc = $startTime.ToUniversalTime()
-        } else {
-            $startTimeUtc = [DateTime]::Parse($startTime, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+        # Define the ConvertToUtcDateTime function from WorkflowPostProcess for testing
+        # This is the actual function used in WorkflowPostProcess.ps1
+        function ConvertToUtcDateTime($DateTimeValue) {
+            if ($DateTimeValue -is [DateTime]) {
+                return $DateTimeValue.ToUniversalTime()
+            } else {
+                return [DateTime]::Parse($DateTimeValue, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+            }
         }
+        
+        # Save the current culture to restore later
+        $originalCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
+        
+        try {
+            # Test with different locales to ensure the fix works regardless of culture
+            # This simulates the scenario where WorkflowInitialize runs on one machine with one locale
+            # and WorkflowPostProcess runs on another machine with a different locale
+            $testCultures = @('en-US', 'en-AU', 'de-DE', 'ja-JP')
+            
+            foreach ($cultureName in $testCultures) {
+                # Set the culture to simulate different locale machines
+                [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::new($cultureName)
+                
+                # Simulate what WorkflowInitialize does - serialize a datetime in ISO 8601 format
+                $utcNow = [DateTime]::UtcNow
+                $scopeJson = @{
+                    "workflowStartTime" = $utcNow.ToString("o")
+                } | ConvertTo-Json -Compress
 
-        # Verify the parsed datetime is in UTC
-        $startTimeUtc.Kind | Should -Be 'Utc'
+                # Simulate what WorkflowPostProcess does - deserialize the datetime
+                $telemetryScope = $scopeJson | ConvertFrom-Json
 
-        # Verify the parsed datetime is close to the original (within 1 second to account for execution time)
-        $timeDiff = [Math]::Abs(($startTimeUtc - $utcNow).TotalSeconds)
-        $timeDiff | Should -BeLessThan 1
+                # Use the ConvertToUtcDateTime function (same logic as in WorkflowPostProcess.ps1)
+                $startTimeUtc = ConvertToUtcDateTime -DateTimeValue $telemetryScope.workflowStartTime
+
+                # Verify the parsed datetime is in UTC
+                $startTimeUtc.Kind | Should -Be 'Utc' -Because "DateTime should be in UTC regardless of culture ($cultureName)"
+
+                # Verify the parsed datetime is close to the original (within 1 second to account for execution time)
+                $timeDiff = [Math]::Abs(($startTimeUtc - $utcNow).TotalSeconds)
+                $timeDiff | Should -BeLessThan 1 -Because "Parsed datetime should match original for culture $cultureName"
+            }
+        }
+        finally {
+            # Restore the original culture
+            [System.Threading.Thread]::CurrentThread.CurrentCulture = $originalCulture
+        }
     }
 
 }
