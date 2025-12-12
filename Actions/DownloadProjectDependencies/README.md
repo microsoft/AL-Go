@@ -37,5 +37,5 @@ The action constructs arrays of paths to .app files, that are dependencies of th
 
 | Name | Description |
 | :-- | :-- |
-| DownloadedApps | A JSON-formatted list of paths to .app files, that dependencies of the apps |
-| DownloadedTestApps | A JSON-formatted list of paths to .app files, that dependencies of the test apps |
+| DownloadedApps | A path to a JSON-formatted list of apps to install |
+| DownloadedTestApps | A path to a JSON-formatted list of test apps to install |

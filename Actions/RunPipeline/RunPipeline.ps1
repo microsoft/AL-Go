@@ -7,10 +7,10 @@ Param(
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [string] $buildMode = 'Default',
-    [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
-    [string] $installAppsJson = '[]',
-    [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of apps to install", Mandatory = $false)]
+    [string] $installAppsJson = '',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to install", Mandatory = $false)]
+    [string] $installTestAppsJson = '',
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
@@ -187,8 +187,26 @@ try {
     }
 
     $install = @{
-        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+        "Apps" = $settings.installApps
+        "TestApps" = $settings.installTestApps
+    }
+
+    if ($installAppsJson -and (Test-Path $installAppsJson)) {
+        try {
+            $install.Apps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
+        }
+    }
+
+    if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+        try {
+            $install.TestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
+        }
     }
 
     # Replace secret names in install.apps and install.testApps

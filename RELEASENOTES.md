@@ -5,6 +5,7 @@ AL-Go telemetry now includes test results so you can more easily see how many AL
 ### Issues
 
 - Issue 2055 When using versioningStrategy 3+16, you get an error when building
+- AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 
 ## v8.1
 
@@ -65,6 +66,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
+- Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
 
 ### Deprecations
 
