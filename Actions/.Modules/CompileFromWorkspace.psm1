@@ -67,6 +67,7 @@ function Build-AppsInWorkspace() {
         Ruleset = $Ruleset
         SourceRepositoryUrl = $SourceRepositoryUrl
         SourceCommit = $SourceCommit
+        MaxCpuCount = $MaxCpuCount
     }
 
     # Pre-Compile Apps - Invoke script override before compilation
