@@ -330,10 +330,36 @@ function ApplyWorkflowDefaultInputs {
         return
     }
 
+    # Helper to convert values to GitHub expression literals
+    $convertToExpressionLiteral = {
+        param($value)
+
+        if ($value -is [bool]) {
+            return $value.ToString().ToLower()
+        }
+
+        if ($value -is [int] -or $value -is [long] -or $value -is [System.Int16] -or $value -is [byte] -or $value -is [System.SByte] -or $value -is [System.UInt16] -or $value -is [System.UInt32] -or $value -is [System.UInt64]) {
+            return $value.ToString()
+        }
+
+        if ($value -is [double] -or $value -is [single] -or $value -is [decimal]) {
+            return $value.ToString([System.Globalization.CultureInfo]::InvariantCulture)
+        }
+
+        $escapedValue = ($value -as [string]) -replace "'", "''"
+        return "'$escapedValue'"
+    }
+
+    $inputsToHide = @{}
+
     # Apply defaults to matching inputs
     foreach ($default in $repoSettings.workflowDefaultInputs) {
         $inputName = $default.name
         $defaultValue = $default.value
+            $hideInput = $false
+            if ($default['hide']) {
+                $hideInput = [bool]$default.hide
+            }
 
         # Check if this input exists in the workflow
         $inputSection = $inputs.Get("$($inputName):/")
@@ -410,6 +436,22 @@ function ApplyWorkflowDefaultInputs {
             throw $validationError
         }
 
+        if ($hideInput) {
+            # Store this input to hide it later
+            $inputsToHide[$inputName] = [pscustomobject]@{
+                value = $defaultValue
+                expression = & $convertToExpressionLiteral $defaultValue
+            }
+            continue
+        }
+        else {
+            # If hide is false, ensure the input is not in the hide list
+            # This handles the case where a previous entry had hide=true but a later entry has hide=false
+            if ($inputsToHide.ContainsKey($inputName)) {
+                $inputsToHide.Remove($inputName)
+            }
+        }
+
         # Convert the default value to the appropriate YAML format
         $yamlValue = $defaultValue
         if ($defaultValue -is [bool]) {
@@ -465,11 +507,82 @@ function ApplyWorkflowDefaultInputs {
         $inputs.Replace("$($inputName):/", $inputSection.content)
     }
 
+    # Remove hidden inputs from the inputs section
+    if ($inputsToHide.Count -gt 0) {
+        # Collect all inputs to remove with their positions
+        $inputsToRemove = @()
+        foreach ($entry in $inputsToHide.GetEnumerator()) {
+            $name = $entry.Key
+            $start = 0
+            $count = 0
+            # Find the input including all its content (type, default, etc.)
+            # Use the name with colon to match the full input section
+            if ($inputs.Find("$($name):", [ref] $start, [ref] $count)) {
+                $inputsToRemove += [pscustomobject]@{
+                    Name = $name
+                    Start = $start
+                    Count = $count
+                }
+            }
+            else {
+                OutputWarning "Workflow '$workflowName': Unable to hide input '$name' because it was not found in the workflow file."
+            }
+        }
+
+        # Remove inputs in reverse order to maintain correct indices
+        foreach ($item in $inputsToRemove | Sort-Object -Property Start -Descending) {
+            $inputs.Remove($item.Start, $item.Count)
+        }
+    }
+
     # Update the workflow_dispatch section with modified inputs
     $workflowDispatch.Replace('inputs:/', $inputs.content)
 
     # Update the on: section with modified workflow_dispatch
     $yaml.Replace('on:/workflow_dispatch:/', $workflowDispatch.content)
+
+    # Replace all references to hidden inputs with their literal values
+    if ($inputsToHide.Count -gt 0) {
+        foreach ($entry in $inputsToHide.GetEnumerator()) {
+            $inputName = $entry.Key
+            $expressionValue = $entry.Value.expression
+            $rawValue = $entry.Value.value
+
+            # Replace references in expressions: ${{ github.event.inputs.name }} and ${{ inputs.name }}
+            # These use the expression literal format (true/false for boolean, unquoted number, 'quoted' string)
+            # Use regex to match any whitespace variations: ${{inputs.name}}, ${{ inputs.name }}, ${{ inputs.name}}, ${{inputs.name }}
+            # Replace the entire ${{ ... }} expression with just the value
+            $pattern = "`\$\{\{\s*github\.event\.inputs\.$inputName\s*\}\}"
+            $yaml.ReplaceAll($pattern, $expressionValue, $true)
+            $pattern = "`\$\{\{\s*inputs\.$inputName\s*\}\}"
+            $yaml.ReplaceAll($pattern, $expressionValue, $true)
+
+            # Replace references in if conditions: github.event.inputs.name and inputs.name (without ${{ }})
+            # github.event.inputs are always strings (user input from UI)
+            # inputs.* are typed values (boolean/number/string/choice)
+
+            # For github.event.inputs.NAME: always use string literal format
+            # Convert the value to a string literal (always quoted) for comparisons
+            if ($rawValue -is [bool]) {
+                $stringValue = $rawValue.ToString().ToLower()
+            }
+            else {
+                $stringValue = $rawValue.ToString().Replace("'", "''")
+            }
+            $stringLiteral = "'$stringValue'"
+            $yaml.ReplaceAll("github.event.inputs.$inputName", $stringLiteral)
+
+            # For inputs.NAME: use expression literal format (typed value)
+            # Replace inputs.NAME but be careful not to match patterns like:
+            # - needs.inputs.outputs.NAME (where a job is named "inputs")
+            # - steps.CreateInputs.outputs.NAME (where "inputs" is part of a word)
+            # Use negative lookbehind (?<!\.) to ensure "inputs" is not preceded by a dot
+            # Use word boundary \b after inputName to avoid partial matches
+            # Don't match if followed by a dot (to avoid matching outputs references)
+            $pattern = "(?<!\.)inputs\.$inputName\b(?!\.)"
+            $yaml.ReplaceAll($pattern, $expressionValue, $true)
+        }
+    }
 }
 
 function GetWorkflowContentWithChangesFromSettings {
