@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 2055 When using versioningStrategy 3+16, you get an error when building
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
@@ -10,7 +11,7 @@ This ensures consistent default values across both manual workflow runs and reus
 
 Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
-## AL-Go Telemetry updates
+### AL-Go Telemetry updates
 
 AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
 
