@@ -12,10 +12,10 @@ Calculate the duration of a workflow from a start time
 
 .DESCRIPTION
 Calculates the duration in seconds from the provided start time to the current UTC time.
-Handles both DateTime objects and string representations in ISO 8601 format.
+Handles both DateTime objects and string representations in any date format that can be parsed by the invariant culture (e.g., ISO 8601 or other culture-independent formats).
 
 .PARAMETER StartTime
-The workflow start time as either a DateTime object or a string in ISO 8601 format
+The workflow start time as either a DateTime object or a string in any date format that can be parsed by the invariant culture (such as ISO 8601 or other culture-independent formats)
 
 .PARAMETER EndTime
 (Optional) The end time as a DateTime object. Defaults to the current UTC time.
