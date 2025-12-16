@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 1512: Throw a warning before trying to publish symbols packages
 - Issue 2055 When using versioningStrategy 3+16, you get an error when building
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 
