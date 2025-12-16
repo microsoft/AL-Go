@@ -1,3 +1,15 @@
+### Issues
+
+- Issue 1512: Throw a warning before trying to publish symbols packages
+- Issue 2055 When using versioningStrategy 3+16, you get an error when building
+- AL-Go repositories with large amounts of projects may run into issues with too large environment variables
+
+### AL-Go Telemetry updates
+
+AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
+
+## v8.1
+
 ### Custom AL-Go files
 
 AL-Go for GitHub now supports updating files from your custom templates via the new `customALGoFiles` setting. Read more at [customALGoFiles](https://aka.ms/algosettings#customALGoFiles).
@@ -55,7 +67,7 @@ Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefault
 - Issue 2016 Running Update AL-Go system files with branches wildcard `*` tries to update _origin_
 - Issue 1960 Deploy Reference Documentation fails
 - Discussion 1952 Set default values on workflow_dispatch input
-- Issue 1512: Throw a warning before trying to publish symbols packages
+- Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
 
 ### Deprecations
 

@@ -7,10 +7,10 @@ Param(
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [string] $buildMode = 'Default',
-    [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
-    [string] $installAppsJson = '[]',
-    [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of apps to install", Mandatory = $false)]
+    [string] $installAppsJson = '',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to install", Mandatory = $false)]
+    [string] $installTestAppsJson = '',
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
@@ -187,8 +187,26 @@ try {
     }
 
     $install = @{
-        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+        "Apps" = $settings.installApps
+        "TestApps" = $settings.installTestApps
+    }
+
+    if ($installAppsJson -and (Test-Path $installAppsJson)) {
+        try {
+            $install.Apps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
+        }
+    }
+
+    if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+        try {
+            $install.TestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
+        }
     }
 
     # Replace secret names in install.apps and install.testApps
@@ -302,8 +320,18 @@ try {
         $appRevision = $artifactVersion.Revision
     }
     elseif (($settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$settings.repoVersion
+        if (($settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
         $runAlPipelineParams += @{
-            "appVersion" = $settings.repoVersion
+            "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
         }
     }
 

@@ -1462,7 +1462,7 @@ function CreateDevEnv {
         }
 
         if ($settings.versioningStrategy -eq -1) {
-            if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
+            if ($kind -eq "cloud") { throw "versioningStrategy -1 cannot be used on cloud" }
             $artifactVersion = [Version]$settings.artifact.Split('/')[4]
             $runAlPipelineParams += @{
                 "appVersion"  = "$($artifactVersion.Major).$($artifactVersion.Minor)"
@@ -1471,13 +1471,24 @@ function CreateDevEnv {
             }
         }
         else {
-            if (($settings.versioningStrategy -band 16) -eq 16) {
-                $runAlPipelineParams += @{
-                    "appVersion" = $settings.repoVersion
-                }
-            }
             $appBuild = 0
             $appRevision = 0
+            if (($settings.versioningStrategy -band 16) -eq 16) {
+                # For versioningStrategy +16, the version number is taken from repoVersion setting
+                $repoVersion = [System.Version]$settings.repoVersion
+                if (($settings.versioningStrategy -band 15) -eq 3) {
+                    # For versioning strategy 3, we need to get the build number from repoVersion setting
+                    if ($repoVersion.Build -eq -1) {
+                        Write-Host "WARNING: RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                    }
+                    else {
+                        $appBuild = $repoVersion.Build
+                    }
+                }
+                $runAlPipelineParams += @{
+                    "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
+                }
+            }
             switch ($settings.versioningStrategy -band 15) {
                 2 {
                     # USE DATETIME
