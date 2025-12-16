@@ -4,15 +4,15 @@ Param(
     [Parameter(HelpMessage = "E2E_APP_ID variable value", Mandatory = $false)]
     [string] $e2eAppId = '',
     [Parameter(HelpMessage = "E2E_PRIVATE_KEY secret value", Mandatory = $false)]
-    [string] $e2ePrivateKey = '',
+    [string] $e2ePrivateKey = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "ALGOAUTHAPP secret value", Mandatory = $false)]
-    [string] $algoAuthApp = '',
+    [string] $algoAuthApp = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "adminCenterApiCredentials secret value", Mandatory = $false)]
-    [string] $adminCenterApiCredentials = '',
+    [string] $adminCenterApiCredentials = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "E2E_GHPackagesPAT secret value", Mandatory = $false)]
-    [string] $e2eGHPackagesPAT = '',
+    [string] $e2eGHPackagesPAT = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "E2EAZURECREDENTIALS secret value", Mandatory = $false)]
-    [string] $e2eAzureCredentials = ''
+    [string] $e2eAzureCredentials = '' # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
 )
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0

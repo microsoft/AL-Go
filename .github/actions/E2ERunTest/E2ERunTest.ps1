@@ -11,13 +11,13 @@ Param(
     [Parameter(HelpMessage = "E2E App ID", Mandatory = $true)]
     [string] $e2eAppId,
     [Parameter(HelpMessage = "E2E App Key", Mandatory = $true)]
-    [string] $e2eAppKey,
+    [string] $e2eAppKey, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "ALGO Auth App", Mandatory = $true)]
-    [string] $algoAuthApp,
+    [string] $algoAuthApp, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "Template", Mandatory = $true)]
     [string] $template,
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
-    [string] $adminCenterApiCredentials = '',
+    [string] $adminCenterApiCredentials = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "Multi-project", Mandatory = $false)]
     [bool] $multiProject = $false,
     [Parameter(HelpMessage = "AppSource app", Mandatory = $false)]

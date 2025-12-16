@@ -10,19 +10,19 @@ Param(
     [Parameter(HelpMessage = "E2E App ID", Mandatory = $true)]
     [string] $e2eAppId,
     [Parameter(HelpMessage = "E2E App Key", Mandatory = $true)]
-    [string] $e2eAppKey,
+    [string] $e2eAppKey, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "ALGO Auth App", Mandatory = $true)]
-    [string] $algoAuthApp,
+    [string] $algoAuthApp, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "PTE template", Mandatory = $true)]
     [string] $pteTemplate,
     [Parameter(HelpMessage = "AppSource template", Mandatory = $true)]
     [string] $appSourceTemplate,
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $true)]
-    [string] $adminCenterApiCredentials,
+    [string] $adminCenterApiCredentials, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "Azure credentials", Mandatory = $true)]
-    [string] $azureCredentials,
+    [string] $azureCredentials, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "GitHub packages token", Mandatory = $true)]
-    [string] $githubPackagesToken
+    [string] $githubPackagesToken # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
 )
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
