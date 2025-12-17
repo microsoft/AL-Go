@@ -68,8 +68,9 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
     # Calculate the workflow duration using the github api
     if ($telemetryScope -and ($null -ne $telemetryScope.workflowStartTime)) {
         Write-Host "Calculating workflow duration..."
-        $workflowTiming= [DateTime]::UtcNow.Subtract([DateTime]::Parse($telemetryScope.workflowStartTime)).TotalSeconds
-        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowTiming
+
+        $workflowDuration = GetWorkflowDuration -StartTime $telemetryScope.workflowStartTime
+        Add-TelemetryProperty -Hashtable $AdditionalData -Key 'WorkflowDuration' -Value $workflowDuration
     }
 
     # Log additional telemetry from AL-Go settings
@@ -102,6 +103,7 @@ function LogWorkflowEnd($TelemetryScopeJson, $JobContext, $AlGoVersion) {
 }
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\TelemetryHelper.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\WorkflowPostProcessHelper.psm1" -Resolve)
 
 try {
     LogWorkflowEnd -TelemetryScopeJson $telemetryScopeJson -JobContext $currentJobContext -AlGoVersion (GetAlGoVersion -ActionsRepo $actionsRepo -ActionRef $actionsRef)

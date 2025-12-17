@@ -30,8 +30,9 @@ TestALGoRepository
 TestRunnerPrerequisites
 
 # Create a json object that contains an entry for the workflowstarttime
+# Use ISO 8601 format for locale-agnostic serialization
 $scopeJson = @{
-    "workflowStartTime" = [DateTime]::UtcNow
+    "workflowStartTime" = [DateTime]::UtcNow.ToString("o")
 } | ConvertTo-Json -Compress
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "telemetryScopeJson=$scopeJson"
