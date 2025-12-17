@@ -237,6 +237,7 @@ try {
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
     if ($settings.runTestsInAllInstalledTestApps) {
+        # Trim parentheses from test apps. Run-ALPipeline will skip running tests in test apps wrapped in ()
         $install.TestApps = $install.TestApps | % { $_.TrimStart("(").TrimEnd(")") }
     }
 
