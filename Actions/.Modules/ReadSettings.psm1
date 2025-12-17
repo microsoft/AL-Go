@@ -210,6 +210,7 @@ function GetDefaultSettings
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "useWorkspaceCompilation"                       = $false
+        "workspaceCompilationParallelism"               = 1
         "pullRequestTrigger"                            = "pull_request_target"
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10

@@ -1617,13 +1617,20 @@ function CreateDevEnv {
                 $scriptPath = Join-Path $PSScriptRoot ".Modules/CompileFromWorkspace.psm1"
                 $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "$($containerName)compiler"
                 $buildVersion = "28.0.0.0"
+                Write-Host "Version info"
+                Write-Host "  App Version:    $($runAlPipelineParams.appVersion)"
+                Write-Host "  App Build:      $($runAlPipelineParams.appBuild)"
+                Write-Host "  App Revision:   $($runAlPipelineParams.appRevision)"
                 #$buildVersion = "$($runAlPipelineParams.appVersion).$($runAlPipelineParams.appBuild).$($runAlPipelineParams.appRevision)"
 
-                # Check if precompile script exists
-                # create empty scriptblock
                 $precompileOverride = $null
                 if ($runAlPipelineParams.PreCompileApp) {
                     $precompileOverride = $runAlPipelineParams.PreCompileApp
+                }
+
+                $postCompileOverride = $null
+                if ($runAlPipelineParams.PostCompileApp) {
+                    $postCompileOverride = $runAlPipelineParams.PostCompileApp
                 }
 
                 # Compile apps
@@ -1634,7 +1641,9 @@ function CreateDevEnv {
                             -OutFolder (Join-Path $projectFolder ".output") `
                             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
                             -BuildVersion $buildVersion `
-                            -PreCompileApp $precompileOverride
+                            -MaxCpuCount $settings.workspaceCompilationParallelism `
+                            -PreCompileApp $precompileOverride `
+                            -PostCompileApp $postCompileOverride
 
                 $installApps += $appFiles
                 $appFolders = @()
@@ -1647,7 +1656,9 @@ function CreateDevEnv {
                                 -OutFolder (Join-Path $projectFolder ".output") `
                                 -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
                                 -BuildVersion $buildVersion `
-                                -PreCompileApp $precompileOverride
+                                -MaxCpuCount $settings.workspaceCompilationParallelism `
+                                -PreCompileApp $precompileOverride `
+                                -PostCompileApp $postCompileOverride
 
                 $installTestApps += $testAppFiles
                 $testFolders = @()

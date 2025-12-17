@@ -511,6 +511,11 @@
             "type": "boolean",
             "description": "PREVIEW: Use workspace compilation"
         },
+        "workspaceCompilationParallelism": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "PREVIEW: The number of parallel processes to use for workspace compilation. See https://aka.ms/ALGoSettings#workspacecompilationparallelism"
+        },
         "pullRequestTrigger": {
             "type": "string",
             "pattern": "^(pull_request|pull_request_target)$",
