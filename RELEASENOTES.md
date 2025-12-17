@@ -2,6 +2,14 @@
 
 - Issue 2055 When using versioningStrategy 3+16, you get an error when building
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
+- Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
+
+### Set default values for workflow inputs
+
+The `workflowDefaultInputs` setting now also applies to `workflow_call` inputs when an input with the same name exists for `workflow_dispatch`.
+This ensures consistent default values across both manual workflow runs and reusable workflow calls.
+
+Read more at [workflowDefaultInputs](https://aka.ms/algosettings#workflowDefaultInputs).
 
 ### AL-Go Telemetry updates
 
