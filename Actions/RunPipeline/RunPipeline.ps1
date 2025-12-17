@@ -315,8 +315,18 @@ try {
         $appRevision = $artifactVersion.Revision
     }
     elseif (($settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$settings.repoVersion
+        if (($settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
         $runAlPipelineParams += @{
-            "appVersion" = $settings.repoVersion
+            "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
         }
     }
 
