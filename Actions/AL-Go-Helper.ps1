@@ -1647,12 +1647,12 @@ function CreateDevEnv {
 
 
                 $precompileOverride = $null
-                if ($runAlPipelineParams.PreCompileApp) {
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "PreCompileApp") {
                     $precompileOverride = $runAlPipelineParams.PreCompileApp
                 }
 
                 $postCompileOverride = $null
-                if ($runAlPipelineParams.PostCompileApp) {
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "PostCompileApp") {
                     $postCompileOverride = $runAlPipelineParams.PostCompileApp
                 }
 
