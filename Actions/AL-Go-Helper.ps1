@@ -1616,12 +1616,35 @@ function CreateDevEnv {
             if ($settings.useWorkspaceCompilation) {
                 $scriptPath = Join-Path $PSScriptRoot ".Modules/CompileFromWorkspace.psm1"
                 $compilerFolder = New-BcCompilerFolder -artifactUrl $runAlPipelineParams.artifact -containerName "$($containerName)compiler"
-                $buildVersion = "28.0.0.0"
+
+                # START - Construct build version (refactor later to a function)
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "appVersion") {
+                    $majorVersion = $runAlPipelineParams.appVersion.Split('.')[0]
+                    $minorVersion = $runAlPipelineParams.appVersion.Split('.')[1]
+                } else {
+                    $majorVersion = 28
+                    $minorVersion = 0
+                }
+
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "appBuild") {
+                    $buildNumber = $runAlPipelineParams.appBuild
+                } else {
+                    $buildNumber = 0
+                }
+
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "appRevision") {
+                    $revisionNumber = $runAlPipelineParams.appRevision
+                } else {
+                    $revisionNumber = 0
+                }
+
                 Write-Host "Version info"
-                Write-Host "  App Version:    $($runAlPipelineParams.appVersion)"
-                Write-Host "  App Build:      $($runAlPipelineParams.appBuild)"
-                Write-Host "  App Revision:   $($runAlPipelineParams.appRevision)"
-                #$buildVersion = "$($runAlPipelineParams.appVersion).$($runAlPipelineParams.appBuild).$($runAlPipelineParams.appRevision)"
+                Write-Host "  App Version:    $majorVersion.$minorVersion"
+                Write-Host "  App Build:      $buildNumber"
+                Write-Host "  App Revision:   $revisionNumber"
+                $buildVersion = "$majorVersion.$minorVersion.$buildNumber.$revisionNumber"
+                # END - Construct build version (refactor later to a function)
+
 
                 $precompileOverride = $null
                 if ($runAlPipelineParams.PreCompileApp) {
