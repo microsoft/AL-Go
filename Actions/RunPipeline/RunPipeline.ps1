@@ -209,6 +209,11 @@ try {
         }
     }
 
+    if ($settings.runTestsInAllInstalledTestApps) {
+        # Trim parentheses from test apps. Run-ALPipeline will skip running tests in test apps wrapped in ()
+        $install.TestApps = $install.TestApps | ForEach-Object { $_.TrimStart("(").TrimEnd(")") }
+    }
+
     # Replace secret names in install.apps and install.testApps
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
@@ -236,6 +241,7 @@ try {
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
