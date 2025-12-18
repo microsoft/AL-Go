@@ -1656,6 +1656,20 @@ function CreateDevEnv {
                     $postCompileOverride = $runAlPipelineParams.PostCompileApp
                 }
 
+                $analyzers = @()
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableCodeCop") {
+                    $analyzers += "CodeCop"
+                }
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableAppSourceCop") {
+                    $analyzers += "AppSourceCop"
+                }
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enablePerTenantExtensionCop") {
+                    $analyzers += "PTECop"
+                }
+                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableUICop") {
+                    $analyzers += "UICop"
+                }
+
                 # Compile apps
                 $appFiles = @()
                 $appFiles = Build-AppsInWorkspace `
@@ -1663,6 +1677,7 @@ function CreateDevEnv {
                             -CompilerFolder $compilerFolder `
                             -OutFolder (Join-Path $projectFolder ".output") `
                             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+                            -Analyzers $analyzers `
                             -BuildVersion $buildVersion `
                             -MaxCpuCount $settings.workspaceCompilationParallelism `
                             -PreCompileApp $precompileOverride `
@@ -1678,6 +1693,7 @@ function CreateDevEnv {
                                 -CompilerFolder $compilerFolder `
                                 -OutFolder (Join-Path $projectFolder ".output") `
                                 -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+                                -Analyzers $analyzers `
                                 -BuildVersion $buildVersion `
                                 -MaxCpuCount $settings.workspaceCompilationParallelism `
                                 -PreCompileApp $precompileOverride `
