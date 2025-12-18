@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 2070 Support public GitHub Packages feeds without a PAT
 - Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
 - Issue 2055 When using versioningStrategy 3+16, you get an error when building
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
