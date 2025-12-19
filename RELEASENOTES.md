@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 2070 Support public GitHub Packages feeds without requiring a Personal Access Token (PAT)
 - Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
 - Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
 - Issue 2055 When using versioningStrategy 3+16, you get an error when building
