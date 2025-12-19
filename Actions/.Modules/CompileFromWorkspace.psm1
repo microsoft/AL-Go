@@ -11,6 +11,38 @@ function Install-ALTool {
     #return $alExe
 }
 
+function Get-AnalyzerPaths() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CompilerFolder,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Analyzers
+    )
+    if (-not $Analyzers -or $Analyzers.Count -eq 0) {
+        return @()
+    }
+    $analyzerPaths = @()
+    $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
+    $analyzersCommonDLLPath = Join-Path $binPath 'Analyzers\Microsoft.Dynamics.Nav.Analyzers.Common.dll'
+    if (Test-Path $analyzersCommonDLLPath) {
+        $analyzerPaths += (Join-Path $binPath 'Analyzers\Microsoft.Dynamics.Nav.Analyzers.Common.dll')
+    }
+
+    if ($Analyzers -contains 'CodeCop') {
+        $analyzerPaths += (Join-Path $binPath 'Analyzers\Microsoft.Dynamics.Nav.CodeCop.dll')
+    }
+    if ($Analyzers -contains 'AppSourceCop') {
+        $analyzerPaths += (Join-Path $binPath 'Analyzers\Microsoft.Dynamics.Nav.AppSourceCop.dll')
+    }
+    if ($Analyzers -contains 'PTECop') {
+        $analyzerPaths += (Join-Path $binPath 'Analyzers\Microsoft.Dynamics.Nav.PerTenantExtensionCop.dll')
+    }
+    if ($Analyzers -contains 'UICop') {
+        $analyzerPaths += (Join-Path $binPath 'Analyzers\Microsoft.Dynamics.Nav.UICop.dll')
+    }
+    return $analyzerPaths
+}
+
 <#
 Before this script: 
 1. Create a compiler folder
@@ -60,6 +92,9 @@ function Build-AppsInWorkspace() {
     # Get the package cache path
     $PackageCachePath = Join-Path $CompilerFolder "symbols"
 
+    # Get the analyzer paths
+    $analyzerPaths = Get-AnalyzerPaths -CompilerFolder $CompilerFolder -Analyzers $Analyzers
+
     # Update the app jsons with version number (and other properties) from the app manifest files
     Update-AppJsonProperties -Folders $Folders -BuildVersion $BuildVersion -OutputFolder $PackageCachePath
 
@@ -73,7 +108,7 @@ function Build-AppsInWorkspace() {
         PackageCachePath = $PackageCachePath
         OutFolder = $OutFolder
         AssemblyProbingPaths = $assemblyProbingPaths
-        Analyzers = $Analyzers
+        Analyzers = $analyzerPaths
         Features = $Features
         GenerateReportLayout = $GenerateReportLayout
         Define = $Define
