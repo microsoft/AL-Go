@@ -19,6 +19,26 @@ on:
         description: Specify a comma-separated list of branches to update. Wildcards are supported. The AL-Go settings will be read for every branch. Leave empty to update the current branch only.
         required: false
         default: ''
+  workflow_call:
+    inputs:
+      templateUrl:
+        description: Template Repository URL (current is {TEMPLATEURL})
+        type: string
+        required: false
+        default: ''
+      downloadLatest:
+        description: Download latest from template repository
+        type: boolean
+        default: true
+      directCommit:
+        description: Direct Commit?
+        type: boolean
+        default: false
+      includeBranches:
+        description: Specify a comma-separated list of branches to update. Wildcards are supported. The AL-Go settings will be read for every branch. Leave empty to update the current branch only.
+        type: string
+        required: false
+        default: ''
 
 permissions:
   actions: read
@@ -42,7 +62,7 @@ jobs:
       TemplateUrl: ${{ steps.DetermineTemplateUrl.outputs.TemplateUrl }}
     steps:
       - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Read settings
         id: ReadSettings
@@ -87,7 +107,7 @@ jobs:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ matrix.branch }}
 
@@ -117,8 +137,8 @@ jobs:
           downloadLatest: '${{ github.event.inputs.downloadLatest }}'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          if('${{ github.event_name }}' -eq 'workflow_dispatch') {
-            Write-Host "Using inputs from workflow_dispatch event"
+          if('${{ github.event_name }}' -in 'workflow_dispatch', 'workflow_call') {
+            Write-Host "Using inputs from ${{ github.event_name }} event"
             $directCommit = $env:directCommit
             $downloadLatest = $env:downloadLatest
           }

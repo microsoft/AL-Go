@@ -241,6 +241,10 @@
             "type": "boolean",
             "description": "Install only referenced apps. See https://aka.ms/ALGoSettings#installonlyreferencedapps"
         },
+        "runTestsInAllInstalledTestApps": {
+            "type": "boolean",
+            "description": "PREVIEW: Run tests in all installed test apps. See https://aka.ms/ALGoSettings#runTestsInAllInstalledTestApps"
+        },
         "generateDependencyArtifact": {
             "type": "boolean",
             "description": "See https://aka.ms/ALGoSettings#generatedependencyartifact"
