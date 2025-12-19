@@ -20,7 +20,7 @@ Param(
 $baseFolder = $ENV:GITHUB_WORKSPACE
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 DownloadAndImportBcContainerHelper
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
