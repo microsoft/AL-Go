@@ -1,18 +1,14 @@
 $script:alTool = $null
 
 function Install-ALTool {
-    if ($script:alTool) {
-        return $script:alTool
-    }
-
     $alToolFolder = Install-DotNetTool -PackageName "Microsoft.Dynamics.BusinessCentral.Development.Tools"
     # Load the AL tool from the downloaded package
-    $altool = Get-ChildItem -Path $alToolFolder -Filter "altool*" -Recurse | Where-Object { $_.Name -eq "altool" -or $_.Name -eq "altool.exe" } | Select-Object -First 1 -ExpandProperty FullName
-    if (-not $altool) {
+    $alExe = Get-ChildItem -Path $alToolFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1 -ExpandProperty FullName
+    if (-not $alExe) {
         throw "Could not find al.exe in the development tools package."
     }
-    $script:alTool = $altool
-    #return $script:alTool
+    $script:alTool = $alExe
+    #return $alExe
 }
 
 <#
