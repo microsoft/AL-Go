@@ -42,9 +42,26 @@ $postCompileOverride = $null
 $containerName = GetContainerName($project)
 $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler"
 
-#
-$installApps = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-$installTestApps = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+$installApps = $settings.installApps
+$installTestApps = $settings.installTestApps
+
+if ($installAppsJson -and (Test-Path $installAppsJson)) {
+    try {
+        $installApps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+    }
+    catch {
+        throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
+    }
+}
+
+if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+    try {
+        $installTestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+    }
+    catch {
+        throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
+    }
+}
 
 # COMPILE - Compiling apps and test apps 
 $appFiles = @()
