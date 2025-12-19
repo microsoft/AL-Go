@@ -7,7 +7,7 @@ function Install-ALTool {
     if (-not $alExe) {
         throw "Could not find al.exe in the development tools package."
     }
-    $script:alTool = $alExe
+    $script:alTool = (Get-Command al).Source #$alExe #TODO: Fix
     #return $alExe
 }
 
