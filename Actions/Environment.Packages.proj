@@ -12,6 +12,7 @@
     <PackageReference Include="Az.Accounts" Version="2.15.1" GeneratePathProperty="true" ExcludeAssets="All" />
     <PackageReference Include="Az.Storage" Version="6.1.1" GeneratePathProperty="true" ExcludeAssets="All" />
     <PackageReference Include="Az.KeyVault" Version="5.2.0" GeneratePathProperty="true" ExcludeAssets="All" />
+    <PackageReference Include="Microsoft.Dynamics.BusinessCentral.Development.Tools" Version="17.0.30.30339-beta" GeneratePathProperty="true" ExcludeAssets="All" />
   </ItemGroup>
 
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

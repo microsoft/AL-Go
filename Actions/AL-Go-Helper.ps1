@@ -2211,6 +2211,57 @@ function GetPackageVersion($packageName) {
     }
 }
 
+<#
+    .SYNOPSIS
+    Checks whether nuget.org is added as a nuget source.
+#>
+function AssertNugetSourceIsAdded() {
+    $nugetSource = "https://api.nuget.org/v3/index.json"
+    $nugetSourceExists = dotnet nuget list source | Select-String -Pattern $nugetSource
+    if (-not $nugetSourceExists) {
+        throw "Nuget source $nugetSource is not added. Please add the source using 'dotnet nuget add source $nugetSource' or add another source with nuget.org as an upstream source."
+    }
+}
+
+<#
+    .SYNOPSIS
+    Installs a .NET tool in a temporary folder and returns the path to the folder
+    .DESCRIPTION
+    This function installs a .NET tool using 'dotnet tool install' in a temporary folder and returns the path to the folder where the tool is installed.
+    .PARAMETER PackageName
+    The name of the package to install
+    .RETURNS
+    The path to the folder where the tool is installed.
+#>
+function Install-DotNetTool {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $PackageName
+    )
+    AssertNugetSourceIsAdded
+    $ToolPath = GetTemporaryPath
+
+    $installationFolder = Join-Path -Path $ToolPath $PackageName
+    if (Test-Path -Path $installationFolder) {
+        # Tool is already installed
+        Write-Host "$PackageName is already installed in $installationFolder"
+        return $installationFolder
+    }
+
+    # Get version of the package
+    $version = GetPackageVersion -PackageName $PackageName
+
+    # Install the tool in the temp folder
+    Write-Host "Installing $PackageName ($version) in $installationFolder"
+    dotnet tool install $PackageName --version $version --tool-path $installationFolder | Out-Host
+
+    if (-not (Test-Path -Path $installationFolder)) {
+        throw "Failed to install $PackageName. If you are using a self-hosted runner please make sure you've followed all the steps described in https://aka.ms/algosettings#runs-on."
+    }
+
+    return $installationFolder
+}
+
 function InstallAzModuleIfNeeded {
     Param(
         [string] $name,
