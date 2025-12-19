@@ -1,4 +1,87 @@
-$script:alTool = "C:\Users\aholstrup\Documents\Platform-ModernDev\out\Release\altool\net8.0\altool.exe"
+$script:alTool = $null
+
+function DownloadALTool {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$Repository = "microsoft/BCAppsPrivate",
+
+        [Parameter(Mandatory = $true)]
+        [string]$DownloadPath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$AssetName = "ParallelCompileRelease.zip",
+
+        [Parameter(Mandatory = $false)]
+        [string]$ReleaseTag,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
+    )
+
+    if ($script:alTool -and (Test-Path $script:alTool) -and -not $Force.IsPresent) {
+        Write-Host "AL Tool already set at '$script:alTool'. Use -Force to redownload." -ForegroundColor Yellow
+        return $script:alTool
+    }
+
+    try {
+        $ghCommand = Get-Command -Name gh -ErrorAction Stop
+    } catch {
+        throw "GitHub CLI was not found in PATH. Install or specify an explicit path to the executable."
+    }
+
+    if ($Force.IsPresent -and (Test-Path $DownloadPath)) {
+        Write-Host "Clearing existing AL Tool download folder at '$DownloadPath'..."
+        Remove-Item -Path $DownloadPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    if (-not (Test-Path $DownloadPath)) {
+        New-Item -ItemType Directory -Path $DownloadPath -Force | Out-Null
+    }
+
+    $existingAlTool = Get-ChildItem -Path $DownloadPath -Filter "altool.exe" -File -Recurse | Select-Object -First 1
+    if ($existingAlTool -and -not $Force.IsPresent) {
+        $script:alTool = $existingAlTool.FullName
+        Write-Host "AL Tool already present at '$script:alTool'. Use -Force to redownload." -ForegroundColor Yellow
+        return $script:alTool
+    }
+
+    $downloadArgs = @("release", "download", "ALTool", "--repo", $Repository, "--dir", $DownloadPath, "--clobber")
+    if ($ReleaseTag) {
+        $downloadArgs += @("--tag", $ReleaseTag)
+    }
+
+    Write-Host "Downloading AL Tool from '$Repository' using gh CLI..." -ForegroundColor Green
+    Write-Host "Executing: $($ghCommand.Source) $($downloadArgs -join ' ')" -ForegroundColor Green
+    & $ghCommand.Source @downloadArgs | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to download release asset '$AssetName' from '$Repository'. gh CLI exit code: $LASTEXITCODE"
+    }
+
+    $downloadedAsset = Get-ChildItem -Path $DownloadPath -File | Where-Object { $_.Name -like $AssetName } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $downloadedAsset) {
+        throw "Unable to locate downloaded asset '$AssetName' in '$DownloadPath'."
+    }
+
+    Write-Host "Extracting '$($downloadedAsset.FullName)' to '$DownloadPath'..."
+    try {
+        Expand-Archive -LiteralPath $downloadedAsset.FullName -DestinationPath $DownloadPath -Force
+        Remove-Item -LiteralPath $downloadedAsset.FullName -Force -ErrorAction SilentlyContinue
+    } catch {
+        throw "Failed to extract '$($downloadedAsset.FullName)': $($_.Exception.Message)"
+    }
+
+    $alToolExecutable = Get-ChildItem -Path $DownloadPath -Filter "altool.exe" -File -Recurse | Select-Object -First 1
+    if (-not $alToolExecutable) {
+        throw "The AL Tool executable was not found after extracting '$AssetName'."
+    }
+
+    $script:alTool = $alToolExecutable.FullName
+    Write-Host "AL Tool downloaded to '$script:alTool'." -ForegroundColor Green
+
+    return $script:alTool
+}
 
 <#
 Before this script: 
@@ -40,6 +123,8 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [scriptblock]$PostCompileApp
     )
+
+    DownloadALTool -DownloadPath (Join-Path $PSScriptRoot "ALTool") -Force
 
     # Get asembly probing paths
     $assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
@@ -387,3 +472,4 @@ function Update-AppJsonProperties() {
 }
 
 Export-ModuleMember -Function *-*
+Export-ModuleMember -Function DownloadALTool
