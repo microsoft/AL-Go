@@ -1656,30 +1656,25 @@ function CreateDevEnv {
                     $postCompileOverride = $runAlPipelineParams.PostCompileApp
                 }
 
-                $analyzers = @()
                 # Print all runalpipeline settings 
                 $runAlPipelineParams.Keys | ForEach-Object {
                     Write-Host "RunAlPipeline Param: $_ = $($runAlPipelineParams[$_])"
                 }
 
-                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableCodeCop") {
-                    if ($settings.enableCodeCop) {
-                        Write-Host "CodeCop analyzer is enabled."
-                        $analyzers += "CodeCop"
-                    }
-                    else {
-                        Write-Host "CodeCop analyzer is enabled via override."
-                    }
-                } else {
-                    Write-Host "CodeCop analyzer is disabled."
+                $analyzers = @()
+                if ($runAlPipelineParams["enableCodeCop"]) {
+                    $analyzers += "CodeCop"
                 }
-                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableAppSourceCop") {
+
+                if ($runAlPipelineParams["enableAppSourceCop"]) {
                     $analyzers += "AppSourceCop"
                 }
-                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enablePerTenantExtensionCop") {
+
+                if ($runAlPipelineParams["enablePerTenantExtensionCop"]) {
                     $analyzers += "PTECop"
                 }
-                if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableUICop") {
+
+                if ($runAlPipelineParams["enableUICop"]) {
                     $analyzers += "UICop"
                 }
 
