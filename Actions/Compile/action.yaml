@@ -1,0 +1,60 @@
+name: Compile
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  artifact:
+    description: ArtifactUrl to use for the build
+    required: false
+    default: ''
+  project:
+    description: Project folder
+    required: false
+    default: '.'
+  buildMode:
+    description: Specifies a mode to use for the build steps
+    required: false
+    default: 'Default'
+  installAppsJson:
+    description: A JSON-formatted list of apps to install
+    required: false
+    default: '[]'
+  installTestAppsJson:
+    description: A JSON-formatted list of test apps to install
+    required: false
+    default: '[]'
+  baselineWorkflowRunId:
+    description: RunId of the baseline workflow run
+    required: false
+    default: ''
+  baselineWorkflowSHA:
+    description: SHA of the baseline workflow run
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _token: ${{ inputs.token }}
+        _artifact: ${{ inputs.artifact }}
+        _project: ${{ inputs.project }}
+        _buildMode: ${{ inputs.buildMode }}
+        _installAppsJson: ${{ inputs.installAppsJson }}
+        _installTestAppsJson: ${{ inputs.installTestAppsJson }}
+        _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+        _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Compile" -Action {
+          ${{ github.action_path }}/Compile.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
+        }
+branding:
+  icon: terminal
+  color: blue
