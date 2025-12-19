@@ -1657,6 +1657,11 @@ function CreateDevEnv {
                 }
 
                 $analyzers = @()
+                # Print all runalpipeline settings 
+                $runAlPipelineParams.PSObject.Properties.Name | ForEach-Object {
+                    Write-Host "RunAlPipeline Param: $_ = $($runAlPipelineParams.$_)"
+                }
+
                 if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableCodeCop") {
                     if ($settings.enableCodeCop) {
                         Write-Host "CodeCop analyzer is enabled."
