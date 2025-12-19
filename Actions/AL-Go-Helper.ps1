@@ -1658,7 +1658,15 @@ function CreateDevEnv {
 
                 $analyzers = @()
                 if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableCodeCop") {
-                    $analyzers += "CodeCop"
+                    if ($settings.enableCodeCop) {
+                        Write-Host "CodeCop analyzer is enabled."
+                        $analyzers += "CodeCop"
+                    }
+                    else {
+                        Write-Host "CodeCop analyzer is enabled via override."
+                    }
+                } else {
+                    Write-Host "CodeCop analyzer is disabled."
                 }
                 if ($runAlPipelineParams.PSObject.Properties.Name -contains "enableAppSourceCop") {
                     $analyzers += "AppSourceCop"
