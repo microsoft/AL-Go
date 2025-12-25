@@ -141,9 +141,16 @@ function GetDependencies {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
 
+            if ($mask -eq 'TestApps') {
+                $altMask = 'Apps'
+            }
+            else {
+                $altMask = 'TestApps'
+            }
             # change the mask to include the build mode
             if($buildMode -ne "Default") {
                 $mask = "$buildMode$mask"
+                $altMask = "$buildMode$altMask"
             }
 
             Write-Host "Locating $mask artifacts for projects: $projects"
@@ -169,8 +176,15 @@ function GetDependencies {
                         }
                     }
                     elseif ($mask -like '*Apps') {
-                        Write-Host "$project not built, downloading from artifacts"
-                        $missingProjects += @($project)
+                        # Check whether Apps/TestApps exists before determining that project isn't built
+                        $altDownloadName = Join-Path $saveToPath "$project-$branchName-$altMask-*"
+                        if (!(Test-Path $altDownloadName -PathType Container)) {
+                            Write-Host "$project not built, downloading from artifacts"
+                            $missingProjects += @($project)
+                        }
+                        else {
+                            Write-Host "$project built, but $mask not found"
+                        }
                     }
                 }
                 if ($missingProjects -and $dependency.baselineWorkflowID) {
