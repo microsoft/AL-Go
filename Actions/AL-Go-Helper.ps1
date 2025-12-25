@@ -1787,6 +1787,28 @@ Function AnalyzeProjectDependencies {
     $projectsOrder = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
+        # First determine projects, which no other project depends on - these should be build last
+        # There is no reason for other jobs running in parallel to wait for these projects to be built
+        $soloProjects = @($projects | Where-Object {
+            $isSolo = $true
+            foreach($otherProject in $projects) {
+                if ($otherProject -ne $_) {
+                    $otherDependencies = $appDependencies."$otherProject".dependencies
+                    foreach($dependency in $otherDependencies) {
+                        if ($appDependencies."$_".apps -contains $dependency) {
+                            $isSolo = $false
+                        }
+                    }
+                }
+            }
+            return $isSolo
+        })
+        if ($soloProjects.Count -gt 0) {
+            Write-Host "Solo projects found (no other project depends on them): $($soloProjects -join ", ")"
+            Write-Host "Adding solo projects to the end of the build order"
+            $projects = @($projects | Where-Object { $soloProjects -notcontains $_ })
+        }
+
         $thisJob = @()
         # Loop through all projects and find projects that do not have dependencies on other projects in the list
         # These projects can be built in parallel and are added to the build order
@@ -1851,11 +1873,17 @@ Function AnalyzeProjectDependencies {
         if ($thisJob.Count -eq 0) {
             throw "Circular project reference encountered, cannot determine build order"
         }
+
+        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
+        if ($projects.Count -eq 0) {
+            # Last job, add solo projects
+            $thisJob += $soloProjects
+        }
+
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
 
-        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
 
