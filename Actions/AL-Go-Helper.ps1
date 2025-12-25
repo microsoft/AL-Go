@@ -1876,7 +1876,7 @@ Function AnalyzeProjectDependencies {
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
 
         # Do not build solo projects until the last job
-        $thisJob = $thisJob | Where-Object { $soloProjects -notcontains $_ }
+        $thisJob = @($thisJob | Where-Object { $soloProjects -notcontains $_ })
 
         if ($projects.Count -eq 0) {
             # Last job, add solo projects
