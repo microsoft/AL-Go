@@ -1880,6 +1880,7 @@ Function AnalyzeProjectDependencies {
 
         if ($projects.Count -eq 0) {
             # Last job, add solo projects
+            Write-Host "Adding solo projects to last build job"
             $thisJob += $soloProjects
         }
 
