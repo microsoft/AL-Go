@@ -305,7 +305,7 @@ try {
         $imageName = $settings.cacheImageName
         $appUri = [Uri]::new($settings.artifact)
         $imageName = "$($imageName):$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
-        $fullImageName = "ghcr.io/Freddy-DK/$imageName"
+        $fullImageName = "ghcr.io/freddy-dk/$imageName"
         Write-Host "----------------------------- $fullImageName -----------------------------"
         "$token" | docker login ghcr.io -u freddydk --password-stdin
         docker pull $fullImageName || true
