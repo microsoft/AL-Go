@@ -309,6 +309,7 @@ try {
         $appUri = [Uri]::new($settings.artifact)
         $imageName = "businesscentral:$hostOsVersion-$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
         $fullImageName = "ghcr.io/Freddy-DK/$imageName"
+        Write-Host "----------------------------- $fullImageName -----------------------------"
         "$token" | docker login ghcr.io -u freddydk --password-stdin
         docker pull $imageName || true
     }
