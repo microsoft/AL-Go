@@ -303,15 +303,12 @@ try {
     $imageName = ""
     if ($gitHubHostedRunner) {
         $imageName = $settings.cacheImageName
-        $os = (Get-CimInstance Win32_OperatingSystem)
-        $UBR = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name UBR).UBR
-        $hostOsVersion = [System.Version]::Parse("$($os.Version).$UBR")
         $appUri = [Uri]::new($settings.artifact)
-        $imageName = "businesscentral:$hostOsVersion-$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
+        $imageName = "$($imageName):$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
         $fullImageName = "ghcr.io/Freddy-DK/$imageName"
         Write-Host "----------------------------- $fullImageName -----------------------------"
         "$token" | docker login ghcr.io -u freddydk --password-stdin
-        docker pull $imageName || true
+        docker pull $fullImageName || true
     }
     else {
         $imageName = $settings.cacheImageName
@@ -321,35 +318,6 @@ try {
             Write-Host "::endgroup::"
         }
     }
-
-
-
-
-
-
-
-
-
-    $fullImageName = ""
-    $imageName = ""
-    if ($gitHubHostedRunner) {
-        $imageName = $settings.cacheImageName
-        if (!$imageName.Contains(':')) {
-            $appUri = [Uri]::new($artifact)
-            $imageName += ":$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
-        }
-        "$token" | docker login ghcr.io -u freddydk --password-stdin
-        $fullImageName = "ghcr.io/Freddy-DK/$imageName"
-        docker pull $fullImageName || true
-    }
-
-
-
-
-
-
-
-
     $authContext = $null
     $environmentName = ""
     $CreateRuntimePackages = $false
