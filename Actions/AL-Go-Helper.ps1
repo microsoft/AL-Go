@@ -1784,8 +1784,9 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
 
-    # First determine projects, which no other project depends on - these should be build last
+    # First determine projects, which no other project depends on - these should be build in the last job
     # There is no reason for other jobs running in parallel to wait for these projects to be built
+    # One example of this is test only jobs, where compilation is done using compilerfolders on linux, and test jobs are postponed until all compilation jobs are done
     $soloProjects = @($projects | Where-Object {
         $isSolo = $true
         foreach($otherProject in $projects) {

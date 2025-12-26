@@ -300,8 +300,19 @@ try {
 
     $additionalCountries = $settings.additionalCountries
 
-    $imageName = ""
-    if (-not $gitHubHostedRunner) {
+    $fullImageName = ''
+    $imageName = ''
+    if ($gitHubHostedRunner) {
+        $imageName = $settings.cacheImageName
+        if (!$imageName.Contains(':')) {
+            $appUri = [Uri]::new($artifact)
+            $imageName += ":$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
+        }
+        "$token" | docker login ghcr.io -u freddydk --password-stdin
+        $fullImageName = "ghcr.io/Freddy-DK/$imageName"
+        docker pull $fullImageName || true
+    }
+    else {
         $imageName = $settings.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
@@ -559,6 +570,12 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
+
+    if ($fullImageName) {
+        Write-Host "Push updated cache image $fullImageName"
+        docker tag $imageName $fullImageName
+        docker push $fullImageName
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
