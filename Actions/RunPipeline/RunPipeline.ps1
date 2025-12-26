@@ -300,8 +300,37 @@ try {
 
     $additionalCountries = $settings.additionalCountries
 
-    $fullImageName = ''
-    $imageName = ''
+    $imageName = ""
+    if ($gitHubHostedRunner) {
+        $imageName = $settings.cacheImageName
+        $os = (Get-CimInstance Win32_OperatingSystem)
+        $UBR = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name UBR).UBR
+        $hostOsVersion = [System.Version]::Parse("$($os.Version).$UBR")
+        $appUri = [Uri]::new($settings.artifact)
+        $imageName = "businesscentral:$hostOsVersion-$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
+        $fullImageName = "ghcr.io/Freddy-DK/$imageName"
+        "$token" | docker login ghcr.io -u freddydk --password-stdin
+        docker pull $imageName || true
+    }
+    else {
+        $imageName = $settings.cacheImageName
+        if ($imageName) {
+            Write-Host "::group::Flush ContainerHelper Cache"
+            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
+            Write-Host "::endgroup::"
+        }
+    }
+
+
+
+
+
+
+
+
+
+    $fullImageName = ""
+    $imageName = ""
     if ($gitHubHostedRunner) {
         $imageName = $settings.cacheImageName
         if (!$imageName.Contains(':')) {
@@ -312,14 +341,14 @@ try {
         $fullImageName = "ghcr.io/Freddy-DK/$imageName"
         docker pull $fullImageName || true
     }
-    else {
-        $imageName = $settings.cacheImageName
-        if ($imageName) {
-            Write-Host "::group::Flush ContainerHelper Cache"
-            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
-            Write-Host "::endgroup::"
-        }
-    }
+
+
+
+
+
+
+
+
     $authContext = $null
     $environmentName = ""
     $CreateRuntimePackages = $false
@@ -570,12 +599,6 @@ try {
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
-
-    if ($fullImageName) {
-        Write-Host "Push updated cache image $fullImageName"
-        docker tag $imageName $fullImageName
-        docker push $fullImageName
-    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"
