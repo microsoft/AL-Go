@@ -82,7 +82,7 @@ permissions:
   actions: read
   contents: read
   id-token: write
-  packages: write
+  packages: read
 
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
