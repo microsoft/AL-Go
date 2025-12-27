@@ -301,16 +301,7 @@ try {
     $additionalCountries = $settings.additionalCountries
 
     $imageName = ""
-    if ($gitHubHostedRunner) {
-        $imageName = $settings.cacheImageName
-        $appUri = [Uri]::new($settings.artifact)
-        $imageName = "$($imageName):$($appUri.AbsolutePath.ToLowerInvariant().Replace('/','-').TrimStart('-'))"
-        $fullImageName = "ghcr.io/freddy-dk/$imageName"
-        Write-Host "----------------------------- $fullImageName -----------------------------"
-        "$token" | docker login ghcr.io -u freddydk --password-stdin
-        docker pull $fullImageName || true
-    }
-    else {
+    if (!$gitHubHostedRunner) {
         $imageName = $settings.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
