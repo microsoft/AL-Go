@@ -1047,7 +1047,18 @@ function GetArtifactsFromWorkflowRun {
                 continue
             }
 
-            $matchingArtifacts = @($matchingArtifacts) #enforce array
+            $matchingArtifacts = @($matchingArtifacts | ForEach-Object {
+                    if ($_ -match '^(.*)-(\d+\.\d+\.\d+\.\d+)$') {
+                        [PSCustomObject]@{
+                            Name    = $Matches[1]
+                            Version = [version]$Matches[2]
+                            Full    = $_
+                        }
+                    }
+                } | Group-Object Name | ForEach-Object {
+                    $_.Group | Sort-Object Version -Descending | Select-Object -First 1
+                } |
+                Select-Object -ExpandProperty Full)
 
             foreach($artifact in $matchingArtifacts) {
                 Write-Host "Found artifact $($artifact.name) (ID: $($artifact.id)) for mask $mask and project $project"
