@@ -1047,8 +1047,10 @@ function GetArtifactsFromWorkflowRun {
                 continue
             }
 
-            $matchingArtifacts | Out-Host
-
+            # If there are reruns of the build we found, we might see artifacts like:
+            # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.0
+            # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.1
+            # We want to keep only the latest version of each artifact (based on the last segment of the version)
             $matchingArtifacts = @($matchingArtifacts | ForEach-Object {
                     if ($_.name -match '^(.*)-(\d+\.\d+\.\d+\.\d+)$') {
                         [PSCustomObject]@{
@@ -1061,8 +1063,6 @@ function GetArtifactsFromWorkflowRun {
                     $_.Group | Sort-Object Version -Descending | Select-Object -First 1
                 } |
                 Select-Object -ExpandProperty Obj)
-
-            $matchingArtifacts | Out-Host
 
             foreach($artifact in $matchingArtifacts) {
                 Write-Host "Found artifact $($artifact.name) (ID: $($artifact.id)) for mask $mask and project $project"
