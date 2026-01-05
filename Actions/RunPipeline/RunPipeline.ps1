@@ -301,7 +301,7 @@ try {
     $additionalCountries = $settings.additionalCountries
 
     $imageName = ""
-    if (!$gitHubHostedRunner) {
+    if (-not $gitHubHostedRunner) {
         $imageName = $settings.cacheImageName
         if ($imageName) {
             Write-Host "::group::Flush ContainerHelper Cache"
