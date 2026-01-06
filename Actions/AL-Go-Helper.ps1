@@ -1823,11 +1823,15 @@ Function AnalyzeProjectDependencies {
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
-                # Find the first project that contains the app for which the current project has a dependency
-                $depProject = @(($projectsBuild + $projects) | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }) | Select-Object -First 1
+                $depProject = @($projectsBuild | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
+                if ($depProject.Count -gt 0) {
+                    # Dependency already resolved by a previous build project
+                    continue
+                }
+                # Find the project that contains the app for which the current project has a dependency
+                $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
-                # Only if the dependency wasn't already resolved by a previous build project
-                if ($projectsBuild -notcontains $depProject) {
+                foreach($depProject in $depProjects) {
                     $foundDependencies += $depProject
                     if ($projectDependencies.Keys -contains $depProject) {
                         $foundDependencies += $projectDependencies."$depProject"
