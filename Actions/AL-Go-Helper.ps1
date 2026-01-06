@@ -1785,29 +1785,10 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
 
-    # First determine projects, which no other project depends on - these should be build in the last job
-    # There is no reason for other jobs running in parallel to wait for these projects to be built
-    # One example of this is test only jobs, where compilation is done using compilerfolders on linux, and test jobs are postponed until all compilation jobs are done
-    #$soloProjects = @($projects | Where-Object {
-    #    $isSolo = $true
-    #    foreach($otherProject in $projects) {
-    #        if ($otherProject -ne $_) {
-    #            $otherDependencies = $appDependencies."$otherProject".dependencies
-    #            foreach($dependency in $otherDependencies) {
-    #                if ($appDependencies."$_".apps -contains $dependency) {
-    #                    $isSolo = $false
-    #                }
-    #            }
-    #        }
-    #    }
-    #    return $isSolo
-    #})
-    #if ($soloProjects.Count -gt 0) {
-    #    Write-Host "Solo projects found (no other project depends on them): $($soloProjects -join ", ")"
-    #}
-
     $no = 1
     $projectsOrder = @()
+    # Collect projects without dependants, which can be build later
+    # This is done to collect avoid building projects at an earlier stage than needed and increase the time until next job subsequently
     $projectsWithoutDependants = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
