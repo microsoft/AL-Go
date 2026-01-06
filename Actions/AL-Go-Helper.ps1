@@ -1808,7 +1808,6 @@ Function AnalyzeProjectDependencies {
 
     $no = 1
     $projectsOrder = @()
-    $projectsBuild = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1823,9 +1822,9 @@ Function AnalyzeProjectDependencies {
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
-                $depProject = @($projectsBuild | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
+                # Check whether dependency is already resolved by a previous build project
+                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
                 if ($depProject.Count -gt 0) {
-                    # Dependency already resolved by a previous build project
                     continue
                 }
                 # Find the project that contains the app for which the current project has a dependency
@@ -1895,7 +1894,6 @@ Function AnalyzeProjectDependencies {
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
-        $projectsBuild += $thisJob
 
         $no++
     }
