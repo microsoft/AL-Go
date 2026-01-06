@@ -242,6 +242,11 @@ function CancelAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
     $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     foreach($run in $runs.workflow_runs) {
         Write-Host $run.name
@@ -262,6 +267,11 @@ function WaitAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
     $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     $workflowRuns = $runs.workflow_runs | Select-Object -First $top
     foreach($run in $workflowRuns) {
@@ -690,6 +700,10 @@ function Test-LogContainsFromRun {
         [string] $expectedText,
         [switch] $isRegEx
     )
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
     try {
