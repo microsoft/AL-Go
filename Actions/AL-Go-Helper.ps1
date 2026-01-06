@@ -1883,7 +1883,7 @@ Function AnalyzeProjectDependencies {
 
         # Check whether any of the projects in $thisJob can be built later (no remaining dependencies)
         Write-Host "------------------ CHECK JOBS WITHOUT REMAINING DEPENDANTS ------------------"
-        $jobsWithoutDependants += @($thisJob | Where-Object {
+        $projectsWithoutDependants += @($thisJob | Where-Object {
             $hasRemainingDependendants = $false
             foreach($otherProject in $projects) {
                 if ($otherProject -ne $_) {
@@ -1891,7 +1891,7 @@ Function AnalyzeProjectDependencies {
                     # Grab dependencies from other project, which haven't been build yet
                     $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
                         $dependency = $_
-                        $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -eq $dependency } })
+                        $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
                         return -not $alreadyBuilt
                     }
                     Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
