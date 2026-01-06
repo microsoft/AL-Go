@@ -1788,26 +1788,27 @@ Function AnalyzeProjectDependencies {
     # First determine projects, which no other project depends on - these should be build in the last job
     # There is no reason for other jobs running in parallel to wait for these projects to be built
     # One example of this is test only jobs, where compilation is done using compilerfolders on linux, and test jobs are postponed until all compilation jobs are done
-    $soloProjects = @($projects | Where-Object {
-        $isSolo = $true
-        foreach($otherProject in $projects) {
-            if ($otherProject -ne $_) {
-                $otherDependencies = $appDependencies."$otherProject".dependencies
-                foreach($dependency in $otherDependencies) {
-                    if ($appDependencies."$_".apps -contains $dependency) {
-                        $isSolo = $false
-                    }
-                }
-            }
-        }
-        return $isSolo
-    })
-    if ($soloProjects.Count -gt 0) {
-        Write-Host "Solo projects found (no other project depends on them): $($soloProjects -join ", ")"
-    }
+    #$soloProjects = @($projects | Where-Object {
+    #    $isSolo = $true
+    #    foreach($otherProject in $projects) {
+    #        if ($otherProject -ne $_) {
+    #            $otherDependencies = $appDependencies."$otherProject".dependencies
+    #            foreach($dependency in $otherDependencies) {
+    #                if ($appDependencies."$_".apps -contains $dependency) {
+    #                    $isSolo = $false
+    #                }
+    #            }
+    #        }
+    #    }
+    #    return $isSolo
+    #})
+    #if ($soloProjects.Count -gt 0) {
+    #    Write-Host "Solo projects found (no other project depends on them): $($soloProjects -join ", ")"
+    #}
 
     $no = 1
     $projectsOrder = @()
+    $jobsWithoutDependants = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1880,15 +1881,31 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
 
+        # Check whether any of the projects in $thisJob can be built later (no remaining dependencies)
+        $jobsWithoutDependants += @($thisJob | Where-Object {
+            $hasRemainingDependencies = $false
+            $dependencies = $appDependencies."$_".dependencies
+            foreach($dependency in $dependencies) {
+                $depProjects = @($projects | Where-Object { $_ -ne $_ -and $appDependencies."$_".apps -contains $dependency })
+                if ($depProjects.Count -gt 0) {
+                    $hasRemainingDependencies = $true
+                }
+            }
+            if (!$hasRemainingDependencies) {
+                Write-Host "Project $_ has no remaining dependendants, can be built later"
+            }
+            return -not $hasRemainingDependencies
+        })
+
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
 
-        # Do not build solo projects until the last job
-        $thisJob = @($thisJob | Where-Object { $soloProjects -notcontains $_ })
+        # Do not build jobs without dependencies until the last job
+        $thisJob = @($thisJob | Where-Object { $jobsWithoutDependants -notcontains $_ })
 
         if ($projects.Count -eq 0) {
-            # Last job, add solo projects
-            Write-Host "Adding solo projects to last build job"
-            $thisJob += $soloProjects
+            # Last job, add jobs without dependendants
+            Write-Host "Adding jobs without dependendants to last build job"
+            $thisJob += $jobsWithoutDependants
         }
 
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
