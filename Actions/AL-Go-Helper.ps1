@@ -1883,18 +1883,21 @@ Function AnalyzeProjectDependencies {
 
         # Check whether any of the projects in $thisJob can be built later (no remaining dependencies)
         $jobsWithoutDependants += @($thisJob | Where-Object {
-            $hasRemainingDependencies = $false
-            $dependencies = $appDependencies."$_".dependencies
-            foreach($dependency in $dependencies) {
-                $depProjects = @($projects | Where-Object { $_ -ne $_ -and $appDependencies."$_".apps -contains $dependency })
-                if ($depProjects.Count -gt 0) {
-                    $hasRemainingDependencies = $true
+            $hasRemainingDependendants = $false
+            foreach($otherProject in $projects) {
+                if ($otherProject -ne $_) {
+                    $otherDependencies = $appDependencies."$otherProject".dependencies
+                    foreach($dependency in $otherDependencies) {
+                        if ($appDependencies."$_".apps -contains $dependency) {
+                            $hasRemainingDependendants = $true
+                        }
+                    }
                 }
             }
-            if (!$hasRemainingDependencies) {
+            if (!$hasRemainingDependendants) {
                 Write-Host "Project $_ has no remaining dependendants, can be built later"
             }
-            return -not $hasRemainingDependencies
+            return -not $hasRemainingDependendants
         })
 
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
