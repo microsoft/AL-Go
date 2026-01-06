@@ -1808,6 +1808,7 @@ Function AnalyzeProjectDependencies {
 
     $no = 1
     $projectsOrder = @()
+    $projectsBuild = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1823,11 +1824,14 @@ Function AnalyzeProjectDependencies {
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
                 # Find the first project that contains the app for which the current project has a dependency
-                $depProject = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }) | Select-Object -First 1
+                $depProject = @(($projectsBuild + $projects) | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency }) | Select-Object -First 1
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
-                $foundDependencies += $depProject
-                if ($projectDependencies.Keys -contains $depProject) {
-                    $foundDependencies += $projectDependencies."$depProject"
+                # Only if the dependency wasn't already resolved by a previous build project
+                if ($projectsBuild -notcontains $depProject) {
+                    $foundDependencies += $depProject
+                    if ($projectDependencies.Keys -contains $depProject) {
+                        $foundDependencies += $projectDependencies."$depProject"
+                    }
                 }
             }
             $foundDependencies = @($foundDependencies | Select-Object -Unique)
@@ -1887,6 +1891,7 @@ Function AnalyzeProjectDependencies {
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
+        $projectsBuild += $thisJob
 
         $no++
     }
