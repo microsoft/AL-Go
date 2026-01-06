@@ -1805,10 +1805,10 @@ Function AnalyzeProjectDependencies {
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
                 # Check whether dependency is already resolved by a previous build project
-#                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
-#                if ($depProject.Count -gt 0) {
-#                    continue
-#                }
+                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
+                if ($depProject.Count -gt 0) {
+                    continue
+                }
                 # Find the project that contains the app for which the current project has a dependency
                 $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
@@ -1863,30 +1863,30 @@ Function AnalyzeProjectDependencies {
         }
 
         # Check whether any of the projects in $thisJob can be built later (no remaining dependendants)
-#        $projectsWithoutDependants += @($thisJob | Where-Object {
-#            $hasRemainingDependendants = $false
-#            foreach($otherProject in $projects) {
-#                if ($otherProject -ne $_) {
-#                    # Grab dependencies from other project, which haven't been build yet
-#                    $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
-#                        $dependency = $_
-#                        $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
-#                        return -not $alreadyBuilt
-#                    }
-#                    Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
-#                    foreach($dependency in $otherDependencies) {
-#                        if ($appDependencies."$_".apps -contains $dependency) {
-#                            Write-Host "Project $_ is still a dependency for project $otherProject"
-#                            $hasRemainingDependendants = $true
-#                        }
-#                    }
-#                }
-#            }
-#            if (!$hasRemainingDependendants) {
-#                Write-Host "Project $_ has no remaining dependendants, can be built later"
-#            }
-#            return -not $hasRemainingDependendants
-#        })
+        $projectsWithoutDependants += @($thisJob | Where-Object {
+            $hasRemainingDependendants = $false
+            foreach($otherProject in $projects) {
+                if ($otherProject -ne $_) {
+                    # Grab dependencies from other project, which haven't been build yet
+                    $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
+                        $dependency = $_
+                        $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
+                        return -not $alreadyBuilt
+                    }
+                    Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
+                    foreach($dependency in $otherDependencies) {
+                        if ($appDependencies."$_".apps -contains $dependency) {
+                            Write-Host "Project $_ is still a dependency for project $otherProject"
+                            $hasRemainingDependendants = $true
+                        }
+                    }
+                }
+            }
+            if (!$hasRemainingDependendants) {
+                Write-Host "Project $_ has no remaining dependendants, can be built later"
+            }
+            return -not $hasRemainingDependendants
+        })
 
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
 
