@@ -1771,7 +1771,7 @@ Function AnalyzeProjectDependencies {
             "apps"         = $apps
             "dependencies" = $dependenciesForProject
         }
-        Write-Host "AppDependencies for project $($appDependencies."$project" | CopnvertTo-Json -Compress)"
+        Write-Host "AppDependencies for project $($appDependencies."$project" | ConvertTo-Json -Compress)"
     }
     # AppDependencies is a hashtable with the following structure
     # $appDependencies = @{
