@@ -162,7 +162,13 @@ try {
                 }
             }
             else {
-                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value ''
+                $tokenValue = ''
+                if ($trustedNuGetFeed.url -like 'https://nuget.pkg.github.com/*') {
+                    # GitHub Packages might be public, but they still require a token with read:packages permissions (not necessarily to the specific feed)
+                    # instead of using a blank token, we use the GitHub token (which has read packages permissions) provided to the action
+                    $tokenValue = $token
+                }
+                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value $tokenValue
             }
             if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'AuthTokenSecret' -and $trustedNuGetFeed.AuthTokenSecret) {
                 $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret

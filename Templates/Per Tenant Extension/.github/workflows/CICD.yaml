@@ -19,6 +19,7 @@ permissions:
   id-token: write
   pages: read
   security-events: write
+  packages: read
 
 env:
   workflowDepth: 1
