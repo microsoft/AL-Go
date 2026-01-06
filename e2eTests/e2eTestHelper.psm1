@@ -5,6 +5,7 @@ $defaultApplication = "22.0.0.0"
 $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
 $lastTokenRefresh = 0
+$github = $false
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
@@ -25,6 +26,7 @@ function SetTokenAndRepository {
 
     $script:githubOwner = $githubOwner
     $script:defaultRepository = $repository
+    $script:github = $github
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
