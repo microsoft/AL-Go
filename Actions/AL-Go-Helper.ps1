@@ -1808,7 +1808,7 @@ Function AnalyzeProjectDependencies {
 
     $no = 1
     $projectsOrder = @()
-    $jobsWithoutDependants = @()
+    $projectsWithoutDependants = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1910,12 +1910,12 @@ Function AnalyzeProjectDependencies {
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
 
         # Do not build jobs without dependencies until the last job
-        $thisJob = @($thisJob | Where-Object { $jobsWithoutDependants -notcontains $_ })
+        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependants -notcontains $_ })
 
         if ($projects.Count -eq 0) {
             # Last job, add jobs without dependendants
             Write-Host "Adding jobs without dependendants to last build job"
-            $thisJob += $jobsWithoutDependants
+            $thisJob += $projectsWithoutDependants
         }
 
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
