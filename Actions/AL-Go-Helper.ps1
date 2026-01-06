@@ -1881,13 +1881,11 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
 
-        # Check whether any of the projects in $thisJob can be built later (no remaining dependencies)
-        Write-Host "------------------ CHECK JOBS WITHOUT REMAINING DEPENDANTS ------------------"
+        # Check whether any of the projects in $thisJob can be built later (no remaining dependendants)
         $projectsWithoutDependants += @($thisJob | Where-Object {
             $hasRemainingDependendants = $false
             foreach($otherProject in $projects) {
                 if ($otherProject -ne $_) {
-                    Write-Host "Check Other project $otherProject"
                     # Grab dependencies from other project, which haven't been build yet
                     $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
                         $dependency = $_
@@ -1897,7 +1895,7 @@ Function AnalyzeProjectDependencies {
                     Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
                     foreach($dependency in $otherDependencies) {
                         if ($appDependencies."$_".apps -contains $dependency) {
-                            Write-Host "Project $otherProject is still a dependency for project $_"
+                            Write-Host "Project $_ is still a dependency for project $otherProject"
                             $hasRemainingDependendants = $true
                         }
                     }
