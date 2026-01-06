@@ -560,9 +560,7 @@ function CommitAndPush {
         [switch] $wait
     )
 
-    if (!$repository) {
-        $repository = $defaultRepository
-    }
+    $repository = $defaultRepository
 
     RefreshToken -repository $repository
 
