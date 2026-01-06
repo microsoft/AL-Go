@@ -1738,7 +1738,7 @@ Function AnalyzeProjectDependencies {
     # Get all apps in the project
     # Get all dependencies for the apps
     foreach($project in $projects) {
-        Write-Host "- Analyzing project: $project"
+        Write-Host -NoNewline "Analyzing project: $project, "
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
@@ -1754,7 +1754,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
+        OutputMessageAndArray -Message "folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -1771,6 +1771,7 @@ Function AnalyzeProjectDependencies {
             "apps"         = $apps
             "dependencies" = $dependenciesForProject
         }
+        Write-Host "AppDependencies for project $($appDependencies."$project" | CopnvertTo-Json -Compress)"
     }
     # AppDependencies is a hashtable with the following structure
     # $appDependencies = @{
