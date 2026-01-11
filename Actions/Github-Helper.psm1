@@ -1029,6 +1029,10 @@ function GetArtifactsFromWorkflowRun {
     # Get sanitized project names (the way they appear in the artifact names)
     $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
+    # Get branch used in workflowRun
+    $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
+    $branch = $workflowRunInfo.head_branch.Replace('\', '_').Replace('/', '_')
+
     # Get the artifacts from the the workflow run
     while($true) {
         $artifactsURI = "$api_url/repos/$repository/actions/runs/$workflowRun/artifacts?per_page=$per_page&page=$page"
@@ -1040,7 +1044,7 @@ function GetArtifactsFromWorkflowRun {
         }
 
         foreach($project in $projectArr) {
-            $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
+            $artifactPattern = "$project-$branch-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
