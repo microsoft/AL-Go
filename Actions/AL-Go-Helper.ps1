@@ -27,7 +27,7 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
+$defaultBcContainerHelperVersion = "https://github.com/freddydk/navcontainerhelper/archive/refs/heads/bhg.zip" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
@@ -1738,7 +1738,7 @@ Function AnalyzeProjectDependencies {
     # Get all apps in the project
     # Get all dependencies for the apps
     foreach($project in $projects) {
-        Write-Host "- Analyzing project: $project"
+        Write-Host -NoNewline "Analyzing project: $project, "
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
@@ -1754,7 +1754,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
+        OutputMessageAndArray -Message "folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -1771,6 +1771,7 @@ Function AnalyzeProjectDependencies {
             "apps"         = $apps
             "dependencies" = $dependenciesForProject
         }
+        Write-Host "AppDependencies for project $($appDependencies."$project" | ConvertTo-Json -Compress)"
     }
     # AppDependencies is a hashtable with the following structure
     # $appDependencies = @{
@@ -1783,8 +1784,12 @@ Function AnalyzeProjectDependencies {
     #         "dependencies" = @("appid7", "appid8")
     #     }
     # }
+
     $no = 1
     $projectsOrder = @()
+    # Collect projects without dependants, which can be build later
+    # This is done to collect avoid building projects at an earlier stage than needed and increase the time until next job subsequently
+    $projectsWithoutDependants = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1799,6 +1804,11 @@ Function AnalyzeProjectDependencies {
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
+                # Check whether dependency is already resolved by a previous build project
+                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
+                if ($depProject.Count -gt 0) {
+                    continue
+                }
                 # Find the project that contains the app for which the current project has a dependency
                 $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
@@ -1851,11 +1861,48 @@ Function AnalyzeProjectDependencies {
         if ($thisJob.Count -eq 0) {
             throw "Circular project reference encountered, cannot determine build order"
         }
+
+        # Check whether any of the projects in $thisJob can be built later (no remaining dependendants)
+        $projectsWithoutDependants += @($thisJob | Where-Object {
+            $hasRemainingDependendants = $false
+            foreach($otherProject in $projects) {
+                if ($otherProject -ne $_) {
+                    # Grab dependencies from other project, which haven't been build yet
+                    $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
+                        $dependency = $_
+                        $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
+                        return -not $alreadyBuilt
+                    }
+                    Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
+                    foreach($dependency in $otherDependencies) {
+                        if ($appDependencies."$_".apps -contains $dependency) {
+                            Write-Host "Project $_ is still a dependency for project $otherProject"
+                            $hasRemainingDependendants = $true
+                        }
+                    }
+                }
+            }
+            if (!$hasRemainingDependendants) {
+                Write-Host "Project $_ has no remaining dependendants, can be built later"
+            }
+            return -not $hasRemainingDependendants
+        })
+
+        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
+
+        # Do not build jobs without dependencies until the last job
+        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependants -notcontains $_ })
+
+        if ($projects.Count -eq 0) {
+            # Last job, add jobs without dependendants
+            Write-Host "Adding jobs without dependendants to last build job"
+            $thisJob += $projectsWithoutDependants
+        }
+
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
 
-        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
 
