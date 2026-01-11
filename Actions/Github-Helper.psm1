@@ -1032,6 +1032,7 @@ function GetArtifactsFromWorkflowRun {
     # Get branch used in workflowRun
     $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
     $branch = $workflowRunInfo.head_branch.Replace('\', '_').Replace('/', '_')
+    Write-Host "Branch for workflow run $workflowRun is $branch"
 
     # Get the artifacts from the the workflow run
     while($true) {
