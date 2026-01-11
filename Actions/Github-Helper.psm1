@@ -1059,10 +1059,19 @@ function GetArtifactsFromWorkflowRun {
             # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.1
             # We want to keep only the latest version of each artifact (based on the last segment of the version)
             $matchingArtifacts = @($matchingArtifacts | ForEach-Object {
+                    # Sort on version number object
                     if ($_.name -match '^(.*)-(\d+\.\d+\.\d+\.\d+)$') {
                         [PSCustomObject]@{
                             Name    = $Matches[1]
                             Version = [version]$Matches[2]
+                            Obj     = $_
+                        }
+                    }
+                    else {
+                        # artifacts from PR builds doesn't match the versioning pattern but are sortable
+                        [PSCustomObject]@{
+                            Name    = $_.name
+                            Version = $_.name
                             Obj     = $_
                         }
                     }
