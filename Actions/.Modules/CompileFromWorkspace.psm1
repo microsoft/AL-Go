@@ -141,7 +141,7 @@ function CompileAppsInWorkspace {
         
         [Parameter(Mandatory = $false)]
         [ValidateSet('Debug', 'Error', 'Normal', 'Verbose', 'Warning')]
-        [string]$LogLevel = 'Normal',
+        [string]$LogLevel = 'Warning',
         
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
