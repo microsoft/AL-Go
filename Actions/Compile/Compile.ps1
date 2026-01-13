@@ -63,12 +63,19 @@ if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
     }
 }
 
-# COMPILE - Compiling apps and test apps 
+$buildArtifactFolder = Join-Path $projectFolder ".buildartifacts"
+New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+$appOutputFolder = Join-Path $buildArtifactFolder "Apps"
+New-Item $appOutputFolder -ItemType Directory | Out-Null
+$testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
+New-Item $testAppOutputFolder -ItemType Directory | Out-Null
+
+# COMPILE - Compiling apps and test apps
 $appFiles = @()
 $appFiles = Build-AppsInWorkspace `
     -Folders $settings.appFolders `
     -CompilerFolder $compilerFolder `
-    -OutFolder (Join-Path $projectFolder ".output") `
+    -OutFolder $appOutputFolder `
     -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
     -Analyzers $analyzers `
     -BuildVersion $buildVersion `
@@ -83,7 +90,7 @@ $testAppFiles = @()
 $testAppFiles = Build-AppsInWorkspace `
     -Folders $settings.testFolders `
     -CompilerFolder $compilerFolder `
-    -OutFolder (Join-Path $projectFolder ".output") `
+    -OutFolder $testAppOutputFolder `
     -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
     -Analyzers $analyzers `
     -BuildVersion $buildVersion `
