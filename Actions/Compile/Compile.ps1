@@ -22,6 +22,7 @@ $baseFolder = $ENV:GITHUB_WORKSPACE
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot '.\Compile.psm1' -Resolve)
 DownloadAndImportBcContainerHelper
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
@@ -100,6 +101,8 @@ $testAppFiles = Build-AppsInWorkspace `
 
 $installTestApps += $testAppFiles
 $testFolders = @()
+
+New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole
 
 # OUTPUT - Output the install apps and test apps as JSON
 ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson
