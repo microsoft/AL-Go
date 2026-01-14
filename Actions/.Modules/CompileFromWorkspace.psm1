@@ -166,6 +166,12 @@ function CompileAppsInWorkspace {
         $OutputFolder = $OutFolder
     }
 
+    # Validate MaxCpuCount
+    if ($MaxCpuCount -gt [System.Environment]::ProcessorCount) {
+        Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $([System.Environment]::ProcessorCount). Using $([System.Environment]::ProcessorCount) instead."
+        $MaxCpuCount = [System.Environment]::ProcessorCount
+    }
+
     # Check if the workspace file exists
     if (-not (Test-Path $WorkspaceFile)) {
         throw "The specified workspace file '$WorkspaceFile' does not exist."
