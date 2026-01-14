@@ -71,38 +71,40 @@ New-Item $appOutputFolder -ItemType Directory | Out-Null
 $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
 New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 
-# COMPILE - Compiling apps and test apps
-$appFiles = @()
-$appFiles = Build-AppsInWorkspace `
-    -Folders $settings.appFolders `
-    -CompilerFolder $compilerFolder `
-    -OutFolder $appOutputFolder `
-    -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-    -Analyzers $analyzers `
-    -BuildVersion $buildVersion `
-    -MaxCpuCount $settings.workspaceCompilationParallelism `
-    -PreCompileApp $precompileOverride `
-    -PostCompileApp $postCompileOverride
+try {
+    # COMPILE - Compiling apps and test apps
+    $appFiles = @()
+    $appFiles = Build-AppsInWorkspace `
+        -Folders $settings.appFolders `
+        -CompilerFolder $compilerFolder `
+        -OutFolder $appOutputFolder `
+        -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+        -Analyzers $analyzers `
+        -BuildVersion $buildVersion `
+        -MaxCpuCount $settings.workspaceCompilationParallelism `
+        -PreCompileApp $precompileOverride `
+        -PostCompileApp $postCompileOverride
 
-$installApps += $appFiles
-$appFolders = @()
+    $installApps += $appFiles
+    $appFolders = @()
 
-$testAppFiles = @()
-$testAppFiles = Build-AppsInWorkspace `
-    -Folders $settings.testFolders `
-    -CompilerFolder $compilerFolder `
-    -OutFolder $testAppOutputFolder `
-    -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-    -Analyzers $analyzers `
-    -BuildVersion $buildVersion `
-    -MaxCpuCount $settings.workspaceCompilationParallelism `
-    -PreCompileApp $precompileOverride `
-    -PostCompileApp $postCompileOverride
+    $testAppFiles = @()
+    $testAppFiles = Build-AppsInWorkspace `
+        -Folders $settings.testFolders `
+        -CompilerFolder $compilerFolder `
+        -OutFolder $testAppOutputFolder `
+        -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+        -Analyzers $analyzers `
+        -BuildVersion $buildVersion `
+        -MaxCpuCount $settings.workspaceCompilationParallelism `
+        -PreCompileApp $precompileOverride `
+        -PostCompileApp $postCompileOverride
 
-$installTestApps += $testAppFiles
-$testFolders = @()
-
-New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole
+    $installTestApps += $testAppFiles
+    $testFolders = @()
+} finally {
+    New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole
+}
 
 # OUTPUT - Output the install apps and test apps as JSON
 ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson

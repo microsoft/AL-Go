@@ -283,7 +283,7 @@ function CompileAppsInWorkspace {
                 if ($OutputFolder -eq $PackageCachePath) {
                     continue
                 }
-                Copy-Item -Path $file.FullName -Destination $destinationPath -Force -Verbose
+                Copy-Item -Path $file.FullName -Destination $destinationPath -Force
             }
         }
     }
