@@ -1,6 +1,6 @@
 ### Issues
 
-- Issue 2078 Workflows run since Januari 14th '26 have space before CI/CD removed
+- Issue 2078 Workflows run since January 14th '26 have space before CI/CD removed
 - Issue 2070 Support public GitHub Packages feeds without requiring a Personal Access Token (PAT)
 - Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
 - Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
