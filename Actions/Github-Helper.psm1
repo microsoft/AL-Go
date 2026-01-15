@@ -958,7 +958,7 @@ function FindLatestSuccessfulCICDRun {
             break
         }
 
-        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name -eq ' CI/CD' })
+        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name.Trim() -eq 'CI/CD' })
 
         foreach($CICDRun in $CICDRuns) {
             if($CICDRun.conclusion -eq 'success') {
