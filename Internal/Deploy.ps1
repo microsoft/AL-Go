@@ -172,7 +172,7 @@ try {
         catch {
             Write-Host "gh repo create $($config.githubOwner)/$repo --public --clone"
             $ownerRepo = "$($config.githubOwner)/$repo"
-            invoke-gh repo create $ownerRepo --public --clone
+            invoke-gh repo create "$ownerRepo" --public --clone
             Start-Sleep -Seconds 10
             Set-Location $repo
             invoke-git checkout -b $branch

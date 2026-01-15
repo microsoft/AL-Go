@@ -434,11 +434,11 @@ function CreateAlGoRepository {
     }
     if ($private) {
         Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
-        invoke-gh repo create $repository --private --clone
+        invoke-gh repo create "$repository" --private --clone
     }
     else {
         Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
-        invoke-gh repo create $repository --public --clone
+        invoke-gh repo create "$repository" --public --clone
     }
     Start-Sleep -seconds 10
     Set-Location '*'
