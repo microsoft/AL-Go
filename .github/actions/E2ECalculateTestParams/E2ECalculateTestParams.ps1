@@ -46,22 +46,22 @@ if (-not $contentPath -and $matrixType) {
 
 # Add outputs
 if ($adminCenterApiCredentials) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials=$adminCenterApiCredentials"
 }
 else {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials=''"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials="
 }
 
 if ($template) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template=$template"
 }
 
 if ($contentPath) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentPath='$contentPath'"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentPath=$contentPath"
 }
 
 # Generate repo name
 $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
-Write-Host "repoName='$repoName'"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
+Write-Host "repoName=$repoName"
 Write-Host "Repo URL: https://github.com/$githubOwner/$repoName"
