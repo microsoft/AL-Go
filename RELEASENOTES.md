@@ -1,5 +1,8 @@
 ### Issues
 
+- Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
+- Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
+- Issue 2086 Postpone jobs, which doesn't have any dependants to the end of the build order.
 - Issue 2078 Workflows run since January 14th '26 have space before CI/CD removed
 - Issue 2070 Support public GitHub Packages feeds without requiring a Personal Access Token (PAT)
 - Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
