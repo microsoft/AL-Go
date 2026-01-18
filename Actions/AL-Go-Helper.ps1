@@ -1771,7 +1771,6 @@ Function AnalyzeProjectDependencies {
             "apps"         = $apps
             "dependencies" = $dependenciesForProject
         }
-        Write-Host "AppDependencies for project $($appDependencies."$project" | ConvertTo-Json -Compress)"
     }
     # AppDependencies is a hashtable with the following structure
     # $appDependencies = @{
@@ -1784,11 +1783,12 @@ Function AnalyzeProjectDependencies {
     #         "dependencies" = @("appid7", "appid8")
     #     }
     # }
-
     $no = 1
     $projectsOrder = @()
     # Collect projects without dependants, which can be build later
     # This is done to collect avoid building projects at an earlier stage than needed and increase the time until next job subsequently
+    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependants
+    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependants)
     $projectsWithoutDependants = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
@@ -1888,14 +1888,15 @@ Function AnalyzeProjectDependencies {
             return -not $hasRemainingDependendants
         })
 
+        # Remove projects in this job from the list of projects to be built (including the projects without dependants)
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
 
-        # Do not build jobs without dependencies until the last job
+        # Do not build jobs without dependendants until the last job, remove them from this job
         $thisJob = @($thisJob | Where-Object { $projectsWithoutDependants -notcontains $_ })
 
         if ($projects.Count -eq 0) {
-            # Last job, add jobs without dependendants
-            Write-Host "Adding jobs without dependendants to last build job"
+            # Last job, add jobs without dependants
+            Write-Host "Adding jobs without dependants to last build job"
             $thisJob += $projectsWithoutDependants
         }
 
