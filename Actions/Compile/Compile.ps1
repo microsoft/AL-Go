@@ -31,6 +31,11 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0) {
+    Write-Host "No app folders or test app folders specified for compilation. Skipping compilation step."
+    return
+}
+
 #TODO
 $projectFolder = Join-Path $baseFolder $project
 Set-Location $projectFolder
@@ -72,36 +77,40 @@ $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
 New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 
 try {
-    # COMPILE - Compiling apps and test apps
-    $appFiles = @()
-    $appFiles = Build-AppsInWorkspace `
-        -Folders $settings.appFolders `
-        -CompilerFolder $compilerFolder `
-        -OutFolder $appOutputFolder `
-        -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-        -Analyzers $analyzers `
-        -BuildVersion $buildVersion `
-        -MaxCpuCount $settings.workspaceCompilationParallelism `
-        -PreCompileApp $precompileOverride `
-        -PostCompileApp $postCompileOverride
+    if ($settings.appFolders.Count -gt 0) {
+        # COMPILE - Compiling apps and test apps
+        $appFiles = @()
+        $appFiles = Build-AppsInWorkspace `
+            -Folders $settings.appFolders `
+            -CompilerFolder $compilerFolder `
+            -OutFolder $appOutputFolder `
+            -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+            -Analyzers $analyzers `
+            -BuildVersion $buildVersion `
+            -MaxCpuCount $settings.workspaceCompilationParallelism `
+            -PreCompileApp $precompileOverride `
+            -PostCompileApp $postCompileOverride
 
-    $installApps += $appFiles
-    $appFolders = @()
+        $installApps += $appFiles
+        $appFolders = @()
+    }
 
-    $testAppFiles = @()
-    $testAppFiles = Build-AppsInWorkspace `
-        -Folders $settings.testFolders `
-        -CompilerFolder $compilerFolder `
-        -OutFolder $testAppOutputFolder `
-        -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-        -Analyzers $analyzers `
-        -BuildVersion $buildVersion `
-        -MaxCpuCount $settings.workspaceCompilationParallelism `
-        -PreCompileApp $precompileOverride `
-        -PostCompileApp $postCompileOverride
+    if ($settings.testFolders.Count -gt 0) {
+        $testAppFiles = @()
+        $testAppFiles = Build-AppsInWorkspace `
+            -Folders $settings.testFolders `
+            -CompilerFolder $compilerFolder `
+            -OutFolder $testAppOutputFolder `
+            -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+            -Analyzers $analyzers `
+            -BuildVersion $buildVersion `
+            -MaxCpuCount $settings.workspaceCompilationParallelism `
+            -PreCompileApp $precompileOverride `
+            -PostCompileApp $postCompileOverride
 
-    $installTestApps += $testAppFiles
-    $testFolders = @()
+        $installTestApps += $testAppFiles
+        $testFolders = @()
+    }
 } finally {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole
 }
