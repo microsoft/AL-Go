@@ -1785,11 +1785,11 @@ Function AnalyzeProjectDependencies {
     # }
     $no = 1
     $projectsOrder = @()
-    # Collect projects without dependants, which can be build later
+    # Collect projects without dependents, which can be build later
     # This is done to collect avoid building projects at an earlier stage than needed and increase the time until next job subsequently
-    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependants
-    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependants)
-    $projectsWithoutDependants = @()
+    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependents
+    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependents)
+    $projectsWithoutDependents = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1862,9 +1862,9 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
 
-        # Check whether any of the projects in $thisJob can be built later (no remaining dependendants)
-        $projectsWithoutDependants += @($thisJob | Where-Object {
-            $hasRemainingDependendants = $false
+        # Check whether any of the projects in $thisJob can be built later (no remaining dependents)
+        $projectsWithoutDependents += @($thisJob | Where-Object {
+            $hasRemainingDependents = $false
             foreach($otherProject in $projects) {
                 if ($otherProject -ne $_) {
                     # Grab dependencies from other project, which haven't been build yet
@@ -1877,27 +1877,27 @@ Function AnalyzeProjectDependencies {
                     foreach($dependency in $otherDependencies) {
                         if ($appDependencies."$_".apps -contains $dependency) {
                             Write-Host "Project $_ is still a dependency for project $otherProject"
-                            $hasRemainingDependendants = $true
+                            $hasRemainingDependents = $true
                         }
                     }
                 }
             }
-            if (!$hasRemainingDependendants) {
-                Write-Host "Project $_ has no remaining dependendants, can be built later"
+            if (!$hasRemainingDependents) {
+                Write-Host "Project $_ has no remaining dependents, can be built later"
             }
-            return -not $hasRemainingDependendants
+            return -not $hasRemainingDependents
         })
 
-        # Remove projects in this job from the list of projects to be built (including the projects without dependants)
+        # Remove projects in this job from the list of projects to be built (including the projects without dependents)
         $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
 
-        # Do not build jobs without dependendants until the last job, remove them from this job
-        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependants -notcontains $_ })
+        # Do not build jobs without dependents until the last job, remove them from this job
+        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependents -notcontains $_ })
 
         if ($projects.Count -eq 0) {
-            # Last job, add jobs without dependants
-            Write-Host "Adding jobs without dependants to last build job"
-            $thisJob += $projectsWithoutDependants
+            # Last job, add jobs without dependents
+            Write-Host "Adding jobs without dependents to last build job"
+            $thisJob += $projectsWithoutDependents
         }
 
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
