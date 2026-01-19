@@ -1,9 +1,11 @@
 $script:alTool = $null
 
 function Install-ALTool {
-    $alToolFolder = Install-DotNetTool -PackageName "Microsoft.Dynamics.BusinessCentral.Development.Tools"
+    param(
+        $CompilerFolder
+    )
     # Load the AL tool from the downloaded package
-    $alExe = Get-ChildItem -Path $alToolFolder -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "al.exe" } | Select-Object -First 1 -ExpandProperty FullName
+    $alExe = Get-ChildItem -Path $CompilerFolder -Recurse -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "altool.exe" } | Select-Object -First 1 -ExpandProperty FullName
     if (-not $alExe) {
         throw "Could not find al.exe in the development tools package."
     }
@@ -52,7 +54,7 @@ function Build-AppsInWorkspace() {
         [scriptblock]$PostCompileApp
     )
 
-    Install-ALTool
+    Install-ALTool -CompilerFolder $CompilerFolder
 
     # Get asembly probing paths
     $assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
