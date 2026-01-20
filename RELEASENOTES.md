@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 2082 Sign action no longer fails when repository is empty or no artifacts are generated
 - Issue 2078 Workflows run since January 14th '26 have space before CI/CD removed
 - Issue 2070 Support public GitHub Packages feeds without requiring a Personal Access Token (PAT)
 - Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
