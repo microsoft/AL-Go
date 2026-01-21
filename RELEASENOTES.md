@@ -4,7 +4,7 @@
 
 ### Merge queue support
 
-AL-Go now supports GitHub's merge queue feature out of the box! The `merge_group` trigger has been added to the Pull Request Build workflow, enabling seamless integration with merge queues. When you have the merge queue feature enabled, AL-Go will automatically validate any items added to your queue, ensuring your code passes all checks before merging.
+AL-Go now supports GitHub's merge queue feature out of the box! The `merge_group` trigger has been added to the Pull Request Build workflow, enabling seamless integration with merge queues. When you have the merge queue feature enabled in your repo, multiple PRs will automatically be validated together. Read more about merge queues [here](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue).
 
 > [!WARNING]
 > If you rely on a custom workflow for merge queue validation, you may need to adjust your setup to avoid duplicate builds.
