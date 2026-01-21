@@ -38,7 +38,9 @@ function PushChanges
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $branchName
-        invoke-gh pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
+        $prUrl = invoke-gh -returnValue pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
+
+        return $prUrl
     }
 }
 
@@ -242,8 +244,8 @@ try {
             }
             Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
-        PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
-
+        $prUrl = PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
+        Write-Host "::notice::Deployed to $repo branch $branch. PR URL: $prUrl"
     }
 }
 finally {
