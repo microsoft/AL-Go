@@ -17,8 +17,6 @@ Param(
     [string] $baselineWorkflowSHA = ''
 )
 
-$baseFolder = $ENV:GITHUB_WORKSPACE
-
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
@@ -26,7 +24,7 @@ Import-Module (Join-Path -Path $PSScriptRoot '.\Compile.psm1' -Resolve)
 DownloadAndImportBcContainerHelper
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
-
+$baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
@@ -77,22 +75,46 @@ $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
 New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 
 try {
+    $sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+    $sourceCommit = $ENV:GITHUB_SHA
+
+    $preprocessorSymbols = @()
+    if ($settings.ContainsKey('preprocessorSymbols')) {
+        Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
+        $preprocessorSymbols += $settings.preprocessorSymbols
+    }
+
+    $features = @()
+    if ($settings.ContainsKey('features')) {
+        Write-Host "Adding features : $($settings.features -join ',')"
+        $features += $settings.features
+    }
+
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
         $appFiles = @()
+
+        # TODO: Missing in compiler buildBy, buildUrl, generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
+        # TODO: Missing handling of incrementalBuilds
+        # TODO: (Maybe) Missing implementation of around using latest release as a baseline (skipUpgrade)
+        # TODO: Missing appBuildnumber implementation (could be its own action?)
+        # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
             -CompilerFolder $compilerFolder `
             -OutFolder $appOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -Analyzers $analyzers `
+            -Preprocessorsymbols $preprocessorSymbols `
+            -Features $features `
             -BuildVersion $buildVersion `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
+            -SourceRepositoryUrl $sourceRepositoryUrl `
+            -SourceCommit $sourceCommit `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
 
         $installApps += $appFiles
-        $appFolders = @()
     }
 
     if ($settings.testFolders.Count -gt 0) {
@@ -103,13 +125,16 @@ try {
             -OutFolder $testAppOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -Analyzers $analyzers `
+            -Preprocessorsymbols $preprocessorSymbols `
+            -Features $features `
             -BuildVersion $buildVersion `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
+            -SourceRepositoryUrl $sourceRepositoryUrl `
+            -SourceCommit $sourceCommit `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
 
         $installTestApps += $testAppFiles
-        $testFolders = @()
     }
 } finally {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole

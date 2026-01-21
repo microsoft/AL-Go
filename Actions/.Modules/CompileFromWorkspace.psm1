@@ -37,6 +37,8 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
         [Parameter(Mandatory = $false)]
+        [string[]]$PreprocessorSymbols,
+        [Parameter(Mandatory = $false)]
         [string[]]$Features,
         [Parameter(Mandatory = $false)]
         [switch]$GenerateReportLayout,
@@ -76,6 +78,7 @@ function Build-AppsInWorkspace() {
         OutFolder = $OutFolder
         AssemblyProbingPaths = $assemblyProbingPaths
         Analyzers = $Analyzers
+        PreprocessorSymbols = $PreprocessorSymbols
         Features = $Features
         GenerateReportLayout = $GenerateReportLayout
         Define = $Define
@@ -122,6 +125,9 @@ function CompileAppsInWorkspace {
         
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$PreprocessorSymbols,
         
         [Parameter(Mandatory = $false)]
         [string[]]$Features,    
@@ -198,6 +204,13 @@ function CompileAppsInWorkspace {
     if ($Analyzers -and $Analyzers.Count -gt 0) {
         $arguments += "--analyzers"
         $arguments += ($Analyzers -join ",")
+    }
+
+    if ($PreprocessorSymbols -and $PreprocessorSymbols.Count -gt 0) {
+        # TODO: Implement PreprocessorSymbols handling
+        Write-Host "Warning - PreprocessorSymbols parameter is not yet implemented in CompileAppsInWorkspace."
+        #$arguments += "--preprocessorsymbols"
+        #$arguments += ($PreprocessorSymbols -join ";")
     }
 
     if ($Features -and $Features.Count -gt 0) {
