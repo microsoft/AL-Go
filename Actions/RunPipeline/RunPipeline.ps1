@@ -162,7 +162,13 @@ try {
                 }
             }
             else {
-                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value ''
+                $tokenValue = ''
+                if ($trustedNuGetFeed.url -like 'https://nuget.pkg.github.com/*') {
+                    # GitHub Packages might be public, but they still require a token with read:packages permissions (not necessarily to the specific feed)
+                    # instead of using a blank token, we use the GitHub token (which has read packages permissions) provided to the action
+                    $tokenValue = $token
+                }
+                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value $tokenValue
             }
             if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'AuthTokenSecret' -and $trustedNuGetFeed.AuthTokenSecret) {
                 $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
@@ -209,6 +215,11 @@ try {
         }
     }
 
+    if ($settings.runTestsInAllInstalledTestApps) {
+        # Trim parentheses from test apps. Run-ALPipeline will skip running tests in test apps wrapped in ()
+        $install.TestApps = $install.TestApps | ForEach-Object { $_.TrimStart("(").TrimEnd(")") }
+    }
+
     # Replace secret names in install.apps and install.testApps
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
@@ -236,6 +247,7 @@ try {
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
@@ -310,8 +322,18 @@ try {
         $appRevision = $artifactVersion.Revision
     }
     elseif (($settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$settings.repoVersion
+        if (($settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
         $runAlPipelineParams += @{
-            "appVersion" = $settings.repoVersion
+            "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
         }
     }
 
