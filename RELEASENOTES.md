@@ -2,9 +2,12 @@
 
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 
-### Breaking changes
+### Merge queue support
 
-`merge_group` trigger added to Pull Request Build workflow. If you are not using the GitHub merge queue feature, this will not affect you. If you do have the merge queue feature enabled, this change will make the Pull Request Build workflow run automatically on any items added to your merge queue. If you rely on a custom workflow for merge queue validation, you may need to adjust your setup to avoid duplicate builds.
+AL-Go now supports GitHub's merge queue feature out of the box! The `merge_group` trigger has been added to the Pull Request Build workflow, enabling seamless integration with merge queues. When you have the merge queue feature enabled, AL-Go will automatically validate any items added to your queue, ensuring your code passes all checks before merging.
+
+> [!WARNING]
+> If you rely on a custom workflow for merge queue validation, you may need to adjust your setup to avoid duplicate builds.
 
 ## AL-Go Telemetry updates
 
