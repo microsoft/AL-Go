@@ -304,7 +304,7 @@ function WaitWorkflow {
     if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
         if (-not $noRerun.IsPresent) {
             Write-Host "::Warning::Rerunning workflow: $($run.name) run $($run.id), conclusion $($run.conclusion), url = $($run.html_url)"
-            gh api --method POST /repos/$repository/actions/runs/$runid/rerun | Out-Null
+            invoke-gh api --method POST /repos/$repository/actions/runs/$runid/rerun | Out-Null
             WaitWorkflow -repository $repository -runid $runid -noDelay:$noDelay -noError:$noError -noRerun
         }
         if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }

@@ -245,7 +245,7 @@ try {
             Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
         $prUrl = PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
-        Write-Host "::notice::Deployed to $repo branch $branch. PR URL: $prUrl"
+        Write-Host "::Notice::Deployed to $repo branch $branch. PR URL: $prUrl"
     }
 }
 finally {
