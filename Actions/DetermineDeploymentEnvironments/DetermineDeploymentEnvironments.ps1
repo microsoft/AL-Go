@@ -4,8 +4,8 @@
     [Parameter(HelpMessage = "Type of deployment (CD, Publish or All)", Mandatory = $true)]
     [ValidateSet('CD','Publish','All')]
     [string] $type,
-    [Parameter(HelpMessage = "If true, allow deploying to environments that do not exist", Mandatory = $false)]
-    [switch] $createEnvIfNotExists
+    [Parameter(HelpMessage = "If true, allow deploying to environments that do not exist (will create a new GitHub environment)", Mandatory = $false)]
+    [bool] $createEnvIfNotExists
 )
 OutputDebugFunctionCall
 
