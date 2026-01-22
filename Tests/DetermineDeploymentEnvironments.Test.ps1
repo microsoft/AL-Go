@@ -1,4 +1,5 @@
 ﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '../Actions/Github-Helper.psm1') -Force
 
 Describe "DetermineDeploymentEnvironments Action Test" {
     BeforeAll {
@@ -236,5 +237,66 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 1
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
+    }
+
+    # Unknown environment - createEnvIfNotExists = false (default) - should throw error
+    It 'Test calling action directly - Unknown environment without createEnvIfNotExists should throw' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @() })}
+        }
+
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+
+        # Environment doesn't exist and createEnvIfNotExists is false (default) - should throw
+        { . (Join-Path $scriptRoot $scriptName) -getEnvironments 'nonexistent' -type 'Publish' } | Should -Throw "*does not exist*"
+    }
+
+    # Unknown environment - createEnvIfNotExists = true - should create unknown environment
+    It 'Test calling action directly - Unknown environment with createEnvIfNotExists should succeed' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @() })}
+        }
+
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+
+        # Environment doesn't exist but createEnvIfNotExists is true - should succeed
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'newenv' -type 'Publish' -createEnvIfNotExists $true
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        $UnknownEnvironment | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "newenv"
+    }
+
+    # Wildcard pattern with no matches - should not throw, just return 0 environments
+    It 'Test calling action directly - Wildcard pattern with no matches should not throw' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "prod"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+
+        # Pattern with wildcard that doesn't match any environment - should not throw, just return 0 environments
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test*' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+    }
+
+    # Environment name containing wildcard characters should throw (not be treated as unknown environment)
+    It 'Test calling action directly - Environment name with wildcard should not create unknown environment' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @() })}
+        }
+
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+
+        # Environment name containing wildcard - should not create unknown environment, should return 0 environments
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'FAT*' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+        $UnknownEnvironment | Should -Be 0
     }
 }
