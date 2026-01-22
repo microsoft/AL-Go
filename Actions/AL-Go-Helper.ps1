@@ -1737,10 +1737,14 @@ Function AnalyzeProjectDependencies {
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
+    $projectsThatCanBePostponed = @()
     foreach($project in $projects) {
         Write-Host -NoNewline "Analyzing project: $project, "
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.postponeProjectInBuildOrder) {
+            $projectsThatCanBePostponed += $project
+        }
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
@@ -1862,8 +1866,8 @@ Function AnalyzeProjectDependencies {
             throw "Circular project reference encountered, cannot determine build order"
         }
 
-        # Check whether any of the projects in $thisJob can be built later (no remaining dependents)
-        $projectsWithoutDependents += @($thisJob | Where-Object {
+        # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
+        $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
             $hasRemainingDependents = $false
             foreach($otherProject in $projects) {
                 if ($otherProject -ne $_) {
