@@ -747,6 +747,131 @@ Describe "Get-ProjectsToBuild" {
         { Get-ProjectsToBuild -baseFolder $baseFolder -maxBuildDepth 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"
     }
 
+    It 'postpones projects if postponeProjectInBuildOrder is set to true' {
+        # Add three dependent projects
+        # Project 1
+        # Project 2 depends on Project 1, has postponeProjectInBuildOrder set to true
+        # Project 3 depends on Project 1, has postponeProjectInBuildOrder set to true
+        # Project 4 depends on Project 2
+        $dependecyAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $dependecyAppFile -Depth 10) -type File -Force
+
+        $dependantAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Second App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        @{ postponeProjectInBuildOrder = $true } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "Project2/.AL-Go/settings.json") -Encoding UTF8
+        New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
+
+        $dependantAppFile3 = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd3'; name = 'Third App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
+        New-Item -Path "$baseFolder/Project3/.AL-Go/settings.json" -type File -Force
+        @{ postponeProjectInBuildOrder = $true } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "Project3/.AL-Go/settings.json") -Encoding UTF8
+        New-Item -Path "$baseFolder/Project3/app/app.json" -Value (ConvertTo-Json $dependantAppFile3 -Depth 10) -type File -Force
+
+        $depedantAppFile4 = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd4'; name = 'Fourth App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Second App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
+        New-Item -Path "$baseFolder/Project4/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project4/app/app.json" -Value (ConvertTo-Json $depedantAppFile4 -Depth 10) -type File -Force
+
+        #Add settings file
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
+        New-Item -Path "$baseFolder/.github" -type Directory -Force
+        $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json") -Encoding UTF8
+
+        # Add settings as environment variable to simulate we've run ReadSettings
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $allProjects | Should -BeExactly @("Project1", "Project2", "Project3", "Project4")
+        $modifiedProjects | Should -BeExactly @()
+        $projectsToBuild | Should -BeExactly @('Project1', 'Project2', 'Project3', 'Project4')
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        $projectDependencies['Project1'] | Should -BeExactly @()
+        $projectDependencies['Project2'] | Should -BeExactly @("Project1")
+        $projectDependencies['Project3'] | Should -BeExactly @("Project1")
+        $projectDependencies['Project4'] | Should -BeExactly @("Project2", "Project1")
+
+        # Build order should have the following structure:
+        #[
+        #{
+        #    "buildDimensions": [
+        #    {
+        #        "projectName": "Project1",
+        #        "buildMode": "Default",
+        #        "project": "Project1",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    },
+        #    ],
+        #    "projectsCount": 1,
+        #    "projects": [
+        #    "Project1"
+        #    ]
+        #},
+        #{
+        #    "buildDimensions": [
+        #    {
+        #        "projectName": "Project2",
+        #        "buildMode": "Default",
+        #        "project": "Project2",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    }
+        #    ],
+        #    "projectsCount": 1,
+        #    "projects": [
+        #    "Project2"
+        #    ]
+        #}
+        #{
+        #    "buildDimensions": [
+        #    {
+        #        "projectName": "Project3",
+        #        "buildMode": "Default",
+        #        "project": "Project3",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    },
+        #    {
+        #        "projectName": "Project4",
+        #        "buildMode": "Default",
+        #        "project": "Project4",
+        #        "githubRunnerShell": "powershell",
+        #        "gitHubRunner": "\"windows-latest\""
+        #    }
+        #    ],
+        #    "projectsCount": 2,
+        #    "projects": [
+        #    "Project3",
+        #    "Project4"
+        #    ]
+        #}
+        #]
+        $buildOrder.Count | Should -BeExactly 3
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @("Project1")
+        $buildOrder[0].projectsCount | Should -BeExactly 1
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
+
+        $buildOrder[1] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[1].projects | Should -BeExactly @("Project2")
+        $buildOrder[1].projectsCount | Should -BeExactly 1
+        $buildOrder[1].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[1].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[1].buildDimensions[0].project | Should -BeExactly "Project2"
+
+        $buildOrder[2] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[2].projects | Should -BeExactly @("Project4", "Project3")
+        $buildOrder[2].projectsCount | Should -BeExactly 2
+        $buildOrder[2].buildDimensions.Count | Should -BeExactly 2
+        $buildOrder[2].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[2].buildDimensions[0].project | Should -BeExactly "Project4"
+        $buildOrder[2].buildDimensions[1].buildMode | Should -BeExactly "Default"
+        $buildOrder[2].buildDimensions[1].project | Should -BeExactly "Project3"
+    }
+
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
     }
