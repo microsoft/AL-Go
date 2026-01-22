@@ -12,6 +12,10 @@
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
+### New Settings
+
+- `postponeProjectInBuildOrder` is a new project setting, which will (if set to true) cause the project to be postponed until the last build job when possible. If set on test projects, then all tests can be deferred until all builds have succeeded.
+
 ### Set default values for workflow inputs
 
 The `workflowDefaultInputs` setting now also applies to `workflow_call` inputs when an input with the same name exists for `workflow_dispatch`.
