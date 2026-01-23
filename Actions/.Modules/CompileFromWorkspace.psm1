@@ -30,7 +30,11 @@ function Build-AppsInWorkspace() {
         [string]$OutFolder,
         # Optional parameters
         [Parameter(Mandatory = $false)]
-        [System.Version]$BuildVersion,
+        [string]$MajorMinorVersion = "",
+        [Parameter(Mandatory = $false)]
+        [int] $BuildNumber = 0,
+        [Parameter(Mandatory = $false)]
+        [int] $RevisionNumber = 0,
         [Parameter(Mandatory = $false)]
         [int]$MaxCpuCount = 1,
         # Optional compiler parameters
@@ -65,7 +69,8 @@ function Build-AppsInWorkspace() {
     $PackageCachePath = Join-Path $CompilerFolder "symbols"
 
     # Update the app jsons with version number (and other properties) from the app manifest files
-    Update-AppJsonProperties -Folders $Folders -BuildVersion $BuildVersion -OutputFolder $PackageCachePath
+    Update-AppJsonProperties -Folders $Folders -OutputFolder $PackageCachePath `
+        -MajorMinorVersion $MajorMinorVersion -BuildNumber $BuildNumber -RevisionNumber $RevisionNumber
 
     # Create workspace file from AL-Go folders
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
@@ -384,9 +389,15 @@ function Update-AppJsonProperties() {
     param(
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
-        
+
         [Parameter(Mandatory = $false)]
-        [System.Version]$BuildVersion,
+        [string]$MajorMinorVersion = "",
+
+        [Parameter(Mandatory = $false)]
+        [int] $BuildNumber = 0,
+
+        [Parameter(Mandatory = $false)]
+        [int] $RevisionNumber = 0,
 
         [Parameter(Mandatory = $true)]
         [string]$OutputFolder
@@ -397,9 +408,18 @@ function Update-AppJsonProperties() {
         foreach ($appJsonFile in $appJsonFiles) {
             $appJsonContent = Get-Content -Path $appJsonFile.FullName -Raw | ConvertFrom-Json
 
-            if ($BuildVersion) {
-                $appJsonContent.version = $BuildVersion.ToString()
+            if ($MajorMinorVersion) {
+                $version = [System.Version]"$($MajorMinorVersion).$($BuildNumber).$($RevisionNumber)"
+            } else {
+                $currentAppJsonVersion = [System.Version]$appJson.Version
+                if ($appBuild -eq -1) {
+       	            $version = [System.Version]::new($currentAppJsonVersion.Major, $currentAppJsonVersion.Minor, $currentAppJsonVersion.Build, $appRevision)
+                } else {
+                    $version = [System.Version]::new($currentAppJsonVersion.Major, $currentAppJsonVersion.Minor, $appBuild, $appRevision)
+                }
             }
+
+            $appJson.Version = "$version"
 
             # Add other properties to update as needed
 

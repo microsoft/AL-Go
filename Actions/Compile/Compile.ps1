@@ -93,11 +93,13 @@ try {
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
         $appFiles = @()
+        $majorMinorVersion = "" # TODO
+        $appBuild = $settings.appBuild
+        $appRevision = $settings.appRevision
 
         # TODO: Missing in compiler buildBy, buildUrl, generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
         # TODO: Missing handling of incrementalBuilds
-        # TODO: (Maybe) Missing implementation of around using latest release as a baseline (skipUpgrade)
-        # TODO: Missing appBuildnumber implementation (could be its own action?)
+        # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
@@ -107,7 +109,9 @@ try {
             -Analyzers $analyzers `
             -Preprocessorsymbols $preprocessorSymbols `
             -Features $features `
-            -BuildVersion $buildVersion `
+            -MajorMinorVersion $majorMinorVersion `
+            -BuildNumber $appBuild `
+            -RevisionNumber $appRevision `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $sourceRepositoryUrl `
             -SourceCommit $sourceCommit `
