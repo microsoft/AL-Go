@@ -6,6 +6,7 @@
 - Issue 2004 PublishToAppSource workflow publishes multi-app repos in alphabetical order instead of dependency order
 - Issue 2045 DateTime parsing fails on non-US locale runners in WorkflowPostProcess.ps1
 - Issue 2055 When using versioningStrategy 3+16, you get an error when building
+- Issue 2094 PR into release branch gets wrong previous release
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
