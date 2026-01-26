@@ -127,7 +127,11 @@ try {
     }
 
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
-    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    if (-not (Test-Path $buildArtifactFolder)) {
+        New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    } elseif(-not ($settings.useWorkspaceCompilation)) {
+        OutputWarning -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
+    }
 
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
