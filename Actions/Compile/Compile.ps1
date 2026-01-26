@@ -156,6 +156,8 @@ try {
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $sourceRepositoryUrl `
             -SourceCommit $sourceCommit `
+            -BuildBy "AL-Go for GitHub" `
+            -BuildUrl "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID" `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
 
@@ -178,6 +180,8 @@ try {
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $sourceRepositoryUrl `
             -SourceCommit $sourceCommit `
+            -BuildBy "AL-Go for GitHub" `
+            -BuildUrl "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID" `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
 

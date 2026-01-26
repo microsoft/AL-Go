@@ -49,13 +49,15 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [switch]$GenerateReportLayout,
         [Parameter(Mandatory = $false)]
-        [string[]]$Define,
-        [Parameter(Mandatory = $false)]
         [string]$Ruleset,
         [Parameter(Mandatory = $false)]
         [string]$SourceRepositoryUrl,
         [Parameter(Mandatory = $false)]
         [string]$SourceCommit,
+        [Parameter(Mandatory = $false)]
+        [string]$BuildBy,
+        [Parameter(Mandatory = $false)]
+        [string]$BuildUrl,
         [Parameter(Mandatory = $false)]
         [scriptblock]$PreCompileApp,
         [Parameter(Mandatory = $false)]
@@ -90,10 +92,11 @@ function Build-AppsInWorkspace() {
         PreprocessorSymbols = $PreprocessorSymbols
         Features = $Features
         GenerateReportLayout = $GenerateReportLayout
-        Define = $Define
         Ruleset = $Ruleset
         SourceRepositoryUrl = $SourceRepositoryUrl
         SourceCommit = $SourceCommit
+        BuildBy = $BuildBy
+        BuildUrl = $BuildUrl
         MaxCpuCount = $MaxCpuCount
     }
 
@@ -145,9 +148,6 @@ function CompileAppsInWorkspace {
         [switch]$GenerateReportLayout,
         
         [Parameter(Mandatory = $false)]
-        [string[]]$Define,
-        
-        [Parameter(Mandatory = $false)]
         [string]$Ruleset,
         
         [Parameter(Mandatory = $false)]
@@ -155,6 +155,12 @@ function CompileAppsInWorkspace {
         
         [Parameter(Mandatory = $false)]
         [string]$SourceCommit,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BuildBy,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BuildUrl,
         
         [Parameter(Mandatory = $false)]
         [ValidateSet('Debug', 'Error', 'Normal', 'Verbose', 'Warning')]
@@ -216,10 +222,8 @@ function CompileAppsInWorkspace {
     }
 
     if ($PreprocessorSymbols -and $PreprocessorSymbols.Count -gt 0) {
-        # TODO: Implement PreprocessorSymbols handling
-        Write-Host "Warning - PreprocessorSymbols parameter is not yet implemented in CompileAppsInWorkspace."
-        #$arguments += "--preprocessorsymbols"
-        #$arguments += ($PreprocessorSymbols -join ";")
+        $arguments += "--define"
+        $arguments += ($PreprocessorSymbols -join ";")
     }
 
     if ($Features -and $Features.Count -gt 0) {
@@ -229,11 +233,6 @@ function CompileAppsInWorkspace {
 
     if ($GenerateReportLayout.IsPresent) {
         $arguments += "--generatereportlayout"
-    }
-
-    if ($Define -and $Define.Count -gt 0) {
-        $arguments += "--define"
-        $arguments += ($Define -join ";")
     }
 
     if ($Ruleset) {
@@ -249,6 +248,14 @@ function CompileAppsInWorkspace {
     if ($SourceCommit) {
         $arguments += "--sourcecommit"
         $arguments += $SourceCommit
+    }
+
+    if ($BuildBy) {
+        $env:BUILD_BY = $BuildBy
+    }
+
+    if ($BuildUrl) {
+        $env:BUILD_URL = $BuildUrl
     }
 
     if ($LogLevel -and $LogLevel -ne 'Normal') {
