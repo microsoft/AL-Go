@@ -101,7 +101,7 @@ if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incr
             -modifiedFiles $modifiedFiles `
             -buildArtifactFolder $buildArtifactFolder `
             -buildMode $buildMode `
-            -projectPath $projectPath
+            -projectPath $projectFolder
     }
 
     # Print the content of the build artifacts folder for debugging purposes
