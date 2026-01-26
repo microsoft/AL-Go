@@ -411,7 +411,7 @@ function Update-AppJsonProperties() {
             if ($MajorMinorVersion) {
                 $version = [System.Version]"$($MajorMinorVersion).$($BuildNumber).$($RevisionNumber)"
             } else {
-                $currentAppJsonVersion = [System.Version]$appJson.Version
+                $currentAppJsonVersion = [System.Version]$appJsonContent.Version
                 if ($appBuild -eq -1) {
        	            $version = [System.Version]::new($currentAppJsonVersion.Major, $currentAppJsonVersion.Minor, $currentAppJsonVersion.Build, $appRevision)
                 } else {
