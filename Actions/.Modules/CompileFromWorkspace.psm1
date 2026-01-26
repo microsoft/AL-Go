@@ -406,8 +406,6 @@ function Update-AppJsonProperties() {
     foreach ($folder in $Folders) {
         $appJsonFiles = Get-ChildItem -Path $folder -Filter "app.json"
         foreach ($appJsonFile in $appJsonFiles) {
-            Write-Host "Updating app.json at $($appJsonFile.FullName)"
-            Write-Host "Content: $(Get-Content -Path $appJsonFile.FullName -Raw)"
             $appJsonContent = Get-Content -Path $appJsonFile.FullName -Raw | ConvertFrom-Json
 
             if ($MajorMinorVersion) {
@@ -421,6 +419,7 @@ function Update-AppJsonProperties() {
                 }
             }
 
+            Write-Host "Updating app.json at $($appJsonFile.FullName) to version $version"
             $appJsonContent.version = "$version"
 
             # Add other properties to update as needed
