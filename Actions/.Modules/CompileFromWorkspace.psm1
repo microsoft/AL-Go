@@ -27,6 +27,8 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $true)]
         [string]$CompilerFolder,
         [Parameter(Mandatory = $false)]
+        [string]$PackageCachePath,
+        [Parameter(Mandatory = $false)]
         [string]$OutFolder,
         # Optional parameters
         [Parameter(Mandatory = $false)]
@@ -66,7 +68,9 @@ function Build-AppsInWorkspace() {
     $assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
 
     # Get the package cache path
-    $PackageCachePath = Join-Path $CompilerFolder "symbols"
+    if (-not $PackageCachePath) {
+        $PackageCachePath = Join-Path $CompilerFolder "symbols"
+    }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
     Update-AppJsonProperties -Folders $Folders -OutputFolder $PackageCachePath `

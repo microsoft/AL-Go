@@ -108,7 +108,9 @@ if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incr
     $buildArtifactContents = Get-ChildItem -Path $buildArtifactFolder -Recurse
     Write-Host "Build artifacts folder contents:"
     foreach ($item in $buildArtifactContents) {
-        Write-Host " - $($item.FullName)"
+        # Copy to the packagecache path
+        Write-Host "Copying $($item.FullName) to package cache"
+        Copy-Item -Path $item.FullName -Destination (Join-Path $compilerFolder "symbols") -Recurse -Force
     }
 }
 
@@ -137,17 +139,12 @@ try {
         $appRevision = $versionNumber.RevisionNumber
 
         # TODO: Missing in compiler buildBy, buildUrl, generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
-        # TODO: Missing handling of incrementalBuilds
-        # - Set up buildartifacts folder 
-        # - Call the function to download apps 
-        # - For every app folder, check the app.json for the name and see if that app is in the downloaded apps
-        # - If it is, copy the app to the output folder and skip compilation
-        # - If it is not, compile the app as normal
         # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
             -CompilerFolder $compilerFolder `
+            -PackageCachePath (Join-Path $compilerFolder "symbols") `
             -OutFolder $appOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -Analyzers $analyzers `
