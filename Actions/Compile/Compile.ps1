@@ -38,7 +38,6 @@ if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0) {
 $projectFolder = Join-Path $baseFolder $project
 Set-Location $projectFolder
 $analyzers = @()
-$buildVersion = "28.0.0.0"
 $precompileOverride = $null
 $postCompileOverride = $null
 
@@ -93,9 +92,10 @@ try {
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
         $appFiles = @()
-        $majorMinorVersion = "" # TODO
-        $appBuild = $settings.appBuild
-        $appRevision = $settings.appRevision
+        $versionNumber = Get-VersionNumber -Settings $settings
+        $majorMinorVersion = $versionNumber.MajorMinorVersion
+        $appBuild = $versionNumber.BuildNumber
+        $appRevision = $versionNumber.RevisionNumber
 
         # TODO: Missing in compiler buildBy, buildUrl, generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
         # TODO: Missing handling of incrementalBuilds

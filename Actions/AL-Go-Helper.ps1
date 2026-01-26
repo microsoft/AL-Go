@@ -2383,3 +2383,38 @@ function RunAndCheck {
         throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $LASTEXITCODE"
     }
 }
+
+function Get-VersionNumber() {
+    param(
+        $Settings
+    )
+    $majorMinorVersion = ""
+    $appBuild = $Settings.appBuild
+    $appRevision = $Settings.appRevision
+
+    if ($Settings.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$Settings.artifact.Split('/')[4]
+        $majorMinorVersion = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+        $appBuild = $artifactVersion.Build
+        $appRevision = $artifactVersion.Revision
+    } elseif (($Settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$Settings.repoVersion
+        $majorMinorVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
+        if (($Settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
+    }
+    
+    # Construct object to return
+    return [PSCustomObject]@{
+        MajorMinorVersion = $majorMinorVersion
+        BuildNumber = $appBuild
+        RevisionNumber = $appRevision
+    }
+}

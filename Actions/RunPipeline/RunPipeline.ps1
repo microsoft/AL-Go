@@ -84,8 +84,6 @@ try {
         $secrets = @{}
     }
 
-    $appBuild = $settings.appBuild
-    $appRevision = $settings.appRevision
     'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
@@ -313,28 +311,11 @@ try {
     $environmentName = ""
     $CreateRuntimePackages = $false
 
-    if ($settings.versioningStrategy -eq -1) {
-        $artifactVersion = [Version]$settings.artifact.Split('/')[4]
-        $runAlPipelineParams += @{
-            "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
-        }
-        $appBuild = $artifactVersion.Build
-        $appRevision = $artifactVersion.Revision
-    }
-    elseif (($settings.versioningStrategy -band 16) -eq 16) {
-        # For versioningStrategy +16, the version number is taken from repoVersion setting
-        $repoVersion = [System.Version]$settings.repoVersion
-        if (($settings.versioningStrategy -band 15) -eq 3) {
-            # For versioning strategy 3, we need to get the build number from repoVersion setting
-            $appBuild = $repoVersion.Build
-            if ($appBuild -eq -1) {
-                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
-                $appBuild = 0
-            }
-        }
-        $runAlPipelineParams += @{
-            "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
-        }
+    $versionNumber = Get-VersionNumber -Settings $settings
+    $runAlPipelineParams += @{
+        "appVersion" = $versionNumber.MajorMinorVersion
+        "appBuild" = $versionNumber.BuildNumber
+        "appRevision" = $versionNumber.RevisionNumber
     }
 
     $allTestResults = "testresults*.xml"
@@ -557,7 +538,7 @@ try {
         -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
-        -appBuild $appBuild -appRevision $appRevision `
+        -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
         -uninstallRemovedApps
 
     if ($containerBaseFolder) {
