@@ -73,6 +73,45 @@ New-Item $appOutputFolder -ItemType Directory | Out-Null
 $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
 New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 
+$baselineWorkflowRunId = "21344657325"
+$baselineWorkflowSHA = "0922521f2b20922f6772a3eed4e87caf9c7cc3e6"
+if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+    # Incremental builds are enabled and we are only building modified apps
+    try {
+        $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+        OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+        $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+    }
+    catch {
+        OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+        $buildAll = $true
+    }
+
+    # TODO: Debug
+    $buildAll = $false
+    if (!$buildAll) {
+        Write-Host "Get unmodified apps from baseline workflow run"
+        # Downloaded apps are placed in the build artifacts folder, which is detected by Run-AlPipeline, meaning only non-downloaded apps are built
+        Get-UnmodifiedAppsFromBaselineWorkflowRun `
+            -token $token `
+            -settings $settings `
+            -baseFolder $baseFolder `
+            -project $project `
+            -baselineWorkflowRunId $baselineWorkflowRunId `
+            -modifiedFiles $modifiedFiles `
+            -buildArtifactFolder $buildArtifactFolder `
+            -buildMode $buildMode `
+            -projectPath $projectPath
+    }
+
+    # Print the content of the build artifacts folder for debugging purposes
+    $buildArtifactContents = Get-ChildItem -Path $buildArtifactFolder -Recurse
+    Write-Host "Build artifacts folder contents:"
+    foreach ($item in $buildArtifactContents) {
+        Write-Host " - $($item.FullName)"
+    }
+}
+
 try {
     $sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
     $sourceCommit = $ENV:GITHUB_SHA
@@ -99,6 +138,11 @@ try {
 
         # TODO: Missing in compiler buildBy, buildUrl, generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
         # TODO: Missing handling of incrementalBuilds
+        # - Set up buildartifacts folder 
+        # - Call the function to download apps 
+        # - For every app folder, check the app.json for the name and see if that app is in the downloaded apps
+        # - If it is, copy the app to the output folder and skip compilation
+        # - If it is not, compile the app as normal
         # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
