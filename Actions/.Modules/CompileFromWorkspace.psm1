@@ -414,6 +414,8 @@ function Update-AppJsonProperties() {
         [string]$OutputFolder
     )
 
+    # TODO: Update implementation to support Directory.App.Props.json
+
     foreach ($folder in $Folders) {
         $appJsonFiles = Get-ChildItem -Path $folder -Filter "app.json"
         foreach ($appJsonFile in $appJsonFiles) {

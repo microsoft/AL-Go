@@ -138,7 +138,7 @@ try {
         $appBuild = $versionNumber.BuildNumber
         $appRevision = $versionNumber.RevisionNumber
 
-        # TODO: Missing in compiler buildBy, buildUrl, generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
+        # TODO: Missing in compiler generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
         # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
