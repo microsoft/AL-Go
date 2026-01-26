@@ -111,30 +111,36 @@ if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incr
 }
 
 try {
+    # Prepare build metadata
     $sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
     $sourceCommit = $ENV:GITHUB_SHA
+    $buildBy = "AL-Go for GitHub"
+    $buildUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID"
 
+    # Collect preprocessor symbols
     $preprocessorSymbols = @()
     if ($settings.ContainsKey('preprocessorSymbols')) {
         Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
         $preprocessorSymbols += $settings.preprocessorSymbols
     }
 
+    # Collect features
     $features = @()
     if ($settings.ContainsKey('features')) {
         Write-Host "Adding features : $($settings.features -join ',')"
         $features += $settings.features
     }
 
+    # Get version number
+    $versionNumber = Get-VersionNumber -Settings $settings
+    $majorMinorVersion = $versionNumber.MajorMinorVersion
+    $appBuild = $versionNumber.BuildNumber
+    $appRevision = $versionNumber.RevisionNumber
+
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
         $appFiles = @()
-        $versionNumber = Get-VersionNumber -Settings $settings
-        $majorMinorVersion = $versionNumber.MajorMinorVersion
-        $appBuild = $versionNumber.BuildNumber
-        $appRevision = $versionNumber.RevisionNumber
 
-        # TODO: Missing in compiler generatecrossreferences, ReportSuppressedDiagnostics, generateErrorLog
         # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
@@ -152,8 +158,8 @@ try {
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $sourceRepositoryUrl `
             -SourceCommit $sourceCommit `
-            -BuildBy "AL-Go for GitHub" `
-            -BuildUrl "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID" `
+            -BuildBy $buildBy `
+            -BuildUrl $buildUrl `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
 
@@ -176,8 +182,8 @@ try {
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $sourceRepositoryUrl `
             -SourceCommit $sourceCommit `
-            -BuildBy "AL-Go for GitHub" `
-            -BuildUrl "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID" `
+            -BuildBy $buildBy `
+            -BuildUrl $buildUrl `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
 

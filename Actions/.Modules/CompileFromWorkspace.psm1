@@ -201,6 +201,10 @@ function CompileAppsInWorkspace {
     }
 
     # Add optional parameters only if they are provided
+    # TODO: Missing parameters in the compiler that cannot be added yet: 
+    # - generatecrossreferences
+    # - ReportSuppressedDiagnostics
+    # - errorLog
     if ($MaxCpuCount -and $MaxCpuCount -ne [System.Environment]::ProcessorCount) {
         $arguments += "--maxcpucount"
         $arguments += $MaxCpuCount.ToString()
