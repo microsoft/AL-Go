@@ -419,7 +419,7 @@ function Update-AppJsonProperties() {
                 }
             }
 
-            $appJson.Version = "$version"
+            $appJson.version = "$version"
 
             # Add other properties to update as needed
 
