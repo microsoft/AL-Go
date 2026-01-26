@@ -73,8 +73,6 @@ New-Item $appOutputFolder -ItemType Directory | Out-Null
 $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
 New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 
-$baselineWorkflowRunId = "21344657325"
-$baselineWorkflowSHA = "0922521f2b20922f6772a3eed4e87caf9c7cc3e6"
 if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
     # Incremental builds are enabled and we are only building modified apps
     try {
@@ -87,8 +85,6 @@ if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incr
         $buildAll = $true
     }
 
-    # TODO: Debug
-    $buildAll = $false
     if (!$buildAll) {
         Write-Host "Get unmodified apps from baseline workflow run"
         # Downloaded apps are placed in the build artifacts folder, which is detected by Run-AlPipeline, meaning only non-downloaded apps are built
