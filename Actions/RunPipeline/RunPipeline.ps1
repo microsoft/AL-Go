@@ -84,6 +84,11 @@ try {
         $secrets = @{}
     }
 
+    if ($settings.useWorkspaceCompilation -and $settings.doNotPublishApps -and $settings.doNotRunTests) {
+        Write-Host "Apps are compiled and doNotPublishApps is set. Exiting..."
+        return 
+    }
+
     'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
