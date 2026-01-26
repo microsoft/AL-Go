@@ -131,7 +131,9 @@ try {
             -Analyzers $analyzers `
             -Preprocessorsymbols $preprocessorSymbols `
             -Features $features `
-            -BuildVersion $buildVersion `
+            -MajorMinorVersion $majorMinorVersion `
+            -BuildNumber $appBuild `
+            -RevisionNumber $appRevision `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $sourceRepositoryUrl `
             -SourceCommit $sourceCommit `
