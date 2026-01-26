@@ -419,14 +419,14 @@ function Update-AppJsonProperties() {
                 }
             }
 
-            Write-Host "Updating app.json at $($appJsonFile.FullName) to version $version"
+            OutputDebug "Updating app.json at $($appJsonFile.FullName) to version $version"
             $appJsonContent.version = "$version"
 
             # Add other properties to update as needed
 
             # Save the updated app.json file
             $appJsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $appJsonFile.FullName -Encoding UTF8
-            Write-Host "Updated app.json at $($appJsonFile.FullName)"
+            OutputDebug "Updated app.json at $($appJsonFile.FullName)"
 
             # Generate app file name
             $appFileName = "$($appJsonContent.Publisher)_$($appJsonContent.Name)_$($appJsonContent.Version).app".Split([System.IO.Path]::GetInvalidFileNameChars()) -join ''
@@ -435,7 +435,7 @@ function Update-AppJsonProperties() {
             $existingAppFilePath = Join-Path $OutputFolder $appFileName
             if (Test-Path $existingAppFilePath) {
                 Remove-Item -Path $existingAppFilePath -Force
-                Write-Host "Deleted existing app file at $existingAppFilePath"
+                OutputDebug "Deleted existing app file at $existingAppFilePath"
             }
         }
     }
