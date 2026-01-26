@@ -1723,6 +1723,38 @@ function CheckAndCreateProjectFolder {
     }
 }
 
+function TestIfProjectHasRemainingDependents {
+    Param(
+        [string] $project,
+        [string[]] $projects,
+        [hashtable] $appDependencies,
+        [array] $projectsOrder
+    )
+
+    $hasRemainingDependents = $false
+    foreach($otherProject in $projects) {
+        if ($otherProject -ne $project) {
+            # Grab dependencies from other project, which haven't been built yet
+            $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
+                $dependency = $_
+                $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
+                return -not $alreadyBuilt
+            }
+            Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
+            foreach($dependency in $otherDependencies) {
+                if ($appDependencies."$project".apps -contains $dependency) {
+                    Write-Host "Project $project is still a dependency for project $otherProject"
+                    $hasRemainingDependents = $true
+                }
+            }
+        }
+    }
+    if (!$hasRemainingDependents) {
+        Write-Host "Project $project has no remaining dependents, can be built later"
+    }
+    return $hasRemainingDependents
+}
+
 Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
@@ -1868,28 +1900,7 @@ Function AnalyzeProjectDependencies {
 
         # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
         $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
-            $hasRemainingDependents = $false
-            foreach($otherProject in $projects) {
-                if ($otherProject -ne $_) {
-                    # Grab dependencies from other project, which haven't been build yet
-                    $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
-                        $dependency = $_
-                        $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
-                        return -not $alreadyBuilt
-                    }
-                    Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
-                    foreach($dependency in $otherDependencies) {
-                        if ($appDependencies."$_".apps -contains $dependency) {
-                            Write-Host "Project $_ is still a dependency for project $otherProject"
-                            $hasRemainingDependents = $true
-                        }
-                    }
-                }
-            }
-            if (!$hasRemainingDependents) {
-                Write-Host "Project $_ has no remaining dependents, can be built later"
-            }
-            return -not $hasRemainingDependents
+            return -not (TestIfProjectHasRemainingDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder)
         })
 
         # Remove projects in this job from the list of projects to be built (including the projects without dependents)
