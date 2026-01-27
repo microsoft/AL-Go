@@ -174,11 +174,11 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
 }
 
 # Start compilation
+$appFiles = @()
+$testAppFiles = @()
 try {
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
-        $appFiles = @()
-
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
@@ -203,7 +203,6 @@ try {
     }
 
     if ($settings.testFolders.Count -gt 0) {
-        $testAppFiles = @()
         if (-not $settings.enableCodeAnalyzersOnTestApps) {
             $analyzers = @()
         }
