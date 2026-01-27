@@ -355,9 +355,7 @@ foreach ($thisProject in $sortedProjectList) {
             Write-Host "deliverToAppSource.ProductId is not specified, project is a library apps project"
             continue
         }
-        else {
-            Write-Host "deliverToAppSource.ProductId is $($projectSettings.deliverToAppSource.ProductId)"
-        }
+        Write-Host "deliverToAppSource.ProductId is $($projectSettings.deliverToAppSource.ProductId)"
         # if type is Release, we only get here with the projects that needs to be delivered to AppSource
         # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
         if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
