@@ -564,6 +564,10 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
+    if ($settings.workspaceCompilationParallelism -lt 0) {
+        $settings.workspaceCompilationParallelism = [System.Environment]::ProcessorCount
+    }
+
     $settings | ValidateSettings
 
     $settings
