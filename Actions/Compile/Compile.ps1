@@ -53,7 +53,7 @@ $postCompileOverride = $null
 foreach ($override in @("PreCompileApp", "PostCompileApp")) {
     $scriptPath = Join-Path $ALGoFolderName "$override.ps1"
     if (Test-Path -Path $scriptPath -Type Leaf) {
-        Write-Host "Add override for $override"
+        Write-Host "Add override for $override ($scriptPath)"
         Trace-Information -Message "Using override for $override"
         if ($override -eq "PreCompileApp") {
             $precompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
@@ -169,13 +169,17 @@ if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incr
     }
 }
 
+if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
+    # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
+    Write-Host "Checking for required upgrades using AppSourceCop..."
+}
+
 # Start compilation
 try {
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
         $appFiles = @()
 
-        # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
         # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
