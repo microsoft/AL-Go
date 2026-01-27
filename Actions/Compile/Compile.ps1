@@ -21,30 +21,91 @@ Param(
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot '.\Compile.psm1' -Resolve)
-DownloadAndImportBcContainerHelper
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+DownloadAndImportBcContainerHelper
 
+# ANALYZE - Analyze the repository and determine settings
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+# Check if there are any app folders or test app folders to compile
 if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0) {
     Write-Host "No app folders or test app folders specified for compilation. Skipping compilation step."
     return
 }
 
-#TODO
 $projectFolder = Join-Path $baseFolder $project
 Set-Location $projectFolder
-$analyzers = @()
+
+# Set up output folders
+$buildArtifactFolder = Join-Path $projectFolder ".buildartifacts"
+New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+$appOutputFolder = Join-Path $buildArtifactFolder "Apps"
+New-Item $appOutputFolder -ItemType Directory | Out-Null
+$testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
+New-Item $testAppOutputFolder -ItemType Directory | Out-Null
+
+# Check for precompile and postcompile overrides
 $precompileOverride = $null
 $postCompileOverride = $null
+foreach ($override in @("PreCompileApp", "PostCompileApp")) {
+    $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
+    if (Test-Path -Path $scriptPath -Type Leaf) {
+        Write-Host "Add override for $scriptName"
+        Trace-Information -Message "Using override for $scriptName"
+        if ($override -eq "PreCompileApp") {
+            $precompileOverride = $scriptPath
+        }
+        else {
+            $postCompileOverride = $scriptPath
+        }
+    }
+}
 
-# Set up a compiler folder 
-$containerName = GetContainerName($project)
-$compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler"
+# Determine which code analyzers to use
+$analyzers = @()
+if ($settings.enableCodeCop) {
+    $analyzers += "CodeCop"
+}
+if ($settings.enableAppSourceCop) {
+    $analyzers += "AppSourceCop"
+}
+if ($settings.enablePerTenantExtensionCop) {
+    $analyzers += "PTECop"
+}
+if ($settings.enableUICop) {
+    $analyzers += "UICop"
+}
 
+# Prepare build metadata
+$sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+$sourceCommit = $ENV:GITHUB_SHA
+$buildBy = "AL-Go for GitHub"
+$buildUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID"
+
+# Collect preprocessor symbols
+$preprocessorSymbols = @()
+if ($settings.ContainsKey('preprocessorSymbols')) {
+    Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
+    $preprocessorSymbols += $settings.preprocessorSymbols
+}
+
+# Collect features
+$features = @()
+if ($settings.ContainsKey('features')) {
+    Write-Host "Adding features : $($settings.features -join ',')"
+    $features += $settings.features
+}
+
+# Get version number
+$versionNumber = Get-VersionNumber -Settings $settings
+$majorMinorVersion = $versionNumber.MajorMinorVersion
+$appBuild = $versionNumber.BuildNumber
+$appRevision = $versionNumber.RevisionNumber
+
+# Read existing install apps and test apps from JSON files
 $installApps = $settings.installApps
 $installTestApps = $settings.installTestApps
 
@@ -66,13 +127,11 @@ if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
     }
 }
 
-$buildArtifactFolder = Join-Path $projectFolder ".buildartifacts"
-New-Item $buildArtifactFolder -ItemType Directory | Out-Null
-$appOutputFolder = Join-Path $buildArtifactFolder "Apps"
-New-Item $appOutputFolder -ItemType Directory | Out-Null
-$testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
-New-Item $testAppOutputFolder -ItemType Directory | Out-Null
+# Set up a compiler folder
+$containerName = GetContainerName($project)
+$compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler"
 
+# Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
 if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
     # Incremental builds are enabled and we are only building modified apps
     try {
@@ -110,33 +169,8 @@ if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incr
     }
 }
 
+# Start compilation
 try {
-    # Prepare build metadata
-    $sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-    $sourceCommit = $ENV:GITHUB_SHA
-    $buildBy = "AL-Go for GitHub"
-    $buildUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID"
-
-    # Collect preprocessor symbols
-    $preprocessorSymbols = @()
-    if ($settings.ContainsKey('preprocessorSymbols')) {
-        Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
-        $preprocessorSymbols += $settings.preprocessorSymbols
-    }
-
-    # Collect features
-    $features = @()
-    if ($settings.ContainsKey('features')) {
-        Write-Host "Adding features : $($settings.features -join ',')"
-        $features += $settings.features
-    }
-
-    # Get version number
-    $versionNumber = Get-VersionNumber -Settings $settings
-    $majorMinorVersion = $versionNumber.MajorMinorVersion
-    $appBuild = $versionNumber.BuildNumber
-    $appRevision = $versionNumber.RevisionNumber
-
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
         $appFiles = @()
@@ -162,12 +196,14 @@ try {
             -BuildUrl $buildUrl `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
-
-        $installApps += $appFiles
     }
 
     if ($settings.testFolders.Count -gt 0) {
         $testAppFiles = @()
+        if (-not $settings.enableCodeAnalyzersOnTestApps) {
+            $analyzers = @()
+        }
+
         $testAppFiles = Build-AppsInWorkspace `
             -Folders $settings.testFolders `
             -CompilerFolder $compilerFolder `
@@ -186,13 +222,13 @@ try {
             -BuildUrl $buildUrl `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
-
-        $installTestApps += $testAppFiles
     }
 } finally {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole
 }
 
 # OUTPUT - Output the install apps and test apps as JSON
+$installApps += $appFiles
+$installTestApps += $testAppFiles
 ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson
 ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installTestAppsJson
