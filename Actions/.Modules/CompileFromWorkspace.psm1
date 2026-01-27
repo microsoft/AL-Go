@@ -106,7 +106,7 @@ function Build-AppsInWorkspace() {
     # Pre-Compile Apps - Invoke script override before compilation
     if ($PreCompileApp) {
         Write-Host "Invoking Pre-Compile App Script..."
-        Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList ($AppType, [ref] $compilationParameters)
+        Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList $AppType, ([ref] $compilationParameters)
     }
 
     # Compile apps
@@ -115,7 +115,7 @@ function Build-AppsInWorkspace() {
     # Post-Compile Apps - Invoke sccript override after compilation
     if ($PostCompileApp) {
         Write-Host "Invoking Post-Compile App Script..."
-        Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList ($appFiles, $AppType, $compilationParams)
+        Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
 
     # Clean up 
