@@ -56,10 +56,10 @@ foreach ($override in @("PreCompileApp", "PostCompileApp")) {
         Write-Host "Add override for $override"
         Trace-Information -Message "Using override for $override"
         if ($override -eq "PreCompileApp") {
-            $precompileOverride = $scriptPath
+            $precompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
         }
         else {
-            $postCompileOverride = $scriptPath
+            $postCompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
         }
     }
 }
