@@ -196,6 +196,8 @@ function CompileAppsInWorkspace {
     if ($MaxCpuCount -gt [System.Environment]::ProcessorCount) {
         Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $([System.Environment]::ProcessorCount). Using $([System.Environment]::ProcessorCount) instead."
         $MaxCpuCount = [System.Environment]::ProcessorCount
+    } elseif ($MaxCpuCount -lt 0) {
+        $MaxCpuCount = [System.Environment]::ProcessorCount
     }
 
     # Check if the workspace file exists
