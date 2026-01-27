@@ -51,10 +51,10 @@ New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 $precompileOverride = $null
 $postCompileOverride = $null
 foreach ($override in @("PreCompileApp", "PostCompileApp")) {
-    $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
+    $scriptPath = Join-Path $ALGoFolderName "$override.ps1"
     if (Test-Path -Path $scriptPath -Type Leaf) {
-        Write-Host "Add override for $scriptName"
-        Trace-Information -Message "Using override for $scriptName"
+        Write-Host "Add override for $override"
+        Trace-Information -Message "Using override for $override"
         if ($override -eq "PreCompileApp") {
             $precompileOverride = $scriptPath
         }
