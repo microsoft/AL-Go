@@ -352,7 +352,7 @@ foreach ($thisProject in $sortedProjectList) {
         }
         # Check whether project has a ProductId defined (needs to be submitted) or it is a library project
         if (!$projectSettings.deliverToAppSource.ProductId) {
-            Write-Host "deliverToAppSource.ProductId is not specified, project is a library apps project"
+            Write-Host "deliverToAppSource.ProductId is not specified, project is a library project"
             continue
         }
         Write-Host "deliverToAppSource.ProductId is $($projectSettings.deliverToAppSource.ProductId)"
