@@ -59,6 +59,9 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string]$BuildUrl,
         [Parameter(Mandatory = $false)]
+        [ValidateSet('app', 'testApp')]
+        [string]$AppType,
+        [Parameter(Mandatory = $false)]
         [scriptblock]$PreCompileApp,
         [Parameter(Mandatory = $false)]
         [scriptblock]$PostCompileApp
@@ -103,7 +106,7 @@ function Build-AppsInWorkspace() {
     # Pre-Compile Apps - Invoke script override before compilation
     if ($PreCompileApp) {
         Write-Host "Invoking Pre-Compile App Script..."
-        Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList ([ref] $compilationParameters)
+        Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList ($AppType, [ref] $compilationParameters)
     }
 
     # Compile apps
@@ -112,7 +115,7 @@ function Build-AppsInWorkspace() {
     # Post-Compile Apps - Invoke sccript override after compilation
     if ($PostCompileApp) {
         Write-Host "Invoking Post-Compile App Script..."
-        Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $compilationParams
+        Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList ($appFiles, $AppType, $compilationParams)
     }
 
     # Clean up 

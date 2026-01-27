@@ -198,6 +198,7 @@ try {
             -SourceCommit $sourceCommit `
             -BuildBy $buildBy `
             -BuildUrl $buildUrl `
+            -AppType 'app' `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
     }
@@ -224,6 +225,7 @@ try {
             -SourceCommit $sourceCommit `
             -BuildBy $buildBy `
             -BuildUrl $buildUrl `
+            -AppType 'testApp' `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
     }
