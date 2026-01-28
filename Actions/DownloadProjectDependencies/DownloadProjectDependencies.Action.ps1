@@ -9,6 +9,122 @@
     [string] $token
 )
 
+<#
+    .SYNOPSIS
+    Downloads an app file from a URL to a specified download path.
+    .DESCRIPTION
+    Downloads an app file from a URL to a specified download path.
+    It handles URL decoding and sanitizes the file name.
+    .PARAMETER Url
+    The URL of the app file to download.
+    .PARAMETER DownloadPath
+    The path where the app file should be downloaded.
+    .OUTPUTS
+    The path to the downloaded app file.
+#>
+function Get-AppFileFromUrl {
+    Param(
+        [string] $Url,
+        [string] $DownloadPath
+    )
+    # Get the file name from the URL
+    $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
+    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
+    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
+    $decodedFileName = [System.IO.Path]::GetFileName($decodedFileName)
+
+    # Sanitize file name by removing invalid characters
+    $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+    $sanitizedFileName = $sanitizedFileName.Trim()
+
+    # Get the final app file path
+    $appFile = Join-Path $DownloadPath $sanitizedFileName
+    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    return $appFile
+}
+
+<#
+    .SYNOPSIS
+    Downloads dependencies from URLs specified in installApps and installTestApps settings.
+    .DESCRIPTION
+    Reads the installApps and installTestApps arrays from the repository settings.
+    For each entry that is a URL (starts with http:// or https://):
+    - Resolves any secret placeholders in the format ${{ secretName }} by looking up the secret value
+    - Downloads the app file to the specified destination path
+    For entries that are not URLs (local paths), they are returned as-is.
+    .PARAMETER DestinationPath
+    The path where the app files should be downloaded.
+    .OUTPUTS
+    A hashtable with Apps and TestApps arrays containing the resolved local file paths.
+#>
+function DownloadDependenciesFromInstallApps {
+    Param(
+        [string] $DestinationPath
+    )
+
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+
+    # Check if the installApps and installTestApps settings are empty
+    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
+        return @{
+            "Apps" = @()
+            "TestApps" = @()
+        }
+    }
+
+    # ENV:Secrets is not set when running Pull_Request trigger
+    if ($env:Secrets) {
+        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    else {
+        $secrets = @{}
+    }
+
+    $install = @{
+        "Apps" = @($settings.installApps)
+        "TestApps" = @($settings.installTestApps)
+    }
+
+
+    # Check if the installApps and installTestApps settings are empty
+    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
+        Write-Host "No installApps or installTestApps settings found."
+        return $install
+    }
+
+    # Replace secret names in install.apps and install.testApps and download files from URLs
+    foreach($list in @('Apps','TestApps')) {
+        $install."$list" = @($install."$list" | ForEach-Object {
+            $appFile = $_
+
+            # If the app file is not a URL, return it as is
+            if ($appFile -notlike 'http*://*') {
+                Write-Host "install$($list) contains a local path: $appFile"
+                return $appFile
+            }
+
+            # Else, check for secrets in the URL and replace them
+            $appFileUrl = $appFile
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            if ($appFile -match $pattern) {
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            }
+
+            # Download the app file to a temporary location
+            try {
+                Write-Host "Downloading app from URL: $appFile"
+                $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
+            } catch {
+                throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
+            }
+
+            return $appFile
+        })
+    }
+
+    return $install
+}
+
 function DownloadDependenciesFromProbingPaths {
     param(
         $baseFolder,
@@ -123,6 +239,10 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
+Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
+$settingsDependencies = DownloadDependenciesFromInstallApps -DestinationPath $destinationPath
+Write-Host "::endgroup::"
+
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -136,6 +256,10 @@ $downloadedDependencies | ForEach-Object {
         $downloadedApps += $_
     }
 }
+
+# Add dependencies from settings
+$downloadedApps += $settingsDependencies.Apps
+$downloadedTestApps += $settingsDependencies.TestApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
