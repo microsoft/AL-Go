@@ -43,6 +43,9 @@ function Get-AppFileFromUrl {
 
     # Get the final app file path
     $appFile = Join-Path $DownloadPath $sanitizedFileName
+    if (Test-Path -LiteralPath $appFile) {
+        OutputDebug -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
+    }
 
     # Download with retry logic (compatible with PS5 and PS7)
     $maxRetries = 3
