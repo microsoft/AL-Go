@@ -63,6 +63,15 @@ function DownloadDependenciesFromInstallApps {
     )
 
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+
+    # Check if the installApps and installTestApps settings are empty
+    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
+        return @{
+            "Apps" = @()
+            "TestApps" = @()
+        }
+    }
+
     # ENV:Secrets is not set when running Pull_Request trigger
     if ($env:Secrets) {
         $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
@@ -76,6 +85,13 @@ function DownloadDependenciesFromInstallApps {
         "TestApps" = @($settings.installTestApps)
     }
 
+    
+    # Check if the installApps and installTestApps settings are empty
+    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
+        Write-Host "No installApps or installTestApps settings found."
+        return $install
+    }
+
     # Replace secret names in install.apps and install.testApps and download files from URLs
     foreach($list in @('Apps','TestApps')) {
         $install."$list" = @($install."$list" | ForEach-Object {
@@ -83,6 +99,7 @@ function DownloadDependenciesFromInstallApps {
 
             # If the app file is not a URL, return it as is
             if ($appFile -notlike 'http*://*') {
+                Write-Host "install$($list) contains a local path: $appFile"
                 return $appFile
             }
 
@@ -95,6 +112,7 @@ function DownloadDependenciesFromInstallApps {
 
             # Download the app file to a temporary location
             try {
+                Write-Host "Downloading app from URL: $appFile"
                 $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
             } catch {
                 throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
