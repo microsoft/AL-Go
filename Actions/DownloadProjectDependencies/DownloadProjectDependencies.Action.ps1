@@ -139,7 +139,7 @@ function DownloadDependenciesFromInstallApps {
                 Write-Host "Downloading app from URL: $appFile"
                 $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
             } catch {
-                throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
+                throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
             }
 
             return $appFile
