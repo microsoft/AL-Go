@@ -47,27 +47,10 @@ function Get-AppFileFromUrl {
         OutputDebug -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
     }
 
-    # Download with retry logic (compatible with PS5 and PS7)
-    $maxRetries = 3
-    $retryIntervalSec = 5
-    $retryCount = 0
-    $success = $false
-    while (-not $success -and $retryCount -lt $maxRetries) {
-        try {
-            Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile | Out-Null
-            $success = $true
-        }
-        catch {
-            $retryCount++
-            if ($retryCount -lt $maxRetries) {
-                Write-Host "Download failed, retrying in $retryIntervalSec seconds... (Attempt $retryCount of $maxRetries)"
-                Start-Sleep -Seconds $retryIntervalSec
-            }
-            else {
-                throw $_
-            }
-        }
-    }
+    # Download with retry logic
+    Invoke-CommandWithRetry -ScriptBlock {
+        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile | Out-Null
+    } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
 
     return $appFile
 }
