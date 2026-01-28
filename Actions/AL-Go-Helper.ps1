@@ -1911,7 +1911,7 @@ Function AnalyzeProjectDependencies {
 
         if ($projects.Count -eq 0) {
             # Last job, add jobs without dependents
-            Write-Host "Adding jobs without dependents to last build job"
+            Write-Host "Adding projects without dependents to last build job"
             $thisJob += $projectsWithoutDependents
         }
 
