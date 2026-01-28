@@ -11,6 +11,13 @@
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
+### Improving error detection and build reliability when downloading project dependencies
+
+The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
+- Earlier detection of inaccessible or misconfigured URLs
+- Clearer error messages when secrets are missing or URLs are invalid
+- Warnings for potential issues like duplicate filenames or insecure HTTP connections
+
 ### Set default values for workflow inputs
 
 The `workflowDefaultInputs` setting now also applies to `workflow_call` inputs when an input with the same name exists for `workflow_dispatch`.

@@ -37,9 +37,21 @@ function Get-AppFileFromUrl {
     $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
     $sanitizedFileName = $sanitizedFileName.Trim()
 
+    if ([string]::IsNullOrWhiteSpace($sanitizedFileName)) {
+        $sanitizedFileName = "$([Guid]::NewGuid().ToString()).app"
+    }
+
     # Get the final app file path
     $appFile = Join-Path $DownloadPath $sanitizedFileName
-    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    if (Test-Path -LiteralPath $appFile) {
+        OutputDebug -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
+    }
+
+    # Download with retry logic
+    Invoke-CommandWithRetry -ScriptBlock {
+        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile | Out-Null
+    } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
+
     return $appFile
 }
 
@@ -64,14 +76,6 @@ function DownloadDependenciesFromInstallApps {
 
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
-    # Check if the installApps and installTestApps settings are empty
-    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
-        return @{
-            "Apps" = @()
-            "TestApps" = @()
-        }
-    }
-
     # ENV:Secrets is not set when running Pull_Request trigger
     if ($env:Secrets) {
         $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
@@ -85,7 +89,6 @@ function DownloadDependenciesFromInstallApps {
         "TestApps" = @($settings.installTestApps)
     }
 
-    
     # Check if the installApps and installTestApps settings are empty
     if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
         Write-Host "No installApps or installTestApps settings found."
@@ -107,7 +110,11 @@ function DownloadDependenciesFromInstallApps {
             $appFileUrl = $appFile
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($appFile -match $pattern) {
-                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+                $secretName = $matches[2]
+                if (-not $secrets.ContainsKey($secretName)) {
+                    throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
+                }
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
             }
 
             # Download the app file to a temporary location
@@ -115,7 +122,7 @@ function DownloadDependenciesFromInstallApps {
                 Write-Host "Downloading app from URL: $appFile"
                 $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
             } catch {
-                throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
+                throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
             }
 
             return $appFile
