@@ -1750,7 +1750,7 @@ function TestIfProjectHasDependents {
         }
     }
     if (!$hasRemainingDependents) {
-        Write-Host "Project $project has no remaining dependents, can be built later"
+        Write-Host "Project $project has no dependents, can be built later"
     }
     return $hasRemainingDependents
 }
