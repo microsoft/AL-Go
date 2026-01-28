@@ -120,7 +120,11 @@ function DownloadDependenciesFromInstallApps {
             $appFileUrl = $appFile
             $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
             if ($appFile -match $pattern) {
-                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+                $secretName = $matches[2]
+                if (-not $secrets.ContainsKey($secretName)) {
+                    throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
+                }
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
             }
 
             # Download the app file to a temporary location
