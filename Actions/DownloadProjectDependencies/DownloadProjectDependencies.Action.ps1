@@ -39,7 +39,29 @@ function Get-AppFileFromUrl {
 
     # Get the final app file path
     $appFile = Join-Path $DownloadPath $sanitizedFileName
-    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+
+    # Download with retry logic (compatible with PS5 and PS7)
+    $maxRetries = 3
+    $retryIntervalSec = 5
+    $retryCount = 0
+    $success = $false
+    while (-not $success -and $retryCount -lt $maxRetries) {
+        try {
+            Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile | Out-Null
+            $success = $true
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -lt $maxRetries) {
+                Write-Host "Download failed, retrying in $retryIntervalSec seconds... (Attempt $retryCount of $maxRetries)"
+                Start-Sleep -Seconds $retryIntervalSec
+            }
+            else {
+                throw $_
+            }
+        }
+    }
+
     return $appFile
 }
 
