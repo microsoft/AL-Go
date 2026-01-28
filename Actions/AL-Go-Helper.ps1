@@ -1734,7 +1734,7 @@ function TestIfProjectHasRemainingDependents {
     $hasRemainingDependents = $false
     foreach($otherProject in $projects) {
         if ($otherProject -ne $project) {
-            # Grab dependencies from other project, which haven't been built yet
+            # Grab dependencies from other project, which haven't been included in the build order yet
             $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
                 $dependency = $_
                 $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
