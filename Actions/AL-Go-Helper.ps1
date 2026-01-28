@@ -1740,7 +1740,7 @@ function TestIfProjectHasDependents {
                 $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
                 return -not $alreadyBuilt
             }
-            Write-Host "Other project $otherProject has unbuilt dependencies: $($otherDependencies -join ", ")"
+            Write-Host "Other project $otherProject has dependencies that are not in the build order yet: $($otherDependencies -join ", ")"
             foreach($dependency in $otherDependencies) {
                 if ($appDependencies."$project".apps -contains $dependency) {
                     Write-Host "Project $project is still a dependency for project $otherProject"
