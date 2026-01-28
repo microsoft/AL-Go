@@ -1,8 +1,11 @@
 # Download project dependencies
 
-Downloads artifacts from AL-Go projects, that are dependencies of a given AL-Go project
+Downloads artifacts from AL-Go projects, that are dependencies of a given AL-Go project.
 
-The action constructs arrays of paths to .app files, that are dependencies of the apps in an AL-Go project
+The action constructs arrays of paths to .app files, that are dependencies of the apps in an AL-Go project. This includes:
+- Dependencies from the current build
+- Dependencies from probing paths
+- External dependencies from URLs specified in installApps and installTestApps settings (with secret placeholder resolution and downloading)
 
 ## INPUT
 

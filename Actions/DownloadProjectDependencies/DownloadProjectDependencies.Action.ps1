@@ -9,6 +9,100 @@
     [string] $token
 )
 
+<#
+    .SYNOPSIS
+    Downloads an app file from a URL to a specified download path.
+    .DESCRIPTION
+    Downloads an app file from a URL to a specified download path.
+    It handles URL decoding and sanitizes the file name.
+    .PARAMETER Url
+    The URL of the app file to download.
+    .PARAMETER DownloadPath
+    The path where the app file should be downloaded.
+    .OUTPUTS
+    The path to the downloaded app file.
+#>
+function Get-AppFileFromUrl {
+    Param(
+        [string] $Url,
+        [string] $DownloadPath
+    )
+    # Get the file name from the URL
+    $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
+    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
+    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
+    $decodedFileName = [System.IO.Path]::GetFileName($decodedFileName)
+
+    # Sanitize file name by removing invalid characters
+    $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
+    $sanitizedFileName = $sanitizedFileName.Trim()
+
+    # Get the final app file path
+    $appFile = Join-Path $DownloadPath $sanitizedFileName
+    Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    return $appFile
+}
+
+<#
+    .SYNOPSIS
+    Downloads external dependencies from URLs specified in installApps and installTestApps settings.
+    .DESCRIPTION
+    Resolves secret placeholders in URLs and downloads the app files to a temporary location.
+    .PARAMETER DestinationPath
+    The path where the app files should be downloaded.
+    .OUTPUTS
+    A hashtable with Apps and TestApps arrays containing the resolved paths.
+#>
+function DownloadExternalDependencies {
+    Param(
+        [string] $DestinationPath
+    )
+
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+    # ENV:Secrets is not set when running Pull_Request trigger
+    if ($env:Secrets) {
+        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+    }
+    else {
+        $secrets = @{}
+    }
+
+    $install = @{
+        "Apps" = @($settings.installApps)
+        "TestApps" = @($settings.installTestApps)
+    }
+
+    # Replace secret names in install.apps and install.testApps and download files from URLs
+    foreach($list in @('Apps','TestApps')) {
+        $install."$list" = @($install."$list" | ForEach-Object {
+            $appFile = $_
+
+            # If the app file is not a URL, return it as is
+            if ($appFile -notlike 'http*://*') {
+                return $appFile
+            }
+
+            # Else, check for secrets in the URL and replace them
+            $appFileUrl = $appFile
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            if ($appFile -match $pattern) {
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
+            }
+
+            # Download the app file to a temporary location
+            try {
+                $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
+            } catch {
+                throw "Setting: install$($list) contains an inaccessible URL: $($_). Error was: $($_.Exception.Message)"
+            }
+
+            return $appFile
+        })
+    }
+
+    return $install
+}
+
 function DownloadDependenciesFromProbingPaths {
     param(
         $baseFolder,
@@ -123,6 +217,10 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
+Write-Host "::group::Downloading dependenciess from installApps and installTestApps settings"
+$externalDependencies = DownloadExternalDependencies -DestinationPath $destinationPath
+Write-Host "::endgroup::"
+
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -136,6 +234,10 @@ $downloadedDependencies | ForEach-Object {
         $downloadedApps += $_
     }
 }
+
+# Add external dependencies
+$downloadedApps += $externalDependencies.Apps
+$downloadedTestApps += $externalDependencies.TestApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
