@@ -11,9 +11,12 @@
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 
-### Download dependencies from installApps and installTestApps settings
+### Improving error detection and build reliability when downloading project dependencies
 
-The DownloadProjectDependencies action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings. Previously, URL validation was done at build time without downloading. Now the files are downloaded upfront, improving error detection and build reliability.
+The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
+- Earlier detection of inaccessible or misconfigured URLs
+- Clearer error messages when secrets are missing or URLs are invalid
+- Warnings for potential issues like duplicate filenames or insecure HTTP connections
 
 ### Set default values for workflow inputs
 
