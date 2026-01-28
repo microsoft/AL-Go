@@ -468,7 +468,7 @@ function New-BuildOutputFile {
         [string]$BuildArtifactFolder,
         [string]$BuildOutputPath,
         [switch]$DisplayInConsole,
-        [string]$BasePath = $ENV:GITHUB_WORKSPACE
+        [string]$BasePath = (Get-BasePath)
     )
     # Create the file path for the build output
     New-Item -Path $BuildOutputPath -ItemType File -Force | Out-Null
@@ -486,6 +486,13 @@ function New-BuildOutputFile {
     }
 
     return $buildOutputPath
+}
+
+function Get-BasePath() {
+    if ($ENV:GITHUB_WORKSPACE) {
+        return $ENV:GITHUB_WORKSPACE
+    }
+    return git rev-parse --show-toplevel
 }
 
 Export-ModuleMember -Function *-*
