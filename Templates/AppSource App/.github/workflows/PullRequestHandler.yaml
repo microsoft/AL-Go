@@ -3,9 +3,10 @@ name: 'Pull Request Build'
 on:
   pull_request_target:
     branches: [ 'main' ]
+  merge_group:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'merge_group' && github.run_id || github.event.pull_request.number }}
   cancel-in-progress: true
 
 defaults:
@@ -56,7 +57,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
-          ref: ${{ github.event_name == 'pull_request' && github.sha || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || github.event_name == 'merge_group' && github.ref || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
 
       - name: Initialize the workflow
         id: init
@@ -103,7 +104,7 @@ jobs:
     with:
       shell: ${{ matrix.githubRunnerShell }}
       runsOn: ${{ matrix.githubRunner }}
-      checkoutRef: ${{ github.event_name == 'pull_request' && github.sha || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
+      checkoutRef: ${{ github.event_name == 'pull_request' && github.sha || github.event_name == 'merge_group' && github.ref || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
@@ -118,7 +119,7 @@ jobs:
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Initialization.outputs.trackALAlertsInGitHub == 'True')
+    if: (!cancelled()) && (needs.Initialization.outputs.trackALAlertsInGitHub == 'True') && (github.event_name != 'merge_group')
     runs-on: [ windows-latest ]
     name: Code Analysis Processing
     steps:
