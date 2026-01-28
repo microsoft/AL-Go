@@ -86,14 +86,6 @@ function DownloadDependenciesFromInstallApps {
 
     $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
-    # Check if the installApps and installTestApps settings are empty
-    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
-        return @{
-            "Apps" = @()
-            "TestApps" = @()
-        }
-    }
-
     # ENV:Secrets is not set when running Pull_Request trigger
     if ($env:Secrets) {
         $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
@@ -106,7 +98,6 @@ function DownloadDependenciesFromInstallApps {
         "Apps" = @($settings.installApps)
         "TestApps" = @($settings.installTestApps)
     }
-
 
     # Check if the installApps and installTestApps settings are empty
     if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
