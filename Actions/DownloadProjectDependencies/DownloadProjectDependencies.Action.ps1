@@ -45,15 +45,19 @@ function Get-AppFileFromUrl {
 
 <#
     .SYNOPSIS
-    Downloads external dependencies from URLs specified in installApps and installTestApps settings.
+    Downloads dependencies from URLs specified in installApps and installTestApps settings.
     .DESCRIPTION
-    Resolves secret placeholders in URLs and downloads the app files to a temporary location.
+    Reads the installApps and installTestApps arrays from the repository settings.
+    For each entry that is a URL (starts with http:// or https://):
+    - Resolves any secret placeholders in the format ${{ secretName }} by looking up the secret value
+    - Downloads the app file to the specified destination path
+    For entries that are not URLs (local paths), they are returned as-is.
     .PARAMETER DestinationPath
     The path where the app files should be downloaded.
     .OUTPUTS
-    A hashtable with Apps and TestApps arrays containing the resolved paths.
+    A hashtable with Apps and TestApps arrays containing the resolved local file paths.
 #>
-function DownloadExternalDependencies {
+function DownloadDependenciesFromInstallApps {
     Param(
         [string] $DestinationPath
     )
@@ -217,8 +221,8 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
-Write-Host "::group::Downloading dependenciess from installApps and installTestApps settings"
-$externalDependencies = DownloadExternalDependencies -DestinationPath $destinationPath
+Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
+$settingsDependencies = DownloadDependenciesFromInstallApps -DestinationPath $destinationPath
 Write-Host "::endgroup::"
 
 $downloadedApps = @()
@@ -235,9 +239,9 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-# Add external dependencies
-$downloadedApps += $externalDependencies.Apps
-$downloadedTestApps += $externalDependencies.TestApps
+# Add dependencies from settings
+$downloadedApps += $settingsDependencies.Apps
+$downloadedTestApps += $settingsDependencies.TestApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
