@@ -1723,7 +1723,7 @@ function CheckAndCreateProjectFolder {
     }
 }
 
-function TestIfProjectHasRemainingDependents {
+function TestIfProjectHasDependents {
     Param(
         [string] $project,
         [string[]] $projects,
