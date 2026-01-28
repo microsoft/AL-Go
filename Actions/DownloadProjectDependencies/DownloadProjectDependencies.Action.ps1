@@ -37,6 +37,10 @@ function Get-AppFileFromUrl {
     $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
     $sanitizedFileName = $sanitizedFileName.Trim()
 
+    if ([string]::IsNullOrWhiteSpace($sanitizedFileName)) {
+        $sanitizedFileName = "$([Guid]::NewGuid().ToString()).app"
+    }
+
     # Get the final app file path
     $appFile = Join-Path $DownloadPath $sanitizedFileName
 
