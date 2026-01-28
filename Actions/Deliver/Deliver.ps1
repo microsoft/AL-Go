@@ -350,6 +350,12 @@ foreach ($thisProject in $sortedProjectList) {
                 $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
             }
         }
+        # Check whether project has a ProductId defined (needs to be submitted) or it is a library project
+        if (!$projectSettings.deliverToAppSource.ProductId) {
+            Write-Host "deliverToAppSource.ProductId is not specified, project is a library project"
+            continue
+        }
+        Write-Host "deliverToAppSource.ProductId is $($projectSettings.deliverToAppSource.ProductId)"
         # if type is Release, we only get here with the projects that needs to be delivered to AppSource
         # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
         if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
@@ -371,9 +377,6 @@ foreach ($thisProject in $sortedProjectList) {
                 catch {
                     throw "Unable to determine main App folder"
                 }
-            }
-            if (!$projectSettings.deliverToAppSource.ProductId) {
-                throw "deliverToAppSource.ProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
             }
             Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
