@@ -166,6 +166,17 @@ jobs:
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
+      - name: Download External Project Dependencies
+        id: DownloadExternalProjectDependencies
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        uses: microsoft/AL-Go-Actions/DownloadExternalProjectDependencies@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: ${{ inputs.shell }}
+          installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+          installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
