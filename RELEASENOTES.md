@@ -23,7 +23,7 @@ AL-Go now supports GitHub's merge queue feature out of the box! The `merge_group
 > [!WARNING]
 > If you rely on a custom workflow for merge queue validation, you may need to adjust your setup to avoid duplicate builds.
 
-## AL-Go Telemetry updates
+### AL-Go Telemetry updates
 
 AL-Go telemetry now includes test results so you can more easily see how many AL tests, Page Scripting tests and BCPT tests ran in your workflows across all your repositories. Documentation for this can be found on [this article](https://github.com/microsoft/AL-Go/blob/main/Scenarios/EnablingTelemetry.md) on enabling telemetry.
 
