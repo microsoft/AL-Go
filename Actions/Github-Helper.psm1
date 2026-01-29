@@ -756,10 +756,14 @@ function DownloadRelease {
         # GitHub replaces series of special characters with a single dot when uploading release assets
         $project = [Uri]::EscapeDataString($project.Replace('\','_').Replace('/','_').Replace(' ','.')).Replace('%2A','*').Replace('%3F','?').Replace('%','')
         Write-Host "project '$project'"
-        $assetPattern1 = "$project-*-$mask-*.zip"
-        $assetPattern2 = "$project-$mask-*.zip"
+        # Pattern 1: project-branch-mask-version.zip (branch used for release creation cannot contain -)
+        # Pattern 2: project-mask-version.zip (no branch)
+        $escapedProject = [regex]::Escape($project)
+        $escapedMask = [regex]::Escape($mask)
+        $assetPattern1 = "^$escapedProject-[^-]+-$escapedMask-.+\.zip$"
+        $assetPattern2 = "^$escapedProject-$escapedMask-.+\.zip$"
         Write-Host "AssetPatterns: '$assetPattern1' | '$assetPattern2'"
-        $assets = @($release.assets | Where-Object { $_.name -like $assetPattern1 -or $_.name -like $assetPattern2 })
+        $assets = @($release.assets | Where-Object { $_.name -match $assetPattern1 -or $_.name -match $assetPattern2 })
         foreach($asset in $assets) {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
