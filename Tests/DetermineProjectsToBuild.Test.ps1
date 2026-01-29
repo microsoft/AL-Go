@@ -869,9 +869,9 @@ Describe "Get-ProjectsToBuild" {
         @{ postponeProjectInBuildOrder = $true } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "Project3/.AL-Go/settings.json") -Encoding UTF8
         New-Item -Path "$baseFolder/Project3/app/app.json" -Value (ConvertTo-Json $dependantAppFile3 -Depth 10) -type File -Force
 
-        $depedantAppFile4 = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd4'; name = 'Fourth App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Second App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
+        $dependantAppFile4 = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd4'; name = 'Fourth App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Second App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
         New-Item -Path "$baseFolder/Project4/.AL-Go/settings.json" -type File -Force
-        New-Item -Path "$baseFolder/Project4/app/app.json" -Value (ConvertTo-Json $depedantAppFile4 -Depth 10) -type File -Force
+        New-Item -Path "$baseFolder/Project4/app/app.json" -Value (ConvertTo-Json $dependantAppFile4 -Depth 10) -type File -Force
 
         #Add settings file
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
