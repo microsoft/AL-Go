@@ -172,7 +172,6 @@ function FilterDependenciesByAppId {
     $filteredDependencies = @()
     foreach ($dependency in $downloadedDependencies) {
         $appPath = $dependency.Trim('()')
-        $isTestApp = $dependency.StartsWith('(')
 
         if (-not (Test-Path $appPath)) {
             # If the file doesn't exist, keep it in the list (might be a URL or other reference)
