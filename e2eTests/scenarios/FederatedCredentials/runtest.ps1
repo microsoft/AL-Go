@@ -128,8 +128,8 @@ $updateCreatedAt = [DateTime]$updateRun.created_at
 $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 
 # Find the CI/CD workflow run that started after the update workflow was created
-$run = $runs.workflow_runs | Where-Object { 
-    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCreatedAt 
+$run = $runs.workflow_runs | Where-Object {
+    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCreatedAt
 } | Select-Object -First 1
 
 if (-not $run) {

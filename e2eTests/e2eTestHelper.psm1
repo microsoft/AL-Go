@@ -326,6 +326,20 @@ function SetRepositorySecret {
     gh secret set $name -b $value --repo $repository
 }
 
+<#
+.SYNOPSIS
+    Deletes all workflow runs in a repository.
+
+.DESCRIPTION
+    Cleans up workflow runs in a GitHub repository by deleting all existing runs.
+    This is useful for ensuring a clean state before running tests that track specific workflow runs.
+
+.PARAMETER repository
+    The full repository name in the format "owner/repo" (e.g., "microsoft/AL-Go").
+
+.EXAMPLE
+    CleanupWorkflowRuns -repository "microsoft/AL-Go"
+#>
 function CleanupWorkflowRuns {
     Param(
         [Parameter(Mandatory = $true)]
@@ -357,6 +371,27 @@ function CleanupWorkflowRuns {
     Write-Host "Cleanup completed"
 }
 
+<#
+.SYNOPSIS
+    Resets a repository to match the content of a source repository.
+
+.DESCRIPTION
+    Clones the target repository, fetches content from a source repository, and performs a hard reset
+    followed by a force push. This preserves the repository identity while resetting its content to
+    match the source repository. Useful for ensuring deterministic state in end-to-end tests.
+
+.PARAMETER repository
+    The full name of the target repository to reset in the format "owner/repo" (e.g., "microsoft/AL-Go").
+
+.PARAMETER sourceRepository
+    The full name of the source repository to copy content from in the format "owner/repo".
+
+.PARAMETER branch
+    The branch name to reset. Defaults to "main".
+
+.EXAMPLE
+    ResetRepositoryToSource -repository "microsoft/test-repo" -sourceRepository "microsoft/source-repo" -branch "main"
+#>
 function ResetRepositoryToSource {
     Param(
         [Parameter(Mandatory = $true)]
