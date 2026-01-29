@@ -326,34 +326,26 @@ function SetRepositorySecret {
     gh secret set $name -b $value --repo $repository
 }
 
-function CleanupOldWorkflowRuns {
+function CleanupWorkflowRuns {
     Param(
-        [string] $repository,
-        [int] $keepCount = 10
+        [Parameter(Mandatory = $true)]
+        [string] $repository
     )
 
-    if (!$repository) {
-        $repository = $defaultRepository
-    }
-
-    Write-Host -ForegroundColor Yellow "`nCleaning up old workflow runs in $repository (keeping last $keepCount)"
+    Write-Host -ForegroundColor Yellow "`nCleaning up workflow runs in $repository"
     
     RefreshToken -repository $repository
 
-    # Get all workflow runs, sorted by created_at descending (newest first)
+    # Get all workflow runs
     $runs = invoke-gh api "/repos/$repository/actions/runs?per_page=100" -silent -returnValue | ConvertFrom-Json
     
-    if ($runs.workflow_runs.Count -le $keepCount) {
-        Write-Host "Found $($runs.workflow_runs.Count) workflow runs, no cleanup needed"
+    if ($runs.workflow_runs.Count -eq 0) {
+        Write-Host "No workflow runs found"
         return
     }
 
-    # Get runs to delete (skip the most recent ones)
-    # Runs are already sorted by created_at descending from the API
-    $runsToDelete = $runs.workflow_runs | Select-Object -Skip $keepCount
-
-    Write-Host "Deleting $($runsToDelete.Count) old workflow runs..."
-    foreach ($run in $runsToDelete) {
+    Write-Host "Deleting $($runs.workflow_runs.Count) workflow runs..."
+    foreach ($run in $runs.workflow_runs) {
         try {
             Write-Host "Deleting run $($run.id) ($($run.name) - $($run.status))"
             invoke-gh api /repos/$repository/actions/runs/$($run.id) --method DELETE -silent | Out-Null
@@ -367,14 +359,12 @@ function CleanupOldWorkflowRuns {
 
 function ResetRepositoryToSource {
     Param(
+        [Parameter(Mandatory = $true)]
         [string] $repository,
+        [Parameter(Mandatory = $true)]
         [string] $sourceRepository,
         [string] $branch = "main"
     )
-
-    if (!$repository) {
-        $repository = $defaultRepository
-    }
 
     Write-Host -ForegroundColor Yellow "`nResetting repository $repository to match $sourceRepository"
 

@@ -82,8 +82,8 @@ Write-Host "Repository $repository exists. Reusing and resetting to match source
 # Reset the repository to match the source repository
 ResetRepositoryToSource -repository $repository -sourceRepository $sourceRepository -branch 'main'
 
-# Clean up old workflow runs to prevent the list from growing and ensure we wait for the correct run
-CleanupOldWorkflowRuns -repository $repository -keepCount 5
+# Clean up workflow runs to ensure proper workflow tracking
+CleanupWorkflowRuns -repository $repository
 
 # Always set/update secrets (they may have changed or repo may have been reset)
 SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
