@@ -726,6 +726,58 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[1].buildDimensions[0].project | Should -BeExactly "Project2"
     }
 
+    It 'uses staticProjectDependencies to override automatic dependency detection' {
+        # Three projects where Project2 and Project3 both build an app with the same ID (simulating country-specific builds)
+        # Project1 (TestProject) depends on the shared app - would normally depend on both Project2 and Project3
+        # But staticProjectDependencies is set to only depend on Project2 (W1)
+
+        # Project2 (W1) - builds the shared app
+        $sharedAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'Shared App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $sharedAppFile -Depth 10) -type File -Force
+
+        # Project3 (GB) - also builds the shared app with the SAME ID
+        New-Item -Path "$baseFolder/Project3/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project3/app/app.json" -Value (ConvertTo-Json $sharedAppFile -Depth 10) -type File -Force
+
+        # Project1 (TestProject) - depends on the shared app, but uses staticProjectDependencies to only depend on Project2
+        $dependantAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Test App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @(@{id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'Shared App'; publisher = 'Contoso'; version = '1.0.0.0'} ) }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        @{ useProjectDependencies = $true; staticProjectDependencies = @('Project2') } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "Project1/.AL-Go/settings.json") -Encoding UTF8
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
+
+        #Add repo settings file
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
+        New-Item -Path "$baseFolder/.github" -type Directory -Force
+        $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json") -Encoding UTF8
+
+        # Add settings as environment variable to simulate we've run ReadSettings
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $allProjects | Should -BeExactly @("Project1", "Project2", "Project3")
+        $projectsToBuild | Should -BeExactly @("Project1", "Project2", "Project3")
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        # Project1 should ONLY depend on Project2 (due to staticProjectDependencies), NOT on Project3
+        $projectDependencies['Project1'] | Should -BeExactly @("Project2")
+        $projectDependencies['Project2'] | Should -BeExactly @()
+        $projectDependencies['Project3'] | Should -BeExactly @()
+
+        # Build order:
+        # - First batch: Project2 and Project3 (both have no dependencies)
+        # - Second batch: Project1 (depends only on Project2)
+        # Without staticProjectDependencies, Project1 would depend on both Project2 AND Project3
+        $buildOrder.Count | Should -BeExactly 2
+        $buildOrder[0].projects | Should -Contain "Project2"
+        $buildOrder[0].projects | Should -Contain "Project3"
+        $buildOrder[0].projectsCount | Should -BeExactly 2
+
+        $buildOrder[1].projects | Should -BeExactly @("Project1")
+        $buildOrder[1].projectsCount | Should -BeExactly 1
+    }
+
     It 'throws if the calculated build depth is more than the maximum supported' {
         # Two dependent projects
         $dependecyAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
