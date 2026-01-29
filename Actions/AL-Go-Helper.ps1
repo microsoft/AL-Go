@@ -1821,10 +1821,10 @@ Function AnalyzeProjectDependencies {
     # }
     $no = 1
     $projectsOrder = @()
-    # Collect projects without dependants, which can be built later
+    # Collect projects without dependents, which can be built later
     # This is done to avoid building projects at an earlier stage than needed and increase the time until next job subsequently
-    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependants
-    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependants)
+    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependents
+    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependents)
     $projectsWithoutDependents = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
