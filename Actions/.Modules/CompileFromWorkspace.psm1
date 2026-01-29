@@ -1,5 +1,52 @@
 $script:alTool = $null
 
+<#
+.SYNOPSIS
+    Gets build metadata for the current build environment.
+.DESCRIPTION
+    Returns a hashtable with build metadata including source repository URL, commit SHA,
+    build system identifier, and build URL. When running locally (outside of GitHub Actions),
+    provides sensible defaults.
+.OUTPUTS
+    Hashtable with SourceRepositoryUrl, SourceCommit, BuildBy, and BuildUrl properties.
+#>
+function Get-BuildMetadata {
+    $isLocalBuild = -not $env:GITHUB_ACTIONS
+
+    if ($isLocalBuild) {
+        # Running locally - use git to get repository info if available
+        $sourceRepositoryUrl = "local"
+        $sourceCommit = "unknown"
+        
+        try {
+            $sourceRepositoryUrl = git config --get remote.origin.url
+        } catch {
+            OutputWarning "Could not determine source repository URL from git. Using 'local'."
+        }
+
+        try {
+            $sourceCommit = git rev-parse HEAD
+        } catch {
+            OutputWarning "Could not determine source commit SHA from git. Using 'unknown'."
+        }
+
+        return @{
+            SourceRepositoryUrl = $sourceRepositoryUrl
+            SourceCommit        = $sourceCommit
+            BuildBy             = "AL-Go for GitHub (local)"
+            BuildUrl            = "N/A"
+        }
+    } else {
+        # Running in GitHub Actions
+        return @{
+            SourceRepositoryUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY"
+            SourceCommit        = $env:GITHUB_SHA
+            BuildBy             = "AL-Go for GitHub"
+            BuildUrl            = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+        }
+    }
+}
+
 function Install-ALTool {
     param(
         $CompilerFolder

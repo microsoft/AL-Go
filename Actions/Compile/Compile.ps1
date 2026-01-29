@@ -80,10 +80,7 @@ if ($settings.enableUICop) {
 #TODO: Mising support for custom analyzers
 
 # Prepare build metadata
-$sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-$sourceCommit = $ENV:GITHUB_SHA
-$buildBy = "AL-Go for GitHub"
-$buildUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY/actions/runs/$ENV:GITHUB_RUN_ID"
+$buildMetadata = Get-BuildMetadata
 
 # Collect preprocessor symbols
 $preprocessorSymbols = @()
@@ -194,10 +191,10 @@ try {
             -BuildNumber $appBuild `
             -RevisionNumber $appRevision `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
-            -SourceRepositoryUrl $sourceRepositoryUrl `
-            -SourceCommit $sourceCommit `
-            -BuildBy $buildBy `
-            -BuildUrl $buildUrl `
+            -SourceRepositoryUrl $buildMetadata.SourceRepositoryUrl `
+            -SourceCommit $buildMetadata.SourceCommit `
+            -BuildBy $buildMetadata.BuildBy `
+            -BuildUrl $buildMetadata.BuildUrl `
             -AppType 'app' `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
@@ -220,10 +217,10 @@ try {
             -BuildNumber $appBuild `
             -RevisionNumber $appRevision `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
-            -SourceRepositoryUrl $sourceRepositoryUrl `
-            -SourceCommit $sourceCommit `
-            -BuildBy $buildBy `
-            -BuildUrl $buildUrl `
+            -SourceRepositoryUrl $buildMetadata.SourceRepositoryUrl `
+            -SourceCommit $buildMetadata.SourceCommit `
+            -BuildBy $buildMetadata.BuildBy `
+            -BuildUrl $buildMetadata.BuildUrl `
             -AppType 'testApp' `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
