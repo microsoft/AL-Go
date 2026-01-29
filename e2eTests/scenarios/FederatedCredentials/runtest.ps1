@@ -80,13 +80,28 @@ if ($repoExists) {
     
     # Clean up old workflow runs to prevent the list from growing and ensure we wait for the correct run
     CleanupOldWorkflowRuns -repository $repository -keepCount 5
-    
-    # Update repository settings (in case they changed)
+}
+else {
+    # Repository doesn't exist - create it
+    Write-Host "Repository $repository does not exist. Creating it."
+    CreateAlGoRepository `
+        -github:$github `
+        -template "https://github.com/$sourceRepository" `
+        -repository $repository `
+        -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
+}
+
+# Always set/update secrets (they may have changed or repo may have been reset)
+SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
+
+# When repo is reused, we need to re-apply the custom repository settings that were lost during reset
+if ($repoExists) {
     $tempPath = [System.IO.Path]::GetTempPath()
     $repoPath = Join-Path $tempPath ([System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()))
     New-Item $repoPath -ItemType Directory | Out-Null
     Push-Location $repoPath
     try {
+        Write-Host "Re-applying repository settings..."
         invoke-gh repo clone $repository . -- --quiet
         $repoSettingsFile = ".github\AL-Go-Settings.json"
         if (Test-Path $repoSettingsFile) {
@@ -101,18 +116,6 @@ if ($repoExists) {
         Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
     }
 }
-else {
-    # Repository doesn't exist - create it
-    Write-Host "Repository $repository does not exist. Creating it."
-    CreateAlGoRepository `
-        -github:$github `
-        -template "https://github.com/$sourceRepository" `
-        -repository $repository `
-        -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
-}
-
-# Always set/update secrets (they may have changed or repo may have been reset)
-SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 
 # Upgrade AL-Go System Files to test version
 # Capture the run object to ensure we wait for the correct workflow run
