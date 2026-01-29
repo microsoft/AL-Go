@@ -29,7 +29,8 @@ Write-Host -ForegroundColor Yellow @'
 # This test uses the bcsamples-bingmaps.appsource repository and will deliver a new build of the app to AppSource.
 # The bcsamples-bingmaps.appsource repository is setup to use an Azure KeyVault for secrets and app signing.
 #
-# The test uses a stable temporary repository called tmp-bingmaps.appsource that is reused across test runs.
+# The test requires a stable temporary repository called tmp-bingmaps.appsource that must be manually created
+# with federated credentials configured before running this test.
 # This is required because federated credentials no longer work with repository name-based matching,
 # so the repository must remain stable to maintain the federated credential configuration.
 # tmp-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
@@ -39,7 +40,8 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test tests the following scenario:
 #
-#  - Reuse or create the repository tmp-bingmaps.appsource (reset to match bcsamples-bingmaps.appsource if it exists)
+#  - Verify that the repository tmp-bingmaps.appsource exists (error out if not)
+#  - Reset the repository to match bcsamples-bingmaps.appsource for deterministic state
 #  - Clean up old workflow runs to ensure proper workflow tracking
 #  - Update AL-Go System Files in branch main in tmp-bingmaps.appsource
 #  - Update version numbers in app.json in tmp-bingmaps.appsource in order to not be lower than the version number in AppSource (and not be higher than the next version from bcsamples-bingmaps.appsource)
@@ -66,58 +68,48 @@ $sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will cre
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 # Check if the repository already exists
+# This repository must exist with federated credentials already configured
 gh api repos/$repository --method HEAD
-$repoExists = ($LASTEXITCODE -eq 0)
+if ($LASTEXITCODE -ne 0) {
+    throw "Repository $repository does not exist. The repository must be created manually with federated credentials configured before running this test."
+}
 
-if ($repoExists) {
-    # Repository exists - reuse it instead of deleting and recreating
-    # This is required because federated credentials no longer work with repository name-based matching,
-    # so the repository must remain stable across test runs
-    Write-Host "Repository $repository already exists. Reusing and resetting to match source."
-    
-    # Reset the repository to match the source repository
-    ResetRepositoryToSource -repository $repository -sourceRepository $sourceRepository -branch 'main'
-    
-    # Clean up old workflow runs to prevent the list from growing and ensure we wait for the correct run
-    CleanupOldWorkflowRuns -repository $repository -keepCount 5
-}
-else {
-    # Repository doesn't exist - create it
-    Write-Host "Repository $repository does not exist. Creating it."
-    CreateAlGoRepository `
-        -github:$github `
-        -template "https://github.com/$sourceRepository" `
-        -repository $repository `
-        -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
-}
+# Repository exists - reuse it and reset to source state
+# This is required because federated credentials no longer work with repository name-based matching,
+# so the repository must remain stable across test runs
+Write-Host "Repository $repository exists. Reusing and resetting to match source."
+
+# Reset the repository to match the source repository
+ResetRepositoryToSource -repository $repository -sourceRepository $sourceRepository -branch 'main'
+
+# Clean up old workflow runs to prevent the list from growing and ensure we wait for the correct run
+CleanupOldWorkflowRuns -repository $repository -keepCount 5
 
 # Always set/update secrets (they may have changed or repo may have been reset)
 SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 
-# When repo is reused, we need to re-apply the custom repository settings that were lost during reset
-if ($repoExists) {
-    $tempPath = [System.IO.Path]::GetTempPath()
-    $repoPath = Join-Path $tempPath ([System.Guid]::NewGuid().ToString())
-    New-Item $repoPath -ItemType Directory | Out-Null
-    Push-Location $repoPath
-    try {
-        Write-Host "Re-applying repository settings..."
-        invoke-gh repo clone $repository . -- --quiet
-        $repoSettingsFile = ".github\AL-Go-Settings.json"
-        if (Test-Path $repoSettingsFile) {
-            Add-PropertiesToJsonFile -path $repoSettingsFile -properties @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow"}
-            invoke-git add $repoSettingsFile
-            invoke-git commit -m "Update repository settings for test" --quiet
-            invoke-git push --quiet
-        }
-        else {
-            Write-Host "Warning: .github\AL-Go-Settings.json not found after cloning. Settings may not be applied correctly."
-        }
+# Re-apply the custom repository settings that were lost during reset
+$tempPath = [System.IO.Path]::GetTempPath()
+$repoPath = Join-Path $tempPath ([System.Guid]::NewGuid().ToString())
+New-Item $repoPath -ItemType Directory | Out-Null
+Push-Location $repoPath
+try {
+    Write-Host "Re-applying repository settings..."
+    invoke-gh repo clone $repository . -- --quiet
+    $repoSettingsFile = ".github\AL-Go-Settings.json"
+    if (Test-Path $repoSettingsFile) {
+        Add-PropertiesToJsonFile -path $repoSettingsFile -properties @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow"}
+        invoke-git add $repoSettingsFile
+        invoke-git commit -m "Update repository settings for test" --quiet
+        invoke-git push --quiet
     }
-    finally {
-        Pop-Location
-        Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
+    else {
+        Write-Host "Warning: .github\AL-Go-Settings.json not found after cloning. Settings may not be applied correctly."
     }
+}
+finally {
+    Pop-Location
+    Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
 }
 
 # Upgrade AL-Go System Files to test version
