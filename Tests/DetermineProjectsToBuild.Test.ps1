@@ -511,8 +511,53 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
-        #Add settings file
+        # Add settings file
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
+        $projectsToBuild | Should -BeExactly @("Project1", "Project2")
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        $projectDependencies['Project1'] | Should -BeExactly @()
+        $projectDependencies['Project2'] | Should -BeExactly @()
+
+        # Build order should have the following structure:
+        #[
+        #  {
+        #    "projects":  [
+        #      "Project1",
+        #      "Project2"
+        #    ],
+        #    "projectsCount":  2,
+        #    "buildDimensions":  [
+        #       {
+        #         "buildMode": "Default",
+        #         "project": "Project1"
+        #       },
+        #       {
+        #         "buildMode": "Default",
+        #         "project": "Project2"
+        #       }
+        #    ]
+        #  }
+        #]
+
+        $buildOrder.Count | Should -BeExactly 1
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @("Project1", "Project2")
+        $buildOrder[0].projectsCount | Should -BeExactly 2
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 2
+        $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
+        $buildOrder[0].buildDimensions[1].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[1].project | Should -BeExactly "Project2"
+
+        # Test that setting postponeProjectInBuildOrder to true doesn't have any effect when useProjectDependencies is false
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; postponeProjectInBuildOrder = $true; useProjectDependencies = $false }
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
@@ -567,13 +612,70 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $dependantAppFile -Depth 10) -type File -Force
 
-        #Add settings file
+        # Add settings file
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
         $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json") -Encoding UTF8
 
         # Add settings as environment variable to simulate we've run ReadSettings
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
+        $projectsToBuild | Should -BeExactly @("Project1", "Project2")
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        $projectDependencies['Project1'] | Should -BeExactly @()
+        $projectDependencies['Project2'] | Should -BeExactly @("Project1")
+
+        # Build order should have the following structure:
+        #[
+        #  {
+        #    "projects":  [
+        #      "Project1"
+        #    ],
+        #    "projectsCount":  1,
+        #    "buildDimensions":  [
+        #       {
+        #         "buildMode": "Default",
+        #         "project": "Project1"
+        #       }
+        #    ]
+        #  },
+        #  {
+        #    "projects":  [
+        #      "Project2"
+        #    ],
+        #    "projectsCount":  1,
+        #    "buildDimensions":  [
+        #       {
+        #         "buildMode": "Default",
+        #         "project": "Project2"
+        #       }
+        #    ]
+        #  }
+        #]
+
+        $buildOrder.Count | Should -BeExactly 2
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @("Project1")
+        $buildOrder[0].projectsCount | Should -BeExactly 1
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
+
+        $buildOrder[1] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[1].projects | Should -BeExactly @("Project2")
+        $buildOrder[1].projectsCount | Should -BeExactly 1
+        $buildOrder[1].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[1].buildDimensions[0].buildMode | Should -BeExactly "Default"
+        $buildOrder[1].buildDimensions[0].project | Should -BeExactly "Project2"
+
+        # Test that setting postponeProjectInBuildOrder to true in the last project in the build order doesn't fail or change anything
+        $projectSettings = @{ "postponeProjectInBuildOrder" = $true }
+        Set-Content -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value (ConvertTo-Json $projectSettings -Depth 10)
 
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 

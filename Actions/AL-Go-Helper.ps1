@@ -1900,7 +1900,7 @@ Function AnalyzeProjectDependencies {
 
         # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
         $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
-            return -not (TestIfProjectHasRemainingDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder)
+            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder)
         })
 
         # Remove projects in this job from the list of projects to be built (including the projects without dependents)
