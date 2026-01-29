@@ -97,7 +97,7 @@ SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $az
 # When repo is reused, we need to re-apply the custom repository settings that were lost during reset
 if ($repoExists) {
     $tempPath = [System.IO.Path]::GetTempPath()
-    $repoPath = Join-Path $tempPath ([System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()))
+    $repoPath = Join-Path $tempPath ([System.Guid]::NewGuid().ToString())
     New-Item $repoPath -ItemType Directory | Out-Null
     Push-Location $repoPath
     try {
@@ -109,6 +109,9 @@ if ($repoExists) {
             invoke-git add $repoSettingsFile
             invoke-git commit -m "Update repository settings for test" --quiet
             invoke-git push --quiet
+        }
+        else {
+            Write-Host "Warning: .github\AL-Go-Settings.json not found after cloning. Settings may not be applied correctly."
         }
     }
     finally {
@@ -128,12 +131,13 @@ Write-Host "Waiting for CI/CD workflow to start (triggered by Update AL-Go Syste
 Start-Sleep -Seconds 60
 
 # Get workflow runs that started after the update workflow
-$updateCompletedAt = [DateTime]$updateRun.updated_at
+# Use created_at for consistent timestamp comparison, and add a small buffer for timing precision
+$updateCreatedAt = [DateTime]$updateRun.created_at
 $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 
-# Find the CI/CD workflow run that started after the update workflow completed
+# Find the CI/CD workflow run that started after the update workflow was created
 $run = $runs.workflow_runs | Where-Object { 
-    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCompletedAt 
+    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCreatedAt 
 } | Select-Object -First 1
 
 if (-not $run) {
@@ -145,7 +149,7 @@ if (-not $run) {
 Write-Host "Waiting for CI/CD workflow run $($run.id) to complete..."
 WaitWorkflow -repository $repository -runid $run.id -noError
 
-# The CI/CD workflow should fail because the version number of the app in thie repository is lower than the version number in AppSource
+# The CI/CD workflow should fail because the version number of the app in the repository is lower than the version number in AppSource
 # Reason being that major.minor from the original bcsamples-bingmaps.appsource is the same and the build number in the newly created repository is lower than the one in AppSource
 # This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the tmp repo) and use it in the next run
 $MatchArr = Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '(?m)^.*The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center.*$' -isRegEx
