@@ -64,20 +64,7 @@ foreach ($override in @("PreCompileApp", "PostCompileApp")) {
 }
 
 # Determine which code analyzers to use
-$analyzers = @()
-if ($settings.enableCodeCop) {
-    $analyzers += "CodeCop"
-}
-if ($settings.enableAppSourceCop) {
-    $analyzers += "AppSourceCop"
-}
-if ($settings.enablePerTenantExtensionCop) {
-    $analyzers += "PTECop"
-}
-if ($settings.enableUICop) {
-    $analyzers += "UICop"
-}
-#TODO: Mising support for custom analyzers
+$analyzers = Get-CodeAnalyzers -Settings $settings
 
 # Prepare build metadata
 $buildMetadata = Get-BuildMetadata
@@ -98,9 +85,6 @@ if ($settings.ContainsKey('features')) {
 
 # Get version number
 $versionNumber = Get-VersionNumber -Settings $settings
-$majorMinorVersion = $versionNumber.MajorMinorVersion
-$appBuild = $versionNumber.BuildNumber
-$appRevision = $versionNumber.RevisionNumber
 
 # Read existing install apps and test apps from JSON files
 $installApps = $settings.installApps
@@ -177,7 +161,6 @@ $testAppFiles = @()
 try {
     if ($settings.appFolders.Count -gt 0) {
         # COMPILE - Compiling apps and test apps
-        # TODO: Missing downloading of external dependencies (should probably be a separate action)
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
             -CompilerFolder $compilerFolder `
@@ -187,9 +170,9 @@ try {
             -Analyzers $analyzers `
             -Preprocessorsymbols $preprocessorSymbols `
             -Features $features `
-            -MajorMinorVersion $majorMinorVersion `
-            -BuildNumber $appBuild `
-            -RevisionNumber $appRevision `
+            -MajorMinorVersion $versionNumber.MajorMinorVersion `
+            -BuildNumber $versionNumber.BuildNumber `
+            -RevisionNumber $versionNumber.RevisionNumber `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $buildMetadata.SourceRepositoryUrl `
             -SourceCommit $buildMetadata.SourceCommit `
@@ -213,9 +196,9 @@ try {
             -Analyzers $analyzers `
             -Preprocessorsymbols $preprocessorSymbols `
             -Features $features `
-            -MajorMinorVersion $majorMinorVersion `
-            -BuildNumber $appBuild `
-            -RevisionNumber $appRevision `
+            -MajorMinorVersion $versionNumber.MajorMinorVersion `
+            -BuildNumber $versionNumber.BuildNumber `
+            -RevisionNumber $versionNumber.RevisionNumber `
             -MaxCpuCount $settings.workspaceCompilationParallelism `
             -SourceRepositoryUrl $buildMetadata.SourceRepositoryUrl `
             -SourceCommit $buildMetadata.SourceCommit `
@@ -226,7 +209,7 @@ try {
             -PostCompileApp $postCompileOverride
     }
 } finally {
-    New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole
+    New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
 }
 
 # OUTPUT - Output the install apps and test apps as JSON

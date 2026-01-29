@@ -2,6 +2,46 @@ $script:alTool = $null
 
 <#
 .SYNOPSIS
+    Gets the list of code analyzers to use for compilation.
+.DESCRIPTION
+    Returns an array of code analyzer names based on the settings provided.
+    Supports CodeCop, AppSourceCop, PTECop, and UICop.
+.PARAMETER Settings
+    Hashtable containing the build settings with analyzer flags.
+.OUTPUTS
+    Array of analyzer names to use for compilation.
+#>
+function Get-CodeAnalyzers {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings
+    )
+
+    $analyzers = @()
+
+    if ($Settings.enableCodeCop) {
+        $analyzers += "CodeCop"
+    }
+    if ($Settings.enableAppSourceCop) {
+        $analyzers += "AppSourceCop"
+    }
+    if ($Settings.enablePerTenantExtensionCop) {
+        $analyzers += "PTECop"
+    }
+    if ($Settings.enableUICop) {
+        $analyzers += "UICop"
+    }
+
+    if ($Settings.CustomCodeCops -and $Settings.CustomCodeCops.Count -gt 0) {
+        # TODO: Implement support for custom code cops in future releases
+        Write-Host "::warning::Custom code cops are not yet supported. The following custom code cops will be ignored: $($CustomCodeCops -join ', ')"
+    }
+
+    return $analyzers
+}
+
+<#
+.SYNOPSIS
     Gets build metadata for the current build environment.
 .DESCRIPTION
     Returns a hashtable with build metadata including source repository URL, commit SHA,
@@ -515,6 +555,8 @@ function New-BuildOutputFile {
         [string]$BuildArtifactFolder,
         [string]$BuildOutputPath,
         [switch]$DisplayInConsole,
+        [ValidateSet('none','error','warning','newWarning')]
+        [string]$FailOn,
         [string]$BasePath = (Get-BasePath)
     )
     # Create the file path for the build output
@@ -528,7 +570,7 @@ function New-BuildOutputFile {
 
         # Print build output to console (aggregated), preserving line formatting
         if ($DisplayInConsole) {
-            Convert-AlcOutputToAzureDevOps -basePath $BasePath -AlcOutput $sanitizedLines -gitHubActions
+            Convert-AlcOutputToAzureDevOps -basePath $BasePath -AlcOutput $sanitizedLines -gitHubActions -FailOn $FailOn
         }
     }
 
