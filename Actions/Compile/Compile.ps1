@@ -72,7 +72,7 @@ if ($settings.enableAppSourceCop) {
     $analyzers += "AppSourceCop"
 }
 if ($settings.enablePerTenantExtensionCop) {
-    $analyzers += "PerTenantExtensionCop"
+    $analyzers += "PTECop"
 }
 if ($settings.enableUICop) {
     $analyzers += "UICop"
