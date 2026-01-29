@@ -10,6 +10,13 @@
 - Issue 2094 PR into release branch gets wrong previous release
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
+- Issue 2050 Publish To Environment creates mistyped environment
+
+### Publish To Environment no longer creates unknown environments by default
+
+Previously, when running the "Publish To Environment" workflow with an environment name that doesn't exist in GitHub or AL-Go settings, the workflow would automatically create a new GitHub environment. This could lead to problems when environment names were mistyped, as the bogus environment would then cause subsequent CI/CD workflows to fail.
+
+Now, the workflow will fail with a clear error message if the specified environment doesn't exist. If you intentionally want to deploy to a new environment that hasn't been configured yet, you can check the **Create environment if it does not exist** checkbox when running the workflow.
 
 ### New settings for project dependency handling
 

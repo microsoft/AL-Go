@@ -11,6 +11,10 @@ inputs:
   type:
     description: Type of deployment (CD, Publish or All)
     required: true
+  createEnvIfNotExists:
+    description: If true, allow deploying to environments that do not exist (will create a new GitHub environment)
+    required: false
+    default: 'false'
 outputs:
   EnvironmentsMatrixJson:
     description: The Environment matrix to use for the Deploy step in compressed JSON format
@@ -39,9 +43,10 @@ runs:
       env:
         _getEnvironments: ${{ inputs.getEnvironments }}
         _type: ${{ inputs.type }}
+        _createEnvIfNotExists: ${{ inputs.createEnvIfNotExists }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineDeploymentEnvironments" -Action {
-          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -getEnvironments $ENV:_getEnvironments -type $ENV:_type
+          ${{ github.action_path }}/DetermineDeploymentEnvironments.ps1 -getEnvironments $ENV:_getEnvironments -type $ENV:_type -createEnvIfNotExists ($ENV:_createEnvIfNotExists -eq 'true')
         }
 branding:
   icon: terminal
