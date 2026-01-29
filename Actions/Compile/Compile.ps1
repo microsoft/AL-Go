@@ -24,7 +24,7 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToB
 DownloadAndImportBcContainerHelper
 
 # ANALYZE - Analyze the repository and determine settings
-$baseFolder = $ENV:GITHUB_WORKSPACE
+$baseFolder = (Get-BasePath)
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
@@ -72,11 +72,12 @@ if ($settings.enableAppSourceCop) {
     $analyzers += "AppSourceCop"
 }
 if ($settings.enablePerTenantExtensionCop) {
-    $analyzers += "PTECop"
+    $analyzers += "PerTenantExtensionCop"
 }
 if ($settings.enableUICop) {
     $analyzers += "UICop"
 }
+#TODO: Mising support for custom analyzers
 
 # Prepare build metadata
 $sourceRepositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
