@@ -326,6 +326,91 @@ function SetRepositorySecret {
     gh secret set $name -b $value --repo $repository
 }
 
+function CleanupOldWorkflowRuns {
+    Param(
+        [string] $repository,
+        [int] $keepCount = 10
+    )
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
+    Write-Host -ForegroundColor Yellow "`nCleaning up old workflow runs in $repository (keeping last $keepCount)"
+    
+    RefreshToken -repository $repository
+
+    # Get all workflow runs
+    $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
+    
+    if ($runs.workflow_runs.Count -le $keepCount) {
+        Write-Host "Found $($runs.workflow_runs.Count) workflow runs, no cleanup needed"
+        return
+    }
+
+    # Get runs to delete (skip the most recent ones)
+    $runsToDelete = $runs.workflow_runs | Select-Object -Skip $keepCount
+
+    Write-Host "Deleting $($runsToDelete.Count) old workflow runs..."
+    foreach ($run in $runsToDelete) {
+        try {
+            Write-Host "Deleting run $($run.id) ($($run.name) - $($run.status))"
+            invoke-gh api /repos/$repository/actions/runs/$($run.id) --method DELETE -silent | Out-Null
+        }
+        catch {
+            Write-Host "Warning: Failed to delete run $($run.id): $_"
+        }
+    }
+    Write-Host "Cleanup completed"
+}
+
+function ResetRepositoryToSource {
+    Param(
+        [string] $repository,
+        [string] $sourceRepository,
+        [string] $branch = "main"
+    )
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
+    Write-Host -ForegroundColor Yellow "`nResetting repository $repository to match $sourceRepository"
+
+    RefreshToken -repository $repository
+
+    # Clone the repository locally if not already in it
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $repoPath = Join-Path $tempPath ([System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName()))
+    New-Item $repoPath -ItemType Directory | Out-Null
+    
+    Push-Location $repoPath
+    try {
+        Write-Host "Cloning $repository..."
+        invoke-gh repo clone $repository . -- --quiet
+        
+        # Fetch the source repository content
+        Write-Host "Fetching source repository $sourceRepository..."
+        invoke-git remote add source "https://github.com/$sourceRepository.git"
+        invoke-git fetch source $branch --quiet
+        
+        # Reset the current branch to match the source
+        Write-Host "Resetting $branch to match source/$branch..."
+        invoke-git checkout $branch --quiet
+        invoke-git reset --hard "source/$branch" --quiet
+        
+        # Force push to update the repository
+        Write-Host "Force pushing changes..."
+        invoke-git push origin $branch --force --quiet
+        
+        Write-Host "Repository reset completed successfully"
+    }
+    finally {
+        Pop-Location
+        Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
+    }
+}
+
 function CreateNewAppInFolder {
     Param(
         [string] $folder,
