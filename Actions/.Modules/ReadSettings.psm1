@@ -251,9 +251,10 @@ function GetDefaultSettings
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
         "customALGoFiles" = [ordered]@{
-            "filesToInclude"                             = @()
+            "filesToInclude"                            = @()
             "filesToExclude"                            = @()
         }
+        "postponeProjectInBuildOrder"                  = $false
     }
 }
 
