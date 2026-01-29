@@ -29,23 +29,23 @@ Write-Host -ForegroundColor Yellow @'
 # This test uses the bcsamples-bingmaps.appsource repository and will deliver a new build of the app to AppSource.
 # The bcsamples-bingmaps.appsource repository is setup to use an Azure KeyVault for secrets and app signing.
 #
-# The test requires a stable temporary repository called tmp-bingmaps.appsource that must be manually created
+# The test requires a stable temporary repository called e2e-bingmaps.appsource that must be manually created
 # with federated credentials configured before running this test.
 # This is required because federated credentials no longer work with repository name-based matching,
 # so the repository must remain stable to maintain the federated credential configuration.
-# tmp-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
+# e2e-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
 # The bcSamples-bingmaps.appsource repository is setup for continuous delivery to AppSource
-# tmp-bingmaps.appsource also has access to the Entra ID app registration for delivering to AppSource using federated credentials.
+# e2e-bingmaps.appsource also has access to the Entra ID app registration for delivering to AppSource using federated credentials.
 # This test will deliver another build of the latest app version already delivered to AppSource (without go-live)
 #
 # This test tests the following scenario:
 #
-#  - Verify that the repository tmp-bingmaps.appsource exists (error out if not)
+#  - Verify that the repository e2e-bingmaps.appsource exists (error out if not)
 #  - Reset the repository to match bcsamples-bingmaps.appsource for deterministic state
 #  - Clean up old workflow runs to ensure proper workflow tracking
-#  - Update AL-Go System Files in branch main in tmp-bingmaps.appsource
-#  - Update version numbers in app.json in tmp-bingmaps.appsource in order to not be lower than the version number in AppSource (and not be higher than the next version from bcsamples-bingmaps.appsource)
-#  - Wait for CI/CD in branch main in repository tmp-bingmaps.appsource
+#  - Update AL-Go System Files in branch main in e2e-bingmaps.appsource
+#  - Update version numbers in app.json in e2e-bingmaps.appsource in order to not be lower than the version number in AppSource (and not be higher than the next version from bcsamples-bingmaps.appsource)
+#  - Wait for CI/CD in branch main in repository e2e-bingmaps.appsource
 #  - Check that artifacts are created and signed
 #  - Check that the app is delivered to AppSource
 '@
@@ -60,7 +60,7 @@ if ($linux) {
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-$repository = "$githubOwner/tmp-bingmaps.appsource"
+$repository = "$githubOwner/e2e-bingmaps.appsource"
 $template = "https://github.com/$appSourceTemplate"
 $sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
 

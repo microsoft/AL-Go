@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 Import-Module (Join-Path "." "e2eTests/e2eTestHelper.psm1") -DisableNameChecking
 
-@(invoke-gh repo list $githubOwner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$githubOwner/tmp*" -and "$_" -ne "$githubOwner/tmp-bingmaps.appsource" } | ForEach-Object {
+@(invoke-gh repo list $githubOwner --limit 1000 -silent -returnValue) | ForEach-Object { $_.Split("`t")[0] } | Where-Object { "$_" -like "$githubOwner/tmp*" } | ForEach-Object {
     $repo = $_
     Write-Host "https://github.com/$repo"
     $repoOwner = $repo.Split('/')[0]
