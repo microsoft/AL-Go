@@ -413,7 +413,7 @@ function ResetRepositoryToSource {
     Push-Location $repoPath
     try {
         Write-Host "Cloning $repository..."
-        invoke-gh repo clone $repository . -- --quiet
+        invoke-gh repo clone $repository .
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to clone repository $repository"
         }

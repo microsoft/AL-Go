@@ -95,7 +95,7 @@ New-Item $repoPath -ItemType Directory | Out-Null
 Push-Location $repoPath
 try {
     Write-Host "Re-applying repository settings..."
-    invoke-gh repo clone $repository . -- --quiet
+    invoke-gh repo clone $repository .
     $repoSettingsFile = ".github\AL-Go-Settings.json"
     if (Test-Path $repoSettingsFile) {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow"}
