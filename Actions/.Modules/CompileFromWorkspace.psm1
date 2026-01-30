@@ -293,6 +293,8 @@ function CompileAppsInWorkspace {
         [string]$OutFolder
     )
 
+    Write-Host "Assembly probing paths: $AssemblyProbingPaths"
+
     # Check if the workspace file exists
     if (-not (Test-Path $WorkspaceFile)) {
         throw "The specified workspace file '$WorkspaceFile' does not exist."
@@ -539,6 +541,7 @@ function Get-AssemblyProbingPaths() {
         [Parameter(Mandatory = $false)]
         [int]$MaximumDotNetVersion = 8
     )
+    Write-Host "Determining assembly probing paths..."
     $probingPaths = @()
 
     $compilerFolderDllsPath = Join-Path $CompilerFolder "dlls"
@@ -563,6 +566,9 @@ function Get-AssemblyProbingPaths() {
             $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
         }
     }
+
+    Write-Host "Assembly probing paths determined:"
+    OutputArray -Message "Probing Paths:" -Array $probingPaths
 
     return $probingPaths
 }
