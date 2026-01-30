@@ -1763,13 +1763,24 @@ Function AnalyzeProjectDependencies {
         # If the project is using project dependencies, add the unknown dependencies to the list of dependencies
         # If not, the unknown dependencies are ignored
         $dependenciesForProject = @()
+        $staticProjectDeps = @()
         if ($projectSettings.useProjectDependencies -eq $true) {
-            $dependenciesForProject = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
+            # Check if staticProjectDependencies are defined (explicit list of project names)
+            if ($projectSettings.staticProjectDependencies -and $projectSettings.staticProjectDependencies.Count -gt 0) {
+                # Use static project dependencies - bypass automatic App ID-based discovery
+                $staticProjectDeps = @($projectSettings.staticProjectDependencies)
+                Write-Host "Using static project dependencies for '$project': $($staticProjectDeps -join ', ')"
+            }
+            else {
+                # Use automatic App ID-based discovery
+                $dependenciesForProject = @($unknownDependencies | ForEach-Object { $_.Split(':')[0] })
+            }
         }
 
         $appDependencies."$project" = @{
-            "apps"         = $apps
-            "dependencies" = $dependenciesForProject
+            "apps"                    = $apps
+            "dependencies"            = $dependenciesForProject
+            "staticProjectDependencies" = $staticProjectDeps
         }
     }
     # AppDependencies is a hashtable with the following structure
@@ -1794,18 +1805,38 @@ Function AnalyzeProjectDependencies {
         # The loop continues until all projects have been added to the build order
         foreach($project in $projects) {
             Write-Host "- $project"
-            # Find all project dependencies for the current project
-            $dependencies = $appDependencies."$project".dependencies
-            # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
+            # Check if static project dependencies are defined (explicit list bypasses App ID-based discovery)
+            $staticDeps = $appDependencies."$project".staticProjectDependencies
             $foundDependencies = @()
-            foreach($dependency in $dependencies) {
-                # Find the project that contains the app for which the current project has a dependency
-                $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
-                # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
-                foreach($depProject in $depProjects) {
-                    $foundDependencies += $depProject
-                    if ($projectDependencies.Keys -contains $depProject) {
-                        $foundDependencies += $projectDependencies."$depProject"
+
+            if ($staticDeps -and $staticDeps.Count -gt 0) {
+                # Use static project dependencies directly (only include projects that are in the build)
+                foreach($staticDep in $staticDeps) {
+                    if ($projects -contains $staticDep) {
+                        $foundDependencies += $staticDep
+                        # Also add transitive dependencies from the static dependency
+                        if ($projectDependencies.Keys -contains $staticDep) {
+                            $foundDependencies += $projectDependencies."$staticDep"
+                        }
+                    }
+                    else {
+                        Write-Host "Static dependency '$staticDep' for project '$project' is not in the build (may have been built already)"
+                    }
+                }
+            }
+            else {
+                # Use automatic App ID-based discovery
+                $dependencies = $appDependencies."$project".dependencies
+                # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
+                foreach($dependency in $dependencies) {
+                    # Find the project that contains the app for which the current project has a dependency
+                    $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
+                    # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
+                    foreach($depProject in $depProjects) {
+                        $foundDependencies += $depProject
+                        if ($projectDependencies.Keys -contains $depProject) {
+                            $foundDependencies += $projectDependencies."$depProject"
+                        }
                     }
                 }
             }

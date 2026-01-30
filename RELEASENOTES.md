@@ -18,6 +18,45 @@ Previously, when running the "Publish To Environment" workflow with an environme
 
 Now, the workflow will fail with a clear error message if the specified environment doesn't exist. If you intentionally want to deploy to a new environment that hasn't been configured yet, you can check the **Create environment if it does not exist** checkbox when running the workflow.
 
+### New settings for project dependency handling
+
+Two new settings have been added to provide more control over how project dependencies are resolved when using `useProjectDependencies`:
+
+#### skipDependenciesBuiltByCurrentProject
+
+When set to `true`, downloaded dependency apps that have the same App ID as apps built by the current project will be excluded. This prevents dependency artifacts from overwriting locally-built apps.
+
+This is useful in scenarios where multiple projects build the same app (e.g., country-specific versions of a base app with the same App ID). Without this setting, the dependency resolution might download an app from a dependency project that overwrites the locally-built version.
+
+Example configuration in project settings:
+
+```json
+{
+  "skipDependenciesBuiltByCurrentProject": true
+}
+```
+
+Defaults to `false` for backwards compatibility.
+
+#### staticProjectDependencies
+
+When using `useProjectDependencies`, you can now explicitly specify which projects to depend on instead of relying on automatic App ID-based discovery. This gives you full control over the build order and dependency resolution.
+
+This is useful when multiple projects build apps with the same App ID, but you want to control exactly which project's artifacts are used as dependencies.
+
+Example configuration in project settings:
+
+```json
+{
+  "useProjectDependencies": true,
+  "staticProjectDependencies": ["W1"]
+}
+```
+
+In this example, the project will only depend on the `W1` project, even if other projects (like `GB`) also build apps that match the project's dependencies. The project will build in parallel with other projects that also only depend on `W1`.
+
+Defaults to an empty array `[]`, which means automatic App ID-based discovery is used (existing behavior).
+
 ### Set default values for workflow inputs
 
 The `workflowDefaultInputs` setting now also applies to `workflow_call` inputs when an input with the same name exists for `workflow_dispatch`.
