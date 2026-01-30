@@ -197,6 +197,7 @@ try {
             -CompilerFolder $compilerFolder `
             -OutFolder $testAppOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+            -AssemblyProbingPaths $assemblyProbingPaths `
             -Analyzers $analyzers `
             -Preprocessorsymbols $preprocessorSymbols `
             -Features $features `
