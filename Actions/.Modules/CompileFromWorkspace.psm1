@@ -61,14 +61,9 @@ function Get-BuildMetadata {
         
         try {
             $sourceRepositoryUrl = git config --get remote.origin.url
-        } catch {
-            OutputWarning "Could not determine source repository URL from git. Using 'local'."
-        }
-
-        try {
             $sourceCommit = git rev-parse HEAD
         } catch {
-            OutputWarning "Could not determine source commit SHA from git. Using 'unknown'."
+            OutputWarning -message "Git repository information could not be retrieved. Using default local values."
         }
 
         return @{
@@ -117,7 +112,7 @@ function Get-ALTool {
 }
 
 <#
-Before this script: 
+Before this script
 1. Create a compiler folder
 2. Fetch external dependencies into the compiler folder symbols folder
 3. Download baseline packages and set up AppSourceCop baseline packages
@@ -196,6 +191,9 @@ function Build-AppsInWorkspace() {
         $MaxProcesses = $MaxCpuCount
     }
 
+    # Get AL tool path
+    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+
     # Update the app jsons with version number (and other properties) from the app manifest files
     Update-AppJsonProperties -Folders $Folders -OutputFolder $PackageCachePath `
         -MajorMinorVersion $MajorMinorVersion -BuildNumber $BuildNumber -RevisionNumber $RevisionNumber
@@ -203,9 +201,10 @@ function Build-AppsInWorkspace() {
     # Create workspace file from AL-Go folders
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
     $workspaceFile = Join-Path $PSScriptRoot "tempWorkspace$datetimeStamp.code-workspace"
-    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath (Get-ALTool -CompilerFolder $CompilerFolder)
+    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
 
     $compilationParameters = @{
+        ALToolPath = $alToolPath
         WorkspaceFile = $workspaceFile
         PackageCachePath = $PackageCachePath
         OutFolder = $OutputFolder
@@ -246,6 +245,9 @@ function Build-AppsInWorkspace() {
 
 function CompileAppsInWorkspace {
     param(
+        [Parameter(Mandatory = $true)]
+        [string]$ALToolPath,
+
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFile,
         
@@ -379,7 +381,6 @@ function CompileAppsInWorkspace {
     }
 
     if ($ReportSuppressedDiagnostics.IsPresent) {
-        #$arguments += "--reportsuppresseddiagnostics"
         OutputWarning "--reportsuppresseddiagnostics is not yet supported and will be ignored."
     }
 
@@ -400,11 +401,11 @@ function CompileAppsInWorkspace {
     $generatedAppFiles = @()
     $originalEncoding = [Console]::OutputEncoding
     try {
-        Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
+        Write-Host "Executing: $ALToolPath $($arguments -join ' ')" -ForegroundColor Green
         
         # Temporarily set console encoding to UTF-8 to handle special characters in output
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-        & $script:alTool @arguments | Out-Host
+        & $ALToolPath @arguments | Out-Host
 
         if ($LASTEXITCODE -ne 0) {
             throw "Compilation failed with exit code $LASTEXITCODE"
@@ -462,7 +463,7 @@ function CompileAppsInWorkspace {
 function Get-DotnetRuntimeVersionInstalled {
     param(
         [Parameter(Mandatory = $false)]
-        [int] $MinimumSupportedMajorVersion = 6,
+        [int] $MinimumSupportedMajorVersion = 6, # TODO: Find a better way to determine minimum supported version and maximum supported version
         [Parameter(Mandatory = $false)]
         [int] $MaximumSupportedMajorVersion = 8
     )
@@ -574,7 +575,6 @@ function Get-AssemblyProbingPaths() {
         }
     }
 
-    Write-Host "Assembly probing paths determined:"
     OutputArray -Message "Probing Paths:" -Array $probingPaths
 
     return $probingPaths
@@ -660,6 +660,7 @@ function Update-AppJsonProperties() {
             OutputDebug "Updated app.json at $($appJsonFile.FullName)"
 
             # Generate app file name
+            # TODO: Consider whether this should happen here or somewhere else
             $appFileName = "$($appJsonContent.Publisher)_$($appJsonContent.Name)_$($appJsonContent.Version).app".Split([System.IO.Path]::GetInvalidFileNameChars()) -join ''
 
             # Delete existing app file in output folder if it exists
@@ -672,13 +673,36 @@ function Update-AppJsonProperties() {
     }
 }
 
+<#
+.SYNOPSIS
+    Creates a consolidated build output file from individual log files.
+.DESCRIPTION
+    Collects all .log files from the specified build artifact folder, sanitizes their content,
+    and appends them to a single build output file. Optionally displays the output in the console
+    and can fail the build based on specified criteria.
+.PARAMETER BuildArtifactFolder
+    The folder containing individual build log files.
+.PARAMETER BuildOutputPath
+    The path where the consolidated build output file will be created.
+.PARAMETER DisplayInConsole
+    Switch to indicate whether the build output should be displayed in the console.
+.PARAMETER FailOn
+    Specifies the criteria for failing the build based on output severity. Options are 'none', 'error', 'warning', 'newWarning'.
+.PARAMETER BasePath
+    The base path for relative paths in the output. Defaults to the GitHub workspace path.
+#>
 function New-BuildOutputFile {
     param(
+        [Parameter(Mandatory = $true)]
         [string]$BuildArtifactFolder,
+        [Parameter(Mandatory = $true)]
         [string]$BuildOutputPath,
+        [Parameter(Mandatory = $false)]
         [switch]$DisplayInConsole,
+        [Parameter(Mandatory = $false)]
         [ValidateSet('none','error','warning','newWarning')]
         [string]$FailOn,
+        [Parameter(Mandatory = $false)]
         [string]$BasePath = (Get-BasePath)
     )
     # Create the file path for the build output
@@ -699,6 +723,7 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
+# TODO: Move to more appropriate module
 function Get-BasePath() {
     if ($ENV:GITHUB_WORKSPACE) {
         return $ENV:GITHUB_WORKSPACE
