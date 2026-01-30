@@ -326,6 +326,141 @@ function SetRepositorySecret {
     gh secret set $name -b $value --repo $repository
 }
 
+<#
+.SYNOPSIS
+    Deletes all workflow runs in a repository.
+
+.DESCRIPTION
+    Cleans up workflow runs in a GitHub repository by deleting all existing runs.
+    This is useful for ensuring a clean state before running tests that track specific workflow runs.
+
+.PARAMETER repository
+    The full repository name in the format "owner/repo" (e.g., "microsoft/AL-Go").
+
+.EXAMPLE
+    CleanupWorkflowRuns -repository "microsoft/AL-Go"
+#>
+function CleanupWorkflowRuns {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository
+    )
+
+    Write-Host -ForegroundColor Yellow "`nCleaning up workflow runs in $repository"
+
+    RefreshToken -repository $repository
+
+    # Get all workflow runs
+    $runs = invoke-gh api "/repos/$repository/actions/runs?per_page=100" -silent -returnValue | ConvertFrom-Json
+
+    if ($runs.workflow_runs.Count -eq 0) {
+        Write-Host "No workflow runs found"
+        return
+    }
+
+    Write-Host "Deleting $($runs.workflow_runs.Count) workflow runs..."
+    foreach ($run in $runs.workflow_runs) {
+        try {
+            Write-Host "Deleting run $($run.id) ($($run.name) - $($run.status))"
+            invoke-gh api /repos/$repository/actions/runs/$($run.id) --method DELETE -silent | Out-Null
+        }
+        catch {
+            Write-Host "Warning: Failed to delete run $($run.id): $_"
+        }
+    }
+    Write-Host "Cleanup completed"
+}
+
+<#
+.SYNOPSIS
+    Resets a repository to match the content of a source repository.
+
+.DESCRIPTION
+    Clones the target repository, fetches content from a source repository, and performs a hard reset
+    followed by a force push. This preserves the repository identity while resetting its content to
+    match the source repository. Useful for ensuring deterministic state in end-to-end tests.
+
+.PARAMETER repository
+    The full name of the target repository to reset in the format "owner/repo" (e.g., "microsoft/AL-Go").
+
+.PARAMETER sourceRepository
+    The full name of the source repository to copy content from in the format "owner/repo".
+
+.PARAMETER branch
+    The branch name to reset. Defaults to "main".
+
+.EXAMPLE
+    ResetRepositoryToSource -repository "microsoft/test-repo" -sourceRepository "microsoft/source-repo" -branch "main"
+#>
+function ResetRepositoryToSource {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $repository,
+        [Parameter(Mandatory = $true)]
+        [string] $sourceRepository,
+        [string] $branch = "main"
+    )
+
+    Write-Host -ForegroundColor Yellow "`nResetting repository $repository to match $sourceRepository"
+
+    RefreshToken -repository $repository
+
+    # Clone the repository locally if not already in it
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $repoPath = Join-Path $tempPath ([System.Guid]::NewGuid().ToString())
+    New-Item $repoPath -ItemType Directory | Out-Null
+
+    Push-Location $repoPath
+    try {
+        Write-Host "Cloning $repository..."
+        invoke-gh repo clone $repository .
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to clone repository $repository"
+        }
+
+        # Fetch the source repository content
+        Write-Host "Fetching source repository $sourceRepository..."
+        invoke-git remote add source "https://github.com/$sourceRepository.git"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to add remote source for $sourceRepository"
+        }
+
+        invoke-git fetch source $branch --quiet
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to fetch branch $branch from source $sourceRepository"
+        }
+
+        # Reset the current branch to match the source
+        Write-Host "Resetting $branch to match source/$branch..."
+        invoke-git checkout $branch --quiet
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to checkout branch $branch"
+        }
+
+        invoke-git reset --hard "source/$branch" --quiet
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to reset branch $branch to source/$branch"
+        }
+
+        # Force push to update the repository
+        Write-Host "Force pushing changes..."
+        invoke-git push origin $branch --force --quiet
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to push changes to $repository"
+        }
+
+        Write-Host "Repository reset completed successfully"
+    }
+    catch {
+        Write-Host "Error resetting repository: $_"
+        throw
+    }
+    finally {
+        Pop-Location
+        Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
+    }
+}
+
 function CreateNewAppInFolder {
     Param(
         [string] $folder,
