@@ -783,3 +783,4 @@ Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Get-ScriptOverrides
+Export-ModuleMember -Function Update-AppJsonProperties
