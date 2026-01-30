@@ -35,7 +35,6 @@ function Get-CodeAnalyzers {
     }
 
     if ($Settings.CustomCodeCops -and $Settings.CustomCodeCops.Count -gt 0) {
-        # TODO: Implement support for custom code cops in future releases
         OutputWarning -message "Custom code cops are not yet supported. The following custom code cops will be ignored: $($CustomCodeCops -join ', ')"
     }
 
@@ -200,11 +199,6 @@ function Build-AppsInWorkspace() {
 
     # Get AL tool path
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
-
-    # Update the app jsons with version number (and other properties) from the app manifest files
-    # TODO: Move to Compile.ps1
-    Update-AppJsonProperties -Folders $Folders -OutputFolder $PackageCachePath `
-        -MajorMinorVersion $MajorMinorVersion -BuildNumber $BuildNumber -RevisionNumber $RevisionNumber
 
     # Create workspace file from AL-Go folders
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"

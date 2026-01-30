@@ -142,6 +142,12 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
     Write-Host "Checking for required upgrades using AppSourceCop..."
 }
 
+$packageCachePath = Join-Path $compilerFolder "symbols"
+
+# Update the app jsons with version number (and other properties) from the app manifest files
+Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) -OutputFolder $packageCachePath `
+    -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber
+
 # Start compilation
 $appFiles = @()
 $testAppFiles = @()
@@ -151,7 +157,7 @@ try {
         $appFiles = Build-AppsInWorkspace `
             -Folders $settings.appFolders `
             -CompilerFolder $compilerFolder `
-            -PackageCachePath (Join-Path $compilerFolder "symbols") `
+            -PackageCachePath $packageCachePath `
             -OutFolder $appOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -AssemblyProbingPaths $assemblyProbingPaths `
@@ -181,6 +187,7 @@ try {
         $testAppFiles = Build-AppsInWorkspace `
             -Folders $settings.testFolders `
             -CompilerFolder $compilerFolder `
+            -PackageCachePath $packageCachePath `
             -OutFolder $testAppOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -AssemblyProbingPaths $assemblyProbingPaths `
