@@ -1,4 +1,5 @@
 $script:alTool = $null
+Import-Module (Join-Path -Path $PSScriptRoot "./DebugLogHelper.psm1" -Resolve)
 
 <#
 .SYNOPSIS
@@ -176,6 +177,23 @@ function Build-AppsInWorkspace() {
         $PackageCachePath = Join-Path $CompilerFolder "symbols"
     }
 
+    # Determine the final output folder
+    if (-not $OutFolder) {
+        $OutputFolder = $PackageCachePath
+    } else {
+        $OutputFolder = $OutFolder
+    }
+
+    # Validate MaxCpuCount
+    if ($MaxCpuCount -gt [System.Environment]::ProcessorCount) {
+        Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $([System.Environment]::ProcessorCount). Using $([System.Environment]::ProcessorCount) instead."
+        $MaxProcesses = [System.Environment]::ProcessorCount
+    } elseif ($MaxCpuCount -lt 0) {
+        $MaxProcesses = [System.Environment]::ProcessorCount
+    } else {
+        $MaxProcesses = $MaxCpuCount
+    }
+
     # Update the app jsons with version number (and other properties) from the app manifest files
     Update-AppJsonProperties -Folders $Folders -OutputFolder $PackageCachePath `
         -MajorMinorVersion $MajorMinorVersion -BuildNumber $BuildNumber -RevisionNumber $RevisionNumber
@@ -188,7 +206,7 @@ function Build-AppsInWorkspace() {
     $compilationParameters = @{
         WorkspaceFile = $workspaceFile
         PackageCachePath = $PackageCachePath
-        OutFolder = $OutFolder
+        OutFolder = $OutputFolder
         AssemblyProbingPaths = $AssemblyProbingPaths
         Analyzers = $Analyzers
         PreprocessorSymbols = $PreprocessorSymbols
@@ -199,7 +217,7 @@ function Build-AppsInWorkspace() {
         SourceCommit = $SourceCommit
         BuildBy = $BuildBy
         BuildUrl = $BuildUrl
-        MaxCpuCount = $MaxCpuCount
+        MaxCpuCount = $MaxProcesses
     }
 
     # Pre-Compile Apps - Invoke script override before compilation
@@ -275,33 +293,18 @@ function CompileAppsInWorkspace {
         [string]$OutFolder
     )
 
+    # Check if the workspace file exists
+    if (-not (Test-Path $WorkspaceFile)) {
+        throw "The specified workspace file '$WorkspaceFile' does not exist."
+    }
+
     # Build the command arguments dynamically
     $arguments = @("workspace", "compile", $WorkspaceFile)
 
     # Get list of files in the package cache path
-    $filesInPackageCache = @()
+    $filesInPackageCacheBeforeCompile = @()
     if ($PackageCachePath -and (Test-Path $PackageCachePath)) {
-        $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File | Select-Object -ExpandProperty FullName
-    }
-
-    # Determine the final output folder
-    if (-not $OutFolder) {
-        $OutputFolder = $PackageCachePath
-    } else {
-        $OutputFolder = $OutFolder
-    }
-
-    # Validate MaxCpuCount
-    if ($MaxCpuCount -gt [System.Environment]::ProcessorCount) {
-        Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $([System.Environment]::ProcessorCount). Using $([System.Environment]::ProcessorCount) instead."
-        $MaxCpuCount = [System.Environment]::ProcessorCount
-    } elseif ($MaxCpuCount -lt 0) {
-        $MaxCpuCount = [System.Environment]::ProcessorCount
-    }
-
-    # Check if the workspace file exists
-    if (-not (Test-Path $WorkspaceFile)) {
-        throw "The specified workspace file '$WorkspaceFile' does not exist."
+        $filesInPackageCacheBeforeCompile = Get-ChildItem -Path $PackageCachePath -File | Select-Object -ExpandProperty FullName
     }
 
     # Add optional parameters only if they are provided
@@ -316,6 +319,11 @@ function CompileAppsInWorkspace {
 
     if ($PackageCachePath) {
         $arguments += "--packagecachepath"
+        $arguments += $PackageCachePath
+
+        # Always output to package cache path first so compiled apps can be used as dependencies for other apps.
+        # Once compilation is complete the generated app files will be copied to the output folder.
+        $arguments += "--outfolder"
         $arguments += $PackageCachePath
     }
 
@@ -380,55 +388,51 @@ function CompileAppsInWorkspace {
         $arguments += $defaultLogDir
     }
 
-    $arguments += "--outfolder"
-    $arguments += $PackageCachePath
-
     $generatedAppFiles = @()
     $originalEncoding = [Console]::OutputEncoding
-    
     try {
         Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
         
-        # Temporarily set console encoding to UTF-8 to handle emojis properly
+        # Temporarily set console encoding to UTF-8 to handle special characters in output
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         & $script:alTool @arguments | Out-Host
 
         if ($LASTEXITCODE -ne 0) {
-            throw "AL compilation failed with exit code $LASTEXITCODE"
+            throw "Compilation failed with exit code $LASTEXITCODE"
         }
+        OutputDebug -message "Compilation completed successfully."
     } catch {
+        OutputColor -Message "Error during compilation: $_" -Color Red
         throw $_
     } finally {
         # Restore original encoding
         [Console]::OutputEncoding = $originalEncoding
+        $outputFiles = @()
 
         # if package cache path and output folder are the same then no need to copy files
         # Copy the output files from the package cache to the output folder 
-        Write-Host "Copying generated app files to output folder..."
-        if (Test-Path $PackageCachePath) {
+        OutputDebug -message "Copying generated app files to output folder..."
+        if ((Test-Path $PackageCachePath) -and ($PackageCachePath -ne $OutputFolder)) {
             if (-not (Test-Path $OutputFolder)) {
                 New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
             }
-            Write-Host "Copying generated app files from package cache '$PackageCachePath' to output folder '$OutputFolder'"
-            $files = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
-            Write-Host "Found $($files.Count) app files in package cache."
-            Write-Host "$($files | ForEach-Object { $_.FullName } | Out-String)"
-            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { $filesInPackageCache -notcontains $_.FullName }
+            $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
+            OutputArray -Message "Files in package cache after compilation:" -Array $filesInPackageCache -Debug
+            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { $filesInPackageCacheBeforeCompile -notcontains $_.FullName }
+        }
 
-            foreach ($file in $outputFiles) {
-                Write-Host "Copying generated app file $($file.FullName) to $OutputFolder"
-                $destinationPath = Join-Path $OutputFolder $file.Name
-                $generatedAppFiles += $destinationPath
-                if ($OutputFolder -eq $PackageCachePath) {
-                    continue
-                }
-                Copy-Item -Path $file.FullName -Destination $destinationPath -Force
+        OutputDebug -message "Copying generated app files from package cache '$PackageCachePath' to output folder '$OutputFolder'"
+        foreach ($file in $outputFiles) {
+            $destinationPath = Join-Path $OutputFolder $file.Name
+            $generatedAppFiles += $destinationPath
+            if ($OutputFolder -eq $PackageCachePath) {
+                continue
             }
+            Copy-Item -Path $file.FullName -Destination $destinationPath -Force
         }
     }
 
-    Write-Host "Generated app files: $($generatedAppFiles | Out-String)"
-
+    OutputArray -Message "Generated app files:" -Array $generatedAppFiles -Debug
     return $generatedAppFiles
 }
 
@@ -510,6 +514,22 @@ function Get-DotnetRuntimeVersionInstalled {
     }
 }
 
+<#
+
+.SYNOPSIS
+    Gets the assembly probing paths for the AL compiler.
+.DESCRIPTION
+    Constructs a list of assembly probing paths based on the compiler folder and the installed .NET runtimes.
+    Includes paths for service assemblies, mock assemblies, OpenXML, and shared runtime folders.
+.PARAMETER CompilerFolder
+    The folder where the AL compiler tool is located.
+.PARAMETER MinimumDotNetVersion
+    The minimum major version of .NET runtime to consider. Default is 6.
+.PARAMETER MaximumDotNetVersion
+    The maximum major version of .NET runtime to consider. Default is 8.
+.OUTPUTS
+    Array of assembly probing paths.
+#>
 function Get-AssemblyProbingPaths() {
     param(
         [Parameter(Mandatory = $true)]
