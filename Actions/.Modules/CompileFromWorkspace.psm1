@@ -319,10 +319,12 @@ function CompileAppsInWorkspace {
     # Build the command arguments dynamically
     $arguments = @("workspace", "compile", $WorkspaceFile)
 
-    # Get list of files in the package cache path
-    $filesInPackageCacheBeforeCompile = @()
+    # Get list of files in the package cache path with their timestamps
+    $filesBeforeCompile = @{}
     if ($PackageCachePath -and (Test-Path $PackageCachePath)) {
-        $filesInPackageCacheBeforeCompile = Get-ChildItem -Path $PackageCachePath -File | Select-Object -ExpandProperty FullName
+        Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | ForEach-Object {
+            $filesBeforeCompile[$_.FullName] = $_.LastWriteTimeUtc
+        }
     }
 
     # Add optional parameters only if they are provided
@@ -442,7 +444,11 @@ function CompileAppsInWorkspace {
             }
             $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
             OutputArray -Message "Files in package cache after compilation:" -Array $filesInPackageCache -Debug
-            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { $filesInPackageCacheBeforeCompile -notcontains $_.FullName }
+            # Find new or modified files by comparing timestamps
+            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { 
+                -not $filesBeforeCompile.ContainsKey($_.FullName) -or 
+                $_.LastWriteTimeUtc -gt $filesBeforeCompile[$_.FullName]
+            }
         }
 
         OutputDebug -message "Copying generated app files from package cache '$PackageCachePath' to output folder '$OutputFolder'"
@@ -641,10 +647,7 @@ function Update-AppJsonProperties() {
         [int] $BuildNumber = 0,
 
         [Parameter(Mandatory = $false)]
-        [int] $RevisionNumber = 0,
-
-        [Parameter(Mandatory = $true)]
-        [string]$OutputFolder
+        [int] $RevisionNumber = 0
     )
 
     # TODO: Update implementation to support Directory.App.Props.json
@@ -673,17 +676,6 @@ function Update-AppJsonProperties() {
             # Save the updated app.json file
             $appJsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $appJsonFile.FullName -Encoding UTF8
             OutputDebug "Updated app.json at $($appJsonFile.FullName)"
-
-            # Generate app file name
-            # TODO: Consider whether this should happen here or somewhere else
-            $appFileName = "$($appJsonContent.Publisher)_$($appJsonContent.Name)_$($appJsonContent.Version).app".Split([System.IO.Path]::GetInvalidFileNameChars()) -join ''
-
-            # Delete existing app file in output folder if it exists
-            $existingAppFilePath = Join-Path $OutputFolder $appFileName
-            if (Test-Path $existingAppFilePath) {
-                Remove-Item -Path $existingAppFilePath -Force
-                OutputDebug "Deleted existing app file at $existingAppFilePath"
-            }
         }
     }
 }

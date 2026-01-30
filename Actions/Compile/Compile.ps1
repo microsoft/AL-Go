@@ -145,7 +145,7 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
 $packageCachePath = Join-Path $compilerFolder "symbols"
 
 # Update the app jsons with version number (and other properties) from the app manifest files
-Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) -OutputFolder $packageCachePath `
+Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
     -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber
 
 # Start compilation
