@@ -1,5 +1,6 @@
 $script:alTool = $null
 Import-Module (Join-Path -Path $PSScriptRoot "./DebugLogHelper.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot "../TelemetryHelper.psm1" -Resolve)
 
 <#
 .SYNOPSIS
@@ -159,7 +160,13 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string]$BuildUrl,
         [Parameter(Mandatory = $false)]
+        [switch]$GenerateCrossReferences,
+        [Parameter(Mandatory = $false)]
         [switch]$ReportSuppressedDiagnostics,
+        [Parameter(Mandatory = $false)]
+        [string]$ErrorLogPath,
+        [Parameter(Mandatory = $false)]
+        [switch]$EnableExternalRulesets,
         [Parameter(Mandatory = $false)]
         [ValidateSet('app', 'testApp')]
         [string]$AppType,
@@ -195,6 +202,7 @@ function Build-AppsInWorkspace() {
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
 
     # Update the app jsons with version number (and other properties) from the app manifest files
+    # TODO: Move to Compile.ps1
     Update-AppJsonProperties -Folders $Folders -OutputFolder $PackageCachePath `
         -MajorMinorVersion $MajorMinorVersion -BuildNumber $BuildNumber -RevisionNumber $RevisionNumber
 
@@ -218,7 +226,10 @@ function Build-AppsInWorkspace() {
         SourceCommit = $SourceCommit
         BuildBy = $BuildBy
         BuildUrl = $BuildUrl
+        GenerateCrossReferences = $GenerateCrossReferences
         ReportSuppressedDiagnostics = $ReportSuppressedDiagnostics
+        ErrorLogPath = $ErrorLogPath
+        EnableExternalRulesets = $EnableExternalRulesets
         MaxCpuCount = $MaxProcesses
     }
 
@@ -289,6 +300,9 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $false)]
         [switch]$ReportSuppressedDiagnostics,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$EnableExternalRulesets,
         
         [Parameter(Mandatory = $false)]
         [ValidateSet('Debug', 'Error', 'Normal', 'Verbose', 'Warning')]
@@ -354,7 +368,9 @@ function CompileAppsInWorkspace {
     }
 
     if ($GenerateReportLayout.IsPresent) {
-        $arguments += "--generatereportlayout"
+        $arguments += "--generatereportlayout+"
+    } else {
+        $arguments += "--generatereportlayout-"
     }
 
     if ($Ruleset) {
@@ -382,6 +398,10 @@ function CompileAppsInWorkspace {
 
     if ($ReportSuppressedDiagnostics.IsPresent) {
         OutputWarning "--reportsuppresseddiagnostics is not yet supported and will be ignored."
+    }
+
+    if ($EnableExternalRulesets.IsPresent) {
+        OutputWarning "--enableexternalrulesets is not yet supported and will be ignored."
     }
 
     if ($LogLevel -and $LogLevel -ne 'Normal') {
@@ -460,10 +480,11 @@ function CompileAppsInWorkspace {
 .OUTPUTS
     System.Version of the highest compatible .NET runtime installed, or $null if none found.
 #>
+# TODO: Find a better way to determine minimum supported version and maximum supported version
 function Get-DotnetRuntimeVersionInstalled {
     param(
         [Parameter(Mandatory = $false)]
-        [int] $MinimumSupportedMajorVersion = 6, # TODO: Find a better way to determine minimum supported version and maximum supported version
+        [int] $MinimumSupportedMajorVersion = 6,
         [Parameter(Mandatory = $false)]
         [int] $MaximumSupportedMajorVersion = 8
     )
@@ -723,6 +744,44 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
+<#
+.SYNOPSIS
+    Gets script overrides for pre-compile and post-compile actions.
+.DESCRIPTION
+    Checks for the existence of PreCompileApp.ps1 and PostCompileApp.ps1 scripts in the specified
+    AL-Go folder and returns their script blocks if found.
+.PARAMETER ALGoFolderName
+    The folder where the AL-Go scripts are located.
+.OUTPUTS
+    Hashtable with PreCompileApp and PostCompileApp script blocks.
+#>
+function Get-ScriptOverrides() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ALGoFolderName
+    )
+    $precompileOverride = $null
+    $postCompileOverride = $null
+    foreach ($override in @("PreCompileApp", "PostCompileApp")) {
+        $scriptPath = Join-Path $ALGoFolderName "$override.ps1"
+        if (Test-Path -Path $scriptPath -Type Leaf) {
+            Write-Host "Add override for $override ($scriptPath)"
+            Trace-Information -Message "Using override for $override"
+            if ($override -eq "PreCompileApp") {
+                $precompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            }
+            else {
+                $postCompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            }
+        }
+    }
+
+    return @{
+        PreCompileApp = $precompileOverride
+        PostCompileApp = $postCompileOverride
+    }
+}
+
 # TODO: Move to more appropriate module
 function Get-BasePath() {
     if ($ENV:GITHUB_WORKSPACE) {
@@ -737,3 +796,4 @@ Export-ModuleMember -Function Get-BasePath
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
+Export-ModuleMember -Function Get-ScriptOverrides

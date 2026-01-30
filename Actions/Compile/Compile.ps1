@@ -47,21 +47,7 @@ $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
 New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 
 # Check for precompile and postcompile overrides
-$precompileOverride = $null
-$postCompileOverride = $null
-foreach ($override in @("PreCompileApp", "PostCompileApp")) {
-    $scriptPath = Join-Path $ALGoFolderName "$override.ps1"
-    if (Test-Path -Path $scriptPath -Type Leaf) {
-        Write-Host "Add override for $override ($scriptPath)"
-        Trace-Information -Message "Using override for $override"
-        if ($override -eq "PreCompileApp") {
-            $precompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-        }
-        else {
-            $postCompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-        }
-    }
-}
+$scriptOverrides = Get-ScriptOverrides -ALGoFolderName $projectFolder
 
 # Determine which code analyzers to use
 $analyzers = Get-CodeAnalyzers -Settings $settings
@@ -72,19 +58,20 @@ $buildMetadata = Get-BuildMetadata
 # Collect preprocessor symbols
 $preprocessorSymbols = @()
 if ($settings.ContainsKey('preprocessorSymbols')) {
-    Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
     $preprocessorSymbols += $settings.preprocessorSymbols
 }
 
 # Collect features
 $features = @()
 if ($settings.ContainsKey('features')) {
-    Write-Host "Adding features : $($settings.features -join ',')"
     $features += $settings.features
 }
 
 # Get version number
 $versionNumber = Get-VersionNumber -Settings $settings
+
+# Get assembly probing paths
+$assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
 
 # Read existing install apps and test apps from JSON files
 $installApps = $settings.installApps
@@ -155,14 +142,6 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
     Write-Host "Checking for required upgrades using AppSourceCop..."
 }
 
-# Get assembly probing paths
-$assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
-
-$reportSuppressedDiagnostics = $false
-if ($settings.reportSuppressedDiagnostics) {
-    $reportSuppressedDiagnostics = $true
-}
-
 # Start compilation
 $appFiles = @()
 $testAppFiles = @()
@@ -187,10 +166,11 @@ try {
             -SourceCommit $buildMetadata.SourceCommit `
             -BuildBy $buildMetadata.BuildBy `
             -BuildUrl $buildMetadata.BuildUrl `
-            -ReportSuppressedDiagnostics $reportSuppressedDiagnostics `
+            -ReportSuppressedDiagnostics:($settings.reportSuppressedDiagnostics) `
+            -EnableExternalRulesets:($settings.enableExternalRulesets) `
             -AppType 'app' `
-            -PreCompileApp $precompileOverride `
-            -PostCompileApp $postCompileOverride
+            -PreCompileApp $scriptOverrides.PreCompileApp `
+            -PostCompileApp $scriptOverrides.PostCompileApp
     }
 
     if ($settings.testFolders.Count -gt 0) {
@@ -215,10 +195,11 @@ try {
             -SourceCommit $buildMetadata.SourceCommit `
             -BuildBy $buildMetadata.BuildBy `
             -BuildUrl $buildMetadata.BuildUrl `
-            -ReportSuppressedDiagnostics $reportSuppressedDiagnostics `
+            -ReportSuppressedDiagnostics:($settings.reportSuppressedDiagnostics) `
+            -EnableExternalRulesets:($settings.enableExternalRulesets) `
             -AppType 'testApp' `
-            -PreCompileApp $precompileOverride `
-            -PostCompileApp $postCompileOverride
+            -PreCompileApp $scriptOverrides.PreCompileApp `
+            -PostCompileApp $scriptOverrides.PostCompileApp
     }
 } finally {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
