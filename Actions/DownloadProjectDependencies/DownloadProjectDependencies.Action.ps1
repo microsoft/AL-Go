@@ -200,6 +200,9 @@ function FilterDependenciesByAppId {
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
+# Import BcContainerHelper module for Sort-AppFoldersByDependencies function
+DownloadAndImportBcContainerHelper
+
 Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Base Folder: $baseFolder, Destination Path: $destinationPath"
 
 $downloadedDependencies = @()
