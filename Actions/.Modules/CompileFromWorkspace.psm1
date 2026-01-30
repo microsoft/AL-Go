@@ -517,7 +517,7 @@ function Get-AssemblyProbingPaths() {
         [Parameter(Mandatory = $false)]
         [int]$MinimumDotNetVersion = 6,
         [Parameter(Mandatory = $false)]
-        [int]$MaximumDotNetVersion = 99
+        [int]$MaximumDotNetVersion = 8
     )
     $probingPaths = @()
 
