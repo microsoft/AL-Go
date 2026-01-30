@@ -35,7 +35,7 @@ function Get-CodeAnalyzers {
 
     if ($Settings.CustomCodeCops -and $Settings.CustomCodeCops.Count -gt 0) {
         # TODO: Implement support for custom code cops in future releases
-        Write-Host "::warning::Custom code cops are not yet supported. The following custom code cops will be ignored: $($CustomCodeCops -join ', ')"
+        OutputWarning -message "Custom code cops are not yet supported. The following custom code cops will be ignored: $($CustomCodeCops -join ', ')"
     }
 
     return $analyzers
@@ -471,7 +471,7 @@ function Get-DotnetRuntimeVersionInstalled {
         $runtimeOutput = dotnet --list-runtimes
         
         if (-not $runtimeOutput) {
-            Write-Host "::warning::Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
+            OutputDebug -message "Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
             return $null
         }
 
@@ -500,7 +500,7 @@ function Get-DotnetRuntimeVersionInstalled {
         $aspNetVersions = $runtimes['Microsoft.AspNetCore.App']
 
         if (-not $netCoreVersions -or -not $aspNetVersions) {
-            Write-Host "::warning::Required .NET runtimes not found. Need both Microsoft.NETCore.App and Microsoft.AspNetCore.App."
+            OutputDebug -message "Required .NET runtimes not found. Need both Microsoft.NETCore.App and Microsoft.AspNetCore.App."
             return $null
         }
 
@@ -518,7 +518,7 @@ function Get-DotnetRuntimeVersionInstalled {
         return $null
     }
     catch {
-        Write-Host "::warning::Failed to detect .NET runtime version: $_"
+        OutputDebug -message "Failed to detect .NET runtime version: $_"
         return $null
     }
 }
