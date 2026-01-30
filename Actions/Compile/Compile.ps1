@@ -155,6 +155,9 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
     Write-Host "Checking for required upgrades using AppSourceCop..."
 }
 
+# Get assembly probing paths
+$assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
+
 # Start compilation
 $appFiles = @()
 $testAppFiles = @()
@@ -167,6 +170,7 @@ try {
             -PackageCachePath (Join-Path $compilerFolder "symbols") `
             -OutFolder $appOutputFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
+            -AssemblyProbingPaths $assemblyProbingPaths `
             -Analyzers $analyzers `
             -Preprocessorsymbols $preprocessorSymbols `
             -Features $features `

@@ -87,17 +87,32 @@ function Get-BuildMetadata {
     }
 }
 
-function Install-ALTool {
+<#
+    .SYNOPSIS
+    Gets the path to the AL compiler tool (al.exe or al).
+    .DESCRIPTION
+    Returns the full path to the AL compiler tool located in the specified compiler folder.
+    .PARAMETER CompilerFolder
+    The folder where the AL compiler tool is located.
+    .OUTPUTS
+    The full path to the AL compiler tool.
+#>
+function Get-ALTool {
     param(
         $CompilerFolder
     )
+
+    if ($script:alTool -and (Test-Path $script:alTool)) {
+        return $script:alTool
+    }
+
     # Load the AL tool from the downloaded package
     $alExe = Get-ChildItem -Path $CompilerFolder -Recurse -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "altool.exe" } | Select-Object -First 1 -ExpandProperty FullName
     if (-not $alExe) {
         throw "Could not find al.exe in the development tools package."
     }
     $script:alTool = $alExe
-    #return $alExe
+    return $script:alTool
 }
 
 <#
@@ -128,6 +143,8 @@ function Build-AppsInWorkspace() {
         [int]$MaxCpuCount = 1,
         # Optional compiler parameters
         [Parameter(Mandatory = $false)]
+        [string[]]$AssemblyProbingPaths,
+        [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
         [Parameter(Mandatory = $false)]
         [string[]]$PreprocessorSymbols,
@@ -154,11 +171,6 @@ function Build-AppsInWorkspace() {
         [scriptblock]$PostCompileApp
     )
 
-    Install-ALTool -CompilerFolder $CompilerFolder
-
-    # Get asembly probing paths
-    $assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
-
     # Get the package cache path
     if (-not $PackageCachePath) {
         $PackageCachePath = Join-Path $CompilerFolder "symbols"
@@ -171,13 +183,13 @@ function Build-AppsInWorkspace() {
     # Create workspace file from AL-Go folders
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
     $workspaceFile = Join-Path $PSScriptRoot "tempWorkspace$datetimeStamp.code-workspace"
-    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile
+    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath (Get-ALTool -CompilerFolder $CompilerFolder)
 
     $compilationParameters = @{
         WorkspaceFile = $workspaceFile
         PackageCachePath = $PackageCachePath
         OutFolder = $OutFolder
-        AssemblyProbingPaths = $assemblyProbingPaths
+        AssemblyProbingPaths = $AssemblyProbingPaths
         Analyzers = $Analyzers
         PreprocessorSymbols = $PreprocessorSymbols
         Features = $Features
@@ -420,76 +432,153 @@ function CompileAppsInWorkspace {
     return $generatedAppFiles
 }
 
+<#
+.SYNOPSIS
+    Gets the highest compatible .NET runtime version installed on the system.
+.DESCRIPTION
+    Uses 'dotnet --list-runtimes' to detect installed .NET runtimes. Returns the highest
+    version that is within the supported major version range. Requires both Microsoft.NETCore.App
+    and Microsoft.AspNetCore.App runtimes to be installed for a version to be considered.
+.PARAMETER MinimumSupportedMajorVersion
+    The minimum major version of .NET runtime to consider. 
+.PARAMETER MaximumSupportedMajorVersion
+    The maximum major version of .NET runtime to consider.
+.OUTPUTS
+    System.Version of the highest compatible .NET runtime installed, or $null if none found.
+#>
+function Get-DotnetRuntimeVersionInstalled {
+    param(
+        [Parameter(Mandatory = $false)]
+        [int] $MinimumSupportedMajorVersion = 6,
+        [Parameter(Mandatory = $false)]
+        [int] $MaximumSupportedMajorVersion = 8
+    )
+
+    try {
+        $runtimeOutput = dotnet --list-runtimes
+        
+        if (-not $runtimeOutput) {
+            Write-Host "::warning::Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
+            return $null
+        }
+
+        # Parse runtimes into a hashtable grouped by runtime name
+        $runtimes = @{}
+        foreach ($line in $runtimeOutput) {
+            # Format: "Microsoft.NETCore.App 8.0.1 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]"
+            if ($line -match '^(Microsoft\.\w+\.App)\s+(\d+\.\d+\.\d+)') {
+                $runtimeName = $matches[1]
+                $versionStr = $matches[2]
+                
+                try {
+                    $version = [System.Version]$versionStr
+                    if (-not $runtimes.ContainsKey($runtimeName)) {
+                        $runtimes[$runtimeName] = @()
+                    }
+                    $runtimes[$runtimeName] += $version
+                } catch {
+                    # Skip versions that can't be parsed
+                }
+            }
+        }
+
+        # Find versions where both NETCore.App and AspNetCore.App are installed
+        $netCoreVersions = $runtimes['Microsoft.NETCore.App']
+        $aspNetVersions = $runtimes['Microsoft.AspNetCore.App']
+
+        if (-not $netCoreVersions -or -not $aspNetVersions) {
+            Write-Host "::warning::Required .NET runtimes not found. Need both Microsoft.NETCore.App and Microsoft.AspNetCore.App."
+            return $null
+        }
+
+        # Find the highest version present in both, within the supported major version range
+        $compatibleVersions = $netCoreVersions | Where-Object { 
+            $_.Major -ge $MinimumSupportedMajorVersion -and
+            $_.Major -le $MaximumSupportedMajorVersion -and 
+            $aspNetVersions -contains $_
+        } | Sort-Object -Descending
+
+        if ($compatibleVersions) {
+            return $compatibleVersions | Select-Object -First 1
+        }
+
+        return $null
+    }
+    catch {
+        Write-Host "::warning::Failed to detect .NET runtime version: $_"
+        return $null
+    }
+}
+
 function Get-AssemblyProbingPaths() {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$CompilerFolder
+        [string]$CompilerFolder,
+        [Parameter(Mandatory = $false)]
+        [int]$MinimumDotNetVersion = 6,
+        [Parameter(Mandatory = $false)]
+        [int]$MaximumDotNetVersion = 99
     )
     $probingPaths = @()
-    $dotNetRuntimeVersionInstalled = [System.Version] "8.0.22" # TODO
-    $platformversion = [System.Version] "28.0.0.0" # TODO
 
     $compilerFolderDllsPath = Join-Path $CompilerFolder "dlls"
     $compilerFolderSharedPath = Join-Path $compilerFolderDllsPath "shared"
     
-    
+    # Use Service and Mock Assemblies folders if they exist from the compiler folder
     if (Test-Path $compilerFolderDllsPath) {
         $probingPaths += @((Join-Path $compilerFolderDllsPath "Service"),(Join-Path $compilerFolderDllsPath "Mock Assemblies"))
     }
 
-    if (Test-Path $compilerFolderSharedPath) {l
+    # Use OpenXML and shared folder if they exist
+    if (Test-Path $compilerFolderSharedPath) {
         $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), $compilerFolderSharedPath) + $probingPaths
-    }
-    elseif ($isLinux -or $isMacOS) {
+    } elseif ($isLinux -or $isMacOS) {
         $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
-    }
-    elseif ($platformversion.Major -ge 22) {
-        if ($dotNetRuntimeVersionInstalled -ge [System.Version]$bcContainerHelperConfig.MinimumDotNetRuntimeVersionStr) {
-            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\$dotNetRuntimeVersionInstalled", "C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersionInstalled") + $probingPaths
+    } else {
+        $dotNetRuntimeVersion = (Get-DotnetRuntimeVersionInstalled -MinimumSupportedMajorVersion $MinimumDotNetVersion -MaximumSupportedMajorVersion $MaximumDotNetVersion)
+        if ($dotNetRuntimeVersion) {
+            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\$dotNetRuntimeVersion", "C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion") + $probingPaths
         }
         else {
             $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
         }
     }
-    else {
-        $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), 'C:\Windows\Microsoft.NET\Assembly') + $probingPaths
-    }
-
-
 
     return $probingPaths
 }
 
+<#
+.SYNOPSIS
+    Creates a workspace file from the specified folders.
+.DESCRIPTION
+    Uses the AL compiler tool to create a workspace file that includes all the specified folders.
+.PARAMETER Folders
+    An array of folder paths to include in the workspace.
+.PARAMETER WorkspaceFile
+    The path where the workspace file will be created.
+.PARAMETER AltoolPath
+    The full path to the AL compiler tool (al.exe or al).
+#>
 function New-WorkspaceFromFolders() {
     param(
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
         
         [Parameter(Mandatory = $true)]
-        [string]$WorkspaceFile
+        [string]$WorkspaceFile,
+
+        [Parameter(Mandatory = $true)]
+        [string]$AltoolPath
     )
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
     try {
-        Write-Host "Executing: $script:alTool $($arguments -join ' ')" -ForegroundColor Green
-        & $script:alTool @arguments | Out-Null
+        Write-Host "Executing: $AltoolPath $($arguments -join ' ')" -ForegroundColor Green
+        & $AltoolPath @arguments | Out-Null
     } catch {
         throw $_
     }
 
     Write-Host "Workspace created at $WorkspaceFile"
-}
-
-function Get-PackageCacheFolder() {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$CompilerFolder
-    )
-    $symbolsFolder = Join-Path $CompilerFolder "symbols"
-    if (Test-Path $symbolsFolder) {
-        return $symbolsFolder
-    } else {
-        throw "The specified compiler folder '$CompilerFolder' does not contain a 'symbols' subfolder."
-    }
 }
 
 function Update-AppJsonProperties() {
@@ -584,4 +673,9 @@ function Get-BasePath() {
     return git rev-parse --show-toplevel
 }
 
-Export-ModuleMember -Function *-*
+Export-ModuleMember -Function Build-AppsInWorkspace
+Export-ModuleMember -Function New-BuildOutputFile
+Export-ModuleMember -Function Get-BasePath
+Export-ModuleMember -Function Get-BuildMetadata
+Export-ModuleMember -Function Get-CodeAnalyzers
+Export-ModuleMember -Function Get-AssemblyProbingPaths
