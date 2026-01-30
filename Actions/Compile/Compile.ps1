@@ -158,6 +158,11 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
 # Get assembly probing paths
 $assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
 
+$reportSuppressedDiagnostics = $false
+if ($settings.reportSuppressedDiagnostics) {
+    $reportSuppressedDiagnostics = $true
+}
+
 # Start compilation
 $appFiles = @()
 $testAppFiles = @()
@@ -182,6 +187,7 @@ try {
             -SourceCommit $buildMetadata.SourceCommit `
             -BuildBy $buildMetadata.BuildBy `
             -BuildUrl $buildMetadata.BuildUrl `
+            -ReportSuppressedDiagnostics $reportSuppressedDiagnostics `
             -AppType 'app' `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride
@@ -209,6 +215,7 @@ try {
             -SourceCommit $buildMetadata.SourceCommit `
             -BuildBy $buildMetadata.BuildBy `
             -BuildUrl $buildMetadata.BuildUrl `
+            -ReportSuppressedDiagnostics $reportSuppressedDiagnostics `
             -AppType 'testApp' `
             -PreCompileApp $precompileOverride `
             -PostCompileApp $postCompileOverride

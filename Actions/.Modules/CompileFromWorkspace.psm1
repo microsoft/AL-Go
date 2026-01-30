@@ -164,6 +164,8 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string]$BuildUrl,
         [Parameter(Mandatory = $false)]
+        [switch]$ReportSuppressedDiagnostics,
+        [Parameter(Mandatory = $false)]
         [ValidateSet('app', 'testApp')]
         [string]$AppType,
         [Parameter(Mandatory = $false)]
@@ -217,6 +219,7 @@ function Build-AppsInWorkspace() {
         SourceCommit = $SourceCommit
         BuildBy = $BuildBy
         BuildUrl = $BuildUrl
+        ReportSuppressedDiagnostics = $ReportSuppressedDiagnostics
         MaxCpuCount = $MaxProcesses
     }
 
@@ -281,6 +284,9 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $false)]
         [string]$BuildUrl,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$ReportSuppressedDiagnostics,
         
         [Parameter(Mandatory = $false)]
         [ValidateSet('Debug', 'Error', 'Normal', 'Verbose', 'Warning')]
@@ -310,10 +316,6 @@ function CompileAppsInWorkspace {
     }
 
     # Add optional parameters only if they are provided
-    # TODO: Missing parameters in the compiler that cannot be added yet: 
-    # - generatecrossreferences
-    # - ReportSuppressedDiagnostics
-    # - errorLog
     if ($MaxCpuCount -and $MaxCpuCount -ne [System.Environment]::ProcessorCount) {
         $arguments += "--maxcpucount"
         $arguments += $MaxCpuCount.ToString()
@@ -374,6 +376,11 @@ function CompileAppsInWorkspace {
 
     if ($BuildUrl) {
         $env:BUILD_URL = $BuildUrl
+    }
+
+    if ($ReportSuppressedDiagnostics.IsPresent) {
+        #$arguments += "--reportsuppresseddiagnostics"
+        OutputWarning "--reportsuppresseddiagnostics is not yet supported and will be ignored."
     }
 
     if ($LogLevel -and $LogLevel -ne 'Normal') {
