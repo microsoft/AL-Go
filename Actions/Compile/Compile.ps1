@@ -70,9 +70,6 @@ if ($settings.ContainsKey('features')) {
 # Get version number
 $versionNumber = Get-VersionNumber -Settings $settings
 
-# Get assembly probing paths
-$assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
-
 # Read existing install apps and test apps from JSON files
 $installApps = $settings.installApps
 $installTestApps = $settings.installTestApps
@@ -143,6 +140,9 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
 }
 
 $packageCachePath = Join-Path $compilerFolder "symbols"
+
+# Get assembly probing paths
+$assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
 
 # Update the app jsons with version number (and other properties) from the app manifest files
 Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
