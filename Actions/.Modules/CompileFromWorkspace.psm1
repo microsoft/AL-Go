@@ -159,8 +159,6 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string]$BuildUrl,
         [Parameter(Mandatory = $false)]
-        [switch]$GenerateCrossReferences,
-        [Parameter(Mandatory = $false)]
         [switch]$ReportSuppressedDiagnostics,
         [Parameter(Mandatory = $false)]
         [string]$ErrorLogPath,
@@ -220,7 +218,6 @@ function Build-AppsInWorkspace() {
         SourceCommit = $SourceCommit
         BuildBy = $BuildBy
         BuildUrl = $BuildUrl
-        GenerateCrossReferences = $GenerateCrossReferences
         ReportSuppressedDiagnostics = $ReportSuppressedDiagnostics
         ErrorLogPath = $ErrorLogPath
         EnableExternalRulesets = $EnableExternalRulesets
