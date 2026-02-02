@@ -133,6 +133,18 @@ try {
         OutputWarning -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
     }
 
+    # When using workspace compilation, apps are already compiled - pass empty folders to Run-AlPipeline
+    if ($settings.useWorkspaceCompilation) {
+        $appFolders = @()
+        $testFolders = @()
+        $bcptTestFolders = @()
+    }
+    else {
+        $appFolders = $settings.appFolders
+        $testFolders = $settings.testFolders
+        $bcptTestFolders = $settings.bcptTestFolders
+    }
+
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
@@ -501,9 +513,9 @@ try {
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $settings.appFolders `
-        -testFolders $settings.testFolders `
-        -bcptTestFolders $settings.bcptTestFolders `
+        -appFolders $appFolders `
+        -testFolders $testFolders `
+        -bcptTestFolders $bcptTestFolders `
         -pageScriptingTests $settings.pageScriptingTests `
         -restoreDatabases $settings.restoreDatabases `
         -buildOutputFile $buildOutputFile `
