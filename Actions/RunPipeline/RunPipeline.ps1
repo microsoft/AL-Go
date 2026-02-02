@@ -145,7 +145,7 @@ try {
         $bcptTestFolders = $settings.bcptTestFolders
     }
 
-    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+    if ((-not $settings.useWorkspaceCompilation) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
             $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
