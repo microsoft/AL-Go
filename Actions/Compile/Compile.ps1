@@ -159,6 +159,7 @@ try {
             -CompilerFolder $compilerFolder `
             -PackageCachePath $packageCachePath `
             -OutFolder $appOutputFolder `
+            -LogDirectory $buildArtifactFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -AssemblyProbingPaths $assemblyProbingPaths `
             -Analyzers $analyzers `
@@ -189,6 +190,7 @@ try {
             -CompilerFolder $compilerFolder `
             -PackageCachePath $packageCachePath `
             -OutFolder $testAppOutputFolder `
+            -LogDirectory $buildArtifactFolder `
             -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
             -AssemblyProbingPaths $assemblyProbingPaths `
             -Analyzers $analyzers `
