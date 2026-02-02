@@ -1,6 +1,7 @@
 $script:alTool = $null
 Import-Module (Join-Path -Path $PSScriptRoot "./DebugLogHelper.psm1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "../TelemetryHelper.psm1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot "../Github-Helper.psm1" -Resolve)
 
 <#
 .SYNOPSIS
@@ -758,14 +759,6 @@ function Get-ScriptOverrides() {
         PreCompileApp = $precompileOverride
         PostCompileApp = $postCompileOverride
     }
-}
-
-# TODO: Move to more appropriate module
-function Get-BasePath() {
-    if ($ENV:GITHUB_WORKSPACE) {
-        return $ENV:GITHUB_WORKSPACE
-    }
-    return git rev-parse --show-toplevel
 }
 
 Export-ModuleMember -Function Build-AppsInWorkspace

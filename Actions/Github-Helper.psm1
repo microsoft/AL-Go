@@ -1370,3 +1370,16 @@ function Invoke-CommandWithRetry {
         }
     }
 }
+
+<#
+.SYNOPSIS
+    Gets the base path of the GitHub workspace or the git repository root.
+.OUTPUTS
+    The base path as a string.
+#>
+function Get-BasePath() {
+    if ($ENV:GITHUB_WORKSPACE) {
+        return $ENV:GITHUB_WORKSPACE
+    }
+    return git rev-parse --show-toplevel
+}
