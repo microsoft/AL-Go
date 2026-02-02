@@ -36,7 +36,7 @@ function Get-CodeAnalyzers {
     }
 
     if ($Settings.CustomCodeCops -and $Settings.CustomCodeCops.Count -gt 0) {
-        OutputWarning -message "Custom code cops are not yet supported. The following custom code cops will be ignored: $($CustomCodeCops -join ', ')"
+        OutputWarning -message "Custom code cops are not yet supported. The following custom code cops will be ignored: $($Settings.CustomCodeCops -join ', ')"
     }
 
     return $analyzers
@@ -231,7 +231,7 @@ function Build-AppsInWorkspace() {
     # Compile apps
     $appFiles = CompileAppsInWorkspace @compilationParameters
 
-    # Post-Compile Apps - Invoke sccript override after compilation
+    # Post-Compile Apps - Invoke script override after compilation
     if ($PostCompileApp) {
         Write-Host "Invoking Post-Compile App Script..."
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
@@ -763,7 +763,6 @@ function Get-ScriptOverrides() {
 
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
-Export-ModuleMember -Function Get-BasePath
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
