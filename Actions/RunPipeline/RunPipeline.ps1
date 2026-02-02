@@ -216,9 +216,14 @@ try {
         "TestApps" = @()
     }
 
+    Write-Host "Contents of installAppsJson ($installAppsJson):"
+    if ($installAppsJson -and (Test-Path $installAppsJson)) {
+        Get-Content -Path $installAppsJson | ForEach-Object { Write-Host $_ }
+    }
+
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
         try {
-            $install.Apps = @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+            $install.Apps = Get-Content -Path $installAppsJson | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
@@ -227,7 +232,7 @@ try {
 
     if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
         try {
-            $install.TestApps = @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+            $install.TestApps = Get-Content -Path $installTestAppsJson | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
