@@ -129,6 +129,8 @@ function Build-AppsInWorkspace() {
         [string]$PackageCachePath,
         [Parameter(Mandatory = $false)]
         [string]$OutFolder,
+        [Parameter(Mandatory = $false)]
+        [string]$LogDirectory,
         # Optional parameters
         [Parameter(Mandatory = $false)]
         [string]$MajorMinorVersion = "",
@@ -207,6 +209,7 @@ function Build-AppsInWorkspace() {
         WorkspaceFile = $workspaceFile
         PackageCachePath = $PackageCachePath
         OutFolder = $OutputFolder
+        LogDirectory = $LogDirectory
         AssemblyProbingPaths = $AssemblyProbingPaths
         Analyzers = $Analyzers
         PreprocessorSymbols = $PreprocessorSymbols
