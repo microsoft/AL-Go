@@ -310,11 +310,6 @@ try {
     $CreateRuntimePackages = $false
 
     $versionNumber = Get-VersionNumber -Settings $settings
-    $runAlPipelineParams += @{
-        "appVersion" = $versionNumber.MajorMinorVersion
-        "appBuild" = $versionNumber.BuildNumber
-        "appRevision" = $versionNumber.RevisionNumber
-    }
 
     $allTestResults = "testresults*.xml"
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
