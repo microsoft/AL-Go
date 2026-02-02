@@ -358,9 +358,7 @@ function CompileAppsInWorkspace {
     }
 
     if ($GenerateReportLayout.IsPresent) {
-        $arguments += "--generatereportlayout+"
-    } else {
-        $arguments += "--generatereportlayout-"
+        $arguments += "--generatereportlayout"
     }
 
     if ($Ruleset) {
