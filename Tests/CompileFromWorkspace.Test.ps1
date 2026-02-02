@@ -404,4 +404,147 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $testJson.version | Should -Be '4.0.123.456'
         }
     }
+
+    Describe 'Build-AppsInWorkspace' {
+        BeforeAll {
+            # Create a mock compiler folder structure
+            $script:mockCompilerFolder = Join-Path $TestDrive 'compiler'
+            New-Item -Path $script:mockCompilerFolder -ItemType Directory -Force | Out-Null
+
+            # Create a fake altool executable
+            $altoolPath = Join-Path $script:mockCompilerFolder 'altool.exe'
+            Set-Content -Path $altoolPath -Value "mock"
+        }
+
+        It 'Uses default PackageCachePath when not specified' {
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace {
+                param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder)
+                # Verify PackageCachePath defaults to compiler\symbols
+                $PackageCachePath | Should -BeLike '*compiler*symbols'
+                return @()
+            } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj1') -AppFolders @(
+                @{ Name = "App1"; Id = "11111111-1111-1111-1111-111111111111" }
+            )
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App1")) -CompilerFolder $script:mockCompilerFolder
+        }
+
+        It 'Uses specified PackageCachePath when provided' {
+            $customCachePath = Join-Path $TestDrive 'custom-cache'
+            New-Item -Path $customCachePath -ItemType Directory -Force | Out-Null
+
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace {
+                param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder)
+                $PackageCachePath | Should -Be $customCachePath
+                return @()
+            } -ModuleName CompileFromWorkspace -ParameterFilter { $PackageCachePath -eq $customCachePath }
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj2') -AppFolders @(
+                @{ Name = "App2"; Id = "22222222-2222-2222-2222-222222222222" }
+            )
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App2")) -CompilerFolder $script:mockCompilerFolder -PackageCachePath $customCachePath
+        }
+
+        It 'Caps MaxCpuCount to available processor count' {
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace {
+                param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers, $PreprocessorSymbols, $Features, $GenerateReportLayout, $Ruleset, $SourceRepositoryUrl, $SourceCommit, $BuildBy, $BuildUrl, $ReportSuppressedDiagnostics, $EnableExternalRulesets, $MaxCpuCount)
+                # MaxCpuCount should be capped to processor count
+                $MaxCpuCount | Should -BeLessOrEqual ([System.Environment]::ProcessorCount)
+                return @()
+            } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj3') -AppFolders @(
+                @{ Name = "App3"; Id = "33333333-3333-3333-3333-333333333333" }
+            )
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App3")) -CompilerFolder $script:mockCompilerFolder -MaxCpuCount 9999
+        }
+
+        It 'Invokes PreCompileApp script before compilation' {
+            $script:preCompileInvoked = $false
+
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace { return @() } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj4') -AppFolders @(
+                @{ Name = "App4"; Id = "44444444-4444-4444-4444-444444444444" }
+            )
+
+            $preCompileScript = {
+                param($appType, $compilationParams)
+                $script:preCompileInvoked = $true
+            }
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App4")) -CompilerFolder $script:mockCompilerFolder -PreCompileApp $preCompileScript -AppType 'app'
+
+            $script:preCompileInvoked | Should -Be $true
+        }
+
+        It 'Invokes PostCompileApp script after compilation' {
+            $script:postCompileInvoked = $false
+
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace { return @('app1.app', 'app2.app') } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj5') -AppFolders @(
+                @{ Name = "App5"; Id = "55555555-5555-5555-5555-555555555555" }
+            )
+
+            $postCompileScript = {
+                param($appFiles, $appType, $compilationParams)
+                $script:postCompileInvoked = $true
+                @($appFiles).Count | Should -Be 2
+            }
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App5")) -CompilerFolder $script:mockCompilerFolder -PostCompileApp $postCompileScript -AppType 'app'
+
+            $script:postCompileInvoked | Should -Be $true
+        }
+
+        It 'Returns compiled app files from CompileAppsInWorkspace' {
+            $expectedApps = @('MyApp_1.0.0.0.app', 'MyApp2_1.0.0.0.app')
+
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace { return $expectedApps } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj6') -AppFolders @(
+                @{ Name = "App6"; Id = "66666666-6666-6666-6666-666666666666" }
+            )
+
+            $result = Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App6")) -CompilerFolder $script:mockCompilerFolder
+
+            @($result).Count | Should -Be 2
+            $result | Should -Contain 'MyApp_1.0.0.0.app'
+            $result | Should -Contain 'MyApp2_1.0.0.0.app'
+        }
+
+        It 'Passes analyzers to CompileAppsInWorkspace' {
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace {
+                param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers)
+                $Analyzers | Should -Contain 'CodeCop'
+                $Analyzers | Should -Contain 'UICop'
+                return @()
+            } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj7') -AppFolders @(
+                @{ Name = "App7"; Id = "77777777-7777-7777-7777-777777777777" }
+            )
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -CompilerFolder $script:mockCompilerFolder -Analyzers @('CodeCop', 'UICop')
+        }
+    }
 }
