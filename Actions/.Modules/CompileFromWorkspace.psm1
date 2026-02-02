@@ -161,8 +161,6 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [switch]$ReportSuppressedDiagnostics,
         [Parameter(Mandatory = $false)]
-        [string]$ErrorLogPath,
-        [Parameter(Mandatory = $false)]
         [switch]$EnableExternalRulesets,
         [Parameter(Mandatory = $false)]
         [ValidateSet('app', 'testApp')]
@@ -219,7 +217,6 @@ function Build-AppsInWorkspace() {
         BuildBy = $BuildBy
         BuildUrl = $BuildUrl
         ReportSuppressedDiagnostics = $ReportSuppressedDiagnostics
-        ErrorLogPath = $ErrorLogPath
         EnableExternalRulesets = $EnableExternalRulesets
         MaxCpuCount = $MaxProcesses
     }
