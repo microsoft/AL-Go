@@ -197,14 +197,6 @@ try {
             -AppType 'testApp'
     }
 
-    if ($settings.testFolders.Count -gt 0) {
-        
-        # Compile BCPT Test Apps
-        $bcptTestAppFiles = Build-AppsInWorkspace @buildParams `
-            -Folders $settings.bcptTestFolders `
-            -OutFolder $testAppOutputFolder `
-            -AppType 'bcptApp'
-    }
 } finally {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
 }
