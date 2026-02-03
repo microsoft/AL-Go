@@ -471,21 +471,15 @@ try {
     }
 
     if ($buildMode -eq 'Translated') {
-        if ($runAlPipelineParams.Keys -notcontains 'features') {
-            $runAlPipelineParams["features"] = @()
-        }
         Write-Host "Adding translationfile feature"
-        $runAlPipelineParams["features"] += "translationfile"
+        $settings.features += "translationfile"
     }
 
-    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-        $runAlPipelineParams["preprocessorsymbols"] = @()
-    }
-
-    if ($settings.ContainsKey('preprocessorSymbols')) {
+    if ($settings.preprocessorSymbols.Count -gt 0) {
         Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
-        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
+    $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
+    $runAlPipelineParams["features"] = $settings.features
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `

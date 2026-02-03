@@ -49,23 +49,8 @@ New-Item $testAppOutputFolder -ItemType Directory | Out-Null
 # Check for precompile and postcompile overrides
 $scriptOverrides = Get-ScriptOverrides -ALGoFolderName $projectFolder
 
-# Determine which code analyzers to use
-$analyzers = Get-CodeAnalyzers -Settings $settings
-
 # Prepare build metadata
 $buildMetadata = Get-BuildMetadata
-
-# Collect preprocessor symbols
-$preprocessorSymbols = @()
-if ($settings.ContainsKey('preprocessorSymbols')) {
-    $preprocessorSymbols += $settings.preprocessorSymbols
-}
-
-# Collect features
-$features = @()
-if ($settings.ContainsKey('features')) {
-    $features += $settings.features
-}
 
 # Get version number
 $versionNumber = Get-VersionNumber -Settings $settings
@@ -107,28 +92,19 @@ if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
     Write-Host "Checking for required upgrades using AppSourceCop..."
 }
 
-$packageCachePath = Join-Path $compilerFolder "symbols"
-
-# Get assembly probing paths
-$assemblyProbingPaths = Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder
-
 # Update the app jsons with version number (and other properties) from the app manifest files
 Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
     -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber
 
-# Start compilation
-$appFiles = @()
-$testAppFiles = @()
-
-# Common parameters for Build-AppsInWorkspace
+# Collect common parameters for Build-AppsInWorkspace
 $buildParams = @{
     CompilerFolder              = $compilerFolder
-    PackageCachePath            = $packageCachePath
+    PackageCachePath            = (Join-Path $compilerFolder "symbols")
     LogDirectory                = $buildArtifactFolder
     Ruleset                     = (Join-Path $projectFolder $settings.rulesetFile -Resolve)
-    AssemblyProbingPaths        = $assemblyProbingPaths
-    Preprocessorsymbols         = $preprocessorSymbols
-    Features                    = $features
+    AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder)
+    Preprocessorsymbols         = $settings.preprocessorSymbols
+    Features                    = $settings.features
     MajorMinorVersion           = $versionNumber.MajorMinorVersion
     BuildNumber                 = $versionNumber.BuildNumber
     RevisionNumber              = $versionNumber.RevisionNumber
@@ -141,9 +117,12 @@ $buildParams = @{
     EnableExternalRulesets      = $settings.enableExternalRulesets
     PreCompileApp               = $scriptOverrides.PreCompileApp
     PostCompileApp              = $scriptOverrides.PostCompileApp
-    Analyzers                   = $analyzers
+    Analyzers                   = (Get-CodeAnalyzers -Settings $settings)
 }
 
+# Start compilation
+$appFiles = @()
+$testAppFiles = @()
 try {
     if ($settings.appFolders.Count -gt 0) {
         # Compile Apps

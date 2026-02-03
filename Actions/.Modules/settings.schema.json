@@ -297,6 +297,20 @@
             },
             "description": "See https://aka.ms/ALGoSettings#customcodecops"
         },
+        "preprocessorSymbols": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Preprocessor symbols to use when compiling the app. See https://aka.ms/ALGoSettings#preprocessorsymbols"
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Features to enable when compiling the app. See https://aka.ms/ALGoSettings#features"
+        },
         "trackALAlertsInGitHub": {
             "type": "boolean",
             "description": "Enable tracking of AL Alerts in GitHub. See https://aka.ms/ALGoSettings#trackALAlertsInGitHub"

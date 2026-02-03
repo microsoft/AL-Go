@@ -161,6 +161,8 @@ function GetDefaultSettings
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
         "customCodeCops"                                = @()
+        "preprocessorSymbols"                           = @()
+        "features"                                      = @()
         "trackALAlertsInGitHub"                         = $false
         "failOn"                                        = "error"
         "treatTestFailuresAsWarnings"                   = $false
