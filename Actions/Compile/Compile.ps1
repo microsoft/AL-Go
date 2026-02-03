@@ -204,6 +204,7 @@ try {
 # OUTPUT - Output the install apps and test apps as JSON
 $installApps += $appFiles
 $installTestApps += $testAppFiles
+Trace-Information -message "Compilation completed. Compiled $($appFiles.Count) apps and $($testAppFiles.Count) test apps."
 
 ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson
 ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installTestAppsJson
