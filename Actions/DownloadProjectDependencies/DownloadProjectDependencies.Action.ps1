@@ -11,18 +11,19 @@
 
 <#
     .SYNOPSIS
-    Downloads an app file from a URL to a specified download path.
+    Downloads a file from a URL to a specified download path.
     .DESCRIPTION
-    Downloads an app file from a URL to a specified download path.
+    Downloads a file from a URL to a specified download path.
     It handles URL decoding and sanitizes the file name.
+    If the downloaded file is a zip file, it extracts the .app files from it.
     .PARAMETER Url
-    The URL of the app file to download.
+    The URL of the file to download.
     .PARAMETER DownloadPath
-    The path where the app file should be downloaded.
+    The path where the file should be downloaded.
     .OUTPUTS
-    The path to the downloaded app file.
+    An array of paths to the downloaded/extracted .app files.
 #>
-function Get-AppFileFromUrl {
+function Get-AppFilesFromUrl {
     Param(
         [string] $Url,
         [string] $DownloadPath
@@ -41,18 +42,46 @@ function Get-AppFileFromUrl {
         $sanitizedFileName = "$([Guid]::NewGuid().ToString()).app"
     }
 
-    # Get the final app file path
-    $appFile = Join-Path $DownloadPath $sanitizedFileName
-    if (Test-Path -LiteralPath $appFile) {
+    # Get the final file path
+    $downloadedFile = Join-Path $DownloadPath $sanitizedFileName
+    if (Test-Path -LiteralPath $downloadedFile) {
         OutputDebug -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
     }
 
     # Download with retry logic
     Invoke-CommandWithRetry -ScriptBlock {
-        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile | Out-Null
+        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $downloadedFile | Out-Null
     } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
 
-    return $appFile
+    # Check if the downloaded file is a zip file
+    $extension = [System.IO.Path]::GetExtension($downloadedFile).ToLowerInvariant()
+    if ($extension -eq '.zip') {
+        Write-Host "Extracting .app files from zip archive: $sanitizedFileName"
+        
+        # Extract to runner temp folder
+        $extractPath = Join-Path $env:RUNNER_TEMP ([System.IO.Path]::GetFileNameWithoutExtension($sanitizedFileName))
+        Expand-Archive -Path $downloadedFile -DestinationPath $extractPath -Force
+        Remove-Item -Path $downloadedFile -Force
+
+        # Find all .app files in the extracted folder and copy them to the download path
+        $appFiles = @()
+        foreach ($appFile in @(Get-ChildItem -Path $extractPath -Filter '*.app' -Recurse)) {
+            $destFile = Join-Path $DownloadPath $appFile.Name
+            Copy-Item -Path $appFile.FullName -Destination $destFile -Force
+            $appFiles += $destFile
+        }
+        
+        # Clean up the extracted folder
+        Remove-Item -Path $extractPath -Recurse -Force
+
+        if ($appFiles.Count -eq 0) {
+            throw "Zip archive '$sanitizedFileName' does not contain any .app files"
+        }
+        Write-Host "Found $($appFiles.Count) .app file(s) in zip archive"
+        return $appFiles
+    }
+
+    return @($downloadedFile)
 }
 
 <#
@@ -117,15 +146,15 @@ function DownloadDependenciesFromInstallApps {
                 $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
             }
 
-            # Download the app file to a temporary location
+            # Download the file (may return multiple .app files if it's a zip)
             try {
-                Write-Host "Downloading app from URL: $appFile"
-                $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
+                Write-Host "Downloading from URL: $appFile"
+                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
             } catch {
                 throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
             }
 
-            return $appFile
+            return $appFiles
         })
     }
 
