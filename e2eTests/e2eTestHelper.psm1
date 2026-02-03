@@ -307,7 +307,9 @@ function WaitWorkflow {
             invoke-gh api --method POST /repos/$repository/actions/runs/$runid/rerun | Out-Null
             WaitWorkflow -repository $repository -runid $runid -noDelay:$noDelay -noError:$noError -noRerun
         }
-        if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
+        else {
+            if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
+        }
     }
 }
 
