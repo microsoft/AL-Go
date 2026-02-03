@@ -82,7 +82,7 @@ if (Test-Path $installAppsJson) {
 
 if ($installAppsJson -and (Test-Path $installAppsJson)) {
     try {
-        $installApps += @(Get-Content -Path $installAppsJson | ConvertFrom-Json)
+        $installApps += Get-Content -Path $installAppsJson | ConvertFrom-Json
     }
     catch {
         throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
@@ -91,7 +91,7 @@ if ($installAppsJson -and (Test-Path $installAppsJson)) {
 
 if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
     try {
-        $installTestApps += @(Get-Content -Path $installTestAppsJson | ConvertFrom-Json)
+        $installTestApps += Get-Content -Path $installTestAppsJson | ConvertFrom-Json
     }
     catch {
         throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
@@ -223,5 +223,9 @@ try {
 # OUTPUT - Output the install apps and test apps as JSON
 $installApps += $appFiles
 $installTestApps += $testAppFiles
-ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson
-ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installTestAppsJson
+
+Write-Host "Writing downloaded apps and test apps to JSON files"
+Write-Host "List of install apps:"
+
+ConvertTo-Json $downloadedApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedAppsJson
+ConvertTo-Json $downloadedTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedTestAppsJson
