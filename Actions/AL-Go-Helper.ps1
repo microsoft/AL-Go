@@ -2234,8 +2234,19 @@ function RunAndCheck {
     }
 }
 
+<#
+.SYNOPSIS
+Get the version number components based on the versioning strategy
+.DESCRIPTION
+Get the version number components based on the versioning strategy defined in the settings.
+.PARAMETER Settings
+The settings object containing versioning information.
+.RETURNS
+A PSCustomObject with MajorMinorVersion, BuildNumber, and RevisionNumber properties.
+#>
 function Get-VersionNumber() {
     param(
+        [Parameter(Mandatory=$true)]
         $Settings
     )
     $majorMinorVersion = ""

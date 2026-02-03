@@ -98,40 +98,8 @@ $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$(
 
 # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
 if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
-    # Incremental builds are enabled and we are only building modified apps
-    try {
-        $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
-        OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
-        $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
-    }
-    catch {
-        OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
-        $buildAll = $true
-    }
-
-    if (!$buildAll) {
-        Write-Host "Get unmodified apps from baseline workflow run"
-        # Downloaded apps are placed in the build artifacts folder, which is detected by Run-AlPipeline, meaning only non-downloaded apps are built
-        Get-UnmodifiedAppsFromBaselineWorkflowRun `
-            -token $token `
-            -settings $settings `
-            -baseFolder $baseFolder `
-            -project $project `
-            -baselineWorkflowRunId $baselineWorkflowRunId `
-            -modifiedFiles $modifiedFiles `
-            -buildArtifactFolder $buildArtifactFolder `
-            -buildMode $buildMode `
-            -projectPath $projectFolder
-    }
-
-    # Print the content of the build artifacts folder for debugging purposes
-    $buildArtifactContents = Get-ChildItem -Path $buildArtifactFolder -Recurse
-    Write-Host "Build artifacts folder contents:"
-    foreach ($item in $buildArtifactContents) {
-        # Copy to the packagecache path
-        Write-Host "Copying $($item.FullName) to package cache"
-        Copy-Item -Path $item.FullName -Destination (Join-Path $compilerFolder "symbols") -Recurse -Force
-    }
+    #TODO: Implement support for incremental builds
+    Write-Host "Incremental builds based on modified apps is not yet implemented."
 }
 
 if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
