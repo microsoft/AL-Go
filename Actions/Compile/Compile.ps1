@@ -71,12 +71,18 @@ if ($settings.ContainsKey('features')) {
 $versionNumber = Get-VersionNumber -Settings $settings
 
 # Read existing install apps and test apps from JSON files
-$installApps = $settings.installApps
-$installTestApps = $settings.installTestApps
+$installApps = @()
+$installTestApps = @()
+
+# Print content of the install apps json files for debugging purposes
+Write-Host "Contents of Install Apps JSON:"
+if (Test-Path $installAppsJson) {
+    Get-Content -Path $installAppsJson | ForEach-Object { Write-Host $_ }
+}
 
 if ($installAppsJson -and (Test-Path $installAppsJson)) {
     try {
-        $installApps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+        $installApps += @(Get-Content -Path $installAppsJson | ConvertFrom-Json)
     }
     catch {
         throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
@@ -85,7 +91,7 @@ if ($installAppsJson -and (Test-Path $installAppsJson)) {
 
 if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
     try {
-        $installTestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+        $installTestApps += @(Get-Content -Path $installTestAppsJson | ConvertFrom-Json)
     }
     catch {
         throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
