@@ -74,12 +74,6 @@ $versionNumber = Get-VersionNumber -Settings $settings
 $installApps = @()
 $installTestApps = @()
 
-# Print content of the install apps json files for debugging purposes
-Write-Host "Contents of Install Apps JSON:"
-if (Test-Path $installAppsJson) {
-    Get-Content -Path $installAppsJson | ForEach-Object { Write-Host $_ }
-}
-
 if ($installAppsJson -and (Test-Path $installAppsJson)) {
     try {
         $installApps += Get-Content -Path $installAppsJson | ConvertFrom-Json
@@ -157,64 +151,59 @@ Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders)
 # Start compilation
 $appFiles = @()
 $testAppFiles = @()
+
+# Common parameters for Build-AppsInWorkspace
+$buildParams = @{
+    CompilerFolder              = $compilerFolder
+    PackageCachePath            = $packageCachePath
+    LogDirectory                = $buildArtifactFolder
+    Ruleset                     = (Join-Path $projectFolder $settings.rulesetFile -Resolve)
+    AssemblyProbingPaths        = $assemblyProbingPaths
+    Preprocessorsymbols         = $preprocessorSymbols
+    Features                    = $features
+    MajorMinorVersion           = $versionNumber.MajorMinorVersion
+    BuildNumber                 = $versionNumber.BuildNumber
+    RevisionNumber              = $versionNumber.RevisionNumber
+    MaxCpuCount                 = $settings.workspaceCompilationParallelism
+    SourceRepositoryUrl         = $buildMetadata.SourceRepositoryUrl
+    SourceCommit                = $buildMetadata.SourceCommit
+    BuildBy                     = $buildMetadata.BuildBy
+    BuildUrl                    = $buildMetadata.BuildUrl
+    ReportSuppressedDiagnostics = $settings.reportSuppressedDiagnostics
+    EnableExternalRulesets      = $settings.enableExternalRulesets
+    PreCompileApp               = $scriptOverrides.PreCompileApp
+    PostCompileApp              = $scriptOverrides.PostCompileApp
+    Analyzers                   = $analyzers
+}
+
 try {
     if ($settings.appFolders.Count -gt 0) {
-        # COMPILE - Compiling apps and test apps
-        $appFiles = Build-AppsInWorkspace `
+        # Compile Apps
+        $appFiles = Build-AppsInWorkspace @buildParams `
             -Folders $settings.appFolders `
-            -CompilerFolder $compilerFolder `
-            -PackageCachePath $packageCachePath `
             -OutFolder $appOutputFolder `
-            -LogDirectory $buildArtifactFolder `
-            -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-            -AssemblyProbingPaths $assemblyProbingPaths `
-            -Analyzers $analyzers `
-            -Preprocessorsymbols $preprocessorSymbols `
-            -Features $features `
-            -MajorMinorVersion $versionNumber.MajorMinorVersion `
-            -BuildNumber $versionNumber.BuildNumber `
-            -RevisionNumber $versionNumber.RevisionNumber `
-            -MaxCpuCount $settings.workspaceCompilationParallelism `
-            -SourceRepositoryUrl $buildMetadata.SourceRepositoryUrl `
-            -SourceCommit $buildMetadata.SourceCommit `
-            -BuildBy $buildMetadata.BuildBy `
-            -BuildUrl $buildMetadata.BuildUrl `
-            -ReportSuppressedDiagnostics:($settings.reportSuppressedDiagnostics) `
-            -EnableExternalRulesets:($settings.enableExternalRulesets) `
-            -AppType 'app' `
-            -PreCompileApp $scriptOverrides.PreCompileApp `
-            -PostCompileApp $scriptOverrides.PostCompileApp
+            -AppType 'app'
     }
 
     if ($settings.testFolders.Count -gt 0) {
-        if (-not $settings.enableCodeAnalyzersOnTestApps) {
-            $analyzers = @()
+        if (-not ($settings.enableCodeAnalyzersOnTestApps)) { 
+            $buildParams.Analyzers = @()
         }
 
-        $testAppFiles = Build-AppsInWorkspace `
+        # Compile Test Apps
+        $testAppFiles = Build-AppsInWorkspace @buildParams `
             -Folders $settings.testFolders `
-            -CompilerFolder $compilerFolder `
-            -PackageCachePath $packageCachePath `
             -OutFolder $testAppOutputFolder `
-            -LogDirectory $buildArtifactFolder `
-            -Ruleset (Join-Path $projectFolder $settings.rulesetFile -Resolve) `
-            -AssemblyProbingPaths $assemblyProbingPaths `
-            -Analyzers $analyzers `
-            -Preprocessorsymbols $preprocessorSymbols `
-            -Features $features `
-            -MajorMinorVersion $versionNumber.MajorMinorVersion `
-            -BuildNumber $versionNumber.BuildNumber `
-            -RevisionNumber $versionNumber.RevisionNumber `
-            -MaxCpuCount $settings.workspaceCompilationParallelism `
-            -SourceRepositoryUrl $buildMetadata.SourceRepositoryUrl `
-            -SourceCommit $buildMetadata.SourceCommit `
-            -BuildBy $buildMetadata.BuildBy `
-            -BuildUrl $buildMetadata.BuildUrl `
-            -ReportSuppressedDiagnostics:($settings.reportSuppressedDiagnostics) `
-            -EnableExternalRulesets:($settings.enableExternalRulesets) `
-            -AppType 'testApp' `
-            -PreCompileApp $scriptOverrides.PreCompileApp `
-            -PostCompileApp $scriptOverrides.PostCompileApp
+            -AppType 'testApp'
+    }
+
+    if ($settings.testFolders.Count -gt 0) {
+        
+        # Compile BCPT Test Apps
+        $bcptTestAppFiles = Build-AppsInWorkspace @buildParams `
+            -Folders $settings.bcptTestFolders `
+            -OutFolder $testAppOutputFolder `
+            -AppType 'bcptApp'
     }
 } finally {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn

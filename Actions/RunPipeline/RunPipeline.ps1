@@ -216,11 +216,6 @@ try {
         "TestApps" = @()
     }
 
-    Write-Host "Contents of installAppsJson ($installAppsJson):"
-    if ($installAppsJson -and (Test-Path $installAppsJson)) {
-        Get-Content -Path $installAppsJson | ForEach-Object { Write-Host $_ }
-    }
-
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
         try {
             $install.Apps = Get-Content -Path $installAppsJson | ConvertFrom-Json
