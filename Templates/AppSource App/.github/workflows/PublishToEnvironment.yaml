@@ -10,6 +10,10 @@ on:
       environmentName:
         description: Environment mask to receive the new version (* for all, PROD* for all environments starting with PROD)
         required: true
+      createEnvIfNotExists:
+        description: Create environment if it does not exist (use with care, yourEnvName_AuthContext yourEnvName_EnvironmentName yourEnvName_Scope must be defined as environment secrets/variables or repo secrets/variables)
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -66,6 +70,7 @@ jobs:
           shell: powershell
           getEnvironments: ${{ github.event.inputs.environmentName }}
           type: 'Publish'
+          createEnvIfNotExists: ${{ github.event.inputs.createEnvIfNotExists }}
 
       - name: EnvName
         id: envName
