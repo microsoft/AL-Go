@@ -137,7 +137,7 @@ try {
     if ($settings.useWorkspaceCompilation) {
         $appFolders = @()
         $testFolders = @()
-        $bcptTestFolders = @()
+        $bcptTestFolders = $settings.bcptTestFolders
     }
     else {
         $appFolders = $settings.appFolders
