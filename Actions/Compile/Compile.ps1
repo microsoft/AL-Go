@@ -224,8 +224,5 @@ try {
 $installApps += $appFiles
 $installTestApps += $testAppFiles
 
-Write-Host "Writing downloaded apps and test apps to JSON files"
-Write-Host "List of install apps:"
-
-ConvertTo-Json $downloadedApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedAppsJson
-ConvertTo-Json $downloadedTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedTestAppsJson
+ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson
+ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installTestAppsJson
