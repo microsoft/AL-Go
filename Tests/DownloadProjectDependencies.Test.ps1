@@ -98,7 +98,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
         $result | Should -Contain (Join-Path $downloadPath "AnotherApp.app")
     }
 
-    It 'Throws error when zip contains no .app files' {
+    It 'Returns empty array and warns when zip contains no .app files' {
         # Create zip with non-.app files
         $zipSourcePath = Join-Path $env:RUNNER_TEMP "ZipSourceNoApps"
         New-Item -ItemType Directory -Path $zipSourcePath | Out-Null
@@ -111,7 +111,14 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
             Copy-Item -Path $zipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
-        { Get-AppFilesFromUrl -Url "https://example.com/downloads/NoApps.zip" -DownloadPath $downloadPath } | Should -Throw "*does not contain any .app files*"
+        Mock OutputWarning {} -ModuleName DownloadProjectDependencies
+
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/NoApps.zip" -DownloadPath $downloadPath
+
+        @($result) | Should -HaveCount 0
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -ParameterFilter {
+            $message -like "*No .app files found in zip archive*"
+        }
     }
 
     It 'Handles URL with query parameters' {
@@ -140,6 +147,116 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
         # Should be a GUID pattern like: 12345678-1234-1234-1234-123456789abc.app
         @($result)[0] | Should -Match "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\.app$"
         Test-Path @($result)[0] | Should -BeTrue
+    }
+}
+
+Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
+    BeforeEach {
+        # Create a temp folder for test files
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFolder', Justification = 'False positive.')]
+        $testFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+
+        # Create destination folder for extracted files
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'destFolder', Justification = 'False positive.')]
+        $destFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+
+        # Set up RUNNER_TEMP for zip extraction
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalRunnerTemp', Justification = 'False positive.')]
+        $originalRunnerTemp = $env:RUNNER_TEMP
+        $env:RUNNER_TEMP = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+    }
+
+    AfterEach {
+        if (Test-Path $testFolder) {
+            Remove-Item -Path $testFolder -Recurse -Force
+        }
+        if (Test-Path $destFolder) {
+            Remove-Item -Path $destFolder -Recurse -Force
+        }
+        if ($env:RUNNER_TEMP -and (Test-Path $env:RUNNER_TEMP)) {
+            Remove-Item -Path $env:RUNNER_TEMP -Recurse -Force
+        }
+        $env:RUNNER_TEMP = $originalRunnerTemp
+    }
+
+    It 'Returns single .app file directly' {
+        $appFile = Join-Path $testFolder "MyApp.app"
+        [System.IO.File]::WriteAllBytes($appFile, [byte[]](1, 2, 3))
+
+        $result = Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 1
+        @($result)[0] | Should -Be $appFile
+    }
+
+    It 'Finds all .app files in a folder recursively' {
+        # Create nested structure
+        $subFolder = New-Item -ItemType Directory -Path (Join-Path $testFolder "SubFolder")
+        [System.IO.File]::WriteAllBytes((Join-Path $testFolder "App1.app"), [byte[]](1, 2, 3))
+        [System.IO.File]::WriteAllBytes((Join-Path $subFolder "App2.app"), [byte[]](4, 5, 6))
+        [System.IO.File]::WriteAllBytes((Join-Path $subFolder "NotAnApp.txt"), [byte[]](7, 8, 9))
+
+        $result = Get-AppFilesFromLocalPath -Path $testFolder -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 2
+        @($result) | Should -Contain (Join-Path $testFolder "App1.app")
+        @($result) | Should -Contain (Join-Path $subFolder "App2.app")
+    }
+
+    It 'Resolves wildcard patterns' {
+        [System.IO.File]::WriteAllBytes((Join-Path $testFolder "App1.app"), [byte[]](1, 2, 3))
+        [System.IO.File]::WriteAllBytes((Join-Path $testFolder "App2.app"), [byte[]](4, 5, 6))
+        [System.IO.File]::WriteAllBytes((Join-Path $testFolder "Other.txt"), [byte[]](7, 8, 9))
+
+        $result = Get-AppFilesFromLocalPath -Path (Join-Path $testFolder "*.app") -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 2
+    }
+
+    It 'Extracts .app files from a .nupkg file (ZIP with different extension)' {
+        # Create a .nupkg (which is really a ZIP)
+        $nupkgContentFolder = Join-Path $env:RUNNER_TEMP "NupkgContent"
+        New-Item -ItemType Directory -Path $nupkgContentFolder | Out-Null
+        [System.IO.File]::WriteAllBytes((Join-Path $nupkgContentFolder "PackagedApp.app"), [byte[]](1, 2, 3))
+        
+        $nupkgFile = Join-Path $testFolder "MyPackage.nupkg"
+        Compress-Archive -Path (Join-Path $nupkgContentFolder "*") -DestinationPath $nupkgFile
+
+        $result = Get-AppFilesFromLocalPath -Path $nupkgFile -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 1
+        @($result)[0] | Should -BeLike "*PackagedApp.app"
+        Test-Path @($result)[0] | Should -BeTrue
+    }
+
+    It 'Returns empty array for wildcard pattern with no matches' {
+        $result = Get-AppFilesFromLocalPath -Path (Join-Path $testFolder "*.app") -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 0
+    }
+
+    It 'Warns when no files found at local path' {
+        Mock OutputWarning {} -ModuleName DownloadProjectDependencies
+
+        $result = Get-AppFilesFromLocalPath -Path "C:\NonExistent\Path.app" -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 0
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -ParameterFilter {
+            $message -like "*No files found at local path*"
+        }
+    }
+
+    It 'Warns when encountering unknown file types' {
+        Mock OutputWarning {} -ModuleName DownloadProjectDependencies
+
+        [System.IO.File]::WriteAllBytes((Join-Path $testFolder "readme.txt"), [byte[]](1, 2, 3))
+
+        $result = Get-AppFilesFromLocalPath -Path $testFolder -DestinationPath $destFolder
+
+        @($result) | Should -HaveCount 0
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -ParameterFilter {
+            $message -like "*Unknown file type*"
+        }
     }
 }
 
@@ -186,17 +303,35 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         $result.TestApps | Should -HaveCount 0
     }
 
-    It 'Returns local paths unchanged' {
+    It 'Returns local .app files from existing paths' {
+        # Create temporary test files
+        $testAppsFolder = Join-Path $downloadPath "TestApps"
+        New-Item -ItemType Directory -Path $testAppsFolder | Out-Null
+        $testAppFile = Join-Path $testAppsFolder "MyApp.app"
+        [System.IO.File]::WriteAllBytes($testAppFile, [byte[]](1, 2, 3))
+        $testTestAppFile = Join-Path $testAppsFolder "TestApp.app"
+        [System.IO.File]::WriteAllBytes($testTestAppFile, [byte[]](1, 2, 3))
+
         $env:Settings = @{
-            installApps = @("C:\Apps\MyApp.app", ".\relative\path\App.app")
-            installTestApps = @("C:\TestApps\TestApp.app")
+            installApps = @($testAppFile)
+            installTestApps = @($testTestAppFile)
         } | ConvertTo-Json -Depth 10
 
         $result = Get-DependenciesFromInstallApps -DestinationPath $downloadPath
 
-        $result.Apps | Should -Contain "C:\Apps\MyApp.app"
-        $result.Apps | Should -Contain ".\relative\path\App.app"
-        $result.TestApps | Should -Contain "C:\TestApps\TestApp.app"
+        $result.Apps | Should -Contain $testAppFile
+        $result.TestApps | Should -Contain $testTestAppFile
+    }
+
+    It 'Returns empty array for non-existent local paths' {
+        $env:Settings = @{
+            installApps = @("C:\NonExistent\Path\MyApp.app")
+            installTestApps = @()
+        } | ConvertTo-Json -Depth 10
+
+        $result = Get-DependenciesFromInstallApps -DestinationPath $downloadPath
+
+        $result.Apps | Should -HaveCount 0
     }
 
     It 'Downloads apps from URLs' {

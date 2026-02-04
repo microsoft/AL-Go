@@ -2,6 +2,134 @@ Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
 
 <#
     .SYNOPSIS
+    Tests if a file is a ZIP archive by checking for the "PK" magic bytes.
+    .PARAMETER Path
+    The path to the file to test.
+    .OUTPUTS
+    $true if the file is a ZIP archive, $false otherwise.
+#>
+function Test-IsZipFile {
+    Param(
+        [string] $Path
+    )
+    $extension = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
+    if ($extension -eq '.zip') {
+        return $true
+    }
+    # Check for ZIP magic bytes "PK" (0x50 0x4B)
+    # This handles the case where the file does not have a .zip extension but is still a ZIP archive (like .nupkg)
+    $bytes = Get-Content -Path $Path -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue
+    if ($bytes -and $bytes.Count -eq 2) {
+        return ([char]$bytes[0] -eq 'P') -and ([char]$bytes[1] -eq 'K')
+    }
+    return $false
+}
+
+<#
+    .SYNOPSIS
+    Extracts .app files from a ZIP archive to the destination path.
+    .PARAMETER ZipFile
+    The path to the ZIP file.
+    .PARAMETER DestinationPath
+    The path where .app files should be extracted to.
+    .OUTPUTS
+    An array of paths to the extracted .app files.
+#>
+function Expand-ZipFileToAppFiles {
+    Param(
+        [string] $ZipFile,
+        [string] $DestinationPath
+    )
+    $fileName = [System.IO.Path]::GetFileName($ZipFile)
+    OutputDebug -message "Expanding zip file to extract .app files: $ZipFile"
+
+    # If file doesn't have .zip extension, copy to temp with .zip extension for Expand-Archive
+    $zipToExtract = $ZipFile
+    $tempZipCreated = $false
+    if ([System.IO.Path]::GetExtension($ZipFile).ToLowerInvariant() -ne '.zip') {
+        $zipToExtract = Join-Path $env:RUNNER_TEMP "$([System.IO.Path]::GetFileName($ZipFile)).zip"
+        Copy-Item -Path $ZipFile -Destination $zipToExtract
+        $tempZipCreated = $true
+    }
+
+    try {
+        # Extract to runner temp folder
+        $extractPath = Join-Path $env:RUNNER_TEMP ([System.IO.Path]::GetFileNameWithoutExtension($fileName))
+        Expand-Archive -Path $zipToExtract -DestinationPath $extractPath -Force
+
+        # Find all .app files in the extracted folder and copy them to the destination
+        $appFiles = @()
+        foreach ($appFile in (Get-ChildItem -Path $extractPath -Filter '*.app' -Recurse)) {
+            $destFile = Join-Path $DestinationPath $appFile.Name
+            Copy-Item -Path $appFile.FullName -Destination $destFile -Force
+            $appFiles += $destFile
+        }
+
+        # Clean up the extracted folder
+        Remove-Item -Path $extractPath -Recurse -Force
+
+        if ($appFiles.Count -eq 0) {
+            OutputWarning -message "No .app files found in zip archive: $fileName"
+        } else {
+            OutputDebug -message "Found $($appFiles.Count) .app file(s) in zip archive"
+        }
+        return $appFiles
+    }
+    finally {
+        if ($tempZipCreated) {
+            Remove-Item -Path $zipToExtract -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+    Resolves a local path to an array of .app file paths.
+    .DESCRIPTION
+    Handles local files and folders:
+    - If path is an .app file: returns it
+    - If path is a folder: recursively finds all .app files
+    - If path contains wildcards: resolves them to matching files
+    - If path is a ZIP file (by extension or magic bytes): extracts and returns .app files
+    .PARAMETER Path
+    The local file or folder path.
+    .PARAMETER DestinationPath
+    The path where extracted .app files should be placed (for ZIP files).
+    .OUTPUTS
+    An array of paths to .app files.
+#>
+function Get-AppFilesFromLocalPath {
+    Param(
+        [string] $Path,
+        [string] $DestinationPath
+    )
+
+    # Get all matching items (works for folders, wildcards, and single files)
+    $matchedItems = @(Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue)
+
+    if ($matchedItems.Count -eq 0) {
+        OutputWarning -message "No files found at local path: $Path"
+        return @()
+    }
+
+    # Process each matched file
+    $appFiles = @()
+    foreach ($item in $matchedItems) {
+        $extension = [System.IO.Path]::GetExtension($item.FullName).ToLowerInvariant()
+
+        if ($extension -eq '.app') {
+            $appFiles += $item.FullName
+        } elseif (Test-IsZipFile -Path $item.FullName) {
+            $appFiles += Expand-ZipFileToAppFiles -ZipFile $item.FullName -DestinationPath $DestinationPath
+        } else {
+            OutputWarning -message "Unknown file type for local path: $($item.FullName). Skipping."
+        }
+    }
+    return $appFiles
+}
+
+<#
+    .SYNOPSIS
     Downloads a file from a URL to a specified download path.
     .DESCRIPTION
     Downloads a file from a URL to a specified download path.
@@ -45,31 +173,10 @@ function Get-AppFilesFromUrl {
         Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $downloadedFile | Out-Null
     } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
 
-    # Check if the downloaded file is a zip file
-    $extension = [System.IO.Path]::GetExtension($downloadedFile).ToLowerInvariant()
-    if ($extension -eq '.zip') {
-        Write-Host "Extracting .app files from zip archive: $sanitizedFileName"
-        
-        # Extract to runner temp folder
-        $extractPath = Join-Path $env:RUNNER_TEMP ([System.IO.Path]::GetFileNameWithoutExtension($sanitizedFileName))
-        Expand-Archive -Path $downloadedFile -DestinationPath $extractPath -Force
+    # Check if the downloaded file is a zip file (by extension or magic bytes)
+    if (Test-IsZipFile -Path $downloadedFile) {
+        $appFiles = Expand-ZipFileToAppFiles -ZipFile $downloadedFile -DestinationPath $DownloadPath
         Remove-Item -Path $downloadedFile -Force
-
-        # Find all .app files in the extracted folder and copy them to the download path
-        $appFiles = @()
-        foreach ($appFile in (Get-ChildItem -Path $extractPath -Filter '*.app' -Recurse)) {
-            $destFile = Join-Path $DownloadPath $appFile.Name
-            Copy-Item -Path $appFile.FullName -Destination $destFile -Force
-            $appFiles += $destFile
-        }
-
-        # Clean up the extracted folder
-        Remove-Item -Path $extractPath -Recurse -Force
-
-        if ($appFiles.Count -eq 0) {
-            throw "Zip archive '$sanitizedFileName' does not contain any .app files"
-        }
-        Write-Host "Found $($appFiles.Count) .app file(s) in zip archive"
         return $appFiles
     }
 
@@ -84,7 +191,9 @@ function Get-AppFilesFromUrl {
     For each entry that is a URL (starts with http:// or https://):
     - Resolves any secret placeholders in the format ${{ secretName }} by looking up the secret value
     - Downloads the app file to the specified destination path
-    For entries that are not URLs (local paths), they are returned as-is.
+    For entries that are local paths:
+    - Resolves folders to their contained .app files
+    - Extracts .app files from ZIP archives
     .PARAMETER DestinationPath
     The path where the app files should be downloaded.
     .OUTPUTS
@@ -105,6 +214,7 @@ function Get-DependenciesFromInstallApps {
         $secrets = @{}
     }
 
+    # Initialize the install hashtable
     $install = @{
         "Apps" = @($settings.installApps)
         "TestApps" = @($settings.installTestApps)
@@ -118,39 +228,42 @@ function Get-DependenciesFromInstallApps {
 
     # Replace secret names in install.apps and install.testApps and download files from URLs
     foreach($list in @('Apps','TestApps')) {
-        $install."$list" = @($install."$list" | ForEach-Object {
-            $appFile = $_
 
-            # If the app file is not a URL, return it as is
+        $updatedListOfFiles = @()
+        foreach($appFile in $install."$list") {
+            Write-Host "Processing install$($list) entry: $appFile"
+
+            # If the app file is not a URL, resolve local path. 
             if ($appFile -notlike 'http*://*') {
-                Write-Host "install$($list) contains a local path: $appFile"
-                return $appFile
-            }
-
-            # Else, check for secrets in the URL and replace them
-            $appFileUrl = $appFile
-            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            if ($appFile -match $pattern) {
-                $secretName = $matches[2]
-                if (-not $secrets.ContainsKey($secretName)) {
-                    throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
+                $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $DestinationPath
+            } else {
+                # Else, check for secrets in the URL and replace them
+                $appFileUrl = $appFile
+                $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+                if ($appFile -match $pattern) {
+                    $secretName = $matches[2]
+                    if (-not $secrets.ContainsKey($secretName)) {
+                        throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
+                    }
+                    $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
                 }
-                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
-            }
 
-            # Download the file (may return multiple .app files if it's a zip)
-            try {
-                Write-Host "Downloading from URL: $appFile"
-                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
-            } catch {
-                throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
-            }
+                # Download the file (may return multiple .app files if it's a zip)
+                try {
+                    $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
+                } catch {
+                    throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
+                }
 
-            return $appFiles
-        })
+                $updatedListOfFiles += $appFiles
+            }
+        }
+
+        # Update the install hashtable with the resolved file paths
+        $install."$list" = $updatedListOfFiles
     }
 
     return $install
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-DependenciesFromInstallApps
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps
