@@ -194,7 +194,7 @@ function Get-AppFilesFromUrl {
     # Get the final file path
     $downloadedFile = Join-Path $DownloadPath $sanitizedFileName
     if (Test-Path -LiteralPath $downloadedFile) {
-        OutputDebug -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
+        OutputWarning -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
     }
 
     # Download with retry logic

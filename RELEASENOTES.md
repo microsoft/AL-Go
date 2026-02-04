@@ -22,7 +22,7 @@ Now, the workflow will fail with a clear error message if the specified environm
 
 The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
 
-- Earlier detectionof inaccessible or misconfigured URLs
+- Earlier detection of inaccessible or misconfigured URLs
 - Clearer error messages when secrets are missing or URLs are invalid
 - Warnings for potential issues like duplicate filenames or insecure HTTP connections
 

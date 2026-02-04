@@ -232,7 +232,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
         @($result) | Should -Contain (Join-Path $destFolder "App2.app")
         Test-Path (Join-Path $destFolder "App1.app") | Should -BeTrue
         Test-Path (Join-Path $destFolder "App2.app") | Should -BeTrue
-        Test-Path (Join-Path $destFolder "App2.app") | Should -BeTrue
+        Test-Path (Join-Path $destFolder "NotAnApp.txt") | Should -BeFalse
     }
 
     It 'Resolves wildcard patterns' {
