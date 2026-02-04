@@ -157,6 +157,8 @@ function Get-AppFilesFromLocalPath {
     If the downloaded file is a zip file, it extracts the .app files from it.
     .PARAMETER Url
     The URL of the file to download.
+    .PARAMETER CleanUrl
+    The original URL for error reporting.
     .PARAMETER DownloadPath
     The path where the file should be downloaded.
     .OUTPUTS
@@ -165,6 +167,7 @@ function Get-AppFilesFromLocalPath {
 function Get-AppFilesFromUrl {
     Param(
         [string] $Url,
+        [string] $CleanUrl,
         [string] $DownloadPath
     )
 
@@ -195,10 +198,14 @@ function Get-AppFilesFromUrl {
     }
 
     # Download with retry logic
-    Invoke-CommandWithRetry -ScriptBlock {
-        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $downloadedFile | Out-Null
-    } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
-    OutputDebug -message "Downloaded file to path: $downloadedFile"
+    try {
+        Invoke-CommandWithRetry -ScriptBlock {
+            Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $downloadedFile | Out-Null
+        } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
+        OutputDebug -message "Downloaded file to path: $downloadedFile"
+    } catch {
+        throw "Failed to download file from inaccessible URL: $CleanUrl. Error was: $($_.Exception.Message)"
+    }
 
     # Check if the downloaded file is a zip file (by extension or magic bytes)
     if (Test-IsZipFile -Path $downloadedFile) {
@@ -276,11 +283,7 @@ function Get-DependenciesFromInstallApps {
                 }
 
                 # Download the file (may return multiple .app files if it's a zip)
-                #try {
-                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
-                #} catch {
-                #    throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
-                #}
+                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -CleanUrl $appFile -DownloadPath $DestinationPath
 
                 $updatedListOfFiles += $appFiles
             }
