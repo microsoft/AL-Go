@@ -231,6 +231,8 @@ jobs:
           $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
           $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
           $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
+          # Temporarily disable FederatedCredentials test due to Azure resource migration work
+          $filteredScenarios = $filteredScenarios | Where-Object { $_ -ne 'FederatedCredentials' }
 
           $scenariosJson = @{
             "matrix" = @{
