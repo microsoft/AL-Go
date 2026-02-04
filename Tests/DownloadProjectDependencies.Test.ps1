@@ -44,7 +44,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3, 4, 5))
         } -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/TestApp.app" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/TestApp.app" -CleanUrl "https://example.com/downloads/TestApp.app" -DownloadPath $downloadPath
 
         @($result) | Should -HaveCount 1
         @($result)[0] | Should -BeLike "*TestApp.app"
@@ -65,7 +65,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
             Copy-Item -Path $zipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/TestApps.zip" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/TestApps.zip" -CleanUrl "https://example.com/downloads/TestApps.zip" -DownloadPath $downloadPath
 
         $result | Should -HaveCount 2
         $result | Should -Contain (Join-Path $downloadPath "App1.app")
@@ -91,7 +91,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
             Copy-Item -Path $zipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/NestedApps.zip" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/NestedApps.zip" -CleanUrl "https://example.com/downloads/NestedApps.zip" -DownloadPath $downloadPath
 
         $result | Should -HaveCount 2
         $result | Should -Contain (Join-Path $downloadPath "NestedApp.app")
@@ -119,7 +119,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
             Copy-Item -Path $outerZipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/OuterApps.zip" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/OuterApps.zip" -CleanUrl "https://example.com/downloads/OuterApps.zip" -DownloadPath $downloadPath
 
         $result | Should -HaveCount 2
         $result | Should -Contain (Join-Path $downloadPath "OuterApp.app")
@@ -141,7 +141,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
 
         Mock OutputWarning {} -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/NoApps.zip" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/NoApps.zip" -CleanUrl "https://example.com/downloads/NoApps.zip" -DownloadPath $downloadPath
 
         @($result) | Should -HaveCount 0
         Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -ParameterFilter {
@@ -155,7 +155,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3, 4, 5))
         } -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/TestApp.app?token=abc123&expires=2025" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/TestApp.app?token=abc123&expires=2025" -CleanUrl "https://example.com/downloads/TestApp.app?token=abc123&expires=2025" -DownloadPath $downloadPath
 
         @($result) | Should -HaveCount 1
         @($result)[0] | Should -BeLike "*TestApp.app"
@@ -168,7 +168,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
         } -ModuleName DownloadProjectDependencies
 
         # URL with only spaces/invalid chars as filename (after sanitization becomes empty)
-        $result = Get-AppFilesFromUrl -Url "https://example.com/%20%20%20" -DownloadPath $downloadPath
+        $result = Get-AppFilesFromUrl -Url "https://example.com/%20%20%20" -CleanUrl "https://example.com/%20%20%20" -DownloadPath $downloadPath
 
         @($result) | Should -HaveCount 1
         @($result)[0] | Should -Match "\.app$"

@@ -24,7 +24,7 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 
 - Earlier detection of inaccessible or misconfigured URLs
 - Clearer error messages when secrets are missing or URLs are invalid
-- Warnings for potential issues like duplicate filenames or insecure HTTP connections
+- Warnings for potential issues like duplicate filenames
 
 ### Set default values for workflow inputs
 
