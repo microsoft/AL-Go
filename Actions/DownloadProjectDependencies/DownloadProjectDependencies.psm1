@@ -1,3 +1,5 @@
+Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
+
 <#
     .SYNOPSIS
     Downloads a file from a URL to a specified download path.
