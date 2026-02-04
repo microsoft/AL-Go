@@ -187,6 +187,7 @@ function Get-AppFilesFromUrl {
     Invoke-CommandWithRetry -ScriptBlock {
         Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $downloadedFile | Out-Null
     } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
+    OutputDebug -message "Downloaded file to path: $downloadedFile"
 
     # Check if the downloaded file is a zip file (by extension or magic bytes)
     if (Test-IsZipFile -Path $downloadedFile) {
@@ -264,11 +265,11 @@ function Get-DependenciesFromInstallApps {
                 }
 
                 # Download the file (may return multiple .app files if it's a zip)
-                try {
-                    $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
-                } catch {
-                    throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
-                }
+                #try {
+                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
+                #} catch {
+                #    throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
+                #}
 
                 $updatedListOfFiles += $appFiles
             }
