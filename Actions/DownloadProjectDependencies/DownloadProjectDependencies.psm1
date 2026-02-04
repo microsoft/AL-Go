@@ -267,7 +267,7 @@ function Get-DependenciesFromInstallApps {
         foreach($appFile in $install."$list") {
             Write-Host "Processing install$($list) entry: $appFile"
 
-            # If the app file is not a URL, resolve local path. 
+            # If the app file is not a URL, resolve local path.
             if ($appFile -notlike 'http*://*') {
                 $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $DestinationPath
             } else {

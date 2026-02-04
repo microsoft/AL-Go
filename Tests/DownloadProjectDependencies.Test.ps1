@@ -37,7 +37,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
     }
 
     It 'Downloads a single .app file from URL' {
-        # Mock Invoke-WebRequest at module level - this works because Invoke-CommandWithRetry 
+        # Mock Invoke-WebRequest at module level - this works because Invoke-CommandWithRetry
         # calls Invoke-WebRequest with a scriptblock that runs in the module scope
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
@@ -250,8 +250,8 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
         $nupkgContentFolder = Join-Path $env:RUNNER_TEMP "NupkgContent"
         New-Item -ItemType Directory -Path $nupkgContentFolder | Out-Null
         [System.IO.File]::WriteAllBytes((Join-Path $nupkgContentFolder "PackagedApp.app"), [byte[]](1, 2, 3))
-        
-        $tempZipFile = Join-Path $testFolder "MyPackage.zip"
+
+        $tempZipFile= Join-Path $testFolder "MyPackage.zip"
         Compress-Archive -Path (Join-Path $nupkgContentFolder "*") -DestinationPath $tempZipFile
         $nupkgFile = Join-Path $testFolder "MyPackage.nupkg"
         Move-Item -Path $tempZipFile -Destination $nupkgFile
