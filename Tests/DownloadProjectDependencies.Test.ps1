@@ -270,7 +270,9 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
     It 'Warns when no files found at local path' {
         Mock OutputWarning {} -ModuleName DownloadProjectDependencies
 
-        $result = Get-AppFilesFromLocalPath -Path "C:\NonExistent\Path.app" -DestinationPath $destFolder
+        # Use a cross-platform path
+        $nonExistentPath = Join-Path $testFolder "NonExistent" "Path.app"
+        $result = Get-AppFilesFromLocalPath -Path $nonExistentPath -DestinationPath $destFolder
 
         @($result) | Should -HaveCount 0
         Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -ParameterFilter {
@@ -358,8 +360,10 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
     }
 
     It 'Returns empty array for non-existent local paths' {
+        # Use a path that works cross-platform
+        $nonExistentPath = Join-Path $downloadPath "NonExistent" "MyApp.app"
         $env:Settings = @{
-            installApps = @("C:\NonExistent\Path\MyApp.app")
+            installApps = @($nonExistentPath)
             installTestApps = @()
         } | ConvertTo-Json -Depth 10
 
