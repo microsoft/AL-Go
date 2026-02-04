@@ -246,13 +246,15 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
     }
 
     It 'Extracts .app files from a .nupkg file (ZIP with different extension)' {
-        # Create a .nupkg (which is really a ZIP)
+        # Create a .nupkg (which is really a ZIP) - create as .zip first, then rename for PS5 compatibility
         $nupkgContentFolder = Join-Path $env:RUNNER_TEMP "NupkgContent"
         New-Item -ItemType Directory -Path $nupkgContentFolder | Out-Null
         [System.IO.File]::WriteAllBytes((Join-Path $nupkgContentFolder "PackagedApp.app"), [byte[]](1, 2, 3))
         
+        $tempZipFile = Join-Path $testFolder "MyPackage.zip"
+        Compress-Archive -Path (Join-Path $nupkgContentFolder "*") -DestinationPath $tempZipFile
         $nupkgFile = Join-Path $testFolder "MyPackage.nupkg"
-        Compress-Archive -Path (Join-Path $nupkgContentFolder "*") -DestinationPath $nupkgFile
+        Move-Item -Path $tempZipFile -Destination $nupkgFile
 
         $result = Get-AppFilesFromLocalPath -Path $nupkgFile -DestinationPath $destFolder
 
@@ -270,8 +272,8 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
     It 'Warns when no files found at local path' {
         Mock OutputWarning {} -ModuleName DownloadProjectDependencies
 
-        # Use a cross-platform path
-        $nonExistentPath = Join-Path $testFolder "NonExistent" "Path.app"
+        # Use a cross-platform path (nested Join-Path for PS5 compatibility)
+        $nonExistentPath = Join-Path (Join-Path $testFolder "NonExistent") "Path.app"
         $result = Get-AppFilesFromLocalPath -Path $nonExistentPath -DestinationPath $destFolder
 
         @($result) | Should -HaveCount 0
@@ -360,8 +362,8 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
     }
 
     It 'Returns empty array for non-existent local paths' {
-        # Use a path that works cross-platform
-        $nonExistentPath = Join-Path $downloadPath "NonExistent" "MyApp.app"
+        # Use a path that works cross-platform (nested Join-Path for PS5 compatibility)
+        $nonExistentPath = Join-Path (Join-Path $downloadPath "NonExistent") "MyApp.app"
         $env:Settings = @{
             installApps = @($nonExistentPath)
             installTestApps = @()
