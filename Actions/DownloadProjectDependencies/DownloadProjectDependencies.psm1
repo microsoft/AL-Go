@@ -117,6 +117,11 @@ function Get-AppFilesFromLocalPath {
         [string] $DestinationPath
     )
 
+    # Ensure the destination directory exists
+    if (-not (Test-Path -Path $DestinationPath)) {
+        New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
+    }
+
     # Get all matching items (works for folders, wildcards, and single files)
     $matchedItems = @(Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue)
 
@@ -162,6 +167,12 @@ function Get-AppFilesFromUrl {
         [string] $Url,
         [string] $DownloadPath
     )
+
+    # Ensure the download directory exists
+    if (-not (Test-Path -Path $DownloadPath)) {
+        New-Item -ItemType Directory -Path $DownloadPath -Force | Out-Null
+    }
+
     # Get the file name from the URL
     $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
     $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
