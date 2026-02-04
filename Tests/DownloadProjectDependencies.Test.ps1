@@ -98,6 +98,34 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
         $result | Should -Contain (Join-Path $downloadPath "AnotherApp.app")
     }
 
+    It 'Extracts .app files from nested ZIP inside ZIP' {
+        # Create inner ZIP with .app file
+        $innerZipSource = Join-Path $env:RUNNER_TEMP "InnerZipSource"
+        New-Item -ItemType Directory -Path $innerZipSource -Force | Out-Null
+        [System.IO.File]::WriteAllBytes((Join-Path $innerZipSource "InnerApp.app"), [byte[]](1, 2, 3))
+        $innerZipPath = Join-Path $env:RUNNER_TEMP "InnerApps.zip"
+        Compress-Archive -Path "$innerZipSource\*" -DestinationPath $innerZipPath
+
+        # Create outer ZIP containing the inner ZIP and another .app
+        $outerZipSource = Join-Path $env:RUNNER_TEMP "OuterZipSource"
+        New-Item -ItemType Directory -Path $outerZipSource -Force | Out-Null
+        Copy-Item -Path $innerZipPath -Destination (Join-Path $outerZipSource "InnerApps.zip")
+        [System.IO.File]::WriteAllBytes((Join-Path $outerZipSource "OuterApp.app"), [byte[]](4, 5, 6))
+        $outerZipPath = Join-Path $env:RUNNER_TEMP "OuterApps.zip"
+        Compress-Archive -Path "$outerZipSource\*" -DestinationPath $outerZipPath
+
+        Mock Invoke-WebRequest {
+            param($Method, $UseBasicParsing, $Uri, $OutFile)
+            Copy-Item -Path $outerZipPath -Destination $OutFile -Force
+        } -ModuleName DownloadProjectDependencies
+
+        $result = Get-AppFilesFromUrl -Url "https://example.com/downloads/OuterApps.zip" -DownloadPath $downloadPath
+
+        $result | Should -HaveCount 2
+        $result | Should -Contain (Join-Path $downloadPath "OuterApp.app")
+        $result | Should -Contain (Join-Path $downloadPath "InnerApp.app")
+    }
+
     It 'Returns empty array and warns when zip contains no .app files' {
         # Create zip with non-.app files
         $zipSourcePath = Join-Path $env:RUNNER_TEMP "ZipSourceNoApps"
@@ -179,17 +207,18 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
         $env:RUNNER_TEMP = $originalRunnerTemp
     }
 
-    It 'Returns single .app file directly' {
+    It 'Copies single .app file to destination' {
         $appFile = Join-Path $testFolder "MyApp.app"
         [System.IO.File]::WriteAllBytes($appFile, [byte[]](1, 2, 3))
 
         $result = Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $destFolder
 
         @($result) | Should -HaveCount 1
-        @($result)[0] | Should -Be $appFile
+        @($result)[0] | Should -Be (Join-Path $destFolder "MyApp.app")
+        Test-Path @($result)[0] | Should -BeTrue
     }
 
-    It 'Finds all .app files in a folder recursively' {
+    It 'Copies all .app files from folder to destination' {
         # Create nested structure
         $subFolder = New-Item -ItemType Directory -Path (Join-Path $testFolder "SubFolder")
         [System.IO.File]::WriteAllBytes((Join-Path $testFolder "App1.app"), [byte[]](1, 2, 3))
@@ -199,8 +228,11 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
         $result = Get-AppFilesFromLocalPath -Path $testFolder -DestinationPath $destFolder
 
         @($result) | Should -HaveCount 2
-        @($result) | Should -Contain (Join-Path $testFolder "App1.app")
-        @($result) | Should -Contain (Join-Path $subFolder "App2.app")
+        @($result) | Should -Contain (Join-Path $destFolder "App1.app")
+        @($result) | Should -Contain (Join-Path $destFolder "App2.app")
+        Test-Path (Join-Path $destFolder "App1.app") | Should -BeTrue
+        Test-Path (Join-Path $destFolder "App2.app") | Should -BeTrue
+        Test-Path (Join-Path $destFolder "App2.app") | Should -BeTrue
     }
 
     It 'Resolves wildcard patterns' {
@@ -303,13 +335,13 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         $result.TestApps | Should -HaveCount 0
     }
 
-    It 'Returns local .app files from existing paths' {
-        # Create temporary test files
-        $testAppsFolder = Join-Path $downloadPath "TestApps"
-        New-Item -ItemType Directory -Path $testAppsFolder | Out-Null
-        $testAppFile = Join-Path $testAppsFolder "MyApp.app"
+    It 'Copies local .app files to destination path' {
+        # Create temporary test files in a source folder (not the download path)
+        $sourceFolder = Join-Path $env:RUNNER_TEMP "SourceApps"
+        New-Item -ItemType Directory -Path $sourceFolder | Out-Null
+        $testAppFile = Join-Path $sourceFolder "MyApp.app"
         [System.IO.File]::WriteAllBytes($testAppFile, [byte[]](1, 2, 3))
-        $testTestAppFile = Join-Path $testAppsFolder "TestApp.app"
+        $testTestAppFile = Join-Path $sourceFolder "TestApp.app"
         [System.IO.File]::WriteAllBytes($testTestAppFile, [byte[]](1, 2, 3))
 
         $env:Settings = @{
@@ -319,8 +351,10 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
 
         $result = Get-DependenciesFromInstallApps -DestinationPath $downloadPath
 
-        $result.Apps | Should -Contain $testAppFile
-        $result.TestApps | Should -Contain $testTestAppFile
+        $result.Apps | Should -Contain (Join-Path $downloadPath "MyApp.app")
+        $result.TestApps | Should -Contain (Join-Path $downloadPath "TestApp.app")
+        Test-Path (Join-Path $downloadPath "MyApp.app") | Should -BeTrue
+        Test-Path (Join-Path $downloadPath "TestApp.app") | Should -BeTrue
     }
 
     It 'Returns empty array for non-existent local paths' {

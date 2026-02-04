@@ -1,4 +1,5 @@
 Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 <#
     .SYNOPSIS
@@ -47,22 +48,30 @@ function Expand-ZipFileToAppFiles {
     $zipToExtract = $ZipFile
     $tempZipCreated = $false
     if ([System.IO.Path]::GetExtension($ZipFile).ToLowerInvariant() -ne '.zip') {
-        $zipToExtract = Join-Path $env:RUNNER_TEMP "$([System.IO.Path]::GetFileName($ZipFile)).zip"
+        $zipToExtract = Join-Path (GetTemporaryPath) "$([System.IO.Path]::GetFileName($ZipFile)).zip"
         Copy-Item -Path $ZipFile -Destination $zipToExtract
         $tempZipCreated = $true
     }
 
     try {
         # Extract to runner temp folder
-        $extractPath = Join-Path $env:RUNNER_TEMP ([System.IO.Path]::GetFileNameWithoutExtension($fileName))
+        $extractPath = Join-Path (GetTemporaryPath) ([System.IO.Path]::GetFileNameWithoutExtension($fileName))
         Expand-Archive -Path $zipToExtract -DestinationPath $extractPath -Force
 
-        # Find all .app files in the extracted folder and copy them to the destination
+        # Find all files in the extracted folder and process them
         $appFiles = @()
-        foreach ($appFile in (Get-ChildItem -Path $extractPath -Filter '*.app' -Recurse)) {
-            $destFile = Join-Path $DestinationPath $appFile.Name
-            Copy-Item -Path $appFile.FullName -Destination $destFile -Force
-            $appFiles += $destFile
+        foreach ($file in (Get-ChildItem -Path $extractPath -Recurse -File)) {
+            $extension = [System.IO.Path]::GetExtension($file.FullName).ToLowerInvariant()
+
+            if ($extension -eq '.app') {
+                $destFile = Join-Path $DestinationPath $file.Name
+                Copy-Item -Path $file.FullName -Destination $destFile -Force
+                $appFiles += $destFile
+            }
+            elseif (Test-IsZipFile -Path $file.FullName) {
+                # Recursively extract nested ZIP files
+                $appFiles += Expand-ZipFileToAppFiles -ZipFile $file.FullName -DestinationPath $DestinationPath
+            }
         }
 
         # Clean up the extracted folder
@@ -118,7 +127,9 @@ function Get-AppFilesFromLocalPath {
         $extension = [System.IO.Path]::GetExtension($item.FullName).ToLowerInvariant()
 
         if ($extension -eq '.app') {
-            $appFiles += $item.FullName
+            $destFile = Join-Path $DestinationPath $item.Name
+            Copy-Item -Path $item.FullName -Destination $destFile -Force
+            $appFiles += $destFile
         } elseif (Test-IsZipFile -Path $item.FullName) {
             $appFiles += Expand-ZipFileToAppFiles -ZipFile $item.FullName -DestinationPath $DestinationPath
         } else {
