@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2107 Publish a specific build mode to an environment
+
 ## v8.2
 
 ### Issues
