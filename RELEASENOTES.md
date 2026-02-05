@@ -1,3 +1,5 @@
+## v8.2
+
 ### Issues
 
 - Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
