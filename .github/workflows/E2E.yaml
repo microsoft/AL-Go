@@ -256,7 +256,7 @@ jobs:
   ScenariosOnWindows:
     runs-on: [ windows-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runScenarios == 'true'
+    if: github.event.inputs.runScenarios == 'true' && matrix.disabled != true
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - name: Harden Runner
@@ -279,7 +279,6 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run test on Windows
-        if: matrix.disabled != true
         run: |
           try {
             . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
@@ -294,7 +293,7 @@ jobs:
   ScenariosOnLinux:
     runs-on: [ windows-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runScenarios == 'true'
+    if: github.event.inputs.runScenarios == 'true' && matrix.disabled != true
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - name: Harden Runner
@@ -317,7 +316,6 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run tests
-        if: matrix.disabled != true
         run: |
           try {
             . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
