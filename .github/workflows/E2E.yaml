@@ -256,20 +256,22 @@ jobs:
   ScenariosOnWindows:
     runs-on: [ windows-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runScenarios == 'true' && matrix.disabled != true
+    if: github.event.inputs.runScenarios == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - name: Harden Runner
-        if: github.repository_owner == 'microsoft'
+        if: github.repository_owner == 'microsoft' && matrix.disabled != true
         uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        if: matrix.disabled != true
         with:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Calculate parameters
+        if: matrix.disabled != true
         id: calculateParams
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -279,6 +281,7 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run test on Windows
+        if: matrix.disabled != true
         run: |
           try {
             . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
@@ -293,20 +296,22 @@ jobs:
   ScenariosOnLinux:
     runs-on: [ windows-latest ]
     needs: [ Check, SetupRepositories, Analyze ]
-    if: github.event.inputs.runScenarios == 'true' && matrix.disabled != true
+    if: github.event.inputs.runScenarios == 'true'
     strategy: ${{ fromJson(needs.Analyze.outputs.scenarios) }}
     steps:
       - name: Harden Runner
-        if: github.repository_owner == 'microsoft'
+        if: github.repository_owner == 'microsoft' && matrix.disabled != true
         uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        if: matrix.disabled != true
         with:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Calculate parameters
+        if: matrix.disabled != true
         id: calculateParams
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -316,6 +321,7 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run tests
+        if: matrix.disabled != true
         run: |
           try {
             . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
