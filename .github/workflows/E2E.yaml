@@ -234,7 +234,7 @@ jobs:
 
           # Load disabled scenarios from config file
           $disabledScenariosConfig = Get-Content -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json") -encoding UTF8 -raw | ConvertFrom-Json
-          $disabledScenarios = $disabledScenariosConfig.disabledScenarios
+          $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
 
           $scenariosJson = @{
             "matrix" = @{
