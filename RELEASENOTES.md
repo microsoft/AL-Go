@@ -1,3 +1,9 @@
+## v8.3
+
+### Issues
+
+- Issue 2096 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
+
 ## v8.2
 
 ### Issues
@@ -13,7 +19,6 @@
 - AL-Go repositories with large amounts of projects may run into issues with too large environment variables
 - Discussion 1855 Add trigger 'workflow_call' to workflow 'Update AL-Go System Files' for reusability
 - Issue 2050 Publish To Environment creates mistyped environment
-- Issue 2096 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
 
 ### Publish To Environment no longer creates unknown environments by default
 
