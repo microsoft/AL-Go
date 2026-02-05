@@ -140,4 +140,25 @@ Describe "GitHub-Helper Tests" {
         $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/.x'
         $result.tag_name | Should -Be '26.3.0'
     }
+
+    It 'GetLatestRelease ignores prerelease and draft releases when filtering by major version' {
+        # Mock GetReleases to return a list of releases including prereleases and drafts
+        Mock GetReleases -ModuleName Github-Helper {
+            return @(
+                [PSCustomObject]@{ tag_name = '26.5.0'; prerelease = $true; draft = $false }  # prerelease - should be ignored
+                [PSCustomObject]@{ tag_name = '26.4.0'; prerelease = $false; draft = $true }  # draft - should be ignored
+                [PSCustomObject]@{ tag_name = '26.3.0'; prerelease = $false; draft = $false } # valid - should be selected
+                [PSCustomObject]@{ tag_name = '26.2.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = '25.1.0'; prerelease = $false; draft = $false }
+            )
+        }
+
+        # Test releases/26.x branch - should find the latest non-prerelease, non-draft 26.x release (26.3.0)
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/26.x'
+        $result.tag_name | Should -Be '26.3.0'
+
+        # Test releases/26 branch - should also find 26.3.0, ignoring prerelease and draft
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/26'
+        $result.tag_name | Should -Be '26.3.0'
+    }
 }

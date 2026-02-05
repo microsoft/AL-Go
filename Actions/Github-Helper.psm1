@@ -610,14 +610,16 @@ function GetLatestRelease {
                 # Find the latest release matching that major version
                 $majorVersion = [int]$versionParts[0]
                 $latestRelease = $releases | Where-Object {
-                    try {
-                        $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-                        $majorVersion -eq $releaseSemVerObj.Major
-                    }
-                    catch {
-                        # If the tag is not a valid semver, skip it
-                        $false
-                    }
+                    -not ($_.prerelease -or $_.draft) -and $(
+                        try {
+                            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                            $majorVersion -eq $releaseSemVerObj.Major
+                        }
+                        catch {
+                            # If the tag is not a valid semver, skip it
+                            $false
+                        }
+                    )
                 } | Select-Object -First 1
             }
             else {
@@ -625,14 +627,16 @@ function GetLatestRelease {
                 try {
                     $semVerObj = SemVerStrToSemVerObj -semVerStr $cleanVersion -allowMajorMinorOnly
                     $latestRelease = $releases | Where-Object {
-                        try {
-                            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-                            $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
-                        }
-                        catch {
-                            # If the tag is not a valid semver, skip it
-                            $false
-                        }
+                        -not ($_.prerelease -or $_.draft) -and $(
+                            try {
+                                $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                                $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
+                            }
+                            catch {
+                                # If the tag is not a valid semver, skip it
+                                $false
+                            }
+                        )
                     } | Select-Object -First 1
                 }
                 catch {
