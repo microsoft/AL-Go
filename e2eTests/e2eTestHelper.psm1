@@ -343,6 +343,20 @@ function SetRepositorySecret {
     CleanupWorkflowRuns -repository "microsoft/AL-Go"
 #>
 function CleanupWorkflowRuns {
+    <#
+    .SYNOPSIS
+        Deletes all workflow runs in a repository.
+
+    .DESCRIPTION
+        This function deletes all workflow runs in a GitHub repository to ensure a clean state for testing.
+        It handles pagination to process all workflow runs, even if there are more than 100.
+
+    .PARAMETER repository
+        The full repository name in the format 'owner/repo'.
+
+    .EXAMPLE
+        CleanupWorkflowRuns -repository 'microsoft/e2e-bingmaps.appsource'
+    #>
     Param(
         [Parameter(Mandatory = $true)]
         [string] $repository
@@ -352,25 +366,36 @@ function CleanupWorkflowRuns {
 
     RefreshToken -repository $repository
 
-    # Get all workflow runs
-    $runs = invoke-gh api "/repos/$repository/actions/runs?per_page=100" -silent -returnValue | ConvertFrom-Json
+    # Get all workflow runs with pagination
+    $page = 1
+    $totalDeleted = 0
+    do {
+        $runs = invoke-gh api "/repos/$repository/actions/runs?per_page=100&page=$page" -silent -returnValue | ConvertFrom-Json
 
-    if ($runs.workflow_runs.Count -eq 0) {
-        Write-Host "No workflow runs found"
-        return
-    }
+        if ($runs.workflow_runs.Count -eq 0) {
+            break
+        }
 
-    Write-Host "Deleting $($runs.workflow_runs.Count) workflow runs..."
-    foreach ($run in $runs.workflow_runs) {
-        try {
-            Write-Host "Deleting run $($run.id) ($($run.name) - $($run.status))"
-            invoke-gh api /repos/$repository/actions/runs/$($run.id) --method DELETE -silent | Out-Null
+        Write-Host "Processing page $page with $($runs.workflow_runs.Count) workflow runs..."
+        foreach ($run in $runs.workflow_runs) {
+            try {
+                Write-Host "Deleting run $($run.id) ($($run.name) - $($run.status))"
+                invoke-gh api /repos/$repository/actions/runs/$($run.id) --method DELETE -silent | Out-Null
+                $totalDeleted++
+            }
+            catch {
+                Write-Host "Warning: Failed to delete run $($run.id): $_"
+            }
         }
-        catch {
-            Write-Host "Warning: Failed to delete run $($run.id): $_"
-        }
+        $page++
+    } while ($runs.workflow_runs.Count -eq 100)
+
+    if ($totalDeleted -eq 0) {
+        Write-Host "No workflow runs found to delete"
     }
-    Write-Host "Cleanup completed"
+    else {
+        Write-Host "Cleanup completed. Deleted $totalDeleted workflow run(s)"
+    }
 }
 
 <#
