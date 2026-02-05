@@ -69,8 +69,10 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId
 
 # Check if the repository already exists
 # This repository must exist with federated credentials already configured
-gh api repos/$repository --method HEAD
-if ($LASTEXITCODE -ne 0) {
+try {
+    invoke-gh api repos/$repository --method HEAD -silent | Out-Null
+}
+catch {
     throw "Repository $repository does not exist. The repository must be created manually with federated credentials configured before running this test."
 }
 
@@ -122,20 +124,20 @@ $updateRun = RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template
 Write-Host "Waiting for CI/CD workflow to start (triggered by Update AL-Go System Files)..."
 Start-Sleep -Seconds 60
 
-# Get workflow runs that started after the update workflow
-# Use created_at for consistent timestamp comparison, and add a small buffer for timing precision
-$updateCreatedAt = [DateTime]$updateRun.created_at
+# Get workflow runs that started after the update workflow completed
+# Use updated_at to ensure we capture runs triggered after the update workflow finished
+$updateCompletedAt = [DateTime]$updateRun.updated_at
 $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 
-# Find the CI/CD workflow run that started after the update workflow was created
+# Find the CI/CD workflow run that started after the update workflow completed
 $run = $runs.workflow_runs | Where-Object {
-    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCreatedAt
+    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCompletedAt
 } | Select-Object -First 1
 
 if (-not $run) {
-    # Fallback to the first workflow run if we can't find one based on timestamp
-    Write-Host "Warning: Could not find CI/CD run based on timestamp, using first run"
-    $run = $runs.workflow_runs | Select-Object -First 1
+    # Fallback to the first push workflow run if we can't find one based on timestamp
+    Write-Host "Warning: Could not find CI/CD run based on timestamp, using first push run"
+    $run = $runs.workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -First 1
 }
 
 Write-Host "Waiting for CI/CD workflow run $($run.id) to complete..."
@@ -143,7 +145,7 @@ WaitWorkflow -repository $repository -runid $run.id -noError
 
 # The CI/CD workflow should fail because the version number of the app in the repository is lower than the version number in AppSource
 # Reason being that major.minor from the original bcsamples-bingmaps.appsource is the same and the build number in the newly created repository is lower than the one in AppSource
-# This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the tmp repo) and use it in the next run
+# This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the e2e-bingmaps.appsource repo) and use it in the next run
 $MatchArr = Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '(?m)^.*The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center.*$' -isRegEx
 $appSourceVersion = [System.Version]$MatchArr[2]
 $newVersion = [System.Version]::new($appSourceVersion.Major, $appSourceVersion.Minor, $appSourceVersion.Build, 0)
