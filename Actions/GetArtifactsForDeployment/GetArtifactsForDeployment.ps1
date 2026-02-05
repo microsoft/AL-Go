@@ -4,16 +4,29 @@ Param(
     [Parameter(HelpMessage = "Artifacts version to download (current, prerelease, draft, latest or version number)", Mandatory = $true)]
     [string] $artifactsVersion,
     [Parameter(HelpMessage = "Folder in which the artifacts will be downloaded", Mandatory = $true)]
-    [string] $artifactsFolder
+    [string] $artifactsFolder,
+    [Parameter(HelpMessage = "Build mode used when building the artifacts", Mandatory = $false)]
+    [string] $buildMode = 'Default'
 )
 
 Import-Module (Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1")
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
+# If buildMode is 'Default', set it to empty string (no prefix in artifact names)
+if ($buildMode -eq 'Default') {
+    $buildMode = ''
+}
+
 # Get artifacts for all projects
 $projects = "*"
-$artifactsToDownload = @("Apps","TestApps","Dependencies","PowerPlatformSolution")
+
+# Default artifact types (used for releases which only support default buildMode)
+$defaultArtifactTypes = @("Apps","TestApps","Dependencies","PowerPlatformSolution")
+
+# Artifact types with buildMode prefix (used for workflow artifacts)
+# PowerPlatformSolution is always built with 'default' buildMode, so it never has a prefix
+$buildModeArtifactTypes = @("$($buildMode)Apps","$($buildMode)TestApps","$($buildMode)Dependencies","PowerPlatformSolution")
 
 Write-Host "Get artifacts for version: '$artifactsVersion' for these projects: '$projects' to folder: '$artifactsFolder'"
 
@@ -38,7 +51,8 @@ if ($artifactsVersion -eq "current" -or $artifactsVersion -eq "prerelease" -or $
         if (!($release)) {
             throw "Unable to locate $artifactsVersion release"
         }
-        $artifactsToDownload | ForEach-Object {
+        # Releases only contain default buildMode artifacts
+        $defaultArtifactTypes | ForEach-Object {
             DownloadRelease -token $token -projects $projects -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $release -path $artifactsFolder -mask $_ -unpack
         }
     }
@@ -72,13 +86,13 @@ elseif ($artifactsVersion -like "PR_*") {
     $expiredArtifacts = @()
     $lastKnownGoodBuildArtifacts = @()
     # Get PR artifacts
-    $artifactsToDownload | ForEach-Object {
+    $buildModeArtifactTypes | ForEach-Object {
         $prArtifacts += GetArtifactsFromWorkflowRun -workflowRun $latestPRBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
     }
     # Get last known good build artifacts referenced from PR
     if ($lastKnownGoodBuildId -ne 0) {
         Write-Host "Last known good build id: $lastKnownGoodBuildId"
-        $artifactsToDownload | ForEach-Object {
+        $buildModeArtifactTypes | ForEach-Object {
             $lastKnownGoodBuildArtifacts += GetArtifactsFromWorkflowRun -workflowRun $lastKnownGoodBuildId -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -expiredArtifacts ([ref]$expiredArtifacts)
         }
     }
@@ -106,7 +120,7 @@ else {
 
 if ($searchArtifacts) {
     $allArtifacts = @()
-    $artifactsToDownload | ForEach-Object {
+    $buildModeArtifactTypes | ForEach-Object {
         $allArtifacts += @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $_ -projects $projects -version $artifactsVersion -branch $ENV:GITHUB_REF_NAME)
     }
     if ($allArtifacts) {
