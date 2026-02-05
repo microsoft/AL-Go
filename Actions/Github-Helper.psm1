@@ -596,7 +596,7 @@ function GetLatestRelease {
         $releaseVersion = $ref -split '/' | Select-Object -Last 1 # Get the version from the release branch
 
         # Handle version strings like "26.x", "26", or "26.3"
-        # Remove any trailing non-numeric segments (like ".x")
+        # Remove trailing ".x" suffix used in branch names like "26.x"
         $cleanVersion = $releaseVersion -replace '\.x$', ''
 
         # Validate that cleanVersion is not empty and starts with a digit
