@@ -205,4 +205,31 @@ Describe "GitHub-Helper Tests" {
         $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/25.x'
         $result.tag_name | Should -Be 'v25.1.0'
     }
+
+    It 'GetLatestRelease handles alternative branch naming formats' {
+        # Mock GetReleases to return a list of releases
+        Mock GetReleases -ModuleName Github-Helper {
+            return @(
+                [PSCustomObject]@{ tag_name = '27.2.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = '27.1.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = '26.3.0'; prerelease = $false; draft = $false }
+            )
+        }
+
+        # Test releases/27x branch (without dot) - should find the latest 27.x release
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/27x'
+        $result.tag_name | Should -Be '27.2.0'
+
+        # Test releases/v27 branch (with v prefix) - should find the latest 27.x release
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/v27'
+        $result.tag_name | Should -Be '27.2.0'
+
+        # Test releases/v27.x branch (with v prefix and .x suffix) - should find the latest 27.x release
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/v27.x'
+        $result.tag_name | Should -Be '27.2.0'
+
+        # Test releases/v26x branch (with v prefix and x suffix without dot) - should find the latest 26.x release
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/v26x'
+        $result.tag_name | Should -Be '26.3.0'
+    }
 }

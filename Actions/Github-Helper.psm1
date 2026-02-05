@@ -595,9 +595,11 @@ function GetLatestRelease {
         # This is given by the latest release with the same major.minor as the release branch
         $releaseVersion = $ref -split '/' | Select-Object -Last 1 # Get the version from the release branch
 
-        # Handle version strings like "26.x", "26", or "26.3"
-        # Remove trailing ".x" suffix used in branch names like "26.x"
-        $cleanVersion = $releaseVersion -replace '\.x$', ''
+        # Handle version strings like "26.x", "26x", "v26", "v26.x", "26", or "26.3"
+        # Remove optional 'v' prefix
+        $cleanVersion = $releaseVersion -replace '^v', ''
+        # Remove trailing "x" suffix (with or without dot) used in branch names like "26.x" or "26x"
+        $cleanVersion = $cleanVersion -replace '\.?x$', ''
 
         # Validate that cleanVersion is not empty and starts with a digit
         if ($cleanVersion -and $cleanVersion -match '^\d') {
