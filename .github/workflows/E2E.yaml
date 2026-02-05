@@ -238,12 +238,13 @@ jobs:
           Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"
 
           # Filter out disabled scenarios
+          $scenariosBeforeDisabledFilter = $filteredScenarios
           $beforeFilter = $filteredScenarios.Count
           $filteredScenarios = $filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ }
           $afterFilter = $filteredScenarios.Count
           if ($beforeFilter -ne $afterFilter) {
             Write-Host "Filtered out $($beforeFilter - $afterFilter) disabled scenario(s)"
-            $disabledScenariosConfig | Where-Object { $filteredScenarios -notcontains $_.scenario } | ForEach-Object {
+            $disabledScenariosConfig | Where-Object { ($scenariosBeforeDisabledFilter -contains $_.scenario) -and ($filteredScenarios -notcontains $_.scenario) } | ForEach-Object {
               Write-Host "  - $($_.scenario): $($_.reason)"
             }
           }
