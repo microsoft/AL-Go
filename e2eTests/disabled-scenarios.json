@@ -1,0 +1,8 @@
+{
+    "disabledScenarios": [
+        "FederatedCredentials"
+    ],
+    "reason": {
+        "FederatedCredentials": "Azure resource migration work in progress"
+    }
+}

@@ -231,12 +231,21 @@ jobs:
           $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
           $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
           $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
-          # Temporarily disable FederatedCredentials test due to Azure resource migration work
-          $filteredScenarios = $filteredScenarios | Where-Object { $_ -ne 'FederatedCredentials' }
+
+          # Load disabled scenarios from config file
+          $disabledScenariosConfig = Get-Content -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json") -encoding UTF8 -raw | ConvertFrom-Json
+          $disabledScenarios = $disabledScenariosConfig.disabledScenarios
 
           $scenariosJson = @{
             "matrix" = @{
-              "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
+              "include" = @($filteredScenarios | ForEach-Object {
+                $scenario = $_
+                $disabled = $disabledScenarios -contains $scenario
+                @{
+                  "Scenario" = $scenario
+                  "Disabled" = $disabled
+                }
+              })
             };
             "max-parallel" = $maxParallel
             "fail-fast" = $false
@@ -270,6 +279,7 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run test on Windows
+        if: matrix.disabled != true
         run: |
           try {
             . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
@@ -307,6 +317,7 @@ jobs:
           Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
 
       - name: Run tests
+        if: matrix.disabled != true
         run: |
           try {
             . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
