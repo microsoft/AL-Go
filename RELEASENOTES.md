@@ -1,3 +1,5 @@
+## v8.2
+
 ### Issues
 
 - Issue 2095 DeliverToAppSource.ProductId needs to be specified (Library app)
