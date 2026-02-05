@@ -161,4 +161,48 @@ Describe "GitHub-Helper Tests" {
         $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/26'
         $result.tag_name | Should -Be '26.3.0'
     }
+
+    It 'GetLatestRelease handles v-prefixed tags correctly' {
+        # Mock GetReleases to return a list of releases with 'v' prefixed tags
+        Mock GetReleases -ModuleName Github-Helper {
+            return @(
+                [PSCustomObject]@{ tag_name = 'v26.3.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = 'v26.2.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = 'v25.1.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = 'v25.0.0'; prerelease = $false; draft = $false }
+            )
+        }
+
+        # Test releases/26.x branch - should find the latest v26.x release (v26.3.0)
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/26.x'
+        $result.tag_name | Should -Be 'v26.3.0'
+
+        # Test releases/26 branch - should find the latest v26.x release (v26.3.0)
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/26'
+        $result.tag_name | Should -Be 'v26.3.0'
+
+        # Test releases/25 branch - should find the latest v25.x release (v25.1.0)
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/25'
+        $result.tag_name | Should -Be 'v25.1.0'
+    }
+
+    It 'GetLatestRelease handles mixed prefixed and non-prefixed tags' {
+        # Mock GetReleases to return a mix of 'v' prefixed and non-prefixed tags
+        Mock GetReleases -ModuleName Github-Helper {
+            return @(
+                [PSCustomObject]@{ tag_name = 'v26.3.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = '26.2.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = 'v25.1.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = '25.0.0'; prerelease = $false; draft = $false }
+            )
+        }
+
+        # Test releases/26.x branch - should find the latest 26.x release (v26.3.0, which is first)
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/26.x'
+        $result.tag_name | Should -Be 'v26.3.0'
+
+        # Test releases/25.x branch - should find the latest 25.x release (v25.1.0)
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/25.x'
+        $result.tag_name | Should -Be 'v25.1.0'
+    }
 }
