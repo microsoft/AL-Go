@@ -618,7 +618,8 @@ function GetLatestRelease {
                             $majorVersion -eq $releaseSemVerObj.Major
                         }
                         catch {
-                            # If the tag is not a valid semver, skip it
+                            # If the tag is not a valid semver, skip it (log for troubleshooting)
+                            OutputDebug -message "Skipping release with invalid semver tag: $($_.tag_name)"
                             $false
                         }
                     )
@@ -635,7 +636,8 @@ function GetLatestRelease {
                                 $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
                             }
                             catch {
-                                # If the tag is not a valid semver, skip it
+                                # If the tag is not a valid semver, skip it (log for troubleshooting)
+                                OutputDebug -message "Skipping release with invalid semver tag: $($_.tag_name)"
                                 $false
                             }
                         )
