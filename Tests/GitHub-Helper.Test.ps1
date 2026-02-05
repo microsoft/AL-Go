@@ -122,4 +122,22 @@ Describe "GitHub-Helper Tests" {
         $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'release/26.x'
         $result.tag_name | Should -Be '26.3.0'
     }
+
+    It 'GetLatestRelease falls back to overall latest release for invalid version format' {
+        # Mock GetReleases to return a list of releases
+        Mock GetReleases -ModuleName Github-Helper {
+            return @(
+                [PSCustomObject]@{ tag_name = '26.3.0'; prerelease = $false; draft = $false }
+                [PSCustomObject]@{ tag_name = '25.1.0'; prerelease = $false; draft = $false }
+            )
+        }
+
+        # Test with invalid version format - should fall back to overall latest release
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/abc'
+        $result.tag_name | Should -Be '26.3.0'
+
+        # Test with just ".x" - should fall back to overall latest release
+        $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/.x'
+        $result.tag_name | Should -Be '26.3.0'
+    }
 }

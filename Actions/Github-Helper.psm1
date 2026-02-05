@@ -598,38 +598,52 @@ function GetLatestRelease {
         # Handle version strings like "26.x", "26", or "26.3"
         # Remove any trailing non-numeric segments (like ".x")
         $cleanVersion = $releaseVersion -replace '\.x$', ''
-        # Check if we have just a major version or major.minor
-        $versionParts = $cleanVersion -split '\.'
-        $majorVersionOnly = ($versionParts.Count -eq 1) -and ($versionParts[0] -match '^\d+$')
 
-        if ($majorVersionOnly) {
-            # If only major version is specified (e.g., "26" or "26.x" -> "26")
-            # Find the latest release matching that major version
-            $majorVersion = [int]$versionParts[0]
-            $latestRelease = $releases | Where-Object {
+        # Validate that cleanVersion is not empty and starts with a digit
+        if ($cleanVersion -and $cleanVersion -match '^\d') {
+            # Check if we have just a major version or major.minor
+            $versionParts = $cleanVersion -split '\.'
+            $majorVersionOnly = ($versionParts.Count -eq 1) -and ($versionParts[0] -match '^\d+$')
+
+            if ($majorVersionOnly) {
+                # If only major version is specified (e.g., "26" or "26.x" -> "26")
+                # Find the latest release matching that major version
+                $majorVersion = [int]$versionParts[0]
+                $latestRelease = $releases | Where-Object {
+                    try {
+                        $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                        $majorVersion -eq $releaseSemVerObj.Major
+                    }
+                    catch {
+                        # If the tag is not a valid semver, skip it
+                        $false
+                    }
+                } | Select-Object -First 1
+            }
+            else {
+                # If major.minor version is specified (e.g., "26.3")
                 try {
-                    $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-                    $majorVersion -eq $releaseSemVerObj.Major
+                    $semVerObj = SemVerStrToSemVerObj -semVerStr $cleanVersion -allowMajorMinorOnly
+                    $latestRelease = $releases | Where-Object {
+                        try {
+                            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                            $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
+                        }
+                        catch {
+                            # If the tag is not a valid semver, skip it
+                            $false
+                        }
+                    } | Select-Object -First 1
                 }
                 catch {
-                    # If the tag is not a valid semver, skip it
-                    $false
+                    # If the version from the branch cannot be parsed, fall back to the overall latest release
+                    Write-Host "Warning: Unable to parse version '$cleanVersion' from branch '$ref', using overall latest release"
                 }
-            } | Select-Object -First 1
+            }
         }
         else {
-            # If major.minor version is specified (e.g., "26.3")
-            $semVerObj = SemVerStrToSemVerObj -semVerStr $cleanVersion -allowMajorMinorOnly
-            $latestRelease = $releases | Where-Object {
-                try {
-                    $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-                    $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
-                }
-                catch {
-                    # If the tag is not a valid semver, skip it
-                    $false
-                }
-            } | Select-Object -First 1
+            # If the version from the branch is invalid, fall back to the overall latest release
+            Write-Host "Warning: Invalid version format '$releaseVersion' in branch '$ref', using overall latest release"
         }
     }
     $latestRelease
