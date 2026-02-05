@@ -232,8 +232,18 @@ jobs:
           $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
           $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
 
-          # Load disabled scenarios from config file
-          $disabledScenariosConfig = Get-Content -path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json") -encoding UTF8 -raw | ConvertFrom-Json
+          # Load disabled scenarios from config file (optional)
+          $disabledScenariosConfigPath = Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json"
+          $disabledScenariosConfig = @()
+          if (Test-Path -Path $disabledScenariosConfigPath) {
+            $disabledScenariosContent = Get-Content -Path $disabledScenariosConfigPath -Encoding UTF8 -Raw
+            if (-not [string]::IsNullOrWhiteSpace($disabledScenariosContent)) {
+              $disabledScenariosConfig = $disabledScenariosContent | ConvertFrom-Json
+            }
+          }
+          else {
+            Write-Host "No disabled-scenarios.json found; proceeding with all scenarios enabled."
+          }
           $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
           Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"
 
