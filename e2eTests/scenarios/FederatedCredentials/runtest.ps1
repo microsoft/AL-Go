@@ -90,6 +90,18 @@ CleanupWorkflowRuns -repository $repository
 # Always set/update secrets (they may have changed or repo may have been reset)
 SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 
+# Capture previous workflow run IDs before making any changes
+# This follows the established pattern from CommitAndPush function
+Write-Host "Capturing previous workflow runs..."
+$previousRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
+$previousRunIds = $previousRuns.workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
+if ($previousRunIds) {
+    Write-Host "Previous run IDs: $($previousRunIds -join ', ')"
+}
+else {
+    Write-Host "No previous runs found"
+}
+
 # Re-apply the custom repository settings that were lost during reset
 $tempPath = [System.IO.Path]::GetTempPath()
 $repoPath = Join-Path $tempPath ([System.Guid]::NewGuid().ToString())
@@ -104,6 +116,7 @@ try {
         invoke-git add $repoSettingsFile
         invoke-git commit -m "Update repository settings for test" --quiet
         invoke-git push --quiet
+        Write-Host "Settings push completed. This will trigger a CI/CD workflow run."
     }
     else {
         Write-Host "Warning: .github\AL-Go-Settings.json not found after cloning. Settings may not be applied correctly."
@@ -116,33 +129,41 @@ finally {
 
 # Upgrade AL-Go System Files to test version
 # Capture the run object to ensure we wait for the correct workflow run
-$updateRun = RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository $repository
+$updateRun = RunUpdateAlGoSystemFiles -directCommit -wait -repository $repository
 
-# Wait for CI/CD to complete
-# The Update AL-Go System Files workflow triggers a CI/CD workflow via push event
-# We need to wait for the CI/CD workflow that was triggered AFTER the update workflow completed
-Write-Host "Waiting for CI/CD workflow to start (triggered by Update AL-Go System Files)..."
-Start-Sleep -Seconds 60
+# Wait for CI/CD workflow to start (triggered by Update AL-Go System Files)
+# This follows the established pattern from CommitAndPush: poll until a new run appears
+Write-Host "Waiting for CI/CD workflow to start (triggered by Update AL-Go System Files push)..."
 
-# Get workflow runs that started after the update workflow completed
-# Use updated_at to ensure we capture runs triggered after the update workflow finished
-$updateCompletedAt = [DateTime]$updateRun.updated_at
-$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
+# Poll for new workflow run that wasn't in the previous list
+$maxAttempts = 60  # 10 minutes maximum wait (60 * 10 seconds)
+$attempts = 0
+$run = $null
 
-# Find the CI/CD workflow run that started after the update workflow completed
-$run = $runs.workflow_runs | Where-Object {
-    $_.event -eq 'push' -and [DateTime]$_.created_at -gt $updateCompletedAt
-} | Select-Object -First 1
-
-if (-not $run) {
-    # Fallback to the first push workflow run if we can't find one based on timestamp
-    Write-Host "Warning: Could not find CI/CD run based on timestamp, using first push run"
-    $run = $runs.workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -First 1
+while ($attempts -lt $maxAttempts) {
+    Start-Sleep -Seconds 10
+    $attempts++
+    
+    $currentRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
+    # Find new push workflow runs that weren't in our previous list
+    $newRuns = $currentRuns.workflow_runs | Where-Object { 
+        $_.event -eq 'push' -and $previousRunIds -notcontains $_.id 
+    }
+    
+    if ($newRuns) {
+        # Get the most recent new run (first one, since API returns newest first)
+        $run = $newRuns | Select-Object -First 1
+        Write-Host "Found new CI/CD workflow run: $($run.id) (created at $($run.created_at))"
+        break
+    }
+    
+    Write-Host "Waiting for new CI/CD workflow run to appear (attempt $attempts/$maxAttempts)..."
 }
 
 if (-not $run) {
-    throw "Error: Could not find a CI/CD workflow run (no 'push' workflow runs were found for repository '$repository')."
+    throw "Error: Timeout waiting for CI/CD workflow run to start after Update AL-Go System Files completed."
 }
+
 
 Write-Host "Waiting for CI/CD workflow run $($run.id) to complete..."
 WaitWorkflow -repository $repository -runid $run.id -noError
