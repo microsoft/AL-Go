@@ -645,13 +645,13 @@ function GetLatestRelease {
                 }
                 catch {
                     # If the version from the branch cannot be parsed, fall back to the overall latest release
-                    Write-Host "Warning: Unable to parse version '$cleanVersion' from branch '$ref', using overall latest release"
+                    OutputWarning -message "Unable to parse version '$cleanVersion' from branch '$ref', using overall latest release"
                 }
             }
         }
         else {
             # If the version from the branch is invalid, fall back to the overall latest release
-            Write-Host "Warning: Invalid version format '$releaseVersion' in branch '$ref', using overall latest release"
+            OutputWarning -message "Invalid version format '$releaseVersion' in branch '$ref', using overall latest release"
         }
     }
     $latestRelease
