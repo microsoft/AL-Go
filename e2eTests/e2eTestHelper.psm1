@@ -329,20 +329,6 @@ function SetRepositorySecret {
 }
 
 function CleanupWorkflowRuns {
-    <#
-    .SYNOPSIS
-        Deletes all workflow runs in a repository.
-
-    .DESCRIPTION
-        This function deletes all workflow runs in a GitHub repository to ensure a clean state for testing.
-        It handles pagination to process all workflow runs, even if there are more than 100.
-
-    .PARAMETER repository
-        The full repository name in the format 'owner/repo'.
-
-    .EXAMPLE
-        CleanupWorkflowRuns -repository 'microsoft/e2e-bingmaps.appsource'
-    #>
     Param(
         [Parameter(Mandatory = $true)]
         [string] $repository
