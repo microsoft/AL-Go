@@ -128,8 +128,7 @@ finally {
 }
 
 # Upgrade AL-Go System Files to test version
-# Capture the run object to ensure we wait for the correct workflow run
-$updateRun = RunUpdateAlGoSystemFiles -directCommit -wait -repository $repository
+RunUpdateAlGoSystemFiles -directCommit -wait -repository $repository | Out-Null
 
 # Wait for CI/CD workflow to start (triggered by Update AL-Go System Files)
 # This follows the established pattern from CommitAndPush: poll until a new run appears
