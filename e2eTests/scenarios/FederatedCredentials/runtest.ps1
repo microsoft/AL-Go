@@ -143,20 +143,20 @@ $run = $null
 while ($attempts -lt $maxAttempts) {
     Start-Sleep -Seconds 10
     $attempts++
-    
+
     $currentRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     # Find new push workflow runs that weren't in our previous list
-    $newRuns = $currentRuns.workflow_runs | Where-Object { 
-        $_.event -eq 'push' -and $previousRunIds -notcontains $_.id 
+    $newRuns = $currentRuns.workflow_runs | Where-Object {
+        $_.event -eq 'push' -and $previousRunIds -notcontains $_.id
     }
-    
+
     if ($newRuns) {
         # Get the most recent new run (first one, since API returns newest first)
         $run = $newRuns | Select-Object -First 1
         Write-Host "Found new CI/CD workflow run: $($run.id) (created at $($run.created_at))"
         break
     }
-    
+
     Write-Host "Waiting for new CI/CD workflow run to appear (attempt $attempts/$maxAttempts)..."
 }
 
