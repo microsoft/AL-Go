@@ -163,10 +163,6 @@ if (-not $run) {
     throw "Error: Timeout waiting for CI/CD workflow run to start after Update AL-Go System Files completed."
 }
 
-if (-not $run) {
-    throw "Error: Could not find a CI/CD workflow run (no 'push' workflow runs were found for repository '$repository')."
-}
-
 Write-Host "Waiting for CI/CD workflow run $($run.id) to complete..."
 WaitWorkflow -repository $repository -runid $run.id -noError
 
