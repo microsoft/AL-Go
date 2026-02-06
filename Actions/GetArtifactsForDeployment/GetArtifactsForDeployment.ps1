@@ -28,7 +28,7 @@ $defaultArtifactTypes = @("Apps","TestApps","Dependencies","PowerPlatformSolutio
 # PowerPlatformSolution is always built with 'default' buildMode, so it never has a prefix
 $buildModeArtifactTypes = @("$($buildMode)Apps","$($buildMode)TestApps","$($buildMode)Dependencies","PowerPlatformSolution")
 
-Write-Host "Get artifacts for version: '$artifactsVersion' for these projects: '$projects' to folder: '$artifactsFolder'"
+Write-Host "Get artifacts for version: '$artifactsVersion' (build mode: $buildMode) for these projects: '$projects' to folder: '$artifactsFolder'"
 
 $artifactsFolder = Join-Path $ENV:GITHUB_WORKSPACE $artifactsFolder
 if (!(Test-Path $artifactsFolder)) {
