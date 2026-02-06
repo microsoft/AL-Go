@@ -388,7 +388,7 @@ function CleanupWorkflowRuns {
             }
         }
         $page++
-    } while ($runs.workflow_runs.Count -eq 100)
+    } while ($runs.workflow_runs.Count -gt 0)
 
     if ($totalDeleted -eq 0) {
         Write-Host "No workflow runs found to delete"
