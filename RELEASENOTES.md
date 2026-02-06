@@ -1,8 +1,11 @@
+### Issues
+
+- Issue 2096 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
+
 ## v8.2
 
 ### Issues
 
-- Issue 2096 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
 - Issue 2095 DeliverToAppSource.ProductId needs to be specified (Library app)
 - Issue 2082 Sign action no longer fails when repository is empty or no artifacts are generated
 - Issue 2078 Workflows run since January 14th '26 have space before CI/CD removed
