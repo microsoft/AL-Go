@@ -328,20 +328,6 @@ function SetRepositorySecret {
     gh secret set $name -b $value --repo $repository
 }
 
-<#
-.SYNOPSIS
-    Deletes all workflow runs in a repository.
-
-.DESCRIPTION
-    Cleans up workflow runs in a GitHub repository by deleting all existing runs.
-    This is useful for ensuring a clean state before running tests that track specific workflow runs.
-
-.PARAMETER repository
-    The full repository name in the format "owner/repo" (e.g., "microsoft/AL-Go").
-
-.EXAMPLE
-    CleanupWorkflowRuns -repository "microsoft/AL-Go"
-#>
 function CleanupWorkflowRuns {
     <#
     .SYNOPSIS
@@ -440,23 +426,53 @@ function ResetRepositoryToSource {
     Push-Location $repoPath
     try {
         Write-Host "Cloning $repository..."
-        invoke-gh repo clone $repository .
+        try {
+            invoke-gh repo clone $repository .
+        }
+        catch {
+            throw "Failed to clone repository $repository`: $_"
+        }
 
         # Fetch the source repository content
         Write-Host "Fetching source repository $sourceRepository..."
-        invoke-git remote add source "https://github.com/$sourceRepository.git"
+        try {
+            invoke-git remote add source "https://github.com/$sourceRepository.git"
+        }
+        catch {
+            throw "Failed to add remote source $sourceRepository`: $_"
+        }
 
-        invoke-git fetch source $branch --quiet
+        try {
+            invoke-git fetch source $branch --quiet
+        }
+        catch {
+            throw "Failed to fetch branch $branch from source $sourceRepository`: $_"
+        }
 
         # Reset the current branch to match the source
         Write-Host "Resetting $branch to match source/$branch..."
-        invoke-git checkout $branch --quiet
+        try {
+            invoke-git checkout $branch --quiet
+        }
+        catch {
+            throw "Failed to checkout branch $branch`: $_"
+        }
 
-        invoke-git reset --hard "source/$branch" --quiet
+        try {
+            invoke-git reset --hard "source/$branch" --quiet
+        }
+        catch {
+            throw "Failed to reset branch $branch to source/$branch`: $_"
+        }
 
         # Force push to update the repository
         Write-Host "Force pushing changes..."
-        invoke-git push origin $branch --force --quiet
+        try {
+            invoke-git push origin $branch --force --quiet
+        }
+        catch {
+            throw "Failed to force push changes to $repository`: $_"
+        }
 
         Write-Host "Repository reset completed successfully"
     }

@@ -245,7 +245,7 @@ jobs:
             Write-Host "No disabled-scenarios.json found; proceeding with all scenarios enabled."
           }
           $disabledScenarios = @()
-          if ($disabledScenariosConfig) {
+          if ($disabledScenariosConfig -and $disabledScenariosConfig.Count -gt 0) {
             $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
           }
           Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"

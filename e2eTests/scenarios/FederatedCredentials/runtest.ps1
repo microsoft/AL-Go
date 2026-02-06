@@ -140,6 +140,10 @@ if (-not $run) {
     $run = $runs.workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -First 1
 }
 
+if (-not $run) {
+    throw "Error: Could not find a CI/CD workflow run (no 'push' workflow runs were found for repository '$repository')."
+}
+
 Write-Host "Waiting for CI/CD workflow run $($run.id) to complete..."
 WaitWorkflow -repository $repository -runid $run.id -noError
 
