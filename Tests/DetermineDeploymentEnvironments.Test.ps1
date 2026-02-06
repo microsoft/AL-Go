@@ -239,6 +239,34 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test (PROD)"
     }
 
+    # Test that buildMode from DeployTo settings is correctly included in the matrix
+    It 'Test calling action directly - Custom buildMode from DeployTo settings is included in matrix' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"
+            "runs-on" = "ubuntu-latest"
+            "shell" = "pwsh"
+            "environments" = @()
+            "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "DeployToTest" = @{
+                "buildMode" = "CustomBuildMode"
+            }
+        }
+
+        $env:Settings = $settings | ConvertTo-Json -Compress -Depth 5
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+
+        # Verify buildMode is correctly set to CustomBuildMode in the matrix
+        $matrix = $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $matrix.matrix.include[0].buildMode | Should -Be "CustomBuildMode"
+        $EnvironmentCount | Should -Be 1
+    }
+
     # Unknown environment - createEnvIfNotExists = false (default) - should throw error
     It 'Test calling action directly - Unknown environment without createEnvIfNotExists should throw' {
         Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
