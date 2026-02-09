@@ -594,11 +594,65 @@ function GetLatestRelease {
         # If release branch, get the latest release from that the release branch
         # This is given by the latest release with the same major.minor as the release branch
         $releaseVersion = $ref -split '/' | Select-Object -Last 1 # Get the version from the release branch
-        $semVerObj = SemVerStrToSemVerObj -semVerStr $releaseVersion -allowMajorMinorOnly
-        $latestRelease = $releases | Where-Object {
-            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-            $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
-        } | Select-Object -First 1
+
+        # Handle version strings like "26.x", "26x", "v26", "v26.x", "26", or "26.3"
+        # Remove optional 'v' prefix
+        $cleanVersion = $releaseVersion -replace '^v', ''
+        # Remove trailing "x" suffix (with or without dot) used in branch names like "26.x" or "26x"
+        $cleanVersion = $cleanVersion -replace '\.?x$', ''
+
+        # Validate that cleanVersion is not empty and starts with a digit
+        if ($cleanVersion -and $cleanVersion -match '^\d') {
+            # Check if we have just a major version or major.minor
+            $versionParts = $cleanVersion -split '\.'
+            $majorVersionOnly = ($versionParts.Count -eq 1) -and ($versionParts[0] -match '^\d+$')
+
+            if ($majorVersionOnly) {
+                # If only major version is specified (e.g., "26" or "26.x" -> "26")
+                # Find the latest release matching that major version
+                $majorVersion = [int]$versionParts[0]
+                $latestRelease = $releases | Where-Object {
+                    -not ($_.prerelease -or $_.draft) -and $(
+                        try {
+                            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                            $majorVersion -eq $releaseSemVerObj.Major
+                        }
+                        catch {
+                            # If the tag is not a valid semver, skip it (log for troubleshooting)
+                            OutputDebug -message "Skipping release with invalid semver tag: $($_.tag_name)"
+                            $false
+                        }
+                    )
+                } | Select-Object -First 1
+            }
+            else {
+                # If major.minor version is specified (e.g., "26.3")
+                try {
+                    $semVerObj = SemVerStrToSemVerObj -semVerStr $cleanVersion -allowMajorMinorOnly
+                    $latestRelease = $releases | Where-Object {
+                        -not ($_.prerelease -or $_.draft) -and $(
+                            try {
+                                $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                                $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
+                            }
+                            catch {
+                                # If the tag is not a valid semver, skip it (log for troubleshooting)
+                                OutputDebug -message "Skipping release with invalid semver tag: $($_.tag_name)"
+                                $false
+                            }
+                        )
+                    } | Select-Object -First 1
+                }
+                catch {
+                    # If the version from the branch cannot be parsed, fall back to the overall latest release
+                    OutputWarning -message "Unable to parse version '$cleanVersion' from branch '$ref', using overall latest release"
+                }
+            }
+        }
+        else {
+            # If the version from the branch is invalid, fall back to the overall latest release
+            OutputWarning -message "Invalid version format '$releaseVersion' in branch '$ref', using overall latest release"
+        }
     }
     $latestRelease
 }
