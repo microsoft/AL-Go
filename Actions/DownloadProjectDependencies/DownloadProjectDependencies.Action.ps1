@@ -9,128 +9,7 @@
     [string] $token
 )
 
-<#
-    .SYNOPSIS
-    Downloads an app file from a URL to a specified download path.
-    .DESCRIPTION
-    Downloads an app file from a URL to a specified download path.
-    It handles URL decoding and sanitizes the file name.
-    .PARAMETER Url
-    The URL of the app file to download.
-    .PARAMETER DownloadPath
-    The path where the app file should be downloaded.
-    .OUTPUTS
-    The path to the downloaded app file.
-#>
-function Get-AppFileFromUrl {
-    Param(
-        [string] $Url,
-        [string] $DownloadPath
-    )
-    # Get the file name from the URL
-    $urlWithoutQuery = $Url.Split('?')[0].TrimEnd('/')
-    $rawFileName = [System.IO.Path]::GetFileName($urlWithoutQuery)
-    $decodedFileName = [Uri]::UnescapeDataString($rawFileName)
-    $decodedFileName = [System.IO.Path]::GetFileName($decodedFileName)
-
-    # Sanitize file name by removing invalid characters
-    $sanitizedFileName = $decodedFileName.Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
-    $sanitizedFileName = $sanitizedFileName.Trim()
-
-    if ([string]::IsNullOrWhiteSpace($sanitizedFileName)) {
-        $sanitizedFileName = "$([Guid]::NewGuid().ToString()).app"
-    }
-
-    # Get the final app file path
-    $appFile = Join-Path $DownloadPath $sanitizedFileName
-    if (Test-Path -LiteralPath $appFile) {
-        OutputDebug -message "Overwriting existing file '$sanitizedFileName'. Multiple dependencies may resolve to the same filename."
-    }
-
-    # Download with retry logic
-    Invoke-CommandWithRetry -ScriptBlock {
-        Invoke-WebRequest -Method GET -UseBasicParsing -Uri $Url -OutFile $appFile | Out-Null
-    } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 10
-
-    return $appFile
-}
-
-<#
-    .SYNOPSIS
-    Downloads dependencies from URLs specified in installApps and installTestApps settings.
-    .DESCRIPTION
-    Reads the installApps and installTestApps arrays from the repository settings.
-    For each entry that is a URL (starts with http:// or https://):
-    - Resolves any secret placeholders in the format ${{ secretName }} by looking up the secret value
-    - Downloads the app file to the specified destination path
-    For entries that are not URLs (local paths), they are returned as-is.
-    .PARAMETER DestinationPath
-    The path where the app files should be downloaded.
-    .OUTPUTS
-    A hashtable with Apps and TestApps arrays containing the resolved local file paths.
-#>
-function DownloadDependenciesFromInstallApps {
-    Param(
-        [string] $DestinationPath
-    )
-
-    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-
-    # ENV:Secrets is not set when running Pull_Request trigger
-    if ($env:Secrets) {
-        $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
-    }
-    else {
-        $secrets = @{}
-    }
-
-    $install = @{
-        "Apps" = @($settings.installApps)
-        "TestApps" = @($settings.installTestApps)
-    }
-
-    # Check if the installApps and installTestApps settings are empty
-    if (($settings.installApps.Count -eq 0) -and ($settings.installTestApps.Count -eq 0)) {
-        Write-Host "No installApps or installTestApps settings found."
-        return $install
-    }
-
-    # Replace secret names in install.apps and install.testApps and download files from URLs
-    foreach($list in @('Apps','TestApps')) {
-        $install."$list" = @($install."$list" | ForEach-Object {
-            $appFile = $_
-
-            # If the app file is not a URL, return it as is
-            if ($appFile -notlike 'http*://*') {
-                Write-Host "install$($list) contains a local path: $appFile"
-                return $appFile
-            }
-
-            # Else, check for secrets in the URL and replace them
-            $appFileUrl = $appFile
-            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            if ($appFile -match $pattern) {
-                $secretName = $matches[2]
-                if (-not $secrets.ContainsKey($secretName)) {
-                    throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
-                }
-                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
-            }
-
-            # Download the app file to a temporary location
-            try {
-                Write-Host "Downloading app from URL: $appFile"
-                $appFile = Get-AppFileFromUrl -Url $appFileUrl -DownloadPath $DestinationPath
-            } catch {
-                throw "Setting: install$($list) contains an inaccessible URL: $appFile. Error was: $($_.Exception.Message)"
-            }
-
-            return $appFile
-        })
-    }
-
-    return $install
-}
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DownloadProjectDependencies.psm1" -Resolve) -DisableNameChecking
 
 function DownloadDependenciesFromProbingPaths {
     param(
@@ -247,7 +126,9 @@ $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $bas
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
-$settingsDependencies = DownloadDependenciesFromInstallApps -DestinationPath $destinationPath
+Push-Location -Path (Join-Path $baseFolder $project)  #Change to the project folder because installApps paths are relative to the project folder
+$settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
+Pop-Location
 Write-Host "::endgroup::"
 
 $downloadedApps = @()
