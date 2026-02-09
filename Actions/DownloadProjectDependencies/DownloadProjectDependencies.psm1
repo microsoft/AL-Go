@@ -276,7 +276,7 @@ function Get-DependenciesFromInstallApps {
                 $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
                 if ($appFile -match $pattern) {
                     $secretName = $matches[2]
-                    if (-not $secrets.ContainsKey($secretName)) {
+                    if (-not $secrets.ContainsKey($secretName) -or [string]::IsNullOrEmpty($secrets."$secretName")) {
                         throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
                     }
                     $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))

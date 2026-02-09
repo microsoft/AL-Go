@@ -425,4 +425,18 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
 
         { Get-DependenciesFromInstallApps -DestinationPath $downloadPath } | Should -Throw "*unknown secret 'unknownSecret'*"
     }
+
+    It 'Throws error for secret with empty value (not found by ReadSecrets)' {
+        $env:Settings = @{
+            installApps = @('https://example.com/App.app?token=${{ missingSecret }}')
+            installTestApps = @()
+        } | ConvertTo-Json -Depth 10
+
+        # ReadSecrets adds missing secrets as empty strings
+        $env:Secrets = @{
+            missingSecret = ""
+        } | ConvertTo-Json -Depth 10
+
+        { Get-DependenciesFromInstallApps -DestinationPath $downloadPath } | Should -Throw "*unknown secret 'missingSecret'*"
+    }
 }
