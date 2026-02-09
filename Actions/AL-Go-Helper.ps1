@@ -1770,6 +1770,7 @@ Function AnalyzeProjectDependencies {
         $appDependencies."$project" = @{
             "apps"         = $apps
             "dependencies" = $dependenciesForProject
+            "country"      = $projectSettings.country
         }
     }
     # AppDependencies is a hashtable with the following structure
@@ -1777,10 +1778,12 @@ Function AnalyzeProjectDependencies {
     #     "project1" = @{
     #         "apps" = @("appid1", "appid2")
     #         "dependencies" = @("appid3", "appid4")
+    #         "country" = "w1"
     #     }
     #     "project2" = @{
     #         "apps" = @("appid5", "appid6")
     #         "dependencies" = @("appid7", "appid8")
+    #         "country" = "dk"
     #     }
     # }
     $no = 1
@@ -1810,6 +1813,21 @@ Function AnalyzeProjectDependencies {
                 }
             }
             $foundDependencies = @($foundDependencies | Select-Object -Unique)
+
+            # Sort dependencies by country affinity: same country first, then W1/base/universal, then others
+            # This ensures that when downloading dependencies, the correct country-specific app is used
+            # (e.g., BaseApp.DK is downloaded before BaseApp.W1 for a DK project)
+            # This is specifically for BaseApp as that is the only real case that should allow the same app id for non identical apps.
+            $currentCountry = $appDependencies."$project".country
+            if ($currentCountry) {
+                $foundDependencies = @($foundDependencies | Sort-Object {
+                    $depCountry = $appDependencies."$_".country
+                    if ($depCountry -eq $currentCountry) { return 0 }        # Same country first
+                    elseif (-not $depCountry -or $depCountry -eq 'w1' -or $depCountry -eq 'base') { return 1 }  # W1/base/universal second
+                    else { return 2 }                                        # Other countries last
+                })
+            }
+
             # foundDependencies now contains all projects that the current project has a dependency on
             # Update ref variable projectDependencies for this project
             if ($projectDependencies.Keys -notcontains $project) {
