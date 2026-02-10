@@ -1806,6 +1806,7 @@ Function AnalyzeProjectDependencies {
                 $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
                 foreach($depProject in $depProjects) {
+                    OutputDebug "Project '$project' depends on '$depProject' due to app ID: $dependency"
                     $foundDependencies += $depProject
                     if ($projectDependencies.Keys -contains $depProject) {
                         $foundDependencies += $projectDependencies."$depProject"
