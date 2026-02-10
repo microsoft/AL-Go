@@ -92,35 +92,13 @@ jobs:
       - name: Authenticate
         id: Authenticate
         if: steps.DetermineDeploymentEnvironments.outputs.UnknownEnvironment == 1
-        run: |
-          $envName = '${{ steps.envName.outputs.envName }}'
-          $secretName = ''
-          $secrets = '${{ steps.ReadSecrets.outputs.Secrets }}' | ConvertFrom-Json
-          $authContext = $null
-          "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext" | ForEach-Object {
-            if (!($authContext)) {
-              if ($secrets."$_") {
-                Write-Host "Using $_ secret as AuthContext"
-                $authContext = $secrets."$_"
-                $secretName = $_
-              }
-            }
-          }
-          if ($authContext) {
-            Write-Host "AuthContext provided in secret $secretName!"
-            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "AuthContext was provided in a secret called $secretName. Using this information for authentication."
-          }
-          else {
-            Write-Host "No AuthContext provided for $envName, initiating Device Code flow"
-            $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
-            $webClient = New-Object System.Net.WebClient
-            $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
-            . $ALGoHelperPath
-            DownloadAndImportBcContainerHelper
-            $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
-            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Environment $('${{ steps.envName.outputs.envName }}'.Split(' ')[0]) and could not locate a secret called ${{ steps.envName.outputs.envName }}_AuthContext`n`n$($authContext.message)"
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
-          }
+        uses: microsoft/AL-Go-Actions/CheckAuthContext@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: powershell
+          secretName: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
+          environmentName: ${{ steps.envName.outputs.envName }}
 
   Deploy:
     needs: [ Initialization ]
