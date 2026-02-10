@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 1915 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
+
 ## v8.2
 
 ### Issues
