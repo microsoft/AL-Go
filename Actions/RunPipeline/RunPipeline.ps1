@@ -270,28 +270,32 @@ try {
 
     $previousApps = @()
     if (!$settings.skipUpgrade) {
-        Write-Host "::group::Locating previous release"
-        try {
-            $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }
-            $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
-            if ($latestRelease) {
-                Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
-                $artifactsFolder = Join-Path $baseFolder "artifacts"
-                if(-not (Test-Path $artifactsFolder)) {
-                    New-Item $artifactsFolder -ItemType Directory | Out-Null
+        if ($settings.useWorkspaceCompilation) {
+            OutputWarning -message "skipUpgrade is ignored when useWorkspaceCompilation is enabled." # TODO
+        } else {
+            Write-Host "::group::Locating previous release"
+            try {
+                $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }
+                $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
+                if ($latestRelease) {
+                    Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
+                    $artifactsFolder = Join-Path $baseFolder "artifacts"
+                    if(-not (Test-Path $artifactsFolder)) {
+                        New-Item $artifactsFolder -ItemType Directory | Out-Null
+                    }
+                    DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
+                    $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
                 }
-                DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
-                $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
+                else {
+                    OutputWarning -message "No previous release found"
+                }
             }
-            else {
-                OutputWarning -message "No previous release found"
+            catch {
+                OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
+                exit
             }
+            Write-Host "::endgroup::"
         }
-        catch {
-            OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
-            exit
-        }
-        Write-Host "::endgroup::"
     }
 
     $additionalCountries = $settings.additionalCountries
