@@ -285,7 +285,11 @@ else {
 $json = @{"matrix" = @{ "include" = @() }; "fail-fast" = $false }
 $deploymentEnvironments.Keys | Sort-Object | ForEach-Object {
     $deploymentEnvironment = $deploymentEnvironments."$_"
-    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject @($deploymentEnvironment."runs-on".Split(',').Trim()) -compress)"; "shell" = $deploymentEnvironment."shell" }
+    $buildMode = "Default"
+    if ($deploymentEnvironment.ContainsKey("buildMode") -and $deploymentEnvironment."buildMode") {
+        $buildMode = $deploymentEnvironment."buildMode"
+    }
+    $json.matrix.include += @{ "environment" = $_; "os" = "$(ConvertTo-Json -InputObject @($deploymentEnvironment."runs-on".Split(',').Trim()) -compress)"; "shell" = $deploymentEnvironment."shell"; "buildMode" = $buildMode }
 }
 $environmentsMatrixJson = $json | ConvertTo-Json -Depth 99 -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "EnvironmentsMatrixJson=$environmentsMatrixJson"
