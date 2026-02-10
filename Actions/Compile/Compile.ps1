@@ -88,7 +88,12 @@ if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
 
 # Set up a compiler folder
 $containerName = GetContainerName($project)
-$compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler"
+$cacheFolder = ""
+if ($settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*") {
+    # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
+    $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
+}
+$compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
 
 # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
 if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
