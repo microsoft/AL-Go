@@ -55,6 +55,15 @@ $buildMetadata = Get-BuildMetadata
 # Get version number
 $versionNumber = Get-VersionNumber -Settings $settings
 
+# Get ruleset file if specified
+$rulesetPath = $settings.rulesetFile
+if ($settings.rulesetFile) {
+    $rulesetPath = Join-Path $projectFolder $settings.rulesetFile -Resolve
+    if (-not (Test-Path $rulesetPath)) {
+        throw "Ruleset file specified in settings.rulesetFile not found at path '$rulesetPath'."
+    }
+}
+
 # Read existing install apps and test apps from JSON files
 $installApps = @()
 $installTestApps = @()
@@ -101,7 +110,7 @@ $buildParams = @{
     CompilerFolder              = $compilerFolder
     PackageCachePath            = (Join-Path $compilerFolder "symbols")
     LogDirectory                = $buildArtifactFolder
-    Ruleset                     = (Join-Path $projectFolder $settings.rulesetFile -Resolve)
+    Ruleset                     = $rulesetPath
     AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder)
     Preprocessorsymbols         = $settings.preprocessorSymbols
     Features                    = $settings.features
