@@ -24,6 +24,14 @@ Previously, when running the "Publish To Environment" workflow with an environme
 
 Now, the workflow will fail with a clear error message if the specified environment doesn't exist. If you intentionally want to deploy to a new environment that hasn't been configured yet, you can check the **Create environment if it does not exist** checkbox when running the workflow.
 
+### Improving error detection and build reliability when downloading project dependencies
+
+The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
+
+- Earlier detection of inaccessible or misconfigured URLs
+- Clearer error messages when secrets are missing or URLs are invalid
+- Warnings for potential issues like duplicate filenames
+
 ### Set default values for workflow inputs
 
 The `workflowDefaultInputs` setting now also applies to `workflow_call` inputs when an input with the same name exists for `workflow_dispatch`.
