@@ -1786,6 +1786,12 @@ Function AnalyzeProjectDependencies {
     #         "country" = "dk"
     #     }
     # }
+
+    # Check if BaseApp is being built by any project
+    # BaseApp app ID: 437dbf0e-84ff-417a-965d-ed2bb9650972
+    $baseAppId = '437dbf0e-84ff-417a-965d-ed2bb9650972'
+    $baseAppIsBeingBuilt = $appDependencies.Values | Where-Object { $_.apps -contains $baseAppId } | Select-Object -First 1
+
     $no = 1
     $projectsOrder = @()
     Write-Host "Analyzing dependencies"
@@ -1819,14 +1825,16 @@ Function AnalyzeProjectDependencies {
             # This ensures that when downloading dependencies, the correct country-specific app is used
             # (e.g., BaseApp.DK is downloaded before BaseApp.W1 for a DK project)
             # This is specifically for BaseApp as that is the only real case that should allow the same app id for non identical apps.
-            $currentCountry = $appDependencies."$project".country
-            if ($currentCountry) {
-                $foundDependencies = @($foundDependencies | Sort-Object {
-                    $depCountry = $appDependencies."$_".country
-                    if ($depCountry -eq $currentCountry) { return 0 }        # Same country first
-                    elseif (-not $depCountry -or $depCountry -eq 'w1' -or $depCountry -eq 'base') { return 1 }  # W1/base/universal second
-                    else { return 2 }                                        # Other countries last
-                })
+            if ($baseAppIsBeingBuilt) {
+                $currentCountry = $appDependencies."$project".country
+                if ($currentCountry) {
+                    $foundDependencies = @($foundDependencies | Sort-Object {
+                        $depCountry = $appDependencies."$_".country
+                        if ($depCountry -eq $currentCountry) { return 0 }        # Same country first
+                        elseif (-not $depCountry -or $depCountry -eq 'w1' -or $depCountry -eq 'base') { return 1 }  # W1/base/universal second
+                        else { return 2 }                                        # Other countries last
+                    })
+                }
             }
 
             # foundDependencies now contains all projects that the current project has a dependency on
