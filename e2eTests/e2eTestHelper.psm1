@@ -518,6 +518,8 @@ function CreateAlGoRepository {
     }
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
+    # Use pull_request trigger instead of pull_request_target for e2e test repos
+    $repoSettings | Add-Member -MemberType NoteProperty -Name "PullRequestTrigger" -Value "pull_request"
     $repoSettings | Set-JsonContentLF -path $repoSettingsFile
     if ($addRepoSettings.Keys.Count) {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
