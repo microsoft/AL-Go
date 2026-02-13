@@ -516,20 +516,9 @@ function CreateAlGoRepository {
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
-    # Replace the pull_request_target trigger on the PullRequestHandler
-    if (Test-Path -Path '.\.github\workflows\PullRequestHandler.yaml') {
-        $prHandler = Get-Item '.\.github\workflows\PullRequestHandler.yaml'
-        $content = Get-ContentLF -Path $prHandler.FullName
-        $srcPattern = "on:`n  pull_request_target:"
-        $replacePattern = "on:`n  pull_request:"
-        $content = "$content`n".Replace($srcPattern, $replacePattern)
-        [System.IO.File]::WriteAllText($prHandler.FullName, $content)
-    }
 
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
-    # Use pull_request trigger instead of pull_request_target for e2e test repos
-    $repoSettings | Add-Member -MemberType NoteProperty -Name "PullRequestTrigger" -Value "pull_request" -Force
     $repoSettings | Set-JsonContentLF -path $repoSettingsFile
     if ($addRepoSettings.Keys.Count) {
         Add-PropertiesToJsonFile -path $repoSettingsFile -properties $addRepoSettings
