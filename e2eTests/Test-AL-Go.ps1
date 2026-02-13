@@ -240,9 +240,8 @@ $repoSettings = Get-Content ".github\AL-Go-Settings.json" -Encoding UTF8 | Conve
 RunUpdateAlGoSystemFiles -templateUrl $repoSettings.templateUrl -wait -repository $repository -branch $branch | Out-Null
 $runs++
 
-# PR Build - We're changing the trigger from pull_request_target to pull_request with the Update AL-Go System Files workflow
-# which causes the workflow to be triggered twice. One will be canceled and one will run. So we expect 2 runs here
-$runs += 2
+# PR Build
+$runs++
 
 # Merge and run CI/CD + Tests
 MergePRandPull -branch $branch -wait | Out-Null

@@ -119,9 +119,6 @@ if ($releaseVersion -ge [System.Version]"2.2") {
     # Expected Run: Pull Request Handler triggered by pull_request_target
     $runs++
 
-    # Expected Run: Pull Request Handler triggered by pull_request (Update AL-Go System Files changes the trigger from pull_request_target to pull_request, causing both to fire)
-    $runs++
-
     if ($releaseVersion -le [System.Version]"2.4") {
         # Expected Run: CICD triggered by workflow_run (after Pull Request Handler has finished)
         $runs++
