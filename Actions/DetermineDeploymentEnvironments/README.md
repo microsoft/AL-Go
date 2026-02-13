@@ -18,6 +18,7 @@ Determines the environments to be used for a build or a publish
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | getEnvironments | Yes | Specifies the pattern of the environments you want to retrieve (\* for all) | |
 | type | Yes | Type of deployment to get environments for (CD, Publish or All) | |
+| createEnvIfNotExists | | If true, allow deploying to environments that do not exist (will create a new GitHub environment) | false |
 
 ## OUTPUT
 
