@@ -77,6 +77,7 @@ if ($deliveryTarget -eq "AppSource") {
 Write-Host "Artifacts $artifacts"
 Write-Host "Projects:"
 $sortedProjectList | Out-Host
+$alreadyDeliveredPackages = @()
 
 $secrets = $env:Secrets | ConvertFrom-Json
 foreach ($thisProject in $sortedProjectList) {
@@ -246,7 +247,6 @@ foreach ($thisProject in $sortedProjectList) {
         }
         # Do not search trusted NuGet feeds for packages when looking for whether packages have been delivered
         $bcContainerHelperConfig.TrustedNuGetFeeds = @()
-        $alreadyDeliveredPackages = @()
         'Apps','TestApps' | ForEach-Object {
             $folder = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-$($_)-*.*.*.*") | Where-Object { $_.PSIsContainer })
             if ($folder.Count -gt 1) {
