@@ -423,6 +423,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | PipelineInitialize.ps1 | Initialize the pipeline |
 | DockerPull.ps1 | Pull the image specified by the parameter $imageName |
 | NewBcContainer.ps1 | Create the container using the parameters transferred in the $parameters hashtable |
+| NewBcCompilerFolder.ps1 | Create the compilerFolder using the parameters transferred in the $parameters hashtable |
 | ImportTestToolkitToBcContainer.ps1 | Import the test toolkit apps specified by the $parameters hashtable |
 | CompileAppInBcContainer.ps1 | Compile the apps specified by the $parameters hashtable |
 | GetBcContainerAppInfo.ps1 | Get App Info for the apps specified by the $parameters hashtable |
@@ -434,6 +435,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | RunTestsInBcContainer.ps1 | Run the tests specified by the $parameters hashtable |
 | GetBcContainerAppRuntimePackage.ps1 | Get the runtime package specified by the $parameters hashtable |
 | RemoveBcContainer.ps1 | Cleanup based on the $parameters hashtable |
+| RemoveBcCompilerFolder.ps1 | Cleanup based on the $parameters hashtable |
 | InstallMissingDependencies | Install missing dependencies |
 | BackupBcContainerDatabases | Backup Databases in container for subsequent restore(s) |
 | RestoreDatabasesInBcContainer | Restore Databases in container |

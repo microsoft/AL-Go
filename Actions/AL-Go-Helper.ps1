@@ -33,6 +33,7 @@ $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","Storage
 $runAlPipelineOverrides = @(
     "DockerPull"
     "NewBcContainer"
+    "NewBcCompilerFolder"
     "ImportTestToolkitToBcContainer"
     "CompileAppInBcContainer"
     "GetBcContainerAppInfo"
@@ -44,6 +45,7 @@ $runAlPipelineOverrides = @(
     "RunTestsInBcContainer"
     "GetBcContainerAppRuntimePackage"
     "RemoveBcContainer"
+    "RemoveBcCompilerFolder"
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
