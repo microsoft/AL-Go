@@ -44,6 +44,7 @@ $runAlPipelineOverrides = @(
     "ImportTestDataInBcContainer"
     "RunTestsInBcContainer"
     "GetBcContainerAppRuntimePackage"
+    "GetBcContainerEventLog"
     "RemoveBcContainer"
     "RemoveBcCompilerFolder"
     "InstallMissingDependencies"

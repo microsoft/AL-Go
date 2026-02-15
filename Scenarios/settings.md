@@ -434,6 +434,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | ImportTestDataInBcContainer.ps1 | If this function is provided, it is expected to insert the test data needed for running tests |
 | RunTestsInBcContainer.ps1 | Run the tests specified by the $parameters hashtable |
 | GetBcContainerAppRuntimePackage.ps1 | Get the runtime package specified by the $parameters hashtable |
+| GetBcContainerEventLog.ps1 | Get the eventlog based on the $parameters hashtable |
 | RemoveBcContainer.ps1 | Cleanup based on the $parameters hashtable |
 | RemoveBcCompilerFolder.ps1 | Cleanup based on the $parameters hashtable |
 | InstallMissingDependencies | Install missing dependencies |
