@@ -141,9 +141,16 @@ function GetDependencies {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
 
+            if ($mask -eq 'TestApps') {
+                $altMask = 'Apps'
+            }
+            else {
+                $altMask = 'TestApps'
+            }
             # change the mask to include the build mode
             if($buildMode -ne "Default") {
                 $mask = "$buildMode$mask"
+                $altMask = "$buildMode$altMask"
             }
 
             Write-Host "Locating $mask artifacts for projects: $projects"
@@ -169,8 +176,15 @@ function GetDependencies {
                         }
                     }
                     elseif ($mask -like '*Apps') {
-                        Write-Host "$project not built, downloading from artifacts"
-                        $missingProjects += @($project)
+                        # Check whether Apps/TestApps exists before determining that project isn't built
+                        $altDownloadName = Join-Path $saveToPath "$project-$branchName-$altMask-*"
+                        if (!(Test-Path $altDownloadName -PathType Container)) {
+                            Write-Host "$project not built, downloading from artifacts"
+                            $missingProjects += @($project)
+                        }
+                        else {
+                            Write-Host "$project built, but $mask not found"
+                        }
                     }
                 }
                 if ($missingProjects -and $dependency.baselineWorkflowID) {
@@ -796,10 +810,14 @@ function DownloadRelease {
         # GitHub replaces series of special characters with a single dot when uploading release assets
         $project = [Uri]::EscapeDataString($project.Replace('\','_').Replace('/','_').Replace(' ','.')).Replace('%2A','*').Replace('%3F','?').Replace('%','')
         Write-Host "project '$project'"
-        $assetPattern1 = "$project-*-$mask-*.zip"
-        $assetPattern2 = "$project-$mask-*.zip"
+        # Pattern 1: project-branch-mask-version.zip (branch used for release creation cannot contain -)
+        # Pattern 2: project-mask-version.zip (no branch)
+        $escapedProject = [regex]::Escape($project)
+        $escapedMask = [regex]::Escape($mask)
+        $assetPattern1 = "^$escapedProject-[^-]+-$escapedMask-.+\.zip$"
+        $assetPattern2 = "^$escapedProject-$escapedMask-.+\.zip$"
         Write-Host "AssetPatterns: '$assetPattern1' | '$assetPattern2'"
-        $assets = @($release.assets | Where-Object { $_.name -like $assetPattern1 -or $_.name -like $assetPattern2 })
+        $assets = @($release.assets | Where-Object { $_.name -match $assetPattern1 -or $_.name -match $assetPattern2 })
         foreach($asset in $assets) {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
@@ -1069,6 +1087,11 @@ function GetArtifactsFromWorkflowRun {
     # Get sanitized project names (the way they appear in the artifact names)
     $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
+    # Get branch used in workflowRun
+    $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
+    $branch = $workflowRunInfo.head_branch.Replace('\', '_').Replace('/', '_')
+    Write-Host "Branch for workflow run $workflowRun is $branch"
+
     # Get the artifacts from the the workflow run
     while($true) {
         $artifactsURI = "$api_url/repos/$repository/actions/runs/$workflowRun/artifacts?per_page=$per_page&page=$page"
@@ -1080,14 +1103,40 @@ function GetArtifactsFromWorkflowRun {
         }
 
         foreach($project in $projectArr) {
-            $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
+             # e.g. "MyProject-main-Apps-*", format is: "project-branch-mask-version"
+             # Mask might include buildMode like TranslatedTestApps
+            $artifactPattern = "$project-$branch-$mask-*"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
                 continue
             }
 
-            $matchingArtifacts = @($matchingArtifacts) #enforce array
+            # If there are reruns of the build we found, we might see artifacts like:
+            # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.0
+            # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.1
+            # We want to keep only the latest version of each artifact (based on the last segment of the version)
+            $matchingArtifacts = @($matchingArtifacts | ForEach-Object {
+                    # Sort on version number object
+                    if ($_.name -match '^(.*)-(\d+\.\d+\.\d+\.\d+)$') {
+                        [PSCustomObject]@{
+                            Name    = $Matches[1]
+                            Version = [version]$Matches[2]
+                            Obj     = $_
+                        }
+                    }
+                    else {
+                        # artifacts from PR builds doesn't match the versioning pattern but are sortable
+                        [PSCustomObject]@{
+                            Name    = $_.name
+                            Version = $_.name
+                            Obj     = $_
+                        }
+                    }
+                } | Group-Object Name | ForEach-Object {
+                    $_.Group | Sort-Object Version -Descending | Select-Object -First 1
+                } |
+                Select-Object -ExpandProperty Obj)
 
             foreach($artifact in $matchingArtifacts) {
                 Write-Host "Found artifact $($artifact.name) (ID: $($artifact.id)) for mask $mask and project $project"
