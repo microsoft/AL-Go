@@ -59,7 +59,7 @@ function Get-BuildMetadata {
         # Running locally - use git to get repository info if available
         $sourceRepositoryUrl = "local"
         $sourceCommit = "unknown"
-        
+
         try {
             $sourceRepositoryUrl = git config --get remote.origin.url
             $sourceCommit = git rev-parse HEAD
@@ -240,7 +240,7 @@ function Build-AppsInWorkspace() {
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
 
-    # Clean up 
+    # Clean up
     Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
 
     return $appFiles
@@ -253,34 +253,34 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFile,
-        
+
         [Parameter(Mandatory = $false)]
         [int]$MaxCpuCount = 1,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$PackageCachePath,
-        
+
         [Parameter(Mandatory = $false)]
         [string[]]$AssemblyProbingPaths,
-        
+
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
 
         [Parameter(Mandatory = $false)]
         [string[]]$PreprocessorSymbols,
-        
+
         [Parameter(Mandatory = $false)]
-        [string[]]$Features,    
-        
+        [string[]]$Features,
+
         [Parameter(Mandatory = $false)]
         [switch]$GenerateReportLayout,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$Ruleset,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$SourceRepositoryUrl,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$SourceCommit,
 
@@ -295,14 +295,14 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $false)]
         [switch]$EnableExternalRulesets,
-        
+
         [Parameter(Mandatory = $false)]
         [ValidateSet('Debug', 'Error', 'Normal', 'Verbose', 'Warning')]
         [string]$LogLevel = 'Warning',
-        
+
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$OutFolder
     )
@@ -414,7 +414,7 @@ function CompileAppsInWorkspace {
     $originalEncoding = [Console]::OutputEncoding
     try {
         Write-Host "Executing: $ALToolPath $($arguments -join ' ')" -ForegroundColor Green
-        
+
         # Temporarily set console encoding to UTF-8 to handle special characters in output
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         & $ALToolPath @arguments | Out-Host
@@ -432,7 +432,7 @@ function CompileAppsInWorkspace {
         $outputFiles = @()
 
         # if package cache path and output folder are the same then no need to copy files
-        # Copy the output files from the package cache to the output folder 
+        # Copy the output files from the package cache to the output folder
         OutputDebug -message "Copying generated app files to output folder..."
         if ((Test-Path $PackageCachePath) -and ($PackageCachePath -ne $OutputFolder)) {
             if (-not (Test-Path $OutputFolder)) {
@@ -441,8 +441,8 @@ function CompileAppsInWorkspace {
             $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
             OutputArray -Message "Files in package cache after compilation:" -Array $filesInPackageCache -Debug
             # Find new or modified files by comparing timestamps
-            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object { 
-                -not $filesBeforeCompile.ContainsKey($_.FullName) -or 
+            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object {
+                -not $filesBeforeCompile.ContainsKey($_.FullName) -or
                 $_.LastWriteTimeUtc -gt $filesBeforeCompile[$_.FullName]
             }
         }
@@ -470,7 +470,7 @@ function CompileAppsInWorkspace {
     version that is within the supported major version range. Requires both Microsoft.NETCore.App
     and Microsoft.AspNetCore.App runtimes to be installed for a version to be considered.
 .PARAMETER MinimumSupportedMajorVersion
-    The minimum major version of .NET runtime to consider. 
+    The minimum major version of .NET runtime to consider.
 .PARAMETER MaximumSupportedMajorVersion
     The maximum major version of .NET runtime to consider.
 .OUTPUTS
@@ -487,7 +487,7 @@ function Get-DotnetRuntimeVersionInstalled {
 
     try {
         $runtimeOutput = dotnet --list-runtimes
-        
+
         if (-not $runtimeOutput) {
             OutputDebug -message "Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
             return $null
@@ -500,7 +500,7 @@ function Get-DotnetRuntimeVersionInstalled {
             if ($line -match '^(Microsoft\.\w+\.App)\s+(\d+\.\d+\.\d+)') {
                 $runtimeName = $matches[1]
                 $versionStr = $matches[2]
-                
+
                 try {
                     $version = [System.Version]$versionStr
                     if (-not $runtimes.ContainsKey($runtimeName)) {
@@ -523,9 +523,9 @@ function Get-DotnetRuntimeVersionInstalled {
         }
 
         # Find the highest version present in both, within the supported major version range
-        $compatibleVersions = $netCoreVersions | Where-Object { 
+        $compatibleVersions = $netCoreVersions | Where-Object {
             $_.Major -ge $MinimumSupportedMajorVersion -and
-            $_.Major -le $MaximumSupportedMajorVersion -and 
+            $_.Major -le $MaximumSupportedMajorVersion -and
             $aspNetVersions -contains $_
         } | Sort-Object -Descending
 
@@ -571,7 +571,7 @@ function Get-AssemblyProbingPaths() {
 
     $compilerFolderDllsPath = Join-Path $CompilerFolder "dlls"
     $compilerFolderSharedPath = Join-Path $compilerFolderDllsPath "shared"
-    
+
     # Use Service and Mock Assemblies folders if they exist from the compiler folder
     if (Test-Path $compilerFolderDllsPath) {
         $probingPaths += @((Join-Path $compilerFolderDllsPath "Service"),(Join-Path $compilerFolderDllsPath "Mock Assemblies"))
@@ -613,7 +613,7 @@ function New-WorkspaceFromFolders() {
     param(
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFile,
 
@@ -631,6 +631,20 @@ function New-WorkspaceFromFolders() {
     Write-Host "Workspace created at $WorkspaceFile"
 }
 
+<#
+.SYNOPSIS
+    Updates the version property in app.json files within the specified folders.
+.DESCRIPTION
+    Finds all app.json files in the given folders and updates their version property based on the provided major/minor version, build number, and revision number. If only the revision number is provided, it will update just the revision part of the existing version.
+.PARAMETER Folders
+    An array of folder paths to search for app.json files.
+.PARAMETER MajorMinorVersion
+    The major and minor version to set in the app.json files (e.g., "1.2"). If not provided, the existing major and minor version will be retained.
+.PARAMETER BuildNumber
+    The build number to set in the app.json files. If not provided, the existing build number will be retained.
+.PARAMETER RevisionNumber
+    The revision number to set in the app.json files. If not provided, the existing revision number will be retained.
+#>
 function Update-AppJsonProperties() {
     param(
         [Parameter(Mandatory = $true)]
@@ -645,8 +659,6 @@ function Update-AppJsonProperties() {
         [Parameter(Mandatory = $false)]
         [int] $RevisionNumber = 0
     )
-
-    # TODO for future PR: Update implementation here to support Directory.App.Props.json
 
     foreach ($folder in $Folders) {
         $appJsonFiles = Get-ChildItem -Path $folder -Filter "app.json"
@@ -666,8 +678,6 @@ function Update-AppJsonProperties() {
 
             OutputDebug "Updating app.json at $($appJsonFile.FullName) to version $version"
             $appJsonContent.version = "$version"
-
-            # Add other properties to update as needed
 
             # Save the updated app.json file
             $appJsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $appJsonFile.FullName -Encoding UTF8
@@ -712,7 +722,7 @@ function New-BuildOutputFile {
     New-Item -Path $BuildOutputPath -ItemType File -Force | Out-Null
 
     # Collect the log files and append their content to the build output file
-    $logFiles = Get-ChildItem -Path $BuildArtifactFolder -Recurse -Filter "*.log" | Select-Object -ExpandProperty FullName    
+    $logFiles = Get-ChildItem -Path $BuildArtifactFolder -Recurse -Filter "*.log" | Select-Object -ExpandProperty FullName
     foreach ($logFile in $logFiles) {
         $sanitizedLines = Get-Content -Path $logFile | ForEach-Object { $_ -replace '^\[OUT\]\s?', '' }
         Add-Content -Path $buildOutputPath -Value $sanitizedLines
