@@ -175,6 +175,16 @@ foreach ($thisProject in $sortedProjectList) {
         Write-Host "- $($_.Name)"
     }
 
+    # Check if there are any app artifacts to deliver
+    $appArtifactsExist = @(Get-ChildItem -Path (Join-Path $artifactsFolder "$project-$refname-Apps-*.*.*.*") -Directory -ErrorAction SilentlyContinue).Count -gt 0
+    if (-not $appArtifactsExist) {
+        Write-Host "No app artifacts found for project '$project'. Skipping delivery."
+        if ($artifactsFolderCreated) {
+            Remove-Item $artifactsFolder -Recurse -Force
+        }
+        continue
+    }
+
     # Check if there is a custom script to run for the delivery target
     # Use Get-ChildItem to support Linux (case sensitive filenames) as well as Windows
     $customScript = Get-ChildItem -Path (Join-Path $baseFolder '.github') | Where-Object { $_.Name -eq "DeliverTo$deliveryTarget.ps1" } | ForEach-Object { $_.FullName }
