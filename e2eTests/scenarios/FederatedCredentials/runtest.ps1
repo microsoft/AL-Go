@@ -127,6 +127,13 @@ finally {
     Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
 }
 
+# Wait a moment for the settings push workflow to be registered, then update baseline
+Write-Host "Updating baseline workflow runs to include the settings push workflow..."
+Start-Sleep -Seconds 5
+$updatedRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
+$previousRunIds = @($updatedRuns.workflow_runs | Select-Object -First 50 | Select-Object -ExpandProperty id)
+Write-Host "Updated baseline now includes $($previousRunIds.Count) workflow run(s)"
+
 # Upgrade AL-Go System Files to test version
 RunUpdateAlGoSystemFiles -directCommit -wait -repository $repository | Out-Null
 
