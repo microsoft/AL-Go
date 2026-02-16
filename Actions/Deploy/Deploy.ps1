@@ -94,7 +94,7 @@ $apps | ForEach-Object {
 # Check if there are any apps to deploy
 if ($apps.Count -eq 0) {
     Write-Host "No apps found to deploy to environment '$environmentName'. Skipping deployment."
-    exit
+    exit 0
 }
 
 if ($deploymentSettings.DependencyInstallMode -ne "ignore") {
