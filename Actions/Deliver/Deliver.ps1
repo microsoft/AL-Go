@@ -261,7 +261,11 @@ foreach ($thisProject in $sortedProjectList) {
                         Write-Host "Package $packageName has already been delivered in this run, skipping"
                     }
                     else {
-                        $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version "$($appJson.version)$preReleaseTag" -select Exact -allowPrerelease
+                        $searchVersion = $appJson.version
+                        if ($preReleaseTag) {
+                            $searchVersion += "-$preReleaseTag"
+                        }
+                        $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $searchVersion -select Exact -allowPrerelease
                         if (-not $feed) {
                             $parameters = @{
                                 "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
