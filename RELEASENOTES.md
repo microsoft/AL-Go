@@ -11,7 +11,7 @@ AL-Go for GitHub is transitioning from the pull_request_target trigger to the mo
 Add the following setting to one of your settings files and run the Update AL-Go System Files workflow:
 
 ```json
-  "PullRequestTrigger": "pull_request_target"
+  "pullRequestTrigger": "pull_request_target"
 ```
 
 ## v8.2
