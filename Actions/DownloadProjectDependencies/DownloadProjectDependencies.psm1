@@ -1,5 +1,5 @@
 Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
-. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
 
 <#
     .SYNOPSIS
