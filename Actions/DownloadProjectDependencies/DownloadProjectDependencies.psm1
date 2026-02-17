@@ -11,6 +11,7 @@ Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
 #>
 function Test-IsZipFile {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $Path
     )
     $extension = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
@@ -42,7 +43,9 @@ function Test-IsZipFile {
 #>
 function Expand-ZipFileToAppFiles {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $ZipFile,
+        [Parameter(Mandatory=$true)]
         [string] $DestinationPath
     )
     $fileName = [System.IO.Path]::GetFileName($ZipFile)
@@ -115,7 +118,9 @@ function Expand-ZipFileToAppFiles {
 #>
 function Get-AppFilesFromLocalPath {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $Path,
+        [Parameter(Mandatory=$true)]
         [string] $DestinationPath
     )
 
@@ -168,8 +173,11 @@ function Get-AppFilesFromLocalPath {
 #>
 function Get-AppFilesFromUrl {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $Url,
+        [Parameter(Mandatory=$true)]
         [string] $CleanUrl,
+        [Parameter(Mandatory=$true)]
         [string] $DownloadPath
     )
 
@@ -237,6 +245,7 @@ function Get-AppFilesFromUrl {
 #>
 function Get-DependenciesFromInstallApps {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $DestinationPath
     )
 
