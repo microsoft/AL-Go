@@ -516,6 +516,7 @@ function CreateAlGoRepository {
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
+
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
     $repoSettings | Set-JsonContentLF -path $repoSettingsFile
