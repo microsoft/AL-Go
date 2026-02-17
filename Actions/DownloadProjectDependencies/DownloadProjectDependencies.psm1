@@ -52,14 +52,16 @@ function Expand-ZipFileToAppFiles {
     $zipToExtract = $ZipFile
     $tempZipCreated = $false
     if ([System.IO.Path]::GetExtension($ZipFile).ToLowerInvariant() -ne '.zip') {
-        $zipToExtract = Join-Path (GetTemporaryPath) "$([System.IO.Path]::GetFileName($ZipFile)).zip"
+        $newZipFileName = "$([System.IO.Path]::GetFileName($ZipFile))_$(Get-Date -Format 'HHmmssfff').zip"
+        $zipToExtract = Join-Path (GetTemporaryPath) $newZipFileName
         Copy-Item -Path $ZipFile -Destination $zipToExtract
         $tempZipCreated = $true
     }
 
     try {
         # Extract to runner temp folder
-        $extractPath = Join-Path (GetTemporaryPath) ([System.IO.Path]::GetFileNameWithoutExtension($fileName))
+        $extractFileName = "$([System.IO.Path]::GetFileNameWithoutExtension($fileName))_$(Get-Date -Format 'HHmmssfff')"
+        $extractPath = Join-Path (GetTemporaryPath) $extractFileName
         Expand-Archive -Path $zipToExtract -DestinationPath $extractPath -Force
 
         # Find all files in the extracted folder and process them
