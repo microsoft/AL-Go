@@ -8,7 +8,7 @@ Param(
     [Parameter(HelpMessage = "Matrix OS (windows or linux)", Mandatory = $false)]
     [string] $matrixOs = '',
     [Parameter(HelpMessage = "Admin center API credentials secret", Mandatory = $false)]
-    [string] $adminCenterApiCredentialsSecret = '',
+    [string] $adminCenterApiCredentialsSecret = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
     [Parameter(HelpMessage = "AppSource app repository template", Mandatory = $true)]
     [string] $appSourceAppRepo,
     [Parameter(HelpMessage = "Per-tenant extension repository template", Mandatory = $true)]
