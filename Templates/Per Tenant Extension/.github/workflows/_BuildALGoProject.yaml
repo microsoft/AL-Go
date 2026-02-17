@@ -122,7 +122,7 @@ jobs:
 
       - name: Read secrets
         id: ReadSecrets
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && github.event_name != 'pull_request'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         uses: microsoft/AL-Go-Actions/ReadSecrets@main
         with:
           shell: ${{ inputs.shell }}
