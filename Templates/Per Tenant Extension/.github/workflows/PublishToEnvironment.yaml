@@ -18,6 +18,7 @@ on:
 permissions:
   actions: read
   contents: read
+  deployments: write
   id-token: write
   pull-requests: read
   checks: read
