@@ -24,10 +24,8 @@ foreach ($name in ($secretName -split ',')) {
 }
 
 if ($authContext) {
-    Write-Host "AuthContext provided in secret $foundSecretName!"
-    Add-Content -Encoding UTF8 -Path $ENV:GITHUB_STEP_SUMMARY -Value "AuthContext was provided in a secret called $foundSecretName. Using this information for authentication."
-}
-else {
+    Write-Host "AuthContext provided in secret $foundSecretName! Using this information for authentication."
+} else {
     Write-Host "No AuthContext provided, initiating Device Code flow"
     DownloadAndImportBcContainerHelper
     $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
