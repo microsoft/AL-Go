@@ -294,6 +294,8 @@ Your custom delivery script receives a hash table with the following parameters:
 
 > **Note:** The folder parameters (`*Folder`) may be `$null` if no artifacts of that type were found. The plural versions (`*Folders`) contain arrays of all matching folders across different build modes.
 
+> **Important:** The delivery step is automatically skipped at the workflow level when no app artifacts are available. This means your custom delivery script will not be executed if no app artifacts were built. This behavior prevents errors on initial commits, failed builds, or branches without code changes that produce artifacts.
+
 ### Branch-Specific Delivery
 
 Configure different delivery targets for different branches:

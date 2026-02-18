@@ -352,6 +352,7 @@ jobs:
 
       - name: Deploy to Business Central
         id: Deploy
+        if: hashFiles('.artifacts/**/*.app') != ''
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -405,6 +406,7 @@ jobs:
           getSecrets: '${{ matrix.deliveryTarget }}Context'
 
       - name: Deliver
+        if: hashFiles('.artifacts/**/*.app') != ''
         uses: microsoft/AL-Go-Actions/Deliver@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
