@@ -223,21 +223,27 @@ jobs:
           $environments = @($matrix.matrix.include | ForEach-Object { $_.environment })
           foreach ($envName in $environments) {
             Write-Host "Tracking deployment for environment: $envName"
-            # Find auto-created deployment to retrieve environment URL
+            $encodedEnv = [System.Uri]::EscapeDataString($envName)
+            # Find the auto-created deployment (ref: main) to get its environment URL and then deactivate it
             $envUrl = $null
             try {
-              $encodedEnv = [System.Uri]::EscapeDataString($envName)
-              $existingDeps = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments?environment=$encodedEnv&ref=${{ github.ref_name }}&per_page=1" -Headers $headers
-              if ($existingDeps -and @($existingDeps).Count -gt 0) {
-                $depId = @($existingDeps)[0].id
-                $statuses = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments/$depId/statuses?per_page=1" -Headers $headers
-                if ($statuses -and @($statuses).Count -gt 0 -and @($statuses)[0].environment_url) {
-                  $envUrl = @($statuses)[0].environment_url
+              $existingDeps = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments?environment=$encodedEnv&ref=${{ github.ref_name }}&per_page=5" -Headers $headers
+              foreach ($dep in @($existingDeps)) {
+                # Retrieve environment URL from the auto-created deployment
+                if (-not $envUrl) {
+                  $statuses = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments/$($dep.id)/statuses?per_page=1" -Headers $headers
+                  if ($statuses -and @($statuses).Count -gt 0 -and @($statuses)[0].environment_url) {
+                    $envUrl = @($statuses)[0].environment_url
+                  }
                 }
+                # Deactivate the auto-created deployment so it no longer shows as active
+                Write-Host "Deactivating auto-created deployment $($dep.id) (ref: $($dep.ref))"
+                $inactiveBody = '{"state":"inactive"}' 
+                Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments/$($dep.id)/statuses" -Method Post -Headers $headers -Body $inactiveBody -ContentType 'application/json' | Out-Null
               }
             }
             catch {
-              Write-Host "::warning::Could not retrieve auto-created deployment info: $($_.Exception.Message)"
+              Write-Host "::warning::Could not process auto-created deployment: $($_.Exception.Message)"
             }
             # Create deployment against the PR branch
             $deployBody = @{
@@ -250,7 +256,6 @@ jobs:
             try {
               $deployment = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments" -Method Post -Headers $headers -Body $deployBody -ContentType 'application/json'
               Write-Host "Created deployment $($deployment.id) against $prRef"
-              # Set deployment status — auto_inactive will deactivate the auto-created main deployment
               $statusBody = @{
                 state       = $state
                 environment = $envName
