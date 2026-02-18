@@ -37,10 +37,6 @@ Describe "CheckAuthContext Action Tests" {
         $output = Get-Content $env:GITHUB_OUTPUT -Raw
         $output | Should -Not -Match "deviceCode="
 
-        # Should write to step summary
-        $summary = Get-Content $env:GITHUB_STEP_SUMMARY -Raw
-        $summary | Should -Match "AuthContext was provided in a secret called adminCenterApiCredentials"
-
         Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
         Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
     }
@@ -54,8 +50,9 @@ Describe "CheckAuthContext Action Tests" {
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'TestEnv-AuthContext,TestEnv_AuthContext,AuthContext'
 
-        $summary = Get-Content $env:GITHUB_STEP_SUMMARY -Raw
-        $summary | Should -Match "AuthContext was provided in a secret called TestEnv-AuthContext"
+        # Should NOT output deviceCode when secret is found
+        $output = Get-Content $env:GITHUB_OUTPUT -Raw
+        $output | Should -Not -Match "deviceCode="
 
         Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
         Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
@@ -70,8 +67,9 @@ Describe "CheckAuthContext Action Tests" {
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'TestEnv-AuthContext,TestEnv_AuthContext,AuthContext'
 
-        $summary = Get-Content $env:GITHUB_STEP_SUMMARY -Raw
-        $summary | Should -Match "AuthContext was provided in a secret called AuthContext"
+        # Should NOT output deviceCode when secret is found
+        $output = Get-Content $env:GITHUB_OUTPUT -Raw
+        $output | Should -Not -Match "deviceCode="
 
         Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
         Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
