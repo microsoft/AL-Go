@@ -1,7 +1,7 @@
 ### Issues
 
 - Issue 1915 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
-- Deliver and Deploy actions now skip execution when no app artifacts are found, preventing errors on initial commits
+- Issue 2126 Deliver and Deploy actions now skip execution when no app artifacts are found, preventing errors on initial commits
 
 ### The default pull request trigger is changing
 
