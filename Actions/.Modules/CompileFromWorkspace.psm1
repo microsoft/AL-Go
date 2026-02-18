@@ -396,7 +396,8 @@ function CompileAppsInWorkspace {
         OutputWarning "--enableexternalrulesets is not yet supported and will be ignored."
     }
 
-    if ($LogLevel -and $LogLevel -ne 'Normal') {
+    if ($LogLevel) {
+        Write-Host "Log level set to $LogLevel"
         $arguments += "--loglevel"
         $arguments += $LogLevel
     }
