@@ -215,24 +215,9 @@ else {
                 Publish-PerTenantExtensionApps @parameters
             }
 
-            # Track PR deployment against the PR branch
-            if ($artifactsVersion -like "PR_*") {
-                $prId = $artifactsVersion.Substring(3)
-                Set-PRDeploymentTracking -repository $ENV:GITHUB_REPOSITORY -prId $prId -environmentName $environmentName -environmentUrl $environmentUrl -deploymentSuccess $true -token $token
-            }
         }
     }
     catch {
-        # Track failed PR deployment
-        if ($artifactsVersion -like "PR_*") {
-            try {
-                $prId = $artifactsVersion.Substring(3)
-                Set-PRDeploymentTracking -repository $ENV:GITHUB_REPOSITORY -prId $prId -environmentName $environmentName -environmentUrl $environmentUrl -deploymentSuccess $false -token $token
-            }
-            catch {
-                Write-Host "::warning::Failed to track PR deployment: $($_.Exception.Message)"
-            }
-        }
         OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
         exit
     }
