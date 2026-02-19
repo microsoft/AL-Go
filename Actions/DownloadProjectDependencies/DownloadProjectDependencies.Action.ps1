@@ -38,6 +38,7 @@ function DownloadDependenciesFromCurrentBuild {
 
     Write-Host "Downloading dependencies for project '$project'"
 
+    $projectDependencies | ConvertTo-HashTable | Out-Host
     $dependencyProjects = @()
     if ($projectDependencies.Keys -contains $project) {
         $dependencyProjects = @($projectDependencies."$project")
