@@ -5,6 +5,8 @@ Param(
     [string] $environmentName = ''
 )
 
+$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $settings = $env:Settings | ConvertFrom-Json
@@ -29,6 +31,9 @@ if ($authContext) {
     Write-Host "No AuthContext provided, initiating Device Code flow"
     DownloadAndImportBcContainerHelper
     $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
+    if ($null -eq $authContext) {
+        throw "Failed to acquire authentication context via device code flow"
+    }
 
     # Build appropriate error message
     if ($environmentName) {

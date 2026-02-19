@@ -13,6 +13,16 @@ Describe "CheckAuthContext Action Tests" {
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
     }
 
+    BeforeEach {
+        $env:GITHUB_STEP_SUMMARY = [System.IO.Path]::GetTempFileName()
+        $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
+    }
+
+    AfterEach {
+        Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
+        Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
+    }
+
     It 'Compile Action' {
         Invoke-Expression $actionScript
     }
@@ -27,8 +37,6 @@ Describe "CheckAuthContext Action Tests" {
     It 'Should find first matching secret' {
         $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
         $env:Secrets = '{"adminCenterApiCredentials": "someCredentials"}'
-        $env:GITHUB_STEP_SUMMARY = [System.IO.Path]::GetTempFileName()
-        $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'adminCenterApiCredentials'
@@ -36,16 +44,11 @@ Describe "CheckAuthContext Action Tests" {
         # Should NOT output deviceCode when secret is found
         $output = Get-Content $env:GITHUB_OUTPUT -Raw
         $output | Should -Not -Match "deviceCode="
-
-        Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
-        Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
     }
 
     It 'Should find secret when checking multiple names - first match wins' {
         $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
         $env:Secrets = '{"TestEnv-AuthContext": "firstSecret", "AuthContext": "secondSecret"}'
-        $env:GITHUB_STEP_SUMMARY = [System.IO.Path]::GetTempFileName()
-        $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'TestEnv-AuthContext,TestEnv_AuthContext,AuthContext'
@@ -53,16 +56,11 @@ Describe "CheckAuthContext Action Tests" {
         # Should NOT output deviceCode when secret is found
         $output = Get-Content $env:GITHUB_OUTPUT -Raw
         $output | Should -Not -Match "deviceCode="
-
-        Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
-        Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
     }
 
     It 'Should find fallback secret when primary not found' {
         $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
         $env:Secrets = '{"AuthContext": "fallbackSecret"}'
-        $env:GITHUB_STEP_SUMMARY = [System.IO.Path]::GetTempFileName()
-        $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'TestEnv-AuthContext,TestEnv_AuthContext,AuthContext'
@@ -70,16 +68,11 @@ Describe "CheckAuthContext Action Tests" {
         # Should NOT output deviceCode when secret is found
         $output = Get-Content $env:GITHUB_OUTPUT -Raw
         $output | Should -Not -Match "deviceCode="
-
-        Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
-        Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
     }
 
     It 'Should initiate device login when no secret is found' {
         $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
         $env:Secrets = '{}'
-        $env:GITHUB_STEP_SUMMARY = [System.IO.Path]::GetTempFileName()
-        $env:GITHUB_OUTPUT = [System.IO.Path]::GetTempFileName()
 
         # Import AL-Go-Helper to get the functions defined, then mock them
         . (Join-Path $scriptRoot "..\AL-Go-Helper.ps1")
@@ -98,8 +91,5 @@ Describe "CheckAuthContext Action Tests" {
         # Should write device login message to step summary
         $summary = Get-Content $env:GITHUB_STEP_SUMMARY -Raw
         $summary | Should -Match "could not locate a secret"
-
-        Remove-Item $env:GITHUB_STEP_SUMMARY -ErrorAction SilentlyContinue
-        Remove-Item $env:GITHUB_OUTPUT -ErrorAction SilentlyContinue
     }
 }
