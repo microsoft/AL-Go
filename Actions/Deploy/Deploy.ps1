@@ -214,7 +214,6 @@ else {
                 Write-Host "Publishing apps using automation API"
                 Publish-PerTenantExtensionApps @parameters
             }
-
         }
     }
     catch {
