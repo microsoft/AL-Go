@@ -200,76 +200,16 @@ jobs:
     if: always() && (needs.Deploy.result == 'success' || needs.Deploy.result == 'failure') && startsWith(github.event.inputs.appVersion, 'PR_')
     runs-on: [ windows-latest ]
     steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - name: Track PR Deployment
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $prNumber = '${{ github.event.inputs.appVersion }}'.Substring(3)
-          $repo = '${{ github.repository }}'
-          $deployResult = '${{ needs.Deploy.result }}'
-          $state = if ($deployResult -eq 'success') { 'success' } else { 'failure' }
-          $headers = @{
-            "Authorization" = "Bearer $env:GITHUB_TOKEN"
-            "Accept"        = "application/vnd.github+json"
-          }
-          # Get PR branch ref
-          $pr = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/pulls/$prNumber" -Headers $headers
-          $prRef = $pr.head.ref
-          Write-Host "PR #$prNumber branch: $prRef"
-          # Get environments from Initialization
-          $matrixJson = '${{ needs.Initialization.outputs.environmentsMatrixJson }}'
-          $matrix = $matrixJson | ConvertFrom-Json
-          $environments = @($matrix.matrix.include | ForEach-Object { $_.environment })
-          foreach ($envName in $environments) {
-            Write-Host "Tracking deployment for environment: $envName"
-            $encodedEnv = [System.Uri]::EscapeDataString($envName)
-            # Find the auto-created deployment (ref: main) to get its environment URL and then deactivate it
-            $envUrl = $null
-            try {
-              $existingDeps = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments?environment=$encodedEnv&ref=${{ github.ref_name }}&per_page=5" -Headers $headers
-              foreach ($dep in @($existingDeps)) {
-                # Retrieve environment URL from the auto-created deployment
-                if (-not $envUrl) {
-                  $statuses = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments/$($dep.id)/statuses?per_page=1" -Headers $headers
-                  if ($statuses -and @($statuses).Count -gt 0 -and @($statuses)[0].environment_url) {
-                    $envUrl = @($statuses)[0].environment_url
-                  }
-                }
-                # Deactivate the auto-created deployment so it no longer shows as active
-                Write-Host "Deactivating auto-created deployment $($dep.id) (ref: $($dep.ref))"
-                $inactiveBody = '{"state":"inactive"}' 
-                Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments/$($dep.id)/statuses" -Method Post -Headers $headers -Body $inactiveBody -ContentType 'application/json' | Out-Null
-              }
-            }
-            catch {
-              Write-Host "::warning::Could not process auto-created deployment: $($_.Exception.Message)"
-            }
-            # Create deployment against the PR branch
-            $deployBody = @{
-              ref                = $prRef
-              environment        = $envName
-              auto_merge         = $false
-              required_contexts  = @()
-              description        = "Deployed via PublishToEnvironment (PR #$prNumber)"
-            } | ConvertTo-Json -Compress
-            try {
-              $deployment = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments" -Method Post -Headers $headers -Body $deployBody -ContentType 'application/json'
-              Write-Host "Created deployment $($deployment.id) against $prRef"
-              $statusBody = @{
-                state       = $state
-                environment = $envName
-                description = "Deployed PR #$prNumber to $envName"
-              }
-              if ($envUrl) { $statusBody['environment_url'] = $envUrl }
-              $statusJson = $statusBody | ConvertTo-Json -Compress
-              Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/deployments/$($deployment.id)/statuses" -Method Post -Headers $headers -Body $statusJson -ContentType 'application/json' | Out-Null
-              Write-Host "Deployment status set to $state for $envName"
-            }
-            catch {
-              Write-Host "::warning::Failed to create PR deployment for environment $envName`: $($_.Exception.Message)"
-            }
-          }
+        uses: microsoft/AL-Go-Actions/TrackPRDeployment@main
+        with:
+          shell: powershell
+          environmentsMatrixJson: ${{ needs.Initialization.outputs.environmentsMatrixJson }}
+          deployResult: ${{ needs.Deploy.result }}
+          artifactsVersion: ${{ github.event.inputs.appVersion }}
 
   PostProcess:
     needs: [ Initialization, Deploy ]
