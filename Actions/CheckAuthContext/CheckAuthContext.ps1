@@ -5,11 +5,8 @@ Param(
     [string] $environmentName = ''
 )
 
-$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = $env:Settings | ConvertFrom-Json
 $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
 
 # Check each secret name in order
