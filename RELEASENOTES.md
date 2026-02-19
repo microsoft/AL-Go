@@ -7,6 +7,18 @@
 
 When deploying a PR build via "Publish To Environment", the deployment is now correctly tracked against the PR branch instead of the trigger branch (e.g. main). Previously, GitHub would show the deployment against the latest commit on main, which was misleading. A new `TrackPRDeployment` action runs after the deploy job to deactivate the auto-created deployment and create one pointing to the actual PR branch.
 
+### The default pull request trigger is changing
+
+AL-Go for GitHub is transitioning from the pull_request_target trigger to the more secure pull_request trigger. This is a step we are taking to make AL-Go for GitHub more secure by default. If you are used to working from branches within the repository you may not notice any difference. If you get pull requests from forks, those pull requests will no longer be able to access secrets. If that is blocking for your repository, you will need to update your settings to use the pull_request_target trigger.
+
+**How do I revert back to pull_request_target?**
+
+Add the following setting to one of your settings files and run the Update AL-Go System Files workflow:
+
+```json
+  "pullRequestTrigger": "pull_request_target"
+```
+
 ## v8.2
 
 ### Issues
