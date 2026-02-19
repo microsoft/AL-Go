@@ -32,7 +32,8 @@ if ($authContext) {
     DownloadAndImportBcContainerHelper
     $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
     if ($null -eq $authContext) {
-        throw "Failed to acquire authentication context via device code flow"
+        OutputError "Failed to acquire authentication context via device code flow."
+        return
     }
 
     # Build appropriate error message

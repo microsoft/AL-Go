@@ -100,4 +100,37 @@ Describe "CheckAuthContext Action Tests" {
         $summary = Get-Content $env:GITHUB_STEP_SUMMARY -Raw
         $summary | Should -Match "could not locate a secret"
     }
+
+    It 'Should output error when New-BcAuthContext returns null' {
+        $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
+        $env:Secrets = '{}'
+
+        . (Join-Path $scriptRoot "..\AL-Go-Helper.ps1")
+        Mock DownloadAndImportBcContainerHelper { }
+        Mock New-BcAuthContext { return $null }
+        Mock OutputError { }
+
+        Invoke-Expression $actionScript
+        CheckAuthContext -secretName 'nonExistentSecret'
+
+        Should -Invoke OutputError -ParameterFilter { $message -like "*Failed to acquire authentication*" }
+    }
+
+    It 'Should use environment-specific message when environmentName is provided' {
+        $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
+        $env:Secrets = '{}'
+
+        . (Join-Path $scriptRoot "..\AL-Go-Helper.ps1")
+        Mock DownloadAndImportBcContainerHelper { }
+        Mock New-BcAuthContext {
+            return @{ deviceCode = "TESTDEVICECODE"; message = "Enter code to authenticate" }
+        }
+
+        Invoke-Expression $actionScript
+        CheckAuthContext -secretName 'secret1,secret2' -environmentName 'MyEnv (Production)'
+
+        $summary = Get-Content $env:GITHUB_STEP_SUMMARY -Raw
+        $summary | Should -Match "Business Central Environment MyEnv"
+        $summary | Should -Match "secret1 or secret2"
+    }
 }
