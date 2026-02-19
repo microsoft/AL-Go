@@ -298,7 +298,7 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Debug', 'Error', 'Normal', 'Verbose', 'Warning')]
-        [string]$LogLevel = 'Verbose',
+        [string]$LogLevel = 'Warning',
 
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
@@ -397,7 +397,6 @@ function CompileAppsInWorkspace {
     }
 
     if ($LogLevel) {
-        Write-Host "Log level set to $LogLevel"
         $arguments += "--loglevel"
         $arguments += $LogLevel
     }
