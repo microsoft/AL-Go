@@ -18,7 +18,7 @@ None
 | token | | The GitHub token running the action | github.token |
 | environmentsMatrixJson | Yes | JSON string with the environments matrix from Initialization | |
 | deployResult | Yes | The result of the Deploy job (success or failure) | |
-| artifactsVersion | Yes | Artifacts version (PR_\<number\>) | |
+| artifactsVersion | Yes | Artifacts version (PR\_\<number>) | |
 
 ## OUTPUT
 
