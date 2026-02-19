@@ -50,12 +50,17 @@ Describe "CheckAuthContext Action Tests" {
         $env:Settings = '{"adminCenterApiCredentialsSecretName": "adminCenterApiCredentials"}'
         $env:Secrets = '{"TestEnv-AuthContext": "firstSecret", "AuthContext": "secondSecret"}'
 
+        Mock Write-Host {}
+
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'TestEnv-AuthContext,TestEnv_AuthContext,AuthContext'
 
         # Should NOT output deviceCode when secret is found
         $output = Get-Content $env:GITHUB_OUTPUT -Raw
         $output | Should -Not -Match "deviceCode="
+
+        # Should use the first matching secret, not a later one
+        Should -Invoke Write-Host -ParameterFilter { $Object -eq "Using TestEnv-AuthContext secret" }
     }
 
     It 'Should find fallback secret when primary not found' {
@@ -83,6 +88,9 @@ Describe "CheckAuthContext Action Tests" {
 
         Invoke-Expression $actionScript
         CheckAuthContext -secretName 'nonExistentSecret'
+
+        # Should invoke New-BcAuthContext to get device code
+        Should -Invoke New-BcAuthContext -Exactly -Times 1
 
         # Should output deviceCode when no secret is found
         $output = Get-Content $env:GITHUB_OUTPUT -Raw

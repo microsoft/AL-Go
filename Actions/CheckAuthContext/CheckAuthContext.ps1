@@ -40,7 +40,7 @@ if ($authContext) {
         $message = "AL-Go needs access to the Business Central Environment $($environmentName.Split(' ')[0]) and could not locate a secret called $($secretName -replace ',', ' or ')"
     }
     else {
-        $message = "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($settings.adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)"
+        $message = "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($secretName -replace ',', ' or ') (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)"
     }
 
     Add-Content -Encoding UTF8 -Path $ENV:GITHUB_STEP_SUMMARY -Value "$message`n`n$($authContext.message)"
