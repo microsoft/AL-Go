@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## name: multi-model-review description: > Multi-model code review skill. Launches 3 parallel code reviews using different AI models (Claude Opus, GPT, Gemini), then synthesizes findings using weighted consensus. Use this skill when asked to review a PR, review code changes, or perform a multi-model review. Trigger phrases: "multi-model review", "review this PR with multiple models", "consensus review", "triple review", "/multi-model-review".
+## name: code-review description: > Multi-model code review skill. Launches 3 parallel code reviews using different AI models (Claude Opus, GPT, Gemini), then synthesizes findings using weighted consensus. Use this skill when asked to review a PR, review code changes, or perform a multi-model review. Trigger phrases: "multi-model review", "review this PR with multiple models", "consensus review", "triple review", "/multi-model-review".
 
 # Multi-Model Code Review
 
