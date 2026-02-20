@@ -41,12 +41,16 @@ function Test-IsZipFile {
     if ($extension -eq '.zip') {
         return $true
     }
+    if ($extension -eq '.app') {
+        # Don't treat .app files as zips. These should not be extracted.
+        return $false
+    }
     # Check for ZIP magic bytes "PK" (0x50 0x4B)
     # This handles the case where the file does not have a .zip extension but is still a ZIP archive (like .nupkg)
     if ($PSVersionTable.PSVersion.Major -ge 6) {
-        $bytes = Get-Content -Path $Path -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue
+        $bytes = @(Get-Content -Path $Path -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue)
     } else {
-        $bytes = Get-Content -Path $Path -Encoding Byte -TotalCount 2 -ErrorAction SilentlyContinue
+        $bytes = @(Get-Content -Path $Path -Encoding Byte -TotalCount 2 -ErrorAction SilentlyContinue)
     }
     if ($bytes -and $bytes.Count -eq 2) {
         return ([char]$bytes[0] -eq 'P') -and ([char]$bytes[1] -eq 'K')

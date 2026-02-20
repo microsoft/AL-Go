@@ -8,6 +8,73 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 # Import the module
 Import-Module (Join-Path $PSScriptRoot "../Actions/DownloadProjectDependencies/DownloadProjectDependencies.psm1" -Resolve) -Force
 
+Describe "DownloadProjectDependencies - Test-IsZipFile Tests" {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFolder', Justification = 'False positive.')]
+        $testFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+    }
+
+    AfterEach {
+        if (Test-Path $testFolder) {
+            Remove-Item -Path $testFolder -Recurse -Force
+        }
+    }
+
+    It 'Returns true for files with .zip extension' {
+        $zipFile = Join-Path $testFolder "test.zip"
+        [System.IO.File]::WriteAllBytes($zipFile, [byte[]](1, 2, 3))
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $zipFile } {
+            param($Path)
+            Test-IsZipFile -Path $Path | Should -Be $true
+        }
+    }
+
+    It 'Returns true for files with ZIP magic bytes but non-zip extension' {
+        $nupkgFile = Join-Path $testFolder "package.nupkg"
+        [System.IO.File]::WriteAllBytes($nupkgFile, [byte[]](0x50, 0x4B, 0x03, 0x04, 0x00))
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $nupkgFile } {
+            param($Path)
+            Test-IsZipFile -Path $Path | Should -Be $true
+        }
+    }
+
+    It 'Returns false for non-zip file without zip extension' {
+        $txtFile = Join-Path $testFolder "readme.txt"
+        [System.IO.File]::WriteAllBytes($txtFile, [byte[]](0x48, 0x65, 0x6C, 0x6C, 0x6F))
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $txtFile } {
+            param($Path)
+            Test-IsZipFile -Path $Path | Should -Be $false
+        }
+    }
+
+    It 'Returns false for empty file without zip extension' {
+        $emptyFile = Join-Path $testFolder "empty.bin"
+        [System.IO.File]::WriteAllBytes($emptyFile, [byte[]]@())
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $emptyFile } {
+            param($Path)
+            Test-IsZipFile -Path $Path | Should -Be $false
+        }
+    }
+
+    It 'Returns false for 1-byte file without zip extension' {
+        $oneByteFile = Join-Path $testFolder "onebyte.bin"
+        [System.IO.File]::WriteAllBytes($oneByteFile, [byte[]](0x50))
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $oneByteFile } {
+            param($Path)
+            Test-IsZipFile -Path $Path | Should -Be $false
+        }
+    }
+
+    It 'Returns false for .app file even with PK bytes' {
+        $appFile = Join-Path $testFolder "test.app"
+        [System.IO.File]::WriteAllBytes($appFile, [byte[]](0x50, 0x4B, 0x03, 0x04))
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $appFile } {
+            param($Path)
+            Test-IsZipFile -Path $Path | Should -Be $false
+        }
+    }
+}
+
 Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
     BeforeEach {
         # Create a temp download folder
