@@ -65,6 +65,8 @@ function Test-IsZipFile {
     The path to the ZIP file.
     .PARAMETER DestinationPath
     The path where .app files should be extracted to.
+    .PARAMETER MaxDepth
+    Maximum nesting depth for recursive ZIP extraction. Default is 3.
     .OUTPUTS
     An array of paths to the extracted .app files.
 #>
@@ -73,8 +75,13 @@ function Expand-ZipFileToAppFiles {
         [Parameter(Mandatory=$true)]
         [string] $ZipFile,
         [Parameter(Mandatory=$true)]
-        [string] $DestinationPath
+        [string] $DestinationPath,
+        [int] $MaxDepth = 3
     )
+    if ($MaxDepth -le 0) {
+        OutputWarning -message "Maximum ZIP nesting depth reached for: $([System.IO.Path]::GetFileName($ZipFile)). Skipping further extraction."
+        return @()
+    }
     $fileName = [System.IO.Path]::GetFileName($ZipFile)
     OutputDebug -message "Expanding zip file to extract .app files: $ZipFile"
 
@@ -106,7 +113,7 @@ function Expand-ZipFileToAppFiles {
             }
             elseif (Test-IsZipFile -Path $file.FullName) {
                 # Recursively extract nested ZIP files
-                $appFiles += Expand-ZipFileToAppFiles -ZipFile $file.FullName -DestinationPath $DestinationPath
+                $appFiles += Expand-ZipFileToAppFiles -ZipFile $file.FullName -DestinationPath $DestinationPath -MaxDepth ($MaxDepth - 1)
             }
         }
 
