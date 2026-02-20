@@ -19,6 +19,7 @@ None
 | environmentsMatrixJson | Yes | JSON string with the environments matrix from Initialization | |
 | deployResult | Yes | The result of the Deploy job (success or failure) | |
 | artifactsVersion | Yes | Artifacts version (PR\_\<number>) | |
+| sha | | The commit SHA of the workflow run, used to identify the correct auto-created deployment | github.sha |
 
 ## OUTPUT
 

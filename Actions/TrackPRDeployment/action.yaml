@@ -18,6 +18,10 @@ inputs:
   artifactsVersion:
     description: Artifacts version (PR_<number>)
     required: true
+  sha:
+    description: The commit SHA of the workflow run, used to identify the correct auto-created deployment
+    required: false
+    default: ${{ github.sha }}
 runs:
   using: composite
   steps:
@@ -28,9 +32,10 @@ runs:
         _environmentsMatrixJson: ${{ inputs.environmentsMatrixJson }}
         _deployResult: ${{ inputs.deployResult }}
         _artifactsVersion: ${{ inputs.artifactsVersion }}
+        _sha: ${{ inputs.sha }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "TrackPRDeployment" -Action {
-          ${{ github.action_path }}/TrackPRDeployment.ps1 -token $ENV:_token -environmentsMatrixJson $ENV:_environmentsMatrixJson -deployResult $ENV:_deployResult -artifactsVersion $ENV:_artifactsVersion
+          ${{ github.action_path }}/TrackPRDeployment.ps1 -token $ENV:_token -environmentsMatrixJson $ENV:_environmentsMatrixJson -deployResult $ENV:_deployResult -artifactsVersion $ENV:_artifactsVersion -sha $ENV:_sha
         }
 branding:
   icon: terminal
