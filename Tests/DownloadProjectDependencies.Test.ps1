@@ -243,6 +243,26 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
         @($result)[0] | Should -Match "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\.app$"
         Test-Path @($result)[0] | Should -BeTrue
     }
+
+    It 'Throws with clean URL when download fails, not the secret-containing URL' {
+        Mock Invoke-CommandWithRetry {
+            throw "Connection refused"
+        } -ModuleName DownloadProjectDependencies
+
+        $secretUrl = "https://example.com/downloads/TestApp.app?token=supersecretvalue"
+        $cleanUrl = 'https://example.com/downloads/TestApp.app?token=${{ mySecret }}'
+
+        $errorThrown = $null
+        try {
+            Get-AppFilesFromUrl -Url $secretUrl -CleanUrl $cleanUrl -DownloadPath $downloadPath
+        } catch {
+            $errorThrown = $_.Exception.Message
+        }
+
+        $errorThrown | Should -Not -BeNullOrEmpty
+        $errorThrown | Should -BeLike '*${{ mySecret }}*'
+        $errorThrown | Should -Not -BeLike "*supersecretvalue*"
+    }
 }
 
 Describe "DownloadProjectDependencies - Get-AppFilesFromLocalPath Tests" {
