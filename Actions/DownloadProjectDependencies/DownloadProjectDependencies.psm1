@@ -3,6 +3,29 @@ Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
 
 <#
     .SYNOPSIS
+    Validates that a path does not escape the workspace root.
+    .DESCRIPTION
+    Resolves the given path to an absolute path and verifies it is within the workspace root
+    returned by Get-BaseFolder. Throws an error if the path traverses outside the workspace.
+    .PARAMETER Path
+    The path to validate.
+#>
+function Test-PathWithinWorkspace {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path
+    )
+
+    $workspaceRoot = Get-BaseFolder
+    $resolvedPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location).Path, $Path))
+    $normalizedWorkspace = [System.IO.Path]::GetFullPath($workspaceRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $resolvedPath.StartsWith($normalizedWorkspace, [System.StringComparison]::OrdinalIgnoreCase)) {
+        OutputWarning -message "Path '$Path' resolves to '$resolvedPath' which is outside the repository. Please use a path inside the repository or a URL instead (https://aka.ms/algosettings#installApps)"
+    }
+}
+
+<#
+    .SYNOPSIS
     Tests if a file is a ZIP archive by checking for the "PK" magic bytes.
     .PARAMETER Path
     The path to the file to test.
@@ -130,6 +153,9 @@ function Get-AppFilesFromLocalPath {
     if (-not (Test-Path -Path $DestinationPath)) {
         New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
     }
+
+    # Validate that the path stays within the workspace root to prevent path traversal
+    Test-PathWithinWorkspace -Path $Path
 
     # Get all matching items (works for folders, wildcards, and single files)
     $matchedItems = @(Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue)

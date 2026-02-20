@@ -1424,3 +1424,20 @@ function Invoke-CommandWithRetry {
         }
     }
 }
+
+<#
+    .SYNOPSIS
+    Returns the base folder (workspace root) for the repository.
+    .DESCRIPTION
+    If the GITHUB_WORKSPACE environment variable is set, its value is returned.
+    Otherwise, the root is determined using 'git rev-parse --show-toplevel'.
+    .OUTPUTS
+    The absolute path to the workspace root, or an empty string if it cannot be determined.
+#>
+function Get-BaseFolder {
+    if ($ENV:GITHUB_WORKSPACE) {
+        return $ENV:GITHUB_WORKSPACE
+    }
+    return (git rev-parse --show-toplevel)
+}
+
