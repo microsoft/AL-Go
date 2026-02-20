@@ -1440,4 +1440,3 @@ function Get-BaseFolder {
     }
     return (git rev-parse --show-toplevel)
 }
-
