@@ -169,6 +169,7 @@ jobs:
           shell: ${{ matrix.shell }}
           artifactsVersion: ${{ github.event.inputs.appVersion }}
           artifactsFolder: '.artifacts'
+          buildMode: ${{ matrix.buildMode }}
 
       - name: Deploy to Business Central
         id: Deploy
