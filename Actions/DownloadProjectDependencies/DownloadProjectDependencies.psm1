@@ -17,10 +17,18 @@ function Test-PathWithinWorkspace {
     )
 
     $workspaceRoot = Get-BaseFolder
-    $resolvedPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location).Path, $Path))
+    # Use the parent directory for validation when the path contains wildcards
+    $pathToValidate = $Path
+    if ($Path -match '[\*\?]') {
+        $pathToValidate = Split-Path -Path $Path -Parent
+        if ([string]::IsNullOrEmpty($pathToValidate)) {
+            $pathToValidate = (Get-Location).Path
+        }
+    }
+    $resolvedPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location).Path, $pathToValidate))
     $normalizedWorkspace = [System.IO.Path]::GetFullPath($workspaceRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
     if (-not $resolvedPath.StartsWith($normalizedWorkspace, [System.StringComparison]::OrdinalIgnoreCase)) {
-        OutputWarning -message "Path '$Path' resolves to '$resolvedPath' which is outside the repository. Please use a path inside the repository or a URL instead (https://aka.ms/algosettings#installApps)"
+        OutputWarning -message "Path '$Path' resolves to '$resolvedPath' which is outside the repository. Please use a path inside the repository or a URL instead. This will be an error in a future version. See https://aka.ms/algosettings#installApps for more information."
     }
 }
 

@@ -598,6 +598,26 @@ Describe "DownloadProjectDependencies - Test-PathWithinWorkspace Tests" {
             Pop-Location
         }
     }
+
+    It 'Handles wildcard paths within the workspace without error' {
+        New-Item -ItemType Directory -Path (Join-Path $testWorkspace 'apps') | Out-Null
+        $wildcardPath = Join-Path $testWorkspace 'apps\*.app'
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $wildcardPath } {
+            param($Path)
+            { Test-PathWithinWorkspace -Path $Path } | Should -Not -Throw
+        }
+    }
+
+    It 'Warns for wildcard paths outside the workspace' {
+        $outsidePath = Join-Path $([System.IO.Path]::GetTempPath()) '*.app'
+        InModuleScope DownloadProjectDependencies -Parameters @{ Path = $outsidePath } {
+            param($Path)
+            Test-PathWithinWorkspace -Path $Path
+        }
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -ParameterFilter {
+            $message -like "*outside the repository*"
+        }
+    }
 }
 
 Describe "DownloadProjectDependencies - Path Traversal Prevention Tests" {
