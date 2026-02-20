@@ -1,5 +1,6 @@
 ### Issues
 
+- Issue 2107 Publish a specific build mode to an environment
 - Issue 1915 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
 - Issue 2118 Deployments from "Publish To Environment" not tracked against PR branch
 
