@@ -14,8 +14,9 @@ Import-Module (Join-Path -Path $PSScriptRoot "GetArtifactsForDeployment.psm1")
 DownloadAndImportBcContainerHelper
 
 # If buildMode is 'Default', set it to empty string (no prefix in artifact names)
+$buildModePrefix = $buildMode
 if ($buildMode -eq 'Default') {
-    $buildMode = ''
+    $buildModePrefix = ''
 }
 
 # Get artifacts for all projects
@@ -26,7 +27,7 @@ $defaultArtifactTypes = @("Apps","TestApps","Dependencies","PowerPlatformSolutio
 
 # Artifact types with buildMode prefix (used for workflow artifacts)
 # PowerPlatformSolution is always built with 'default' buildMode, so it never has a prefix
-$buildModeArtifactTypes = @("$($buildMode)Apps","$($buildMode)TestApps","$($buildMode)Dependencies","PowerPlatformSolution")
+$buildModeArtifactTypes = @("$($buildModePrefix)Apps","$($buildModePrefix)TestApps","$($buildModePrefix)Dependencies","PowerPlatformSolution")
 
 Write-Host "Get artifacts for version: '$artifactsVersion' (build mode: $buildMode) for these projects: '$projects' to folder: '$artifactsFolder'"
 

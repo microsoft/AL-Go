@@ -265,6 +265,10 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $matrix = $EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
         $matrix.matrix.include[0].buildMode | Should -Be "CustomBuildMode"
         $EnvironmentCount | Should -Be 1
+
+        # Verify buildMode is correctly set in DeploymentEnvironmentsJson
+        $deployEnvs = $DeploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $deployEnvs.test.buildMode | Should -Be "CustomBuildMode"
     }
 
     # Unknown environment - createEnvIfNotExists = false (default) - should throw error
