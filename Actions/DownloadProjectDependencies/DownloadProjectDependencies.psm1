@@ -83,9 +83,6 @@ function Expand-ZipFileToAppFiles {
             }
         }
 
-        # Clean up the extracted folder
-        Remove-Item -Path $extractPath -Recurse -Force
-
         if ($appFiles.Count -eq 0) {
             OutputWarning -message "No .app files found in zip archive: $fileName"
         } else {
@@ -94,6 +91,11 @@ function Expand-ZipFileToAppFiles {
         return $appFiles
     }
     finally {
+        # Clean up the extracted folder
+        if (Test-Path -Path $extractPath) {
+            Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        # Clean up the temp zip file if we created one
         if ($tempZipCreated) {
             Remove-Item -Path $zipToExtract -Force -ErrorAction SilentlyContinue
         }
@@ -282,7 +284,7 @@ function Get-DependenciesFromInstallApps {
             if ($appFile -notlike 'http*://*') {
                 $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $DestinationPath
             } else {
-                # Else, check for secrets in the URL and replace them
+                # Else, check for secrets in the URL and replace them. Only match on the first occurrence of the pattern ${{ secretName }}
                 $appFileUrl = $appFile
                 $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
                 if ($appFile -match $pattern) {
