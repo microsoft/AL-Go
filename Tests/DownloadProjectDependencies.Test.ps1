@@ -527,5 +527,3 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         { Get-DependenciesFromInstallApps -DestinationPath $downloadPath } | Should -Throw "*unknown secret 'missingSecret'*"
     }
 }
-
-
