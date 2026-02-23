@@ -1,6 +1,8 @@
 Param(
     [Parameter(HelpMessage = "Name of the secret to check (e.g., 'adminCenterApiCredentials' or comma-separated list to check multiple)", Mandatory = $true)]
     [string] $secretName,
+    [Parameter(HelpMessage = "Type of authentication (e.g., 'AuthContext' or 'Admin Center Api Credentials')", Mandatory = $false)]
+    [string] $authType = 'AuthContext',
     [Parameter(HelpMessage = "Environment name (for error messages)", Mandatory = $false)]
     [string] $environmentName = ''
 )
@@ -23,9 +25,9 @@ foreach ($name in ($secretName -split ',')) {
 }
 
 if ($authContext) {
-    Write-Host "AuthContext provided in secret $foundSecretName! Using this information for authentication."
+    Write-Host "$authType provided in secret $foundSecretName! Using this information for authentication."
 } else {
-    Write-Host "No AuthContext provided, initiating Device Code flow"
+    Write-Host "No $authType provided, initiating Device Code flow"
     DownloadAndImportBcContainerHelper
     $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
     if ($null -eq $authContext) {

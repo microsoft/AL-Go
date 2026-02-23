@@ -85,6 +85,7 @@ jobs:
         with:
           shell: powershell
           secretName: 'adminCenterApiCredentials'
+          authType: 'Admin Center Api Credentials'
 
   CreateDevelopmentEnvironment:
     needs: [ Initialization ]

@@ -17,6 +17,7 @@ Check if Admin Center Api Credentials / AuthContext are provided in secrets. If 
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | secretName | Yes | Name of the secret to check (comma-separated list to check multiple in order) | |
+| authType | | Type of authentication (e.g., 'AuthContext' or 'Admin Center Api Credentials') | AuthContext |
 | environmentName | | Environment name (for error messages when deploying to environments) | |
 
 ## OUTPUT
