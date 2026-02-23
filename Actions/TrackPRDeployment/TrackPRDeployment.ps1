@@ -34,6 +34,8 @@ function DeactivateAutoDeployments {
     $encodedEnv = [System.Uri]::EscapeDataString($environmentName)
     $envUrl = $null
 
+    $logUrl = $null
+
     $listUri = "$apiBase/deployments?environment=$encodedEnv&ref=$triggerRef&sha=$sha&per_page=1"
     OutputDebug "GET $listUri"
     $existingDeps = (InvokeWebRequest -Headers $headers -Uri $listUri).Content | ConvertFrom-Json
@@ -44,9 +46,12 @@ function DeactivateAutoDeployments {
         OutputDebug "GET $statusesUri"
         $statuses = (InvokeWebRequest -Headers $headers -Uri $statusesUri).Content | ConvertFrom-Json
         if ($statuses -and @($statuses).Count -gt 0) {
-            OutputDebug "Latest status: state=$(@($statuses)[0].state), environment_url=$(@($statuses)[0].environment_url)"
+            OutputDebug "Latest status: state=$(@($statuses)[0].state), environment_url=$(@($statuses)[0].environment_url), log_url=$(@($statuses)[0].log_url)"
             if (@($statuses)[0].environment_url) {
                 $envUrl = @($statuses)[0].environment_url
+            }
+            if (@($statuses)[0].log_url) {
+                $logUrl = @($statuses)[0].log_url
             }
             if (@($statuses)[0].state -ne 'inactive') {
                 Write-Host "Deactivating auto-created deployment $($dep.id) (ref: $($dep.ref))"
@@ -63,7 +68,10 @@ function DeactivateAutoDeployments {
         OutputDebug "No auto-created deployment found for environment=$environmentName, ref=$triggerRef, sha=$sha"
     }
 
-    return $envUrl
+    return @{
+        EnvironmentUrl = $envUrl
+        LogUrl         = $logUrl
+    }
 }
 
 <#
@@ -78,6 +86,7 @@ function CreatePRDeployment {
         [string] $prNumber,
         [string] $environmentName,
         [string] $environmentUrl,
+        [string] $logUrl,
         [string] $state
     )
 
@@ -102,6 +111,7 @@ function CreatePRDeployment {
         description = "Deployed PR #$prNumber to $environmentName"
     }
     if ($environmentUrl) { $statusBody['environment_url'] = $environmentUrl }
+    if ($logUrl) { $statusBody['log_url'] = $logUrl }
     $statusJson = $statusBody | ConvertTo-Json -Compress
 
     $statusUri = "$apiBase/deployments/$($deployment.id)/statuses"
@@ -136,16 +146,16 @@ OutputDebug "Environments to process: $($environments -join ', ')"
 foreach ($envName in $environments) {
     Write-Host "Tracking deployment for environment: $envName"
 
-    $envUrl = $null
+    $deploymentInfo = $null
     try {
-        $envUrl = DeactivateAutoDeployments -headers $headers -repository $repo -environmentName $envName -triggerRef $triggerRef -sha $sha
+        $deploymentInfo = DeactivateAutoDeployments -headers $headers -repository $repo -environmentName $envName -triggerRef $triggerRef -sha $sha
     }
     catch {
         OutputWarning -message "Could not deactivate auto-created deployment for $envName`: $($_.Exception.Message)"
     }
 
     try {
-        CreatePRDeployment -headers $headers -repository $repo -prRef $prRef -prNumber $prNumber -environmentName $envName -environmentUrl $envUrl -state $state
+        CreatePRDeployment -headers $headers -repository $repo -prRef $prRef -prNumber $prNumber -environmentName $envName -environmentUrl $deploymentInfo.EnvironmentUrl -logUrl $deploymentInfo.LogUrl -state $state
     }
     catch {
         OutputWarning -message "Failed to create PR deployment for $envName`: $($_.Exception.Message)"
