@@ -301,15 +301,6 @@ try {
 
     $additionalCountries = $settings.additionalCountries
 
-    $imageName = ""
-    if (-not $gitHubHostedRunner) {
-        $imageName = $settings.cacheImageName
-        if ($imageName) {
-            Write-Host "::group::Flush ContainerHelper Cache"
-            Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
-            Write-Host "::endgroup::"
-        }
-    }
     $authContext = $null
     $environmentName = ""
     $CreateRuntimePackages = $false
@@ -364,6 +355,21 @@ try {
         }
     }
 
+    $isNewBcContainerOverridden = $false
+    if ($runAlPipelineParams.Keys -notcontains 'NewBcContainer') {
+        $runAlPipelineParams += @{
+            "NewBcContainer" = {
+                Param([Hashtable]$parameters)
+                $parameters.additionalParameters += @("--label creator=AL-Go");
+                New-BcContainer @parameters;
+                Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock { $progressPreference = 'SilentlyContinue' }
+            }
+        }
+    }
+    else {
+        $isNewBcContainerOverridden = $true
+    }
+
     if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
             "RemoveBcContainer" = {
@@ -408,6 +414,22 @@ try {
                     }
                }
             }
+        }
+    }
+
+    $imageName = ""
+    if (-not $gitHubHostedRunner) {
+        $imageName = $settings.cacheImageName
+        if ($imageName) {
+            Write-Host "::group::Flush ContainerHelper Cache"
+            # If a custom NewBcContainer is used, we can't guarantee that containers are marked as created by AL-Go. In that case purge all.
+            $flushCacheParam = 'all,exitedcontainers'
+            if (!$isNewBcContainerOverridden) {
+                $flushCacheParam += ',ALGoContainersOnly'
+            }
+            OutputDebug -message "Running Flush-ContainerHelperCache with parameters: -cache $flushCacheParam -keepdays $($settings.cacheKeepDays)"
+            Flush-ContainerHelperCache -cache $flushCacheParam -keepdays $settings.cacheKeepDays
+            Write-Host "::endgroup::"
         }
     }
 
