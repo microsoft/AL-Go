@@ -1251,6 +1251,7 @@ function Assert-DockerIsRunning {
         }
         Write-Host "Docker service is not running (status: $($dockerService.Status)). Attempting to start..."
         Start-Service docker -ErrorAction Stop
+        $dockerService = Get-Service -Name 'docker'
         $dockerService.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
         Write-Host "Docker service started successfully"
     }
