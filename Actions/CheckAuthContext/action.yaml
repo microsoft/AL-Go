@@ -1,0 +1,39 @@
+name: Check Auth Context
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  secretName:
+    description: Name of the secret to check (e.g., 'adminCenterApiCredentials' or comma-separated list to check multiple)
+    required: true
+  authType:
+    description: Type of authentication (e.g., 'AuthContext' or 'Admin Center Api Credentials')
+    required: false
+    default: 'AuthContext'
+  environmentName:
+    description: Environment name (for error messages)
+    required: false
+    default: ''
+outputs:
+  deviceCode:
+    description: Device code for authentication (if device login is required)
+    value: ${{ steps.CheckAuthContext.outputs.deviceCode }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: CheckAuthContext
+      env:
+        _secretName: ${{ inputs.secretName }}
+        _authType: ${{ inputs.authType }}
+        _environmentName: ${{ inputs.environmentName }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckAuthContext" -Action {
+          ${{ github.action_path }}/CheckAuthContext.ps1 -secretName $ENV:_secretName -authType $ENV:_authType -environmentName $ENV:_environmentName
+        }
+branding:
+  icon: terminal
+  color: blue
