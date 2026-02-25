@@ -1255,7 +1255,7 @@ function Assert-DockerIsRunning {
         Write-Host "Docker service started successfully"
     }
     catch {
-        Write-Host "::warning::Failed to ensure Docker is running: $($_.Exception.Message)"
+        OutputWarning "Failed to ensure Docker is running: $($_.Exception.Message)"
     }
 }
 
