@@ -18,6 +18,7 @@ on:
 permissions:
   actions: read
   contents: read
+  deployments: write
   id-token: write
   pull-requests: read
   checks: read
@@ -194,6 +195,22 @@ jobs:
           environmentName: ${{ matrix.environment }}
           artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+
+  TrackPRDeployment:
+    needs: [ Initialization, Deploy ]
+    if: always() && (needs.Deploy.result == 'success' || needs.Deploy.result == 'failure') && startsWith(github.event.inputs.appVersion, 'PR_')
+    runs-on: [ windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Track PR Deployment
+        uses: microsoft/AL-Go-Actions/TrackPRDeployment@main
+        with:
+          shell: powershell
+          environmentsMatrixJson: ${{ needs.Initialization.outputs.environmentsMatrixJson }}
+          deployResult: ${{ needs.Deploy.result }}
+          artifactsVersion: ${{ github.event.inputs.appVersion }}
 
   PostProcess:
     needs: [ Initialization, Deploy ]

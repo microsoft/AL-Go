@@ -4,6 +4,11 @@
 
 - Issue 2107 Publish a specific build mode to an environment
 - Issue 1915 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
+- Issue 2118 Deployments from "Publish To Environment" not tracked against PR branch
+
+### PR deployment tracking
+
+When deploying a PR build via "Publish To Environment", the deployment is now correctly tracked against the PR branch instead of the trigger branch (e.g. main). Previously, GitHub would show the deployment against the latest commit on main, which was misleading. A new `TrackPRDeployment` action runs after the deploy job to deactivate the auto-created deployment and create one pointing to the actual PR branch.
 
 ### The default pull request trigger is changing
 
