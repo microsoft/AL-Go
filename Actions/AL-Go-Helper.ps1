@@ -1255,6 +1255,8 @@ function Assert-DockerIsRunning {
         Write-Host "::warning::Failed to ensure Docker is running: $($_.Exception.Message)"
     }
 }
+
+function CreateDevEnv {
     Param(
         [Parameter(Mandatory = $true)]
         [ValidateSet('local', 'cloud')]
