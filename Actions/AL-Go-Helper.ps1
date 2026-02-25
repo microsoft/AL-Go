@@ -1230,9 +1230,12 @@ function GetContainerName([string] $project) {
     "bc$($project -replace "[^a-z0-9\-]")$env:GITHUB_RUN_ID"
 }
 
-# Ensure the Docker service is running on Windows.
-# Docker 29.1.5 on GitHub-hosted Windows runners may not auto-start the service.
-# See https://github.com/actions/runner-images/issues/13729
+<#
+    .SYNOPSIS
+    Ensures that the Docker service is running on Windows.
+    .DESCRIPTION
+    Occasionally, on GitHub-hosted Windows runners, the Docker service may not start automatically, which can cause issues for workflows that depend on Docker.
+#>
 function Assert-DockerIsRunning {
     try {
         if (-not $isWindows) {
