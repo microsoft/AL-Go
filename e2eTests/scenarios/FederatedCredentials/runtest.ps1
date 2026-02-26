@@ -62,7 +62,7 @@ Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameC
 
 $repository = "$githubOwner/e2e-bingmaps.appsource"
 $template = "https://github.com/$appSourceTemplate"
-$sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
+$sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # Source repository to reset e2e-bingmaps.appsource to (must be created manually)
 
 # Setup authentication and repository
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
