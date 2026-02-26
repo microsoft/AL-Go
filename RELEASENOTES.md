@@ -1,3 +1,11 @@
+### Improving error detection and build reliability when downloading project dependencies
+
+The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
+
+- Earlier detection of inaccessible or misconfigured URLs
+- Clearer error messages when secrets are missing or URLs are invalid
+- Warnings for potential issues like duplicate filenames
+
 ## v8.3
 
 ### Issues
@@ -38,14 +46,6 @@ Add the following setting to one of your settings files and run the Update AL-Go
 Previously, when running the "Publish To Environment" workflow with an environment name that doesn't exist in GitHub or AL-Go settings, the workflow would automatically create a new GitHub environment. This could lead to problems when environment names were mistyped, as the bogus environment would then cause subsequent CI/CD workflows to fail.
 
 Now, the workflow will fail with a clear error message if the specified environment doesn't exist. If you intentionally want to deploy to a new environment that hasn't been configured yet, you can check the **Create environment if it does not exist** checkbox when running the workflow.
-
-### Improving error detection and build reliability when downloading project dependencies
-
-The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
-
-- Earlier detection of inaccessible or misconfigured URLs
-- Clearer error messages when secrets are missing or URLs are invalid
-- Warnings for potential issues like duplicate filenames
 
 ### Set default values for workflow inputs
 
