@@ -157,7 +157,12 @@ function Get-AppFilesFromLocalPath {
 
         if ($extension -eq '.app') {
             $destFile = Join-Path $DestinationPath $item.Name
-            Copy-Item -Path $item.FullName -Destination $destFile -Force
+            if ($item.FullName -ne $destFile) {
+                Copy-Item -Path $item.FullName -Destination $destFile -Force
+            } else {
+                # This can happen if the user specifies a local path that is the same as AL-Go uses for storing dependencies
+                OutputDebug -message "Source and destination are the same for .app file: $destFile. Skipping copy."
+            }
             $appFiles += $destFile
         } elseif (Test-IsZipFile -Path $item.FullName) {
             $appFiles += Expand-ZipFileToAppFiles -ZipFile $item.FullName -DestinationPath $DestinationPath
