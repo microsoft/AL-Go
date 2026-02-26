@@ -29,23 +29,18 @@ Write-Host -ForegroundColor Yellow @'
 # This test uses the bcsamples-bingmaps.appsource repository and will deliver a new build of the app to AppSource.
 # The bcsamples-bingmaps.appsource repository is setup to use an Azure KeyVault for secrets and app signing.
 #
-# The test requires a stable temporary repository called e2e-bingmaps.appsource that must be manually created
-# with federated credentials configured before running this test.
-# This is required because federated credentials no longer work with repository name-based matching,
-# so the repository must remain stable to maintain the federated credential configuration.
-# e2e-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
+# During the test, the bcsamples-bingmaps.appsource repository will be copied to a new repository called tmp-bingmaps.appsource.
+# tmp-bingmaps.appsource has access to the same Azure KeyVault as bcsamples-bingmaps.appsource using federated credentials.
 # The bcSamples-bingmaps.appsource repository is setup for continuous delivery to AppSource
-# e2e-bingmaps.appsource also has access to the Entra ID app registration for delivering to AppSource using federated credentials.
+# tmp-bingmaps.appsource also has access to the Entra ID app registration for delivering to AppSource using federated credentials.
 # This test will deliver another build of the latest app version already delivered to AppSource (without go-live)
 #
 # This test tests the following scenario:
 #
-#  - Verify that the repository e2e-bingmaps.appsource exists (error out if not)
-#  - Reset the repository to match bcsamples-bingmaps.appsource for deterministic state
-#  - Clean up old workflow runs to ensure proper workflow tracking
-#  - Update AL-Go System Files in branch main in e2e-bingmaps.appsource
-#  - Update version numbers in app.json in e2e-bingmaps.appsource in order to not be lower than the version number in AppSource (and not be higher than the next version from bcsamples-bingmaps.appsource)
-#  - Wait for CI/CD in branch main in repository e2e-bingmaps.appsource
+#  - Create a new repository called tmp-bingmaps.appsource (based on bcsamples-bingmaps.appsource)
+#  - Update AL-Go System Files in branch main in tmp-bingmaps.appsource
+#  - Update version numbers in app.json in tmp-bingmaps.appsource in order to not be lower than the version number in AppSource (and not be higher than the next version from bcsamples-bingmaps.appsource)
+#  - Wait for CI/CD in branch main in repository tmp-bingmaps.appsource
 #  - Check that artifacts are created and signed
 #  - Check that the app is delivered to AppSource
 '@
@@ -60,122 +55,40 @@ if ($linux) {
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
-$repository = "$githubOwner/e2e-bingmaps.appsource"
+$repository = "$githubOwner/tmp-bingmaps.appsource"
 $template = "https://github.com/$appSourceTemplate"
-$sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # Source repository to reset e2e-bingmaps.appsource to (must be created manually)
+$sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
 
-# Setup authentication and repository
+# Create temp repository from sourceRepository
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
-# Check if the repository already exists
-# This repository must exist with federated credentials already configured
-try {
-    invoke-gh api repos/$repository --method HEAD -silent | Out-Null
-}
-catch {
-    throw "Repository $repository does not exist. The repository must be created manually with federated credentials configured before running this test."
+gh api repos/$repository --method HEAD
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Repository $repository already exists. Deleting it."
+    gh repo delete $repository --yes | Out-Host
+    Start-Sleep -Seconds 30
 }
 
-# Repository exists - reuse it and reset to source state
-# This is required because federated credentials no longer work with repository name-based matching,
-# so the repository must remain stable across test runs
-Write-Host "Repository $repository exists. Reusing and resetting to match source."
+CreateAlGoRepository `
+    -github:$github `
+    -template "https://github.com/$sourceRepository" `
+    -repository $repository `
+    -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
 
-# Reset the repository to match the source repository
-ResetRepositoryToSource -repository $repository -sourceRepository $sourceRepository -branch 'main'
-
-# Capture previous workflow run IDs BEFORE cleanup (they'll be deleted, but we need the baseline)
-# This follows the established pattern from CommitAndPush function
-Write-Host "Capturing previous workflow runs before cleanup..."
-$previousRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
-$previousRunIds = $previousRuns.workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
-if ($previousRunIds) {
-    Write-Host "Previous run IDs captured: $($previousRunIds -join ', ')"
-}
-else {
-    Write-Host "No previous runs found"
-}
-
-# Clean up workflow runs to ensure clean state (but we already have the IDs captured above)
-CleanupWorkflowRuns -repository $repository
-
-# Always set/update secrets (they may have changed or repo may have been reset)
 SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 
-# Re-apply the custom repository settings that were lost during reset
-$tempPath = [System.IO.Path]::GetTempPath()
-$repoPath = Join-Path $tempPath ([System.Guid]::NewGuid().ToString())
-New-Item $repoPath -ItemType Directory | Out-Null
-Push-Location $repoPath
-try {
-    Write-Host "Re-applying repository settings..."
-    invoke-gh repo clone $repository .
-    $repoSettingsFile = ".github\AL-Go-Settings.json"
-    if (Test-Path $repoSettingsFile) {
-        Add-PropertiesToJsonFile -path $repoSettingsFile -properties @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow"}
-        invoke-git add $repoSettingsFile
-        invoke-git commit -m "Update repository settings for test" --quiet
-        invoke-git push --quiet
-        Write-Host "Settings push completed. This will trigger a CI/CD workflow run."
-    }
-    else {
-        Write-Host "Warning: .github\AL-Go-Settings.json not found after cloning. Settings may not be applied correctly."
-    }
-}
-finally {
-    Pop-Location
-    Remove-Item -Path $repoPath -Force -Recurse -ErrorAction SilentlyContinue
-}
-
-# Wait a moment for the settings push workflow to be registered, then update baseline
-Write-Host "Updating baseline workflow runs to include the settings push workflow..."
-Start-Sleep -Seconds 5
-$updatedRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
-$previousRunIds = @($updatedRuns.workflow_runs | Select-Object -First 50 | Select-Object -ExpandProperty id)
-Write-Host "Updated baseline now includes $($previousRunIds.Count) workflow run(s)"
-
 # Upgrade AL-Go System Files to test version
-RunUpdateAlGoSystemFiles -directCommit -wait -repository $repository | Out-Null
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -repository $repository | Out-Null
 
-# Wait for CI/CD workflow to start (triggered by Update AL-Go System Files)
-# This follows the established pattern from CommitAndPush: poll until a new run appears
-Write-Host "Waiting for CI/CD workflow to start (triggered by Update AL-Go System Files push)..."
-
-# Poll for new workflow run that wasn't in the previous list
-$maxAttempts = 60  # 10 minutes maximum wait (60 * 10 seconds)
-$attempts = 0
-$run = $null
-
-while ($attempts -lt $maxAttempts) {
-    Start-Sleep -Seconds 10
-    $attempts++
-
-    $currentRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
-    # Find new push workflow runs that weren't in our previous list
-    $newRuns = $currentRuns.workflow_runs | Where-Object {
-        $_.event -eq 'push' -and $previousRunIds -notcontains $_.id
-    }
-
-    if ($newRuns) {
-        # Get the most recent new run (first one, since API returns newest first)
-        $run = $newRuns | Select-Object -First 1
-        Write-Host "Found new CI/CD workflow run: $($run.id) (created at $($run.created_at))"
-        break
-    }
-
-    Write-Host "Waiting for new CI/CD workflow run to appear (attempt $attempts/$maxAttempts)..."
-}
-
-if (-not $run) {
-    throw "Error: Timeout waiting for CI/CD workflow run to start after Update AL-Go System Files completed."
-}
-
-Write-Host "Waiting for CI/CD workflow run $($run.id) to complete..."
+# Wait for CI/CD to complete
+Start-Sleep -Seconds 60
+$runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
+$run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id -noError
 
-# The CI/CD workflow should fail because the version number of the app in the repository is lower than the version number in AppSource
+# The CI/CD workflow should fail because the version number of the app in thie repository is lower than the version number in AppSource
 # Reason being that major.minor from the original bcsamples-bingmaps.appsource is the same and the build number in the newly created repository is lower than the one in AppSource
-# This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the e2e-bingmaps.appsource repo) and use it in the next run
+# This error is expected we will grab the version number from AppSource, add one to revision number (by switching to versioningstrategy 3 in the tmp repo) and use it in the next run
 $MatchArr = Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'Deliver to AppSource' -stepName 'Deliver' -expectedText '(?m)^.*The new version number \((\d+(?:\.\d+){3})\) is lower than the existing version number \((\d+(?:\.\d+){3})\) in Partner Center.*$' -isRegEx
 $appSourceVersion = [System.Version]$MatchArr[2]
 $newVersion = [System.Version]::new($appSourceVersion.Major, $appSourceVersion.Minor, $appSourceVersion.Build, 0)
