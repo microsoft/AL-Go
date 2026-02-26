@@ -289,6 +289,9 @@ function Get-DependenciesFromInstallApps {
 
         $updatedListOfFiles = @()
         foreach($appFile in $install."$list") {
+            if ([string]::IsNullOrWhiteSpace($appFile)) {
+                continue
+            }
             Write-Host "Processing install$($list) entry: $appFile"
 
             # If the app file is not a URL, resolve local path.
