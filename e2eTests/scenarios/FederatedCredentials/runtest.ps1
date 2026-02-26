@@ -84,23 +84,23 @@ Write-Host "Repository $repository exists. Reusing and resetting to match source
 # Reset the repository to match the source repository
 ResetRepositoryToSource -repository $repository -sourceRepository $sourceRepository -branch 'main'
 
-# Clean up workflow runs to ensure proper workflow tracking
-CleanupWorkflowRuns -repository $repository
-
-# Always set/update secrets (they may have changed or repo may have been reset)
-SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
-
-# Capture previous workflow run IDs before making any changes
+# Capture previous workflow run IDs BEFORE cleanup (they'll be deleted, but we need the baseline)
 # This follows the established pattern from CommitAndPush function
-Write-Host "Capturing previous workflow runs..."
+Write-Host "Capturing previous workflow runs before cleanup..."
 $previousRuns = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
 $previousRunIds = $previousRuns.workflow_runs | Where-Object { $_.event -eq 'push' } | Select-Object -ExpandProperty id
 if ($previousRunIds) {
-    Write-Host "Previous run IDs: $($previousRunIds -join ', ')"
+    Write-Host "Previous run IDs captured: $($previousRunIds -join ', ')"
 }
 else {
     Write-Host "No previous runs found"
 }
+
+# Clean up workflow runs to ensure clean state (but we already have the IDs captured above)
+CleanupWorkflowRuns -repository $repository
+
+# Always set/update secrets (they may have changed or repo may have been reset)
+SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 
 # Re-apply the custom repository settings that were lost during reset
 $tempPath = [System.IO.Path]::GetTempPath()
