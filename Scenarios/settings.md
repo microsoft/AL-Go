@@ -48,6 +48,7 @@ When running a workflow or a local script, the settings are applied by reading s
 | <a id="appDependencyProbingPaths"></a>appDependencyProbingPaths | Array of dependency specifications, from which apps will be downloaded when the CI/CD workflow is starting. Every dependency specification consists of the following properties:<br />**repo** = repository<br />**version** = version (default latest)<br />**release_status** = latestBuild/release/prerelease/draft (default release)<br />**projects** = projects (default * = all)<br />**branch** = branch (default main)<br />**AuthTokenSecret** = Name of secret containing auth token (default none)<br /> | [ ] |
 | <a id="preprocessorSymbols"></a>preprocessorSymbols | List of preprocessor symbols to use when building the apps. This setting can be specified in [workflow specific settings files](https://aka.ms/algosettings#where-are-the-settings-located) or in [conditional settings](https://aka.ms/algosettings#conditional-settings). | [ ] |
 | <a id="bcptThresholds"></a>bcptThresholds | Structure with properties for the thresholds when running performance tests using the Business Central Performance Toolkit.<br />**DurationWarning** = a warning is shown if the duration of a bcpt test degrades more than this percentage (default 10)<br />**DurationError** - an error is shown if the duration of a bcpt test degrades more than this percentage (default 25)<br />**NumberOfSqlStmtsWarning** - a warning is shown if the number of SQL statements from a bcpt test increases more than this percentage (default 5)<br />**NumberOfSqlStmtsError** - an error is shown if the number of SQL statements from a bcpt test increases more than this percentage (default 10)<br />*Note that errors and warnings on the build in GitHub are only issued when a threshold is exceeded on the codeunit level, when an individual operation threshold is exceeded, it is only shown in the test results viewer.* |
+| <a id="postponeProjectInBuildOrder"></a>postponeProjectInBuildOrder | When this setting is enabled (true), the project will be postponed to the end of the build sequence whenever possible - specifically, when no other projects depend on it. This allows, for example, test projects to run only after all build projects have completed successfully.<br/>This setting only has effect when useProjectDependencies is also enabled, as dependency information is required to determine whether postponement is allowed. | false |
 
 ## AppSource specific basic project settings
 
@@ -422,6 +423,7 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | PipelineInitialize.ps1 | Initialize the pipeline |
 | DockerPull.ps1 | Pull the image specified by the parameter $imageName |
 | NewBcContainer.ps1 | Create the container using the parameters transferred in the $parameters hashtable |
+| NewBcCompilerFolder.ps1 | Create the compilerFolder using the parameters transferred in the $parameters hashtable |
 | ImportTestToolkitToBcContainer.ps1 | Import the test toolkit apps specified by the $parameters hashtable |
 | CompileAppInBcContainer.ps1 | Compile the apps specified by the $parameters hashtable |
 | GetBcContainerAppInfo.ps1 | Get App Info for the apps specified by the $parameters hashtable |
@@ -432,7 +434,9 @@ Note that changes to AL-Go for GitHub or Run-AlPipeline functionality in the fut
 | ImportTestDataInBcContainer.ps1 | If this function is provided, it is expected to insert the test data needed for running tests |
 | RunTestsInBcContainer.ps1 | Run the tests specified by the $parameters hashtable |
 | GetBcContainerAppRuntimePackage.ps1 | Get the runtime package specified by the $parameters hashtable |
+| GetBcContainerEventLog.ps1 | Get the eventlog based on the $parameters hashtable |
 | RemoveBcContainer.ps1 | Cleanup based on the $parameters hashtable |
+| RemoveBcCompilerFolder.ps1 | Cleanup based on the $parameters hashtable |
 | InstallMissingDependencies | Install missing dependencies |
 | BackupBcContainerDatabases | Backup Databases in container for subsequent restore(s) |
 | RestoreDatabasesInBcContainer | Restore Databases in container |

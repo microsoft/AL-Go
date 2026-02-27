@@ -27,12 +27,13 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
+$defaultBcContainerHelperVersion = "https://github.com/freddydk/navcontainerhelper/archive/refs/heads/bhg.zip" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
     "NewBcContainer"
+    "NewBcCompilerFolder"
     "ImportTestToolkitToBcContainer"
     "CompileAppInBcContainer"
     "GetBcContainerAppInfo"
@@ -43,7 +44,9 @@ $runAlPipelineOverrides = @(
     "ImportTestDataInBcContainer"
     "RunTestsInBcContainer"
     "GetBcContainerAppRuntimePackage"
+    "GetBcContainerEventLog"
     "RemoveBcContainer"
+    "RemoveBcCompilerFolder"
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
@@ -1753,6 +1756,38 @@ function CheckAndCreateProjectFolder {
     }
 }
 
+function TestIfProjectHasDependents {
+    Param(
+        [string] $project,
+        [string[]] $projects,
+        [hashtable] $appDependencies,
+        [array] $projectsOrder
+    )
+
+    $hasRemainingDependents = $false
+    foreach($otherProject in $projects) {
+        if ($otherProject -ne $project) {
+            # Grab dependencies from other project, which haven't been included in the build order yet
+            $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
+                $dependency = $_
+                $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
+                return -not $alreadyBuilt
+            }
+            Write-Host "Other project $otherProject has dependencies that are not in the build order yet: $($otherDependencies -join ", ")"
+            foreach($dependency in $otherDependencies) {
+                if ($appDependencies."$project".apps -contains $dependency) {
+                    Write-Host "Project $project is still a dependency for project $otherProject"
+                    $hasRemainingDependents = $true
+                }
+            }
+        }
+    }
+    if (!$hasRemainingDependents) {
+        Write-Host "Project $project has no dependents, can be built later"
+    }
+    return $hasRemainingDependents
+}
+
 Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
@@ -1767,10 +1802,14 @@ Function AnalyzeProjectDependencies {
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
+    $projectsThatCanBePostponed = @()
     foreach($project in $projects) {
-        Write-Host "- Analyzing project: $project"
+        Write-Host -NoNewline "Analyzing project: $project, "
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.postponeProjectInBuildOrder) {
+            $projectsThatCanBePostponed += $project
+        }
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
@@ -1784,7 +1823,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
+        OutputMessageAndArray -Message "folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -1802,6 +1841,7 @@ Function AnalyzeProjectDependencies {
             "dependencies" = $dependenciesForProject
         }
     }
+    $appDependencies | ConvertTo-Json | Out-Host
     # AppDependencies is a hashtable with the following structure
     # $appDependencies = @{
     #     "project1" = @{
@@ -1815,6 +1855,11 @@ Function AnalyzeProjectDependencies {
     # }
     $no = 1
     $projectsOrder = @()
+    # Collect projects without dependents, which can be built later
+    # This is done to avoid building projects at an earlier stage than needed and increase the time until next job subsequently
+    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependents
+    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependents)
+    $projectsWithoutDependents = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1829,6 +1874,11 @@ Function AnalyzeProjectDependencies {
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
+                # Check whether dependency is already resolved by a previous build project
+                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
+                if ($depProject.Count -gt 0) {
+                    continue
+                }
                 # Find the project that contains the app for which the current project has a dependency
                 $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
@@ -1881,11 +1931,28 @@ Function AnalyzeProjectDependencies {
         if ($thisJob.Count -eq 0) {
             throw "Circular project reference encountered, cannot determine build order"
         }
+
+        # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
+        $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
+            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder)
+        })
+
+        # Remove projects in this job from the list of projects to be built (including the projects without dependents)
+        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
+
+        # Do not build jobs without dependents until the last job, remove them from this job
+        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependents -notcontains $_ })
+
+        if ($projects.Count -eq 0) {
+            # Last job, add jobs without dependents
+            Write-Host "Adding projects without dependents to last build job"
+            $thisJob += $projectsWithoutDependents
+        }
+
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
 
-        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
 

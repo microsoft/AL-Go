@@ -359,8 +359,12 @@ try {
             Write-Host "Add override for $scriptName"
             Trace-Information -Message "Using override for $scriptName"
 
+            $scriptblock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            if (-not $scriptblock) {
+                throw "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+            }
             $runAlPipelineParams += @{
-                "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+                "$scriptName" = $scriptblock
             }
         }
     }

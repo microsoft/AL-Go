@@ -25,6 +25,9 @@ Add the following setting to one of your settings files and run the Update AL-Go
 
 ### Issues
 
+- Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
+- Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
+- Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
 - Issue 2095 DeliverToAppSource.ProductId needs to be specified (Library app)
 - Issue 2082 Sign action no longer fails when repository is empty or no artifacts are generated
 - Issue 2078 Workflows run since January 14th '26 have space before CI/CD removed
@@ -42,6 +45,10 @@ Add the following setting to one of your settings files and run the Update AL-Go
 Previously, when running the "Publish To Environment" workflow with an environment name that doesn't exist in GitHub or AL-Go settings, the workflow would automatically create a new GitHub environment. This could lead to problems when environment names were mistyped, as the bogus environment would then cause subsequent CI/CD workflows to fail.
 
 Now, the workflow will fail with a clear error message if the specified environment doesn't exist. If you intentionally want to deploy to a new environment that hasn't been configured yet, you can check the **Create environment if it does not exist** checkbox when running the workflow.
+
+### New Settings
+
+- `postponeProjectInBuildOrder` is a new project setting, which will (if set to true) cause the project to be postponed until the last build job when possible. If set on test projects, then all tests can be deferred until all builds have succeeded.
 
 ### Set default values for workflow inputs
 
