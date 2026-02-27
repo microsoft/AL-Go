@@ -6,6 +6,10 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 - Clearer error messages when secrets are missing or URLs are invalid
 - Warnings for potential issues like duplicate filenames
 
+### Issues
+
+- Attempt to start docker service in case it is not running
+
 ## v8.3
 
 ### Issues
