@@ -27,6 +27,7 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     if ($isWindows) {
+        Assert-DockerIsRunning
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
         Start-Job -ScriptBlock {
