@@ -1,0 +1,42 @@
+name: E2E Setup Repositories
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: pwsh
+  githubOwner:
+    description: GitHub owner for test repositories
+    required: true
+  bcContainerHelperVersion:
+    description: BcContainerHelper version
+    required: false
+    default: ''
+  token:
+    description: GitHub token with permissions to create repositories
+    required: true
+outputs:
+  actionsRepo:
+    description: Actions repository name
+    value: ${{ steps.run.outputs.actionsRepo }}
+  perTenantExtensionRepo:
+    description: Per-tenant extension repository name
+    value: ${{ steps.run.outputs.perTenantExtensionRepo }}
+  appSourceAppRepo:
+    description: AppSource app repository name
+    value: ${{ steps.run.outputs.appSourceAppRepo }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _githubOwner: ${{ inputs.githubOwner }}
+        _bcContainerHelperVersion: ${{ inputs.bcContainerHelperVersion }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        ${{ github.action_path }}/E2ESetupRepositories.ps1 -githubOwner $ENV:_githubOwner -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
+branding:
+  icon: git-branch
+  color: blue

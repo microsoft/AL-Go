@@ -5,6 +5,7 @@ $defaultApplication = "22.0.0.0"
 $defaultRuntime = "10.0"
 $defaultPublisher = "MS Test"
 $lastTokenRefresh = 0
+$github = $false
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
@@ -25,6 +26,7 @@ function SetTokenAndRepository {
 
     $script:githubOwner = $githubOwner
     $script:defaultRepository = $repository
+    $script:github = $github
 
     if ($github) {
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
@@ -240,6 +242,11 @@ function CancelAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
     $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     foreach($run in $runs.workflow_runs) {
         Write-Host $run.name
@@ -260,6 +267,11 @@ function WaitAllWorkflows {
     if (-not $noDelay.IsPresent) {
         Start-Sleep -Seconds 60
     }
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
+
     $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | ConvertFrom-Json
     $workflowRuns = $runs.workflow_runs | Select-Object -First $top
     foreach($run in $workflowRuns) {
@@ -430,11 +442,11 @@ function CreateAlGoRepository {
     }
     if ($private) {
         Write-Host -ForegroundColor Yellow "`nCreating private repository $repository (based on $template)"
-        invoke-gh repo create $repository --private --clone
+        invoke-gh repo create "$repository" --private --clone
     }
     else {
         Write-Host -ForegroundColor Yellow "`nCreating public repository $repository (based on $template)"
-        invoke-gh repo create $repository --public --clone
+        invoke-gh repo create "$repository" --public --clone
     }
     Start-Sleep -seconds 10
     Set-Location '*'
@@ -557,9 +569,7 @@ function CommitAndPush {
         [switch] $wait
     )
 
-    if (!$repository) {
-        $repository = $defaultRepository
-    }
+    $repository = $defaultRepository
 
     RefreshToken -repository $repository
 
@@ -697,6 +707,10 @@ function Test-LogContainsFromRun {
         [string] $expectedText,
         [switch] $isRegEx
     )
+
+    if (!$repository) {
+        $repository = $defaultRepository
+    }
 
     DownloadWorkflowLog -repository $repository -runid $runid -path 'logs'
     try {
