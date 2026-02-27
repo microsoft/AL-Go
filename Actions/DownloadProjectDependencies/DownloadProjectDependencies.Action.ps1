@@ -131,8 +131,8 @@ try {
     $settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
 } finally {
     Pop-Location
+    Write-Host "::endgroup::"
 }
-Write-Host "::endgroup::"
 
 $downloadedApps = @()
 $downloadedTestApps = @()

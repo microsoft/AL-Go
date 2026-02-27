@@ -238,7 +238,7 @@ function Get-AppFilesFromUrl {
     # Check if the downloaded file is a zip file (by extension or magic bytes)
     if (Test-IsZipFile -Path $downloadedFile) {
         $appFiles = Expand-ZipFileToAppFiles -ZipFile $downloadedFile -DestinationPath $DownloadPath
-        Remove-Item -Path $downloadedFile -Force
+        Remove-Item -Path $downloadedFile -Force -ErrorAction SilentlyContinue
         return $appFiles
     }
 
