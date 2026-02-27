@@ -62,6 +62,37 @@ $scenariosFilterArr = $scenariosFilter -split ',' | ForEach-Object { $_.Trim() }
 $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
 $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilterArr | ForEach-Object { $scenario -like $_ } }
 
+# Load disabled scenarios from config file (optional)
+$disabledScenariosConfigPath = Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json"
+$disabledScenariosConfig = @()
+if (Test-Path -Path $disabledScenariosConfigPath) {
+    $disabledScenariosContent = Get-Content -Path $disabledScenariosConfigPath -Encoding UTF8 -Raw
+    if (-not [string]::IsNullOrWhiteSpace($disabledScenariosContent)) {
+        $disabledScenariosConfig = $disabledScenariosContent | ConvertFrom-Json
+    }
+}
+else {
+    Write-Host "No disabled-scenarios.json found; proceeding with all scenarios enabled."
+}
+$disabledScenarios = @()
+if ($disabledScenariosConfig -and $disabledScenariosConfig.Count -gt 0) {
+    $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
+}
+Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"
+
+# Filter out disabled scenarios
+$scenariosBeforeDisabledFilter = $filteredScenarios
+$beforeFilter = $filteredScenarios.Count
+$filteredScenarios = $filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ }
+$afterFilter = $filteredScenarios.Count
+if ($beforeFilter -ne $afterFilter) {
+    Write-Host "Filtered out $($beforeFilter - $afterFilter) disabled scenario(s)"
+    $disabledScenariosConfig | Where-Object { ($scenariosBeforeDisabledFilter -contains $_.scenario) -and ($filteredScenarios -notcontains $_.scenario) } | ForEach-Object {
+        Write-Host "  - $($_.scenario): $($_.reason)"
+    }
+}
+Write-Host "Scenarios to run: $($filteredScenarios -join ', ')"
+
 $scenariosJson = @{
     "matrix" = @{
         "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
