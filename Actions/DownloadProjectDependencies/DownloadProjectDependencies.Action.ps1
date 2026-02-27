@@ -9,6 +9,8 @@
     [string] $token
 )
 
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DownloadProjectDependencies.psm1" -Resolve) -DisableNameChecking
+
 function DownloadDependenciesFromProbingPaths {
     param(
         $baseFolder,
@@ -123,6 +125,15 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
+Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
+Push-Location -Path (Join-Path $baseFolder $project)  #Change to the project folder because installApps paths are relative to the project folder
+try {
+    $settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
+} finally {
+    Pop-Location
+    Write-Host "::endgroup::"
+}
+
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -136,6 +147,10 @@ $downloadedDependencies | ForEach-Object {
         $downloadedApps += $_
     }
 }
+
+# Add dependencies from settings
+$downloadedApps += $settingsDependencies.Apps
+$downloadedTestApps += $settingsDependencies.TestApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
