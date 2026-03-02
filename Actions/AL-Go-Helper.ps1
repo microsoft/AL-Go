@@ -1846,10 +1846,12 @@ Function AnalyzeProjectDependencies {
                 if (-not $resolvedTarget) {
                     throw "Test project '$project' references project '$targetProject' which does not exist in the repository"
                 }
-                # Add all app IDs from the target project as dependencies
-                $testProjectDeps += @($appDependencies."$resolvedTarget".apps)
-                # Also add all dependencies of the target project (transitive)
-                $testProjectDeps += @($appDependencies."$resolvedTarget".dependencies)
+                # Use a synthetic marker ID unique to the target project so the topological sort
+                # only resolves the dependency to that specific project (not other projects that
+                # happen to produce the same apps)
+                $projectMarker = "testProjectDep:$resolvedTarget"
+                $appDependencies."$resolvedTarget".apps += @($projectMarker)
+                $testProjectDeps += @($projectMarker)
             }
             $appDependencies."$project".dependencies = @(($appDependencies."$project".dependencies + $testProjectDeps) | Select-Object -Unique)
         }
