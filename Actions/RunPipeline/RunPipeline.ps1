@@ -119,9 +119,13 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+    $isTestProject = $settings.testProject -and $settings.testProject.Count -gt 0
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
-        Write-Host "Repository is empty, exiting"
-        exit
+        if (-not $isTestProject) {
+            Write-Host "Repository is empty, exiting"
+            exit
+        }
+        Write-Host "Test project: no local app/test folders, will install and test apps from upstream projects"
     }
 
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"

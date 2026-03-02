@@ -714,12 +714,22 @@ function AnalyzeRepo {
         if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
+    $isTestProject = $settings.testProject -and $settings.testProject.Count -gt 0
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
-        $settings.doNotRunTests = $true
+        if ($isTestProject) {
+            # Test projects run tests from upstream projects via installTestApps, not from local testFolders
+            Write-Host "Test project: tests will be run from installed test apps"
+            $settings.installTestRunner = $true
+            $settings.installTestFramework = $true
+            $settings.installTestLibraries = $true
+        }
+        else {
+            if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+            $settings.doNotRunTests = $true
+        }
     }
     if (-not $settings.appFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
+        if (!$isTestProject -and !$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
     }
 
     $settings
@@ -1813,6 +1823,26 @@ Function AnalyzeProjectDependencies {
     #         "dependencies" = @("appid7", "appid8")
     #     }
     # }
+
+    # Handle testProject settings: inject explicit dependencies from target project names
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+        if ($projectSettings.testProject -and $projectSettings.testProject.Count -gt 0) {
+            Write-Host "Project '$project' is a test project targeting: $($projectSettings.testProject -join ', ')"
+            $testProjectDeps = @()
+            foreach($targetProject in $projectSettings.testProject) {
+                if ($appDependencies.Keys -notcontains $targetProject) {
+                    throw "Test project '$project' references project '$targetProject' which does not exist in the repository"
+                }
+                # Add all app IDs from the target project as dependencies
+                $testProjectDeps += @($appDependencies."$targetProject".apps)
+                # Also add all dependencies of the target project (transitive)
+                $testProjectDeps += @($appDependencies."$targetProject".dependencies)
+            }
+            $appDependencies."$project".dependencies = @(($appDependencies."$project".dependencies + $testProjectDeps) | Select-Object -Unique)
+        }
+    }
+
     $no = 1
     $projectsOrder = @()
     Write-Host "Analyzing dependencies"

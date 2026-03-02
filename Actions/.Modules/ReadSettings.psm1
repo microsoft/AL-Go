@@ -190,6 +190,7 @@ function GetDefaultSettings
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
+        "testProject"                                   = @()
         "runs-on"                                       = "windows-latest"
         "shell"                                         = ""
         "githubRunner"                                  = ""
