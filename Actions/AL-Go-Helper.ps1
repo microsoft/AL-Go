@@ -1831,13 +1831,25 @@ Function AnalyzeProjectDependencies {
             Write-Host "Project '$project' is a test project targeting: $($projectSettings.testProject -join ', ')"
             $testProjectDeps = @()
             foreach($targetProject in $projectSettings.testProject) {
-                if ($appDependencies.Keys -notcontains $targetProject) {
+                # Resolve target project name: support both full paths (build/projects/Apps) and short names (Apps)
+                $resolvedTarget = $null
+                if ($appDependencies.Keys -contains $targetProject) {
+                    $resolvedTarget = $targetProject
+                } else {
+                    $matchingProjects = @($appDependencies.Keys | Where-Object { $_ -eq $targetProject -or $_.EndsWith("/$targetProject") -or $_.EndsWith("\$targetProject") })
+                    if ($matchingProjects.Count -eq 1) {
+                        $resolvedTarget = $matchingProjects[0]
+                    } elseif ($matchingProjects.Count -gt 1) {
+                        throw "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
+                    }
+                }
+                if (-not $resolvedTarget) {
                     throw "Test project '$project' references project '$targetProject' which does not exist in the repository"
                 }
                 # Add all app IDs from the target project as dependencies
-                $testProjectDeps += @($appDependencies."$targetProject".apps)
+                $testProjectDeps += @($appDependencies."$resolvedTarget".apps)
                 # Also add all dependencies of the target project (transitive)
-                $testProjectDeps += @($appDependencies."$targetProject".dependencies)
+                $testProjectDeps += @($appDependencies."$resolvedTarget".dependencies)
             }
             $appDependencies."$project".dependencies = @(($appDependencies."$project".dependencies + $testProjectDeps) | Select-Object -Unique)
         }
