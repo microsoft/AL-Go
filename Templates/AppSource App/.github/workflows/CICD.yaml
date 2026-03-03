@@ -349,6 +349,11 @@ jobs:
           type: 'CD'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
+      - name: Deployment skipped
+        if: hashFiles('.artifacts/**/*.app') == ''
+        run: |
+          Write-Host "::Notice::Deployment to environment ${{ matrix.environment }} was skipped because no app artifacts were found"
+
       - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
         uses: microsoft/AL-Go-Actions/DeployPowerPlatform@main
@@ -402,6 +407,11 @@ jobs:
           projects: ${{ needs.Initialization.outputs.projects }}
           deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '.artifacts'
+
+      - name: Delivery skipped
+        if: hashFiles('.artifacts/**/*.app') == ''
+        run: |
+          Write-Host "::Notice::Delivery to ${{ matrix.deliveryTarget }} was skipped because no app artifacts were found"
 
   PostProcess:
     needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]
