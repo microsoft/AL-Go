@@ -1,5 +1,13 @@
 ### Issues
 
+- Attempt to start docker service in case it is not running
+- NextMajor (v28) fails when downloading dependencies from NuGet-feed
+
+## v8.3
+
+### Issues
+
+- Issue 2107 Publish a specific build mode to an environment
 - Issue 1915 CICD fails on releases/26.x branch - '26.x' cannot be recognized as a semantic version string
 - Issue 2126 Deliver and Deploy actions now skip execution when no app artifacts are found, preventing errors on initial commits
 

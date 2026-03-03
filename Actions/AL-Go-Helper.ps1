@@ -1230,6 +1230,36 @@ function GetContainerName([string] $project) {
     "bc$($project -replace "[^a-z0-9\-]")$env:GITHUB_RUN_ID"
 }
 
+<#
+    .SYNOPSIS
+    Ensures that the Docker service is running on Windows.
+    .DESCRIPTION
+    Occasionally, on GitHub-hosted Windows runners, the Docker service may not start automatically, which can cause issues for workflows that depend on Docker.
+#>
+function Assert-DockerIsRunning {
+    try {
+        if (-not $isWindows) {
+            return
+        }
+        $dockerService = Get-Service -Name 'docker' -ErrorAction SilentlyContinue
+        if (-not $dockerService) {
+            Write-Host "Docker service not found"
+            return
+        }
+        if ($dockerService.Status -eq 'Running') {
+            return
+        }
+        Write-Host "Docker service is not running (status: $($dockerService.Status)). Attempting to start..."
+        Start-Service docker -ErrorAction Stop
+        $dockerService = Get-Service -Name 'docker'
+        $dockerService.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
+        Write-Host "Docker service started successfully"
+    }
+    catch {
+        OutputWarning "Failed to ensure Docker is running: $($_.Exception.Message)"
+    }
+}
+
 function CreateDevEnv {
     Param(
         [Parameter(Mandatory = $true)]
