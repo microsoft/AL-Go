@@ -10,6 +10,7 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 
 - Attempt to start docker service in case it is not running
 - NextMajor (v28) fails when downloading dependencies from NuGet-feed
+- Rework input handling of workflow 'Update AL-Go System Files' for trigger 'workflow_call'
 
 ## v8.3
 
