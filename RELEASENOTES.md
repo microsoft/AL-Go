@@ -9,6 +9,7 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 ### Issues
 
 - Attempt to start docker service in case it is not running
+- NextMajor (v28) fails when downloading dependencies from NuGet-feed
 
 ## v8.3
 
