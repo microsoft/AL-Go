@@ -1811,7 +1811,6 @@ Function AnalyzeProjectDependencies {
             "dependencies" = $dependenciesForProject
         }
     }
-    $appDependencies | ConvertTo-Json | Out-Host
     # AppDependencies is a hashtable with the following structure
     # $appDependencies = @{
     #     "project1" = @{
