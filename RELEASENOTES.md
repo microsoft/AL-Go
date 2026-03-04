@@ -10,6 +10,7 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 
 - Attempt to start docker service in case it is not running
 - NextMajor (v28) fails when downloading dependencies from NuGet-feed
+- Issue 2126 Deliver and Deploy actions now skip execution when no app artifacts are found, preventing errors on initial commits
 
 ## v8.3
 

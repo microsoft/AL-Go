@@ -352,6 +352,7 @@ jobs:
 
       - name: Deploy to Business Central
         id: Deploy
+        if: hashFiles('.artifacts/**/*.app') != ''
         uses: microsoft/AL-Go-Actions/Deploy@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -361,6 +362,11 @@ jobs:
           artifactsFolder: '.artifacts'
           type: 'CD'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+
+      - name: Deployment skipped
+        if: hashFiles('.artifacts/**/*.app') == ''
+        run: |
+          Write-Host "::Notice::Deployment to environment ${{ matrix.environment }} was skipped because no app artifacts were found"
 
       - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
@@ -405,6 +411,7 @@ jobs:
           getSecrets: '${{ matrix.deliveryTarget }}Context'
 
       - name: Deliver
+        if: hashFiles('.artifacts/**/*.app') != ''
         uses: microsoft/AL-Go-Actions/Deliver@main
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -414,6 +421,11 @@ jobs:
           projects: ${{ needs.Initialization.outputs.projects }}
           deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '.artifacts'
+
+      - name: Delivery skipped
+        if: hashFiles('.artifacts/**/*.app') == ''
+        run: |
+          Write-Host "::Notice::Delivery to ${{ matrix.deliveryTarget }} was skipped because no app artifacts were found"
 
   PostProcess:
     needs: [ Initialization, Build, BuildPP, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]
