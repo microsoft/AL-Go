@@ -2,6 +2,9 @@
 
 - Attempt to start docker service in case it is not running
 - NextMajor (v28) fails when downloading dependencies from NuGet-feed
+- Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
+- Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
+- Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
 
 ## v8.3
 
@@ -26,9 +29,6 @@ Add the following setting to one of your settings files and run the Update AL-Go
 
 ### Issues
 
-- Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
-- Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
-- Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
 - Issue 2095 DeliverToAppSource.ProductId needs to be specified (Library app)
 - Issue 2082 Sign action no longer fails when repository is empty or no artifacts are generated
 - Issue 2078 Workflows run since January 14th '26 have space before CI/CD removed
