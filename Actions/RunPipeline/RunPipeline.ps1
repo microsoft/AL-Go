@@ -491,7 +491,8 @@ try {
         }
         $ccTrackingType = if ($ccSetup['trackingType']) { $ccSetup['trackingType'] } else { 'PerRun' }
         $ccProduceMap = if ($ccSetup['produceCodeCoverageMap']) { $ccSetup['produceCodeCoverageMap'] } else { 'PerCodeunit' }
-        $ccExcludePatterns = if ($ccSetup['excludeFilesPattern']) { @($ccSetup['excludeFilesPattern']) } else { @() }
+        [string[]]$ccExcludePatterns = @()
+        if ($ccSetup['excludeFilesPattern']) { $ccExcludePatterns = @($ccSetup['excludeFilesPattern']) }
         if ($ccExcludePatterns.Count -gt 0) {
             Write-Host "Code coverage exclude patterns: $($ccExcludePatterns -join ', ')"
         }
