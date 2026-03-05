@@ -484,11 +484,14 @@ try {
     # Add RunTestsInBcContainer override to use ALTestRunner with code coverage support
     if ($settings.enableCodeCoverage) {
         # Read codeCoverageSetup settings with defaults
-        $codeCoverageSetup = if ($settings.codeCoverageSetup) { $settings.codeCoverageSetup } else { @{} }
-        if ($codeCoverageSetup -is [PSCustomObject]) { $codeCoverageSetup = $codeCoverageSetup | ConvertTo-HashTable }
-        $ccTrackingType = if ($codeCoverageSetup.trackingType) { $codeCoverageSetup.trackingType } else { 'PerRun' }
-        $ccProduceMap = if ($codeCoverageSetup.produceCodeCoverageMap) { $codeCoverageSetup.produceCodeCoverageMap } else { 'PerCodeunit' }
-        $ccExcludePatterns = if ($codeCoverageSetup.excludeFilesPattern) { @($codeCoverageSetup.excludeFilesPattern) } else { @() }
+        $codeCoverageSetup = if ($settings.PSObject.Properties.Name -contains 'codeCoverageSetup') { $settings.codeCoverageSetup } else { $null }
+        $ccSetup = @{}
+        if ($codeCoverageSetup) {
+            $codeCoverageSetup.PSObject.Properties | ForEach-Object { $ccSetup[$_.Name] = $_.Value }
+        }
+        $ccTrackingType = if ($ccSetup['trackingType']) { $ccSetup['trackingType'] } else { 'PerRun' }
+        $ccProduceMap = if ($ccSetup['produceCodeCoverageMap']) { $ccSetup['produceCodeCoverageMap'] } else { 'PerCodeunit' }
+        $ccExcludePatterns = if ($ccSetup['excludeFilesPattern']) { @($ccSetup['excludeFilesPattern']) } else { @() }
         if ($ccExcludePatterns.Count -gt 0) {
             Write-Host "Code coverage exclude patterns: $($ccExcludePatterns -join ', ')"
         }
