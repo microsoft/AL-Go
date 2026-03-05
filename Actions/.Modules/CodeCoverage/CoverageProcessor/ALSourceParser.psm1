@@ -45,6 +45,10 @@ function Read-AppJson {
     Optional array of specific directories to scan for .al files.
     When provided, only these directories are scanned instead of SourcePath.
     Relative paths in output are still calculated from SourcePath.
+.PARAMETER ExcludePatterns
+    Optional array of glob patterns to exclude files from coverage.
+    Patterns are matched against both the file name and relative path using -like.
+    Example: @('*.PermissionSet.al', '*.PermissionSetExtension.al')
 .OUTPUTS
     Hashtable mapping "ObjectType.ObjectId" to file and metadata info
 #>
@@ -55,7 +59,10 @@ function Get-ALObjectMap {
         [string]$SourcePath,
         
         [Parameter(Mandatory = $false)]
-        [string[]]$AppSourcePaths = @()
+        [string[]]$AppSourcePaths = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [string[]]$ExcludePatterns = @()
     )
     
     $objectMap = @{}
@@ -83,6 +90,26 @@ function Get-ALObjectMap {
         $alFiles = Get-ChildItem -Path $SourcePath -Filter "*.al" -Recurse -File
     }
     
+    # Apply exclude patterns to filter out unwanted files
+    if ($ExcludePatterns.Count -gt 0 -and $alFiles.Count -gt 0) {
+        $beforeCount = $alFiles.Count
+        $alFiles = @($alFiles | Where-Object {
+            $relativePath = $_.FullName.Substring($normalizedSourcePath.Length + 1)
+            $excluded = $false
+            foreach ($pattern in $ExcludePatterns) {
+                if ($relativePath -like $pattern -or $_.Name -like $pattern) {
+                    $excluded = $true
+                    break
+                }
+            }
+            -not $excluded
+        })
+        $excludedCount = $beforeCount - $alFiles.Count
+        if ($excludedCount -gt 0) {
+            Write-Host "Excluded $excludedCount file(s) matching pattern(s): $($ExcludePatterns -join ', ')"
+        }
+    }
+
     foreach ($file in $alFiles) {
         $content = Get-Content -Path $file.FullName -Raw -ErrorAction SilentlyContinue
         if (-not $content) { continue }

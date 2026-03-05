@@ -16,6 +16,29 @@ Add the following to your `.AL-Go/settings.json` or `.github/AL-Go-Settings.json
 
 Read more about settings at [Settings](settings.md#enableCodeCoverage).
 
+## Advanced Configuration
+
+Use the `codeCoverageSetup` object to customize coverage behavior:
+
+```json
+{
+    "enableCodeCoverage": true,
+    "codeCoverageSetup": {
+        "excludeFilesPattern": ["*.PermissionSet.al", "*.PermissionSetExtension.al"],
+        "trackingType": "PerRun",
+        "produceCodeCoverageMap": "PerCodeunit"
+    }
+}
+```
+
+| Property | Description | Default |
+|---|---|---|
+| `excludeFilesPattern` | Array of glob patterns for files to exclude from the coverage denominator. Patterns are matched against both the file name and relative path. Example: `["*.PermissionSet.al"]` excludes all permission set files. | `[]` |
+| `trackingType` | Coverage tracking granularity: `PerRun`, `PerCodeunit`, or `PerTest`. | `PerRun` |
+| `produceCodeCoverageMap` | Code coverage map granularity: `Disabled`, `PerCodeunit`, or `PerTest`. | `PerCodeunit` |
+
+Read more about settings at [Settings](settings.md#codeCoverageSetup).
+
 ## How It Works
 
 When `enableCodeCoverage` is set to `true`:

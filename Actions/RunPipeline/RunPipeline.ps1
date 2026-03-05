@@ -483,11 +483,23 @@ try {
 
     # Add RunTestsInBcContainer override to use ALTestRunner with code coverage support
     if ($settings.enableCodeCoverage) {
+        # Read codeCoverageSetup settings with defaults
+        $codeCoverageSetup = if ($settings.codeCoverageSetup) { $settings.codeCoverageSetup } else { @{} }
+        if ($codeCoverageSetup -is [PSCustomObject]) { $codeCoverageSetup = $codeCoverageSetup | ConvertTo-HashTable }
+        $ccTrackingType = if ($codeCoverageSetup.trackingType) { $codeCoverageSetup.trackingType } else { 'PerRun' }
+        $ccProduceMap = if ($codeCoverageSetup.produceCodeCoverageMap) { $codeCoverageSetup.produceCodeCoverageMap } else { 'PerCodeunit' }
+        $ccExcludePatterns = if ($codeCoverageSetup.excludeFilesPattern) { @($codeCoverageSetup.excludeFilesPattern) } else { @() }
+        if ($ccExcludePatterns.Count -gt 0) {
+            Write-Host "Code coverage exclude patterns: $($ccExcludePatterns -join ', ')"
+        }
+
         if ($runAlPipelineParams.Keys -notcontains 'RunTestsInBcContainer') {
             Write-Host "Adding RunTestsInBcContainer override with code coverage support"
         
-        # Capture buildArtifactFolder for use in scriptblock
+        # Capture variables for use in scriptblock
         $ccBuildArtifactFolder = $buildArtifactFolder
+        $ccTrackingTypeCapture = $ccTrackingType
+        $ccProduceMapCapture = $ccProduceMap
 
         $runAlPipelineParams += @{
             "RunTestsInBcContainer" = {
@@ -555,8 +567,8 @@ try {
                     Detailed = $true
                     DisableSSLVerification = $true
                     ResultsFormat = $resultsFormat
-                    CodeCoverageTrackingType = 'PerRun'
-                    ProduceCodeCoverageMap = 'PerCodeunit'
+                    CodeCoverageTrackingType = $ccTrackingTypeCapture
+                    ProduceCodeCoverageMap = $ccProduceMapCapture
                     CodeCoverageOutputPath = $codeCoverageOutputPath
                     CodeCoverageFilePrefix = "CodeCoverage_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
                 }
@@ -839,6 +851,7 @@ try {
                             -CoverageFilePath $coverageFiles[0].FullName `
                             -SourcePath $sourcePath `
                             -AppSourcePaths $appSourcePaths `
+                            -ExcludePatterns $ccExcludePatterns `
                             -OutputPath $coberturaOutputPath
                     } else {
                         # Multiple coverage files - merge them
@@ -846,6 +859,7 @@ try {
                             -CoverageFiles ($coverageFiles.FullName) `
                             -SourcePath $sourcePath `
                             -AppSourcePaths $appSourcePaths `
+                            -ExcludePatterns $ccExcludePatterns `
                             -OutputPath $coberturaOutputPath
                     }
 

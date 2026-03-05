@@ -42,7 +42,10 @@ function Convert-BCCoverageToCobertura {
         [string]$AppJsonPath = "",
         
         [Parameter(Mandatory = $false)]
-        [string[]]$AppSourcePaths = @()
+        [string[]]$AppSourcePaths = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [string[]]$ExcludePatterns = @()
     )
     
     Write-Host "Converting BC coverage to Cobertura format..."
@@ -91,7 +94,7 @@ function Convert-BCCoverageToCobertura {
     
     if ($SourcePath -and (Test-Path $SourcePath)) {
         Write-Host "`nStep 4: Mapping source files..."
-        $objectMap = Get-ALObjectMap -SourcePath $SourcePath -AppSourcePaths $AppSourcePaths
+        $objectMap = Get-ALObjectMap -SourcePath $SourcePath -AppSourcePaths $AppSourcePaths -ExcludePatterns $ExcludePatterns
         
         # Filter coverage to only include objects from user's source files
         # This excludes Microsoft base app objects
@@ -247,7 +250,10 @@ function Merge-BCCoverageToCobertura {
         [string]$AppJsonPath = "",
         
         [Parameter(Mandatory = $false)]
-        [string[]]$AppSourcePaths = @()
+        [string[]]$AppSourcePaths = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [string[]]$ExcludePatterns = @()
     )
     
     Write-Host "Merging $($CoverageFiles.Count) coverage files..."
@@ -313,7 +319,7 @@ function Merge-BCCoverageToCobertura {
     # Map sources and track excluded objects
     $excludedObjectsData = [System.Collections.Generic.List[object]]::new()
     if ($SourcePath -and (Test-Path $SourcePath)) {
-        $objectMap = Get-ALObjectMap -SourcePath $SourcePath -AppSourcePaths $AppSourcePaths
+        $objectMap = Get-ALObjectMap -SourcePath $SourcePath -AppSourcePaths $AppSourcePaths -ExcludePatterns $ExcludePatterns
         $filteredCoverage = @{}
         
         foreach ($key in $groupedCoverage.Keys) {
