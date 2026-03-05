@@ -79,24 +79,13 @@ jobs:
 
       - name: Check AdminCenterApiCredentials / Initiate Device Login (open to see code)
         id: authenticate
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $settings = $env:Settings | ConvertFrom-Json
-          if ('${{ fromJson(steps.ReadSecrets.outputs.Secrets).adminCenterApiCredentials }}') {
-            Write-Host "AdminCenterApiCredentials provided in secret $($settings.adminCenterApiCredentialsSecretName)!"
-            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "Admin Center Api Credentials was provided in a secret called $($settings.adminCenterApiCredentialsSecretName). Using this information for authentication."
-          }
-          else {
-            Write-Host "AdminCenterApiCredentials not provided, initiating Device Code flow"
-            $ALGoHelperPath = "$([System.IO.Path]::GetTempFileName()).ps1"
-            $webClient = New-Object System.Net.WebClient
-            $webClient.DownloadFile('https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/AL-Go-Helper.ps1', $ALGoHelperPath)
-            . $ALGoHelperPath
-            DownloadAndImportBcContainerHelper
-            $authContext = New-BcAuthContext -includeDeviceLogin -deviceLoginTimeout ([TimeSpan]::FromSeconds(0))
-            Add-Content -Encoding UTF8 -path $ENV:GITHUB_STEP_SUMMARY -value "AL-Go needs access to the Business Central Admin Center Api and could not locate a secret called $($settings.adminCenterApiCredentialsSecretName) (https://aka.ms/ALGoSettings#AdminCenterApiCredentialsSecretName)`n`n$($authContext.message)"
-            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deviceCode=$($authContext.deviceCode)"
-          }
+        uses: microsoft/AL-Go-Actions/CheckAuthContext@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: powershell
+          secretName: 'adminCenterApiCredentials'
+          authType: 'Admin Center Api Credentials'
 
   CreateDevelopmentEnvironment:
     needs: [ Initialization ]
