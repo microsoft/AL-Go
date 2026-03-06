@@ -48,7 +48,7 @@ function DownloadDependenciesFromCurrentBuild {
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
 
     # For each dependency project, calculate the corresponding probing path
-    $dependeciesProbingPaths = @()
+    $dependenciesProbingPaths = @()
     foreach($dependencyProject in $dependencyProjects) {
         Write-Host "Reading settings for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
@@ -72,7 +72,7 @@ function DownloadDependenciesFromCurrentBuild {
             $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
-        $dependeciesProbingPaths += @(@{
+        $dependenciesProbingPaths += @(@{
             "release_status"  = "thisBuild"
             "version"         = "latest"
             "buildMode"       = $dependencyBuildMode
@@ -87,7 +87,7 @@ function DownloadDependenciesFromCurrentBuild {
 
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
-    foreach($probingPath in $dependeciesProbingPaths) {
+    foreach($probingPath in $dependenciesProbingPaths) {
         $buildMode = $probingPath.buildMode
         $project = $probingPath.projects
         $branch = $probingPath.branch

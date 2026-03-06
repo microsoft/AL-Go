@@ -10,6 +10,13 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 
 - Attempt to start docker service in case it is not running
 - NextMajor (v28) fails when downloading dependencies from NuGet-feed
+- Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
+- Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
+- Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
+
+### New Settings
+
+- `postponeProjectInBuildOrder` is a new project setting, which will (if set to true) cause the project to be postponed until the last build job when possible. If set on test projects, then all tests can be deferred until all builds have succeeded.
 
 ## v8.3
 
