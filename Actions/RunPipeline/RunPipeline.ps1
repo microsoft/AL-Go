@@ -27,6 +27,7 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     if ($isWindows) {
+        Assert-DockerIsRunning
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
         Start-Job -ScriptBlock {
@@ -86,7 +87,7 @@ try {
 
     if ($settings.useWorkspaceCompilation -and $settings.doNotPublishApps -and $settings.doNotRunTests) {
         Write-Host "Apps are compiled and doNotPublishApps is set. Exiting..."
-        return 
+        return
     }
 
     'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
@@ -218,7 +219,7 @@ try {
 
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
         try {
-            $install.Apps = Get-Content -Path $installAppsJson | ConvertFrom-Json
+            $install.Apps = Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
@@ -227,7 +228,7 @@ try {
 
     if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
         try {
-            $install.TestApps = Get-Content -Path $installTestAppsJson | ConvertFrom-Json
+            $install.TestApps = Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
@@ -431,7 +432,11 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
+                        try {
+                            Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        } catch {
+                            OutputWarning -message "Failed to publish app $appid version $version to container $($parameters.containerName). Error was: $($_.Exception.Message)."
+                        }
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {

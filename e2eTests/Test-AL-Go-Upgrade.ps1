@@ -116,7 +116,7 @@ $runs++
 Start-Sleep -seconds 100
 MergePRandPull -branch $branch | Out-Null
 if ($releaseVersion -ge [System.Version]"2.2") {
-    # Expected Run: Pull Request Handler triggered by pull_request_target
+    # Expected Run: Pull Request Handler triggered by pull_request
     $runs++
 
     if ($releaseVersion -le [System.Version]"2.4") {

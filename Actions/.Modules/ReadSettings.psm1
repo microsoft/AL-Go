@@ -214,7 +214,7 @@ function GetDefaultSettings
         "useCompilerFolder"                             = $false
         "useWorkspaceCompilation"                       = $false
         "workspaceCompilationParallelism"               = 1
-        "pullRequestTrigger"                            = "pull_request_target"
+        "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
             "DurationError"                             = 25

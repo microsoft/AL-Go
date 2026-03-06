@@ -127,9 +127,12 @@ Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
 Push-Location -Path (Join-Path $baseFolder $project)  #Change to the project folder because installApps paths are relative to the project folder
-$settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
-Pop-Location
-Write-Host "::endgroup::"
+try {
+    $settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
+} finally {
+    Pop-Location
+    Write-Host "::endgroup::"
+}
 
 $downloadedApps = @()
 $downloadedTestApps = @()

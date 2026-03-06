@@ -1,5 +1,5 @@
 Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
-. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
 
 <#
     .SYNOPSIS
@@ -11,18 +11,23 @@ Import-Module -Name (Join-Path $PSScriptRoot '../Github-Helper.psm1')
 #>
 function Test-IsZipFile {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $Path
     )
     $extension = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
     if ($extension -eq '.zip') {
         return $true
     }
+    if ($extension -eq '.app') {
+        # Don't treat .app files as zips. These should not be extracted.
+        return $false
+    }
     # Check for ZIP magic bytes "PK" (0x50 0x4B)
     # This handles the case where the file does not have a .zip extension but is still a ZIP archive (like .nupkg)
     if ($PSVersionTable.PSVersion.Major -ge 6) {
-        $bytes = Get-Content -Path $Path -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue
+        $bytes = @(Get-Content -Path $Path -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue)
     } else {
-        $bytes = Get-Content -Path $Path -Encoding Byte -TotalCount 2 -ErrorAction SilentlyContinue
+        $bytes = @(Get-Content -Path $Path -Encoding Byte -TotalCount 2 -ErrorAction SilentlyContinue)
     }
     if ($bytes -and $bytes.Count -eq 2) {
         return ([char]$bytes[0] -eq 'P') -and ([char]$bytes[1] -eq 'K')
@@ -37,14 +42,23 @@ function Test-IsZipFile {
     The path to the ZIP file.
     .PARAMETER DestinationPath
     The path where .app files should be extracted to.
+    .PARAMETER MaxDepth
+    Maximum nesting depth for recursive ZIP extraction. Default is 3.
     .OUTPUTS
     An array of paths to the extracted .app files.
 #>
 function Expand-ZipFileToAppFiles {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $ZipFile,
-        [string] $DestinationPath
+        [Parameter(Mandatory=$true)]
+        [string] $DestinationPath,
+        [int] $MaxDepth = 3
     )
+    if ($MaxDepth -le 0) {
+        OutputWarning -message "Maximum ZIP nesting depth reached for: $([System.IO.Path]::GetFileName($ZipFile)). Skipping further extraction."
+        return @()
+    }
     $fileName = [System.IO.Path]::GetFileName($ZipFile)
     OutputDebug -message "Expanding zip file to extract .app files: $ZipFile"
 
@@ -52,14 +66,16 @@ function Expand-ZipFileToAppFiles {
     $zipToExtract = $ZipFile
     $tempZipCreated = $false
     if ([System.IO.Path]::GetExtension($ZipFile).ToLowerInvariant() -ne '.zip') {
-        $zipToExtract = Join-Path (GetTemporaryPath) "$([System.IO.Path]::GetFileName($ZipFile)).zip"
+        $newZipFileName = "$([System.IO.Path]::GetFileName($ZipFile))_$(Get-Date -Format 'HHmmssfff').zip"
+        $zipToExtract = Join-Path (GetTemporaryPath) $newZipFileName
         Copy-Item -Path $ZipFile -Destination $zipToExtract
         $tempZipCreated = $true
     }
 
     try {
         # Extract to runner temp folder
-        $extractPath = Join-Path (GetTemporaryPath) ([System.IO.Path]::GetFileNameWithoutExtension($fileName))
+        $extractFileName = "$([System.IO.Path]::GetFileNameWithoutExtension($fileName))_$(Get-Date -Format 'HHmmssfff')"
+        $extractPath = Join-Path (GetTemporaryPath) $extractFileName
         Expand-Archive -Path $zipToExtract -DestinationPath $extractPath -Force
 
         # Find all files in the extracted folder and process them
@@ -74,12 +90,9 @@ function Expand-ZipFileToAppFiles {
             }
             elseif (Test-IsZipFile -Path $file.FullName) {
                 # Recursively extract nested ZIP files
-                $appFiles += Expand-ZipFileToAppFiles -ZipFile $file.FullName -DestinationPath $DestinationPath
+                $appFiles += Expand-ZipFileToAppFiles -ZipFile $file.FullName -DestinationPath $DestinationPath -MaxDepth ($MaxDepth - 1)
             }
         }
-
-        # Clean up the extracted folder
-        Remove-Item -Path $extractPath -Recurse -Force
 
         if ($appFiles.Count -eq 0) {
             OutputWarning -message "No .app files found in zip archive: $fileName"
@@ -89,6 +102,11 @@ function Expand-ZipFileToAppFiles {
         return $appFiles
     }
     finally {
+        # Clean up the extracted folder
+        if (Test-Path -Path $extractPath) {
+            Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        # Clean up the temp zip file if we created one
         if ($tempZipCreated) {
             Remove-Item -Path $zipToExtract -Force -ErrorAction SilentlyContinue
         }
@@ -113,7 +131,9 @@ function Expand-ZipFileToAppFiles {
 #>
 function Get-AppFilesFromLocalPath {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $Path,
+        [Parameter(Mandatory=$true)]
         [string] $DestinationPath
     )
 
@@ -137,7 +157,12 @@ function Get-AppFilesFromLocalPath {
 
         if ($extension -eq '.app') {
             $destFile = Join-Path $DestinationPath $item.Name
-            Copy-Item -Path $item.FullName -Destination $destFile -Force
+            if ($item.FullName -ne $destFile) {
+                Copy-Item -Path $item.FullName -Destination $destFile -Force
+            } else {
+                # This can happen if the user specifies a local path that is the same as AL-Go uses for storing dependencies
+                OutputDebug -message "Source and destination are the same for .app file: $destFile. Skipping copy."
+            }
             $appFiles += $destFile
         } elseif (Test-IsZipFile -Path $item.FullName) {
             $appFiles += Expand-ZipFileToAppFiles -ZipFile $item.FullName -DestinationPath $DestinationPath
@@ -166,8 +191,11 @@ function Get-AppFilesFromLocalPath {
 #>
 function Get-AppFilesFromUrl {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $Url,
+        [Parameter(Mandatory=$true)]
         [string] $CleanUrl,
+        [Parameter(Mandatory=$true)]
         [string] $DownloadPath
     )
 
@@ -210,7 +238,7 @@ function Get-AppFilesFromUrl {
     # Check if the downloaded file is a zip file (by extension or magic bytes)
     if (Test-IsZipFile -Path $downloadedFile) {
         $appFiles = Expand-ZipFileToAppFiles -ZipFile $downloadedFile -DestinationPath $DownloadPath
-        Remove-Item -Path $downloadedFile -Force
+        Remove-Item -Path $downloadedFile -Force -ErrorAction SilentlyContinue
         return $appFiles
     }
 
@@ -235,6 +263,7 @@ function Get-AppFilesFromUrl {
 #>
 function Get-DependenciesFromInstallApps {
     Param(
+        [Parameter(Mandatory=$true)]
         [string] $DestinationPath
     )
 
@@ -265,13 +294,16 @@ function Get-DependenciesFromInstallApps {
 
         $updatedListOfFiles = @()
         foreach($appFile in $install."$list") {
+            if ([string]::IsNullOrWhiteSpace($appFile)) {
+                continue
+            }
             Write-Host "Processing install$($list) entry: $appFile"
 
             # If the app file is not a URL, resolve local path.
             if ($appFile -notlike 'http*://*') {
                 $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $DestinationPath
             } else {
-                # Else, check for secrets in the URL and replace them
+                # Else, check for secrets in the URL and replace them. Only match on the first occurrence of the pattern ${{ secretName }}
                 $appFileUrl = $appFile
                 $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
                 if ($appFile -match $pattern) {
