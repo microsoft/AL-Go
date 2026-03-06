@@ -812,7 +812,12 @@ function DownloadRelease {
         Write-Host "project '$project'"
         # Pattern 1: project-branch-mask-version.zip (branch used for release creation cannot contain -)
         # Pattern 2: project-mask-version.zip (no branch)
-        $escapedProject = [regex]::Escape($project)
+        if ($project -eq '*') {
+            $escapedProject = '.*'
+        }
+        else {
+            $escapedProject = [regex]::Escape($project)
+        }
         $escapedMask = [regex]::Escape($mask)
         $assetPattern1 = "^$escapedProject-[^-]+-$escapedMask-.+\.zip$"
         $assetPattern2 = "^$escapedProject-$escapedMask-.+\.zip$"
