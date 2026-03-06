@@ -722,6 +722,7 @@ function AnalyzeRepo {
             $settings.installTestRunner = $true
             $settings.installTestFramework = $true
             $settings.installTestLibraries = $true
+            $settings.runTestsInAllInstalledTestApps = $true
         }
         else {
             if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
