@@ -1103,8 +1103,8 @@ function GetArtifactsFromWorkflowRun {
         }
 
         foreach($project in $projectArr) {
-             # e.g. "MyProject-main-Apps-*", format is: "project-branch-mask-version"
-             # Mask might include buildMode like TranslatedTestApps
+            # e.g. "MyProject-main-Apps-*", format is: "project-branch-mask-version"
+            # Mask might include buildMode like TranslatedTestApps
             $artifactPattern = "$project-$branch-$mask-*"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
