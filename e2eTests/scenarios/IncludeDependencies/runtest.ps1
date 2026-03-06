@@ -67,6 +67,7 @@ CreateAlGoRepository `
     -repository $repository `
     -branch $branch `
     -projects @('P1','P2','P3','P4','P0') `
+    -addRepoSettings @{ "artifact" = "////nextmajor" } `
     -contentScript {
         Param([string] $path)
         $id2 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name app2 -objID 50002

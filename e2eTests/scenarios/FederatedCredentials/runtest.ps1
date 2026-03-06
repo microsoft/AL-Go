@@ -73,7 +73,7 @@ CreateAlGoRepository `
     -github:$github `
     -template "https://github.com/$sourceRepository" `
     -repository $repository `
-    -addRepoSettings @{"ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
+    -addRepoSettings @{ "artifact" = "////nextmajor"; "ghTokenWorkflowSecretName" = "e2eghTokenWorkflow" }
 
 SetRepositorySecret -repository $repository -name 'Azure_Credentials' -value $azureCredentials
 

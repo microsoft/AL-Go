@@ -81,6 +81,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository1 `
     -branch $branch `
+    -addRepoSettings @{ "artifact" = "////nextmajor" } `
     -contentScript {
         Param([string] $path)
         $script:id2 = CreateNewAppInFolder -folder $path -name app2 -objID 50002
@@ -98,7 +99,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository2 `
     -branch $branch `
-    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
+    -addRepoSettings @{ "artifact" = "////nextmajor"; "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
     -contentScript {
         Param([string] $path)
         $script:id4 = CreateNewAppInFolder -folder $path -name app4 -objID 50004 -dependencies @( @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )
@@ -113,7 +114,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{ "generateDependencyArtifact" = $true } `
+    -addRepoSettings @{ "artifact" = "////nextmajor"; "generateDependencyArtifact" = $true } `
     -contentScript {
         Param([string] $path)
         $script:id5 = CreateNewAppInFolder -folder $path -name app5 -objID 50005 -dependencies @( @{ "id" = $script:id4; "name" = "app4"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }; @{ "id" = $script:id3; "name" = "app3"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" } )

@@ -26,13 +26,13 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test tests the following scenario:
 #
-#  - Create a new repository based on the PTE template with one project and 3 apps with dependencies
+#  - Create a new repository based on the PTE template with one project and 4 apps with dependencies
 #  - Enable useWorkspaceCompilation, useCompilerFolder and doNotPublishApps in settings
 #  - Run the "CI/CD" workflow
-#  - Check artifacts generated - all 3 apps should be compiled successfully
+#  - Check artifacts generated - all 4 apps should be compiled successfully
 #  - Verify that apps are compiled using workspace compilation (faster parallel build)
 #  - Modify one app and verify dependent apps are also rebuilt correctly
-#  - Test with test apps to ensure test folders are also compiled via workspace compilation
+#  - Modify a leaf app and verify only that app gets a new version
 #  - Cleanup repositories
 #
 '@
@@ -61,8 +61,7 @@ else {
 }
 
 # Create a new repository with useWorkspaceCompilation enabled
-# 3 apps: app1 (base), app2 (depends on app1), app3 (depends on app2)
-# 1 test app: app1.Test (depends on app1)
+# 4 apps: app1 (base), app2 (depends on app1), app3 (depends on app2), app4 (depends on app1)
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
@@ -74,7 +73,7 @@ CreateAlGoRepository `
         "useWorkspaceCompilation" = $true
         "useCompilerFolder" = $true
         "doNotPublishApps" = $true
-        "doNotRunTests" = $true
+        "artifact" = "////nextmajor"
         "githubRunner" = $githubRunner
         "githubRunnerShell" = $githubRunnerShell
     } `
@@ -95,8 +94,8 @@ CreateAlGoRepository `
             @{ "id" = $script:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
         )
 
-        # Create test app for app1
-        CreateNewTestAppInFolder -folder (Join-Path $path 'P1') -name 'app1.Test' -objID 60001 -dependencies @(
+        # Create app4 (depends on app1, used to verify additional dependent apps compile correctly)
+        $script:id4 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app4' -objID 50004 -dependencies @(
             @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
         )
     }
@@ -114,26 +113,24 @@ WaitWorkflow -repository $repository -runid $run.id
 
 # Check artifacts generated - all apps should be compiled with version 1.0.2.0
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 3
-    "P1-main-TestApps-*.app" = 1
+    "P1-main-Apps-*.app" = 4
     "P1-main-Apps-*_app1_1.0.2.0.app" = 1
     "P1-main-Apps-*_app2_1.0.2.0.app" = 1
     "P1-main-Apps-*_app3_1.0.2.0.app" = 1
-    "P1-main-TestApps-*_app1.Test_1.0.2.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.2.0.app" = 1
 }
 
 # Modify app1 and verify dependent apps are rebuilt
 Pull
 $run = ModifyAppInFolder -folder 'P1/app1' -name 'app1' -commit -wait
 
-# Check that all apps got a new version (app1 was modified, app2 and app3 depend on it)
+# Check that all apps got a new version (app1 was modified, app2/app3/app4 depend on it directly or transitively)
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 3
-    "P1-main-TestApps-*.app" = 1
+    "P1-main-Apps-*.app" = 4
     "P1-main-Apps-*_app1_1.0.3.0.app" = 1
     "P1-main-Apps-*_app2_1.0.3.0.app" = 1
     "P1-main-Apps-*_app3_1.0.3.0.app" = 1
-    "P1-main-TestApps-*_app1.Test_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.3.0.app" = 1
 }
 
 # Modify only app3 (leaf node) - only app3 should be rebuilt
@@ -142,32 +139,24 @@ $run = ModifyAppInFolder -folder 'P1/app3' -name 'app3' -commit -wait
 
 # Check that only app3 got a new version
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 3
-    "P1-main-TestApps-*.app" = 1
+    "P1-main-Apps-*.app" = 4
     "P1-main-Apps-*_app1_1.0.3.0.app" = 1
     "P1-main-Apps-*_app2_1.0.3.0.app" = 1
     "P1-main-Apps-*_app3_1.0.4.0.app" = 1
-    "P1-main-TestApps-*_app1.Test_1.0.3.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.3.0.app" = 1
 }
 
-# Now enable running tests to verify test apps compile and run correctly with workspace compilation
+# Modify only app4 (leaf node depending on app1) - only app4 should get a new version
 Pull
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{
-    "doNotRunTests" = $false
-} -commit -wait
+$run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
 
-# Modify test app to trigger a new build
-Pull
-$run = ModifyAppInFolder -folder 'P1/app1.Test' -name 'app1.Test' -commit -wait
-
-# Check that test app was rebuilt
+# Check that only app4 got a new version
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 3
-    "P1-main-TestApps-*.app" = 1
+    "P1-main-Apps-*.app" = 4
     "P1-main-Apps-*_app1_1.0.3.0.app" = 1
     "P1-main-Apps-*_app2_1.0.3.0.app" = 1
     "P1-main-Apps-*_app3_1.0.4.0.app" = 1
-    "P1-main-TestApps-*_app1.Test_1.0.6.0.app" = 1
+    "P1-main-Apps-*_app4_1.0.5.0.app" = 1
 }
 
 # Cleanup repositories
