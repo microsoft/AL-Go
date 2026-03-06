@@ -337,7 +337,7 @@ try {
 
             $scriptblock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
             if (-not $scriptblock) {
-                throw "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
             }
             $runAlPipelineParams += @{
                 "$scriptName" = $scriptblock
