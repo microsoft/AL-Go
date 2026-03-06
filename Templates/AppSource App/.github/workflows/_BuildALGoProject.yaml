@@ -167,7 +167,7 @@ jobs:
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
       - name: Compile
-        uses: microsoft/AL-Go-Actions/Compile@aholstrup/workspace_compilationm
+        uses: microsoft/AL-Go-Actions/Compile@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
