@@ -1087,9 +1087,20 @@ function GetArtifactsFromWorkflowRun {
     # Get sanitized project names (the way they appear in the artifact names)
     $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
-    # Get branch used in workflowRun
-    $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
-    $branch = $workflowRunInfo.head_branch.Replace('\', '_').Replace('/', '_')
+    # Get branch used in workflowRun (cached per workflow run to avoid repeated API calls)
+    if (-not $Script:WorkflowRunBranchCache) {
+        $Script:WorkflowRunBranchCache = @{}
+    }
+
+    if ($Script:WorkflowRunBranchCache.ContainsKey($workflowRun)) {
+        $branch = $Script:WorkflowRunBranchCache[$workflowRun]
+    }
+    else {
+        $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
+        $branch = $workflowRunInfo.head_branch
+        $branch = $branch.Replace('\', '_').Replace('/', '_')
+        $Script:WorkflowRunBranchCache[$workflowRun] = $branch
+    }
     Write-Host "Branch for workflow run $workflowRun is $branch"
 
     # Get the artifacts from the the workflow run
