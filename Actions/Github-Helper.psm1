@@ -1092,14 +1092,14 @@ function GetArtifactsFromWorkflowRun {
         $Script:WorkflowRunBranchCache = @{}
     }
 
-    if ($Script:WorkflowRunBranchCache.ContainsKey($workflowRun)) {
-        $branch = $Script:WorkflowRunBranchCache[$workflowRun]
+    if ($Script:WorkflowRunBranchCache.ContainsKey("$repository/$workflowRun")) {
+        $branch = $Script:WorkflowRunBranchCache["$repository/$workflowRun"]
     }
     else {
         $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
         $branch = $workflowRunInfo.head_branch
         $branch = $branch.Replace('\', '_').Replace('/', '_')
-        $Script:WorkflowRunBranchCache[$workflowRun] = $branch
+        $Script:WorkflowRunBranchCache["$repository/$workflowRun"] = $branch
     }
     Write-Host "Branch for workflow run $workflowRun is $branch"
 
