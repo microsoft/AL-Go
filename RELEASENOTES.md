@@ -6,6 +6,14 @@ The `DownloadProjectDependencies` action now downloads app files from URLs speci
 - Clearer error messages when secrets are missing or URLs are invalid
 - Warnings for potential issues like duplicate filenames
 
+### Improve overall performance by postponing projects with no dependants
+
+The time it takes to build projects can vary significantly depending on factors such as whether you are using Linux or Windows, Containers or CompilerFolders, and whether apps are being published or tests are being run.
+
+By default, projects are built according to their dependency order. As soon as all dependencies for a project are satisfied, the project is added to the next layer of jobs.
+
+The new setting `postponeProjectInBuildOrder` allows you to delay jobs that only run tests until the final layer of the build order. This can improve overall build performance by preventing subsequent layers from waiting on projects that take longer to complete but are not required for further dependencies.
+
 ### Issues
 
 - Attempt to start docker service in case it is not running
