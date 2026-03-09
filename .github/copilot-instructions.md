@@ -13,7 +13,7 @@ AL-Go for GitHub is a set of GitHub Actions and Templates for building, testing,
   ```
 - Use `try/catch/finally` with structured error propagation.
 - Check `$LASTEXITCODE` after running external commands.
-- Use `Write-Host "::ERROR::<message>"` for GitHub Actions error annotations.
+- Use `Write-Host "::Error::<message>"` for GitHub Actions error annotations.
 - Use `Write-Host "::Warning::<message>"` for non-blocking warnings.
 
 ### JSON Processing
