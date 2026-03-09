@@ -98,5 +98,5 @@ When reviewing PRs, verify:
 - [ ] No deprecated settings are introduced
 - [ ] YAML workflows declare minimal permissions
 - [ ] Cross-platform compatibility is maintained
- - [ ] New or changed settings are documented in `Scenarios/settings.md` and reflected in `Actions/.Modules/settings.schema.json` with consistent metadata
- - [ ] New public functions have appropriate comment-based help and any new workflows/user-facing behaviors are documented in scenarios/READMEs
+- [ ] New or changed settings are documented in `Scenarios/settings.md` and reflected in `Actions/.Modules/settings.schema.json` with consistent metadata
+- [ ] New public functions have appropriate comment-based help and any new workflows/user-facing behaviors are documented in scenarios/READMEs
