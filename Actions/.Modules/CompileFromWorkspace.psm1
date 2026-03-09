@@ -623,7 +623,7 @@ function New-WorkspaceFromFolders() {
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
     try {
         Write-Host "Executing: $AltoolPath $($arguments -join ' ')" -ForegroundColor Green
-        & $AltoolPath @arguments | Out-Null
+        $null = & $AltoolPath @arguments
     } catch {
         throw $_
     }
