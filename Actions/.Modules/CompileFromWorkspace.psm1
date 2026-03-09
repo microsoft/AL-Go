@@ -301,6 +301,44 @@ function Build-AppsInWorkspace() {
     return $appFiles
 }
 
+function Copy-CompiledAppsToOutput {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PackageCachePath,
+        [Parameter(Mandatory = $true)]
+        [string]$OutputFolder,
+        [Parameter(Mandatory = $true)]
+        [hashtable]$FilesBeforeCompile
+    )
+
+    $generatedAppFiles = @()
+    if (-not (Test-Path $PackageCachePath) -or ($PackageCachePath -eq $OutputFolder)) {
+        return $generatedAppFiles
+    }
+
+    if (-not (Test-Path $OutputFolder)) {
+        New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
+    }
+
+    $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
+    OutputArray -Message "Files in package cache after compilation:" -Array $filesInPackageCache -Debug
+
+    # Find new or modified files by comparing timestamps
+    $outputFiles = $filesInPackageCache | Where-Object {
+        -not $FilesBeforeCompile.ContainsKey($_.FullName) -or
+        $_.LastWriteTimeUtc -gt $FilesBeforeCompile[$_.FullName]
+    }
+
+    OutputDebug -message "Copying generated app files from package cache '$PackageCachePath' to output folder '$OutputFolder'"
+    foreach ($file in $outputFiles) {
+        $destinationPath = Join-Path $OutputFolder $file.Name
+        $generatedAppFiles += $destinationPath
+        Copy-Item -Path $file.FullName -Destination $destinationPath -Force
+    }
+
+    return $generatedAppFiles
+}
+
 function CompileAppsInWorkspace {
     param(
         [Parameter(Mandatory = $true)]
@@ -492,33 +530,7 @@ function CompileAppsInWorkspace {
     } finally {
         # Restore original encoding
         [Console]::OutputEncoding = $originalEncoding
-        $outputFiles = @()
-
-        # if package cache path and output folder are the same then no need to copy files
-        # Copy the output files from the package cache to the output folder
-        OutputDebug -message "Copying generated app files to output folder..."
-        if ((Test-Path $PackageCachePath) -and ($PackageCachePath -ne $OutputFolder)) {
-            if (-not (Test-Path $OutputFolder)) {
-                New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
-            }
-            $filesInPackageCache = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app"
-            OutputArray -Message "Files in package cache after compilation:" -Array $filesInPackageCache -Debug
-            # Find new or modified files by comparing timestamps
-            $outputFiles = Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | Where-Object {
-                -not $filesBeforeCompile.ContainsKey($_.FullName) -or
-                $_.LastWriteTimeUtc -gt $filesBeforeCompile[$_.FullName]
-            }
-        }
-
-        OutputDebug -message "Copying generated app files from package cache '$PackageCachePath' to output folder '$OutputFolder'"
-        foreach ($file in $outputFiles) {
-            $destinationPath = Join-Path $OutputFolder $file.Name
-            $generatedAppFiles += $destinationPath
-            if ($OutputFolder -eq $PackageCachePath) {
-                continue
-            }
-            Copy-Item -Path $file.FullName -Destination $destinationPath -Force
-        }
+        $generatedAppFiles = Copy-CompiledAppsToOutput -PackageCachePath $PackageCachePath -OutputFolder $OutFolder -FilesBeforeCompile $filesBeforeCompile
     }
 
     OutputArray -Message "Generated app files:" -Array $generatedAppFiles -Debug
@@ -687,6 +699,9 @@ function New-WorkspaceFromFolders() {
     try {
         Write-Host "Executing: $AltoolPath $($arguments -join ' ')" -ForegroundColor Green
         $null = & $AltoolPath @arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to create workspace file '$WorkspaceFile'. altool exited with code $LASTEXITCODE"
+        }
     } catch {
         throw $_
     }
