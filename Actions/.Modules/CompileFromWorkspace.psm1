@@ -103,10 +103,24 @@ function Get-ALTool {
         return $script:alTool
     }
 
-    # Load the AL tool from the downloaded package
-    $alExe = Get-ChildItem -Path $CompilerFolder -Recurse -Filter "al*" | Where-Object { $_.Name -eq "al" -or $_.Name -eq "altool.exe" } | Select-Object -First 1 -ExpandProperty FullName
-    if (-not $alExe) {
-        throw "Could not find al.exe in the development tools package."
+    # Select the platform-specific AL tool binary
+    if ($IsLinux) {
+        $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/linux"
+        $alExe = Join-Path $platformFolder "altool"
+        if (-not (Test-Path $alExe)) {
+            $alExe = Join-Path $platformFolder "al"
+        }
+    }
+    else {
+        $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/win32"
+        $alExe = Join-Path $platformFolder "altool.exe"
+        if (-not (Test-Path $alExe)) {
+            $alExe = Join-Path $platformFolder "al.exe"
+        }
+    }
+
+    if (-not (Test-Path $alExe)) {
+        throw "Could not find AL tool in the compiler folder: $CompilerFolder"
     }
     $script:alTool = $alExe
     return $script:alTool
