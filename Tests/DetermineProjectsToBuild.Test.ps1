@@ -816,6 +816,70 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[2].projects | Should -BeExactly @("TestProject")
     }
 
+    It 'throws error when test project has buildable app folders' {
+        # TestProject has both testProject setting AND an app folder — this should fail
+        $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
+
+        New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
+        @{ testProject = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        # Add an app folder to the test project — this should be forbidden
+        $testAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Bad App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/TestProject/app/app.json" -Value (ConvertTo-Json $testAppFile -Depth 10) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        New-Item -Path "$baseFolder/.github" -type Directory -Force
+        $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json") -Encoding UTF8
+
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*must not contain buildable code*"
+    }
+
+    It 'throws error when test project has buildable test folders' {
+        # TestProject has both testProject setting AND a test folder — this should fail
+        $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
+
+        # Add a test folder with an app to the test project
+        $testAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd3'; name = 'Bad Test App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/TestProject/test/app.json" -Value (ConvertTo-Json $testAppFile -Depth 10) -type File -Force
+        @{ testProject = @("Project1"); testFolders = @("test") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        New-Item -Path "$baseFolder/.github" -type Directory -Force
+        $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json") -Encoding UTF8
+
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*must not contain buildable code*"
+    }
+
+    It 'throws error when one test project depends on another test project' {
+        # Project1 is a normal project, TestProject1 and TestProject2 are both test projects
+        # TestProject2 tries to depend on TestProject1 — this should fail
+        $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
+
+        New-Item -Path "$baseFolder/TestProject1/.AL-Go/settings.json" -type File -Force
+        @{ testProject = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject1/.AL-Go/settings.json") -Encoding UTF8
+
+        New-Item -Path "$baseFolder/TestProject2/.AL-Go/settings.json" -type File -Force
+        @{ testProject = @("TestProject1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject2/.AL-Go/settings.json") -Encoding UTF8
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        New-Item -Path "$baseFolder/.github" -type Directory -Force
+        $alGoSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder ".github/AL-Go-Settings.json") -Encoding UTF8
+
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*cannot depend on another test project*"
+    }
+
     It 'throws error when testProject references nonexistent project' {
         # Project1 exists
         $project1AppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }

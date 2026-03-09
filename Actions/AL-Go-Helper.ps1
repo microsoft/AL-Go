@@ -715,6 +715,13 @@ function AnalyzeRepo {
         $settings.doNotRunBcptTests = $true
     }
     $isTestProject = $settings.testProject -and $settings.testProject.Count -gt 0
+    if ($isTestProject) {
+        # Test projects must not contain any buildable code — they only run tests from upstream projects
+        if ($settings.appFolders -or $settings.testFolders -or $settings.bcptTestFolders) {
+            $buildableFolders = @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | Where-Object { $_ })
+            throw "Test project must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the testProject setting. Found: $($buildableFolders -join ', ')"
+        }
+    }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
         if ($isTestProject) {
             # Test projects run tests from upstream projects via installTestApps, not from local testFolders
@@ -1826,36 +1833,47 @@ Function AnalyzeProjectDependencies {
     # }
 
     # Handle testProject settings: inject explicit dependencies from target project names
+    # First pass: collect all test projects so we can validate that no project depends on a test project
+    $testProjectNames = @{}
     foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
         if ($projectSettings.testProject -and $projectSettings.testProject.Count -gt 0) {
-            Write-Host "Project '$project' is a test project targeting: $($projectSettings.testProject -join ', ')"
-            $testProjectDeps = @()
-            foreach($targetProject in $projectSettings.testProject) {
-                # Resolve target project name: support both full paths (build/projects/Apps) and short names (Apps)
-                $resolvedTarget = $null
-                if ($appDependencies.Keys -contains $targetProject) {
-                    $resolvedTarget = $targetProject
-                } else {
-                    $matchingProjects = @($appDependencies.Keys | Where-Object { $_ -eq $targetProject -or $_.EndsWith("/$targetProject") -or $_.EndsWith("\$targetProject") })
-                    if ($matchingProjects.Count -eq 1) {
-                        $resolvedTarget = $matchingProjects[0]
-                    } elseif ($matchingProjects.Count -gt 1) {
-                        throw "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
-                    }
-                }
-                if (-not $resolvedTarget) {
-                    throw "Test project '$project' references project '$targetProject' which does not exist in the repository"
-                }
-                # Use a synthetic marker ID unique to the target project so the topological sort
-                # only resolves the dependency to that specific project (not other projects that
-                # happen to produce the same apps)
-                $projectMarker = "testProjectDep:$resolvedTarget"
-                $appDependencies."$resolvedTarget".apps += @($projectMarker)
-                $testProjectDeps += @($projectMarker)
+            # Validate that test projects do not contain buildable code
+            $buildableFolders = @($appDependencies."$project".apps)
+            if ($buildableFolders.Count -gt 0) {
+                throw "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the testProject setting."
             }
-            $appDependencies."$project".dependencies = @(($appDependencies."$project".dependencies + $testProjectDeps) | Select-Object -Unique)
+            $testProjectNames[$project] = $projectSettings.testProject
         }
+    }
+    foreach($project in $testProjectNames.Keys) {
+        Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
+        $testProjectDeps = @()
+        foreach($targetProject in $testProjectNames[$project]) {
+            # Resolve target project name: support both full paths (build/projects/Apps) and short names (Apps)
+            $resolvedTarget = $null
+            if ($appDependencies.Keys -contains $targetProject) {
+                $resolvedTarget = $targetProject
+            } else {
+                $matchingProjects = @($appDependencies.Keys | Where-Object { $_ -eq $targetProject -or $_.EndsWith("/$targetProject") -or $_.EndsWith("\$targetProject") })
+                if ($matchingProjects.Count -eq 1) {
+                    $resolvedTarget = $matchingProjects[0]
+                } elseif ($matchingProjects.Count -gt 1) {
+                    throw "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
+                }
+            }
+            if (-not $resolvedTarget) {
+                throw "Test project '$project' references project '$targetProject' which does not exist in the repository"
+            }
+            # Validate that the target is not itself a test project
+            if ($testProjectNames.Keys -contains $resolvedTarget) {
+                throw "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
+            }
+            $projectMarker = "testProjectDep:$resolvedTarget"
+            $appDependencies."$resolvedTarget".apps += @($projectMarker)
+            $testProjectDeps += @($projectMarker)
+        }
+        $appDependencies."$project".dependencies = @(($appDependencies."$project".dependencies + $testProjectDeps) | Select-Object -Unique)
     }
 
     $no = 1
