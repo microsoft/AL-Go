@@ -40,6 +40,12 @@ Write-Host -ForegroundColor Yellow @'
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 $prevLocation = Get-Location
 
+if ($linux) {
+    Write-Host 'Workspace compilation currently doesnt work on Linux runners, so this test is only run on Windows.'
+    exit
+}
+
+
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\..\e2eTestHelper.psm1") -DisableNameChecking
 
