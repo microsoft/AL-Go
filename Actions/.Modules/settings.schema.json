@@ -421,6 +421,13 @@
             "type": "boolean",
             "description": "See https://aka.ms/ALGoSettings#useprojectdependencies"
         },
+        "testProject": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "See https://aka.ms/ALGoSettings#testproject"
+        },
         "runs-on": {
             "type": "string",
             "minLength": 1,

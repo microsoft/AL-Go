@@ -26,6 +26,7 @@ AL-Go will automatically:
 - A test project cannot depend on another test project.
 - You can target multiple projects: `"testProject": ["ProjectA", "ProjectB"]`.
 - Short project names and full paths are both supported. If a short name is ambiguous, AL-Go will ask you to use the full path.
+
 ### Improving error detection and build reliability when downloading project dependencies
 
 The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
