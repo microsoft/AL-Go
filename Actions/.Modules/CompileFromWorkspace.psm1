@@ -35,8 +35,46 @@ function Get-CodeAnalyzers {
         $analyzers += "UICop"
     }
 
-    if ($Settings.CustomCodeCops -and $Settings.CustomCodeCops.Count -gt 0) {
-        OutputWarning -message "Custom code cops are not yet supported. The following custom code cops will be ignored: $($Settings.CustomCodeCops -join ', ')"
+    return $analyzers
+}
+
+<#
+.SYNOPSIS
+    Gets the list of custom code analyzers to use for compilation.
+.DESCRIPTION
+    Returns an array of custom code analyzer paths based on the settings provided.
+    If the custom code cop is a URL, it will be downloaded to the compiler folder and the local path will be returned.
+.PARAMETER Settings
+    Hashtable containing the build settings with custom code cop paths or URLs.
+.PARAMETER CompilerFolder
+    The folder where the AL compiler tool is located, used for downloading custom analyzers if URLs are provided.
+.OUTPUTS
+    Array of custom analyzer paths to use for compilation.
+#>
+function Get-CustomAnalyzers {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings,
+
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder
+    )
+
+    $analyzers = @()
+    if (-not $Settings.CustomCodeCops -or $Settings.CustomCodeCops.Count -eq 0) {
+        return $analyzers
+    }
+
+    $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
+    foreach ($customCodeCop in $Settings.CustomCodeCops) {
+        if ($customCodeCop -like 'https://*') {
+            $analyzerFileName = Join-Path $binPath "Analyzers/$(Split-Path $customCodeCop -Leaf)"
+            Download-File -SourceUrl $customCodeCop -destinationFile $analyzerFileName
+            $analyzers += $analyzerFileName
+        }
+        else {
+            $analyzers += $customCodeCop
+        }
     }
 
     return $analyzers
@@ -160,6 +198,8 @@ function Build-AppsInWorkspace() {
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
         [Parameter(Mandatory = $false)]
+        [string[]]$CustomAnalyzers,
+        [Parameter(Mandatory = $false)]
         [string[]]$PreprocessorSymbols,
         [Parameter(Mandatory = $false)]
         [string[]]$Features,
@@ -226,6 +266,7 @@ function Build-AppsInWorkspace() {
         LogDirectory = $LogDirectory
         AssemblyProbingPaths = $AssemblyProbingPaths
         Analyzers = $Analyzers
+        CustomAnalyzers = $CustomAnalyzers
         PreprocessorSymbols = $PreprocessorSymbols
         Features = $Features
         GenerateReportLayout = $GenerateReportLayout
@@ -279,6 +320,9 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $false)]
         [string[]]$Analyzers,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$CustomAnalyzers,
 
         [Parameter(Mandatory = $false)]
         [string[]]$PreprocessorSymbols,
@@ -363,6 +407,11 @@ function CompileAppsInWorkspace {
     if ($Analyzers -and $Analyzers.Count -gt 0) {
         $arguments += "--analyzers"
         $arguments += ($Analyzers -join ",")
+    }
+
+    if ($CustomAnalyzers -and $CustomAnalyzers.Count -gt 0) {
+        $arguments += "--customanalyzers"
+        $arguments += ($CustomAnalyzers -join ",")
     }
 
     if ($PreprocessorSymbols -and $PreprocessorSymbols.Count -gt 0) {

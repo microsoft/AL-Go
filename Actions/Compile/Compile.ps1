@@ -132,6 +132,7 @@ $buildParams = @{
     PreCompileApp               = $scriptOverrides.PreCompileApp
     PostCompileApp              = $scriptOverrides.PostCompileApp
     Analyzers                   = (Get-CodeAnalyzers -Settings $settings)
+    CustomAnalyzers             = (Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
 }
 
 # Start compilation
