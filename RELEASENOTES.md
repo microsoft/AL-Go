@@ -10,7 +10,7 @@ Add a `testProject` setting to the project-level `.AL-Go/settings.json` of an em
 
 ```json
 {
-  "testProject": ["MyApp"]
+  "testProject": ["MyProject"]
 }
 ```
 

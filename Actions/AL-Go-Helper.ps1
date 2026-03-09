@@ -1841,7 +1841,7 @@ Function AnalyzeProjectDependencies {
             # Validate that test projects do not contain buildable code
             $buildableFolders = @($appDependencies."$project".apps)
             if ($buildableFolders.Count -gt 0) {
-                throw "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the testProject setting."
+                OutputError "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the testProject setting."
             }
             $testProjectNames[$project] = $projectSettings.testProject
         }
@@ -1850,7 +1850,7 @@ Function AnalyzeProjectDependencies {
         Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
         $testProjectDeps = @()
         foreach($targetProject in $testProjectNames[$project]) {
-            # Resolve target project name: support both full paths (build/projects/Apps) and short names (Apps)
+            # Resolve target project name: support both full paths (path/to/projectName) and short names (projectName)
             $resolvedTarget = $null
             if ($appDependencies.Keys -contains $targetProject) {
                 $resolvedTarget = $targetProject
@@ -1859,16 +1859,17 @@ Function AnalyzeProjectDependencies {
                 if ($matchingProjects.Count -eq 1) {
                     $resolvedTarget = $matchingProjects[0]
                 } elseif ($matchingProjects.Count -gt 1) {
-                    throw "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
+                    OutputError "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
                 }
             }
             if (-not $resolvedTarget) {
-                throw "Test project '$project' references project '$targetProject' which does not exist in the repository"
+                OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository"
             }
             # Validate that the target is not itself a test project
             if ($testProjectNames.Keys -contains $resolvedTarget) {
-                throw "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
+                OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
             }
+            # Insert 'fake' app to force dependency from test project to target project
             $projectMarker = "testProjectDep:$resolvedTarget"
             $appDependencies."$resolvedTarget".apps += @($projectMarker)
             $testProjectDeps += @($projectMarker)
