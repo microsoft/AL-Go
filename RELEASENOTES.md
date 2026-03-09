@@ -12,7 +12,7 @@ The time it takes to build projects can vary significantly depending on factors 
 
 By default, projects are built according to their dependency order. As soon as all dependencies for a project are satisfied, the project is added to the next layer of jobs.
 
-The new setting `postponeProjectInBuildOrder` allows you to delay jobs that only run tests until the final layer of the build order. This can improve overall build performance by preventing subsequent layers from waiting on projects that take longer to complete but are not required for further dependencies.
+The new setting `postponeProjectInBuildOrder` allows you to delay long running jobs (f.ex. test runs) with no dependants until the final layer of the build order. This can improve overall build performance by preventing subsequent layers from waiting on projects that take longer to complete but are not required for further dependencies.
 
 ### Issues
 
