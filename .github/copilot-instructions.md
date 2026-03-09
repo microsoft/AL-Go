@@ -17,7 +17,7 @@ AL-Go for GitHub is a set of GitHub Actions and Templates for building, testing,
 - Use `Write-Host "::Warning::<message>"` for non-blocking warnings.
 
 ### JSON Processing
-- Always use `ConvertTo-HashTable -recurse` after `ConvertFrom-Json` to ensure case-insensitive access.
+- Always use `ConvertTo-HashTable -recurse` after `ConvertFrom-Json` to ensure nested objects and arrays are converted to hashtables for consistent access.
 - Always specify `-Encoding UTF8` when reading or writing JSON files.
 
 ### Function Declarations
