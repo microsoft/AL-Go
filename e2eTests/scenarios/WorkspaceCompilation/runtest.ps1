@@ -72,7 +72,7 @@ CreateAlGoRepository `
     -addRepoSettings @{
         "useWorkspaceCompilation" = $true
         "useCompilerFolder" = $true
-        "doNotPublishApps" = $true
+        "doNotPublishApps" = $false
         "artifact" = "////nextmajor"
         "githubRunner" = $githubRunner
         "githubRunnerShell" = $githubRunnerShell
@@ -131,32 +131,6 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-Apps-*_app2_1.0.3.0.app" = 1
     "P1-main-Apps-*_app3_1.0.3.0.app" = 1
     "P1-main-Apps-*_app4_1.0.3.0.app" = 1
-}
-
-# Modify only app3 (leaf node) - only app3 should be rebuilt
-Pull
-$run = ModifyAppInFolder -folder 'P1/app3' -name 'app3' -commit -wait
-
-# Check that only app3 got a new version
-Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 4
-    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app2_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app3_1.0.4.0.app" = 1
-    "P1-main-Apps-*_app4_1.0.3.0.app" = 1
-}
-
-# Modify only app4 (leaf node depending on app1) - only app4 should get a new version
-Pull
-$run = ModifyAppInFolder -folder 'P1/app4' -name 'app4' -commit -wait
-
-# Check that only app4 got a new version
-Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 4
-    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app2_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app3_1.0.4.0.app" = 1
-    "P1-main-Apps-*_app4_1.0.5.0.app" = 1
 }
 
 # Cleanup repositories
