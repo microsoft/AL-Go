@@ -64,7 +64,6 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{ "artifact" = "////nextmajor" } `
     -contentScript {
         Param([string] $path)
         $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName

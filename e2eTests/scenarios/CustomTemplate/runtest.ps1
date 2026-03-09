@@ -61,8 +61,7 @@ CreateAlGoRepository `
     -linux:$linux `
     -template $template `
     -repository $templateRepository `
-    -branch $branch `
-    -addRepoSettings @{ "artifact" = "////nextmajor" }
+    -branch $branch
 $templateRepoPath = (Get-Location).Path
 
 Set-Location $prevLocation
@@ -77,7 +76,6 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{ "artifact" = "////nextmajor" } `
     -contentScript {
         Param([string] $path)
         $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName

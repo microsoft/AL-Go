@@ -147,7 +147,7 @@ try {
     }
 
     if ($settings.testFolders.Count -gt 0) {
-        if (-not ($settings.enableCodeAnalyzersOnTestApps)) { 
+        if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
             $buildParams.Analyzers = @()
         }
 

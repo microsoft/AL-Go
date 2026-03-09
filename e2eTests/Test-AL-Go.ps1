@@ -108,7 +108,7 @@ SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId
 # Create repo
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder
 # This causes the CI/CD workflow to use FilesOnly containers or CompilerFolder (if UseCompilerFolder is true)
-CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "artifact" = "////nextmajor"; "useCompilerFolder" = $useCompilerFolder.IsPresent; "doNotPublishApps" = $useCompilerFolder.IsPresent }
+CreateAlGoRepository -github:$github -template $template -branch $branch -private:$private -linux:$linux -addRepoSettings @{ "useCompilerFolder" = $useCompilerFolder.IsPresent; "doNotPublishApps" = $useCompilerFolder.IsPresent }
 $repoPath = (Get-Location).Path
 
 # Wait for GitHub to create the repository

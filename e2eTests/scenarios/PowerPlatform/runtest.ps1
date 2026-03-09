@@ -65,7 +65,6 @@ foreach($sourceRepo in $repositories) {
         -template "https://github.com/microsoft/$sourceRepo" `
         -repository $repository `
         -branch $branch `
-        -addRepoSettings @{ "artifact" = "////nextmajor" } `
         -contentScript {
             Param([string] $path)
             Remove-PropertiesFromJsonFile -path (Join-Path $path '.github/AL-Go-Settings.json') -properties @('environments','DeployTo*')

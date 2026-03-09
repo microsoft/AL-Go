@@ -68,8 +68,7 @@ CreateAlGoRepository `
     -github:$github `
     -template "https://github.com/$sourceRepo" `
     -repository $repository `
-    -branch $branch `
-    -addRepoSettings @{ "artifact" = "////nextmajor" }
+    -branch $branch
 
 $repoPath = (Get-Location).Path
 Write-Host "Repo Path: $repoPath"

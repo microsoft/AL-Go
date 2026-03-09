@@ -64,7 +64,7 @@ $template = "https://github.com/$template"
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
 # Create repo
-CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private -addRepoSettings @{ "artifact" = "////nextmajor" }
+CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
 $repoPath = (Get-Location).Path
 
 # Get initial number of runs (due to bug in GitHub, this might be 0, 1 or 2)

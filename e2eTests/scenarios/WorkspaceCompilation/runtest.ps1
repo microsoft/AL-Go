@@ -27,7 +27,7 @@ Write-Host -ForegroundColor Yellow @'
 # This test tests the following scenario:
 #
 #  - Create a new repository based on the PTE template with one project and 4 apps with dependencies
-#  - Enable useWorkspaceCompilation, useCompilerFolder and doNotPublishApps in settings
+#  - Enable useWorkspaceCompilation and doNotPublishApps in settings
 #  - Run the "CI/CD" workflow
 #  - Check artifacts generated - all 4 apps should be compiled successfully
 #  - Verify that apps are compiled using workspace compilation (faster parallel build)
@@ -77,7 +77,6 @@ CreateAlGoRepository `
     -projects @('P1') `
     -addRepoSettings @{
         "useWorkspaceCompilation" = $true
-        "useCompilerFolder" = $true
         "doNotPublishApps" = $false
         "artifact" = "////nextmajor"
         "githubRunner" = $githubRunner

@@ -57,7 +57,7 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -addRepoSettings @{"artifact" = "////nextmajor"; "buildModes" = @("Clean", "Default", "Translated", "CustomBuildMode" ); "conditionalSettings" = @( @{ "buildModes" = @("Clean"); "settings" = @{ "preprocessorSymbols" = @( "CLEAN" ) } } ) } `
+    -addRepoSettings @{"buildModes" = @("Clean", "Default", "Translated", "CustomBuildMode" ); "conditionalSettings" = @( @{ "buildModes" = @("Clean"); "settings" = @{ "preprocessorSymbols" = @( "CLEAN" ) } } ) } `
     -contentScript {
         Param([string] $path)
         CreateNewAppInFolder -folder $path -name "App" | Out-Null
