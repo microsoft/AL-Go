@@ -18,7 +18,7 @@ AL-Go will automatically:
 
 - Resolve the dependency so the test project always builds after its target project(s).
 - Install the Test Runner, Test Framework, and Test Libraries into the container.
-- Run all tests from the installed test apps (`runTestsInAllInstalledTestApps`).
+- Run all tests from the installed test apps.
 
 **Key rules**
 
