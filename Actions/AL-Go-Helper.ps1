@@ -51,6 +51,42 @@ $runAlPipelineOverrides = @(
     "PipelineFinalize"
 )
 
+<#
+    .SYNOPSIS
+        Gets script overrides from the AL-Go folder.
+    .DESCRIPTION
+        Checks the specified AL-Go folder for .ps1 scripts matching the provided override names.
+        Returns a hashtable mapping each found override name to its script block.
+    .PARAMETER ALGoFolderName
+        The folder where the AL-Go scripts are located.
+    .PARAMETER OverrideScriptNames
+        An array of script names to look for (without .ps1 extension).
+    .OUTPUTS
+        Hashtable with override script names as keys and their script blocks as values.
+#>
+function Get-ScriptOverrides() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALGoFolderName,
+        [Parameter(Mandatory = $true)]
+        [string[]] $OverrideScriptNames
+    )
+    $overrides = @{}
+    foreach ($scriptName in $OverrideScriptNames) {
+        $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
+        if (Test-Path -Path $scriptPath -Type Leaf) {
+            OutputDebug "Add override for $scriptName ($scriptPath)"
+            Trace-Information -Message "Using override for $scriptName"
+            $scriptBlock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            if (-not $scriptBlock) {
+                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+            }
+            $overrides[$scriptName] = $scriptBlock
+        }
+    }
+    return $overrides
+}
+
 # Well known AppIds
 $platformAppId = "8874ed3a-0643-4247-9ced-7a7002f7135d"
 $systemAppId = "63ca2fa4-4f03-4f2b-a480-172fef340d3f"
@@ -1546,16 +1582,7 @@ function CreateDevEnv {
 
         Push-Location $projectFolder
         try {
-            $runAlPipelineOverrides | ForEach-Object {
-                $scriptName = $_
-                $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-                if (Test-Path -Path $scriptPath -Type Leaf) {
-                    Write-Host "Add override for $scriptName"
-                    $runAlPipelineParams += @{
-                        "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-                    }
-                }
-            }
+            $runAlPipelineParams += (Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides)
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{

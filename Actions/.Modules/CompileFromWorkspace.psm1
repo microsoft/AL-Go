@@ -784,49 +784,10 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
-<#
-.SYNOPSIS
-    Gets script overrides for pre-compile and post-compile actions.
-.DESCRIPTION
-    Checks for the existence of PreCompileApp.ps1 and PostCompileApp.ps1 scripts in the specified
-    AL-Go folder and returns their script blocks if found.
-.PARAMETER ALGoFolderName
-    The folder where the AL-Go scripts are located.
-.OUTPUTS
-    Hashtable with PreCompileApp and PostCompileApp script blocks.
-#>
-function Get-ScriptOverrides() {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ALGoFolderName
-    )
-    $precompileOverride = $null
-    $postCompileOverride = $null
-    foreach ($override in @("PreCompileApp", "PostCompileApp")) {
-        $scriptPath = Join-Path $ALGoFolderName "$override.ps1"
-        if (Test-Path -Path $scriptPath -Type Leaf) {
-            OutputDebug "Add override for $override ($scriptPath)"
-            Trace-Information -Message "Using override for $override"
-            if ($override -eq "PreCompileApp") {
-                $precompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-            }
-            else {
-                $postCompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-            }
-        }
-    }
-
-    return @{
-        PreCompileApp = $precompileOverride
-        PostCompileApp = $postCompileOverride
-    }
-}
-
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
-Export-ModuleMember -Function Get-ScriptOverrides
 Export-ModuleMember -Function Update-AppJsonProperties

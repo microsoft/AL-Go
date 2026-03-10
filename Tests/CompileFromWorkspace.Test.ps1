@@ -230,16 +230,23 @@ Describe 'CompileFromWorkspace.psm1 Tests' {
     }
 
     Describe 'Get-ScriptOverrides' {
+        BeforeAll {
+            # Get-ScriptOverrides is defined in AL-Go-Helper.ps1 (dot-sourced at file scope).
+            # Re-dot-source here so it's available inside Pester's It blocks.
+            . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+            # Trace-Information is from TelemetryHelper.psm1 which isn't loaded in tests
+            function Trace-Information { param([string]$Message) }
+        }
+
         It 'Returns null overrides when no override scripts exist' {
             $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'no-overrides') -AppFolders @(
                 @{ Name = "MyApp"; Id = "11111111-1111-1111-1111-111111111111" }
             )
             $alGoFolder = Join-Path $projectPath ".AL-Go"
 
-            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder
+            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.PreCompileApp | Should -BeNullOrEmpty
-            $result.PostCompileApp | Should -BeNullOrEmpty
+            $result.Keys | Should -HaveCount 0
         }
 
         It 'Returns PreCompileApp override when script exists in .AL-Go folder' {
@@ -256,10 +263,10 @@ Param(
 Write-Host "Pre-compile for $appType"
 '@
 
-            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder
+            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.PreCompileApp | Should -Not -BeNullOrEmpty
-            $result.PostCompileApp | Should -BeNullOrEmpty
+            $result.Keys | Should -Contain 'PreCompileApp'
+            $result.Keys | Should -Not -Contain 'PostCompileApp'
         }
 
         It 'Returns PostCompileApp override when script exists in .AL-Go folder' {
@@ -277,10 +284,10 @@ Param(
 Write-Host "Post-compile: $($appFiles.Count) apps"
 '@
 
-            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder
+            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.PreCompileApp | Should -BeNullOrEmpty
-            $result.PostCompileApp | Should -Not -BeNullOrEmpty
+            $result.Keys | Should -Not -Contain 'PreCompileApp'
+            $result.Keys | Should -Contain 'PostCompileApp'
         }
 
         It 'Returns both overrides when both scripts exist in .AL-Go folder' {
@@ -309,10 +316,10 @@ Param(
 Write-Host "Post-compile: $($appFiles.Count) apps"
 '@
 
-            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder
+            $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.PreCompileApp | Should -Not -BeNullOrEmpty
-            $result.PostCompileApp | Should -Not -BeNullOrEmpty
+            $result.Keys | Should -Contain 'PreCompileApp'
+            $result.Keys | Should -Contain 'PostCompileApp'
         }
     }
 

@@ -329,18 +329,7 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
     Set-Location $projectPath
-    $runAlPipelineOverrides | ForEach-Object {
-        $scriptName = $_
-        $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-        if (Test-Path -Path $scriptPath -Type Leaf) {
-            Write-Host "Add override for $scriptName"
-            Trace-Information -Message "Using override for $scriptName"
-
-            $runAlPipelineParams += @{
-                "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-            }
-        }
-    }
+    $runAlPipelineParams += (Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides)
 
     if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
