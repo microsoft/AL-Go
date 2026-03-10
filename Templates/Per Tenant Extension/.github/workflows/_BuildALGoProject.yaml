@@ -170,9 +170,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/Compile@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useWorkspaceCompilation == 'True'
         env:
-          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
-          NeedsContext: ${{ inputs.needsContext }}
         with:
           shell: ${{ inputs.shell }}
           artifact: ${{ env.artifact }}

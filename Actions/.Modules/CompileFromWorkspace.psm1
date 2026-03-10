@@ -280,6 +280,20 @@ function Build-AppsInWorkspace() {
     return $appFiles
 }
 
+<#
+    .SYNOPSIS
+    Copies compiled app files from the package cache to the output folder, and returns the list of generated app file paths.
+    .DESCRIPTION
+    Compares the files in the package cache before and after compilation to determine which app files were generated or updated by the compilation process. Copies those files to the output folder and returns their paths.
+    .PARAMETER PackageCachePath
+    The folder where the AL compiler outputs compiled app files (package cache).
+    .PARAMETER OutputFolder
+    The folder where the generated app files should be copied to.
+    .PARAMETER FilesBeforeCompile
+    A hashtable of file paths and their last write times before compilation, used to determine which files were generated or updated by the compilation process.
+    .OUTPUTS
+    Array of file paths for the generated app files that were copied to the output folder.
+#>
 function Copy-CompiledAppsToOutput {
     param(
         [Parameter(Mandatory = $true)]
@@ -529,11 +543,10 @@ function CompileAppsInWorkspace {
 .OUTPUTS
     System.Version of the highest compatible .NET runtime installed, or $null if none found.
 #>
-# TODO: Find a better way to determine minimum supported version and maximum supported version
 function Get-DotnetRuntimeVersionInstalled {
     param(
         [Parameter(Mandatory = $false)]
-        [int] $MinimumSupportedMajorVersion = 6,
+        [int] $MinimumSupportedMajorVersion = 6, # TODO: Find a better way to determine minimum supported version and maximum supported version
         [Parameter(Mandatory = $false)]
         [int] $MaximumSupportedMajorVersion = 8
     )
@@ -714,8 +727,10 @@ function Update-AppJsonProperties() {
             $appJsonContent = Get-Content -Path $appJsonFile.FullName -Raw | ConvertFrom-Json
 
             if ($MajorMinorVersion) {
+                # If MajorMinorVersion is provided, use it along with BuildNumber and RevisionNumber (or 0 if not provided) to construct the new version
                 $version = [System.Version]"$($MajorMinorVersion).$($BuildNumber).$($RevisionNumber)"
             } else {
+                # If MajorMinorVersion is not provided, retain the existing major and minor version from app.json and update build and revision numbers based on provided parameters (or retain existing if not provided)
                 $currentAppJsonVersion = [System.Version]$appJsonContent.Version
                 if ($BuildNumber -eq 0) {
        	            $version = [System.Version]::new($currentAppJsonVersion.Major, $currentAppJsonVersion.Minor, $currentAppJsonVersion.Build, $RevisionNumber)

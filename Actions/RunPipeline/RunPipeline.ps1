@@ -86,7 +86,7 @@ try {
     }
 
     if ($settings.useWorkspaceCompilation -and $settings.doNotPublishApps -and $settings.doNotRunTests) {
-        Write-Host "Apps are compiled and doNotPublishApps is set. Exiting..."
+        OutputColor -Message "Apps are compiled and doNotPublishApps is set. Exiting..." -Color Yellow
         return
     }
 
@@ -131,7 +131,7 @@ try {
     if (-not (Test-Path $buildArtifactFolder)) {
         New-Item $buildArtifactFolder -ItemType Directory | Out-Null
     } elseif(-not ($settings.useWorkspaceCompilation)) {
-        OutputWarning -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
+        OutputDebug -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
     }
 
     # When using workspace compilation, apps are already compiled - pass empty folders to Run-AlPipeline
