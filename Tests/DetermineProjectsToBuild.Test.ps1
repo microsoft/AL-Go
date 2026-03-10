@@ -1045,6 +1045,8 @@ Describe "Get-ProjectsToBuild" {
 
     It 'throws error when test project has buildable app folders' {
         # TestProject has both testProject setting AND an app folder — this should fail
+        Mock OutputError {}
+
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
@@ -1061,11 +1063,14 @@ Describe "Get-ProjectsToBuild" {
 
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*must not contain buildable code*"
+        { Get-ProjectsToBuild -baseFolder $baseFolder } 
+        Should -Invoke OutputError -ParameterFilter { $message -like "*must not contain buildable code*" }
     }
 
     It 'throws error when test project has buildable test folders' {
         # TestProject has both testProject setting AND a test folder — this should fail
+        Mock OutputError {}
+
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
@@ -1082,7 +1087,8 @@ Describe "Get-ProjectsToBuild" {
 
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*must not contain buildable code*"
+        { Get-ProjectsToBuild -baseFolder $baseFolder } 
+        Should -Invoke OutputError -ParameterFilter { $message -like "*must not contain buildable code*" }
     }
 
     It 'throws error when one test project depends on another test project' {
@@ -1106,7 +1112,8 @@ Describe "Get-ProjectsToBuild" {
 
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Invoke OutputError -ParameterFilter { $message -like "*cannot depend on another test project*" }
+        { Get-ProjectsToBuild -baseFolder $baseFolder } 
+        Should -Invoke OutputError -ParameterFilter { $message -like "*cannot depend on another test project*" }
 
     }
 
@@ -1128,7 +1135,8 @@ Describe "Get-ProjectsToBuild" {
 
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Invoke OutputError -ParameterFilter { $message -like "*does not exist*" }
+        { Get-ProjectsToBuild -baseFolder $baseFolder } 
+        Should -Invoke OutputError -ParameterFilter { $message -like "*does not exist*" }
     }
 
     It 'test project can depend on multiple upstream projects' {
