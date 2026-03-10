@@ -1836,7 +1836,7 @@ Function AnalyzeProjectDependencies {
     # First pass: collect all test projects so we can validate that no project depends on a test project
     $testProjectNames = @{}
     foreach($project in $projects) {
-        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
         if ($projectSettings.testProject -and $projectSettings.testProject.Count -gt 0) {
             # Validate that test projects do not contain buildable code
             $buildableFolders = @($appDependencies."$project".apps)
