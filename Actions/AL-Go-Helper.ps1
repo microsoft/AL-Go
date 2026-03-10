@@ -1899,14 +1899,17 @@ Function AnalyzeProjectDependencies {
                     $resolvedTarget = $matchingProjects[0]
                 } elseif ($matchingProjects.Count -gt 1) {
                     OutputError "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
+                    throw
                 }
             }
             if (-not $resolvedTarget) {
                 OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository"
+                throw
             }
             # Validate that the target is not itself a test project
             if ($testProjectNames.Keys -contains $resolvedTarget) {
                 OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
+                throw
             }
             # Insert 'fake' app to force dependency from test project to target project
             $projectMarker = "testProjectDep:$resolvedTarget"
