@@ -1088,6 +1088,8 @@ Describe "Get-ProjectsToBuild" {
     It 'throws error when one test project depends on another test project' {
         # Project1 is a normal project, TestProject1 and TestProject2 are both test projects
         # TestProject2 tries to depend on TestProject1 — this should fail
+        Mock OutputError {}
+
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
@@ -1104,11 +1106,14 @@ Describe "Get-ProjectsToBuild" {
 
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*cannot depend on another test project*"
+        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Invoke OutputError -ParameterFilter { $message -like "*cannot depend on another test project*" }
+
     }
 
     It 'throws error when testProject references nonexistent project' {
         # Project1 exists
+        Mock OutputError {}
+
         $project1AppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $project1AppFile -Depth 10) -type File -Force
@@ -1123,7 +1128,7 @@ Describe "Get-ProjectsToBuild" {
 
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
-        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Throw "*does not exist*"
+        { Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Invoke OutputError -ParameterFilter { $message -like "*does not exist*" }
     }
 
     It 'test project can depend on multiple upstream projects' {
