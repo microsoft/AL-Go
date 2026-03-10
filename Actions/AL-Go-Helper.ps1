@@ -729,9 +729,18 @@ function AnalyzeRepo {
         if ($isTestProject) {
             # Test projects run tests from upstream projects via installTestApps, not from local testFolders
             Write-Host "Test project: tests will be run from installed test apps"
-            $settings.installTestRunner = $true
-            $settings.installTestFramework = $true
-            $settings.installTestLibraries = $true
+            if (-not $settings.installTestRunner) {
+                Write-Host "installTestRunner is false, this needs to manually be set to true in the project settings if needed by any upsstream test app."
+            }
+            if (-not $settings.installTestFramework) {
+                Write-Host "installTestFramework is false, this needs to manually be set to true in the project settings if needed by any upsstream test app."
+            }
+            if (-not $settings.installTestLibraries) {
+                Write-Host "installTestLibraries is false, this needs to manually be set to true in the project settings if needed by any upsstream test app."
+            }
+            if (-not $settings.runTestsInAllInstalledTestApps) {
+                Write-Host "runTestsInAllInstalledTestApps is false, but will be forced to true as no tests would be run otherwise."
+            }
             $settings.runTestsInAllInstalledTestApps = $true
         }
         else {
