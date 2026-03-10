@@ -221,7 +221,7 @@ function Build-AppsInWorkspace() {
     # Validate MaxCpuCount
     $maxAvailableProcesses = [System.Environment]::ProcessorCount
     if ($MaxCpuCount -gt $maxAvailableProcesses) {
-        Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $maxAvailableProcesses. Using $maxAvailableProcesses instead."
+        OutputWarning "Specified MaxCpuCount $MaxCpuCount is greater than available processors $maxAvailableProcesses. Using $maxAvailableProcesses instead."
         $MaxProcesses = $maxAvailableProcesses
     } elseif ($MaxCpuCount -lt 0) {
         $MaxProcesses = $maxAvailableProcesses
@@ -261,7 +261,7 @@ function Build-AppsInWorkspace() {
 
     # Pre-Compile Apps - Invoke script override before compilation
     if ($PreCompileApp) {
-        Write-Host "Invoking Pre-Compile App Script..."
+        OutputDebug "Invoking Pre-Compile App Script..."
         Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList $AppType, ([ref] $compilationParameters)
     }
 
@@ -270,7 +270,7 @@ function Build-AppsInWorkspace() {
 
     # Post-Compile Apps - Invoke script override after compilation
     if ($PostCompileApp) {
-        Write-Host "Invoking Post-Compile App Script..."
+        OutputDebug "Invoking Post-Compile App Script..."
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
 
@@ -382,8 +382,6 @@ function CompileAppsInWorkspace {
         [string]$OutFolder
     )
 
-    Write-Host "Assembly probing paths: $AssemblyProbingPaths"
-
     # Check if the workspace file exists
     if (-not (Test-Path $WorkspaceFile)) {
         throw "The specified workspace file '$WorkspaceFile' does not exist."
@@ -494,7 +492,7 @@ function CompileAppsInWorkspace {
     $generatedAppFiles = @()
     $originalEncoding = [Console]::OutputEncoding
     try {
-        Write-Host "Executing: $ALToolPath $($arguments -join ' ')" -ForegroundColor Green
+        OutputColor "Executing: $ALToolPath $($arguments -join ' ')" -Color Green
 
         # Temporarily set console encoding to UTF-8 to handle special characters in output
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -605,23 +603,15 @@ function Get-DotnetRuntimeVersionInstalled {
     Includes paths for service assemblies, mock assemblies, OpenXML, and shared runtime folders.
 .PARAMETER CompilerFolder
     The folder where the AL compiler tool is located.
-.PARAMETER MinimumDotNetVersion
-    The minimum major version of .NET runtime to consider. Default is 6.
-.PARAMETER MaximumDotNetVersion
-    The maximum major version of .NET runtime to consider. Default is 8.
 .OUTPUTS
     Array of assembly probing paths.
 #>
 function Get-AssemblyProbingPaths() {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$CompilerFolder,
-        [Parameter(Mandatory = $false)]
-        [int]$MinimumDotNetVersion = 6,
-        [Parameter(Mandatory = $false)]
-        [int]$MaximumDotNetVersion = 8
+        [string]$CompilerFolder
     )
-    Write-Host "Determining assembly probing paths..."
+    OutputDebug "Determining assembly probing paths..."
     $probingPaths = @()
 
     $compilerFolderDllsPath = Join-Path $CompilerFolder "dlls"
@@ -638,7 +628,7 @@ function Get-AssemblyProbingPaths() {
     } elseif ($isLinux -or $isMacOS) {
         $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
     } else {
-        $dotNetRuntimeVersion = (Get-DotnetRuntimeVersionInstalled -MinimumSupportedMajorVersion $MinimumDotNetVersion -MaximumSupportedMajorVersion $MaximumDotNetVersion)
+        $dotNetRuntimeVersion = (Get-DotnetRuntimeVersionInstalled)
         if ($dotNetRuntimeVersion) {
             $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\$dotNetRuntimeVersion", "C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion") + $probingPaths
         }
@@ -677,7 +667,7 @@ function New-WorkspaceFromFolders() {
     )
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
     try {
-        Write-Host "Executing: $AltoolPath $($arguments -join ' ')" -ForegroundColor Green
+        OutputColor "Executing: $AltoolPath $($arguments -join ' ')" -Color Green
         $null = & $AltoolPath @arguments
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create workspace file '$WorkspaceFile'. altool exited with code $LASTEXITCODE"
@@ -686,7 +676,7 @@ function New-WorkspaceFromFolders() {
         throw $_
     }
 
-    Write-Host "Workspace created at $WorkspaceFile"
+    OutputDebug "Workspace created at $WorkspaceFile"
 }
 
 <#
@@ -815,7 +805,7 @@ function Get-ScriptOverrides() {
     foreach ($override in @("PreCompileApp", "PostCompileApp")) {
         $scriptPath = Join-Path $ALGoFolderName "$override.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
-            Write-Host "Add override for $override ($scriptPath)"
+            OutputDebug "Add override for $override ($scriptPath)"
             Trace-Information -Message "Using override for $override"
             if ($override -eq "PreCompileApp") {
                 $precompileOverride = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
