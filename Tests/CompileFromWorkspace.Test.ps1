@@ -246,7 +246,9 @@ Describe 'CompileFromWorkspace.psm1 Tests' {
 
             $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.Keys | Should -HaveCount 0
+            $result.Keys | Should -HaveCount 2
+            $result.PreCompileApp | Should -BeNullOrEmpty
+            $result.PostCompileApp | Should -BeNullOrEmpty
         }
 
         It 'Returns PreCompileApp override when script exists in .AL-Go folder' {
@@ -265,8 +267,8 @@ Write-Host "Pre-compile for $appType"
 
             $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.Keys | Should -Contain 'PreCompileApp'
-            $result.Keys | Should -Not -Contain 'PostCompileApp'
+            $result.PreCompileApp | Should -Not -BeNullOrEmpty
+            $result.PostCompileApp | Should -BeNullOrEmpty
         }
 
         It 'Returns PostCompileApp override when script exists in .AL-Go folder' {
@@ -286,8 +288,8 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             $result = Get-ScriptOverrides -ALGoFolderName $alGoFolder -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
 
-            $result.Keys | Should -Not -Contain 'PreCompileApp'
-            $result.Keys | Should -Contain 'PostCompileApp'
+            $result.PreCompileApp | Should -BeNullOrEmpty
+            $result.PostCompileApp | Should -Not -BeNullOrEmpty
         }
 
         It 'Returns both overrides when both scripts exist in .AL-Go folder' {
