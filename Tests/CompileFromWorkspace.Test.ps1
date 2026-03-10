@@ -205,15 +205,6 @@ Describe 'CompileFromWorkspace.psm1 Tests' {
     }
 
     Describe 'Get-BuildMetadata' {
-        It 'Returns local build metadata when not running in GitHub Actions' {
-            $env:GITHUB_ACTIONS = $null
-
-            $result = Get-BuildMetadata
-
-            $result.BuildBy | Should -Be 'AL-Go for GitHub (local)'
-            $result.BuildUrl | Should -Be 'N/A'
-        }
-
         It 'Returns GitHub Actions metadata when running in GitHub Actions' {
             $env:GITHUB_ACTIONS = 'true'
             $env:GITHUB_SERVER_URL = 'https://github.com'

@@ -69,7 +69,7 @@ function Get-CustomAnalyzers {
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
             $analyzerFileName = Join-Path $binPath "Analyzers/$(Split-Path $customCodeCop -Leaf)"
-            Download-File -SourceUrl $customCodeCop -destinationFile $analyzerFileName
+            Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName
             $analyzers += $analyzerFileName
         }
         else {
@@ -91,34 +91,12 @@ function Get-CustomAnalyzers {
     Hashtable with SourceRepositoryUrl, SourceCommit, BuildBy, and BuildUrl properties.
 #>
 function Get-BuildMetadata {
-    $isLocalBuild = -not $env:GITHUB_ACTIONS
-
-    if ($isLocalBuild) {
-        # Running locally - use git to get repository info if available
-        $sourceRepositoryUrl = "local"
-        $sourceCommit = "unknown"
-
-        try {
-            $sourceRepositoryUrl = git config --get remote.origin.url
-            $sourceCommit = git rev-parse HEAD
-        } catch {
-            OutputWarning -message "Git repository information could not be retrieved. Using default local values."
-        }
-
-        return @{
-            SourceRepositoryUrl = $sourceRepositoryUrl
-            SourceCommit        = $sourceCommit
-            BuildBy             = "AL-Go for GitHub (local)"
-            BuildUrl            = "N/A"
-        }
-    } else {
-        # Running in GitHub Actions
-        return @{
-            SourceRepositoryUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY"
-            SourceCommit        = $env:GITHUB_SHA
-            BuildBy             = "AL-Go for GitHub"
-            BuildUrl            = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
-        }
+    # Running in GitHub Actions
+    return @{
+        SourceRepositoryUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY"
+        SourceCommit        = $env:GITHUB_SHA
+        BuildBy             = "AL-Go for GitHub"
+        BuildUrl            = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
     }
 }
 
@@ -228,7 +206,7 @@ function Build-AppsInWorkspace() {
         [scriptblock]$PostCompileApp
     )
 
-    # Get the package cache path
+    # Get the package cache path. Use the compiler folder symbols subfolder if not specified
     if (-not $PackageCachePath) {
         $PackageCachePath = Join-Path $CompilerFolder "symbols"
     }
@@ -241,11 +219,12 @@ function Build-AppsInWorkspace() {
     }
 
     # Validate MaxCpuCount
-    if ($MaxCpuCount -gt [System.Environment]::ProcessorCount) {
-        Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $([System.Environment]::ProcessorCount). Using $([System.Environment]::ProcessorCount) instead."
-        $MaxProcesses = [System.Environment]::ProcessorCount
+    $maxAvailableProcesses = [System.Environment]::ProcessorCount
+    if ($MaxCpuCount -gt $maxAvailableProcesses) {
+        Write-Host "Specified MaxCpuCount $MaxCpuCount is greater than available processors $maxAvailableProcesses. Using $maxAvailableProcesses instead."
+        $MaxProcesses = $maxAvailableProcesses
     } elseif ($MaxCpuCount -lt 0) {
-        $MaxProcesses = [System.Environment]::ProcessorCount
+        $MaxProcesses = $maxAvailableProcesses
     } else {
         $MaxProcesses = $MaxCpuCount
     }
@@ -295,7 +274,7 @@ function Build-AppsInWorkspace() {
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
 
-    # Clean up
+    # Clean up the workspace file
     Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
 
     return $appFiles
@@ -347,8 +326,8 @@ function CompileAppsInWorkspace {
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFile,
 
-        [Parameter(Mandatory = $false)]
-        [int]$MaxCpuCount = 1,
+        [Parameter(Mandatory = $true)]
+        [int]$MaxCpuCount,
 
         [Parameter(Mandatory = $false)]
         [string]$PackageCachePath,
@@ -414,6 +393,7 @@ function CompileAppsInWorkspace {
     $arguments = @("workspace", "compile", $WorkspaceFile)
 
     # Get list of files in the package cache path with their timestamps
+    # Since we are outputting to the package cache path first, we can compare the files before and after compilation to determine which files were generated or updated by the compilation process.
     $filesBeforeCompile = @{}
     if ($PackageCachePath -and (Test-Path $PackageCachePath)) {
         Get-ChildItem -Path $PackageCachePath -File -Filter "*.app" | ForEach-Object {
@@ -523,7 +503,7 @@ function CompileAppsInWorkspace {
         if ($LASTEXITCODE -ne 0) {
             throw "Compilation failed with exit code $LASTEXITCODE"
         }
-        OutputDebug -message "Compilation completed successfully."
+        OutputColor -message "Compilation completed successfully." -Color Green
     } catch {
         OutputColor -Message "Error during compilation: $_" -Color Red
         throw $_
@@ -856,6 +836,7 @@ Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
+Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Get-ScriptOverrides
 Export-ModuleMember -Function Update-AppJsonProperties
