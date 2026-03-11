@@ -71,7 +71,7 @@ if ($coverageResult.SummaryMD) {
     $incompleteWarning = ""
     if ($env:BUILD_RESULT -eq 'failure') {
         $incompleteWarning = "> :warning: **Incomplete coverage data** - some build jobs failed and did not produce coverage results. Actual coverage may be higher than reported.`n`n"
-        Write-Host "::warning::Coverage data is incomplete - some build jobs failed and did not produce coverage results."
+        OutputWarning -message "Coverage data is incomplete - some build jobs failed and did not produce coverage results."
     }
     $headerSize = GetStringByteSize($header)
     $inputInfoSize = GetStringByteSize($inputInfo)

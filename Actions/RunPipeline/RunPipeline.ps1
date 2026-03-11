@@ -675,7 +675,7 @@ try {
             }.GetNewClosure()
         }
     } else {
-        Write-Host "::warning::enableCodeCoverage is set to true, but a custom RunTestsInBcContainer override was found. The custom override will be used and code coverage data may not be collected. To use the built-in code coverage support, remove your custom RunTestsInBcContainer override."
+        OutputWarning -message "enableCodeCoverage is set to true, but a custom RunTestsInBcContainer override was found. The custom override will be used and code coverage data may not be collected. To use the built-in code coverage support, remove your custom RunTestsInBcContainer override."
     }
 }
 
@@ -839,7 +839,7 @@ try {
                             }
                         }
                     } catch {
-                        Write-Host "::warning::Could not resolve project dependencies for coverage: $($_.Exception.Message)"
+                        OutputWarning -message "Could not resolve project dependencies for coverage: $($_.Exception.Message)"
                     }
                     
                     if ($appSourcePaths.Count -eq 0) {
@@ -872,7 +872,7 @@ try {
                     }
                 }
                 catch {
-                    Write-Host "::warning::Failed to process code coverage to Cobertura format: $($_.Exception.Message)"
+                    OutputWarning -message "Failed to process code coverage to Cobertura format: $($_.Exception.Message)"
                 }
             }
         }
