@@ -1,3 +1,33 @@
+### Improving error detection and build reliability when downloading project dependencies
+
+The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
+
+- Earlier detection of inaccessible or misconfigured URLs
+- Clearer error messages when secrets are missing or URLs are invalid
+- Warnings for potential issues like duplicate filenames
+
+### Improve overall performance by postponing projects with no dependants
+
+The time it takes to build projects can vary significantly depending on factors such as whether you are using Linux or Windows, Containers or CompilerFolders, and whether apps are being published or tests are being run.
+
+By default, projects are built according to their dependency order. As soon as all dependencies for a project are satisfied, the project is added to the next layer of jobs.
+
+The new setting `postponeProjectInBuildOrder` allows you to delay long running jobs (f.ex. test runs) with no dependants until the final layer of the build order. This can improve overall build performance by preventing subsequent layers from waiting on projects that take longer to complete but are not required for further dependencies.
+
+### Issues
+
+- Attempt to start docker service in case it is not running
+- NextMajor (v28) fails when downloading dependencies from NuGet-feed
+- Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
+- Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
+- Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
+
+### New Settings
+
+- `postponeProjectInBuildOrder` is a new project setting, which will (if set to true) cause the project to be postponed until the last build job when possible. If set on test projects, then all tests can be deferred until all builds have succeeded.
+
+## v8.3
+
 ### Issues
 
 - Issue 2113 Using the action "Create Online Dev. Environment" fails in Initialization phase

@@ -9,6 +9,8 @@
     [string] $token
 )
 
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DownloadProjectDependencies.psm1" -Resolve) -DisableNameChecking
+
 function DownloadDependenciesFromProbingPaths {
     param(
         $baseFolder,
@@ -46,7 +48,7 @@ function DownloadDependenciesFromCurrentBuild {
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
 
     # For each dependency project, calculate the corresponding probing path
-    $dependeciesProbingPaths = @()
+    $dependenciesProbingPaths = @()
     foreach($dependencyProject in $dependencyProjects) {
         Write-Host "Reading settings for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
@@ -70,7 +72,7 @@ function DownloadDependenciesFromCurrentBuild {
             $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
-        $dependeciesProbingPaths += @(@{
+        $dependenciesProbingPaths += @(@{
             "release_status"  = "thisBuild"
             "version"         = "latest"
             "buildMode"       = $dependencyBuildMode
@@ -85,7 +87,7 @@ function DownloadDependenciesFromCurrentBuild {
 
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
-    foreach($probingPath in $dependeciesProbingPaths) {
+    foreach($probingPath in $dependenciesProbingPaths) {
         $buildMode = $probingPath.buildMode
         $project = $probingPath.projects
         $branch = $probingPath.branch
@@ -123,6 +125,15 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
+Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
+Push-Location -Path (Join-Path $baseFolder $project)  #Change to the project folder because installApps paths are relative to the project folder
+try {
+    $settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
+} finally {
+    Pop-Location
+    Write-Host "::endgroup::"
+}
+
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -136,6 +147,10 @@ $downloadedDependencies | ForEach-Object {
         $downloadedApps += $_
     }
 }
+
+# Add dependencies from settings
+$downloadedApps += $settingsDependencies.Apps
+$downloadedTestApps += $settingsDependencies.TestApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
