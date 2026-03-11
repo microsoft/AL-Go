@@ -171,7 +171,7 @@ function Merge-CoberturaFiles {
 
             # Lines
             $linesElement = $xml.CreateElement("lines")
-            foreach ($lineNum in $cls.Lines.Keys | Sort-Object) {
+            foreach ($lineNum in $cls.Lines.Keys | Sort-Object { [int]$_ }) {
                 $lineData = $cls.Lines[$lineNum]
                 $lineElement = $xml.CreateElement("line")
                 $lineElement.SetAttribute("number", $lineNum.ToString())
