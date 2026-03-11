@@ -133,9 +133,9 @@ function Print-TestResults
         }
         default
         {
-            if($codeUnitId -ne "0")
+            if($TestRunResultObject.codeUnit -and $TestRunResultObject.codeUnit -ne "0")
             {
-                Write-Host -ForegroundColor Yellow "No tests were executed - Codeunit $"
+                Write-Host -ForegroundColor Yellow "No tests were executed - Codeunit $($TestRunResultObject.name)"
             }
         }
     }
