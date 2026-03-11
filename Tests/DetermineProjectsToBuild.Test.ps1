@@ -1214,4 +1214,3 @@ Describe "Get-BuildAllProjects" {
         Remove-Item $baseFolder -Force -Recurse
     }
 }
-
