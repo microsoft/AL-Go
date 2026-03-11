@@ -41,7 +41,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 $prevLocation = Get-Location
 
 if ($linux) {
-    Write-Host 'Workspace compilation currently doesnt work on Linux runners, so this test is only run on Windows.'
+    Write-Host 'Workspace compilation currently doesn''t work on Linux runners, so this test is only run on Windows.'
     exit
 }
 
