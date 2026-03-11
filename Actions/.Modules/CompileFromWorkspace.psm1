@@ -237,9 +237,9 @@ function Build-AppsInWorkspace() {
     # Get AL tool path
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
 
-    # Create workspace file from AL-Go folders
+    # Create workspace file in temp directory
     $tempFolder = NewTemporaryFolder
-    $workspaceFile = Join-Path $tempFolder "tempWorkspace$datetimeStamp.code-workspace"
+    $workspaceFile = Join-Path $tempFolder "workspace.code-workspace"
     New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
 
     $compilationParameters = @{
