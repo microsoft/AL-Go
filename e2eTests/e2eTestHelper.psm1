@@ -272,7 +272,8 @@ function WaitWorkflow {
         [string] $repository,
         [string] $runid,
         [switch] $noDelay,
-        [switch] $noError
+        [switch] $noError,
+        [switch] $noRerun
     )
 
     $delay = !$noDelay.IsPresent
@@ -301,7 +302,14 @@ function WaitWorkflow {
     Write-Host "Workflow conclusion: $($run.conclusion)"
 
     if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
-        if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
+        if (-not $noRerun.IsPresent) {
+            Write-Host "::warning::Rerunning workflow: $($run.name) run $($run.id), conclusion $($run.conclusion), url = $($run.html_url)"
+            invoke-gh api --method POST /repos/$repository/actions/runs/$runid/rerun | Out-Null
+            WaitWorkflow -repository $repository -runid $runid -noDelay:$noDelay -noError:$noError -noRerun
+        }
+        else {
+            if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
+        }
     }
 }
 
@@ -508,6 +516,7 @@ function CreateAlGoRepository {
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
+
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
     $repoSettings | Set-JsonContentLF -path $repoSettingsFile

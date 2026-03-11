@@ -141,9 +141,16 @@ function GetDependencies {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
 
+            if ($mask -eq 'TestApps') {
+                $altMask = 'Apps'
+            }
+            else {
+                $altMask = 'TestApps'
+            }
             # change the mask to include the build mode
             if($buildMode -ne "Default") {
                 $mask = "$buildMode$mask"
+                $altMask = "$buildMode$altMask"
             }
 
             Write-Host "Locating $mask artifacts for projects: $projects"
@@ -169,8 +176,15 @@ function GetDependencies {
                         }
                     }
                     elseif ($mask -like '*Apps') {
-                        Write-Host "$project not built, downloading from artifacts"
-                        $missingProjects += @($project)
+                        # Check whether Apps/TestApps exists before determining that project isn't built
+                        $altDownloadName = Join-Path $saveToPath "$project-$branchName-$altMask-*"
+                        if (!(Test-Path $altDownloadName -PathType Container)) {
+                            Write-Host "$project not built, downloading from artifacts"
+                            $missingProjects += @($project)
+                        }
+                        else {
+                            Write-Host "$project built, but $mask not found"
+                        }
                     }
                 }
                 if ($missingProjects -and $dependency.baselineWorkflowID) {
@@ -594,11 +608,65 @@ function GetLatestRelease {
         # If release branch, get the latest release from that the release branch
         # This is given by the latest release with the same major.minor as the release branch
         $releaseVersion = $ref -split '/' | Select-Object -Last 1 # Get the version from the release branch
-        $semVerObj = SemVerStrToSemVerObj -semVerStr $releaseVersion -allowMajorMinorOnly
-        $latestRelease = $releases | Where-Object {
-            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
-            $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
-        } | Select-Object -First 1
+
+        # Handle version strings like "26.x", "26x", "v26", "v26.x", "26", or "26.3"
+        # Remove optional 'v' prefix
+        $cleanVersion = $releaseVersion -replace '^v', ''
+        # Remove trailing "x" suffix (with or without dot) used in branch names like "26.x" or "26x"
+        $cleanVersion = $cleanVersion -replace '\.?x$', ''
+
+        # Validate that cleanVersion is not empty and starts with a digit
+        if ($cleanVersion -and $cleanVersion -match '^\d') {
+            # Check if we have just a major version or major.minor
+            $versionParts = $cleanVersion -split '\.'
+            $majorVersionOnly = ($versionParts.Count -eq 1) -and ($versionParts[0] -match '^\d+$')
+
+            if ($majorVersionOnly) {
+                # If only major version is specified (e.g., "26" or "26.x" -> "26")
+                # Find the latest release matching that major version
+                $majorVersion = [int]$versionParts[0]
+                $latestRelease = $releases | Where-Object {
+                    -not ($_.prerelease -or $_.draft) -and $(
+                        try {
+                            $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                            $majorVersion -eq $releaseSemVerObj.Major
+                        }
+                        catch {
+                            # If the tag is not a valid semver, skip it (log for troubleshooting)
+                            OutputDebug -message "Skipping release with invalid semver tag: $($_.tag_name)"
+                            $false
+                        }
+                    )
+                } | Select-Object -First 1
+            }
+            else {
+                # If major.minor version is specified (e.g., "26.3")
+                try {
+                    $semVerObj = SemVerStrToSemVerObj -semVerStr $cleanVersion -allowMajorMinorOnly
+                    $latestRelease = $releases | Where-Object {
+                        -not ($_.prerelease -or $_.draft) -and $(
+                            try {
+                                $releaseSemVerObj = SemVerStrToSemVerObj -semVerStr $_.tag_name
+                                $semVerObj.Major -eq $releaseSemVerObj.Major -and $semVerObj.Minor -eq $releaseSemVerObj.Minor
+                            }
+                            catch {
+                                # If the tag is not a valid semver, skip it (log for troubleshooting)
+                                OutputDebug -message "Skipping release with invalid semver tag: $($_.tag_name)"
+                                $false
+                            }
+                        )
+                    } | Select-Object -First 1
+                }
+                catch {
+                    # If the version from the branch cannot be parsed, fall back to the overall latest release
+                    OutputWarning -message "Unable to parse version '$cleanVersion' from branch '$ref', using overall latest release"
+                }
+            }
+        }
+        else {
+            # If the version from the branch is invalid, fall back to the overall latest release
+            OutputWarning -message "Invalid version format '$releaseVersion' in branch '$ref', using overall latest release"
+        }
     }
     $latestRelease
 }
@@ -742,10 +810,19 @@ function DownloadRelease {
         # GitHub replaces series of special characters with a single dot when uploading release assets
         $project = [Uri]::EscapeDataString($project.Replace('\','_').Replace('/','_').Replace(' ','.')).Replace('%2A','*').Replace('%3F','?').Replace('%','')
         Write-Host "project '$project'"
-        $assetPattern1 = "$project-*-$mask-*.zip"
-        $assetPattern2 = "$project-$mask-*.zip"
+        # Pattern 1: project-branch-mask-version.zip (branch used for release creation cannot contain -)
+        # Pattern 2: project-mask-version.zip (no branch)
+        if ($project -eq '*') {
+            $escapedProject = '.*'
+        }
+        else {
+            $escapedProject = [regex]::Escape($project)
+        }
+        $escapedMask = [regex]::Escape($mask)
+        $assetPattern1 = "^$escapedProject-[^-]+-$escapedMask-.+\.zip$"
+        $assetPattern2 = "^$escapedProject-$escapedMask-.+\.zip$"
         Write-Host "AssetPatterns: '$assetPattern1' | '$assetPattern2'"
-        $assets = @($release.assets | Where-Object { $_.name -like $assetPattern1 -or $_.name -like $assetPattern2 })
+        $assets = @($release.assets | Where-Object { $_.name -match $assetPattern1 -or $_.name -match $assetPattern2 })
         foreach($asset in $assets) {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
@@ -1015,6 +1092,22 @@ function GetArtifactsFromWorkflowRun {
     # Get sanitized project names (the way they appear in the artifact names)
     $projectArr = @(@($projects.Split(',')) | ForEach-Object { $_.Replace('\','_').Replace('/','_') })
 
+    # Get branch used in workflowRun (cached per workflow run to avoid repeated API calls)
+    if (-not $Script:WorkflowRunBranchCache) {
+        $Script:WorkflowRunBranchCache = @{}
+    }
+
+    if ($Script:WorkflowRunBranchCache.ContainsKey("$repository/$workflowRun")) {
+        $branch = $Script:WorkflowRunBranchCache["$repository/$workflowRun"]
+    }
+    else {
+        $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
+        $branch = $workflowRunInfo.head_branch
+        $branch = $branch.Replace('\', '_').Replace('/', '_')
+        $Script:WorkflowRunBranchCache["$repository/$workflowRun"] = $branch
+    }
+    Write-Host "Branch for workflow run $workflowRun is $branch"
+
     # Get the artifacts from the the workflow run
     while($true) {
         $artifactsURI = "$api_url/repos/$repository/actions/runs/$workflowRun/artifacts?per_page=$per_page&page=$page"
@@ -1026,14 +1119,40 @@ function GetArtifactsFromWorkflowRun {
         }
 
         foreach($project in $projectArr) {
-            $artifactPattern = "$project-*-$mask-*" # e.g. "MyProject-*-Apps-*", format is: "project-branch-mask-version"
+            # e.g. "MyProject-main-Apps-*", format is: "project-branch-mask-version"
+            # Mask might include buildMode like TranslatedTestApps
+            $artifactPattern = "$project-$branch-$mask-*"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
                 continue
             }
 
-            $matchingArtifacts = @($matchingArtifacts) #enforce array
+            # If there are reruns of the build we found, we might see artifacts like:
+            # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.0
+            # Test DBC-BHG-SAF-T-main-TestApps-1.0.48.1
+            # We want to keep only the latest version of each artifact (based on the last segment of the version)
+            $matchingArtifacts = @($matchingArtifacts | ForEach-Object {
+                    # Sort on version number object
+                    if ($_.name -match '^(.*)-(\d+\.\d+\.\d+\.\d+)$') {
+                        [PSCustomObject]@{
+                            Name    = $Matches[1]
+                            Version = [version]$Matches[2]
+                            Obj     = $_
+                        }
+                    }
+                    else {
+                        # artifacts from PR builds doesn't match the versioning pattern but are sortable
+                        [PSCustomObject]@{
+                            Name    = $_.name
+                            Version = $_.name
+                            Obj     = $_
+                        }
+                    }
+                } | Group-Object Name | ForEach-Object {
+                    $_.Group | Sort-Object Version -Descending | Select-Object -First 1
+                } |
+                Select-Object -ExpandProperty Obj)
 
             foreach($artifact in $matchingArtifacts) {
                 Write-Host "Found artifact $($artifact.name) (ID: $($artifact.id)) for mask $mask and project $project"

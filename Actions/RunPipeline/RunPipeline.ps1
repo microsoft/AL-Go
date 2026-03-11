@@ -33,6 +33,7 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\TestRunner\ALTestRunner.psm1" -Resolve) -Force -DisableNameChecking
 
     if ($isWindows) {
+        Assert-DockerIsRunning
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
         Start-Job -ScriptBlock {
@@ -199,13 +200,13 @@ try {
     }
 
     $install = @{
-        "Apps" = $settings.installApps
-        "TestApps" = $settings.installTestApps
+        "Apps" = @()
+        "TestApps" = @()
     }
 
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
         try {
-            $install.Apps += @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
+            $install.Apps = Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
@@ -214,7 +215,7 @@ try {
 
     if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
         try {
-            $install.TestApps += @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
+            $install.TestApps = Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
@@ -224,30 +225,6 @@ try {
     if ($settings.runTestsInAllInstalledTestApps) {
         # Trim parentheses from test apps. Run-ALPipeline will skip running tests in test apps wrapped in ()
         $install.TestApps = $install.TestApps | ForEach-Object { $_.TrimStart("(").TrimEnd(")") }
-    }
-
-    # Replace secret names in install.apps and install.testApps
-    foreach($list in @('Apps','TestApps')) {
-        $install."$list" = @($install."$list" | ForEach-Object {
-            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            $url = $_
-            if ($url -match $pattern) {
-                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
-            }
-            else {
-                $finalUrl = $url
-            }
-            # Check validity of URL
-            if ($finalUrl -like 'http*://*') {
-                try {
-                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
-                }
-                catch {
-                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
-                }
-            }
-            return $finalUrl
-        })
     }
 
     # Analyze app.json version dependencies before launching pipeline
@@ -283,7 +260,8 @@ try {
     if (!$settings.skipUpgrade) {
         Write-Host "::group::Locating previous release"
         try {
-            $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
+            $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }
+            $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
             if ($latestRelease) {
                 Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
                 $artifactsFolder = Join-Path $baseFolder "artifacts"
@@ -363,8 +341,12 @@ try {
             Write-Host "Add override for $scriptName"
             Trace-Information -Message "Using override for $scriptName"
 
+            $scriptblock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            if (-not $scriptblock) {
+                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+            }
             $runAlPipelineParams += @{
-                "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+                "$scriptName" = $scriptblock
             }
         }
     }
@@ -459,7 +441,11 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
+                        try {
+                            Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        } catch {
+                            OutputWarning -message "Failed to publish app $appid version $version to container $($parameters.containerName). Error was: $($_.Exception.Message)."
+                        }
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
