@@ -40,11 +40,17 @@ Set-Location $projectFolder
 
 # Set up output folders
 $buildArtifactFolder = Join-Path $projectFolder ".buildartifacts"
-New-Item $buildArtifactFolder -ItemType Directory | Out-Null
 $appOutputFolder = Join-Path $buildArtifactFolder "Apps"
-New-Item $appOutputFolder -ItemType Directory | Out-Null
 $testAppOutputFolder = Join-Path $buildArtifactFolder "TestApps"
-New-Item $testAppOutputFolder -ItemType Directory | Out-Null
+if (-not (Test-Path $buildArtifactFolder)) {
+    New-Item $buildArtifactFolder -ItemType Directory -Force | Out-Null
+}
+if (-not (Test-Path $appOutputFolder)) {
+    New-Item $appOutputFolder -ItemType Directory -Force | Out-Null
+}
+if (-not (Test-Path $testAppOutputFolder)) {
+    New-Item $testAppOutputFolder -ItemType Directory -Force | Out-Null
+}
 
 # Check for precompile and postcompile overrides
 $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
