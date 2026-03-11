@@ -233,8 +233,8 @@ function Build-AppsInWorkspace() {
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
 
     # Create workspace file from AL-Go folders
-    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
-    $workspaceFile = Join-Path $PSScriptRoot "tempWorkspace$datetimeStamp.code-workspace"
+    $tempFolder = NewTemporaryFolder
+    $workspaceFile = Join-Path $tempFolder "tempWorkspace$datetimeStamp.code-workspace"
     New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
 
     $compilationParameters = @{
@@ -273,9 +273,6 @@ function Build-AppsInWorkspace() {
         OutputDebug "Invoking Post-Compile App Script..."
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
-
-    # Clean up the workspace file
-    Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
 
     return $appFiles
 }
