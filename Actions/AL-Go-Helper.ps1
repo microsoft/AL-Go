@@ -76,7 +76,6 @@ function Get-ScriptOverrides() {
     )
     $overrides = @{}
     foreach ($scriptName in $OverrideScriptNames) {
-        $overrides[$scriptName] = $null
         $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             OutputDebug "Add override for $scriptName ($scriptPath)"

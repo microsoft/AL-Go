@@ -145,8 +145,8 @@ $buildParams = @{
     BuildUrl                    = $buildMetadata.BuildUrl
     ReportSuppressedDiagnostics = $settings.reportSuppressedDiagnostics
     EnableExternalRulesets      = $settings.enableExternalRulesets
-    PreCompileApp               = $scriptOverrides.PreCompileApp
-    PostCompileApp              = $scriptOverrides.PostCompileApp
+    PreCompileApp               = $scriptOverrides['PreCompileApp']
+    PostCompileApp              = $scriptOverrides['PostCompileApp']
     Analyzers                   = (Get-CodeAnalyzers -Settings $settings)
     CustomAnalyzers             = (Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
 }
