@@ -41,7 +41,13 @@ function Merge-CoberturaFiles {
         }
 
         Write-Host "  Reading: $file"
-        [xml]$xml = Get-Content -Path $file -Encoding UTF8
+        try {
+            [xml]$xml = Get-Content -Path $file -Encoding UTF8 -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "Failed to read or parse $file`: $($_.Exception.Message)"
+            continue
+        }
 
         $packagesNode = $xml.coverage.SelectSingleNode('packages')
         if (-not $packagesNode -or -not $packagesNode.HasChildNodes) { continue }
