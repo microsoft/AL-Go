@@ -39,15 +39,6 @@ Use the `codeCoverageSetup` object to customize coverage behavior:
 
 Read more about settings at [Settings](settings.md#codeCoverageSetup).
 
-## How It Works
-
-When `enableCodeCoverage` is set to `true`:
-
-1. AL-Go replaces the standard test runner (`Run-TestsInBcContainer` from BcContainerHelper) with a built-in override that uses the **AL Test Runner** (`Run-AlTests`).
-2. The AL Test Runner connects to the Business Central container via client services and executes tests while tracking which lines of AL code are executed.
-3. After tests complete, the raw coverage data (`.dat` files) is processed into **Cobertura XML** format — a widely supported standard for code coverage reporting.
-4. The Cobertura XML file is saved to the `CodeCoverage` folder in the build artifacts.
-
 ## Output
 
 The coverage output is available in the build artifacts under the `CodeCoverage` folder:
