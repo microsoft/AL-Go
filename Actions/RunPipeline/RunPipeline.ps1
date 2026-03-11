@@ -85,8 +85,8 @@ try {
         $secrets = @{}
     }
 
-    if ($settings.useWorkspaceCompilation -and $settings.doNotPublishApps -and $settings.doNotRunTests) {
-        OutputColor -Message "Apps are compiled and doNotPublishApps is set. Exiting..." -Color Yellow
+    if ($settings.useWorkspaceCompilation -and $settings.doNotPublishApps) {
+        OutputColor -Message "Workspace compilation complete; doNotPublishApps is set. Exiting." -Color Yellow
         return
     }
 

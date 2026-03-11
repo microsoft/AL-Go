@@ -65,11 +65,16 @@ function Get-CustomAnalyzers {
         return $analyzers
     }
 
+    # Analyzers/ directory exists in the compiler folder by default
     $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
             $analyzerFileName = Join-Path $binPath "Analyzers/$(Split-Path $customCodeCop -Leaf)"
-            Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName
+            try {
+                Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName -ErrorAction Stop
+            } catch {
+                throw "Failed to download custom analyzer from '$customCodeCop': $($_.Exception.Message)"
+            }
             $analyzers += $analyzerFileName
         }
         else {
