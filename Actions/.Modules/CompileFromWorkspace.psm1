@@ -238,8 +238,8 @@ function Build-AppsInWorkspace() {
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
 
     # Create workspace file in temp directory
-    $tempFolder = NewTemporaryFolder
-    $workspaceFile = Join-Path $tempFolder "workspace.code-workspace"
+    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
+    $workspaceFile = Join-Path $PSScriptRoot "tempWorkspace$datetimeStamp.code-workspace"
     New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
 
     $compilationParameters = @{
