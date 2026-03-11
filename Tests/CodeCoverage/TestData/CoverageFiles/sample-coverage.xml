@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage>
+  <objects>
+    <object type="Codeunit" id="50100" name="Test Codeunit 1">
+      <lines>
+        <line number="10" covered="true" hits="5" />
+        <line number="11" covered="true" hits="5" />
+        <line number="12" covered="true" hits="3" />
+        <line number="15" covered="false" hits="0" />
+        <line number="16" covered="true" hits="2" />
+      </lines>
+    </object>
+    <object type="Codeunit" id="50101" name="Test Codeunit 2">
+      <lines>
+        <line number="20" covered="true" hits="10" />
+        <line number="21" covered="true" hits="10" />
+        <line number="22" covered="false" hits="0" />
+      </lines>
+    </object>
+  </objects>
+</coverage>
