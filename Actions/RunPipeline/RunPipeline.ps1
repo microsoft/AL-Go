@@ -815,7 +815,7 @@ try {
                     try {
                         $projectDeps = $projectDependenciesJson | ConvertFrom-Json
                         $parentProjects = @()
-                        if ($project -and $projectDeps.PSObject.Properties.Name -contains $project) {
+                        if ($projectDeps -and $project -and $projectDeps.PSObject.Properties.Name -contains $project) {
                             $parentProjects = @($projectDeps.$project)
                         }
                         if ($parentProjects.Count -gt 0) {
