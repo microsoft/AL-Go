@@ -90,8 +90,7 @@ function Get-CustomAnalyzers {
     Gets build metadata for the current build environment.
 .DESCRIPTION
     Returns a hashtable with build metadata including source repository URL, commit SHA,
-    build system identifier, and build URL. When running locally (outside of GitHub Actions),
-    provides sensible defaults.
+    build system identifier, and build URL.
 .OUTPUTS
     Hashtable with SourceRepositoryUrl, SourceCommit, BuildBy, and BuildUrl properties.
 #>
