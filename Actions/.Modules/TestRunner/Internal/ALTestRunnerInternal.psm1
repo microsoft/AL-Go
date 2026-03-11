@@ -268,7 +268,8 @@ function Run-NextTest
     [pscredential] $Credential,
     [Parameter(Mandatory=$true)]
     [string] $ServiceUrl,
-    [string] $TestSuite = $script:DefaultTestSuite
+    [string] $TestSuite = $script:DefaultTestSuite,
+    [string] $TestPage = $global:DefaultTestPage
 )
 {
     try
