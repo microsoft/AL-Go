@@ -94,6 +94,16 @@ if ($settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "u
     $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
 }
 $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
+$packageCachePath = Join-Path $compilerFolder "symbols"
+
+# Copy dependency apps to the package cache so the compiler can resolve them
+foreach ($appFile in $installApps) {
+    $appFile = $appFile.Trim('()')
+    if ($appFile -and (Test-Path $appFile)) {
+        Copy-Item -Path $appFile -Destination $packageCachePath -Force
+        OutputDebug "Copied dependency app to package cache: $(Split-Path $appFile -Leaf)"
+    }
+}
 
 # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
 if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
@@ -113,7 +123,7 @@ Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders)
 # Collect common parameters for Build-AppsInWorkspace
 $buildParams = @{
     CompilerFolder              = $compilerFolder
-    PackageCachePath            = (Join-Path $compilerFolder "symbols")
+    PackageCachePath            = $packageCachePath
     LogDirectory                = $buildArtifactFolder
     Ruleset                     = $rulesetPath
     AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $CompilerFolder)
