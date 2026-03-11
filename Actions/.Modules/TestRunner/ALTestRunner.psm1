@@ -187,13 +187,13 @@ function Write-DisabledTestsJson
        $testsToDisable.Add($test)
     }
 
-    $oututFile = Join-Path $OutputFolder $FileName
+    $outputFile = Join-Path $OutputFolder $FileName
     if(-not (Test-Path $outputFolder))
     {
         New-Item -Path $outputFolder -ItemType Directory
     }
 
-    Add-Content -Value (ConvertTo-Json $testsToDisable) -Path $oututFile
+    Add-Content -Value (ConvertTo-Json $testsToDisable) -Path $outputFile
 }
 
 function Report-ErrorsInAzureDevOps
