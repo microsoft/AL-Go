@@ -30,7 +30,7 @@ try {
     
     # Import Code Coverage module for ALTestRunner functionality
     # This makes Run-AlTests available globally for custom RunTestsInBcContainer overrides
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\CodeCoverage\ALTestRunner.psm1" -Resolve) -Force -DisableNameChecking
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\TestRunner\ALTestRunner.psm1" -Resolve) -Force -DisableNameChecking
 
     if ($isWindows) {
         # Pull docker image in the background
@@ -788,7 +788,7 @@ try {
             if ($coverageFiles.Count -gt 0) {
                 Write-Host "Processing $($coverageFiles.Count) code coverage file(s) to Cobertura format..."
                 try {
-                    $coverageProcessorModule = Join-Path $PSScriptRoot "..\.Modules\CodeCoverage\CoverageProcessor\CoverageProcessor.psm1"
+                    $coverageProcessorModule = Join-Path $PSScriptRoot "..\.Modules\TestRunner\CoverageProcessor\CoverageProcessor.psm1"
                     Import-Module $coverageProcessorModule -Force -DisableNameChecking
 
                     $coberturaOutputPath = Join-Path $codeCoveragePath "cobertura.xml"
