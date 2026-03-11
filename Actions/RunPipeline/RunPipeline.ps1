@@ -119,7 +119,7 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
-    $isTestProject = $settings.testProject -and $settings.testProject.Count -gt 0
+    $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
         if (-not $isTestProject) {
             Write-Host "Repository is empty, exiting"

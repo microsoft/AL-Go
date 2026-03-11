@@ -6,11 +6,11 @@ This lets you re-run tests without waiting for a full recompilation, and makes i
 
 **Getting started**
 
-Add a `testProject` setting to the project-level `.AL-Go/settings.json` of an empty project (no `appFolders` or `testFolders`):
+Add a `projectsToTest` setting to the project-level `.AL-Go/settings.json` of an empty project (no `appFolders` or `testFolders`):
 
 ```json
 {
-  "testProject": ["MyProject"]
+  "projectsToTest": ["build/projects/MyProject"]
 }
 ```
 
@@ -22,10 +22,10 @@ AL-Go will automatically:
 
 **Key rules**
 
-- A test project must **not** contain buildable code (no `appFolders`, `testFolders`, or `bcptTestFolders`). AL-Go will fail with a clear error if it detects both `testProject` and buildable folders.
+- A test project must **not** contain buildable code (no `appFolders`, `testFolders`, or `bcptTestFolders`). AL-Go will fail with a clear error if it detects both `projectsToTest` and buildable folders.
 - A test project cannot depend on another test project.
-- You can target multiple projects: `"testProject": ["ProjectA", "ProjectB"]`.
-- Short project names and full paths are both supported. If a short name is ambiguous, AL-Go will ask you to use the full path.
+- You can target multiple projects: `"projectsToTest": ["build/projects/ProjectA", "build/projects/ProjectB"]`.
+- Use full project paths as they appear in the repository.
 
 ### Improving error detection and build reliability when downloading project dependencies
 

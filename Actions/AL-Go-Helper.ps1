@@ -717,12 +717,12 @@ function AnalyzeRepo {
         if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
-    $isTestProject = $settings.testProject -and $settings.testProject.Count -gt 0
+    $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
     if ($isTestProject) {
         # Test projects must not contain any buildable code — they only run tests from upstream projects
         if ($settings.appFolders -or $settings.testFolders -or $settings.bcptTestFolders) {
             $buildableFolders = @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | Where-Object { $_ })
-            throw "Test project must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the testProject setting. Found: $($buildableFolders -join ', ')"
+            throw "Test project must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting. Found: $($buildableFolders -join ', ')"
         }
     }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
@@ -730,13 +730,14 @@ function AnalyzeRepo {
             # Test projects run tests from upstream projects via installTestApps, not from local testFolders
             Write-Host "Test project: tests will be run from installed test apps"
             if (-not $settings.installTestRunner) {
-                Write-Host "installTestRunner is false, this needs to manually be set to true in the project settings if needed by any upsstream test app."
+                Write-Host "Test project: installTestRunner will be set to true as it is required to run tests."
             }
+            $settings.installTestRunner = $true
             if (-not $settings.installTestFramework) {
-                Write-Host "installTestFramework is false, this needs to manually be set to true in the project settings if needed by any upsstream test app."
+                Write-Host "Test project: installTestFramework is not set. Add it to the project settings if upstream test apps depend on the test framework."
             }
             if (-not $settings.installTestLibraries) {
-                Write-Host "installTestLibraries is false, this needs to manually be set to true in the project settings if needed by any upsstream test app."
+                Write-Host "Test project: installTestLibraries is not set. Add it to the project settings if upstream test apps depend on test libraries."
             }
             if (-not $settings.runTestsInAllInstalledTestApps) {
                 Write-Host "runTestsInAllInstalledTestApps is false, but will be forced to true as no tests would be run otherwise."
@@ -1880,39 +1881,31 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
 
-    # Handle testProject settings: inject explicit dependencies from target project names
+    # Handle projectsToTest settings: inject explicit dependencies from target project paths
     # First pass: collect all test projects so we can validate that no project depends on a test project
     $testProjectNames = @{}
     foreach($project in $projects) {
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
-        if ($projectSettings.testProject -and $projectSettings.testProject.Count -gt 0) {
+        if ($projectSettings.projectsToTest -and $projectSettings.projectsToTest.Count -gt 0) {
             # Validate that test projects do not contain buildable code
             $buildableFolders = @($appDependencies."$project".apps)
             if ($buildableFolders.Count -gt 0) {
-                OutputError "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the testProject setting."
+                OutputError "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting."
             }
-            $testProjectNames[$project] = $projectSettings.testProject
+            $testProjectNames[$project] = $projectSettings.projectsToTest
         }
     }
     foreach($project in $testProjectNames.Keys) {
         Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
         $testProjectDeps = @()
         foreach($targetProject in $testProjectNames[$project]) {
-            # Resolve target project name: support both full paths (path/to/projectName) and short names (projectName)
+            # Resolve target project name: must be the full project path
             $resolvedTarget = $null
             if ($appDependencies.Keys -contains $targetProject) {
                 $resolvedTarget = $targetProject
-            } else {
-                $matchingProjects = @($appDependencies.Keys | Where-Object { $_ -eq $targetProject -or $_.EndsWith("/$targetProject") -or $_.EndsWith("\$targetProject") })
-                if ($matchingProjects.Count -eq 1) {
-                    $resolvedTarget = $matchingProjects[0]
-                } elseif ($matchingProjects.Count -gt 1) {
-                    OutputError "Test project '$project' references '$targetProject' which matches multiple projects: $($matchingProjects -join ', '). Use the full project path to disambiguate."
-                    throw
-                }
             }
             if (-not $resolvedTarget) {
-                OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository"
+                OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository. Use the full project path (e.g. 'projects/MyProject')."
                 throw
             }
             # Validate that the target is not itself a test project

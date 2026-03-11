@@ -1,4 +1,4 @@
-﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 Describe "Get-ProjectsToBuild" {
     BeforeAll {
@@ -974,15 +974,15 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[2].buildDimensions[1].project | Should -BeExactly "Project3"
     }
 
-    It 'resolves test project dependencies from testProject setting' {
+    It 'resolves test project dependencies from projectsToTest setting' {
         # Project1 has an app
         $project1AppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $project1AppFile -Depth 10) -type File -Force
 
-        # TestProject is a test-only project that depends on Project1 via testProject setting
+        # TestProject is a test-only project that depends on Project1 via projectsToTest setting
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
 
         # Add settings file
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
@@ -1018,7 +1018,7 @@ Describe "Get-ProjectsToBuild" {
 
         # TestProject depends on Project2 (which transitively depends on Project1)
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("Project2") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("Project2") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
 
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $true }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
@@ -1044,7 +1044,7 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'throws error when test project has buildable app folders' {
-        # TestProject has both testProject setting AND an app folder — this should fail
+        # TestProject has both projectsToTest setting AND an app folder — this should fail
         Mock OutputError {} -ModuleName DetermineProjectsToBuild
 
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
@@ -1052,7 +1052,7 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
 
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
         # Add an app folder to the test project — this should be forbidden
         $testAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Bad App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/TestProject/app/app.json" -Value (ConvertTo-Json $testAppFile -Depth 10) -type File -Force
@@ -1068,7 +1068,7 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'throws error when test project has buildable test folders' {
-        # TestProject has both testProject setting AND a test folder — this should fail
+        # TestProject has both projectsToTest setting AND a test folder — this should fail
         Mock OutputError {} -ModuleName DetermineProjectsToBuild
 
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
@@ -1079,7 +1079,7 @@ Describe "Get-ProjectsToBuild" {
         $testAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd3'; name = 'Bad Test App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/TestProject/test/app.json" -Value (ConvertTo-Json $testAppFile -Depth 10) -type File -Force
-        @{ testProject = @("Project1"); testFolders = @("test") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("Project1"); testFolders = @("test") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
 
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
@@ -1101,10 +1101,10 @@ Describe "Get-ProjectsToBuild" {
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appFile -Depth 10) -type File -Force
 
         New-Item -Path "$baseFolder/TestProject1/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject1/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject1/.AL-Go/settings.json") -Encoding UTF8
 
         New-Item -Path "$baseFolder/TestProject2/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("TestProject1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject2/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("TestProject1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject2/.AL-Go/settings.json") -Encoding UTF8
 
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
@@ -1116,7 +1116,7 @@ Describe "Get-ProjectsToBuild" {
         Should -Invoke OutputError -ModuleName DetermineProjectsToBuild -ParameterFilter { $message -like "*cannot depend on another test project*" }
     }
 
-    It 'throws error when testProject references nonexistent project' {
+    It 'throws error when projectsToTest references nonexistent project' {
         # Project1 exists
         Mock OutputError {} -ModuleName DetermineProjectsToBuild
 
@@ -1126,7 +1126,7 @@ Describe "Get-ProjectsToBuild" {
 
         # TestProject references NonExistentProject
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("NonExistentProject") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("NonExistentProject") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
 
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
@@ -1150,7 +1150,7 @@ Describe "Get-ProjectsToBuild" {
 
         # TestProject depends on both Project1 and Project2
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
-        @{ testProject = @("Project1", "Project2") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
+        @{ projectsToTest = @("Project1", "Project2") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
 
         $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
         New-Item -Path "$baseFolder/.github" -type Directory -Force
@@ -1218,3 +1218,4 @@ Describe "Get-BuildAllProjects" {
         Remove-Item $baseFolder -Force -Recurse
     }
 }
+
