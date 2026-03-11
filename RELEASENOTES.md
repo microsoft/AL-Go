@@ -6,7 +6,7 @@ With v28 of Business Central, the ALTool now also provides the ability to compil
   "useWorkspaceCompilation": true
 ```
 
-By default apps are compiled sequentlially but this can be changed via the workspaceCompilationParallelism setting. This allows you to configure the maximum amount of parallel compilation processes.
+By default apps are compiled sequentially but this can be changed via the workspaceCompilationParallelism setting. This allows you to configure the maximum amount of parallel compilation processes.
 
 ```json
   "workspaceCompilationParallelism": 4
