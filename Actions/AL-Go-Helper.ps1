@@ -718,13 +718,6 @@ function AnalyzeRepo {
         $settings.doNotRunBcptTests = $true
     }
     $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
-    if ($isTestProject) {
-        # Test projects must not contain any buildable code — they only run tests from upstream projects
-        if ($settings.appFolders -or $settings.testFolders -or $settings.bcptTestFolders) {
-            $buildableFolders = @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | Where-Object { $_ })
-            throw "Test project must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting. Found: $($buildableFolders -join ', ')"
-        }
-    }
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
         if ($isTestProject) {
             # Test projects run tests from upstream projects via installTestApps, not from local testFolders
@@ -1890,7 +1883,7 @@ Function AnalyzeProjectDependencies {
             # Validate that test projects do not contain buildable code
             $buildableFolders = @($appDependencies."$project".apps)
             if ($buildableFolders.Count -gt 0) {
-                OutputError "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting."
+                throw "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting."
             }
             $testProjectNames[$project] = $projectSettings.projectsToTest
         }
