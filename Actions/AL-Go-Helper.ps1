@@ -1893,9 +1893,11 @@ Function AnalyzeProjectDependencies {
         $testProjectDeps = @()
         foreach($targetProject in $testProjectNames[$project]) {
             # Resolve target project name: must be the full project path
+            # Normalize slashes to match how project keys are stored (OS-dependent)
+            $normalizedTarget = $targetProject.Replace('/', [System.IO.Path]::DirectorySeparatorChar).Replace('\', [System.IO.Path]::DirectorySeparatorChar)
             $resolvedTarget = $null
-            if ($appDependencies.Keys -contains $targetProject) {
-                $resolvedTarget = $targetProject
+            if ($appDependencies.Keys -contains $normalizedTarget) {
+                $resolvedTarget = $normalizedTarget
             }
             if (-not $resolvedTarget) {
                 OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository. Use the full project path (e.g. 'projects/MyProject')."
