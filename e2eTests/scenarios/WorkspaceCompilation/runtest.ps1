@@ -26,13 +26,15 @@ Write-Host -ForegroundColor Yellow @'
 #
 # This test tests the following scenario:
 #
-#  - Create a new repository based on the PTE template with one project and 4 apps with dependencies
-#  - Enable useWorkspaceCompilation in settings
+#  - Create a new repository based on the PTE template with two projects (P1 and P2)
+#  - P1 has 2 apps: app1 (base) and app2 (depends on app1)
+#  - P2 has 1 app: app3 (depends on P1/app1 — cross-project dependency)
+#  - Enable useWorkspaceCompilation and useProjectDependencies in repo settings
+#  - P1 has doNotPublishApps enabled (compile-only, no container)
+#  - P2 publishes apps (full pipeline with testing)
 #  - Run the "CI/CD" workflow
-#  - Check artifacts generated - all 4 apps should be compiled successfully
-#  - Verify that apps are compiled using workspace compilation (faster parallel build)
-#  - Modify one app and verify dependent apps are also rebuilt correctly
-#  - Modify a leaf app and verify only that app gets a new version
+#  - Verify P1 compiles both apps successfully
+#  - Verify P2 compiles app3 using P1's compiled app1 as a dependency
 #  - Cleanup repositories
 #
 '@
@@ -66,41 +68,47 @@ else {
     $githubRunnerShell = "powershell"
 }
 
-# Create a new repository with useWorkspaceCompilation enabled
-# 4 apps: app1 (base), app2 (depends on app1), app3 (depends on app2), app4 (depends on app1)
+# Create a multi-project repo with cross-project dependencies
+# P1: app1 (base), app2 (depends on app1) — compile-only (doNotPublishApps)
+# P2: app3 (depends on P1/app1) — full pipeline (publish + test)
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
     -template $template `
     -repository $repository `
     -branch $branch `
-    -projects @('P1') `
+    -projects @('P1', 'P2') `
     -addRepoSettings @{
         "useWorkspaceCompilation" = $true
-        "doNotPublishApps" = $false
+        "useProjectDependencies" = $true
         "artifact" = "////nextmajor"
         "githubRunner" = $githubRunner
         "githubRunnerShell" = $githubRunnerShell
     } `
     -contentScript {
         Param([string] $path)
-        Add-PropertiesToJsonFile -path (Join-Path $path 'P1\.AL-Go\settings.json') -properties @{ "country" = "w1" }
+        # P1: compile-only, no container needed
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P1\.AL-Go\settings.json') -properties @{
+            "country" = "w1"
+            "doNotPublishApps" = $true
+            "doNotRunTests" = $true
+        }
 
-        # Create app1 (base app)
+        # P2: full pipeline
+        Add-PropertiesToJsonFile -path (Join-Path $path 'P2\.AL-Go\settings.json') -properties @{
+            "country" = "w1"
+        }
+
+        # P1/app1 (base app)
         $script:id1 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app1' -objID 50001
 
-        # Create app2 (depends on app1)
+        # P1/app2 (depends on app1 within same project)
         $script:id2 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app2' -objID 50002 -dependencies @(
             @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
         )
 
-        # Create app3 (depends on app2)
-        $script:id3 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app3' -objID 50003 -dependencies @(
-            @{ "id" = $script:id2; "name" = "app2"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
-        )
-
-        # Create app4 (depends on app1, used to verify additional dependent apps compile correctly)
-        $script:id4 = CreateNewAppInFolder -folder (Join-Path $path 'P1') -name 'app4' -objID 50004 -dependencies @(
+        # P2/app3 (depends on P1/app1 — cross-project dependency)
+        $script:id3 = CreateNewAppInFolder -folder (Join-Path $path 'P2') -name 'app3' -objID 50003 -dependencies @(
             @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
         )
     }
@@ -116,26 +124,17 @@ $runs = invoke-gh api /repos/$repository/actions/runs -silent -returnValue | Con
 $run = $runs.workflow_runs | Select-Object -First 1
 WaitWorkflow -repository $repository -runid $run.id
 
-# Check artifacts generated - all apps should be compiled with version 1.0.2.0
+# Check P1 artifacts — 2 apps compiled (compile-only, no publishing)
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 4
+    "P1-main-Apps-*.app" = 2
     "P1-main-Apps-*_app1_1.0.2.0.app" = 1
     "P1-main-Apps-*_app2_1.0.2.0.app" = 1
-    "P1-main-Apps-*_app3_1.0.2.0.app" = 1
-    "P1-main-Apps-*_app4_1.0.2.0.app" = 1
 }
 
-# Modify app1 and verify dependent apps are rebuilt
-Pull
-$run = ModifyAppInFolder -folder 'P1/app1' -name 'app1' -commit -wait
-
-# Check that all apps got a new version (app1 was modified, app2/app3/app4 depend on it directly or transitively)
+# Check P2 artifacts — 1 app compiled (using P1/app1 as dependency)
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P1-main-Apps-*.app" = 4
-    "P1-main-Apps-*_app1_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app2_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app3_1.0.3.0.app" = 1
-    "P1-main-Apps-*_app4_1.0.3.0.app" = 1
+    "P2-main-Apps-*.app" = 1
+    "P2-main-Apps-*_app3_1.0.2.0.app" = 1
 }
 
 # Cleanup repositories
