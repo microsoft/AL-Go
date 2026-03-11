@@ -7,6 +7,7 @@ AL-Go for GitHub is a set of GitHub Actions and Templates for building, testing,
 ## PowerShell Conventions
 
 ### Error Handling
+
 - Every action script must start with the standard header:
   ```powershell
   $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -17,30 +18,36 @@ AL-Go for GitHub is a set of GitHub Actions and Templates for building, testing,
 - Use `Write-Host "::Warning::<message>"` for non-blocking warnings.
 
 ### JSON Processing
+
 - Always use `ConvertTo-HashTable -recurse` after `ConvertFrom-Json` to ensure nested objects and arrays are converted to hashtables for consistent access.
 - Always specify `-Encoding UTF8` when reading or writing JSON files.
 
 ### Function Declarations
+
 - Use PascalCase for function names and camelCase for variables.
 
 ### Module Loading
+
 - Import modules with explicit paths: `Join-Path $PSScriptRoot` pattern.
 - Use `-Force -DisableNameChecking` for re-imports.
 
 ## Security Patterns
 
 ### Secret Handling
+
 - Mask secrets with `Write-Host "::add-mask::$secret"` before any output.
 - Never log raw secrets; use clean/placeholder URLs in error messages.
 - Be aware that secrets in URLs use `${{ secretName }}` syntax — replacement is done before use.
 - URL-encode secret values when injecting into URLs.
 
 ### Input Sanitization
+
 - Sanitize filenames using `[System.IO.Path]::GetInvalidFileNameChars()`.
 - Check for path traversal using `Test-PathWithinWorkspace` or equivalent.
 - Sanitize container names with `-replace "[^a-z0-9\-]"`.
 
 ### Authentication
+
 - Never hardcode credentials or tokens in source code.
 - Use GitHub secrets or Azure KeyVault for credential storage.
 
@@ -75,6 +82,7 @@ AL-Go for GitHub is a set of GitHub Actions and Templates for building, testing,
 ## Deprecated Features
 
 Before using or accepting settings, check `DEPRECATIONS.md` for deprecated settings:
+
 - `unusedALGoSystemFiles` → use `customALGoFiles.filesToExclude`
 - `alwaysBuildAllProjects` → use `incrementalBuilds.onPull_Request`
 - `<workflow>Schedule` → use `workflowSchedule` with conditional settings
@@ -89,6 +97,7 @@ Before using or accepting settings, check `DEPRECATIONS.md` for deprecated setti
 ## Pull Request Checklist
 
 When reviewing PRs, verify:
+
 - [ ] Standard error handling header is present in new scripts
 - [ ] Secrets are masked before any output
 - [ ] JSON is converted with `ConvertTo-HashTable -recurse`
