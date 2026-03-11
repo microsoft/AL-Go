@@ -744,6 +744,10 @@
                 }
             }
         },
+        "postponeProjectInBuildOrder": {
+            "type": "boolean",
+            "description": "Indicates whether the project can be postponed in the build order to optimize build times. See https://aka.ms/ALGoSettings#postponeProjectInBuildOrder"
+        },
         "workflowDefaultInputs": {
             "type": "array",
             "items": {
