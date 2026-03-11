@@ -27,7 +27,7 @@ Write-Host -ForegroundColor Yellow @'
 # This test tests the following scenario:
 #
 #  - Create a new repository based on the PTE template with one project and 4 apps with dependencies
-#  - Enable useWorkspaceCompilation and doNotPublishApps in settings
+#  - Enable useWorkspaceCompilation in settings
 #  - Run the "CI/CD" workflow
 #  - Check artifacts generated - all 4 apps should be compiled successfully
 #  - Verify that apps are compiled using workspace compilation (faster parallel build)
