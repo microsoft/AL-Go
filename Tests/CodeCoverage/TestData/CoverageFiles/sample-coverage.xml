@@ -1,21 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<coverage>
-  <objects>
-    <object type="Codeunit" id="50100" name="Test Codeunit 1">
-      <lines>
-        <line number="10" covered="true" hits="5" />
-        <line number="11" covered="true" hits="5" />
-        <line number="12" covered="true" hits="3" />
-        <line number="15" covered="false" hits="0" />
-        <line number="16" covered="true" hits="2" />
-      </lines>
-    </object>
-    <object type="Codeunit" id="50101" name="Test Codeunit 2">
-      <lines>
-        <line number="20" covered="true" hits="10" />
-        <line number="21" covered="true" hits="10" />
-        <line number="22" covered="false" hits="0" />
-      </lines>
-    </object>
-  </objects>
-</coverage>
+<CodeCoverage>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50100</ObjectID>
+    <LineNo>10</LineNo>
+    <CoverageStatus>0</CoverageStatus>
+    <NoOfHits>5</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50100</ObjectID>
+    <LineNo>11</LineNo>
+    <CoverageStatus>0</CoverageStatus>
+    <NoOfHits>5</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50100</ObjectID>
+    <LineNo>12</LineNo>
+    <CoverageStatus>0</CoverageStatus>
+    <NoOfHits>3</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50100</ObjectID>
+    <LineNo>15</LineNo>
+    <CoverageStatus>1</CoverageStatus>
+    <NoOfHits>0</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50100</ObjectID>
+    <LineNo>16</LineNo>
+    <CoverageStatus>0</CoverageStatus>
+    <NoOfHits>2</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50101</ObjectID>
+    <LineNo>20</LineNo>
+    <CoverageStatus>0</CoverageStatus>
+    <NoOfHits>10</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50101</ObjectID>
+    <LineNo>21</LineNo>
+    <CoverageStatus>0</CoverageStatus>
+    <NoOfHits>10</NoOfHits>
+  </CodeLine>
+  <CodeLine>
+    <ObjectType>5</ObjectType>
+    <ObjectID>50101</ObjectID>
+    <LineNo>22</LineNo>
+    <CoverageStatus>1</CoverageStatus>
+    <NoOfHits>0</NoOfHits>
+  </CodeLine>
+</CodeCoverage>
