@@ -37,9 +37,9 @@ if ($coberturaFiles.Count -eq 1) {
     $mergedOutputDir = Join-Path $coveragePath "_merged"
     $mergedFile = Join-Path $mergedOutputDir "cobertura.xml"
 
-    $mergeStats = Merge-CoberturaFiles `
+    Merge-CoberturaFiles `
         -CoberturaFiles ($coberturaFiles.FullName) `
-        -OutputPath $mergedFile
+        -OutputPath $mergedFile | Out-Null
 }
 
 # Merge stats.json files for metadata (app source paths, excluded objects)
