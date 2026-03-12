@@ -37,6 +37,10 @@ inputs:
     description: SHA of the baseline workflow run
     required: false
     default: ''
+  projectDependenciesJson:
+    description: Dependencies of the built project in compressed JSON format
+    required: false
+    default: '{}'
 runs:
   using: composite
   steps:
@@ -51,9 +55,10 @@ runs:
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
         _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+        _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunPipeline" -Action {
-          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
+          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA -projectDependenciesJson $ENV:_projectDependenciesJson
         }
 branding:
   icon: terminal

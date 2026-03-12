@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage line-rate="0.75" branch-rate="0.0" version="1.0" timestamp="1710166900">
+  <packages>
+    <package name="TestApp" line-rate="0.75" branch-rate="0.0">
+      <classes>
+        <class name="Codeunit.50100" filename="src/Codeunit50100.TestCodeunit1.al" line-rate="0.75">
+          <methods/>
+          <lines>
+            <line number="8" hits="3" branch="false"/>
+            <line number="9" hits="3" branch="false"/>
+            <line number="15" hits="2" branch="false"/>
+            <line number="16" hits="1" branch="false"/>
+          </lines>
+        </class>
+        <class name="Codeunit.50101" filename="src/Codeunit50101.TestCodeunit2.al" line-rate="0.67">
+          <methods/>
+          <lines>
+            <line number="20" hits="10" branch="false"/>
+            <line number="21" hits="10" branch="false"/>
+            <line number="22" hits="0" branch="false"/>
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

@@ -157,6 +157,7 @@ Describe 'CalculateArtifactNames Action Tests' {
             "BuildOutputArtifactsName" = "Artifacts name for BuildOutput"
             "ContainerEventLogArtifactsName" = "Artifacts name for ContainerEventLog"
             "ErrorLogsArtifactsName" = "Artifacts name for ErrorLogs"
+            "CodeCoverageArtifactsName" = "Artifacts name for CodeCoverage"
             "BuildMode" = "Build mode used when building the artifacts"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
