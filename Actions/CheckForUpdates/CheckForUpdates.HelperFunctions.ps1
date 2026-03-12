@@ -264,6 +264,10 @@ function ModifyBuildWorkflows {
     if ($codeAnalysisUpload) {
         $postProcessNeeds += @('CodeAnalysisUpload')
     }
+    $mergeCoverage = $yaml.Get('jobs:/MergeCoverage:/')
+    if ($mergeCoverage) {
+        $postProcessNeeds += @('MergeCoverage')
+    }
     if ($postProcess) {
         $postProcess.Replace('needs:', "needs: [ $($postProcessNeeds -join ', ') ]")
         $yaml.Replace('jobs:/PostProcess:/', $postProcess.content)
