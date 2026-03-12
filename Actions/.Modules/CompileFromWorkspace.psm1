@@ -307,9 +307,6 @@ function Copy-CompiledAppsToOutput {
     )
 
     $generatedAppFiles = @()
-    if (-not (Test-Path $PackageCachePath) -or ($PackageCachePath -eq $OutputFolder)) {
-        return $generatedAppFiles
-    }
 
     if (-not (Test-Path $OutputFolder)) {
         New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
@@ -328,7 +325,9 @@ function Copy-CompiledAppsToOutput {
     foreach ($file in $outputFiles) {
         $destinationPath = Join-Path $OutputFolder $file.Name
         $generatedAppFiles += $destinationPath
-        Copy-Item -Path $file.FullName -Destination $destinationPath -Force
+        if ($PackageCachePath -ne $OutputFolder) {
+            Copy-Item -Path $file.FullName -Destination $destinationPath -Force
+        }
     }
 
     return $generatedAppFiles
