@@ -48,12 +48,12 @@ function Run-AlTestsInternal
 )
 {
     $ErrorActionPreference = $script:DefaultErrorActionPreference
-   
+
     Setup-TestRun -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -TestSuite $TestSuite `
         -TestCodeunitsRange $TestCodeunitsRange -TestProcedureRange $TestProcedureRange -ExtensionId $ExtensionId -RequiredTestIsolation $RequiredTestIsolation -TestType $TestType `
         -TestRunnerId $TestRunnerId -TestPage $TestPage -DisabledTests $DisabledTests -CodeCoverageTrackingType $CodeCoverageTrackingType -CodeCoverageTrackAllSessions:$CodeCoverageTrackAllSessions -CodeCoverageOutputPath $CodeCoverageOutputPath -CodeCoverageExporterId $CodeCoverageExporterId -ProduceCodeCoverageMap $ProduceCodeCoverageMap -StabilityRun $StabilityRun
-            
-    $testRunResults = New-Object System.Collections.ArrayList 
+
+    $testRunResults = New-Object System.Collections.ArrayList
     $testResult = ''
     $numberOfUnexpectedFailures = 0;
 
@@ -67,7 +67,7 @@ function Run-AlTestsInternal
             {
                 return [Array]$testRunResults
             }
- 
+
             $testRunResultObject = ConvertFrom-Json $testResult
             if($CodeCoverageTrackingType -ne 'Disabled') {
                 $null = CollectCoverageResults -TrackingType $CodeCoverageTrackingType -OutputPath $CodeCoverageOutputPath -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -CodeCoverageFilePrefix $CodeCoverageFilePrefix -TestPage $TestPage -ProduceCodeCoverageMap $ProduceCodeCoverageMap
@@ -77,7 +77,7 @@ function Run-AlTestsInternal
         {
             $numberOfUnexpectedFailures++
 
-            $stackTrace = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace 
+            $stackTrace = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace
             $testMethodResult = @{
                 method = "Unexpected Failure"
                 codeUnit = "Unexpected Failure"
@@ -97,7 +97,7 @@ function Run-AlTestsInternal
                 testResults = @($testMethodResult)
             }
         }
-        
+
         $testRunResults.Add($testRunResultObject) > $null
         if($Detailed)
         {
@@ -106,14 +106,14 @@ function Run-AlTestsInternal
     }
     until((!$testRunResultObject) -or ($script:NumberOfUnexpectedFailuresBeforeAborting -lt $numberOfUnexpectedFailures))
 
-    throw "Expected to end the test execution, something went wrong with returning test results."      
+    throw "Expected to end the test execution, something went wrong with returning test results."
 }
 
 function Print-TestResults
 (
     $TestRunResultObject
 )
-{              
+{
     $startTime = Convert-ResultStringToDateTimeSafe -DateTimeString $TestRunResultObject.startTime
     $finishTime = Convert-ResultStringToDateTimeSafe -DateTimeString $TestRunResultObject.finishTime
     $duration = $finishTime.Subtract($startTime)
@@ -168,7 +168,7 @@ function Print-TestResults
                     Write-Host -ForegroundColor Red "   Failure - Test method: $methodName - Duration $durationSeconds seconds"
                     Write-Host -ForegroundColor Red "      Error:"
                     Write-Host -ForegroundColor Red "         $($testFunctionResult.message)"
-                    Write-Host -ForegroundColor Red "      Call Stack:"                    
+                    Write-Host -ForegroundColor Red "      Call Stack:"
                     if($callStack)
                     {
                         Write-Host -ForegroundColor Red "         $($callStack.Replace(';',"`n         "))"
@@ -182,7 +182,7 @@ function Print-TestResults
                 }
             }
         }
-    }            
+    }
 }
 
 function Setup-TestRun
@@ -225,7 +225,7 @@ function Setup-TestRun
 
     try
     {
-        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl 
+        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl
 
         $form = Open-TestForm -TestPage $TestPage -ClientContext $clientContext
         Set-TestSuite -TestSuite $TestSuite -ClientContext $clientContext -Form $form
@@ -282,7 +282,7 @@ function Run-NextTest
         }
 
         $clientContext.InvokeAction($clientContext.GetActionByName($form, "RunNextTest"))
-        
+
         $testResultControl = $clientContext.GetControlByName($form, "TestResultJson")
         $testResultJson = $testResultControl.StringValue
         $clientContext.CloseForm($form)
@@ -294,13 +294,13 @@ function Run-NextTest
         {
             $clientContext.Dispose()
         }
-    } 
+    }
 }
 
 function Convert-ResultStringToDateTimeSafe([string] $DateTimeString)
 {
     [datetime]$parsedDateTime = New-Object DateTime
-    
+
     try
     {
         [datetime]$parsedDateTime = [datetime]$DateTimeString

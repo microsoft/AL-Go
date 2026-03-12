@@ -35,7 +35,7 @@ function Initialize-TestRunner(
     $script:APIHost = ''
 
     $script:CompanyId = $CompanyId
-    
+
 
     # If -Environment is not specified then pick the default
     if ($Environment -eq '') {
@@ -93,7 +93,7 @@ function Initialize-TestRunner(
             }
 
             $script:AadTokenProvider = [AadTokenProvider]::new($script:AadTenantId, $script:ClientId, $script:RedirectUri)
-            
+
             if (!$script:AadTokenProvider) {
                 $example = @'
 
@@ -167,7 +167,7 @@ function Initialize-TestRunner(
             else {
                 $script:APIHost = $APIHost
             }
-            
+
             $script:Tenant = GetTenantFromServiceUrl -Uri $script:ServiceUrl
         }
     }
@@ -194,7 +194,7 @@ function Initialize-TestRunner(
             }
         }
     }
-    
+
     $script:Credential = $Credential
     $script:ClientSessionTimeout = $ClientSessionTimeout
     $script:TransactionTimeout = [timespan]::FromMinutes($TransactionTimeout);
@@ -208,19 +208,19 @@ function GetTenantFromServiceUrl([Uri]$Uri)
     # Extract the query string part of the URI
     $queryString = [Uri]$Uri -replace '.*\?', ''
     $params = @{}
-    
-    $queryString -split '&' | ForEach-Object {  
-        if ($_ -match '([^=]+)=(.*)') { 
-            $params[$matches[1]] = $matches[2] 
-        }  
+
+    $queryString -split '&' | ForEach-Object {
+        if ($_ -match '([^=]+)=(.*)') {
+            $params[$matches[1]] = $matches[2]
+        }
     }
 
     if($params['tenant'])
     {
         return $params['tenant']
-    } 
-    
-    return 'default'    
+    }
+
+    return 'default'
 }
 
 # Test the connection to the AI Test Toolkit
@@ -229,7 +229,7 @@ function Test-AITestToolkitConnection {
         Write-HostWithTimestamp "Testing the connection to the AI Test Toolkit..."
 
         $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -Credential $script:Credential -ServiceUrl $script:ServiceUrl -ClientSessionTimeout $script:ClientSessionTimeout -TransactionTimeout $script:TransactionTimeout -Culture $script:Culture
-        
+
         Write-HostWithTimestamp "Opening the Test Form $script:TestRunnerPage"
         $form = Open-TestForm -TestPage $script:TestRunnerPage -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -ClientContext $clientContext
 
@@ -269,7 +269,7 @@ function Test-AITestToolkitConnection {
         if ($clientContext) {
             $clientContext.Dispose()
         }
-    }     
+    }
 }
 
 # Reset the test suite pending tests
@@ -286,10 +286,10 @@ function Reset-AITTestSuite {
 
         $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -Credential $script:Credential -ServiceUrl $script:ServiceUrl -ClientSessionTimeout $ClientSessionTimeout -TransactionTimeout $TransactionTimeout -Culture $script:Culture
 
-        $form = Open-TestForm -TestPage $script:TestRunnerPage -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -ClientContext $clientContext        
+        $form = Open-TestForm -TestPage $script:TestRunnerPage -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -ClientContext $clientContext
 
-        $SelectSuiteControl = $clientContext.GetControlByName($form, "AIT Suite Code")        
-        $clientContext.SaveValue($SelectSuiteControl, $SuiteCode);        
+        $SelectSuiteControl = $clientContext.GetControlByName($form, "AIT Suite Code")
+        $clientContext.SaveValue($SelectSuiteControl, $SuiteCode);
 
         Write-HostWithTimestamp "Resetting the test suite $SuiteCode"
 
@@ -320,10 +320,10 @@ function Invoke-AITSuite
 
             $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -Credential $script:Credential -ServiceUrl $script:ServiceUrl -ClientSessionTimeout $ClientSessionTimeout -TransactionTimeout $TransactionTimeout -Culture $script:Culture
 
-            $form = Open-TestForm -TestPage $script:TestRunnerPage -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -ClientContext $clientContext            
+            $form = Open-TestForm -TestPage $script:TestRunnerPage -DisableSSLVerification:$script:DisableSSLVerification -AuthorizationType $script:AuthorizationType -ClientContext $clientContext
 
-            $SelectSuiteControl = $clientContext.GetControlByName($form, "AIT Suite Code")            
-            $clientContext.SaveValue($SelectSuiteControl, $SuiteCode);            
+            $SelectSuiteControl = $clientContext.GetControlByName($form, "AIT Suite Code")
+            $clientContext.SaveValue($SelectSuiteControl, $SuiteCode);
 
             if ($SuiteLineNo -ne '') {
                 $SelectSuiteLineControl = $clientContext.GetControlByName($form, "Line No. Filter")
@@ -333,13 +333,13 @@ function Invoke-AITSuite
             Invoke-NextTest -SuiteCode $SuiteCode -ClientContext $clientContext -Form $form
 
             # Get the results for the last run
-            $TestResult += Get-AITSuiteTestResultInternal -SuiteCode $SuiteCode -TestRunVersion 0 | ConvertFrom-Json            
+            $TestResult += Get-AITSuiteTestResultInternal -SuiteCode $SuiteCode -TestRunVersion 0 | ConvertFrom-Json
 
-            $NoOfPendingTests = $clientContext.GetControlByName($form, "No. of Pending Tests")            
-            $NoOfPendingTests = [int] $NoOfPendingTests.StringValue            
+            $NoOfPendingTests = $clientContext.GetControlByName($form, "No. of Pending Tests")
+            $NoOfPendingTests = [int] $NoOfPendingTests.StringValue
         }
         catch {
-            $stackTraceText = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace 
+            $stackTraceText = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace
             $testResultError = @(
                 @{
                     aitCode        = $SuiteCode
@@ -411,7 +411,7 @@ function Get-AITSuiteTestResultInternal {
     if ($TestRunVersion -lt 0) {
         throw "TestRunVersion should be 0 or greater"
     }
-    
+
     $APIEndpoint = Get-DefaultAPIEndpointForAITLogEntries
 
     # if AIT suite version is not provided then get the latest version
@@ -419,10 +419,10 @@ function Get-AITSuiteTestResultInternal {
         # Odata to sort by version and get all the entries with highest version
         $APIQuery = Build-LogEntryAPIFilter -SuiteCode $SuiteCode -TestRunVersion $TestRunVersion -CodeunitId $CodeunitId -CodeunitName $CodeunitName -TestStatus $TestStatus -ProcedureName $ProcedureName
         $AITVersionAPI = $APIEndpoint + $APIQuery + "&`$orderby=version desc&`$top=1&`$select=version"
-        
+
         Write-HostWithTimestamp "Getting the latest version of the AIT Suite from $AITVersionAPI"
         $AITApiResponse = Invoke-BCRestMethod -Uri $AITVersionAPI
-        
+
         $TestRunVersion = $AITApiResponse.value[0].version
     }
 
@@ -433,7 +433,7 @@ function Get-AITSuiteTestResultInternal {
     $AITLogEntries = Invoke-BCRestMethod -Uri $AITLogEntryAPI
 
     # Convert the response to JSON
-    
+
     $AITLogEntriesJson = $AITLogEntries.value | ConvertTo-Json -Depth 100 -AsArray
     return $AITLogEntriesJson
 }
@@ -453,7 +453,7 @@ function Get-AITSuiteEvaluationResultInternal {
     if ($TestRunVersion -lt 0) {
         throw "TestRunVersion should be 0 or greater"
     }
-    
+
     $APIEndpoint = Get-DefaultAPIEndpointForAITEvaluationLogEntries
 
     Write-Host "Getting the AIT Suite Evaluation Results for Suite Code: $SuiteCode, Suite Line No: $SuiteLineNo, Test Run Version: $TestRunVersion, Test State: $TestState"
@@ -463,10 +463,10 @@ function Get-AITSuiteEvaluationResultInternal {
         # Odata to sort by version and get all the entries with highest version
         $APIQuery = Build-LogEvaluationEntryAPIFilter -SuiteCode $SuiteCode -TestRunVersion $TestRunVersion -SuiteLineNo $SuiteLineNo -TestState $TestState
         $AITVersionAPI = $APIEndpoint + $APIQuery + "&`$orderby=version desc&`$top=1&`$select=version"
-        
+
         Write-HostWithTimestamp "Getting the latest version of the AIT Suite from $AITVersionAPI"
         $AITApiResponse = Invoke-BCRestMethod -Uri $AITVersionAPI
-        
+
         $TestRunVersion = $AITApiResponse.value[0].version
     }
 
@@ -496,7 +496,7 @@ function Get-AITSuiteTestMethodLinesInternal {
     if ($TestRunVersion -lt 0) {
         throw "TestRunVersion should be 0 or greater"
     }
-    
+
     $APIEndpoint = Get-DefaultAPIEndpointForAITTestMethodLines
 
     $APIQuery = Build-TestMethodLineAPIFilter -SuiteCode $SuiteCode -TestRunVersion $TestRunVersion -CodeunitId $CodeunitId -CodeunitName $CodeunitName -TestStatus $TestStatus
@@ -515,7 +515,7 @@ function Get-DefaultAPIEndpointForAITLogEntries {
     if ($script:CompanyId -ne [guid]::Empty -and $null -ne $script:CompanyId) {
         $CompanyPath = '/companies(' + $script:CompanyId + ')'
     }
-    
+
     $TenantParam = ''
     if($script:Tenant)
     {
@@ -549,7 +549,7 @@ function Get-DefaultAPIEndpointForAITEvaluationLogEntries {
     if ($script:CompanyId -ne [guid]::Empty -and $null -ne $script:CompanyId) {
         $CompanyPath = '/companies(' + $script:CompanyId + ')'
     }
-    
+
     $TenantParam = ''
     if($script:Tenant)
     {
@@ -660,7 +660,7 @@ function Set-InputDatasetInternal {
 
         $SelectSuiteControl = $clientContext.GetControlByName($form, "Input Dataset Filename")
         $clientContext.SaveValue($SelectSuiteControl, $InputDatasetFilename);
-        
+
         Write-HostWithTimestamp "Uploading the Input Dataset $InputDatasetFilename"
 
         $SelectSuiteControl = $clientContext.GetControlByName($form, "Input Dataset")
@@ -678,7 +678,7 @@ function Set-InputDatasetInternal {
         if ($clientContext) {
             $clientContext.Dispose()
         }
-    }     
+    }
 }
 
 #Upload the XML test suite definition needed to setup the AI Test Suite
@@ -697,7 +697,7 @@ function  Set-SuiteDefinitionInternal {
         Write-HostWithTimestamp "Uploading the Suite Definition"
         $SelectSuiteControl = $clientContext.GetControlByName($form, "Suite Definition")
         $clientContext.SaveValue($SelectSuiteControl, $SuiteDefinition.OuterXml);
-        
+
         # Check if the suite definition is set correctly
         $validationResultsError = Get-FormError($form)
         if ($validationResultsError.Count -gt 0) {
@@ -733,7 +733,7 @@ function Get-FormError {
             $validationResultsError += "TestPage: $script:TestRunnerPage, Status: Error, Message: $($validationResult.Description), ErrorCallStack: $(Get-PSCallStack)"
         }
         return ($validationResultsError -join "`n")
-    }  
+    }
 }
 
 function Invoke-BCRestMethod {
@@ -800,7 +800,7 @@ if (!$script:TypesLoaded) {
 
     $clientContextScriptPath = Join-Path $PSScriptRoot "ClientContext.ps1"
     . "$clientContextScriptPath"
-    
+
     $aadTokenProviderScriptPath = Join-Path $PSScriptRoot "AadTokenProvider.ps1"
     . "$aadTokenProviderScriptPath"
 }

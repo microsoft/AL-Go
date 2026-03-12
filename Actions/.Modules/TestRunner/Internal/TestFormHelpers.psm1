@@ -7,9 +7,9 @@ function Open-TestForm(
     [int] $TestPage = $global:DefaultTestPage,
     [ClientContext] $ClientContext
 )
-{ 
+{
     $form = $ClientContext.OpenForm($TestPage)
-    if (!$form) 
+    if (!$form)
     {
         throw "Cannot open page $TestPage. Verify if the test tool and test objects are imported and can be opened manually."
     }
@@ -98,7 +98,7 @@ function Set-TestType {
         [ClientContext] $ClientContext,
         $Form
     )
-    $TypeValues = @{    
+    $TypeValues = @{
         UnitTest = 1
         IntegrationTest = 2
         Uncategorized = 3

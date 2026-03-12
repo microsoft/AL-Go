@@ -22,13 +22,13 @@ function Install-WcfDependencies {
     )
 
     $tempFolder = Join-Path ([System.IO.Path]::GetTempPath()) "BcClientPackages_$([Guid]::NewGuid().ToString().Substring(0,8))"
-    
+
     try {
         foreach ($package in $requiredPackages) {
             $packageName = $package.Name
             $packageVersion = $package.Version
             $expectedDll = Join-Path $TargetPath "$packageName.dll"
-            
+
             # Skip if already exists
             if (Test-Path $expectedDll) {
                 Write-Host "Dependency $packageName already exists"
@@ -36,7 +36,7 @@ function Install-WcfDependencies {
             }
 
             Write-Host "Downloading dependency: $packageName v$packageVersion"
-            
+
             $nugetUrl = "https://www.nuget.org/api/v2/package/$packageName/$packageVersion"
             $packageZip = Join-Path $tempFolder "$packageName.zip"
             $packageExtract = Join-Path $tempFolder $packageName
@@ -59,7 +59,7 @@ function Install-WcfDependencies {
                 (Join-Path $packageExtract "lib\netstandard2.0\$packageName.dll"),
                 (Join-Path $packageExtract "lib\netcoreapp3.1\$packageName.dll")
             )
-            
+
             foreach ($searchPath in $searchPaths) {
                 if (Test-Path $searchPath) {
                     $dllPath = $searchPath
@@ -88,10 +88,10 @@ if(!$script:TypesLoaded)
     # Load order matters - dependencies must be loaded before the client DLL
     # See: https://github.com/microsoft/navcontainerhelper/blob/main/AppHandling/PsTestFunctions.ps1
     # Fix for issue with Microsoft.Internal.AntiSSRF.dll v2.2+: https://github.com/microsoft/navcontainerhelper/pull/4063
-    
+
     # Check if we're running on .NET Core/5+/6+ (PowerShell 7+) vs .NET Framework (Windows PowerShell 5.1)
     $isNetCore = $PSVersionTable.PSVersion.Major -ge 6
-    
+
     # Always ensure System.Threading.Tasks.Extensions is available - AntiSSRF.dll v2.2+ needs it
     # regardless of .NET Framework or .NET Core
     $threadingExtDll = Join-Path $PSScriptRoot "System.Threading.Tasks.Extensions.dll"
@@ -117,18 +117,18 @@ if(!$script:TypesLoaded)
             }
         }
     }
-    
+
     if ($isNetCore) {
         # On .NET Core/5+/6+, we need to install WCF packages as they're not included by default
         Write-Host "Running on .NET Core/.NET 5+, ensuring WCF dependencies are installed..."
         Install-WcfDependencies -TargetPath $PSScriptRoot
-        
+
         # Load WCF dependencies first (order matters)
         $dependencyDlls = @(
             "System.Runtime.CompilerServices.Unsafe.dll",
             "System.Threading.Tasks.Extensions.dll",
             "System.Private.ServiceModel.dll",
-            "System.ServiceModel.Primitives.dll", 
+            "System.ServiceModel.Primitives.dll",
             "System.ServiceModel.Http.dll"
         )
         foreach ($dll in $dependencyDlls) {
@@ -142,18 +142,18 @@ if(!$script:TypesLoaded)
             }
         }
     }
-    
+
     # Now load the BC client dependencies in the correct order
     # Wrap in try/catch to get detailed LoaderExceptions if it fails
     try {
         Add-Type -Path "$PSScriptRoot\NewtonSoft.Json.dll"
-        
+
         # Microsoft.Internal.AntiSSRF.dll v2.2+ requires System.Threading.Tasks.Extensions
         # Use AssemblyResolve event handler to help the runtime find it
         # See: https://github.com/microsoft/navcontainerhelper/pull/4063
         $antiSSRFdll = Join-Path $PSScriptRoot "Microsoft.Internal.AntiSSRF.dll"
         $threadingExtDll = Join-Path $PSScriptRoot "System.Threading.Tasks.Extensions.dll"
-        
+
         if ((Test-Path $antiSSRFdll) -and (Test-Path $threadingExtDll)) {
             $Threading = [Reflection.Assembly]::LoadFile($threadingExtDll)
             $onAssemblyResolve = [System.ResolveEventHandler] {
@@ -175,7 +175,7 @@ if(!$script:TypesLoaded)
             # Fall back to simple Add-Type if threading extensions not available
             Add-Type -Path $antiSSRFdll
         }
-        
+
         Add-Type -Path "$PSScriptRoot\Microsoft.Dynamics.Framework.UI.Client.dll"
     }
     catch [System.Reflection.ReflectionTypeLoadException] {
@@ -197,7 +197,7 @@ if(!$script:TypesLoaded)
         }
         throw
     }
-    
+
     $clientContextScriptPath = Join-Path $PSScriptRoot "ClientContext.ps1"
     . "$clientContextScriptPath"
 }

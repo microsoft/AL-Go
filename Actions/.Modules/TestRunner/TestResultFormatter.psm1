@@ -77,7 +77,7 @@ function Save-ResultsAsXUnit {
         $XUnitAssembly.SetAttribute("passed", 0)
         $XUnitAssembly.SetAttribute("failed", 0)
         $XUnitAssembly.SetAttribute("time", $durationSeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture))
-        
+
         $XUnitCollection = $XUnitDoc.CreateElement("collection")
         $XUnitAssembly.AppendChild($XUnitCollection) | Out-Null
         $XUnitCollection.SetAttribute("name", $name)
@@ -91,12 +91,12 @@ function Save-ResultsAsXUnit {
             $testMethodName = $testMethod.method
             $XUnitAssembly.SetAttribute("total", ([int]$XUnitAssembly.GetAttribute("total") + 1))
             $XUnitCollection.SetAttribute("total", ([int]$XUnitCollection.GetAttribute("total") + 1))
-            
+
             $XUnitTest = $XUnitDoc.CreateElement("test")
             $XUnitCollection.AppendChild($XUnitTest) | Out-Null
             $XUnitTest.SetAttribute("name", $XUnitAssembly.GetAttribute("name") + ':' + $testMethodName)
             $XUnitTest.SetAttribute("method", $testMethodName)
-            
+
             $methodStartTime = [datetime]($testMethod.startTime)
             $methodFinishTime = [datetime]($testMethod.finishTime)
             $methodDuration = $methodFinishTime.Subtract($methodStartTime)
@@ -113,7 +113,7 @@ function Save-ResultsAsXUnit {
                     $XUnitAssembly.SetAttribute("failed", ([int]$XUnitAssembly.GetAttribute("failed") + 1))
                     $XUnitCollection.SetAttribute("failed", ([int]$XUnitCollection.GetAttribute("failed") + 1))
                     $XUnitTest.SetAttribute("result", "Fail")
-                    
+
                     $XUnitFailure = $XUnitDoc.CreateElement("failure")
                     $XUnitMessage = $XUnitDoc.CreateElement("message")
                     $XUnitMessage.InnerText = $testMethod.message

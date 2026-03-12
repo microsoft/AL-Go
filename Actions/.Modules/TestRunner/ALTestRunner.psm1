@@ -60,7 +60,7 @@ function Run-AlTests
         Detailed = $Detailed
         StabilityRun = $StabilityRun
     }
-    
+
     [array]$testRunResult = Run-AlTestsInternal @testRunArguments
 
     if($SaveResultFile -and $testRunResult)
@@ -89,7 +89,7 @@ function Invoke-ALTestResultVerification
 {
     $failedTestList = Get-FailedTestsFromXMLFiles -TestResultsFolder $TestResultsFolder
 
-    if($failedTestList.Count -gt 0) 
+    if($failedTestList.Count -gt 0)
     {
         $testsExecuted = $true;
         Write-Log "Failed tests:"
@@ -241,7 +241,7 @@ function Get-TestRunnerId
 {
     switch($TestIsolation)
     {
-        "Codeunit" 
+        "Codeunit"
         {
             return Get-CodeunitTestIsolationTestRunnerId
         }

@@ -26,12 +26,12 @@ class AadTokenProvider
 
     AadTokenProvider([string] $AADTenantID, [string] $ClientId, [string] $RedirectUri)
     {
-        $this.Initialize($AADTenantID, $ClientId, $RedirectUri)        
+        $this.Initialize($AADTenantID, $ClientId, $RedirectUri)
     }
 
     Initialize([string] $AADTenantID, [string] $ClientId, [string] $RedirectUri)
     {
-        $this.AADTenantID = $AADTenantID 
+        $this.AADTenantID = $AADTenantID
         $this.ClientId = $ClientId
         $this.RedirectUri = $RedirectUri
         $BaseAuthorityUri = "https://login.microsoftonline.com"
@@ -42,8 +42,8 @@ class AadTokenProvider
     }
 
     [string] GetToken([pscredential] $Credential)
-    {   
-        
+    {
+
         if($this.TokenExpirationTime)
         {
             if ($this.TokenExpirationTime -gt (Get-Date))
@@ -61,7 +61,7 @@ class AadTokenProvider
         }
 
         $this.CurrentToken =  $AuthenticationResult.AccessToken;
-    
+
         $this.TokenExpirationTime = ($AuthenticationResult.ExpiresOn - (New-TimeSpan -Minutes 3))
         return $AuthenticationResult.AccessToken;
     }

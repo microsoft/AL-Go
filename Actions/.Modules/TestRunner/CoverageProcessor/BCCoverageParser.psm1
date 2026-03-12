@@ -76,7 +76,7 @@ function Get-ObjectTypeId {
         [Parameter(Mandatory = $true)]
         [string]$ObjectTypeName
     )
-    
+
     $lower = $ObjectTypeName.ToLower().Trim()
     if ($script:ObjectTypeNameMap.ContainsKey($lower)) {
         return $script:ObjectTypeNameMap[$lower]
@@ -98,22 +98,22 @@ function Read-BCCoverageFile {
         [Parameter(Mandatory = $true)]
         [string]$Path
     )
-    
+
     if (-not (Test-Path $Path)) {
         throw "Coverage file not found: $Path"
     }
-    
+
     # Detect format based on file extension or content
     $extension = [System.IO.Path]::GetExtension($Path).ToLower()
-    
+
     if ($extension -eq '.xml') {
         return Read-BCCoverageXmlFile -Path $Path
     }
-    
+
     # For .dat or other extensions, check content to detect format
     $bytes = [System.IO.File]::ReadAllBytes($Path)
     $contentStart = ""
-    
+
     # Get first few characters to detect XML
     if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
         # UTF-16 LE
@@ -125,11 +125,11 @@ function Read-BCCoverageFile {
         # No BOM, assume UTF-8
         $contentStart = [System.Text.Encoding]::UTF8.GetString($bytes, 0, [Math]::Min(100, $bytes.Length))
     }
-    
+
     if ($contentStart.TrimStart().StartsWith('<?xml') -or $contentStart.TrimStart().StartsWith('<CodeCoverage')) {
         return Read-BCCoverageXmlFile -Path $Path
     }
-    
+
     return Read-BCCoverageCsvFile -Path $Path
 }
 
@@ -147,9 +147,9 @@ function Read-BCCoverageXmlFile {
         [Parameter(Mandatory = $true)]
         [string]$Path
     )
-    
+
     $coverageEntries = [System.Collections.Generic.List[object]]::new()
-    
+
     try {
         [xml]$xml = Get-Content -Path $Path -Encoding UTF8
     }
@@ -157,7 +157,7 @@ function Read-BCCoverageXmlFile {
         # Try Unicode encoding
         [xml]$xml = Get-Content -Path $Path -Encoding Unicode
     }
-    
+
     # XMLport 130007 format: <CodeCoverage><CodeLine>...</CodeLine></CodeCoverage>
     # Each CodeLine has: ObjectType, ObjectID, LineNo, Code, CoverageStatus, NoOfHits
     $codeLines = $xml.SelectNodes('//CodeLine')
@@ -168,12 +168,12 @@ function Read-BCCoverageXmlFile {
     if (-not $codeLines -or $codeLines.Count -eq 0) {
         $codeLines = $xml.SelectNodes('//*[ObjectType and ObjectID and LineNo]')
     }
-    
+
     foreach ($node in $codeLines) {
         $objectTypeRaw = $node.ObjectType
         $objectId = [int]$node.ObjectID
         $lineNo = [int]$node.LineNo
-        
+
         # CoverageStatus: 0=Covered, 1=NotCovered, 2=PartiallyCovered
         $coverageStatus = 1  # Default to NotCovered
         if ($node.CoverageStatus) {
@@ -181,28 +181,28 @@ function Read-BCCoverageXmlFile {
         } elseif ($node.NoOfHits -and [int]$node.NoOfHits -gt 0) {
             $coverageStatus = 0  # Covered
         }
-        
+
         $hits = 0
         if ($node.NoOfHits) {
             $hits = [int]$node.NoOfHits
         }
-        
+
         # Handle both numeric and text object types
         $objectTypeId = 0
         $objectType = $objectTypeRaw
-        
+
         if ($objectTypeRaw -match '^\d+$') {
             $objectTypeId = [int]$objectTypeRaw
-            $objectType = if ($script:ObjectTypeMap.ContainsKey($objectTypeId)) { 
-                $script:ObjectTypeMap[$objectTypeId] 
-            } else { 
-                "Unknown_$objectTypeId" 
+            $objectType = if ($script:ObjectTypeMap.ContainsKey($objectTypeId)) {
+                $script:ObjectTypeMap[$objectTypeId]
+            } else {
+                "Unknown_$objectTypeId"
             }
         } else {
             $objectType = $objectTypeRaw
             $objectTypeId = Get-ObjectTypeId $objectTypeRaw
         }
-        
+
         $entry = [PSCustomObject]@{
             ObjectTypeId       = $objectTypeId
             ObjectType         = $objectType
@@ -217,10 +217,10 @@ function Read-BCCoverageXmlFile {
             Hits               = $hits
             IsCovered          = ($coverageStatus -eq 0 -or $coverageStatus -eq 2)
         }
-        
+
         $coverageEntries.Add($entry)
     }
-    
+
     Write-Host "Parsed $($coverageEntries.Count) coverage entries from XML file: $Path"
     return ,@($coverageEntries)
 }
@@ -241,24 +241,24 @@ function Read-BCCoverageCsvFile {
     )
 
     $coverageEntries = [System.Collections.Generic.List[object]]::new()
-    
+
     # BC coverage files can be UTF-16 (Unicode) or UTF-8 encoded
     # Try to detect based on BOM or content validation
     $content = $null
     $bytes = [System.IO.File]::ReadAllBytes($Path)
-    
+
     # Check for UTF-16 LE BOM (FF FE)
     if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
         $content = Get-Content -Path $Path -Encoding Unicode
     }
-    # Check for UTF-8 BOM (EF BB BF)  
+    # Check for UTF-8 BOM (EF BB BF)
     elseif ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
         $content = Get-Content -Path $Path -Encoding UTF8
     }
     else {
         # No BOM - try UTF8 first (more common for text files without BOM)
         $content = Get-Content -Path $Path -Encoding UTF8
-        
+
         # Validate first line looks like coverage data
         if ($content.Count -gt 0) {
             $firstLine = $content[0]
@@ -269,42 +269,42 @@ function Read-BCCoverageCsvFile {
             }
         }
     }
-    
+
     foreach ($line in $content) {
         # Skip empty lines
         if ([string]::IsNullOrWhiteSpace($line)) {
             continue
         }
-        
+
         # Parse CSV: ObjectType,ObjectID,LineNo,CoverageStatus,NoOfHits
         # ObjectType can be numeric (5) or text (Codeunit, Table, etc.)
         $parts = $line.Split(',')
-        
+
         if ($parts.Count -ge 5) {
             $objectTypeRaw = $parts[0].Trim()
             $objectId = [int]$parts[1]
             $lineNo = [int]$parts[2]
             $coverageStatus = [int]$parts[3]
             $hits = [int]$parts[4]
-            
+
             # Handle both numeric and text object types
             $objectTypeId = 0
             $objectType = $objectTypeRaw
-            
+
             if ($objectTypeRaw -match '^\d+$') {
                 # Numeric object type ID
                 $objectTypeId = [int]$objectTypeRaw
-                $objectType = if ($script:ObjectTypeMap.ContainsKey($objectTypeId)) { 
-                    $script:ObjectTypeMap[$objectTypeId] 
-                } else { 
-                    "Unknown_$objectTypeId" 
+                $objectType = if ($script:ObjectTypeMap.ContainsKey($objectTypeId)) {
+                    $script:ObjectTypeMap[$objectTypeId]
+                } else {
+                    "Unknown_$objectTypeId"
                 }
             } else {
                 # Text object type name - normalize and find ID
                 $objectType = $objectTypeRaw
                 $objectTypeId = Get-ObjectTypeId $objectTypeRaw
             }
-            
+
             $entry = [PSCustomObject]@{
                 ObjectTypeId   = $objectTypeId
                 ObjectType     = $objectType
@@ -319,11 +319,11 @@ function Read-BCCoverageCsvFile {
                 Hits           = $hits
                 IsCovered      = ($coverageStatus -eq 0 -or $coverageStatus -eq 2)
             }
-            
+
             $coverageEntries.Add($entry)
         }
     }
-    
+
     Write-Host "Parsed $($coverageEntries.Count) coverage entries from $Path"
     return ,@($coverageEntries)
 }
@@ -343,12 +343,12 @@ function Group-CoverageByObject {
         [AllowEmptyCollection()]
         [array]$CoverageEntries
     )
-    
+
     $grouped = @{}
-    
+
     foreach ($entry in $CoverageEntries) {
         $key = "$($entry.ObjectType).$($entry.ObjectId)"
-        
+
         if (-not $grouped.ContainsKey($key)) {
             $grouped[$key] = @{
                 ObjectType   = $entry.ObjectType
@@ -357,10 +357,10 @@ function Group-CoverageByObject {
                 Lines        = [System.Collections.Generic.List[object]]::new()
             }
         }
-        
+
         $grouped[$key].Lines.Add($entry)
     }
-    
+
     return $grouped
 }
 
@@ -379,16 +379,16 @@ function Get-CoverageStatistics {
         [AllowEmptyCollection()]
         [array]$CoverageEntries
     )
-    
+
     $totalLines = $CoverageEntries.Count
     $coveredLines = ($CoverageEntries | Where-Object { $_.IsCovered }).Count
     $notCoveredLines = $totalLines - $coveredLines
-    $coveragePercent = if ($totalLines -gt 0) { 
-        [math]::Round(($coveredLines / $totalLines) * 100, 2) 
-    } else { 
-        0 
+    $coveragePercent = if ($totalLines -gt 0) {
+        [math]::Round(($coveredLines / $totalLines) * 100, 2)
+    } else {
+        0
     }
-    
+
     return [PSCustomObject]@{
         TotalLines      = $totalLines
         CoveredLines    = $coveredLines
@@ -412,7 +412,7 @@ function Get-ObjectTypeName {
         [Parameter(Mandatory = $true)]
         [int]$ObjectTypeId
     )
-    
+
     if ($script:ObjectTypeMap.ContainsKey($ObjectTypeId)) {
         return $script:ObjectTypeMap[$ObjectTypeId]
     }

@@ -40,7 +40,7 @@ function CollectCoverageResults {
                 Set-Content -Path "$OutputPath\$CCOutputFilename" -Value $CCResult
             }
         } while ($CCInfo -ne $script:CCCollectedResult)
-       
+
         if($ProduceCodeCoverageMap -ne 'Disabled') {
             $codeCoverageMapPath = Join-Path $OutputPath "TestCoverageMap"
             SaveCodeCoverageMap -OutputPath $codeCoverageMapPath -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -TestPage $TestPage
@@ -80,7 +80,7 @@ function SaveCodeCoverageMap {
         {
             New-Item $OutputPath -ItemType Directory
         }
-        
+
         $codeCoverageMapFileName = Join-Path $OutputPath "TestCoverageMap.txt"
         if (-not (Test-Path $codeCoverageMapFileName))
         {

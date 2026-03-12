@@ -2,7 +2,7 @@ codeunit 50102 "Complex Codeunit"
 {
     // Header comments
     // More comments
-    
+
     var
         GlobalVar: Integer;
 
@@ -14,7 +14,7 @@ codeunit 50102 "Complex Codeunit"
         // Initialize
         localVar := 'Test';
         counter := 0;
-        
+
         // Process
         repeat
             counter += 1;
@@ -23,7 +23,7 @@ codeunit 50102 "Complex Codeunit"
             else
                 DoOddProcessing();
         until counter >= 10;
-        
+
         exit(true);
     end;
 

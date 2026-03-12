@@ -30,12 +30,12 @@ Merges multiple Cobertura XML coverage files from different build jobs into a si
 ## How It Works
 
 1. **Finds Coverage Files**: Recursively searches `coveragePath` for all `cobertura.xml` files
-2. **Merges Coverage Data**: 
+1. **Merges Coverage Data**:
    - Combines coverage from multiple files
    - Takes maximum hit count when same line appears in multiple files
    - Recalculates overall statistics
-3. **Merges Metadata**: Consolidates `.stats.json` files (app source paths, excluded objects)
-4. **Generates Summary**: Creates consolidated GitHub Job Summary with:
+1. **Merges Metadata**: Consolidates `.stats.json` files (app source paths, excluded objects)
+1. **Generates Summary**: Creates consolidated GitHub Job Summary with:
    - Overall coverage percentage with visual indicator
    - Information about number of build jobs merged
    - Warning if some jobs failed (incomplete coverage)
@@ -53,6 +53,7 @@ Merges multiple Cobertura XML coverage files from different build jobs into a si
 ## Prerequisites
 
 This action expects coverage artifacts to be downloaded with each artifact in its own subfolder, for example:
+
 ```
 .coverage-inputs/
   ├─ Project1-main-CodeCoverage-1.0.0.0/
@@ -74,19 +75,19 @@ MergeCoverage:
   steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
+
     - name: Download Coverage Artifacts
       uses: actions/download-artifact@v4
       with:
         pattern: '*CodeCoverage*'
         path: .coverage-inputs
-    
+
     - name: Merge Coverage
       uses: microsoft/AL-Go/Actions/MergeCoverageSummaries@main
       with:
         coveragePath: '.coverage-inputs'
         sourcePath: '.'
-    
+
     - name: Publish Merged Coverage
       uses: actions/upload-artifact@v4
       with:

@@ -24,11 +24,13 @@ Generates a GitHub Job Summary with code coverage visualization from Cobertura X
 The action generates a GitHub Job Summary containing:
 
 ### Overall Coverage Summary
+
 - Overall coverage percentage with visual indicator
 - Coverage bar showing filled/unfilled proportion
 - Lines covered vs total lines
 
 ### Coverage by Object Table
+
 - Object name (e.g., `Codeunit.50100`)
 - Source filename
 - Coverage percentage with status icon
@@ -36,6 +38,7 @@ The action generates a GitHub Job Summary containing:
 - Visual coverage bar
 
 ### Method-level Details (Collapsible)
+
 - Per-method coverage breakdown
 - Organized by object/class
 
@@ -50,6 +53,7 @@ The action generates a GitHub Job Summary containing:
 ## Prerequisites
 
 This action expects a Cobertura XML file at:
+
 ```
 {project}/.buildartifacts/CodeCoverage/cobertura.xml
 ```

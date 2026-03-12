@@ -27,7 +27,7 @@ try {
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-    
+
     # Import Code Coverage module for ALTestRunner functionality
     # This makes Run-AlTests available globally for custom RunTestsInBcContainer overrides
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\TestRunner\ALTestRunner.psm1" -Resolve) -Force -DisableNameChecking
@@ -485,7 +485,7 @@ try {
 
         if ($runAlPipelineParams.Keys -notcontains 'RunTestsInBcContainer') {
             Write-Host "Adding RunTestsInBcContainer override with code coverage support"
-        
+
             # Capture variables for use in scriptblock
             $ccBuildArtifactFolder = $buildArtifactFolder
             $ccTrackingTypeCapture = $ccTrackingType
@@ -499,7 +499,7 @@ try {
                     $credential = $parameters.credential
                     $extensionId = $parameters.extensionId
                     $appName = $parameters.appName
-                    
+
                     # Handle both JUnit and XUnit result file names
                     $resultsFilePath = $null
                     $resultsFormat = 'JUnit'
@@ -560,7 +560,7 @@ try {
                         CodeCoverageOutputPath = $codeCoverageOutputPath
                         CodeCoverageFilePrefix = "CodeCoverage_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
                     }
-                    
+
                     if ($extensionId) {
                         $testRunParams.ExtensionId = $extensionId
                     }
@@ -568,7 +568,7 @@ try {
                     if ($appName) {
                         $testRunParams.AppName = $appName
                     }
-                    
+
                     if ($resultsFilePath) {
                         $testRunParams.ResultsFilePath = if ($appendToResults) { $tempResultsFilePath } else { $resultsFilePath }
                         $testRunParams.SaveResultFile = $true
@@ -600,7 +600,7 @@ try {
                     }
 
                     Run-AlTests @testRunParams
-                    
+
                     # Determine which file to check for this app's results
                     $checkResultsFile = if ($appendToResults) { $tempResultsFilePath } else { $resultsFilePath }
                     $testsPassed = $true
@@ -776,13 +776,13 @@ try {
                     Import-Module $coverageProcessorModule -Force -DisableNameChecking
 
                     $coberturaOutputPath = Join-Path $codeCoveragePath "cobertura.xml"
-                    
+
                     # Resolve app source paths for coverage denominator
                     # Collect appFolders from this project + parent projects (dependency chain)
                     # This ensures test-only projects measure coverage against the correct app source
                     $sourcePath = $ENV:GITHUB_WORKSPACE
                     $appSourcePaths = @()
-                    
+
                     # Add current project's app folders
                     if ($settings.appFolders -and $settings.appFolders.Count -gt 0) {
                         foreach ($folder in $settings.appFolders) {
@@ -794,7 +794,7 @@ try {
                         Write-Host "Project app folders ($($appSourcePaths.Count) resolved):"
                         $appSourcePaths | ForEach-Object { Write-Host "  $_" }
                     }
-                    
+
                     # Walk project dependencies to collect parent projects' app folders
                     try {
                         $projectDeps = $projectDependenciesJson | ConvertFrom-Json
@@ -825,7 +825,7 @@ try {
                     } catch {
                         OutputWarning -message "Could not resolve project dependencies for coverage: $($_.Exception.Message)"
                     }
-                    
+
                     if ($appSourcePaths.Count -eq 0) {
                         Write-Host "No app source paths resolved, scanning entire workspace for source files"
                     } else {

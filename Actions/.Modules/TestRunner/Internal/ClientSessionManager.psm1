@@ -60,25 +60,25 @@ function Open-ClientSession
 
     switch ($AuthorizationType)
     {
-        "Windows" 
+        "Windows"
         {
             $clientContext = [ClientContext]::new($ServiceUrl, $DisableSSLVerification, $TransactionTimeout, $Culture)
             break;
         }
-        "NavUserPassword" 
+        "NavUserPassword"
         {
-            if ($Credential -eq $null -or $Credential -eq [System.Management.Automation.PSCredential]::Empty) 
+            if ($Credential -eq $null -or $Credential -eq [System.Management.Automation.PSCredential]::Empty)
             {
                 throw "You need to specify credentials if using NavUserPassword authentication"
             }
-        
+
             $clientContext = [ClientContext]::new($ServiceUrl, $Credential, $DisableSSLVerification, $TransactionTimeout, $Culture)
             break;
         }
         "AAD"
         {
             $AadTokenProvider = $global:AadTokenProvider
-            if ($AadTokenProvider -eq $null) 
+            if ($AadTokenProvider -eq $null)
             {
                 throw "You need to specify the AadTokenProvider for obtaining the token if using AAD authentication"
             }

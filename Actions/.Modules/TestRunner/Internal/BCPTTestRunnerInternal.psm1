@@ -12,12 +12,12 @@ function Setup-Enviroment
 {
     switch ($Environment)
     {
-        "PROD" 
-        {           
+        "PROD"
+        {
             $authority = "https://login.microsoftonline.com/"
             $resource = "https://api.businesscentral.dynamics.com"
             $global:AadTokenProvider = [AadTokenProvider]::new($AadTenantId, $ClientId, $RedirectUri)
-            
+
             if(!$global:AadTokenProvider){
                 $example = @'
 
@@ -106,25 +106,25 @@ function Run-BCPTTestsInternal
 
         .PARAMETER Credential
         Specifies the credential object that needs to be used to authenticate. Both 'NavUserPassword' and 'AAD' needs a valid credential objects to eb passed in.
-        
+
         .PARAMETER Token
         Specifies the AAD token credential object that needs to be used to authenticate. The credential object should contain username and token.
 
         .PARAMETER SandboxName
         Specifies the sandbox name. This is necessary only when the environment is either 'PROD' or 'TIE'. Default is 'sandbox'.
-        
+
         .PARAMETER TestRunnerPage
         Specifies the page id that is used to start the tests. Defualt is 150010.
-        
+
         .PARAMETER DisableSSLVerification
         Specifies if the SSL verification should be disabled or not.
-        
+
         .PARAMETER ServiceUrl
         Specifies the base url of the service. This parameter is used only in 'OnPrem' environment.
-        
+
         .PARAMETER SuiteCode
         Specifies the code that will be used to select the test suite to be run.
-        
+
         .PARAMETER SessionTimeoutInMins
         Specifies the timeout for the client session. This will be same the length you expect the test suite to run.
 
@@ -173,7 +173,7 @@ function Run-NextTest
     {
         $ServiceUrl = Get-SaaSServiceURL
     }
-    
+
     try
     {
         $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl -ClientSessionTimeout $SessionTimeout
@@ -192,7 +192,7 @@ function Run-NextTest
         }
 
         $clientContext.InvokeAction($StartNextAction)
-        
+
         $clientContext.CloseForm($form)
     }
     finally
@@ -201,7 +201,7 @@ function Run-NextTest
         {
             $clientContext.Dispose()
         }
-    } 
+    }
 }
 
 function Get-NoOfIterations
@@ -237,25 +237,25 @@ function Get-NoOfIterations
 
         .PARAMETER Credential
         Specifies the credential object that needs to be used to authenticate. Both 'NavUserPassword' and 'AAD' needs a valid credential objects to eb passed in.
-        
+
         .PARAMETER Token
         Specifies the AAD token credential object that needs to be used to authenticate. The credential object should contain username and token.
 
         .PARAMETER SandboxName
         Specifies the sandbox name. This is necessary only when the environment is either 'PROD' or 'TIE'. Default is 'sandbox'.
-        
+
         .PARAMETER TestRunnerPage
         Specifies the page id that is used to start the tests.
-        
+
         .PARAMETER DisableSSLVerification
         Specifies if the SSL verification should be disabled or not.
-        
+
         .PARAMETER ServiceUrl
         Specifies the base url of the service. This parameter is used only in 'OnPrem' environment.
-        
+
         .PARAMETER SuiteCode
         Specifies the code that will be used to select the test suite to be run.
-        
+
         .PARAMETER ClientId
         Specifies the guid that the BC is registered with in AAD.
 
@@ -276,7 +276,7 @@ function Get-NoOfIterations
     {
         $ServiceUrl = Get-SaaSServiceURL
     }
-    
+
     try
     {
         $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl
@@ -292,7 +292,7 @@ function Get-NoOfIterations
 
         $testResultControl = $clientContext.GetControlByName($form, "No. of Tests")
         $NoOfTests = [int]$testResultControl.StringValue
-        
+
         $clientContext.CloseForm($form)
         return $NoOfInstances,$DurationInMins,$NoOfTests
     }
@@ -302,7 +302,7 @@ function Get-NoOfIterations
         {
             $clientContext.Dispose()
         }
-    } 
+    }
 }
 
 $ErrorActionPreference = "Stop"
@@ -312,13 +312,13 @@ if(!$script:TypesLoaded)
     Add-type -Path "$PSScriptRoot\Microsoft.Dynamics.Framework.UI.Client.dll"
     Add-type -Path "$PSScriptRoot\NewtonSoft.Json.dll"
     Add-type -Path "$PSScriptRoot\Microsoft.Internal.AntiSSRF.dll"
-    
+
     $alTestRunnerInternalPath = Join-Path $PSScriptRoot "ALTestRunnerInternal.psm1"
     Import-Module "$alTestRunnerInternalPath"
 
     $clientContextScriptPath = Join-Path $PSScriptRoot "ClientContext.ps1"
     . "$clientContextScriptPath"
-    
+
     $aadTokenProviderScriptPath = Join-Path $PSScriptRoot "AadTokenProvider.ps1"
     . "$aadTokenProviderScriptPath"
 }

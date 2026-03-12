@@ -8,7 +8,7 @@ codeunit 50100 "Test Codeunit 1"
         myVar := 10;
         if myVar > 5 then
             myVar := 20;
-        
+
         DoSomething(myVar);
     end;
 
