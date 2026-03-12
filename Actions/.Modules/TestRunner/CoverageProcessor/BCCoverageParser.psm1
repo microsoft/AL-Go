@@ -340,6 +340,7 @@ function Group-CoverageByObject {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [array]$CoverageEntries
     )
     
@@ -375,6 +376,7 @@ function Get-CoverageStatistics {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [array]$CoverageEntries
     )
     
