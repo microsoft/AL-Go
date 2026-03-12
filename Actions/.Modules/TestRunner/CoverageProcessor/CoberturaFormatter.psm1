@@ -69,8 +69,8 @@ function New-CoberturaDocument {
     
     # Root coverage element
     $coverage = $xml.CreateElement("coverage")
-    $coverage.SetAttribute("line-rate", $lineRate.ToString())
-    $coverage.SetAttribute("branch-rate", $branchRate.ToString())
+    $coverage.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
+    $coverage.SetAttribute("branch-rate", $branchRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $coverage.SetAttribute("lines-covered", $coveredLines.ToString())
     $coverage.SetAttribute("lines-valid", $totalExecutableLines.ToString())
     $coverage.SetAttribute("branches-covered", "0")
@@ -160,7 +160,7 @@ function New-CoberturaClass {
     }
     $class.SetAttribute("filename", $filename.Replace('\', '/'))
     
-    $class.SetAttribute("line-rate", $lineRate.ToString())
+    $class.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $class.SetAttribute("branch-rate", "0")
     $class.SetAttribute("complexity", "0")
     

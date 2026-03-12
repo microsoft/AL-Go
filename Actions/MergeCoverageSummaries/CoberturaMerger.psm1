@@ -120,7 +120,7 @@ function Merge-CoberturaFiles {
     $lineRate = if ($totalLines -gt 0) { [math]::Round($coveredLines / $totalLines, 4) } else { 0 }
 
     $coverage = $xml.CreateElement("coverage")
-    $coverage.SetAttribute("line-rate", $lineRate.ToString())
+    $coverage.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $coverage.SetAttribute("branch-rate", "0")
     $coverage.SetAttribute("lines-covered", $coveredLines.ToString())
     $coverage.SetAttribute("lines-valid", $totalLines.ToString())
@@ -167,7 +167,7 @@ function Merge-CoberturaFiles {
             $classElement = $xml.CreateElement("class")
             $classElement.SetAttribute("name", $cls.Name)
             $classElement.SetAttribute("filename", $filename)
-            $classElement.SetAttribute("line-rate", $clsLineRate.ToString())
+            $classElement.SetAttribute("line-rate", $clsLineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
             $classElement.SetAttribute("branch-rate", "0")
             $classElement.SetAttribute("complexity", "0")
 
@@ -195,7 +195,7 @@ function Merge-CoberturaFiles {
 
         $pkgLineRate = if ($pkgTotalLines -gt 0) { [math]::Round($pkgCoveredLines / $pkgTotalLines, 4) } else { 0 }
         $package.SetAttribute("name", $pkgName)
-        $package.SetAttribute("line-rate", $pkgLineRate.ToString())
+        $package.SetAttribute("line-rate", $pkgLineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
         $package.SetAttribute("branch-rate", "0")
         $package.SetAttribute("complexity", "0")
         $package.AppendChild($classes) | Out-Null
