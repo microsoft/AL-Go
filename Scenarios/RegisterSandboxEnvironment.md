@@ -18,6 +18,9 @@
 > [!NOTE]
 > The secret **NEEDS** to be compressed JSON and there should **NOT** be a newline after the secret value.
 
+> [!NOTE]
+> **GitHub Environment secrets** (defined under the environment in GitHub) are only injected into jobs that explicitly declare an `environment:` property. The AL-Go Initialization job that performs the auth check does **not** have this property, so environment-scoped `AUTHCONTEXT` secrets are **not** available at that step. The secret **is** available in the downstream deploy job, which is sufficient for deployment. If you prefer the secret to be resolved during the initialization auth check as well, define it as a **repository secret** using the naming convention `<EnvironmentName>-AuthContext` (e.g., `QA-AuthContext`) instead of as an environment secret named `AUTHCONTEXT`. See [secrets documentation](secrets.md#AuthContext) for the full lookup order.
+
 3. Navigate to **Actions**, select the **Publish To Environment** workflow and choose **Run workflow**. Enter **latest** in the **App version** field and the **name of your environment** or keep the * in the **environment to receive the new version** field. Click **Run workflow**.
    ![Publish To Environment](https://github.com/user-attachments/assets/9299009a-b429-477d-b1d0-c5bf96455a93)
 
