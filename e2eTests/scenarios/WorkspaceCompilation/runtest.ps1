@@ -28,13 +28,13 @@ Write-Host -ForegroundColor Yellow @'
 #
 #  - Create a new repository based on the PTE template with two projects (P1 and P2)
 #  - P1 has 2 apps: app1 (base) and app2 (depends on app1)
-#  - P2 has 1 app: app3 (depends on P1/app1 — cross-project dependency)
-#  - Enable workspaceCompilation and useProjectDependencies in repo settings
+#  - P2 has 2 apps: app3 and app4 (both depend on P1/app1 — cross-project dependencies, can compile in parallel)
+#  - Enable workspaceCompilation with parallelism and useProjectDependencies in repo settings
 #  - P1 has doNotPublishApps enabled (compile-only, no container)
 #  - P2 publishes apps (full pipeline with testing)
 #  - Run the "CI/CD" workflow
 #  - Verify P1 compiles both apps successfully
-#  - Verify P2 compiles app3 using P1's compiled app1 as a dependency
+#  - Verify P2 compiles app3 and app4 using P1's compiled app1 as a dependency
 #  - Cleanup repositories
 #
 '@
@@ -70,7 +70,7 @@ else {
 
 # Create a multi-project repo with cross-project dependencies
 # P1: app1 (base), app2 (depends on app1) — compile-only (doNotPublishApps)
-# P2: app3 (depends on P1/app1) — full pipeline (publish + test)
+# P2: app3 and app4 (both depend on P1/app1, can compile in parallel) — full pipeline (publish + test)
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
@@ -81,6 +81,7 @@ CreateAlGoRepository `
     -addRepoSettings @{
         "workspaceCompilation" = @{
             "enabled" = $true
+            "parallelism" = -1
         }
         "useProjectDependencies" = $true
         "artifact" = "////nextmajor"
@@ -113,6 +114,11 @@ CreateAlGoRepository `
         $script:id3 = CreateNewAppInFolder -folder (Join-Path $path 'P2') -name 'app3' -objID 50003 -dependencies @(
             @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
         )
+
+        # P2/app4 (depends on P1/app1 — cross-project dependency, can compile in parallel with app3)
+        $script:id4 = CreateNewAppInFolder -folder (Join-Path $path 'P2') -name 'app4' -objID 50004 -dependencies @(
+            @{ "id" = $script:id1; "name" = "app1"; "publisher" = (GetDefaultPublisher); "version" = "1.0.0.0" }
+        )
     }
 
 $repoPath = (Get-Location).Path
@@ -133,10 +139,11 @@ Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
     "P1-main-Apps-*_app2_1.0.2.0.app" = 1
 }
 
-# Check P2 artifacts — 1 app compiled (using P1/app1 as dependency)
+# Check P2 artifacts — 2 apps compiled in parallel (using P1/app1 as dependency)
 Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -expectedArtifacts @{
-    "P2-main-Apps-*.app" = 1
+    "P2-main-Apps-*.app" = 2
     "P2-main-Apps-*_app3_1.0.2.0.app" = 1
+    "P2-main-Apps-*_app4_1.0.2.0.app" = 1
 }
 
 # Cleanup repositories
