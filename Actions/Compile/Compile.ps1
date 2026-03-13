@@ -71,12 +71,12 @@ if ($settings.rulesetFile) {
 }
 
 # Read existing install apps and test apps from JSON files
-$installApps = @()
-$installTestApps = @()
+$dependencyApps = @()
+$dependencyTestApps = @()
 
 if ($dependencyAppsJson -and (Test-Path $dependencyAppsJson)) {
     try {
-        $installApps += Get-Content -Path $dependencyAppsJson | ConvertFrom-Json
+        $dependencyApps += Get-Content -Path $dependencyAppsJson | ConvertFrom-Json
     }
     catch {
         throw "Failed to parse JSON file at path '$dependencyAppsJson'. Error: $($_.Exception.Message)"
@@ -85,7 +85,7 @@ if ($dependencyAppsJson -and (Test-Path $dependencyAppsJson)) {
 
 if ($dependencyTestAppsJson -and (Test-Path $dependencyTestAppsJson)) {
     try {
-        $installTestApps += Get-Content -Path $dependencyTestAppsJson | ConvertFrom-Json
+        $dependencyTestApps += Get-Content -Path $dependencyTestAppsJson | ConvertFrom-Json
     }
     catch {
         throw "Failed to parse JSON file at path '$dependencyTestAppsJson'. Error: $($_.Exception.Message)"
@@ -103,7 +103,7 @@ $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$(
 $packageCachePath = Join-Path $compilerFolder "symbols"
 
 # Copy dependency apps to the package cache so the compiler can resolve them
-foreach ($appFile in $installApps) {
+foreach ($appFile in $dependencyApps) {
     $appFile = $appFile.Trim('()')
     if ($appFile -and (Test-Path $appFile)) {
         Copy-Item -Path $appFile -Destination $packageCachePath -Force
@@ -179,10 +179,10 @@ try {
     New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
 }
 
-# OUTPUT - Output the install apps and test apps as JSON
-$installApps += $appFiles
-$installTestApps += $testAppFiles
+# OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
+$dependencyApps += $appFiles
+$dependencyTestApps += $testAppFiles
 Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
 
-ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
-ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson
+ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
+ConvertTo-Json $dependencyTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson
