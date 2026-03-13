@@ -181,5 +181,24 @@
             $result.RevisionNumber | Should -Be 7
         }
 
+        It 'Strategy 2 passes through date-based appBuild and appRevision' {
+            $baseSettings.versioningStrategy = 2
+            $baseSettings.appBuild = 20260313 # Simulate date-based build number
+            $baseSettings.appRevision = 141450 # Simulate time-based revision number
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be ""
+            $result.BuildNumber | Should -Be 20260313 # Build number should be passed through unchanged
+            $result.RevisionNumber | Should -Be 141450 # Revision number should be passed through unchanged
+        }
+
+        It 'Strategy 15 passes through max build value' {
+            $baseSettings.versioningStrategy = 15
+            $baseSettings.appBuild = [Int32]::MaxValue # Simulate max build number
+            $baseSettings.appRevision = 100 # Simulate some revision number
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be ""
+            $result.BuildNumber | Should -Be ([Int32]::MaxValue) # Build number should be passed through unchanged
+            $result.RevisionNumber | Should -Be 100 # Revision number should be passed through unchanged
+        }
     }
 }

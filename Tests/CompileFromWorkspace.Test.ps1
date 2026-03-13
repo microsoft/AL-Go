@@ -545,4 +545,325 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -CompilerFolder $script:mockCompilerFolder -Analyzers @('CodeCop', 'UICop')
         }
     }
+
+    Describe 'Copy-CompiledAppsToOutput' {
+        It 'Returns new files that appeared after compilation' {
+            InModuleScope CompileFromWorkspace {
+                $packageCache = Join-Path $TestDrive 'cache-copy1'
+                $outputFolder = Join-Path $TestDrive 'output-copy1'
+                New-Item -Path $packageCache -ItemType Directory -Force | Out-Null
+
+                $filesBefore = @{}
+
+                $appFile = Join-Path $packageCache 'NewApp_1.0.0.0.app'
+                Set-Content -Path $appFile -Value 'compiled'
+
+                $result = @(Copy-CompiledAppsToOutput -PackageCachePath $packageCache -OutputFolder $outputFolder -FilesBeforeCompile $filesBefore)
+
+                $result.Count | Should -Be 1
+                $result[0] | Should -BeLike '*NewApp_1.0.0.0.app'
+                Test-Path (Join-Path $outputFolder 'NewApp_1.0.0.0.app') | Should -Be $true
+            }
+        }
+
+        It 'Returns modified files with newer timestamps' {
+            InModuleScope CompileFromWorkspace {
+                $packageCache = Join-Path $TestDrive 'cache-copy2'
+                $outputFolder = Join-Path $TestDrive 'output-copy2'
+                New-Item -Path $packageCache -ItemType Directory -Force | Out-Null
+
+                $appFile = Join-Path $packageCache 'Existing_1.0.0.0.app'
+                Set-Content -Path $appFile -Value 'old'
+                $oldTimestamp = (Get-Item $appFile).LastWriteTimeUtc
+
+                $filesBefore = @{ $appFile = $oldTimestamp }
+
+                Start-Sleep -Milliseconds 100
+                Set-Content -Path $appFile -Value 'recompiled'
+
+                $result = Copy-CompiledAppsToOutput -PackageCachePath $packageCache -OutputFolder $outputFolder -FilesBeforeCompile $filesBefore
+
+                @($result).Count | Should -Be 1
+            }
+        }
+
+        It 'Skips unchanged files' {
+            InModuleScope CompileFromWorkspace {
+                $packageCache = Join-Path $TestDrive 'cache-copy3'
+                $outputFolder = Join-Path $TestDrive 'output-copy3'
+                New-Item -Path $packageCache -ItemType Directory -Force | Out-Null
+
+                $appFile = Join-Path $packageCache 'Unchanged_1.0.0.0.app'
+                Set-Content -Path $appFile -Value 'content'
+                $timestamp = (Get-Item $appFile).LastWriteTimeUtc
+
+                $filesBefore = @{ $appFile = $timestamp }
+
+                $result = Copy-CompiledAppsToOutput -PackageCachePath $packageCache -OutputFolder $outputFolder -FilesBeforeCompile $filesBefore
+
+                @($result).Count | Should -Be 0
+            }
+        }
+
+        It 'Skips copy when PackageCachePath equals OutputFolder' {
+            InModuleScope CompileFromWorkspace {
+                $sameFolder = Join-Path $TestDrive 'cache-copy4'
+                New-Item -Path $sameFolder -ItemType Directory -Force | Out-Null
+
+                $appFile = Join-Path $sameFolder 'App_1.0.0.0.app'
+                Set-Content -Path $appFile -Value 'compiled'
+
+                $result = Copy-CompiledAppsToOutput -PackageCachePath $sameFolder -OutputFolder $sameFolder -FilesBeforeCompile @{}
+
+                @($result).Count | Should -Be 1
+                Test-Path $appFile | Should -Be $true
+            }
+        }
+
+        It 'Creates OutputFolder if it does not exist' {
+            InModuleScope CompileFromWorkspace {
+                $packageCache = Join-Path $TestDrive 'cache-copy5'
+                $outputFolder = Join-Path $TestDrive 'output-copy5-new'
+                New-Item -Path $packageCache -ItemType Directory -Force | Out-Null
+
+                $appFile = Join-Path $packageCache 'App_1.0.0.0.app'
+                Set-Content -Path $appFile -Value 'compiled'
+
+                Test-Path $outputFolder | Should -Be $false
+
+                Copy-CompiledAppsToOutput -PackageCachePath $packageCache -OutputFolder $outputFolder -FilesBeforeCompile @{}
+
+                Test-Path $outputFolder | Should -Be $true
+            }
+        }
+    }
+
+    Describe 'New-BuildOutputFile' {
+        It 'Creates build output file from log files' {
+            $buildArtifactFolder = Join-Path $TestDrive 'artifacts-build1'
+            $logsFolder = Join-Path $buildArtifactFolder 'Logs'
+            New-Item -Path $logsFolder -ItemType Directory -Force | Out-Null
+
+            # Create a mock log file
+            Set-Content -Path (Join-Path $logsFolder 'compile.log') -Value "[OUT] warning AL0001: Some warning`n[OUT] info AL0002: Some info"
+
+            $outputPath = Join-Path $TestDrive 'BuildOutput1.txt'
+
+            Mock Convert-AlcOutputToAzureDevOps { } -ModuleName CompileFromWorkspace
+
+            $result = New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath $outputPath
+
+            $result | Should -Be $outputPath
+            Test-Path $outputPath | Should -Be $true
+            $content = Get-Content $outputPath
+            $content | Should -Contain 'warning AL0001: Some warning'
+        }
+
+        It 'Strips [OUT] prefix from log lines' {
+            $buildArtifactFolder = Join-Path $TestDrive 'artifacts-build2'
+            $logsFolder = Join-Path $buildArtifactFolder 'Logs'
+            New-Item -Path $logsFolder -ItemType Directory -Force | Out-Null
+
+            Set-Content -Path (Join-Path $logsFolder 'compile.log') -Value "[OUT] some output line"
+
+            $outputPath = Join-Path $TestDrive 'BuildOutput2.txt'
+
+            Mock Convert-AlcOutputToAzureDevOps { } -ModuleName CompileFromWorkspace
+
+            New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath $outputPath
+
+            $content = Get-Content $outputPath
+            $content | Should -Contain 'some output line'
+            $content | Should -Not -Contain '[OUT] some output line'
+        }
+
+        It 'Handles empty artifacts folder with no log files' {
+            $buildArtifactFolder = Join-Path $TestDrive 'artifacts-build3'
+            New-Item -Path $buildArtifactFolder -ItemType Directory -Force | Out-Null
+
+            $outputPath = Join-Path $TestDrive 'BuildOutput3.txt'
+
+            $result = New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath $outputPath
+
+            $result | Should -Be $outputPath
+            Test-Path $outputPath | Should -Be $true
+        }
+    }
+
+    Describe 'Get-CustomAnalyzers' {
+        It 'Returns empty array when no custom code cops configured' {
+            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @() } -CompilerFolder $TestDrive
+
+            @($result).Count | Should -Be 0
+        }
+
+        It 'Returns local paths as-is' {
+            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('C:\analyzers\MyAnalyzer.dll') } -CompilerFolder $TestDrive
+
+            @($result).Count | Should -Be 1
+            $result | Should -Contain 'C:\analyzers\MyAnalyzer.dll'
+        }
+
+        It 'Downloads URL-based analyzers to compiler folder' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-analyzers'
+            $analyzersBin = Join-Path $compilerFolder 'compiler\extension\bin\Analyzers'
+            New-Item -Path $analyzersBin -ItemType Directory -Force | Out-Null
+
+            Mock Invoke-WebRequest {
+                param($Uri, $OutFile)
+                Set-Content -Path $OutFile -Value 'mock-dll'
+            } -ModuleName CompileFromWorkspace
+
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeLike '*MyAnalyzer.dll'
+        }
+    }
+
+    Describe 'Get-AssemblyProbingPaths' {
+        It 'Includes Service and Mock Assemblies when dlls folder exists' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing1'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'Service') -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $dllsPath 'Mock Assemblies') -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+
+            Mock Get-DotnetRuntimeVersionInstalled { return $null } -ModuleName CompileFromWorkspace
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Service') | Should -Not -BeNullOrEmpty
+            ($result -like '*Mock Assemblies') | Should -Not -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Uses shared folder when it exists' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing2'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            $sharedPath = Join-Path $dllsPath 'shared'
+            New-Item -Path $sharedPath -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $dllsPath 'Service') -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $dllsPath 'Mock Assemblies') -ItemType Directory -Force | Out-Null
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*shared') | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    Describe 'CompileAppsInWorkspace argument construction' {
+        It 'Includes --analyzers when analyzers are specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args1'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -Analyzers @('CodeCop', 'UICop')
+
+                $script:capturedArguments | Should -Contain '--analyzers'
+                $script:capturedArguments | Should -Contain 'CodeCop,UICop'
+            }
+        }
+
+        It 'Includes --features when features are specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -Features @('TranslationFile', 'GenerateCaptions')
+
+                $script:capturedArguments | Should -Contain '--features'
+                $script:capturedArguments | Should -Contain 'TranslationFile,GenerateCaptions'
+            }
+        }
+
+        It 'Includes --define when preprocessor symbols are specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args3'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -PreprocessorSymbols @('CLEAN', 'DEBUG')
+
+                $script:capturedArguments | Should -Contain '--define'
+                $script:capturedArguments | Should -Contain 'CLEAN;DEBUG'
+            }
+        }
+
+        It 'Includes --ruleset when ruleset is specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args4'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -Ruleset 'myruleset.json'
+
+                $script:capturedArguments | Should -Contain '--ruleset'
+                $script:capturedArguments | Should -Contain 'myruleset.json'
+            }
+        }
+
+        It 'Omits --maxcpucount when equal to processor count' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args5'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount ([System.Environment]::ProcessorCount) -OutFolder $outDir -PackageCachePath $outDir
+
+                $script:capturedArguments | Should -Not -Contain '--maxcpucount'
+            }
+        }
+
+        It 'Always includes --logdirectory' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args6'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir
+
+                $script:capturedArguments | Should -Contain '--logdirectory'
+            }
+        }
+    }
 }
