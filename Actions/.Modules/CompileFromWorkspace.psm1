@@ -148,10 +148,65 @@ function Get-ALTool {
 }
 
 <#
-Before this script
-1. Create a compiler folder
-2. Fetch external dependencies into the compiler folder symbols folder
-3. Download baseline packages and set up AppSourceCop baseline packages
+.SYNOPSIS
+    Compiles AL apps in a workspace using the ALTool.
+.DESCRIPTION
+    Compiles one or more AL app folders using workspace compilation from the ALTool.
+    Supports parallel compilation, code analyzers, preprocessor symbols, and compiler features.
+    Before calling this function, ensure that:
+    1. A compiler folder has been created
+    2. External dependencies have been fetched into the compiler folder symbols folder
+    3. Baseline packages have been downloaded and AppSourceCop baseline packages set up (if applicable)
+.PARAMETER Folders
+    Array of app folder paths to compile.
+.PARAMETER CompilerFolder
+    Path to the compiler folder containing the ALTool and symbols.
+.PARAMETER PackageCachePath
+    Path to the package cache folder. Defaults to the compiler folder's symbols subfolder.
+.PARAMETER OutFolder
+    Path to the output folder for compiled .app files. Defaults to PackageCachePath.
+.PARAMETER LogDirectory
+    Path to the directory for compilation log files.
+.PARAMETER MajorMinorVersion
+    Major.Minor version to stamp into the compiled apps.
+.PARAMETER BuildNumber
+    Build number to stamp into the compiled apps.
+.PARAMETER RevisionNumber
+    Revision number to stamp into the compiled apps.
+.PARAMETER MaxCpuCount
+    Maximum number of parallel compilation processes. Defaults to 1.
+.PARAMETER AssemblyProbingPaths
+    Array of assembly probing paths for the compiler.
+.PARAMETER Analyzers
+    Array of code analyzer names to enable (e.g., CodeCop, UICop).
+.PARAMETER CustomAnalyzers
+    Array of paths to custom code analyzer DLLs.
+.PARAMETER PreprocessorSymbols
+    Array of preprocessor symbols to define during compilation.
+.PARAMETER Features
+    Array of compiler features to enable (e.g., LcgTranslationFile, TranslationFile, GenerateCaptions).
+.PARAMETER GenerateReportLayout
+    Switch to enable report layout generation during compilation.
+.PARAMETER Ruleset
+    Path to a custom ruleset file for code analysis.
+.PARAMETER SourceRepositoryUrl
+    URL of the source repository for build metadata.
+.PARAMETER SourceCommit
+    Commit SHA for build metadata.
+.PARAMETER BuildBy
+    Build system identifier for build metadata.
+.PARAMETER BuildUrl
+    URL of the build run for build metadata.
+.PARAMETER ReportSuppressedDiagnostics
+    Switch to include suppressed diagnostics in the build output.
+.PARAMETER EnableExternalRulesets
+    Switch to enable external rulesets for code analysis.
+.PARAMETER AppType
+    Type of apps being compiled: 'app' or 'testApp'.
+.PARAMETER PreCompileApp
+    Scriptblock to execute before compiling each app.
+.PARAMETER PostCompileApp
+    Scriptblock to execute after compiling each app.
 #>
 function Build-AppsInWorkspace() {
     param(
