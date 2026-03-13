@@ -109,7 +109,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,useWorkspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
 
       - name: Determine whether to build project
         id: DetermineBuildProject
@@ -168,7 +168,7 @@ jobs:
 
       - name: Compile
         uses: microsoft/AL-Go-Actions/Compile@main
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useWorkspaceCompilation == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && fromJson(env.workspaceCompilation).enabled == true
         env:
           BuildMode: ${{ inputs.buildMode }}
         with:

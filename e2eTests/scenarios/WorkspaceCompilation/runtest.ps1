@@ -29,7 +29,7 @@ Write-Host -ForegroundColor Yellow @'
 #  - Create a new repository based on the PTE template with two projects (P1 and P2)
 #  - P1 has 2 apps: app1 (base) and app2 (depends on app1)
 #  - P2 has 1 app: app3 (depends on P1/app1 — cross-project dependency)
-#  - Enable useWorkspaceCompilation and useProjectDependencies in repo settings
+#  - Enable workspaceCompilation and useProjectDependencies in repo settings
 #  - P1 has doNotPublishApps enabled (compile-only, no container)
 #  - P2 publishes apps (full pipeline with testing)
 #  - Run the "CI/CD" workflow
@@ -79,7 +79,9 @@ CreateAlGoRepository `
     -branch $branch `
     -projects @('P1', 'P2') `
     -addRepoSettings @{
-        "useWorkspaceCompilation" = $true
+        "workspaceCompilation" = @{
+            "enabled" = $true
+        }
         "useProjectDependencies" = $true
         "artifact" = "////nextmajor"
         "githubRunner" = $githubRunner

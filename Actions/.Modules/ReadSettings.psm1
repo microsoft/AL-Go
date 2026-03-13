@@ -212,8 +212,10 @@ function GetDefaultSettings
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
-        "useWorkspaceCompilation"                       = $false
-        "workspaceCompilationParallelism"               = 1
+        "workspaceCompilation"                          = [ordered]@{
+            "enabled"                                   = $false
+            "parallelism"                               = 1
+        }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
@@ -567,9 +569,9 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
-    # Interpret negative workspaceCompilationParallelism as the max number of processors
-    if ($settings.workspaceCompilationParallelism -lt 0) {
-        $settings.workspaceCompilationParallelism = [System.Environment]::ProcessorCount
+    # Interpret negative parallelism as the max number of processors
+    if ($settings.workspaceCompilation.parallelism -lt 0) {
+        $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
     }
 
     $settings | ValidateSettings

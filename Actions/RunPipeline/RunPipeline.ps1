@@ -85,7 +85,7 @@ try {
         $secrets = @{}
     }
 
-    if ($settings.useWorkspaceCompilation -and $settings.doNotPublishApps) {
+    if ($settings.workspaceCompilation.enabled -and $settings.doNotPublishApps) {
         OutputColor -Message "Workspace compilation complete; doNotPublishApps is set. Exiting." -Color Yellow
         return
     }
@@ -130,12 +130,12 @@ try {
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
     if (-not (Test-Path $buildArtifactFolder)) {
         New-Item $buildArtifactFolder -ItemType Directory | Out-Null
-    } elseif(-not ($settings.useWorkspaceCompilation)) {
+    } elseif(-not ($settings.workspaceCompilation.enabled)) {
         OutputDebug -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
     }
 
     # When using workspace compilation, apps are already compiled - pass empty folders to Run-AlPipeline
-    if ($settings.useWorkspaceCompilation) {
+    if ($settings.workspaceCompilation.enabled) {
         $appFolders = @()
         $testFolders = @()
         $bcptTestFolders = $settings.bcptTestFolders
@@ -146,7 +146,7 @@ try {
         $bcptTestFolders = $settings.bcptTestFolders
     }
 
-    if ((-not $settings.useWorkspaceCompilation) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+    if ((-not $settings.workspaceCompilation.enabled) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
             $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
@@ -271,8 +271,8 @@ try {
 
     $previousApps = @()
     if (!$settings.skipUpgrade) {
-        if ($settings.useWorkspaceCompilation) {
-            OutputWarning -message "skipUpgrade is ignored when useWorkspaceCompilation is enabled." # TODO
+        if ($settings.workspaceCompilation.enabled) {
+            OutputWarning -message "skipUpgrade is ignored when workspaceCompilation is enabled." # TODO
         } else {
             Write-Host "::group::Locating previous release"
             try {
