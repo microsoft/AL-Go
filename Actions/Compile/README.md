@@ -1,6 +1,6 @@
 # Compile apps from workspace
 
-Compile AL apps by invoking the workspace-based compiler pipeline used by AL-Go.
+Compile AL apps by using workspace compilation from the ALTool
 
 ## INPUT
 
