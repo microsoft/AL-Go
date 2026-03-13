@@ -1959,11 +1959,14 @@ Function AnalyzeProjectDependencies {
                 }
             }
             # If this project is a test project, add its target projects as direct dependencies
+            # Only add target projects that haven't been built yet (still in $projects), matching the normal dependency resolution pattern
             if ($testProjectTargets.Keys -contains $project) {
                 foreach($targetProject in $testProjectTargets."$project") {
-                    $foundDependencies += $targetProject
-                    if ($projectDependencies.Keys -contains $targetProject) {
-                        $foundDependencies += $projectDependencies."$targetProject"
+                    if ($projects -contains $targetProject) {
+                        $foundDependencies += $targetProject
+                        if ($projectDependencies.Keys -contains $targetProject) {
+                            $foundDependencies += $projectDependencies."$targetProject"
+                        }
                     }
                 }
             }
