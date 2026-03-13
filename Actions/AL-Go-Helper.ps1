@@ -1782,7 +1782,8 @@ function TestIfProjectHasDependents {
         [string] $project,
         [string[]] $projects,
         [hashtable] $appDependencies,
-        [array] $projectsOrder
+        [array] $projectsOrder,
+        [hashtable] $testProjectTargets = @{}
     )
 
     $hasRemainingDependents = $false
@@ -1800,6 +1801,11 @@ function TestIfProjectHasDependents {
                     Write-Host "Project $project is still a dependency for project $otherProject"
                     $hasRemainingDependents = $true
                 }
+            }
+            # Check whether the other project is a test project that targets the current project
+            if ($testProjectTargets.Keys -contains $otherProject -and $testProjectTargets."$otherProject" -contains $project) {
+                Write-Host "Project $project is a test target for test project $otherProject"
+                $hasRemainingDependents = $true
             }
         }
     }
@@ -1874,7 +1880,7 @@ Function AnalyzeProjectDependencies {
     #     }
     # }
 
-    # Handle projectsToTest settings: inject explicit dependencies from target project paths
+    # Handle projectsToTest settings: build a mapping of test projects to their target projects
     # First pass: collect all test projects so we can validate that no project depends on a test project
     $testProjectNames = @{}
     foreach($project in $projects) {
@@ -1888,9 +1894,12 @@ Function AnalyzeProjectDependencies {
             $testProjectNames[$project] = $projectSettings.projectsToTest
         }
     }
+    # Second pass: resolve and validate target projects, build the testProjectTargets mapping
+    # testProjectTargets maps each test project to an array of resolved target project names
+    $testProjectTargets = @{}
     foreach($project in $testProjectNames.Keys) {
         Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
-        $testProjectDeps = @()
+        $resolvedTargets = @()
         foreach($targetProject in $testProjectNames[$project]) {
             # Resolve target project name: must be the full project path
             # Normalize slashes to match how project keys are stored (OS-dependent)
@@ -1908,12 +1917,9 @@ Function AnalyzeProjectDependencies {
                 OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
                 throw
             }
-            # Insert 'fake' app to force dependency from test project to target project
-            $projectMarker = "testProjectDep:$resolvedTarget"
-            $appDependencies."$resolvedTarget".apps += @($projectMarker)
-            $testProjectDeps += @($projectMarker)
+            $resolvedTargets += @($resolvedTarget)
         }
-        $appDependencies."$project".dependencies = @(($appDependencies."$project".dependencies + $testProjectDeps) | Select-Object -Unique)
+        $testProjectTargets[$project] = $resolvedTargets
     }
 
     $no = 1
@@ -1949,6 +1955,15 @@ Function AnalyzeProjectDependencies {
                     $foundDependencies += $depProject
                     if ($projectDependencies.Keys -contains $depProject) {
                         $foundDependencies += $projectDependencies."$depProject"
+                    }
+                }
+            }
+            # If this project is a test project, add its target projects as direct dependencies
+            if ($testProjectTargets.Keys -contains $project) {
+                foreach($targetProject in $testProjectTargets."$project") {
+                    $foundDependencies += $targetProject
+                    if ($projectDependencies.Keys -contains $targetProject) {
+                        $foundDependencies += $projectDependencies."$targetProject"
                     }
                 }
             }
@@ -1997,7 +2012,7 @@ Function AnalyzeProjectDependencies {
 
         # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
         $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
-            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder)
+            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder -testProjectTargets $testProjectTargets)
         })
 
         # Remove projects in this job from the list of projects to be built (including the projects without dependents)
