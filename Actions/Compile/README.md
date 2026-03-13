@@ -22,8 +22,6 @@ none
 | baselineWorkflowRunId | | RunId of the baseline workflow run | '' |
 | baselineWorkflowSHA | | SHA of the baseline workflow run | '' |
 
-> ℹ️ Additional compile-specific values (such as folders, compiler folder, analyzers, etc.) can be provided through environment variables or by extending the script logic.
-
 ## OUTPUT
 
 none
