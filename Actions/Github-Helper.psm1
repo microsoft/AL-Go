@@ -1493,6 +1493,7 @@ function Invoke-CommandWithRetry {
 <#
 .SYNOPSIS
     Gets the base path of the GitHub workspace or the git repository root.
+    Assumes either GITHUB_WORKSPACE is set (GitHub Actions) or git is available and the current directory is within a git repository.
 .OUTPUTS
     The base path as a string.
 #>
