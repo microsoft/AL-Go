@@ -334,6 +334,9 @@ function Build-AppsInWorkspace() {
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
 
+    # Remove the workspace file again
+    Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
+
     return $appFiles
 }
 
