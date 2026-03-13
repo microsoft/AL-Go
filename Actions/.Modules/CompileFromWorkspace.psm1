@@ -614,21 +614,16 @@ function Get-DotnetRuntimeVersionInstalled {
 
         # Parse runtimes into a hashtable grouped by runtime name
         $runtimes = @{}
-        foreach ($line in $runtimeOutput) {
-            # Format: "Microsoft.NETCore.App 8.0.1 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]"
-            if ($line -match '^(Microsoft\.\w+\.App)\s+(\d+\.\d+\.\d+)') {
-                $runtimeName = $matches[1]
-                $versionStr = $matches[2]
-
-                try {
-                    $version = [System.Version]$versionStr
-                    if (-not $runtimes.ContainsKey($runtimeName)) {
-                        $runtimes[$runtimeName] = @()
-                    }
-                    $runtimes[$runtimeName] += $version
-                } catch {
-                    # Skip versions that can't be parsed
+        $parsedRuntimes = $runtimeOutput | ConvertFrom-Csv -Delimiter ' ' -Header 'name', 'version'
+        foreach ($runtime in $parsedRuntimes) {
+            try {
+                $version = [System.Version]$runtime.version
+                if (-not $runtimes.ContainsKey($runtime.name)) {
+                    $runtimes[$runtime.name] = @()
                 }
+                $runtimes[$runtime.name] += $version
+            } catch {
+                # Skip versions that can't be parsed
             }
         }
 
