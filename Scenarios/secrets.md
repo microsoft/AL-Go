@@ -58,7 +58,7 @@ If your GitHub organization might have many organizational secrets, please only 
 The following is a list of secrets and a brief description:
 
 - [Azure_Credentials](#Azure_Credentials) - Connect to Azure
-- [AuthContext or \<EnvironmentName>\_AuthContext](#AuthContext) - Deploy to an environment
+- [AuthContext, \<EnvironmentName>-AuthContext, or \<EnvironmentName>\_AuthContext](#AuthContext) - Deploy to an environment
 - [AppSourceContext](#AppSourceContext) - Deliver to AppSource
 - [StorageContext](#StorageContext) - Deliver to storage
 - [GitHubPackagesContext](#GitHubPackagesContext) - Deliver to GitHub Packages
@@ -107,7 +107,28 @@ With this setup, you can create a setting called `keyVaultCodesignCertificateNam
 
 ## **AuthContext** -> Deploy to an environment
 
-Whenever AL-Go for GitHub is doing to deploy to an environment, it will need an AuthContext secret. The AuthContext secret can be provided underneath the environment in GitHub. If you are using a private repository in the free GitHub plan, you do not have environments. Then you can create an AuthContext secret in the repository. If you have multiple environments, you can create different AuthContext secrets by using the environment name followed by an underscore and AuthContext (f.ex. **QA_AuthContext**).
+Whenever AL-Go for GitHub deploys to an environment, it needs an AuthContext secret. AL-Go resolves the AuthContext secret by looking up the following secret names **in order**, using the first one that resolves to a non-empty value:
+
+1. **`<EnvironmentName>-AuthContext`** (dash variant, e.g. `QA-AuthContext`) – checked first
+2. **`<EnvironmentName>_AuthContext`** (underscore variant, e.g. `QA_AuthContext`) – checked second
+3. **`AuthContext`** (generic fallback) – checked last
+
+> [!IMPORTANT]
+> **Azure Key Vault users:** Azure Key Vault does not allow underscores (`_`) in secret names. If Azure Key Vault is configured as your secrets provider, any secret whose name contains an underscore will be **skipped** during Key Vault lookup (a warning will be emitted in the workflow log). This means the underscore variant `<EnvironmentName>_AuthContext` will not be found in Azure Key Vault. Use the **dash variant** `<EnvironmentName>-AuthContext` when storing per-environment AuthContext secrets in Azure Key Vault, as dashes are permitted in Key Vault secret names.
+
+> [!WARNING]
+> **Multi-environment and multi-tenant repos:** If neither `<EnvironmentName>-AuthContext` nor `<EnvironmentName>_AuthContext` resolves to a value, AL-Go **silently falls back** to the generic `AuthContext` secret. The workflow log will only show `Using AuthContext secret as AuthContext` — no warning is emitted that a per-environment secret was expected but not found. In repositories with multiple environments (for example, different customer tenants), this means a missing per-environment secret will cause all environments to deploy using the same shared credentials, which may not be the intended behavior. Ensure all environments that require credential isolation have a per-environment `<EnvironmentName>-AuthContext` or `<EnvironmentName>_AuthContext` secret defined.
+
+> [!NOTE]
+> **GitHub Environment secrets scope:** GitHub Actions only injects environment-scoped secrets into jobs that explicitly declare an `environment:` property. The `AuthContext` resolution in the **Initialization job** (which performs the auth check before deployment) does **not** have an `environment:` property set. This means an `AUTHCONTEXT` secret defined as a **GitHub Environment secret** will not be visible to the auth-check step in the Initialization job. To ensure the AuthContext secret is found during initialization, define it as a **repository secret** or **organization secret** using the per-environment naming convention (`<EnvironmentName>-AuthContext` or `<EnvironmentName>_AuthContext`), rather than as a GitHub Environment secret named `AUTHCONTEXT`.
+
+The AuthContext secret can be provided in the following ways:
+
+- As a **GitHub Environment secret** named `AUTHCONTEXT` under the environment (note the scope limitation above — this is available in the deploy job but not the initialization auth-check)
+- As a **repository or organization secret** named `<EnvironmentName>-AuthContext` or `<EnvironmentName>_AuthContext` (recommended for per-environment isolation)
+- As a **repository or organization secret** named `AuthContext` (generic fallback for all environments)
+
+If you are using a private repository with the free GitHub plan and do not have access to GitHub Environments, use the per-environment naming convention as a repository secret.
 
 ### Managed identity
 
