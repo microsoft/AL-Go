@@ -733,7 +733,7 @@ function New-WorkspaceFromFolders() {
     )
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
     OutputColor "Executing: $AltoolPath $($arguments -join ' ')" -Color Green
-    RunAndCheck $AltoolPath @arguments
+    RunAndCheck $AltoolPath @arguments | Out-Null
 
     OutputDebug "Workspace created at $WorkspaceFile"
 }
