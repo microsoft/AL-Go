@@ -85,8 +85,11 @@ try {
         $secrets = @{}
     }
 
-    $appBuild = $settings.appBuild
-    $appRevision = $settings.appRevision
+    if ($settings.workspaceCompilation.enabled -and $settings.doNotPublishApps) {
+        OutputColor -Message "Workspace compilation complete; doNotPublishApps is set. Exiting." -Color Yellow
+        return
+    }
+
     'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
@@ -125,9 +128,25 @@ try {
     }
 
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
-    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    if (-not (Test-Path $buildArtifactFolder)) {
+        New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    } elseif(-not ($settings.workspaceCompilation.enabled)) {
+        OutputDebug -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
+    }
 
-    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+    # When using workspace compilation, apps are already compiled - pass empty folders to Run-AlPipeline
+    if ($settings.workspaceCompilation.enabled) {
+        $appFolders = @()
+        $testFolders = @()
+        $bcptTestFolders = $settings.bcptTestFolders
+    }
+    else {
+        $appFolders = $settings.appFolders
+        $testFolders = $settings.testFolders
+        $bcptTestFolders = $settings.bcptTestFolders
+    }
+
+    if ((-not $settings.workspaceCompilation.enabled) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
             $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
@@ -252,28 +271,32 @@ try {
 
     $previousApps = @()
     if (!$settings.skipUpgrade) {
-        Write-Host "::group::Locating previous release"
-        try {
-            $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }
-            $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
-            if ($latestRelease) {
-                Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
-                $artifactsFolder = Join-Path $baseFolder "artifacts"
-                if(-not (Test-Path $artifactsFolder)) {
-                    New-Item $artifactsFolder -ItemType Directory | Out-Null
+        if ($settings.workspaceCompilation.enabled) {
+            OutputWarning -message "skipUpgrade is ignored when workspaceCompilation is enabled." # TODO: Missing implementation when workspace compilation is enabled (AB#620310)
+        } else {
+            Write-Host "::group::Locating previous release"
+            try {
+                $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }
+                $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
+                if ($latestRelease) {
+                    Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
+                    $artifactsFolder = Join-Path $baseFolder "artifacts"
+                    if(-not (Test-Path $artifactsFolder)) {
+                        New-Item $artifactsFolder -ItemType Directory | Out-Null
+                    }
+                    DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
+                    $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
                 }
-                DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
-                $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
+                else {
+                    OutputWarning -message "No previous release found"
+                }
             }
-            else {
-                OutputWarning -message "No previous release found"
+            catch {
+                OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
+                exit
             }
+            Write-Host "::endgroup::"
         }
-        catch {
-            OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
-            exit
-        }
-        Write-Host "::endgroup::"
     }
 
     $additionalCountries = $settings.additionalCountries
@@ -291,29 +314,7 @@ try {
     $environmentName = ""
     $CreateRuntimePackages = $false
 
-    if ($settings.versioningStrategy -eq -1) {
-        $artifactVersion = [Version]$settings.artifact.Split('/')[4]
-        $runAlPipelineParams += @{
-            "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
-        }
-        $appBuild = $artifactVersion.Build
-        $appRevision = $artifactVersion.Revision
-    }
-    elseif (($settings.versioningStrategy -band 16) -eq 16) {
-        # For versioningStrategy +16, the version number is taken from repoVersion setting
-        $repoVersion = [System.Version]$settings.repoVersion
-        if (($settings.versioningStrategy -band 15) -eq 3) {
-            # For versioning strategy 3, we need to get the build number from repoVersion setting
-            $appBuild = $repoVersion.Build
-            if ($appBuild -eq -1) {
-                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
-                $appBuild = 0
-            }
-        }
-        $runAlPipelineParams += @{
-            "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
-        }
-    }
+    $versionNumber = Get-VersionNumber -Settings $settings
 
     $allTestResults = "testresults*.xml"
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
@@ -328,22 +329,7 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
     Set-Location $projectPath
-    $runAlPipelineOverrides | ForEach-Object {
-        $scriptName = $_
-        $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-        if (Test-Path -Path $scriptPath -Type Leaf) {
-            Write-Host "Add override for $scriptName"
-            Trace-Information -Message "Using override for $scriptName"
-
-            $scriptblock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-            if (-not $scriptblock) {
-                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
-            }
-            $runAlPipelineParams += @{
-                "$scriptName" = $scriptblock
-            }
-        }
-    }
+    $runAlPipelineParams += (Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides)
 
     if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
@@ -483,21 +469,15 @@ try {
     }
 
     if ($buildMode -eq 'Translated') {
-        if ($runAlPipelineParams.Keys -notcontains 'features') {
-            $runAlPipelineParams["features"] = @()
-        }
         Write-Host "Adding translationfile feature"
-        $runAlPipelineParams["features"] += "translationfile"
+        $settings.features += "translationfile"
     }
 
-    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-        $runAlPipelineParams["preprocessorsymbols"] = @()
-    }
-
-    if ($settings.ContainsKey('preprocessorSymbols')) {
+    if ($settings.preprocessorSymbols.Count -gt 0) {
         Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
-        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
+    $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
+    $runAlPipelineParams["features"] = $settings.features
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
@@ -520,9 +500,9 @@ try {
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $settings.appFolders `
-        -testFolders $settings.testFolders `
-        -bcptTestFolders $settings.bcptTestFolders `
+        -appFolders $appFolders `
+        -testFolders $testFolders `
+        -bcptTestFolders $bcptTestFolders `
         -pageScriptingTests $settings.pageScriptingTests `
         -restoreDatabases $settings.restoreDatabases `
         -buildOutputFile $buildOutputFile `
@@ -543,7 +523,7 @@ try {
         -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
-        -appBuild $appBuild -appRevision $appRevision `
+        -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
         -uninstallRemovedApps
 
     if ($containerBaseFolder) {

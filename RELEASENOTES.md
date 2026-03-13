@@ -1,3 +1,22 @@
+### Added support for workspace compilation
+
+With v28 of Business Central, the ALTool now also provides the ability to compile workspaces of apps. This has the added advantage that the ALTool can compute the dependency graph for the apps in the workspace and compile apps in parallel (if possible). For AL-Go projects with large amounts of apps that can save a lot of time. If you want to try this out you can enable it via the following setting
+
+```json
+  "workspaceCompilation": {
+    "enabled": true
+  }
+```
+
+By default apps are compiled sequentially but this can be changed via the parallelism property. This allows you to configure the maximum amount of parallel compilation processes. Set to -1 to use all available processors.
+
+```json
+  "workspaceCompilation": {
+    "enabled": true,
+    "parallelism": 4
+  }
+```
+
 ### Improving error detection and build reliability when downloading project dependencies
 
 The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:

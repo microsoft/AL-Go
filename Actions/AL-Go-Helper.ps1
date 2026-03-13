@@ -54,6 +54,42 @@ $runAlPipelineOverrides = @(
     "PipelineFinalize"
 )
 
+<#
+    .SYNOPSIS
+        Gets script overrides from the AL-Go folder.
+    .DESCRIPTION
+        Checks the specified AL-Go folder for .ps1 scripts matching the provided override names.
+        Returns a hashtable mapping each found override name to its script block.
+    .PARAMETER ALGoFolderName
+        The folder where the AL-Go scripts are located.
+    .PARAMETER OverrideScriptNames
+        An array of script names to look for (without .ps1 extension).
+    .OUTPUTS
+        Hashtable with override script names as keys and their script blocks as values.
+#>
+function Get-ScriptOverrides() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALGoFolderName,
+        [Parameter(Mandatory = $true)]
+        [string[]] $OverrideScriptNames
+    )
+    $overrides = @{}
+    foreach ($scriptName in $OverrideScriptNames) {
+        $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
+        if (Test-Path -Path $scriptPath -Type Leaf) {
+            OutputDebug "Add override for $scriptName ($scriptPath)"
+            Trace-Information -Message "Using override for $scriptName"
+            $scriptBlock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            if (-not $scriptBlock) {
+                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+            }
+            $overrides[$scriptName] = $scriptBlock
+        }
+    }
+    return $overrides
+}
+
 # Well known AppIds
 $platformAppId = "8874ed3a-0643-4247-9ced-7a7002f7135d"
 $systemAppId = "63ca2fa4-4f03-4f2b-a480-172fef340d3f"
@@ -1549,16 +1585,7 @@ function CreateDevEnv {
 
         Push-Location $projectFolder
         try {
-            $runAlPipelineOverrides | ForEach-Object {
-                $scriptName = $_
-                $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-                if (Test-Path -Path $scriptPath -Type Leaf) {
-                    Write-Host "Add override for $scriptName"
-                    $runAlPipelineParams += @{
-                        "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-                    }
-                }
-            }
+            $runAlPipelineParams += (Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides)
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{
@@ -2327,5 +2354,51 @@ function RunAndCheck {
     if ($LASTEXITCODE -ne 0) {
         $host.SetShouldExit(0)
         throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $LASTEXITCODE"
+    }
+}
+
+<#
+.SYNOPSIS
+Get the version number components based on the versioning strategy
+.DESCRIPTION
+Get the version number components based on the versioning strategy defined in the settings.
+.PARAMETER Settings
+The settings object containing versioning information.
+.RETURNS
+A PSCustomObject with MajorMinorVersion, BuildNumber, and RevisionNumber properties.
+#>
+function Get-VersionNumber() {
+    param(
+        [Parameter(Mandatory=$true)]
+        $Settings
+    )
+    $majorMinorVersion = ""
+    $appBuild = $Settings.appBuild
+    $appRevision = $Settings.appRevision
+
+    if ($Settings.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$Settings.artifact.Split('/')[4]
+        $majorMinorVersion = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+        $appBuild = $artifactVersion.Build
+        $appRevision = $artifactVersion.Revision
+    } elseif (($Settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$Settings.repoVersion
+        $majorMinorVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
+        if (($Settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
+    }
+
+    # Construct object to return
+    return [PSCustomObject]@{
+        MajorMinorVersion = $majorMinorVersion
+        BuildNumber = $appBuild
+        RevisionNumber = $appRevision
     }
 }
