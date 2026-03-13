@@ -6,7 +6,9 @@ Compile AL apps by using workspace compilation from the ALTool
 
 ### ENV variables
 
-none
+| Name | Description |
+| :-- | :-- |
+| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
 
 ### Parameters
 
