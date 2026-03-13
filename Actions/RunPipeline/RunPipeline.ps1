@@ -272,7 +272,7 @@ try {
     $previousApps = @()
     if (!$settings.skipUpgrade) {
         if ($settings.workspaceCompilation.enabled) {
-            OutputWarning -message "skipUpgrade is ignored when workspaceCompilation is enabled." # TODO
+            OutputWarning -message "skipUpgrade is ignored when workspaceCompilation is enabled." # TODO: Missing implementation when workspace compilation is enabled (AB#620310)
         } else {
             Write-Host "::group::Locating previous release"
             try {

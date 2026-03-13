@@ -113,12 +113,12 @@ foreach ($appFile in $installApps) {
 
 # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
 if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
-    #TODO: Implement support for incremental builds
+    #TODO: Implement support for incremental builds (AB#620492)
     Write-Host "Incremental builds based on modified apps is not yet implemented."
 }
 
 if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
-    # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation
+    # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation (AB#620310)
     Write-Host "Checking for required upgrades using AppSourceCop..."
 }
 
