@@ -9,6 +9,7 @@ Compile AL apps by using workspace compilation from the ALTool
 | Name | Description |
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
+| Secrets | env.Secrets with secrets needed for appDependencyProbingPaths authentication must be read by a prior call to the ReadSecrets Action |
 
 ### Parameters
 
