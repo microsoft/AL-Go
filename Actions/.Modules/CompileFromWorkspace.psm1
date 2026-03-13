@@ -578,8 +578,9 @@ function CompileAppsInWorkspace {
     } finally {
         # Restore original encoding
         [Console]::OutputEncoding = $originalEncoding
-        $generatedAppFiles = Copy-CompiledAppsToOutput -PackageCachePath $PackageCachePath -OutputFolder $OutFolder -FilesBeforeCompile $filesBeforeCompile
     }
+
+    $generatedAppFiles = Copy-CompiledAppsToOutput -PackageCachePath $PackageCachePath -OutputFolder $OutFolder -FilesBeforeCompile $filesBeforeCompile
 
     OutputArray -Message "Generated app files:" -Array $generatedAppFiles -Debug
     return $generatedAppFiles
