@@ -10,8 +10,6 @@ none
 
 ### Parameters
 
-This action deliberately mirrors the inputs exposed by the `RunPipeline` action so that automation using one can easily call the other.
-
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script should run | powershell |
@@ -19,8 +17,8 @@ This action deliberately mirrors the inputs exposed by the `RunPipeline` action 
 | artifact | | ArtifactUrl to use for the build (optional) | '' |
 | project | | Project folder | '.' |
 | buildMode | | Specifies a mode to use for the build steps | Default |
-| installAppsJson | | Path to a JSON file containing a list of apps to install | '' |
-| installTestAppsJson | | Path to a JSON file containing a list of test apps to install | '' |
+| dependencyAppsJson | | Path to a JSON file containing a list of dependency apps | '' |
+| dependencyTestAppsJson | | Path to a JSON file containing a list of dependency test apps | '' |
 | baselineWorkflowRunId | | RunId of the baseline workflow run | '' |
 | baselineWorkflowSHA | | SHA of the baseline workflow run | '' |
 

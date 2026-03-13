@@ -21,12 +21,12 @@ inputs:
     description: Specifies a mode to use for the build steps
     required: false
     default: 'Default'
-  installAppsJson:
-    description: A path to a JSON-formatted list of apps to install
+  dependencyAppsJson:
+    description: A path to a JSON-formatted list of dependency apps
     required: false
     default: ''
-  installTestAppsJson:
-    description: A path to a JSON-formatted list of test apps to install
+  dependencyTestAppsJson:
+    description: A path to a JSON-formatted list of dependency test apps
     required: false
     default: ''
   baselineWorkflowRunId:
@@ -47,13 +47,13 @@ runs:
         _artifact: ${{ inputs.artifact }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
-        _installAppsJson: ${{ inputs.installAppsJson }}
-        _installTestAppsJson: ${{ inputs.installTestAppsJson }}
+        _dependencyAppsJson: ${{ inputs.dependencyAppsJson }}
+        _dependencyTestAppsJson: ${{ inputs.dependencyTestAppsJson }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
         _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Compile" -Action {
-          ${{ github.action_path }}/Compile.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
+          ${{ github.action_path }}/Compile.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -dependencyAppsJson $ENV:_dependencyAppsJson -dependencyTestAppsJson $ENV:_dependencyTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
         }
 branding:
   icon: terminal

@@ -176,8 +176,8 @@ jobs:
           artifact: ${{ env.artifact }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
-          installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+          dependencyAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+          dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
 

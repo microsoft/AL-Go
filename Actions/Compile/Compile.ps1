@@ -7,10 +7,10 @@ Param(
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [string] $buildMode = 'Default',
-    [Parameter(HelpMessage = "A path to a JSON-formatted list of apps to install", Mandatory = $false)]
-    [string] $installAppsJson = '',
-    [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of dependency apps", Mandatory = $false)]
+    [string] $dependencyAppsJson = '',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of dependency test apps", Mandatory = $false)]
+    [string] $dependencyTestAppsJson = '',
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
@@ -74,21 +74,21 @@ if ($settings.rulesetFile) {
 $installApps = @()
 $installTestApps = @()
 
-if ($installAppsJson -and (Test-Path $installAppsJson)) {
+if ($dependencyAppsJson -and (Test-Path $dependencyAppsJson)) {
     try {
-        $installApps += Get-Content -Path $installAppsJson | ConvertFrom-Json
+        $installApps += Get-Content -Path $dependencyAppsJson | ConvertFrom-Json
     }
     catch {
-        throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
+        throw "Failed to parse JSON file at path '$dependencyAppsJson'. Error: $($_.Exception.Message)"
     }
 }
 
-if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+if ($dependencyTestAppsJson -and (Test-Path $dependencyTestAppsJson)) {
     try {
-        $installTestApps += Get-Content -Path $installTestAppsJson | ConvertFrom-Json
+        $installTestApps += Get-Content -Path $dependencyTestAppsJson | ConvertFrom-Json
     }
     catch {
-        throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
+        throw "Failed to parse JSON file at path '$dependencyTestAppsJson'. Error: $($_.Exception.Message)"
     }
 }
 
@@ -184,5 +184,5 @@ $installApps += $appFiles
 $installTestApps += $testAppFiles
 Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
 
-ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installAppsJson
-ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $installTestAppsJson
+ConvertTo-Json $installApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
+ConvertTo-Json $installTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson
