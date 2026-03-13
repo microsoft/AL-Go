@@ -695,7 +695,8 @@ function Get-AssemblyProbingPaths() {
     } else {
         $dotNetRuntimeVersion = (Get-DotnetRuntimeVersionInstalled)
         if ($dotNetRuntimeVersion) {
-            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\$dotNetRuntimeVersion", "C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion") + $probingPaths
+            $dotnetRoot = Split-Path (Get-Command dotnet).Source
+            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), (Join-Path $dotnetRoot "shared\Microsoft.NETCore.App\$dotNetRuntimeVersion"), (Join-Path $dotnetRoot "shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion")) + $probingPaths
         }
         else {
             $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
