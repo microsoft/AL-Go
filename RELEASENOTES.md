@@ -8,7 +8,7 @@ With v28 of Business Central, the ALTool now also provides the ability to compil
   }
 ```
 
-By default apps are compiled sequentially but this can be changed via the parallelism property. This allows you to configure the maximum amount of parallel compilation processes. Set to -1 to use all available processors.
+By default apps are compiled sequentially but this can be changed via the parallelism property. This allows you to configure the maximum amount of parallel compilation processes. Set to 0 or -1 to use all available processors.
 
 ```json
   "workspaceCompilation": {

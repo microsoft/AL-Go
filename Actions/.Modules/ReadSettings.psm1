@@ -569,8 +569,8 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
     }
 
-    # Interpret negative parallelism as the max number of processors
-    if ($settings.workspaceCompilation.parallelism -lt 0) {
+    # Interpret zero or negative parallelism as the max number of processors
+    if ($settings.workspaceCompilation.parallelism -le 0) {
         $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
     }
 
