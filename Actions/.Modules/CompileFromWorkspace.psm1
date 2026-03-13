@@ -566,11 +566,8 @@ function CompileAppsInWorkspace {
 
         # Temporarily set console encoding to UTF-8 to handle special characters in output
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-        & $ALToolPath @arguments | Out-Host
+        RunAndCheck $ALToolPath @arguments | Out-Host
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "Compilation failed with exit code $LASTEXITCODE"
-        }
         OutputColor -message "Compilation completed successfully." -Color Green
     } catch {
         OutputColor -Message "Error during compilation: $_" -Color Red
@@ -735,15 +732,8 @@ function New-WorkspaceFromFolders() {
         [string]$AltoolPath
     )
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
-    try {
-        OutputColor "Executing: $AltoolPath $($arguments -join ' ')" -Color Green
-        $null = & $AltoolPath @arguments
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to create workspace file '$WorkspaceFile'. altool exited with code $LASTEXITCODE"
-        }
-    } catch {
-        throw $_
-    }
+    OutputColor "Executing: $AltoolPath $($arguments -join ' ')" -Color Green
+    RunAndCheck $AltoolPath @arguments
 
     OutputDebug "Workspace created at $WorkspaceFile"
 }
