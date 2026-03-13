@@ -27,4 +27,4 @@ Compile AL apps by using workspace compilation from the ALTool
 
 ## OUTPUT
 
-none
+none but the action will edit the dependencyAppsJson and dependencyTestAppsJson to include the compiled apps.

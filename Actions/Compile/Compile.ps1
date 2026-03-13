@@ -36,7 +36,7 @@ if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0) {
 }
 
 $projectFolder = Join-Path $baseFolder $project
-Set-Location $projectFolder
+Push-Location $projectFolder
 
 # Set up output folders
 $buildArtifactFolder = Join-Path $projectFolder ".buildartifacts"
@@ -186,3 +186,5 @@ Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count
 
 ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
 ConvertTo-Json $dependencyTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson
+
+Pop-Location
