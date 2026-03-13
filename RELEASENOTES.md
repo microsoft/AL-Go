@@ -1,3 +1,32 @@
+### Test Projects — split builds and tests for faster feedback
+
+AL-Go now supports **test projects**: a new project type that separates test execution from compilation. A test project does not build any apps itself — instead it depends on one or more regular projects, installs the apps they produce, and runs tests against them.
+
+This lets you re-run tests without waiting for a full recompilation, and makes it easy to organize large repositories where builds and test suites have different scopes or cadences.
+
+**Getting started**
+
+Add a `projectsToTest` setting to the project-level `.AL-Go/settings.json` of an empty project (no `appFolders` or `testFolders`):
+
+```json
+{
+  "projectsToTest": ["build/projects/MyProject"]
+}
+```
+
+AL-Go will automatically:
+
+- Resolve the dependency so the test project always builds after its target project(s).
+- Install the Test Runner, Test Framework, and Test Libraries into the container.
+- Run all tests from the installed test apps.
+
+**Key rules**
+
+- A test project must **not** contain buildable code (no `appFolders`, `testFolders`, or `bcptTestFolders`). AL-Go will fail with a clear error if it detects both `projectsToTest` and buildable folders.
+- A test project cannot depend on another test project.
+- You can target multiple projects: `"projectsToTest": ["build/projects/ProjectA", "build/projects/ProjectB"]`.
+- Use full project paths as they appear in the repository.
+
 ### Improving error detection and build reliability when downloading project dependencies
 
 The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
