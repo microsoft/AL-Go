@@ -2389,7 +2389,7 @@ function Get-VersionNumber() {
             # For versioning strategy 3, we need to get the build number from repoVersion setting
             $appBuild = $repoVersion.Build
             if ($appBuild -eq -1) {
-                Write-Warning "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                OutputWarning -message "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
                 $appBuild = 0
             }
         }
