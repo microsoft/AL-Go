@@ -133,7 +133,7 @@ try {
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
         AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
-        Preprocessorsymbols         = $settings.preprocessorSymbols
+        PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
         MajorMinorVersion           = $versionNumber.MajorMinorVersion
         BuildNumber                 = $versionNumber.BuildNumber
