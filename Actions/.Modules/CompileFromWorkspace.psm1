@@ -117,7 +117,8 @@ function Get-BuildMetadata {
 #>
 function Get-ALTool {
     param(
-        $CompilerFolder
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder
     )
 
     if ($script:alTool -and (Test-Path $script:alTool)) {
