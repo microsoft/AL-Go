@@ -833,14 +833,19 @@ function New-BuildOutputFile {
 
     # Collect the log files and append their content to the build output file
     $logFiles = Get-ChildItem -Path $BuildArtifactFolder -Recurse -Filter "*.log" | Select-Object -ExpandProperty FullName
-    foreach ($logFile in $logFiles) {
-        $sanitizedLines = Get-Content -Path $logFile | ForEach-Object { $_ -replace '^\[OUT\]\s?', '' }
-        Add-Content -Path $buildOutputPath -Value $sanitizedLines
+    OutputGroupStart -Message "Build Logs"
+    try {
+        foreach ($logFile in $logFiles) {
+            $sanitizedLines = Get-Content -Path $logFile | ForEach-Object { $_ -replace '^\[OUT\]\s?', '' }
+            Add-Content -Path $buildOutputPath -Value $sanitizedLines
 
-        # Print build output to console (aggregated), preserving line formatting
-        if ($DisplayInConsole) {
-            Convert-AlcOutputToAzureDevOps -basePath $BasePath -AlcOutput $sanitizedLines -gitHubActions -FailOn $FailOn
+            # Print build output to console (aggregated), preserving line formatting
+            if ($DisplayInConsole) {
+                Convert-AlcOutputToAzureDevOps -basePath $BasePath -AlcOutput $sanitizedLines -gitHubActions -FailOn $FailOn
+            }
         }
+    } finally {
+        OutputGroupEnd
     }
 
     return $buildOutputPath
