@@ -209,7 +209,7 @@ function Get-ALTool {
 .PARAMETER PostCompileApp
     Scriptblock to execute after compiling each app.
 #>
-function Build-AppsInWorkspace() {
+function Build-AppsInWorkspace {
     param(
         # Mandatory parameters
         [Parameter(Mandatory = $true)]
@@ -672,7 +672,7 @@ function Get-DotnetRuntimeVersionInstalled {
 .OUTPUTS
     Array of assembly probing paths.
 #>
-function Get-AssemblyProbingPaths() {
+function Get-AssemblyProbingPaths {
     param(
         [Parameter(Mandatory = $true)]
         [string]$CompilerFolder
@@ -721,7 +721,7 @@ function Get-AssemblyProbingPaths() {
 .PARAMETER AltoolPath
     The full path to the AL compiler tool (al.exe or al).
 #>
-function New-WorkspaceFromFolders() {
+function New-WorkspaceFromFolders {
     param(
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
@@ -753,7 +753,7 @@ function New-WorkspaceFromFolders() {
 .PARAMETER RevisionNumber
     The revision number to set in the app.json files. If not provided, the existing revision number will be retained.
 #>
-function Update-AppJsonProperties() {
+function Update-AppJsonProperties {
     param(
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
