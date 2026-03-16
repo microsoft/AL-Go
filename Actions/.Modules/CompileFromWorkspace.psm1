@@ -194,10 +194,6 @@ function Get-ALTool {
     URL of the source repository for build metadata.
 .PARAMETER SourceCommit
     Commit SHA for build metadata.
-.PARAMETER BuildBy
-    Build system identifier for build metadata.
-.PARAMETER BuildUrl
-    URL of the build run for build metadata.
 .PARAMETER ReportSuppressedDiagnostics
     Switch to include suppressed diagnostics in the build output.
 .PARAMETER EnableExternalRulesets
@@ -250,10 +246,6 @@ function Build-AppsInWorkspace {
         [string]$SourceRepositoryUrl,
         [Parameter(Mandatory = $false)]
         [string]$SourceCommit,
-        [Parameter(Mandatory = $false)]
-        [string]$BuildBy,
-        [Parameter(Mandatory = $false)]
-        [string]$BuildUrl,
         [Parameter(Mandatory = $false)]
         [switch]$ReportSuppressedDiagnostics,
         [Parameter(Mandatory = $false)]
@@ -313,8 +305,6 @@ function Build-AppsInWorkspace {
         Ruleset = $Ruleset
         SourceRepositoryUrl = $SourceRepositoryUrl
         SourceCommit = $SourceCommit
-        BuildBy = $BuildBy
-        BuildUrl = $BuildUrl
         ReportSuppressedDiagnostics = $ReportSuppressedDiagnostics
         EnableExternalRulesets = $EnableExternalRulesets
         MaxCpuCount = $MaxProcesses
@@ -434,12 +424,6 @@ function CompileAppsInWorkspace {
         [string]$SourceCommit,
 
         [Parameter(Mandatory = $false)]
-        [string]$BuildBy,
-
-        [Parameter(Mandatory = $false)]
-        [string]$BuildUrl,
-
-        [Parameter(Mandatory = $false)]
         [switch]$ReportSuppressedDiagnostics,
 
         [Parameter(Mandatory = $false)]
@@ -531,14 +515,6 @@ function CompileAppsInWorkspace {
     if ($SourceCommit) {
         $arguments += "--sourcecommit"
         $arguments += $SourceCommit
-    }
-
-    if ($BuildBy) {
-        $env:BUILD_BY = $BuildBy
-    }
-
-    if ($BuildUrl) {
-        $env:BUILD_URL = $BuildUrl
     }
 
     if ($ReportSuppressedDiagnostics.IsPresent) {
@@ -765,7 +741,13 @@ function Update-AppJsonProperties {
         [int] $BuildNumber = 0,
 
         [Parameter(Mandatory = $false)]
-        [int] $RevisionNumber = 0
+        [int] $RevisionNumber = 0,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BuildBy = "",
+
+        [Parameter(Mandatory = $false)]
+        [string]$BuildUrl = ""
     )
 
     foreach ($folder in $Folders) {
@@ -788,6 +770,18 @@ function Update-AppJsonProperties {
 
             OutputDebug "Updating app.json at $($appJsonFile.FullName) to version $version"
             $appJsonContent.version = "$version"
+
+            # Stamp build metadata into app.json
+            if ($BuildBy -or $BuildUrl) {
+                $buildObject = @{}
+                if ($BuildBy) { $buildObject.by = $BuildBy }
+                if ($BuildUrl) { $buildObject.url = $BuildUrl }
+                if ($appJsonContent.PSObject.Properties.Name -contains 'build') {
+                    $appJsonContent.build = $buildObject
+                } else {
+                    $appJsonContent | Add-Member -MemberType NoteProperty -Name 'build' -Value $buildObject
+                }
+            }
 
             # Save the updated app.json file
             $appJsonContent | ConvertTo-Json -Depth 10 | Set-Content -Path $appJsonFile.FullName -Encoding UTF8

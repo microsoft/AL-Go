@@ -124,7 +124,8 @@ try {
 
     # Update the app jsons with version number (and other properties) from the app manifest files
     Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
-        -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber
+        -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber `
+        -BuildBy $buildMetadata.BuildBy -BuildUrl $buildMetadata.BuildUrl
 
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
@@ -141,8 +142,6 @@ try {
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism
         SourceRepositoryUrl         = $buildMetadata.SourceRepositoryUrl
         SourceCommit                = $buildMetadata.SourceCommit
-        BuildBy                     = $buildMetadata.BuildBy
-        BuildUrl                    = $buildMetadata.BuildUrl
         ReportSuppressedDiagnostics = $settings.reportSuppressedDiagnostics
         EnableExternalRulesets      = $settings.enableExternalRulesets
         PreCompileApp               = $scriptOverrides['PreCompileApp']
