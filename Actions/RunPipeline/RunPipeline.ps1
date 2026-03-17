@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
-    [string] $baselineWorkflowSHA = ''
+    [string] $baselineWorkflowSHA = '',
+    [Parameter(HelpMessage = "Path to folder containing previous release apps for upgrade testing", Mandatory = $false)]
+    [string] $previousAppsPath = ''
 )
 
 $containerBaseFolder = $null
@@ -138,17 +140,12 @@ try {
         OutputDebug -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
     }
 
-    # When using workspace compilation, apps are already compiled - pass empty folders to Run-AlPipeline
-    if ($settings.workspaceCompilation.enabled) {
-        $appFolders = @()
-        $testFolders = @()
-        $bcptTestFolders = $settings.bcptTestFolders
-    }
-    else {
-        $appFolders = $settings.appFolders
-        $testFolders = $settings.testFolders
-        $bcptTestFolders = $settings.bcptTestFolders
-    }
+    # When using workspace compilation, apps are already compiled in .buildartifacts.
+    # Pass appFolders/testFolders to Run-AlPipeline so its prebuilt detection picks them up
+    # and publishes them through the proper upgrade testing path.
+    $appFolders = $settings.appFolders
+    $testFolders = $settings.testFolders
+    $bcptTestFolders = $settings.bcptTestFolders
 
     if ((-not $settings.workspaceCompilation.enabled) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
@@ -275,9 +272,12 @@ try {
 
     $previousApps = @()
     if (!$settings.skipUpgrade) {
-        if ($settings.workspaceCompilation.enabled) {
-            OutputWarning -message "skipUpgrade is ignored when workspaceCompilation is enabled." # TODO: Missing implementation when workspace compilation is enabled (AB#620310)
-        } else {
+        if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
+            # Use previously downloaded release apps
+            $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
+            Write-Host "Using $($previousApps.Count) previous release app(s) from $previousAppsPath"
+        }
+        else {
             OutputGroupStart -Message "Locating previous release"
             try {
                 $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }

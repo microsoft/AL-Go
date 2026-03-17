@@ -846,6 +846,90 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
+<#
+.SYNOPSIS
+    Generates AppSourceCop.json files for app folders with baseline version information.
+.DESCRIPTION
+    For each app folder, creates an AppSourceCop.json file containing the previous version
+    of the app as a baseline for breaking change detection. Also includes mandatory affixes,
+    supported countries, and obsolete tag settings from the project settings.
+.PARAMETER AppFolders
+    Array of app folder paths to generate AppSourceCop.json for.
+.PARAMETER PreviousApps
+    Array of file paths to previous release .app files.
+.PARAMETER CompilerFolder
+    Path to the compiler folder containing the AL tool.
+.PARAMETER Settings
+    Hashtable containing the build settings with AppSourceCop configuration.
+#>
+function New-AppSourceCopJson {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $AppFolders,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]] $PreviousApps,
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings
+    )
+
+    # Extract version info from previous apps using the AL tool
+    $previousAppVersions = @{}
+    foreach ($appFile in $PreviousApps) {
+        try {
+            $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json
+            $key = "$($appInfo.Publisher)_$($appInfo.Name)"
+            $previousAppVersions[$key] = $appInfo.Version.ToString()
+            Write-Host "$key = $($appInfo.Version.ToString())"
+        }
+        catch {
+            OutputWarning -message "Failed to read manifest from '$appFile': $($_.Exception.Message)"
+        }
+    }
+
+    foreach ($folder in $AppFolders) {
+        $appSourceCopJson = @{}
+        $saveIt = $false
+
+        if ($Settings.appSourceCopMandatoryAffixes -and $Settings.appSourceCopMandatoryAffixes.Count -gt 0) {
+            $appSourceCopJson["mandatoryAffixes"] = @() + $Settings.appSourceCopMandatoryAffixes
+            $saveIt = $true
+        }
+
+        if ($Settings.obsoleteTagMinAllowedMajorMinor) {
+            $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
+            $saveIt = $true
+        }
+
+        # Match previous app version by Publisher_Name
+        $appJsonPath = Join-Path $folder "app.json"
+        if (Test-Path $appJsonPath) {
+            $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
+            $key = "$($appJson.Publisher)_$($appJson.Name)"
+            if ($previousAppVersions.ContainsKey($key)) {
+                $appSourceCopJson["Publisher"] = $appJson.Publisher
+                $appSourceCopJson["Name"] = $appJson.Name
+                $appSourceCopJson["Version"] = $previousAppVersions[$key]
+                $saveIt = $true
+            }
+        }
+
+        $appSourceCopJsonFile = Join-Path $folder "AppSourceCop.json"
+        if ($saveIt) {
+            Write-Host "Creating AppSourceCop.json for $folder"
+            $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content $appSourceCopJsonFile
+        }
+        else {
+            if (Test-Path $appSourceCopJsonFile) {
+                Remove-Item $appSourceCopJsonFile -Force
+            }
+        }
+    }
+}
+
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
@@ -853,3 +937,5 @@ Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
+Export-ModuleMember -Function Get-AppIdForAppFile
+Export-ModuleMember -Function New-AppSourceCopJson

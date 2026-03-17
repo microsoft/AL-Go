@@ -27,4 +27,4 @@ Compile AL apps by using workspace compilation from the ALTool
 
 ## OUTPUT
 
-None but the action will edit the dependencyAppsJson (installAppsJson) and dependencyTestAppsJson (installTestAppsJson) to include the compiled apps. That way the apps will be installed in the RunPipeline step.
+None. Compiled apps are placed in `.buildartifacts/Apps` and `.buildartifacts/TestApps` where they are picked up by `Run-AlPipeline`'s prebuilt app detection in the RunPipeline step.

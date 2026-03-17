@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
-    [string] $baselineWorkflowSHA = ''
+    [string] $baselineWorkflowSHA = '',
+    [Parameter(HelpMessage = "Path to folder containing previous release apps for AppSourceCop baseline", Mandatory = $false)]
+    [string] $previousAppsPath = ''
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -117,9 +119,17 @@ try {
         Write-Host "Incremental builds based on modified apps is not yet implemented."
     }
 
-    if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
-        # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation (AB#620310)
-        Write-Host "Checking for required upgrades using AppSourceCop..."
+    if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop -and $previousAppsPath -and (Test-Path $previousAppsPath)) {
+        $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
+        if ($previousApps.Count -gt 0) {
+            # Copy previous apps to the package cache so AppSourceCop can resolve them
+            $previousApps | ForEach-Object {
+                Copy-Item -Path $_ -Destination $packageCachePath -Force
+            }
+
+            # Generate AppSourceCop.json files for app folders
+            New-AppSourceCopJson -AppFolders $appFoldersToBuild -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
+        }
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
@@ -178,9 +188,9 @@ try {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
     }
 
-    # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
-    $dependencyApps += $appFiles
-    $dependencyTestApps += $testAppFiles
+    # OUTPUT - Write back the original dependency apps (without compiled apps) to JSON files for downstream steps.
+    # Compiled apps remain in .buildartifacts and are picked up by Run-AlPipeline's prebuilt detection,
+    # which ensures they go through the proper upgrade testing path rather than being treated as installApps.
     Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
 
     ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson

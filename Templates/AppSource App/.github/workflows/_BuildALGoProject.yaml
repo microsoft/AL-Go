@@ -166,6 +166,14 @@ jobs:
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
+      - name: Download Previous Release
+        id: DownloadPreviousRelease
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        uses: microsoft/AL-Go-Actions/DownloadPreviousRelease@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+
       - name: Compile Apps
         id: compile
         uses: microsoft/AL-Go-Actions/CompileApps@main
@@ -182,6 +190,7 @@ jobs:
           dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+          previousAppsPath: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
 
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
@@ -199,6 +208,7 @@ jobs:
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+          previousAppsPath: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
 
       - name: Sign
         id: sign
