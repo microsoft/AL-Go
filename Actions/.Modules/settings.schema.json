@@ -421,6 +421,13 @@
             "type": "boolean",
             "description": "See https://aka.ms/ALGoSettings#useprojectdependencies"
         },
+        "projectsToTest": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "See https://aka.ms/ALGoSettings#projectstotest"
+        },
         "runs-on": {
             "type": "string",
             "minLength": 1,
@@ -743,6 +750,10 @@
                     }
                 }
             }
+        },
+        "postponeProjectInBuildOrder": {
+            "type": "boolean",
+            "description": "Indicates whether the project can be postponed in the build order to optimize build times. See https://aka.ms/ALGoSettings#postponeProjectInBuildOrder"
         },
         "workflowDefaultInputs": {
             "type": "array",

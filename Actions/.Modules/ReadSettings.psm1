@@ -190,6 +190,7 @@ function GetDefaultSettings
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
+        "projectsToTest"                                = @()
         "runs-on"                                       = "windows-latest"
         "shell"                                         = ""
         "githubRunner"                                  = ""
@@ -251,9 +252,10 @@ function GetDefaultSettings
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
         "customALGoFiles" = [ordered]@{
-            "filesToInclude"                             = @()
+            "filesToInclude"                            = @()
             "filesToExclude"                            = @()
         }
+        "postponeProjectInBuildOrder"                  = $false
     }
 }
 
