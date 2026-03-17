@@ -39,6 +39,8 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/main") }
+
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1")
 
@@ -148,8 +150,8 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
-            # Call the action script with workflowEventName parameter
-            . (Join-Path $scriptRoot "$actionName.ps1") -workflowEventName "workflow_call"
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/main") }
+
             # Call the action script
             . (Join-Path $scriptRoot "$actionName.ps1")
 
