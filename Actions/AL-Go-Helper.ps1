@@ -753,12 +753,33 @@ function AnalyzeRepo {
         if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
+    $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
-        $settings.doNotRunTests = $true
+        if ($isTestProject) {
+            # Test projects run tests from upstream projects via installTestApps, not from local testFolders
+            Write-Host "Test project: tests will be run from installed test apps"
+            if (-not $settings.installTestRunner) {
+                Write-Host "Test project: installTestRunner will be set to true as it is required to run tests."
+            }
+            $settings.installTestRunner = $true
+            if (-not $settings.installTestFramework) {
+                Write-Host "Test project: installTestFramework is not set. Add it to the project settings if upstream test apps depend on the test framework."
+            }
+            if (-not $settings.installTestLibraries) {
+                Write-Host "Test project: installTestLibraries is not set. Add it to the project settings if upstream test apps depend on test libraries."
+            }
+            if (-not $settings.runTestsInAllInstalledTestApps) {
+                Write-Host "runTestsInAllInstalledTestApps is false, but will be forced to true as no tests would be run otherwise."
+            }
+            $settings.runTestsInAllInstalledTestApps = $true
+        }
+        else {
+            if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+            $settings.doNotRunTests = $true
+        }
     }
     if (-not $settings.appFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
+        if (!$isTestProject -and !$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
     }
 
     $settings
@@ -1788,7 +1809,8 @@ function TestIfProjectHasDependents {
         [string] $project,
         [string[]] $projects,
         [hashtable] $appDependencies,
-        [array] $projectsOrder
+        [array] $projectsOrder,
+        [hashtable] $testProjectTargets = @{}
     )
 
     $hasRemainingDependents = $false
@@ -1806,6 +1828,11 @@ function TestIfProjectHasDependents {
                     Write-Host "Project $project is still a dependency for project $otherProject"
                     $hasRemainingDependents = $true
                 }
+            }
+            # Check whether the other project is a test project that targets the current project
+            if ($testProjectTargets.Keys -contains $otherProject -and $testProjectTargets."$otherProject" -contains $project) {
+                Write-Host "Project $project is a test target for test project $otherProject"
+                $hasRemainingDependents = $true
             }
         }
     }
@@ -1879,6 +1906,49 @@ Function AnalyzeProjectDependencies {
     #         "dependencies" = @("appid7", "appid8")
     #     }
     # }
+
+    # Handle projectsToTest settings: build a mapping of test projects to their target projects
+    # First pass: collect all test projects so we can validate that no project depends on a test project
+    $testProjectNames = @{}
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.projectsToTest -and $projectSettings.projectsToTest.Count -gt 0) {
+            # Validate that test projects do not contain buildable code
+            $buildableFolders = @($appDependencies."$project".apps)
+            if ($buildableFolders.Count -gt 0) {
+                throw "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting."
+            }
+            $testProjectNames[$project] = $projectSettings.projectsToTest
+        }
+    }
+    # Second pass: resolve and validate target projects, build the testProjectTargets mapping
+    # testProjectTargets maps each test project to an array of resolved target project names
+    $testProjectTargets = @{}
+    foreach($project in $testProjectNames.Keys) {
+        Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
+        $resolvedTargets = @()
+        foreach($targetProject in $testProjectNames[$project]) {
+            # Resolve target project name: must be the full project path
+            # Normalize slashes to match how project keys are stored (OS-dependent)
+            $normalizedTarget = $targetProject.Replace('/', [System.IO.Path]::DirectorySeparatorChar).Replace('\', [System.IO.Path]::DirectorySeparatorChar)
+            $resolvedTarget = $null
+            if ($appDependencies.Keys -contains $normalizedTarget) {
+                $resolvedTarget = $normalizedTarget
+            }
+            if (-not $resolvedTarget) {
+                OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository. Use the full project path (e.g. 'projects/MyProject')."
+                throw
+            }
+            # Validate that the target is not itself a test project
+            if ($testProjectNames.Keys -contains $resolvedTarget) {
+                OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
+                throw
+            }
+            $resolvedTargets += @($resolvedTarget)
+        }
+        $testProjectTargets[$project] = $resolvedTargets
+    }
+
     $no = 1
     $projectsOrder = @()
     # Collect projects without dependents, which can be built later
@@ -1912,6 +1982,18 @@ Function AnalyzeProjectDependencies {
                     $foundDependencies += $depProject
                     if ($projectDependencies.Keys -contains $depProject) {
                         $foundDependencies += $projectDependencies."$depProject"
+                    }
+                }
+            }
+            # If this project is a test project, add its target projects as direct dependencies
+            # Only add target projects that haven't been built yet (still in $projects), matching the normal dependency resolution pattern
+            if ($testProjectTargets.Keys -contains $project) {
+                foreach($targetProject in $testProjectTargets."$project") {
+                    if ($projects -contains $targetProject) {
+                        $foundDependencies += $targetProject
+                        if ($projectDependencies.Keys -contains $targetProject) {
+                            $foundDependencies += $projectDependencies."$targetProject"
+                        }
                     }
                 }
             }
@@ -1960,7 +2042,7 @@ Function AnalyzeProjectDependencies {
 
         # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
         $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
-            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder)
+            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder -testProjectTargets $testProjectTargets)
         })
 
         # Remove projects in this job from the list of projects to be built (including the projects without dependents)
