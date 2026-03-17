@@ -166,7 +166,7 @@ jobs:
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
-      - name: Compile
+      - name: Compile Apps
         id: compile
         uses: microsoft/AL-Go-Actions/CompileApps@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && fromJson(env.workspaceCompilation).enabled == true
