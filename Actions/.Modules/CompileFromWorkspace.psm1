@@ -1,8 +1,9 @@
-$script:alTool = $null
 Import-Module (Join-Path -Path $PSScriptRoot "./DebugLogHelper.psm1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "../TelemetryHelper.psm1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "../Github-Helper.psm1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
+
+$script:alTool = $null
 
 <#
 .SYNOPSIS

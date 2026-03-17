@@ -274,7 +274,7 @@ try {
         if ($settings.workspaceCompilation.enabled) {
             OutputWarning -message "skipUpgrade is ignored when workspaceCompilation is enabled." # TODO: Missing implementation when workspace compilation is enabled (AB#620310)
         } else {
-            Write-Host "::group::Locating previous release"
+            OutputGroupStart -Message "Locating previous release"
             try {
                 $branchForRelease = if ($ENV:GITHUB_BASE_REF) { $ENV:GITHUB_BASE_REF } else { $ENV:GITHUB_REF_NAME }
                 $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
@@ -295,7 +295,9 @@ try {
                 OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
                 exit
             }
-            Write-Host "::endgroup::"
+            finally {
+                OutputGroupEnd
+            }
         }
     }
 
@@ -305,9 +307,9 @@ try {
     if (-not $gitHubHostedRunner) {
         $imageName = $settings.cacheImageName
         if ($imageName) {
-            Write-Host "::group::Flush ContainerHelper Cache"
+            OutputGroupStart -Message "Flush ContainerHelper Cache"
             Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
-            Write-Host "::endgroup::"
+            OutputGroupEnd
         }
     }
     $authContext = $null

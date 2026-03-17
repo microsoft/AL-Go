@@ -52,7 +52,7 @@ runs:
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
         _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Compile" -Action {
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Compile Apps" -Action {
           ${{ github.action_path }}/Compile.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -dependencyAppsJson $ENV:_dependencyAppsJson -dependencyTestAppsJson $ENV:_dependencyTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
         }
 branding:

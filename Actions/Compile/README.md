@@ -27,4 +27,4 @@ Compile AL apps by using workspace compilation from the ALTool
 
 ## OUTPUT
 
-none but the action will edit the dependencyAppsJson and dependencyTestAppsJson to include the compiled apps.
+None but the action will edit the dependencyAppsJson (installAppsJson) and dependencyTestAppsJson (installTestAppsJson) to include the compiled apps. That way the apps will be installed in the RunPipeline step.
