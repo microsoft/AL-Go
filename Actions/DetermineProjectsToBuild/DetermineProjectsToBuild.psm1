@@ -511,4 +511,34 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
 }
 
+<#
+.Synopsis
+    Tests whether an app folder should be compiled or can be skipped (because it was downloaded from a baseline workflow run).
+.Parameter AppFolder
+    The relative app folder path (e.g., './MyApp').
+.Parameter DownloadedAppIds
+    Array of app IDs that were downloaded from the baseline workflow run.
+.Outputs
+    $true if the folder should be compiled, $false if it can be skipped.
+#>
+function Test-FolderShouldBeCompiled {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $AppFolder,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]] $DownloadedAppIds
+    )
+
+    try {
+        $appJsonPath = Join-Path $AppFolder "app.json"
+        $appId = (Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json).id
+        return $DownloadedAppIds -notcontains $appId
+    }
+    catch {
+        OutputWarning -message "Failed to read app.json for folder '$AppFolder': $($_.Exception.Message). Including folder in compilation."
+        return $true
+    }
+}
+
 Export-ModuleMember *-*

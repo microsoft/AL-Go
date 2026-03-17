@@ -845,6 +845,29 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
+<#
+.SYNOPSIS
+    Gets the app ID from a compiled .app file using the AL tool.
+.PARAMETER CompilerFolder
+    The path to the compiler folder containing the AL tool.
+.PARAMETER AppFile
+    The path to the .app file to read the manifest from.
+.OUTPUTS
+    The app ID (GUID) from the app's package manifest.
+#>
+function Get-AppIdForAppFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder,
+        [Parameter(Mandatory = $true)]
+        [string] $AppFile
+    )
+
+    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    $manifest = RunAndCheck $alToolPath GetPackageManifest $AppFile | ConvertFrom-Json
+    return $manifest.id
+}
+
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
@@ -852,3 +875,4 @@ Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
+Export-ModuleMember -Function Get-AppIdForAppFile

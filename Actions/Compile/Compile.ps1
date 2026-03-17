@@ -112,9 +112,51 @@ try {
     }
 
     # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
+    $appFoldersToBuild = $settings.appFolders
+    $testFoldersToBuild = $settings.testFolders
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
-        #TODO: Implement support for incremental builds (AB#620492)
-        Write-Host "Incremental builds based on modified apps is not yet implemented."
+        $buildAll = $true
+        try {
+            $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        }
+        catch {
+            OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+        }
+        if (!$buildAll) {
+            Write-Host "Get unmodified apps from baseline workflow run"
+            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+                -token $token `
+                -settings $settings `
+                -baseFolder $baseFolder `
+                -project $project `
+                -baselineWorkflowRunId $baselineWorkflowRunId `
+                -modifiedFiles $modifiedFiles `
+                -buildArtifactFolder $buildArtifactFolder `
+                -buildMode $buildMode `
+                -projectPath $projectFolder
+
+            # Copy downloaded apps to the package cache and track their app IDs
+            $downloadedAppIds = @()
+            foreach ($subfolder in @("Apps", "TestApps")) {
+                $downloadedFolder = Join-Path $buildArtifactFolder $subfolder
+                if (Test-Path $downloadedFolder) {
+                    Get-ChildItem -Path $downloadedFolder -Filter "*.app" | ForEach-Object {
+                        Copy-Item -Path $_.FullName -Destination $packageCachePath -Force
+                        $downloadedAppIds += Get-AppIdForAppFile -CompilerFolder $compilerFolder -AppFile $_.FullName
+                        OutputDebug "Copied downloaded app to package cache: $($_.Name)"
+                    }
+                }
+            }
+
+            # Exclude folders whose app ID matches a downloaded (unmodified) app
+            $appFoldersToBuild = @($settings.appFolders | Where-Object { Test-FolderShouldBeCompiled -AppFolder $_ -DownloadedAppIds $downloadedAppIds })
+            $testFoldersToBuild = @($settings.testFolders | Where-Object { Test-FolderShouldBeCompiled -AppFolder $_ -DownloadedAppIds $downloadedAppIds })
+
+            OutputMessageAndArray -message "App folders to build" -arrayOfStrings $appFoldersToBuild
+            OutputMessageAndArray -message "Test folders to build" -arrayOfStrings $testFoldersToBuild
+        }
     }
 
     if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
@@ -122,8 +164,8 @@ try {
         Write-Host "Checking for required upgrades using AppSourceCop..."
     }
 
-    # Update the app jsons with version number (and other properties) from the app manifest files
-    Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
+    # Update the app jsons with version number (and other properties) for folders being compiled
+    Update-AppJsonProperties -Folders ($appFoldersToBuild + $testFoldersToBuild) `
         -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber `
         -BuildBy $buildMetadata.BuildBy -BuildUrl $buildMetadata.BuildUrl
 
@@ -154,22 +196,22 @@ try {
     $appFiles = @()
     $testAppFiles = @()
     try {
-        if ($settings.appFolders.Count -gt 0) {
+        if ($appFoldersToBuild.Count -gt 0) {
             # Compile Apps
             $appFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.appFolders `
+                -Folders $appFoldersToBuild `
                 -OutFolder $appOutputFolder `
                 -AppType 'app'
         }
 
-        if ($settings.testFolders.Count -gt 0) {
+        if ($testFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
             }
 
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.testFolders `
+                -Folders $testFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
         }
@@ -179,9 +221,12 @@ try {
     }
 
     # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
-    $dependencyApps += $appFiles
-    $dependencyTestApps += $testAppFiles
-    Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
+    # Include both newly compiled apps and any downloaded baseline apps (from incremental builds)
+    $allAppFiles = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+    $allTestAppFiles = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+    $dependencyApps += $allAppFiles
+    $dependencyTestApps += $allTestAppFiles
+    Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps. Total output: $(@($allAppFiles).Count) apps and $(@($allTestAppFiles).Count) test apps."
 
     ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
     ConvertTo-Json $dependencyTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson
