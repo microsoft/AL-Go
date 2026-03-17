@@ -143,8 +143,8 @@ jobs:
           downloadLatest: '${{ inputs.downloadLatest }}'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          if('${{ env.WorkflowEventName }}' -in 'workflow_dispatch', 'workflow_call') {
-            Write-Host "Using inputs from ${{ env.WorkflowEventName }} event"
+          if($env:WorkflowEventName -in 'workflow_dispatch', 'workflow_call') {
+            Write-Host "Using inputs from $($env:WorkflowEventName) event"
             $directCommit = $env:directCommit
             $downloadLatest = $env:downloadLatest
           }
