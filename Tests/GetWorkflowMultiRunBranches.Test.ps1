@@ -144,10 +144,14 @@ Describe "GetWorkflowMultiRunBranches Action" {
 
     Context 'workflow_call event' {
         It 'Action sets the current branch as result when no branch patterns are specified' {
+            $env:GITHUB_EVENT_NAME = "workflow_call"
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             # Call the action script with workflowEventName parameter
             . (Join-Path $scriptRoot "$actionName.ps1") -workflowEventName "workflow_call"
+            # Call the action script
+            . (Join-Path $scriptRoot "$actionName.ps1")
 
             $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
@@ -155,12 +159,14 @@ Describe "GetWorkflowMultiRunBranches Action" {
         }
 
         It 'Action sets the input branch as result when a branch pattern is specified' {
+            $env:GITHUB_EVENT_NAME = "workflow_call"
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
-            # Call the action script with workflowEventName and includeBranches parameters
-            . (Join-Path $scriptRoot "$actionName.ps1") -workflowEventName "workflow_call" -includeBranches "test-branch"
+            # Call the action script
+            . (Join-Path $scriptRoot "$actionName.ps1") -includeBranches "test-branch"
 
             $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
@@ -168,12 +174,14 @@ Describe "GetWorkflowMultiRunBranches Action" {
         }
 
         It 'Action sets the input branch as result when a branch pattern with wild card is specified' {
+            $env:GITHUB_EVENT_NAME = "workflow_call"
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
-            # Call the action script with workflowEventName and wildcard pattern
-            . (Join-Path $scriptRoot "$actionName.ps1") -workflowEventName "workflow_call" -includeBranches "*branch*"
+            # Call the action script
+            . (Join-Path $scriptRoot "$actionName.ps1") -includeBranches "*branch*"
 
             $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
@@ -181,12 +189,14 @@ Describe "GetWorkflowMultiRunBranches Action" {
         }
 
         It 'Action filters out HEAD symbolic reference when using wildcard' {
+            $env:GITHUB_EVENT_NAME = "workflow_call"
+            $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/HEAD", "origin/main", "origin/develop", "origin/feature-1") }
 
             # Call the action script with wildcard to get all branches
-            . (Join-Path $scriptRoot "$actionName.ps1") -workflowEventName "workflow_call" -includeBranches "*"
+            . (Join-Path $scriptRoot "$actionName.ps1") -includeBranches "*"
 
             $outputName, $outputValue = (Get-Content $env:GITHUB_OUTPUT) -split '='
             $outputName | Should -Be "Result"
