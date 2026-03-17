@@ -168,7 +168,7 @@ jobs:
 
       - name: Compile
         id: compile
-        uses: microsoft/AL-Go-Actions/Compile@main
+        uses: microsoft/AL-Go-Actions/CompileApps@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && fromJson(env.workspaceCompilation).enabled == true
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
