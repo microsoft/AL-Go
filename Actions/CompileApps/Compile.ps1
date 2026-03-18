@@ -119,7 +119,7 @@ try {
         Write-Host "Incremental builds based on modified apps is not yet implemented."
     }
 
-    if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop -and $previousAppsPath -and (Test-Path $previousAppsPath)) {
+    if ($settings.enableAppSourceCop -and $previousAppsPath -and (Test-Path $previousAppsPath)) {
         $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
         if ($previousApps.Count -gt 0) {
             # Copy previous apps to the package cache so AppSourceCop can resolve them
@@ -128,7 +128,7 @@ try {
             }
 
             # Generate AppSourceCop.json files for app folders
-            New-AppSourceCopJson -AppFolders $appFoldersToBuild -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
+            New-AppSourceCopJson -AppFolders ($settings.appFolders + $settings.testFolders) -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
         }
     }
 
