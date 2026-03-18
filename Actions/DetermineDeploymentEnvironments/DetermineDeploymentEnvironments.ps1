@@ -218,6 +218,11 @@ else {
         $ghEnvironment = $ghEnvironments | Where-Object { $_.name -eq $environmentName }
         $deploymentSettings.BranchesFromPolicy = @(Get-BranchesFromPolicy -ghEnvironment $ghEnvironment)
 
+        # If continuousDeployment is not set per-environment, check for a global continuousDeployment setting
+        if ($null -eq $deploymentSettings.continuousDeployment -and $null -ne $settings.continuousDeployment) {
+            $deploymentSettings.continuousDeployment = $settings.continuousDeployment
+        }
+
         # Include Environment if:
         # - Type is not Continous Deployment
         # - Environment is setup for Continuous Deployment (in settings)

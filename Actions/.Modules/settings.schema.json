@@ -561,6 +561,10 @@
             },
             "description": "An array of environments to be excluded from the build. See https://aka.ms/ALGoSettings#excludeenvironments"
         },
+        "continuousDeployment": {
+            "type": ["boolean", "null"],
+            "description": "Global default for continuous deployment. When set to false, disables automatic CD for all environments (overrides the name-based default, but not per-environment DeployTo<name>.ContinuousDeployment). Set to null or omit to fall back to per-environment name conventions. See https://aka.ms/ALGoSettings#continuousdeployment"
+        },
         "alDoc": {
             "type": "object",
             "properties": {
