@@ -129,7 +129,7 @@ function OutputError {
     }
     else {
         Write-Host "::Error::$($message.Replace("`r",'').Replace("`n",' '))"
-        $host.SetShouldExit(1)
+        throw $message
     }
 }
 
