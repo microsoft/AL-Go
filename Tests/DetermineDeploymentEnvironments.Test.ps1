@@ -331,4 +331,70 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $EnvironmentCount | Should -Be 0
         $UnknownEnvironment | Should -Be 0
     }
+
+    # Global continuousDeployment: false disables CD for all environments
+    It 'Test calling action directly - Global continuousDeployment=false disables CD for all environments' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
+        }
+
+        # Global continuousDeployment=false - no environments should be included in CD
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "continuousDeployment" = $false; "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+    }
+
+    # Global continuousDeployment: false does not affect Publish
+    It 'Test calling action directly - Global continuousDeployment=false does not affect Publish' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
+        }
+
+        # Global continuousDeployment=false - Publish should still include all environments
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "continuousDeployment" = $false; "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments 'test' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+    }
+
+    # Per-environment setting overrides global continuousDeployment
+    It 'Test calling action directly - Per-environment continuousDeployment overrides global setting' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
+        }
+
+        # Global=false but test environment opts back in with per-env setting
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "continuousDeployment" = $false
+            "DeployToTest" = @{ "continuousDeployment" = $true }
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress -Depth 5
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "test"
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Not -Contain "another"
+    }
+
+    # No global setting - existing name-based default behaviour is preserved
+    It 'Test calling action directly - No global continuousDeployment preserves existing name-based default' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test (PROD)"; "protection_rules" = @() }, @{ "name" = "another"; "protection_rules" = @() } ) })}
+        }
+
+        # No global continuousDeployment - PROD-tagged environment excluded, non-PROD included (existing behaviour)
+        $settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' ); "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false } }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 1
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Contain "another"
+        ($EnvironmentsMatrixJson | ConvertFrom-Json | ConvertTo-HashTable -recurse).matrix.include.environment | Should -Not -Contain "test (PROD)"
+    }
 }
