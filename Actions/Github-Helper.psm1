@@ -809,6 +809,10 @@ function DownloadRelease {
     foreach($project in $projects.Split(',')) {
         # GitHub replaces series of special characters with a single dot when uploading release assets
         $project = [Uri]::EscapeDataString($project.Replace('\','_').Replace('/','_').Replace(' ','.')).Replace('%2A','*').Replace('%3F','?').Replace('%','')
+        # When project is '.' (root), artifact names use the repo name instead
+        if ($project -eq '.') {
+            $project = $repository.Split('/')[1]
+        }
         Write-Host "project '$project'"
         # Pattern 1: project-branch-mask-version.zip (branch used for release creation cannot contain -)
         # Pattern 2: project-mask-version.zip (no branch)
