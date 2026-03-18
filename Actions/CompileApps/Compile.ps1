@@ -163,6 +163,7 @@ try {
     # Start compilation
     $appFiles = @()
     $testAppFiles = @()
+    $compilationError = $null
     try {
         if ($settings.appFolders.Count -gt 0) {
             # Compile Apps
@@ -184,8 +185,16 @@ try {
                 -AppType 'testApp'
         }
 
+    } catch {
+        # Capture the compilation error so we can re-throw after logging build output
+        $compilationError = $_
     } finally {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
+    }
+
+    # Re-throw the compilation error after build output has been logged
+    if ($compilationError) {
+        throw $compilationError
     }
 
     # OUTPUT - Write back the original dependency apps (without compiled apps) to JSON files for downstream steps.
