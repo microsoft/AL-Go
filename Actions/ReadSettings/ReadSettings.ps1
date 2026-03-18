@@ -58,7 +58,6 @@ if ($settings.versioningstrategy -ne -1) {
         }
         default {
             OutputError -message "Unknown versioning strategy $($settings.versioningStrategy)"
-            exit
         }
     }
 }
