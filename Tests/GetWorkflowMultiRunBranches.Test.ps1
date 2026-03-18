@@ -39,6 +39,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/main") }
 
             # Call the action script
@@ -54,6 +55,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
             # Call the action script
@@ -69,6 +71,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
             # Call the action script
@@ -84,6 +87,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/HEAD", "origin/main", "origin/develop", "origin/feature-1") }
 
             # Call the action script with wildcard to get all branches
@@ -103,6 +107,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = "{ 'workflowSchedule': { 'includeBranches': [] } }"
             $env:GITHUB_REF_NAME = "default-branch"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/default-branch", "origin") }
 
             # Call the action script
@@ -118,6 +123,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = "{ 'workflowSchedule': { 'includeBranches': ['test-branch'] } }"
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
             # Call the action script
@@ -133,6 +139,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = "{ 'workflowSchedule': { 'includeBranches': ['*branch*'] } }"
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
             # Call the action script
@@ -150,6 +157,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/main") }
 
             # Call the action script
@@ -165,6 +173,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
             # Call the action script
@@ -180,6 +189,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/test-branch", "origin/main", "origin/some-other-branch", "origin") }
 
             # Call the action script
@@ -195,6 +205,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = ""
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'}  -MockWith  { return @("origin/HEAD", "origin/main", "origin/develop", "origin/feature-1") }
 
             # Call the action script with wildcard to get all branches
@@ -214,6 +225,7 @@ Describe "GetWorkflowMultiRunBranches Action" {
             $env:Settings = "{ 'workflowSchedule': { 'includeBranches': ['schedule-branch'] } }"
             $env:GITHUB_REF_NAME = "main"
 
+            Mock -CommandName invoke-git -ParameterFilter { $command -eq 'fetch' } -MockWith { }
             Mock -CommandName invoke-git -ParameterFilter { $command -eq 'for-each-ref'} -MockWith { return @("origin/call-branch", "origin/schedule-branch", "origin/main") }
 
             # Parameter should override environment variable
