@@ -275,7 +275,6 @@ try {
         }
         catch {
             OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
-            exit
         }
         Write-Host "::endgroup::"
     }

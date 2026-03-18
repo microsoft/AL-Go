@@ -1366,11 +1366,9 @@ function CreateDevEnv {
         if ($caller -eq "GitHubActions") {
             if ($kind -ne "cloud") {
                 OutputError -message "Unexpected. kind=$kind, caller=$caller"
-                exit
             }
             if ($adminCenterApiCredentials.Keys.Count -eq 0) {
                 OutputError -message "You need to add a secret called AdminCenterApiCredentials containing authentication for the admin Center API."
-                exit
             }
         }
         else {
@@ -1433,7 +1431,6 @@ function CreateDevEnv {
                             $keyVaultClientIdSecret = Get-AzKeyVaultSecret -VaultName $settings.keyVaultName -Name $settings.keyVaultClientIdSecretName
                             if (-not ($keyVaultCertificatePasswordSecret) -or -not ($keyVaultClientIdSecret)) {
                                 OutputError -message "When specifying a KeyVaultCertificateUrl secret in settings, you also need to provide a KeyVaultCertificatePassword secret and a KeyVaultClientId secret"
-                                exit
                             }
                             $runAlPipelineParams += @{
                                 "KeyVaultCertPfxFile"     = $KeyVaultCertificateUrlSecret.SecretValue | Get-PlainText
@@ -1910,12 +1907,10 @@ Function AnalyzeProjectDependencies {
             }
             if (-not $resolvedTarget) {
                 OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository. Use the full project path (e.g. 'projects/MyProject')."
-                throw
             }
             # Validate that the target is not itself a test project
             if ($testProjectNames.Keys -contains $resolvedTarget) {
                 OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
-                throw
             }
             $resolvedTargets += @($resolvedTarget)
         }
