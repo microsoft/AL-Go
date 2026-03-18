@@ -18,7 +18,7 @@ try {
     if ($latestRelease) {
         Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
         New-Item $previousAppsPath -ItemType Directory -Force | Out-Null
-        DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $previousAppsPath -mask "Apps"
+        DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $previousAppsPath -mask "Apps" -unpack
         $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
         Write-Host "Downloaded $($previousApps.Count) previous release app(s)"
         Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "PreviousAppsPath=$previousAppsPath"
