@@ -2407,7 +2407,6 @@ function RunAndCheck {
     & $args[0] $rest
     $ErrorActionPreference = 'STOP'
     if ($LASTEXITCODE -ne 0) {
-        $host.SetShouldExit(0)
-        throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $LASTEXITCODE"
+        throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $exitCode"
     }
 }
