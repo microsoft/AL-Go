@@ -134,11 +134,9 @@ else {
     $response = Invoke-RestMethod -UseBasicParsing -Method Get -Uri "$environmentUrl/deployment/url"
     if ($response.Status -eq "DoesNotExist") {
         OutputError -message "Environment with name $($deploymentSettings.EnvironmentName) does not exist in the current authorization context."
-        exit
     }
     if ($response.Status -ne "Ready") {
         OutputError -message "Environment with name $($deploymentSettings.EnvironmentName) is not ready (Status is $($response.Status))."
-        exit
     }
 
     try {
@@ -218,6 +216,5 @@ else {
     }
     catch {
         OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
-        exit
     }
 }

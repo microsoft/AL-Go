@@ -113,9 +113,9 @@ function OutputColor {
 
 <#
     .SYNOPSIS
-        Write an error message to the console.
+        Write an error message to the console and throw an exception.
     .DESCRIPTION
-        Writes an error message to the console. Throws an exception if running locally, otherwise formats the message for GitHub Actions.
+        Writes an error message to the console and throws an exception. If running in GitHub Actions, the message is also formatted as an error annotation.
     .PARAMETER Message
         Message to be written to console.
 #>
@@ -124,13 +124,10 @@ function OutputError {
         [string] $message
     )
 
-    if ($runningLocal) {
-        throw $message
-    }
-    else {
+    if (!$runningLocal) {
         Write-Host "::Error::$($message.Replace("`r",'').Replace("`n",' '))"
-        throw $message
     }
+    throw $message
 }
 
 <#

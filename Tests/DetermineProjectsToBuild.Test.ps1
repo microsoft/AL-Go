@@ -1090,7 +1090,7 @@ Describe "Get-ProjectsToBuild" {
     It 'throws error when one test project depends on another test project' {
         # Project1 is a normal project, TestProject1 and TestProject2 are both test projects
         # TestProject2 tries to depend on TestProject1 — this should fail
-        Mock OutputError {} -ModuleName DetermineProjectsToBuild
+        Mock OutputError { Param([string] $message) throw $message } -ModuleName DetermineProjectsToBuild
 
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -1114,7 +1114,7 @@ Describe "Get-ProjectsToBuild" {
 
     It 'throws error when projectsToTest references nonexistent project' {
         # Project1 exists
-        Mock OutputError {} -ModuleName DetermineProjectsToBuild
+        Mock OutputError { Param([string] $message) throw $message } -ModuleName DetermineProjectsToBuild
 
         $project1AppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
