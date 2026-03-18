@@ -21,7 +21,7 @@ on:
         default: ''
   workflow_call:
     inputs:
-      __caller:
+      caller:
         description: Name of the calling workflow (use github.workflow as value when calling)
         type: string
         required: true
@@ -54,7 +54,7 @@ defaults:
     shell: powershell
 
 env:
-  WorkflowEventName: ${{ inputs.__caller && 'workflow_call' || github.event_name }}
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
