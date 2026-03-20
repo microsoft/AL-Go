@@ -119,12 +119,9 @@ Whenever AL-Go for GitHub deploys to an environment, it needs an AuthContext sec
 > [!WARNING]
 > **Multi-environment and multi-tenant repos:** If neither `<EnvironmentName>-AuthContext` nor `<EnvironmentName>_AuthContext` resolves to a value, AL-Go **silently falls back** to the generic `AuthContext` secret. The workflow log will only show `Using AuthContext secret as AuthContext` — no warning is emitted that a per-environment secret was expected but not found. In repositories with multiple environments (for example, different customer tenants), this means a missing per-environment secret will cause all environments to deploy using the same shared credentials, which may not be the intended behavior. Ensure all environments that require credential isolation have a per-environment `<EnvironmentName>-AuthContext` or `<EnvironmentName>_AuthContext` secret defined.
 
-> [!NOTE]
-> **GitHub Environment secrets scope:** GitHub Actions only injects environment-scoped secrets into jobs that explicitly declare an `environment:` property. The `AuthContext` resolution in the **Initialization job** (which performs the auth check before deployment) does **not** have an `environment:` property set. This means an `AUTHCONTEXT` secret defined as a **GitHub Environment secret** will not be visible to the auth-check step in the Initialization job. To ensure the AuthContext secret is found during initialization, define it as a **repository secret** or **organization secret** using the per-environment naming convention (`<EnvironmentName>-AuthContext` or `<EnvironmentName>_AuthContext`), rather than as a GitHub Environment secret named `AUTHCONTEXT`.
-
 The AuthContext secret can be provided in the following ways:
 
-- As a **GitHub Environment secret** named `AUTHCONTEXT` under the environment (note the scope limitation above — this is available in the deploy job but not the initialization auth-check)
+- As a **GitHub Environment secret** named `AUTHCONTEXT` under the environment (available in the deploy job when targeting that GitHub Environment)
 - As a **repository or organization secret** named `<EnvironmentName>-AuthContext` or `<EnvironmentName>_AuthContext` (recommended for per-environment isolation)
 - As a **repository or organization secret** named `AuthContext` (generic fallback for all environments)
 
