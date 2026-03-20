@@ -554,6 +554,11 @@
             },
             "description": "An array of environments to be excluded from the build. See https://aka.ms/ALGoSettings#excludeenvironments"
         },
+        "noMatchingEnvironmentsAction": {
+            "type": "string",
+            "pattern": "^(ignore|warning|error)$",
+            "description": "Specifies what happens when deployment environments are found but all are excluded by branch policies or deployment type filters. Allowed values are ignore, warning and error. See https://aka.ms/ALGoSettings#nomatchingenvironmentsaction"
+        },
         "alDoc": {
             "type": "object",
             "properties": {
