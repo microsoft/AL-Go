@@ -142,7 +142,7 @@ Describe "ALSourceParser - Get-ALExecutableLines" {
             }
 
             if ($commentLineNum -gt 0) {
-                \$result.ExecutableLineNumbers | Should -Not -Contain $commentLineNum
+                $result.ExecutableLineNumbers | Should -Not -Contain $commentLineNum
             }
         }
 
@@ -154,7 +154,7 @@ Describe "ALSourceParser - Get-ALExecutableLines" {
             $allLines = ($content -split "`n").Count
 
             # Executable lines should be less than total lines (some empty/comments)
-            \$result.ExecutableLineNumbers.Count | Should -BeLessThan $allLines
+            $result.ExecutableLineNumbers.Count | Should -BeLessThan $allLines
         }
 
         It "Should include assignment statements" {
@@ -164,7 +164,7 @@ Describe "ALSourceParser - Get-ALExecutableLines" {
             $result = Get-ALExecutableLines -Content $content
 
             # Should have found the assignment "myVar := 10;"
-            \$result.ExecutableLineNumbers.Count | Should -BeGreaterThan 5
+            $result.ExecutableLineNumbers.Count | Should -BeGreaterThan 5
         }
 
         It "Should include control flow statements" {
@@ -174,7 +174,7 @@ Describe "ALSourceParser - Get-ALExecutableLines" {
             $result = Get-ALExecutableLines -Content $content
 
             # Complex file has repeat/until, if statements
-            \$result.ExecutableLineNumbers.Count | Should -BeGreaterThan 10
+            $result.ExecutableLineNumbers.Count | Should -BeGreaterThan 10
         }
     }
 
@@ -196,7 +196,7 @@ Describe "ALSourceParser - Get-ALExecutableLines" {
             }
 
             if ($varLineNum -gt 0) {
-                \$result.ExecutableLineNumbers | Should -Not -Contain $varLineNum
+                $result.ExecutableLineNumbers | Should -Not -Contain $varLineNum
             }
         }
 
