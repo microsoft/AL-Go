@@ -1,8 +1,8 @@
 ﻿$githubOwner = "githubOwner"
 $token = "DefaultToken"
 $defaultRepository = "repo"
-$defaultApplication = "22.0.0.0"
-$defaultRuntime = "10.0"
+$defaultApplication = "27.0.0.0"
+$defaultRuntime = "16.0"
 $defaultPublisher = "MS Test"
 $lastTokenRefresh = 0
 
@@ -356,7 +356,6 @@ function CreateNewAppInFolder {
         "publisher" = $publisher
         "dependencies" = $dependencies
         "application" = $application
-        "runtime" = $runtime
         "idRanges" = @( @{ "from" = $objID; "to" = $objID } )
         "resourceExposurePolicy" = @{ "allowDebugging" = $true; "allowDownloadingSource" = $true; "includeSourceInSymbolFile" = $true }
     }
