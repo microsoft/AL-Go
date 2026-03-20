@@ -331,4 +331,67 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $EnvironmentCount | Should -Be 0
         $UnknownEnvironment | Should -Be 0
     }
+
+    # noMatchingEnvironmentsAction = ignore (default) - should succeed silently when all environments are filtered out by branch policy
+    It 'Test calling action directly - noMatchingEnvironmentsAction ignore should succeed silently' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "ignore"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should succeed silently with 0 environments
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+    }
+
+    # noMatchingEnvironmentsAction = warning - should succeed with a warning when all environments are filtered out by branch policy
+    It 'Test calling action directly - noMatchingEnvironmentsAction warning should output warning' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "warning"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should succeed but output a warning
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' 3>&1 -WarningVariable warningOutput | Out-Null
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+        # Verify the warning was emitted (OutputWarning writes to warning stream when running locally)
+        $warningOutput | Should -Match "No environments matched deployment criteria"
+    }
+
+    # noMatchingEnvironmentsAction = error - should throw when all environments are filtered out by branch policy
+    It 'Test calling action directly - noMatchingEnvironmentsAction error should throw' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "error"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should throw with a clear error message
+        { . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' } | Should -Throw "*No environments matched deployment criteria*"
+    }
 }
