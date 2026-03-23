@@ -121,13 +121,18 @@ function OutputColor {
 #>
 function OutputError {
     Param(
-        [string] $message
+        [string] $message,
+        [switch] $NoThrow
     )
 
-    if (!$runningLocal) {
+    if ($runningLocal) {
+        Write-Host "$message" -ForegroundColor Red
+    } else {
         Write-Host "::Error::$($message.Replace("`r",'').Replace("`n",' '))"
     }
-    throw $message
+    if (!$NoThrow) {
+        throw $message
+    }
 }
 
 <#
