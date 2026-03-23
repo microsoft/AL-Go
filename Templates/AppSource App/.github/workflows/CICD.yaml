@@ -204,7 +204,6 @@ jobs:
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       signArtifacts: true
       useArtifactCache: true
-      needsContext:  ${{ toJson(needs) }}
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
