@@ -106,7 +106,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
 
       - name: Determine whether to build project
         id: DetermineBuildProject
@@ -162,6 +162,23 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+
+      - name: Compile Apps
+        id: compile
+        uses: microsoft/AL-Go-Actions/CompileApps@main
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && fromJson(env.workspaceCompilation).enabled == true
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+          BuildMode: ${{ inputs.buildMode }}
+        with:
+          shell: ${{ inputs.shell }}
+          artifact: ${{ env.artifact }}
+          project: ${{ inputs.project }}
+          buildMode: ${{ inputs.buildMode }}
+          dependencyAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+          dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+          baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+          baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
 
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main

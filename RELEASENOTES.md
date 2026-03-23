@@ -1,3 +1,51 @@
+### Added support for workspace compilation
+
+With v28 of Business Central, the ALTool now also provides the ability to compile workspaces of apps. This has the added advantage that the ALTool can compute the dependency graph for the apps in the workspace and compile apps in parallel (if possible). For AL-Go projects with large amounts of apps that can save a lot of time. If you want to try this out you can enable it via the following setting
+
+```json
+  "workspaceCompilation": {
+    "enabled": true
+  }
+```
+
+By default apps are compiled sequentially but this can be changed via the parallelism property. This allows you to configure the maximum amount of parallel compilation processes. Set to 0 or -1 to use all available processors.
+
+```json
+  "workspaceCompilation": {
+    "enabled": true,
+    "parallelism": 4
+  }
+```
+
+### Test Projects — split builds and tests for faster feedback
+
+AL-Go now supports **test projects**: a new project type that separates test execution from compilation. A test project does not build any apps itself — instead it depends on one or more regular projects, installs the apps they produce, and runs tests against them.
+
+This lets you re-run tests without waiting for a full recompilation, and makes it easy to organize large repositories where builds and test suites have different scopes or cadences.
+
+**Getting started**
+
+Add a `projectsToTest` setting to the project-level `.AL-Go/settings.json` of an empty project (no `appFolders` or `testFolders`):
+
+```json
+{
+  "projectsToTest": ["build/projects/MyProject"]
+}
+```
+
+AL-Go will automatically:
+
+- Resolve the dependency so the test project always builds after its target project(s).
+- Install the Test Runner, Test Framework, and Test Libraries into the container.
+- Run all tests from the installed test apps.
+
+**Key rules**
+
+- A test project must **not** contain buildable code (no `appFolders`, `testFolders`, or `bcptTestFolders`). AL-Go will fail with a clear error if it detects both `projectsToTest` and buildable folders.
+- A test project cannot depend on another test project.
+- You can target multiple projects: `"projectsToTest": ["build/projects/ProjectA", "build/projects/ProjectB"]`.
+- Use full project paths as they appear in the repository.
+
 ### Improving error detection and build reliability when downloading project dependencies
 
 The `DownloadProjectDependencies` action now downloads app files from URLs specified in the `installApps` and `installTestApps` settings upfront, rather than validating URLs at build time. This change provides:
@@ -21,6 +69,7 @@ The new setting `postponeProjectInBuildOrder` allows you to delay long running j
 - Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
 - Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
 - Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
+- Rework input handling of workflow 'Update AL-Go System Files' for trigger 'workflow_call'
 
 ### New Settings
 
