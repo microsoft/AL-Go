@@ -186,10 +186,13 @@ jobs:
       - name: Save needs context to file
         if: inputs.needsContext != '{}'
         shell: ${{ inputs.shell }}
-        env:
-          NEEDS_CONTEXT: ${{ inputs.needsContext }}
         run: |
-          [System.IO.File]::WriteAllText((Join-Path $ENV:RUNNER_TEMP 'needsContext.json'), $ENV:NEEDS_CONTEXT)
+          $nc = @'
+          ${{ inputs.needsContext }}
+          '@
+          $needsContextPath = Join-Path $ENV:RUNNER_TEMP 'needsContext.json'
+          [System.IO.File]::WriteAllText($needsContextPath, $nc.Trim())
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "NeedsContext=$needsContextPath"
 
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
@@ -197,6 +200,7 @@ jobs:
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
+          NeedsContext: ${{ env.NeedsContext }}
         with:
           shell: ${{ inputs.shell }}
           artifact: ${{ env.artifact }}
