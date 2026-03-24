@@ -1,0 +1,57 @@
+name: 'TRASER Nightly Tests'
+
+on:
+  schedule:
+    - cron: '0 3 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+defaults:
+  run:
+    shell: powershell
+
+jobs:
+  Test:
+    runs-on: [ self-hosted, windows ]
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read settings
+        id: settings
+        run: |
+          $s = Get-Content ".AL-Go/settings.json" -Encoding UTF8 | ConvertFrom-Json
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "country=$($s.country)"
+
+      - name: Run Nightly Tests
+        env:
+          BC_LICENSE_URL: ${{ secrets.BC_LICENSE_FILE_URL }}
+          BAK_FOLDER: ${{ vars.BAK_FOLDER_MASTER }}
+          CONTAINER_PASSWORD: ${{ secrets.BC_CONTAINER_PASSWORD }}
+        run: |
+          $cn = "test-$([Guid]::NewGuid().ToString().Substring(0, 8))"
+          $cred = New-Object PSCredential 'admin' (ConvertTo-SecureString $ENV:CONTAINER_PASSWORD -AsPlainText -Force)
+          try {
+            $url = Get-BCArtifactUrl -type OnPrem -country ${{ steps.settings.outputs.country }} -select Latest
+            New-BcContainer -accept_eula -containerName $cn -artifactUrl $url -credential $cred `
+              -auth NavUserPassword -licenseFile $ENV:BC_LICENSE_URL -includeTestToolkit -includeTestLibrariesOnly `
+              -accept_outdated -updateHosts -bakFolder $ENV:BAK_FOLDER
+
+            $testResults = Join-Path $ENV:GITHUB_WORKSPACE "TestResults.xml"
+            Run-TestsInBCContainer -containerName $cn -credential $cred -XUnitResultFileName $testResults
+          } finally {
+            if (Test-BcContainer -containerName $cn) { Remove-BcContainer -containerName $cn }
+          }
+
+      - name: Publish Test Results
+        if: always()
+        uses: dorny/test-reporter@v2
+        with:
+          name: 'Nightly Tests'
+          path: TestResults.xml
+          reporter: java-junit
+          fail-on-error: false

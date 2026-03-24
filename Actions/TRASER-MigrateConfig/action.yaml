@@ -1,0 +1,22 @@
+name: 'TRASER Migrate Config'
+description: 'Migrates legacy config.json to AL-Go settings.json.'
+inputs:
+  config-path:
+    required: false
+    default: './config.json'
+  output-path:
+    required: false
+    default: './.AL-Go/settings.json'
+  main-branch-strategy:
+    required: false
+    default: 'master'
+runs:
+  using: 'composite'
+  steps:
+    - name: Migrate
+      shell: powershell
+      run: |
+        & "${{ github.action_path }}/MigrateConfig.ps1" `
+          -ConfigJsonPath "${{ inputs.config-path }}" `
+          -OutputPath "${{ inputs.output-path }}" `
+          -MainBranchDependencyStrategy "${{ inputs.main-branch-strategy }}"

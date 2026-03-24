@@ -1,7 +1,41 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/main/.Modules/settings.schema.json",
-  "country": "us",
+  "country": "de",
   "appFolders": [],
   "testFolders": [],
-  "bcptTestFolders": []
+  "bcptTestFolders": [],
+  "gitHubRunner": "[ self-hosted, windows ]",
+  "gitHubRunnerShell": "powershell",
+  "CICDPushBranches": [ "main", "staging", "release/*", "feature/*" ],
+  "CICDPullRequestTargetBranches": [ "main", "staging", "release/*" ],
+  "environments": [ "Internal-Master", "Internal-Staging" ],
+  "DeployToInternal-Master": {
+    "branches": [ "main" ],
+    "environmentName": "Internal-Master",
+    "ContinuousDeployment": true,
+    "runs-on": "[ self-hosted, windows ]"
+  },
+  "DeployToInternal-Staging": {
+    "branches": [ "staging" ],
+    "environmentName": "Internal-Staging",
+    "ContinuousDeployment": true,
+    "runs-on": "[ self-hosted, windows ]"
+  },
+  "trustedNuGetFeeds": [
+    { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-runtime/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" }
+  ],
+  "ConditionalSettings": [
+    { "branches": [ "staging" ], "settings": { "versioningStrategy": 0, "trustedNuGetFeeds": [
+      { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-staging/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" },
+      { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-runtime/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" }
+    ] } },
+    { "branches": [ "main" ], "settings": { "trustedNuGetFeeds": [
+      { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-master/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" },
+      { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-runtime/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" }
+    ] } },
+    { "branches": [ "release/*" ], "settings": { "trustedNuGetFeeds": [
+      { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-release/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" },
+      { "url": "https://pkgs.dev.azure.com/TRASERSoftwareGmbH/57865e76-6f0b-4dd0-967d-d899bfd89907/_packaging/bc-runtime/nuget/v3/index.json", "authTokenSecret": "NUGET_TOKEN" }
+    ] } }
+  ]
 }

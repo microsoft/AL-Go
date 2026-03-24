@@ -1,0 +1,94 @@
+name: 'TRASER PR Container'
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+defaults:
+  run:
+    shell: powershell
+
+jobs:
+  PRContainer:
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/container'))
+    runs-on: [ self-hosted, windows ]
+    timeout-minutes: 120
+    steps:
+      - name: Determine action
+        id: action
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            [ "${{ github.event.action }}" == "closed" ] && echo "action=remove" >> $GITHUB_OUTPUT || echo "action=deploy" >> $GITHUB_OUTPUT
+            echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "action=$(echo '${{ github.event.comment.body }}' | awk '{print $2}')" >> $GITHUB_OUTPUT
+            echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout
+        if: steps.action.outputs.action == 'deploy'
+        uses: actions/checkout@v4
+
+      - name: Deploy PR Container
+        if: steps.action.outputs.action == 'deploy'
+        env:
+          CONTAINER_PASSWORD: ${{ secrets.BC_CONTAINER_PASSWORD }}
+          BC_LICENSE_URL: ${{ secrets.BC_LICENSE_FILE_URL }}
+          BAK_FOLDER: ${{ github.base_ref == 'staging' && vars.BAK_FOLDER_STAGING || vars.BAK_FOLDER_MASTER }}
+          TRAEFIK_DOMAIN: ${{ vars.TRAEFIK_DOMAIN }}
+        run: |
+          $cn = "pr${{ steps.action.outputs.pr-number }}"
+          $cred = New-Object PSCredential 'admin' (ConvertTo-SecureString $ENV:CONTAINER_PASSWORD -AsPlainText -Force)
+
+          if (Test-BcContainer -containerName $cn) {
+            Start-BcContainer -containerName $cn
+            Import-BcContainerLicense -containerName $cn -licenseFile $ENV:BC_LICENSE_URL
+            Get-BcContainerAppInfo -containerName $cn | Where-Object { $_.Publisher -eq "TRASER Software GmbH" } | ForEach-Object {
+              UnInstall-BcContainerApp -containerName $cn -name $_.Name -Force
+              UnPublish-BcContainerApp -containerName $cn -name $_.Name
+            }
+          } else {
+            $settings = Get-Content ".AL-Go/settings.json" -Encoding UTF8 | ConvertFrom-Json
+            $url = Get-BCArtifactUrl -type OnPrem -country $settings.country -select Latest
+            New-BcContainer -accept_eula -containerName $cn -artifactUrl $url -credential $cred `
+              -auth NavUserPassword -licenseFile $ENV:BC_LICENSE_URL -includeTestToolkit -includeTestLibrariesOnly `
+              -accept_outdated -updateHosts -useTraefik -PublicDnsName $ENV:TRAEFIK_DOMAIN -bakFolder $ENV:BAK_FOLDER
+          }
+          Write-Host "PR container ready: https://pr${{ steps.action.outputs.pr-number }}.${{ vars.TRAEFIK_DOMAIN }}/BC/"
+
+      - name: Post PR Comment
+        if: steps.action.outputs.action == 'deploy' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ steps.action.outputs.pr-number }},
+              owner: context.repo.owner, repo: context.repo.repo,
+              body: 'PR Container ready: https://pr${{ steps.action.outputs.pr-number }}.${{ vars.TRAEFIK_DOMAIN }}/BC/'
+            })
+
+      - name: Remove PR Container
+        if: steps.action.outputs.action == 'remove'
+        run: |
+          $cn = "pr${{ steps.action.outputs.pr-number }}"
+          if (Test-BcContainer -containerName $cn) { Remove-BcContainer -containerName $cn }
+
+      - name: Stop/Start/Restart PR Container
+        if: contains(fromJson('["stop","start","restart"]'), steps.action.outputs.action)
+        run: |
+          $cn = "pr${{ steps.action.outputs.pr-number }}"
+          switch ("${{ steps.action.outputs.action }}") {
+            "stop"    { Stop-BcContainer -containerName $cn }
+            "start"   { Start-BcContainer -containerName $cn }
+            "restart" { Restart-BcContainer -containerName $cn }
+          }

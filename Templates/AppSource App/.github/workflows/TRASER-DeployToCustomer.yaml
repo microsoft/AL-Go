@@ -1,0 +1,46 @@
+name: 'TRASER Deploy to Customer'
+
+on:
+  workflow_dispatch:
+    inputs:
+      customer:
+        description: 'Customer environment name (GitHub Environment)'
+        required: true
+        type: string
+      version:
+        description: 'Release version to deploy (tag name)'
+        required: true
+        type: string
+      syncMode:
+        description: 'Sync mode'
+        required: false
+        type: choice
+        options: [ Add, ForceSync ]
+        default: Add
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: powershell
+
+jobs:
+  Deploy:
+    environment: ${{ inputs.customer }}
+    runs-on: [ self-hosted, windows ]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Deploy to customer
+        uses: microsoft/AL-Go-Actions/TRASER-DeployToCustomer@main
+        with:
+          server-instance: ${{ secrets.SERVER_INSTANCE }}
+          artifacts-folder: ./artifacts
+          nuget-token: ${{ secrets.NUGET_TOKEN }}
+          sync-mode: ${{ inputs.syncMode }}
+          target-bc-version: ${{ secrets.BC_VERSION }}

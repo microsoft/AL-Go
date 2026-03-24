@@ -1,0 +1,80 @@
+name: 'TRASER Nightly Backup'
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      bcVersion:
+        description: 'BC version override (leave empty for default)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: powershell
+
+jobs:
+  Backup:
+    runs-on: [ self-hosted, windows ]
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - branch: main
+            bakVar: BAK_FOLDER_MASTER
+          - branch: staging
+            bakVar: BAK_FOLDER_STAGING
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - name: Read settings
+        id: settings
+        run: |
+          $settings = Get-Content ".AL-Go/settings.json" -Encoding UTF8 | ConvertFrom-Json
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "country=$($settings.country)"
+
+      - name: Create Nightly Backup
+        env:
+          BC_LICENSE_URL: ${{ secrets.BC_LICENSE_FILE_URL }}
+          BAK_FOLDER: ${{ vars[matrix.bakVar] }}
+          CONTAINER_PASSWORD: ${{ secrets.BC_CONTAINER_PASSWORD }}
+        run: |
+          $containerName = "nightly-bak-${{ matrix.branch }}"
+          $bakFolder = $ENV:BAK_FOLDER
+          if (-not $bakFolder) { Write-Warning "No BAK folder for ${{ matrix.branch }}"; return }
+
+          if (Test-BcContainer -containerName $containerName) { Remove-BcContainer -containerName $containerName }
+
+          $credential = New-Object PSCredential 'admin' (ConvertTo-SecureString $ENV:CONTAINER_PASSWORD -AsPlainText -Force)
+          $artifactUrl = Get-BCArtifactUrl -type OnPrem -country ${{ steps.settings.outputs.country }} -select Latest
+          if ("${{ inputs.bcVersion }}" -ne "") {
+            $artifactUrl = Get-BCArtifactUrl -type OnPrem -country ${{ steps.settings.outputs.country }} -version "${{ inputs.bcVersion }}" -select Latest
+          }
+
+          New-BcContainer -accept_eula -containerName $containerName -artifactUrl $artifactUrl -credential $credential `
+            -auth NavUserPassword -licenseFile $ENV:BC_LICENSE_URL -includeTestToolkit -includeTestLibrariesOnly `
+            -accept_outdated -updateHosts
+
+          New-Item -ItemType Directory -Path $bakFolder -Force | Out-Null
+          Backup-BcContainerDatabases -containerName $containerName -bakFolder $bakFolder
+
+          @{ createdAt = (Get-Date -Format "o"); branch = "${{ matrix.branch }}" } | ConvertTo-Json |
+            Set-Content -Path (Join-Path $bakFolder "metadata.json") -Encoding UTF8
+
+          Remove-BcContainer -containerName $containerName
+
+      - name: Apply retention policy
+        env:
+          BAK_FOLDER: ${{ vars[matrix.bakVar] }}
+        run: |
+          $bak = $ENV:BAK_FOLDER
+          if (-not $bak -or -not (Test-Path $bak)) { return }
+          Get-ChildItem $bak -Filter "*.bak" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } | Remove-Item -Force

@@ -1,0 +1,21 @@
+name: 'TRASER Dependency Tree'
+description: 'Resolves app dependency ordering for correct installation sequence.'
+inputs:
+  apps-folder:
+    description: 'Path to folder containing .app files'
+    required: true
+outputs:
+  ordered-apps-json:
+    description: 'JSON array of app paths in dependency order'
+    value: ${{ steps.resolve.outputs.result }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve
+      id: resolve
+      shell: powershell
+      run: |
+        . "${{ github.action_path }}/DependencyTreeHelper.ps1"
+        $result = Get-AppDependencyTree -Path "${{ inputs.apps-folder }}"
+        $json = $result | Select-Object Name, Version, Path, ProcessOrder | ConvertTo-Json -Compress
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "result=$json"

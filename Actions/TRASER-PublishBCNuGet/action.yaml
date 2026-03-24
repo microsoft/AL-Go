@@ -1,0 +1,41 @@
+name: 'TRASER Publish BC NuGet'
+description: 'Publishes BC apps to TRASER NuGet feeds with multi-feed routing and runtime dual-publishing.'
+inputs:
+  artifacts-folder:
+    description: 'Path to compiled .app files'
+    required: true
+  nuget-token:
+    description: 'NuGet feed authentication token'
+    required: true
+  release-type:
+    description: 'Release type (auto-detected from branch if empty)'
+    required: false
+    default: ''
+  runtime-package:
+    description: 'Publish as runtime packages'
+    required: false
+    default: 'false'
+  runtime-bc-version:
+    description: 'BC version for runtime packages'
+    required: false
+    default: ''
+  runtime-valid-for:
+    description: 'Runtime version range: major or minor'
+    required: false
+    default: 'major'
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish to NuGet
+      shell: powershell
+      env:
+        NUGET_TOKEN: ${{ inputs.nuget-token }}
+      run: |
+        . "${{ github.action_path }}/../TRASER-NuGetHelper/NuGetHelper.ps1"
+        & "${{ github.action_path }}/Publish-BCNuGet.ps1" `
+          -ArtifactsFolder "${{ inputs.artifacts-folder }}" `
+          -NuGetToken $ENV:NUGET_TOKEN `
+          -ReleaseType "${{ inputs.release-type }}" `
+          -RuntimePackage:([bool]::Parse("${{ inputs.runtime-package }}")) `
+          -RuntimeBCVersion "${{ inputs.runtime-bc-version }}" `
+          -RuntimeValidFor "${{ inputs.runtime-valid-for }}"

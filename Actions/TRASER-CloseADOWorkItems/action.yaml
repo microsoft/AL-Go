@@ -1,0 +1,41 @@
+name: 'TRASER Close ADO Work Items'
+description: 'Transitions ADO work items from Release Pending to Done on GitHub release.'
+inputs:
+  ado-organization:
+    description: 'Azure DevOps organization'
+    required: true
+  ado-project:
+    description: 'Azure DevOps project'
+    required: true
+  ado-token:
+    description: 'ADO PAT with work item write'
+    required: true
+  from-tag:
+    description: 'Previous release tag'
+    required: true
+  to-tag:
+    description: 'Current release tag'
+    required: true
+  source-state:
+    required: false
+    default: 'Release Pending'
+  target-state:
+    required: false
+    default: 'Done'
+runs:
+  using: 'composite'
+  steps:
+    - name: Close work items
+      shell: powershell
+      env:
+        ADO_TOKEN: ${{ inputs.ado-token }}
+      run: |
+        & "${{ github.action_path }}/CloseADOWorkItems.ps1" `
+          -Organization "${{ inputs.ado-organization }}" `
+          -Project "${{ inputs.ado-project }}" `
+          -Token $ENV:ADO_TOKEN `
+          -FromTag "${{ inputs.from-tag }}" `
+          -ToTag "${{ inputs.to-tag }}" `
+          -SourceState "${{ inputs.source-state }}" `
+          -TargetState "${{ inputs.target-state }}" `
+          -ReleaseUrl "${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.to-tag }}"

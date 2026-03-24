@@ -1,0 +1,36 @@
+name: 'TRASER Package BC Product'
+description: 'Creates SaaS and runtime distribution zip packages.'
+inputs:
+  artifacts-folder:
+    description: 'Path to compiled .app files'
+    required: true
+  output:
+    description: 'Output directory'
+    required: true
+  target-bc-version:
+    description: 'BC version for runtime variant'
+    required: false
+    default: ''
+  target-bc-country:
+    description: 'Country code'
+    required: false
+    default: 'w1'
+outputs:
+  saas-package:
+    description: 'Path to SaaS zip'
+    value: ${{ steps.pkg.outputs.saas-package }}
+  runtime-package:
+    description: 'Path to runtime zip'
+    value: ${{ steps.pkg.outputs.runtime-package }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Package
+      id: pkg
+      shell: powershell
+      run: |
+        & "${{ github.action_path }}/PackageBCProduct.ps1" `
+          -ArtifactsFolder "${{ inputs.artifacts-folder }}" `
+          -Output "${{ inputs.output }}" `
+          -TargetBCVersion "${{ inputs.target-bc-version }}" `
+          -TargetBCCountry "${{ inputs.target-bc-country }}"

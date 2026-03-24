@@ -1,0 +1,27 @@
+name: 'TRASER NuGet Helper'
+description: 'TRASER NuGet feed routing, package naming, and version range management.'
+inputs:
+  release-type:
+    description: 'Release type (auto-detected from branch if empty)'
+    required: false
+    default: ''
+outputs:
+  feed-url:
+    description: 'Resolved NuGet feed URL'
+    value: ${{ steps.resolve.outputs.feed-url }}
+  release-type:
+    description: 'Detected release type'
+    value: ${{ steps.resolve.outputs.release-type }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve NuGet feed
+      id: resolve
+      shell: powershell
+      run: |
+        . "${{ github.action_path }}/NuGetHelper.ps1"
+        $rt = "${{ inputs.release-type }}"
+        if (-not $rt) { $rt = Get-ReleaseTypeFromBranch }
+        $feedUrl = Get-TRASERNuGetFeed -ReleaseType $rt
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "feed-url=$feedUrl"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "release-type=$rt"

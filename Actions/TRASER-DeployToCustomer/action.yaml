@@ -1,0 +1,45 @@
+name: 'TRASER Deploy to Customer'
+description: 'Deploys BC apps to on-premise customer servers with multi-tenant support and dependency ordering.'
+inputs:
+  server-instance:
+    description: 'BC Server instance name'
+    required: true
+  artifacts-folder:
+    description: 'Path to .app files'
+    required: true
+  nuget-token:
+    description: 'NuGet feed token'
+    required: true
+  sync-mode:
+    description: 'Sync mode: Add, Development, or ForceSync'
+    required: false
+    default: 'Add'
+  target-bc-version:
+    description: 'Target BC version'
+    required: false
+    default: ''
+  target-bc-country:
+    description: 'Target country code'
+    required: false
+    default: 'w1'
+  tenant:
+    description: 'Specific tenant (empty for all)'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Deploy
+      shell: powershell
+      env:
+        NUGET_TOKEN: ${{ inputs.nuget-token }}
+      run: |
+        . "${{ github.action_path }}/../TRASER-DependencyTree/DependencyTreeHelper.ps1"
+        . "${{ github.action_path }}/../TRASER-NuGetHelper/NuGetHelper.ps1"
+        & "${{ github.action_path }}/DeployToBCCustomer.ps1" `
+          -ServerInstance "${{ inputs.server-instance }}" `
+          -ArtifactsFolder "${{ inputs.artifacts-folder }}" `
+          -NuGetToken $ENV:NUGET_TOKEN `
+          -SyncMode "${{ inputs.sync-mode }}" `
+          -TargetBCVersion "${{ inputs.target-bc-version }}" `
+          -Tenant "${{ inputs.tenant }}"
