@@ -185,7 +185,6 @@ jobs:
 
       - name: Save needs context to file
         if: inputs.needsContext != '{}'
-        shell: ${{ inputs.shell }}
         run: |
           $nc = @'
           ${{ inputs.needsContext }}
