@@ -73,7 +73,10 @@ on:
         description: Flag determining whether to use the Artifacts Cache
         type: boolean
         default: false
-
+      needsContext:
+        description: JSON formatted needs context
+        type: string
+        default: '{}'
 
 permissions:
   actions: read
@@ -179,6 +182,14 @@ jobs:
           dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+
+      - name: Save needs context to file
+        if: inputs.needsContext != '{}'
+        shell: ${{ inputs.shell }}
+        env:
+          NEEDS_CONTEXT: ${{ inputs.needsContext }}
+        run: |
+          [System.IO.File]::WriteAllText((Join-Path $ENV:RUNNER_TEMP 'needsContext.json'), $ENV:NEEDS_CONTEXT)
 
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main

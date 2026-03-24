@@ -115,6 +115,7 @@ jobs:
       artifactsRetentionDays: ${{ fromJson(needs.Initialization.outputs.artifactsRetentionDays) }}
       artifactsNameSuffix: 'PR${{ github.event.number }}'
       useArtifactCache: true
+      needsContext:  ${{ toJson(needs) }}
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
