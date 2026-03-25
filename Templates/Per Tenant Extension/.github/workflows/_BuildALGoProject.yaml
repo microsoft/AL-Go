@@ -183,13 +183,23 @@ jobs:
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
 
+      - name: Save needs context to file
+        shell: pwsh
+        run: |
+          $nc = @'
+          ${{ inputs.needsContext }}
+          '@
+          $needsContextPath = Join-Path $ENV:RUNNER_TEMP 'needsContext.json'
+          [System.IO.File]::WriteAllText($needsContextPath, $nc.Trim())
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "NeedsContext=$needsContextPath"
+
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
-          NeedsContext: ${{ inputs.needsContext }}
+          NeedsContext: ${{ env.NeedsContext }}
         with:
           shell: ${{ inputs.shell }}
           artifact: ${{ env.artifact }}
