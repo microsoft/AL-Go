@@ -867,7 +867,6 @@ function New-AppSourceCopJson {
         [Parameter(Mandatory = $true)]
         [string[]] $AppFolders,
         [Parameter(Mandatory = $true)]
-        [AllowEmptyCollection()]
         [string[]] $PreviousApps,
         [Parameter(Mandatory = $true)]
         [string] $CompilerFolder,
@@ -883,7 +882,6 @@ function New-AppSourceCopJson {
             $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json
             $key = "$($appInfo.Publisher)_$($appInfo.Name)"
             $previousAppVersions[$key] = $appInfo.Version.ToString()
-            Write-Host "$key = $($appInfo.Version.ToString())"
         }
         catch {
             OutputWarning -message "Failed to read manifest from '$appFile': $($_.Exception.Message)"

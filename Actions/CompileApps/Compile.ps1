@@ -128,7 +128,7 @@ try {
             }
 
             # Generate AppSourceCop.json files for app folders
-            New-AppSourceCopJson -AppFolders ($settings.appFolders + $settings.testFolders) -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
+            New-AppSourceCopJson -AppFolders $settings.appFolders -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
         }
     }
 
