@@ -888,18 +888,19 @@ function New-AppSourceCopJson {
         }
     }
 
+    # Create AppSourceCop.json for each app folder with the previous version as baseline and settings from the project configuration
     foreach ($folder in $AppFolders) {
+        $appSourceCopJsonFile = Join-Path $folder "AppSourceCop.json"
         $appSourceCopJson = @{}
-        $saveIt = $false
 
+        # Set mandatory affixes if specified in settings
         if ($Settings.appSourceCopMandatoryAffixes -and $Settings.appSourceCopMandatoryAffixes.Count -gt 0) {
             $appSourceCopJson["mandatoryAffixes"] = @() + $Settings.appSourceCopMandatoryAffixes
-            $saveIt = $true
         }
 
+        # Set obsolete tag minimum allowed major.minor version if specified in settings
         if ($Settings.obsoleteTagMinAllowedMajorMinor) {
             $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
-            $saveIt = $true
         }
 
         # Match previous app version by Publisher_Name
@@ -911,19 +912,15 @@ function New-AppSourceCopJson {
                 $appSourceCopJson["Publisher"] = $appJson.Publisher
                 $appSourceCopJson["Name"] = $appJson.Name
                 $appSourceCopJson["Version"] = $previousAppVersions[$key]
-                $saveIt = $true
             }
         }
 
-        $appSourceCopJsonFile = Join-Path $folder "AppSourceCop.json"
-        if ($saveIt) {
+        if ($appSourceCopJson.Count -gt 0) {
             Write-Host "Creating AppSourceCop.json for $folder"
             $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content $appSourceCopJsonFile
         }
-        else {
-            if (Test-Path $appSourceCopJsonFile) {
-                Remove-Item $appSourceCopJsonFile -Force
-            }
+        elseif (Test-Path $appSourceCopJsonFile) {
+            Remove-Item $appSourceCopJsonFile -Force
         }
     }
 }
