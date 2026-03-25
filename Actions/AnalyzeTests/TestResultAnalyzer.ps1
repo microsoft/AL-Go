@@ -339,7 +339,6 @@ function GetBcptSummaryMD {
     $totalPassed = 0
     $totalFailed = 0
     $totalSkipped = 0
-    $collectedErrors = @()
 
     # calculate statistics on measurements, skipping the $skipMeasurements longest measurements
     foreach($suiteName in $bcpt.Keys) {
@@ -412,14 +411,14 @@ function GetBcptSummaryMD {
                             $statusStr = $statusError
                             if ($thisCodeunitName) {
                                 # Only give errors and warnings on top level operation
-                                $collectedErrors += "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($bcptThresholds.durationError)% for duration"
+                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctDurationMin.ToString('N0'))%, which exceeds the error threshold of $($bcptThresholds.durationError)% for duration"
                             }
                         }
                         if ($pctNumberOfSQLStmts -ge $bcptThresholds.numberOfSqlStmtsError) {
                             $statusStr = $statusError
                             if ($thisCodeunitName) {
                                 # Only give errors and warnings on top level operation
-                                $collectedErrors += "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($bcptThresholds.numberOfSqlStmtsError)% for number of SQL statements"
+                                OutputError -message "$operationName in $($suiteName):$codeUnitID degrades $($pctNumberOfSQLStmts.ToString('N0'))%, which exceeds the error threshold of $($bcptThresholds.numberOfSqlStmtsError)% for number of SQL statements"
                             }
                         }
                         if ($statusStr -eq $statusOK) {
@@ -481,10 +480,6 @@ function GetBcptSummaryMD {
     }
 
     $summarySb.ToString()
-
-    if ($collectedErrors.Count -gt 0) {
-        OutputError ($collectedErrors -join [Environment]::NewLine)
-    }
 }
 
 function GetPageScriptingTestResultSummaryMD {
