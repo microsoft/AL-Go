@@ -32,7 +32,7 @@ $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $pr
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
 # Check if there are any app folders or test app folders to compile
-if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0) {
+if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0 -and $settings.bcptTestFolders.Count -eq 0) {
     Write-Host "No app folders or test app folders specified for compilation. Skipping compilation step."
     return
 }
@@ -180,6 +180,18 @@ try {
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
                 -Folders $settings.testFolders `
+                -OutFolder $testAppOutputFolder `
+                -AppType 'testApp'
+        }
+
+        if ($settings.bcptTestFolders.Count -gt 0) {
+            if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
+                $buildParams.Analyzers = @()
+            }
+
+            # Compile BCPT Test Apps
+            $testAppFiles += Build-AppsInWorkspace @buildParams `
+                -Folders $settings.bcptTestFolders `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
         }
