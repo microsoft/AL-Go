@@ -163,7 +163,6 @@ try {
     # Start compilation
     $appFiles = @()
     $testAppFiles = @()
-    $compilationError = $null
     try {
         if ($settings.appFolders.Count -gt 0) {
             # Compile Apps
@@ -185,21 +184,13 @@ try {
                 -AppType 'testApp'
         }
 
-    } catch {
-        # Capture the compilation error so we can re-throw after logging build output
-        $compilationError = $_
     } finally {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
     }
 
-    # Re-throw the compilation error after build output has been logged
-    if ($compilationError) {
-        throw $compilationError
-    }
-
-    # OUTPUT - Write back the original dependency apps (without compiled apps) to JSON files for downstream steps.
-    # Compiled apps remain in .buildartifacts and are picked up by Run-AlPipeline's prebuilt detection,
-    # which ensures they go through the proper upgrade testing path rather than being treated as installApps.
+    # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
+    $dependencyApps += $appFiles
+    $dependencyTestApps += $testAppFiles
     Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
 
     ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson

@@ -69,6 +69,7 @@ The new setting `postponeProjectInBuildOrder` allows you to delay long running j
 - Issue 2084 Multiple artifacts failure if you re-run failed jobs after flaky tests
 - Issue 2085 Projects that doesn't contain both Apps and TestApps are wrongly seen as not built.
 - Issue 2086 Postpone jobs, which doesn't have any dependents to the end of the build order.
+- Rework input handling of workflow 'Update AL-Go System Files' for trigger 'workflow_call'
 
 ### New Settings
 

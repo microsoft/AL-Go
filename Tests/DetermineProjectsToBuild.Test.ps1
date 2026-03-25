@@ -1044,7 +1044,7 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'throws error when test project has buildable app folders' {
-        # TestProject has both projectsToTest setting AND an app folder — this should fail
+        # TestProject has both projectsToTest setting AND an app folder - this should fail
 
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -1052,7 +1052,7 @@ Describe "Get-ProjectsToBuild" {
 
         New-Item -Path "$baseFolder/TestProject/.AL-Go/settings.json" -type File -Force
         @{ projectsToTest = @("Project1") } | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $baseFolder "TestProject/.AL-Go/settings.json") -Encoding UTF8
-        # Add an app folder to the test project — this should be forbidden
+        # Add an app folder to the test project - this should be forbidden
         $testAppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Bad App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/TestProject/app/app.json" -Value (ConvertTo-Json $testAppFile -Depth 10) -type File -Force
 
@@ -1066,7 +1066,7 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'throws error when test project has buildable test folders' {
-        # TestProject has both projectsToTest setting AND a test folder — this should fail
+        # TestProject has both projectsToTest setting AND a test folder - this should fail
 
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
@@ -1089,8 +1089,8 @@ Describe "Get-ProjectsToBuild" {
 
     It 'throws error when one test project depends on another test project' {
         # Project1 is a normal project, TestProject1 and TestProject2 are both test projects
-        # TestProject2 tries to depend on TestProject1 — this should fail
-        Mock OutputError { Param([string] $message) throw $message } -ModuleName DetermineProjectsToBuild
+        # TestProject2 tries to depend on TestProject1 - this should fail
+        Mock OutputError {} -ModuleName DetermineProjectsToBuild
 
         $appFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
