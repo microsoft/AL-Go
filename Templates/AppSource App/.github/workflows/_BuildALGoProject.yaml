@@ -184,7 +184,7 @@ jobs:
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
 
       - name: Save needs context to file
-        if: inputs.needsContext != '{}'
+        shell: pwsh
         run: |
           $nc = @'
           ${{ inputs.needsContext }}
