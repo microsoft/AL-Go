@@ -864,9 +864,9 @@ function New-AppSourceCopJson {
 
     # Extract version info from previous apps using the AL tool
     $previousAppVersions = @{}
+    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
     foreach ($appFile in $PreviousApps) {
         try {
-            $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
             $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json
             $key = "$($appInfo.Publisher)_$($appInfo.Name)"
             $previousAppVersions[$key] = $appInfo.Version.ToString()
@@ -920,5 +920,4 @@ Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
-Export-ModuleMember -Function Get-AppIdForAppFile
 Export-ModuleMember -Function New-AppSourceCopJson

@@ -135,7 +135,7 @@ try {
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
-    Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
+    Update-AppJsonProperties -Folders $settings.appFolders `
         -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber `
         -BuildBy $buildMetadata.BuildBy -BuildUrl $buildMetadata.BuildUrl
 
