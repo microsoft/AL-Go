@@ -10,6 +10,7 @@ Param(
 $baseFolder = (Get-BasePath)
 $projectFolder = Join-Path $baseFolder $project
 $previousAppsPath = Join-Path $projectFolder ".previousRelease"
+New-Item $previousAppsPath -ItemType Directory -Force | Out-Null
 
 OutputGroupStart -Message "Locating previous release"
 try {
@@ -17,21 +18,21 @@ try {
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
     if ($latestRelease) {
         Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
-        New-Item $previousAppsPath -ItemType Directory -Force | Out-Null
         DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $previousAppsPath -mask "Apps" -unpack
         $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
         Write-Host "Downloaded $($previousApps.Count) previous release app(s)"
-        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "PreviousAppsPath=$previousAppsPath"
     }
     else {
         OutputWarning -message "No previous release found"
-        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "PreviousAppsPath="
     }
 }
 catch {
-    OutputWarning -message "Error trying to locate previous release: $($_.Exception.Message). Continuing without baseline."
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "PreviousAppsPath="
+    OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
+    exit
 }
 finally {
     OutputGroupEnd
 }
+
+# Output variable with path to previous apps for use in subsequent steps
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "PreviousAppsPath=$previousAppsPath"
