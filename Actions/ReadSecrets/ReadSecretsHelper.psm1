@@ -157,6 +157,7 @@ function GetKeyVaultSecret {
     }
     if ($secret.Contains('_')) {
         # Secret name contains a '_', which is not allowed in Key Vault secret names
+        Write-Host "::warning::Secret name '$secret' contains an underscore ('_'), which is not supported in Azure Key Vault. The Key Vault lookup will be skipped for this secret. Consider using a dash ('-') instead (e.g., '$($secret.Replace('_','-'))') when storing secrets in Azure Key Vault."
         return $null
     }
 
