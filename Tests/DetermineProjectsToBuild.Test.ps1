@@ -1116,7 +1116,7 @@ Describe "Get-ProjectsToBuild" {
         # Project1 exists
         Mock OutputError {} -ModuleName DetermineProjectsToBuild
 
-        $project1AppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        $project1AppFile= @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'First App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $project1AppFile -Depth 10) -type File -Force
 

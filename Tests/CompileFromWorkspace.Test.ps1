@@ -866,4 +866,142 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
         }
     }
+
+    Describe 'New-AppSourceCopJson' {
+        BeforeEach {
+            # Create app folders with app.json
+            $script:appFolder = Join-Path $TestDrive "MyApp"
+            New-Item -Path $script:appFolder -ItemType Directory -Force | Out-Null
+            @{
+                id = "11111111-1111-1111-1111-111111111111"
+                name = "MyApp"
+                publisher = "Contoso"
+                version = "2.0.0.0"
+            } | ConvertTo-Json | Set-Content (Join-Path $script:appFolder "app.json")
+
+            # Mock the AL tool to return manifest info from previous apps
+            Mock Get-ALTool { return "altool.exe" } -ModuleName CompileFromWorkspace
+            Mock RunAndCheck {
+                return '{"Publisher":"Contoso","Name":"MyApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+        }
+
+        It 'Creates AppSourceCop.json with baseline version from previous app' {
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.Publisher | Should -Be "Contoso"
+            $result.Name | Should -Be "MyApp"
+            $result.Version | Should -Be "1.0.0.0"
+        }
+
+        It 'Includes mandatory affixes from settings' {
+            $settings = @{
+                appSourceCopMandatoryAffixes = @("Test", "Contoso")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings $settings
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.mandatoryAffixes | Should -Be @("Test", "Contoso")
+        }
+
+        It 'Includes obsoleteTagMinAllowedMajorMinor from settings' {
+            $settings = @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = "24.0"
+            }
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings $settings
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.obsoleteTagMinAllowedMajorMinor | Should -Be "24.0"
+        }
+
+        It 'Combines settings and baseline version in one file' {
+            $settings = @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = "23.0"
+            }
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings $settings
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.Publisher | Should -Be "Contoso"
+            $result.Version | Should -Be "1.0.0.0"
+            $result.mandatoryAffixes | Should -Be @("Test")
+            $result.obsoleteTagMinAllowedMajorMinor | Should -Be "23.0"
+        }
+
+        It 'Does not create file when no previous app matches and no settings apply' {
+            Mock RunAndCheck {
+                return '{"Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            Test-Path (Join-Path $script:appFolder "AppSourceCop.json") | Should -Be $false
+        }
+
+        It 'Removes existing AppSourceCop.json when nothing to write' {
+            # Pre-create an AppSourceCop.json
+            $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
+            '{"old":"content"}' | Set-Content $copJsonPath
+
+            Mock RunAndCheck {
+                return '{"Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            Test-Path $copJsonPath | Should -Be $false
+        }
+
+        It 'Handles multiple app folders, only writing for matching ones' {
+            $appFolder2 = Join-Path $TestDrive "OtherApp"
+            New-Item -Path $appFolder2 -ItemType Directory -Force | Out-Null
+            @{
+                id = "22222222-2222-2222-2222-222222222222"
+                name = "OtherApp"
+                publisher = "OtherPublisher"
+                version = "1.0.0.0"
+            } | ConvertTo-Json | Set-Content (Join-Path $appFolder2 "app.json")
+
+            # RunAndCheck only returns a match for MyApp/Contoso
+            New-AppSourceCopJson -AppFolders @($script:appFolder, $appFolder2) -PreviousApps @("dummy.app") -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            # MyApp should have AppSourceCop.json (publisher/name match)
+            Test-Path (Join-Path $script:appFolder "AppSourceCop.json") | Should -Be $true
+            # OtherApp should not (no match from RunAndCheck mock)
+            Test-Path (Join-Path $appFolder2 "AppSourceCop.json") | Should -Be $false
+        }
+
+        It 'Warns and continues when reading manifest fails' {
+            Mock RunAndCheck { throw "Failed to read app" } -ModuleName CompileFromWorkspace
+            Mock OutputWarning {} -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("bad.app") -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            # Should still create the file with just the affixes
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.mandatoryAffixes | Should -Be @("Test")
+            Should -Invoke OutputWarning -ModuleName CompileFromWorkspace -Times 1
+        }
+    }
 }
