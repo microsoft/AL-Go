@@ -275,7 +275,11 @@ try {
         if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
             # Use previously downloaded release apps
             $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
-            Write-Host "Using $($previousApps.Count) previous release app(s) from $previousAppsPath"
+            if ($previousApps.Count -gt 0) {
+                Write-Host "Using $($previousApps.Count) previous release app(s) from $previousAppsPath"
+            } else {
+                OutputWarning -message "No .app files found in '$previousAppsPath' for upgrade testing."
+            }
         } else {
             OutputWarning -message "Could not locate previous release apps for upgrade testing."
         }
