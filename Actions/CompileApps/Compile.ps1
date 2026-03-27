@@ -133,7 +133,7 @@ try {
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
-    Update-AppJsonProperties -Folders $settings.appFolders `
+    Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) `
         -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber `
         -BuildBy $buildMetadata.BuildBy -BuildUrl $buildMetadata.BuildUrl
 
@@ -193,7 +193,7 @@ try {
             $testAppFiles += Build-AppsInWorkspace @buildParams `
                 -Folders $settings.bcptTestFolders `
                 -OutFolder $testAppOutputFolder `
-                -AppType 'testApp'
+                -AppType 'bcptApp'
         }
 
     } finally {
