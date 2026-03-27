@@ -23,4 +23,4 @@ Downloads the latest release apps for use as a baseline in AppSourceCop validati
 
 | Name | Description |
 | :-- | :-- |
-| PreviousAppsPath | Path to the folder containing the downloaded previous release apps. Empty if no release was found. |
+| PreviousAppsPath | Path to the folder containing the downloaded previous release apps. |

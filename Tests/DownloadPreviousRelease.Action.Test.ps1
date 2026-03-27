@@ -19,7 +19,7 @@ Describe "DownloadPreviousRelease Action Tests" {
 
     It 'Test action.yaml matches script' {
         $outputs = [ordered]@{
-            "PreviousAppsPath" = "Path to the folder containing the downloaded previous release apps. Empty if no release was found."
+            "PreviousAppsPath" = "Path to the folder containing the downloaded previous release apps."
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
