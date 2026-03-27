@@ -15,7 +15,7 @@ inputs:
     default: '.'
 outputs:
   PreviousAppsPath:
-    description: Path to the folder containing the downloaded previous release apps. Empty if no release was found.
+    description: Path to the folder containing the downloaded previous release apps.
     value: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
 runs:
   using: composite
