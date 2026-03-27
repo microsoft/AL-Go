@@ -854,8 +854,8 @@ function New-AppSourceCopJson {
     param(
         [Parameter(Mandatory = $true)]
         [string[]] $AppFolders,
-        [Parameter(Mandatory = $true)]
-        [string[]] $PreviousApps,
+        [Parameter(Mandatory = $false)]
+        [string[]] $PreviousApps = @(),
         [Parameter(Mandatory = $true)]
         [string] $CompilerFolder,
         [Parameter(Mandatory = $true)]
