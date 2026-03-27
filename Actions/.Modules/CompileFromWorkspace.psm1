@@ -851,8 +851,8 @@ function New-BuildOutputFile {
     Generates AppSourceCop.json files for app folders with baseline version information.
 .DESCRIPTION
     For each app folder, creates an AppSourceCop.json file containing the previous version
-    of the app as a baseline for breaking change detection. Also includes mandatory affixes,
-    supported countries, and obsolete tag settings from the project settings.
+    of the app as a baseline for breaking change detection. Also includes mandatory affixes
+    and obsolete tag settings from the project settings.
 .PARAMETER AppFolders
     Array of app folder paths to generate AppSourceCop.json for.
 .PARAMETER PreviousApps
@@ -917,7 +917,7 @@ function New-AppSourceCopJson {
 
         if ($appSourceCopJson.Count -gt 0) {
             Write-Host "Creating AppSourceCop.json for $folder"
-            $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content $appSourceCopJsonFile
+            $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content -Encoding UTF8 $appSourceCopJsonFile
         }
         elseif (Test-Path $appSourceCopJsonFile) {
             Remove-Item $appSourceCopJsonFile -Force
