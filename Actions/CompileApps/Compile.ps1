@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
-    [string] $baselineWorkflowSHA = ''
+    [string] $baselineWorkflowSHA = '',
+    [Parameter(HelpMessage = "Path to folder containing previous release apps for AppSourceCop baseline", Mandatory = $false)]
+    [string] $previousAppsPath = ''
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -30,7 +32,7 @@ $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $pr
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
 # Check if there are any app folders or test app folders to compile
-if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0) {
+if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0 -and $settings.bcptTestFolders.Count -eq 0) {
     Write-Host "No app folders or test app folders specified for compilation. Skipping compilation step."
     return
 }
@@ -117,13 +119,24 @@ try {
         Write-Host "Incremental builds based on modified apps is not yet implemented."
     }
 
-    if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
-        # TODO: Missing implementation of around using latest release as a baseline (skipUpgrade) / Appsourcecop.json baseline implementation (AB#620310)
-        Write-Host "Checking for required upgrades using AppSourceCop..."
+    $previousApps = @()
+    if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
+        $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
+        if ($previousApps.Count -gt 0) {
+            # Copy previous apps to the package cache so AppSourceCop can resolve them
+            $previousApps | ForEach-Object {
+                Copy-Item -Path $_ -Destination $packageCachePath -Force
+            }
+        }
+    }
+
+    if ($settings.enableAppSourceCop) {
+        # Generate AppSourceCop.json files for app folders with baseline version and settings
+        New-AppSourceCopJson -AppFolders $settings.appFolders -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
-    Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders) `
+    Update-AppJsonProperties -Folders ($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) `
         -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber `
         -BuildBy $buildMetadata.BuildBy -BuildUrl $buildMetadata.BuildUrl
 
@@ -172,6 +185,18 @@ try {
                 -Folders $settings.testFolders `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
+        }
+
+        if ($settings.bcptTestFolders.Count -gt 0) {
+            if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
+                $buildParams.Analyzers = @()
+            }
+
+            # Compile BCPT Test Apps
+            $testAppFiles += Build-AppsInWorkspace @buildParams `
+                -Folders $settings.bcptTestFolders `
+                -OutFolder $testAppOutputFolder `
+                -AppType 'bcptApp'
         }
 
     } finally {
