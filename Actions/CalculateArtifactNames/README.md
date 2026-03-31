@@ -40,4 +40,5 @@ none
 | BuildOutputArtifactsName | Artifacts name for BuildOutput |
 | ContainerEventLogArtifactsName | Artifacts name for ContainerEventLog |
 | ErrorLogsArtifactsName | Artifacts name for ErrorLogs |
+| DatabaseArtifactsName | Artifacts name for Database |
 | BuildMode | Build mode used when building the artifacts |
