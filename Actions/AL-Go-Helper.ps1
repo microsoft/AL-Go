@@ -52,6 +52,8 @@ $runAlPipelineOverrides = @(
     "PostCompileApp"
     "PipelineInitialize"
     "PipelineFinalize"
+    "BackupBcContainerDatabases"
+    "RestoreDatabasesInBcContainer"
 )
 
 # Well known AppIds
