@@ -1214,3 +1214,137 @@ Describe "Get-BuildAllProjects" {
         Remove-Item $baseFolder -Force -Recurse
     }
 }
+
+Describe "Get-FoldersToCompileIncrementally" {
+    BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+        Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1" -Resolve)
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking -Force
+    }
+
+    BeforeEach {
+        # Mock functions that interact with external systems
+        Mock GetArtifactsFromWorkflowRun { return $null } -ModuleName DetermineProjectsToBuild
+
+        # Set required environment variables for artifact download functions
+        $env:GITHUB_API_URL = 'https://api.github.com'
+        $env:GITHUB_REPOSITORY = 'owner/repo'
+
+        $script:destFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+    }
+
+    It 'returns all folders when all folders are modified' {
+        $settings = @{
+            appFolders = @('./App1', './App2')
+            testFolders = @('./App1.Test')
+            bcptTestFolders = @()
+        }
+
+        Mock GetFoldersFromAllProjects { return @('App1', 'App2', 'App1.Test') } -ModuleName DetermineProjectsToBuild
+        Mock Sort-AppFoldersByDependencies { } -ModuleName DetermineProjectsToBuild
+
+        $modifiedFiles = @('App1/MyCodeunit.al', 'App2/MyTable.al', 'App1.Test/TestCodeunit.al')
+        $destinationFolders = @{ 'Apps' = @($destFolder); 'TestApps' = @($destFolder) }
+
+        $result = Get-FoldersToCompileIncrementally -token 'fake' -settings $settings -baseFolder 'C:\repo' -baselineWorkflowRunId '123' -modifiedFiles $modifiedFiles -buildMode 'Default' -projectPath $destFolder -destinationFolders $destinationFolders
+
+        $result.appFolders | Should -HaveCount 2
+        $result.testFolders | Should -HaveCount 1
+    }
+
+    It 'returns only modified folders when some folders are unmodified' {
+        $settings = @{
+            appFolders = @('./App1', './App2')
+            testFolders = @('./App1.Test')
+            bcptTestFolders = @()
+        }
+
+        Mock GetFoldersFromAllProjects { return @('App1', 'App2', 'App1.Test') } -ModuleName DetermineProjectsToBuild
+        Mock Sort-AppFoldersByDependencies {
+            param($appFolders, $baseFolder, $skippedApps, $unknownDependencies, $knownApps, $selectSubordinates)
+            $skippedApps.Value = @('App2')
+        } -ModuleName DetermineProjectsToBuild
+
+        $modifiedFiles = @('App1/MyCodeunit.al', 'App1.Test/TestCodeunit.al')
+        $destinationFolders = @{ 'Apps' = @($destFolder); 'TestApps' = @($destFolder) }
+
+        $result = Get-FoldersToCompileIncrementally -token 'fake' -settings $settings -baseFolder 'C:\repo' -baselineWorkflowRunId '123' -modifiedFiles $modifiedFiles -buildMode 'Default' -projectPath $destFolder -destinationFolders $destinationFolders
+
+        $result.appFolders | Should -HaveCount 1
+        $result.appFolders | Should -Contain './App1'
+    }
+
+    It 'returns empty folder lists when no folders are modified' {
+        $settings = @{
+            appFolders = @('./App1', './App2')
+            testFolders = @('./App1.Test')
+            bcptTestFolders = @()
+        }
+
+        Mock GetFoldersFromAllProjects { return @('App1', 'App2', 'App1.Test') } -ModuleName DetermineProjectsToBuild
+        Mock Sort-AppFoldersByDependencies {
+            param($appFolders, $baseFolder, $skippedApps, $unknownDependencies, $knownApps, $selectSubordinates)
+            $skippedApps.Value = @('App1', 'App2', 'App1.Test')
+        } -ModuleName DetermineProjectsToBuild
+
+        $modifiedFiles = @('README.md')
+        $destinationFolders = @{ 'Apps' = @($destFolder); 'TestApps' = @($destFolder) }
+
+        $result = Get-FoldersToCompileIncrementally -token 'fake' -settings $settings -baseFolder 'C:\repo' -baselineWorkflowRunId '123' -modifiedFiles $modifiedFiles -buildMode 'Default' -projectPath $destFolder -destinationFolders $destinationFolders
+
+        $result.appFolders | Should -HaveCount 0
+        $result.testFolders | Should -HaveCount 0
+    }
+
+    It 'handles project prefix correctly for multi-project repos' {
+        $settings = @{
+            appFolders = @('./App1', './App2')
+            testFolders = @()
+            bcptTestFolders = @()
+        }
+
+        Mock GetFoldersFromAllProjects { return @("MyProject$([System.IO.Path]::DirectorySeparatorChar)App1", "MyProject$([System.IO.Path]::DirectorySeparatorChar)App2") } -ModuleName DetermineProjectsToBuild
+        Mock Sort-AppFoldersByDependencies {
+            param($appFolders, $baseFolder, $skippedApps, $unknownDependencies, $knownApps, $selectSubordinates)
+            $skippedApps.Value = @("MyProject$([System.IO.Path]::DirectorySeparatorChar)App2")
+        } -ModuleName DetermineProjectsToBuild
+
+        $modifiedFiles = @("MyProject$([System.IO.Path]::DirectorySeparatorChar)App1$([System.IO.Path]::DirectorySeparatorChar)MyCodeunit.al")
+        $destinationFolders = @{ 'Apps' = @($destFolder); 'TestApps' = @($destFolder) }
+
+        $result = Get-FoldersToCompileIncrementally -token 'fake' -settings $settings -baseFolder 'C:\repo' -project 'MyProject' -baselineWorkflowRunId '123' -modifiedFiles $modifiedFiles -buildMode 'Default' -projectPath $destFolder -destinationFolders $destinationFolders
+
+        $result.appFolders | Should -HaveCount 1
+        $result.appFolders | Should -Contain './App1'
+    }
+
+    It 'handles bcptTestFolders correctly' {
+        $settings = @{
+            appFolders = @('./App1')
+            testFolders = @('./App1.Test')
+            bcptTestFolders = @('./App1.BcptTest')
+        }
+
+        Mock GetFoldersFromAllProjects { return @('App1', 'App1.Test', 'App1.BcptTest') } -ModuleName DetermineProjectsToBuild
+        Mock Sort-AppFoldersByDependencies {
+            param($appFolders, $baseFolder, $skippedApps, $unknownDependencies, $knownApps, $selectSubordinates)
+            $skippedApps.Value = @('App1.BcptTest')
+        } -ModuleName DetermineProjectsToBuild
+
+        $modifiedFiles = @('App1/MyCodeunit.al', 'App1.Test/TestCodeunit.al')
+        $destinationFolders = @{ 'Apps' = @($destFolder); 'TestApps' = @($destFolder) }
+
+        $result = Get-FoldersToCompileIncrementally -token 'fake' -settings $settings -baseFolder 'C:\repo' -baselineWorkflowRunId '123' -modifiedFiles $modifiedFiles -buildMode 'Default' -projectPath $destFolder -destinationFolders $destinationFolders
+
+        $result.appFolders | Should -HaveCount 1
+        $result.testFolders | Should -HaveCount 1
+        $result.bcptTestFolders | Should -HaveCount 0
+    }
+
+    AfterEach {
+        if ($script:destFolder -and (Test-Path $script:destFolder)) { Remove-Item $script:destFolder -Force -Recurse }
+        $env:GITHUB_API_URL = $null
+        $env:GITHUB_REPOSITORY = $null
+    }
+}

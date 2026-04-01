@@ -113,10 +113,45 @@ try {
         }
     }
 
-    # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
+    # Incremental Builds - Determine which folders need to be built vs downloaded from baseline
+    $appFoldersToBuild = $settings.appFolders
+    $testFoldersToBuild = $settings.testFolders
+    $bcptTestFoldersToBuild = $settings.bcptTestFolders
+
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
-        #TODO: Implement support for incremental builds (AB#620492)
-        Write-Host "Incremental builds based on modified apps is not yet implemented."
+        try {
+            $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        }
+        catch {
+            OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+            $buildAll = $true
+        }
+
+        if (!$buildAll) {
+            Write-Host "Incremental build: determining which apps need to be recompiled"
+            # Download unmodified apps to both the package cache (for dependency resolution) and the output folders (for downstream publishing)
+            $destinationFolders = @{
+                'Apps' = @($packageCachePath, $appOutputFolder)
+                'TestApps' = @($packageCachePath, $testAppOutputFolder)
+            }
+
+            $foldersToCompile = Get-FoldersToCompileIncrementally `
+                -token $token `
+                -settings $settings `
+                -baseFolder $baseFolder `
+                -project $project `
+                -baselineWorkflowRunId $baselineWorkflowRunId `
+                -modifiedFiles $modifiedFiles `
+                -buildMode $buildMode `
+                -projectPath $projectFolder `
+                -destinationFolders $destinationFolders
+
+            $appFoldersToBuild = $foldersToCompile.appFolders
+            $testFoldersToBuild = $foldersToCompile.testFolders
+            $bcptTestFoldersToBuild = $foldersToCompile.bcptTestFolders
+        }
     }
 
     $previousApps = @()
@@ -163,38 +198,38 @@ try {
         CustomAnalyzers             = (Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
     }
 
-    # Start compilation
+    # Start compilation - only compile folders that need building (all folders in full build, modified folders in incremental build)
     $appFiles = @()
     $testAppFiles = @()
     try {
-        if ($settings.appFolders.Count -gt 0) {
+        if ($appFoldersToBuild.Count -gt 0) {
             # Compile Apps
             $appFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.appFolders `
+                -Folders $appFoldersToBuild `
                 -OutFolder $appOutputFolder `
                 -AppType 'app'
         }
 
-        if ($settings.testFolders.Count -gt 0) {
+        if ($testFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
             }
 
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.testFolders `
+                -Folders $testFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
         }
 
-        if ($settings.bcptTestFolders.Count -gt 0) {
+        if ($bcptTestFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
             }
 
             # Compile BCPT Test Apps
             $testAppFiles += Build-AppsInWorkspace @buildParams `
-                -Folders $settings.bcptTestFolders `
+                -Folders $bcptTestFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'bcptApp'
         }
@@ -204,9 +239,13 @@ try {
     }
 
     # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
-    $dependencyApps += $appFiles
-    $dependencyTestApps += $testAppFiles
-    Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
+    # Include all apps from the output folders (both compiled and downloaded from baseline for incremental builds)
+    $allAppFiles = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+    $allTestAppFiles = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+
+    $dependencyApps += $allAppFiles
+    $dependencyTestApps += $allTestAppFiles
+    Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps. Total output: $(@($allAppFiles).Count) apps and $(@($allTestAppFiles).Count) test apps."
 
     ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
     ConvertTo-Json $dependencyTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson

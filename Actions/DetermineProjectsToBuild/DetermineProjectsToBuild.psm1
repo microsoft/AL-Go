@@ -511,4 +511,154 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     Trace-Information -Message "Incremental builds (apps)" -AdditionalData $additionalDataForTelemetry
 }
 
+<#
+.Synopsis
+    Determines which app folders need to be rebuilt for an incremental workspace compilation build.
+.Description
+    Analyzes modified files against all app folders using dependency analysis to determine which
+    folders must be recompiled and which can be reused from a baseline workflow run.
+    Downloads unmodified apps from the baseline and copies them to the specified destination folders.
+    Returns an updated settings hashtable with appFolders, testFolders, and bcptTestFolders filtered
+    to only include folders that need recompilation.
+.Parameter token
+    The GitHub token to use for downloading artifacts.
+.Parameter settings
+    The resolved AL-Go Project Settings (will not be modified).
+.Parameter baseFolder
+    The base folder of the repository.
+.Parameter project
+    The current project name. Empty for single-project repos.
+.Parameter baselineWorkflowRunId
+    RunId of the baseline workflow run to download unmodified apps from.
+.Parameter modifiedFiles
+    Array of modified file paths relative to the base folder.
+.Parameter buildMode
+    The build mode (e.g. 'Default').
+.Parameter projectPath
+    The project path on disk, used to locate app.json files for matching.
+.Parameter destinationFolders
+    Hashtable mapping artifact mask ('Apps', 'TestApps') to arrays of destination folder paths.
+    Downloaded apps are copied to every destination in the array for that mask.
+.Outputs
+    A hashtable with 'appFolders', 'testFolders', 'bcptTestFolders' keys containing
+    only the folders that need to be recompiled.
+#>
+function Get-FoldersToCompileIncrementally {
+    Param(
+        [Parameter(HelpMessage = "The GitHub token to use for downloading artifacts", Mandatory = $true)]
+        [String] $token,
+        [Parameter(HelpMessage = "The resolved AL-Go Project Settings", Mandatory = $true)]
+        [hashtable] $settings,
+        [Parameter(HelpMessage = "The base folder", Mandatory = $true)]
+        [string] $baseFolder,
+        [Parameter(HelpMessage = "The current project", Mandatory = $false)]
+        [string] $project = '',
+        [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $true)]
+        [string] $baselineWorkflowRunId,
+        [Parameter(HelpMessage = "Array of modified files in the repository (all projects)", Mandatory = $false)]
+        [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "The build mode", Mandatory = $true)]
+        [string] $buildMode,
+        [Parameter(HelpMessage = "The project path", Mandatory = $true)]
+        [string] $projectPath,
+        [Parameter(HelpMessage = "Hashtable mapping artifact mask to arrays of destination folder paths", Mandatory = $true)]
+        [hashtable] $destinationFolders
+    )
+
+    # Determine which folders are modified using dependency analysis
+    $skipFolders = @()
+    $unknownDependencies = @()
+    $knownApps = @()
+    $allFolders = @(GetFoldersFromAllProjects -baseFolder $baseFolder | ForEach-Object { $_.Replace('\', $([System.IO.Path]::DirectorySeparatorChar)).Replace('/', $([System.IO.Path]::DirectorySeparatorChar)) } )
+    $modifiedFolders = @($allFolders | Where-Object {
+        $modifiedFiles -like "$($_)$([System.IO.Path]::DirectorySeparatorChar)*"
+    })
+    OutputMessageAndArray -message "Modified folders" -arrayOfStrings $modifiedFolders
+    Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
+    OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
+
+    $projectWithSeperator = ''
+    if ($project) {
+        $projectWithSeperator = "$project$([System.IO.Path]::DirectorySeparatorChar)"
+    }
+
+    # Split each folder type into build (must compile) and download (reuse from baseline) lists
+    # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
+    $foldersToCompile = @{}
+    $foldersToDownload = @{}
+    foreach ($folderType in @('appFolders', 'testFolders', 'bcptTestFolders')) {
+        $allOfType = @($settings.$folderType)
+        $foldersToDownload[$folderType] = @($allOfType | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
+        $foldersToCompile[$folderType] = @($allOfType | Where-Object { $skipFolders -notcontains "$projectWithSeperator$($_.SubString(2))" })
+    }
+
+    OutputMessageAndArray -message "Download appFolders" -arrayOfStrings $foldersToDownload.appFolders
+    OutputMessageAndArray -message "Download testFolders" -arrayOfStrings $foldersToDownload.testFolders
+    OutputMessageAndArray -message "Download bcptTestFolders" -arrayOfStrings $foldersToDownload.bcptTestFolders
+    OutputMessageAndArray -message "Build appFolders" -arrayOfStrings $foldersToCompile.appFolders
+    OutputMessageAndArray -message "Build testFolders" -arrayOfStrings $foldersToCompile.testFolders
+    OutputMessageAndArray -message "Build bcptTestFolders" -arrayOfStrings $foldersToCompile.bcptTestFolders
+
+    # Download unmodified apps from baseline workflow run
+    if ($project) { $projectName = $project } else { $projectName = $env:GITHUB_REPOSITORY -replace '.+/' }
+    $appsToDownload = [ordered]@{
+        "appFolders" = @{ "Mask" = "Apps"; "Downloads" = $foldersToDownload.appFolders; "Downloaded" = 0 }
+        "testFolders" = @{ "Mask" = "TestApps"; "Downloads" = $foldersToDownload.testFolders; "Downloaded" = 0 }
+        "bcptTestFolders" = @{ "Mask" = "TestApps"; "Downloads" = $foldersToDownload.bcptTestFolders; "Downloaded" = 0 }
+    }
+
+    $additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+    $appsToDownload.Keys | ForEach-Object {
+        $appType = $_
+        $mask = $appsToDownload."$appType".Mask
+        $downloads = $appsToDownload."$appType".Downloads
+
+        # Ensure all destination folders exist
+        $destinations = @($destinationFolders[$mask])
+        foreach ($dest in $destinations) {
+            if ($dest -and !(Test-Path $dest)) {
+                New-Item $dest -ItemType Directory | Out-Null
+            }
+        }
+
+        if ($downloads) {
+            Write-Host "Downloading from $mask"
+            $tempFolder = NewTemporaryFolder
+            $artifactMask = if ($buildMode -eq 'Default') { $mask } else { "$buildMode$mask" }
+            $runArtifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $artifactMask -projects $projectName
+            if ($runArtifact) {
+                if ($runArtifact -is [Array]) {
+                    throw "Multiple artifacts found with mask $artifactMask for project $projectName"
+                }
+                $file = DownloadArtifact -path $tempFolder -token $token -artifact $runArtifact
+                $artifactFolder = Join-Path $tempFolder $mask
+                Expand-Archive -Path $file -DestinationPath $artifactFolder -Force
+                Remove-Item -Path $file -Force
+                $downloads | ForEach-Object {
+                    $appJsonPath = Join-Path $projectPath "$_/app.json"
+                    $appJson = Get-Content -Encoding UTF8 -Path $appJsonPath -Raw | ConvertFrom-Json
+                    $appName = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_*.*.*.*.app"
+                    $appPath = Join-Path $artifactFolder $appName
+                    if (Test-Path $appPath) {
+                        $item = Get-Item -Path $appPath
+                        Write-Host "Copy $($item.Name) to build folders"
+                        foreach ($dest in $destinations) {
+                            if ($dest) {
+                                Copy-Item -Path $item.FullName -Destination $dest -Force
+                            }
+                        }
+                        $appsToDownload."$appType".Downloaded++
+                    }
+                }
+            }
+            Remove-Item -Path $tempFolder -Recurse -force
+        }
+        $additionalDataForTelemetry.Add("$($appType)ToDownload", $appsToDownload."$appType".Downloads.Count)
+        $additionalDataForTelemetry.Add("$($appType)Downloaded", $appsToDownload."$appType".Downloaded)
+    }
+    Trace-Information -Message "Incremental builds - workspace compilation" -AdditionalData $additionalDataForTelemetry
+
+    return $foldersToCompile
+}
+
 Export-ModuleMember *-*
