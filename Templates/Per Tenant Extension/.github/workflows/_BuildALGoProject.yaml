@@ -109,7 +109,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
 
       - name: Determine whether to build project
         id: DetermineBuildProject
@@ -148,7 +148,7 @@ jobs:
 
       - name: Cache Business Central Artifacts
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useCompilerFolder == 'True' && inputs.useArtifactCache && env.artifactCacheKey
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ runner.temp }}/.artifactcache
           key: ${{ env.artifactCacheKey }}
@@ -166,13 +166,40 @@ jobs:
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
+      - name: Compile Apps
+        id: compile
+        uses: microsoft/AL-Go-Actions/CompileApps@main
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && fromJson(env.workspaceCompilation).enabled == true
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+          BuildMode: ${{ inputs.buildMode }}
+        with:
+          shell: ${{ inputs.shell }}
+          artifact: ${{ env.artifact }}
+          project: ${{ inputs.project }}
+          buildMode: ${{ inputs.buildMode }}
+          dependencyAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+          dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+          baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+          baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+
+      - name: Save needs context to file
+        shell: pwsh
+        run: |
+          $nc = @'
+          ${{ inputs.needsContext }}
+          '@
+          $needsContextPath = Join-Path $ENV:RUNNER_TEMP 'needsContext.json'
+          [System.IO.File]::WriteAllText($needsContextPath, $nc.Trim())
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "NeedsContext=$needsContextPath"
+
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
-          NeedsContext: ${{ inputs.needsContext }}
+          NeedsContext: ${{ env.NeedsContext }}
         with:
           shell: ${{ inputs.shell }}
           artifact: ${{ env.artifact }}
