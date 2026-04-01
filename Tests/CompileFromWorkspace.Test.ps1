@@ -1,4 +1,4 @@
-$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+﻿$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/CompileFromWorkspace.psm1' -Resolve) -DisableNameChecking -Force
