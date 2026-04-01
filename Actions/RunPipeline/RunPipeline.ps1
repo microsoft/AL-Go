@@ -546,7 +546,6 @@ try {
         -buildArtifactFolder $buildArtifactFolder `
         -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
-        -databaseFolder (Join-Path $buildArtifactFolder 'Database') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appBuild $appBuild -appRevision $appRevision `
         -uninstallRemovedApps
