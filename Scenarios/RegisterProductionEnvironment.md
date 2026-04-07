@@ -9,9 +9,6 @@
 
    ![Publish to MYPROD](https://github.com/user-attachments/assets/fdb05510-2785-483a-b2f3-98a2fe36bfc4)
 
-> [!NOTE]
-> **GitHub Environment secrets** (defined under the environment in GitHub) are only injected into jobs that explicitly declare an `environment:` property. The AL-Go Initialization job that performs the auth check does **not** have this property, so environment-scoped `AUTHCONTEXT` secrets are **not** available at that step. The secret **is** available in the downstream deploy job. If you prefer the secret to be resolved during the initialization auth check as well, define it as a **repository secret** using the naming convention `<EnvironmentName>-AuthContext` (e.g., `MYPROD-AuthContext`) instead of as an environment secret named `AUTHCONTEXT`. See [secrets documentation](secrets.md#AuthContext) for the full lookup order.
-
 1. When running the **Publish to Environment** workflow, you should see that the app is deployed to the **MYPROD** environment only.
 
    ![MYPROD](https://github.com/user-attachments/assets/04dab8af-57b4-4bc3-a0c2-6e6869d8df34)
