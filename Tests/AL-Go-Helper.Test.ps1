@@ -113,4 +113,92 @@
             "src$([System.IO.Path]::DirectorySeparatorChar)app4"
         )
     }
+
+    Describe 'Get-VersionNumber' {
+        # All tests share the same baseline settings to verify each strategy picks the correct source
+        BeforeEach {
+            $baseSettings = @{
+                appBuild = 42
+                appRevision = 7
+                artifact = "https://bcartifacts.azureedge.net/sandbox/24.5.26928.27583/us"
+                repoVersion = "3.1.200"
+            }
+        }
+
+        It 'Default versioning strategy returns settings appBuild and appRevision' {
+            $baseSettings.versioningStrategy = 0
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be ""
+            $result.BuildNumber | Should -Be 42
+            $result.RevisionNumber | Should -Be 7
+        }
+
+        It 'Strategy -1 extracts version from artifact URL' {
+            $baseSettings.versioningStrategy = -1
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be "24.5"
+            $result.BuildNumber | Should -Be 26928
+            $result.RevisionNumber | Should -Be 27583
+        }
+
+        It 'Strategy 16 uses repoVersion for major.minor' {
+            $baseSettings.versioningStrategy = 16
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be "3.1"
+            $result.BuildNumber | Should -Be 42
+            $result.RevisionNumber | Should -Be 7
+        }
+
+        It 'Strategy 19 (16+3) gets build number from repoVersion' {
+            $baseSettings.versioningStrategy = 19
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be "3.1"
+            $result.BuildNumber | Should -Be 200
+            $result.RevisionNumber | Should -Be 7
+        }
+
+        It 'Strategy 19 with two-digit repoVersion defaults build to 0 with warning' {
+            $baseSettings.versioningStrategy = 19
+            $baseSettings.repoVersion = "2.4"
+            $result = Get-VersionNumber -Settings $baseSettings -WarningVariable warnings -WarningAction SilentlyContinue
+            $result.MajorMinorVersion | Should -Be "2.4"
+            $result.BuildNumber | Should -Be 0
+        }
+
+        It 'Strategy 17 (16+1) uses repoVersion for major.minor but does not override appBuild' {
+            $baseSettings.versioningStrategy = 17
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be "3.1"
+            $result.BuildNumber | Should -Be 42
+            $result.RevisionNumber | Should -Be 7
+        }
+
+        It 'Strategy 3 without bit 16 behaves like default' {
+            $baseSettings.versioningStrategy = 3
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be ""
+            $result.BuildNumber | Should -Be 42
+            $result.RevisionNumber | Should -Be 7
+        }
+
+        It 'Strategy 2 passes through date-based appBuild and appRevision' {
+            $baseSettings.versioningStrategy = 2
+            $baseSettings.appBuild = 20260313 # Simulate date-based build number
+            $baseSettings.appRevision = 141450 # Simulate time-based revision number
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be ""
+            $result.BuildNumber | Should -Be 20260313 # Build number should be passed through unchanged
+            $result.RevisionNumber | Should -Be 141450 # Revision number should be passed through unchanged
+        }
+
+        It 'Strategy 15 passes through max build value' {
+            $baseSettings.versioningStrategy = 15
+            $baseSettings.appBuild = [Int32]::MaxValue # Simulate max build number
+            $baseSettings.appRevision = 100 # Simulate some revision number
+            $result = Get-VersionNumber -Settings $baseSettings
+            $result.MajorMinorVersion | Should -Be ""
+            $result.BuildNumber | Should -Be ([Int32]::MaxValue) # Build number should be passed through unchanged
+            $result.RevisionNumber | Should -Be 100 # Revision number should be passed through unchanged
+        }
+    }
 }

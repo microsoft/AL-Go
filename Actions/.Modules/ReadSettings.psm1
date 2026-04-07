@@ -161,6 +161,8 @@ function GetDefaultSettings
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
         "customCodeCops"                                = @()
+        "preprocessorSymbols"                           = @()
+        "features"                                      = @()
         "trackALAlertsInGitHub"                         = $false
         "failOn"                                        = "error"
         "treatTestFailuresAsWarnings"                   = $false
@@ -196,6 +198,7 @@ function GetDefaultSettings
         "templateBranch"                                = ""
         "appDependencyProbingPaths"                     = @()
         "useProjectDependencies"                        = $false
+        "projectsToTest"                                = @()
         "runs-on"                                       = "windows-latest"
         "shell"                                         = ""
         "githubRunner"                                  = ""
@@ -216,6 +219,10 @@ function GetDefaultSettings
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
+        "workspaceCompilation"                          = [ordered]@{
+            "enabled"                                   = $false
+            "parallelism"                               = 1
+        }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
@@ -567,6 +574,11 @@ function ReadSettings {
     if($settings.projectName -eq '') {
         OutputDebug "Setting projectName to default value: $project"
         $settings.projectName = $project # Default to project path as project name
+    }
+
+    # Interpret zero or negative parallelism as the max number of processors
+    if ($settings.workspaceCompilation.parallelism -le 0) {
+        $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
     }
 
     $settings | ValidateSettings
