@@ -297,6 +297,20 @@
             },
             "description": "See https://aka.ms/ALGoSettings#customcodecops"
         },
+        "preprocessorSymbols": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Preprocessor symbols to use when compiling the app. See https://aka.ms/ALGoSettings#preprocessorsymbols"
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Features to enable when compiling the app. See https://aka.ms/ALGoSettings#features"
+        },
         "trackALAlertsInGitHub": {
             "type": "boolean",
             "description": "Enable tracking of AL Alerts in GitHub. See https://aka.ms/ALGoSettings#trackALAlertsInGitHub"
@@ -421,6 +435,13 @@
             "type": "boolean",
             "description": "See https://aka.ms/ALGoSettings#useprojectdependencies"
         },
+        "projectsToTest": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "See https://aka.ms/ALGoSettings#projectstotest"
+        },
         "runs-on": {
             "type": "string",
             "minLength": 1,
@@ -510,6 +531,21 @@
         "useCompilerFolder": {
             "type": "boolean",
             "description": "Use the compiler folder instead of a BC container. See https://aka.ms/ALGoSettings#usecompilerfolder"
+        },
+        "workspaceCompilation": {
+            "type": "object",
+            "description": "PREVIEW: Configuration for workspace compilation. See https://aka.ms/ALGoSettings#workspacecompilation",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable workspace compilation for building apps"
+                },
+                "parallelism": {
+                    "type": "integer",
+                    "description": "The number of parallel processes to use for workspace compilation. Set to 0 or -1 to use all available processors."
+                }
+            },
+            "additionalProperties": false
         },
         "pullRequestTrigger": {
             "type": "string",
