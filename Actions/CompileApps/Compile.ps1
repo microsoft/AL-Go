@@ -124,17 +124,11 @@ try {
     $previousApps = @()
     if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
         $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
-        if ($previousApps.Count -gt 0) {
-            # Copy previous apps to the package cache so AppSourceCop can resolve them
-            $previousApps | ForEach-Object {
-                Copy-Item -Path $_ -Destination $packageCachePath -Force
-            }
-        }
     }
 
     if ($settings.enableAppSourceCop) {
         # Generate AppSourceCop.json files for app folders with baseline version and settings
-        New-AppSourceCopJson -AppFolders $settings.appFolders -PreviousApps $previousApps -CompilerFolder $compilerFolder -Settings $settings
+        New-AppSourceCopJson -AppFolders $settings.appFolders -PreviousApps $previousApps -BaselinePackageCachePath $previousAppsPath -CompilerFolder $compilerFolder -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files

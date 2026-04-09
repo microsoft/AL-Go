@@ -845,6 +845,8 @@ function New-BuildOutputFile {
     Array of app folder paths to generate AppSourceCop.json for.
 .PARAMETER PreviousApps
     Array of file paths to previous release .app files.
+.PARAMETER BaselinePackageCachePath
+    Path to the folder containing the previous release .app files (used for baselinePackageCachePath in AppSourceCop.json).
 .PARAMETER CompilerFolder
     Path to the compiler folder containing the AL tool.
 .PARAMETER Settings
@@ -856,20 +858,21 @@ function New-AppSourceCopJson {
         [string[]] $AppFolders,
         [Parameter(Mandatory = $false)]
         [string[]] $PreviousApps = @(),
+        [Parameter(Mandatory = $false)]
+        [string] $BaselinePackageCachePath = '',
         [Parameter(Mandatory = $true)]
         [string] $CompilerFolder,
         [Parameter(Mandatory = $true)]
         [hashtable] $Settings
     )
 
-    # Extract version info from previous apps using the AL tool
+    # Extract version info from previous apps using the AL tool, keyed by app ID
     $previousAppVersions = @{}
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
     foreach ($appFile in $PreviousApps) {
         try {
             $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json
-            $key = "$($appInfo.Publisher)_$($appInfo.Name)"
-            $previousAppVersions[$key] = $appInfo.Version.ToString()
+            $previousAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
         }
         catch {
             OutputWarning -message "Failed to read manifest from '$appFile': $($_.Exception.Message)"
@@ -891,15 +894,13 @@ function New-AppSourceCopJson {
             $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
         }
 
-        # Match previous app version by Publisher_Name
+        # Match previous app version by app ID
         $appJsonPath = Join-Path $folder "app.json"
         if (Test-Path $appJsonPath) {
             $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
-            $key = "$($appJson.Publisher)_$($appJson.Name)"
-            if ($previousAppVersions.ContainsKey($key)) {
-                $appSourceCopJson["Publisher"] = $appJson.Publisher
-                $appSourceCopJson["Name"] = $appJson.Name
-                $appSourceCopJson["Version"] = $previousAppVersions[$key]
+            if ($previousAppVersions.ContainsKey($appJson.id)) {
+                $appSourceCopJson["Version"] = $previousAppVersions[$appJson.id]
+                $appSourceCopJson["baselinePackageCachePath"] = $BaselinePackageCachePath
             }
         }
 
