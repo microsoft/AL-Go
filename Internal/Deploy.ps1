@@ -229,7 +229,7 @@ try {
                     }
                 }
                 if (-not $found) {
-                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helpers.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""([^""]*)""(\s*#.*)?$"'
+                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helper.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""([^""]*)""(\s*#.*)?$"'
                 }
             }
 
