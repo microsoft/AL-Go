@@ -1,3 +1,9 @@
+## vNext
+
+### Fix: Workspace compilation now honors the `vsixFile` setting
+
+Workspace compilation was ignoring the `vsixFile` setting and always resolving the compiler from the BC artifacts. The setting is now passed through to `New-BcCompilerFolder`, consistent with the traditional compilation path.
+
 ## v9.0
 
 ### Needs Context in Build job moved from environment variable to file
