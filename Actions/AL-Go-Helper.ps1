@@ -79,7 +79,6 @@ function Get-ScriptOverrides() {
         $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             OutputDebug "Add override for $scriptName ($scriptPath)"
-            Trace-Information -Message "Using override for $scriptName"
             $scriptBlock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
             if (-not $scriptBlock) {
                 OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
