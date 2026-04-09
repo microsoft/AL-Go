@@ -100,7 +100,7 @@ try {
         # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
         $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
     }
-    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
+    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -vsixFile $settings.vsixFile -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
     $packageCachePath = Join-Path $compilerFolder "symbols"
 
     # Copy dependency apps to the package cache so the compiler can resolve them

@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2204 - Workspace compilation ignores vsixFile setting
+
 ## v9.0
 
 ### Needs Context in Build job moved from environment variable to file
