@@ -1215,11 +1215,8 @@ Describe "Get-BuildAllProjects" {
     }
 }
 
-Describe "Get-UnmodifiedAppsFromBaselineWorkflowRun" {
+Describe "ConvertTo-RepoRelativePath" {
     BeforeAll {
-        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
-        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
-
         Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking -Force
     }
 
@@ -1228,235 +1225,176 @@ Describe "Get-UnmodifiedAppsFromBaselineWorkflowRun" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 
-    It 'correctly identifies unmodified apps when appFolders reference paths above the project folder via ../' {
-        # Repo layout where the project is nested and appFolders reference sources via ../:
-        #   baseFolder/
-        #     .github/AL-Go-Settings.json
-        #     src/Apps/AppA/App/app.json        (modified)
-        #     src/Apps/AppB/App/app.json        (unmodified - should be downloaded from baseline)
-        #     src/Apps/AppC/App/app.json        (unmodified - should be downloaded from baseline)
-        #     build/projects/MyProject/.AL-Go/settings.json
-        #       appFolders: ["../../../src/Apps/*/App"]
+    It 'resolves a standard .\ prefixed folder to a repo-relative path' {
+        $appDir = New-Item -Path "$baseFolder/app" -ItemType Directory -Force
+        $result = ConvertTo-RepoRelativePath -folder '.\app' -projectPath $baseFolder -baseFolder $baseFolder
+        $result | Should -Be 'app'
+    }
 
+    It 'resolves a ../ relative folder to a repo-relative path' {
+        # Simulate: baseFolder/src/Apps/MyApp/App exists, project is at baseFolder/build/projects/Proj
+        New-Item -Path "$baseFolder/src/Apps/MyApp/App" -ItemType Directory -Force | Out-Null
+        $projectPath = (New-Item -Path "$baseFolder/build/projects/Proj" -ItemType Directory -Force).FullName
+
+        $result = ConvertTo-RepoRelativePath -folder '..\..\..\src\Apps\MyApp\App' -projectPath $projectPath -baseFolder $baseFolder
+        $sep = [System.IO.Path]::DirectorySeparatorChar
+        $result | Should -Be "src${sep}Apps${sep}MyApp${sep}App"
+    }
+
+    It 'returns $null for a folder that does not exist on disk' {
+        $result = ConvertTo-RepoRelativePath -folder '.\nonexistent' -projectPath $baseFolder -baseFolder $baseFolder
+        $result | Should -BeNullOrEmpty
+    }
+
+    It 'returns $null for a folder that resolves outside the base folder' {
+        # Create a directory above baseFolder and try to reference it
+        $parentDir = Split-Path $baseFolder -Parent
+        $outsideDir = New-Item -Path (Join-Path $parentDir 'outside-repo') -ItemType Directory -Force
+        try {
+            $result = ConvertTo-RepoRelativePath -folder '..\outside-repo' -projectPath $baseFolder -baseFolder $baseFolder
+            $result | Should -BeNullOrEmpty
+        }
+        finally {
+            Remove-Item $outsideDir -Force -Recurse
+        }
+    }
+
+    It 'handles baseFolder with trailing separator' {
+        $appDir = New-Item -Path "$baseFolder/app" -ItemType Directory -Force
+        $baseFolderWithTrailing = $baseFolder + [System.IO.Path]::DirectorySeparatorChar
+        $result = ConvertTo-RepoRelativePath -folder '.\app' -projectPath $baseFolder -baseFolder $baseFolderWithTrailing
+        $result | Should -Be 'app'
+    }
+
+    It 'handles deeply nested project with multiple ../ segments' {
+        New-Item -Path "$baseFolder/src/Common/Shared" -ItemType Directory -Force | Out-Null
+        $projectPath = (New-Item -Path "$baseFolder/a/b/c/d/project" -ItemType Directory -Force).FullName
+
+        $result = ConvertTo-RepoRelativePath -folder '..\..\..\..\..\src\Common\Shared' -projectPath $projectPath -baseFolder $baseFolder
+        $sep = [System.IO.Path]::DirectorySeparatorChar
+        $result | Should -Be "src${sep}Common${sep}Shared"
+    }
+
+    AfterEach {
+        Remove-Item $baseFolder -Force -Recurse
+    }
+}
+
+Describe "Get-UnmodifiedAppsFromBaselineWorkflowRun" {
+    BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking -Force
+
+        # Helper to extract the download entries from captured Write-Host output for a given section
+        function script:Get-DownloadEntries {
+            param([string] $section, [System.Collections.ArrayList] $output)
+            $inSection = $false
+            $entries = @()
+            foreach ($line in $output) {
+                if ($line -eq "Download ${section}:") {
+                    $inSection = $true
+                    continue
+                }
+                if ($inSection) {
+                    if ($line -match '^Download ') { break }
+                    $entries += $line
+                }
+            }
+            return $entries
+        }
+    }
+
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'baseFolder', Justification = 'False positive.')]
+        $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+
+        if (-not (Get-Command 'Trace-Information' -ErrorAction SilentlyContinue)) {
+            function global:Trace-Information { param([string]$Message, $AdditionalData) }
+        }
+        $env:GITHUB_API_URL = 'https://api.github.com'
+        $env:GITHUB_REPOSITORY = 'test/repo'
+
+        Mock InvokeWebRequest {
+            $uri = $args[0]
+            if (-not $uri) { $uri = $Uri }
+            $content = if ($uri -like '*/actions/runs/*/artifacts*') {
+                '{"artifacts":[]}'
+            } else {
+                '{"head_branch":"main"}'
+            }
+            return [PSCustomObject]@{ Content = $content }
+        } -ModuleName 'Github-Helper'
+
+        $script:capturedOutput = [System.Collections.ArrayList]::new()
+        Mock Write-Host { $null = $script:capturedOutput.Add($Object) } -ModuleName 'DetermineProjectsToBuild'
+    }
+
+    It 'identifies unmodified apps when appFolders reference paths above the project via ../' {
         $project = 'build/projects/MyProject'
         $projectPath = Join-Path $baseFolder $project
 
-        # Create repo-level AL-Go settings
-        $repoSettings = @{
-            fullBuildPatterns = @()
-            projects = @($project)
-            powerPlatformSolutionFolder = ''
-            useProjectDependencies = $false
-            incrementalBuilds = @{
-                onPull_Request = $true
-                mode = 'modifiedApps'
-            }
-        }
+        $repoSettings = @{ fullBuildPatterns = @(); projects = @($project); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; incrementalBuilds = @{ onPull_Request = $true; mode = 'modifiedApps' } }
         New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $repoSettings -Depth 10) -type File -Force | Out-Null
+        New-Item -Path "$projectPath/.AL-Go/settings.json" -Value (ConvertTo-Json @{ appFolders = @('../../../src/Apps/*/App'); testFolders = @(); bcptTestFolders = @() } -Depth 10) -type File -Force | Out-Null
 
-        # Create project-level settings with appFolders that go above the project
-        $projectSettingsJson = @{
-            appFolders = @("../../../src/Apps/*/App")
-            testFolders = @()
-            bcptTestFolders = @()
+        @('AppA', 'AppB', 'AppC') | ForEach-Object {
+            $app = @{ id = [guid]::NewGuid().ToString(); name = $_; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() }
+            New-Item -Path "$baseFolder/src/Apps/$_/App/app.json" -Value (ConvertTo-Json $app -Depth 10) -type File -Force | Out-Null
         }
-        New-Item -Path "$projectPath/.AL-Go/settings.json" -Value (ConvertTo-Json $projectSettingsJson -Depth 10) -type File -Force | Out-Null
 
-        # Create three independent apps
-        $appA = @{ id = 'aaaaaaaa-0000-0000-0000-000000000001'; name = 'App A'; publisher = 'TestPublisher'; version = '1.0.0.0'; dependencies = @() }
-        $appB = @{ id = 'bbbbbbbb-0000-0000-0000-000000000002'; name = 'App B'; publisher = 'TestPublisher'; version = '1.0.0.0'; dependencies = @() }
-        $appC = @{ id = 'cccccccc-0000-0000-0000-000000000003'; name = 'App C'; publisher = 'TestPublisher'; version = '1.0.0.0'; dependencies = @() }
-        New-Item -Path "$baseFolder/src/Apps/AppA/App/app.json" -Value (ConvertTo-Json $appA -Depth 10) -type File -Force | Out-Null
-        New-Item -Path "$baseFolder/src/Apps/AppB/App/app.json" -Value (ConvertTo-Json $appB -Depth 10) -type File -Force | Out-Null
-        New-Item -Path "$baseFolder/src/Apps/AppC/App/app.json" -Value (ConvertTo-Json $appC -Depth 10) -type File -Force | Out-Null
-
-        # Also create a dummy .al file so there's something to be "modified"
-        New-Item -Path "$baseFolder/src/Apps/AppA/App/MyCodeunit.al" -Value "// modified file" -type File -Force | Out-Null
-
-        # Set env:Settings for helper functions
         $env:Settings = ConvertTo-Json $repoSettings -Depth 99 -Compress
 
-        # Resolve appFolders the way ResolveProjectFolders/AnalyzeRepo does:
-        # Push-Location to project, Resolve-Path -Relative
         Push-Location $projectPath
-        $resolvedAppFolders = @(Resolve-Path "../../../src/Apps/*/App" -Relative -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_ 'app.json') })
+        $resolvedAppFolders = @(Resolve-Path '../../../src/Apps/*/App' -Relative -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_ 'app.json') })
         Pop-Location
 
-        # Build a settings hashtable with resolved folders (same as what RunPipeline passes in)
-        $resolvedSettings = @{
-            appFolders = $resolvedAppFolders
-            testFolders = @()
-            bcptTestFolders = @()
-        }
-
-        # Build artifact folder
-        $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
+        $buildArtifactFolder = Join-Path $projectPath '.buildartifacts'
         New-Item -Path $buildArtifactFolder -ItemType Directory -Force | Out-Null
 
-        # Only AppA is modified
         $sep = [System.IO.Path]::DirectorySeparatorChar
-        $modifiedFiles = @("src${sep}Apps${sep}AppA${sep}App${sep}MyCodeunit.al")
-
-        # Mock GitHub API calls since we don't have a real baseline workflow
-        # Stub functions that are normally provided by GitHub Actions runtime
-        if (-not (Get-Command 'Trace-Information' -ErrorAction SilentlyContinue)) {
-            function global:Trace-Information { param([string]$Message, $AdditionalData) }
-        }
-        $env:GITHUB_API_URL = 'https://api.github.com'
-        $env:GITHUB_REPOSITORY = 'test/repo'
-        Mock InvokeWebRequest {
-            # Return a mock response object that mimics the GitHub API
-            $uri = $args[0]
-            if (-not $uri) { $uri = $Uri }
-            $content = if ($uri -like '*/actions/runs/*/artifacts*') {
-                # Artifacts endpoint - return empty list to stop pagination
-                '{"artifacts":[]}'
-            } else {
-                # Workflow run info endpoint
-                '{"head_branch":"main"}'
-            }
-            return [PSCustomObject]@{ Content = $content }
-        } -ModuleName 'Github-Helper'
-
-        # Capture Write-Host output to verify download folder matching
-        $script:capturedOutput = [System.Collections.ArrayList]::new()
-        Mock Write-Host { $null = $script:capturedOutput.Add($Object) } -ModuleName 'DetermineProjectsToBuild'
-
         Get-UnmodifiedAppsFromBaselineWorkflowRun `
             -token 'fake-token' `
-            -settings $resolvedSettings `
-            -baseFolder $baseFolder `
-            -project $project `
-            -baselineWorkflowRunId '12345' `
-            -modifiedFiles $modifiedFiles `
-            -buildArtifactFolder $buildArtifactFolder `
-            -buildMode 'Default' `
-            -projectPath $projectPath
+            -settings @{ appFolders = $resolvedAppFolders; testFolders = @(); bcptTestFolders = @() } `
+            -baseFolder $baseFolder -project $project -baselineWorkflowRunId '12345' `
+            -modifiedFiles @("src${sep}Apps${sep}AppA${sep}App${sep}MyCodeunit.al") `
+            -buildArtifactFolder $buildArtifactFolder -buildMode 'Default' -projectPath $projectPath
 
-        # The output should list the unmodified app folders (AppB and AppC) as download candidates.
-        # Before the fix: the download list was always empty ("- None") because the path matching
-        # used SubString(2) which mangled paths starting with ..\ into nonsense like \..\..\src\...
-        $downloadAppLine = $script:capturedOutput | Where-Object { $_ -eq 'Download appFolders:' }
-        $downloadAppLine | Should -Not -BeNullOrEmpty -Because "the function should output the 'Download appFolders:' header"
-
-        # Find entries after "Download appFolders:" up to the next section header
-        $inDownloadSection = $false
-        $downloadEntries = @()
-        foreach ($line in $script:capturedOutput) {
-            if ($line -eq 'Download appFolders:') {
-                $inDownloadSection = $true
-                continue
-            }
-            if ($inDownloadSection) {
-                if ($line -match '^Download (test|bcpt)') { break }
-                $downloadEntries += $line
-            }
-        }
-
-        # With the bug: downloadEntries would be @("- None") because the path matching fails
-        # With the fix: downloadEntries should contain AppB and AppC folders
-        $downloadEntries | Should -Not -Contain '- None' -Because "unmodified apps should be identified for download from baseline"
-        ($downloadEntries | Where-Object { $_ -like '*AppB*' }) | Should -Not -BeNullOrEmpty -Because "AppB was not modified and should be downloaded from baseline"
-        ($downloadEntries | Where-Object { $_ -like '*AppC*' }) | Should -Not -BeNullOrEmpty -Because "AppC was not modified and should be downloaded from baseline"
-        ($downloadEntries | Where-Object { $_ -like '*AppA*' }) | Should -BeNullOrEmpty -Because "AppA was modified and should NOT be downloaded from baseline"
+        $entries = Get-DownloadEntries -section 'appFolders' -output $script:capturedOutput
+        $entries | Should -Not -Contain '- None' -Because 'unmodified apps should be identified for download'
+        ($entries | Where-Object { $_ -like '*AppB*' }) | Should -Not -BeNullOrEmpty -Because 'AppB is unmodified'
+        ($entries | Where-Object { $_ -like '*AppC*' }) | Should -Not -BeNullOrEmpty -Because 'AppC is unmodified'
+        ($entries | Where-Object { $_ -like '*AppA*' }) | Should -BeNullOrEmpty -Because 'AppA is modified'
     }
 
-    It 'also works when appFolders are inside the project folder (standard layout)' {
-        # Standard layout where apps are inside the project folder:
-        #   baseFolder/
-        #     .AL-Go/settings.json
-        #     .github/AL-Go-Settings.json
-        #     app1/app.json
-        #     app2/app.json
-
-        $project = ''
-        $projectPath = $baseFolder
-
-        # Create repo-level AL-Go settings
-        $repoSettings = @{
-            fullBuildPatterns = @()
-            projects = @()
-            powerPlatformSolutionFolder = ''
-            useProjectDependencies = $false
-            incrementalBuilds = @{
-                onPull_Request = $true
-                mode = 'modifiedApps'
-            }
-        }
+    It 'identifies unmodified apps in a standard layout with .\ prefixed folders' {
+        $repoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; incrementalBuilds = @{ onPull_Request = $true; mode = 'modifiedApps' } }
         New-Item -Path "$baseFolder/.github/AL-Go-Settings.json" -Value (ConvertTo-Json $repoSettings -Depth 10) -type File -Force | Out-Null
         New-Item -Path "$baseFolder/.AL-Go/settings.json" -Value (ConvertTo-Json @{} -Depth 10) -type File -Force | Out-Null
 
-        # Create two apps inside the project folder
-        $app1 = @{ id = '11111111-0000-0000-0000-000000000001'; name = 'App One'; publisher = 'TestPublisher'; version = '1.0.0.0'; dependencies = @() }
-        $app2 = @{ id = '22222222-0000-0000-0000-000000000002'; name = 'App Two'; publisher = 'TestPublisher'; version = '1.0.0.0'; dependencies = @() }
-        New-Item -Path "$baseFolder/app1/app.json" -Value (ConvertTo-Json $app1 -Depth 10) -type File -Force | Out-Null
-        New-Item -Path "$baseFolder/app2/app.json" -Value (ConvertTo-Json $app2 -Depth 10) -type File -Force | Out-Null
-        New-Item -Path "$baseFolder/app1/MyCodeunit.al" -Value "// modified file" -type File -Force | Out-Null
+        @('app1', 'app2') | ForEach-Object {
+            $app = @{ id = [guid]::NewGuid().ToString(); name = $_; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() }
+            New-Item -Path "$baseFolder/$_/app.json" -Value (ConvertTo-Json $app -Depth 10) -type File -Force | Out-Null
+        }
 
         $env:Settings = ConvertTo-Json $repoSettings -Depth 99 -Compress
 
-        # Resolve appFolders (standard layout: .\ prefix)
-        $resolvedSettings = @{
-            appFolders = @('.\app1', '.\app2')
-            testFolders = @()
-            bcptTestFolders = @()
-        }
-
-        $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
+        $buildArtifactFolder = Join-Path $baseFolder '.buildartifacts'
         New-Item -Path $buildArtifactFolder -ItemType Directory -Force | Out-Null
 
-        # Only app1 is modified
         $sep = [System.IO.Path]::DirectorySeparatorChar
-        $modifiedFiles = @("app1${sep}MyCodeunit.al")
-
-        Mock InvokeWebRequest {
-            $uri = $args[0]
-            if (-not $uri) { $uri = $Uri }
-            $content = if ($uri -like '*/actions/runs/*/artifacts*') {
-                '{"artifacts":[]}'
-            } else {
-                '{"head_branch":"main"}'
-            }
-            return [PSCustomObject]@{ Content = $content }
-        } -ModuleName 'Github-Helper'
-        # Stub Trace-Information if not already defined (normally loaded by Invoke-AlGoAction.ps1)
-        if (-not (Get-Command 'Trace-Information' -ErrorAction SilentlyContinue)) {
-            function global:Trace-Information { param([string]$Message, $AdditionalData) }
-        }
-        $env:GITHUB_API_URL = 'https://api.github.com'
-        $env:GITHUB_REPOSITORY = 'test/repo'
-
-        $script:capturedOutput = [System.Collections.ArrayList]::new()
-        Mock Write-Host { $null = $script:capturedOutput.Add($Object) } -ModuleName 'DetermineProjectsToBuild'
-
         Get-UnmodifiedAppsFromBaselineWorkflowRun `
             -token 'fake-token' `
-            -settings $resolvedSettings `
-            -baseFolder $baseFolder `
-            -project $project `
-            -baselineWorkflowRunId '12345' `
-            -modifiedFiles $modifiedFiles `
-            -buildArtifactFolder $buildArtifactFolder `
-            -buildMode 'Default' `
-            -projectPath $projectPath
+            -settings @{ appFolders = @('.\app1', '.\app2'); testFolders = @(); bcptTestFolders = @() } `
+            -baseFolder $baseFolder -project '' -baselineWorkflowRunId '12345' `
+            -modifiedFiles @("app1${sep}MyCodeunit.al") `
+            -buildArtifactFolder $buildArtifactFolder -buildMode 'Default' -projectPath $baseFolder
 
-        $inDownloadSection = $false
-        $downloadEntries = @()
-        foreach ($line in $script:capturedOutput) {
-            if ($line -eq 'Download appFolders:') {
-                $inDownloadSection = $true
-                continue
-            }
-            if ($inDownloadSection) {
-                if ($line -match '^Download (test|bcpt)') { break }
-                $downloadEntries += $line
-            }
-        }
-
-        # app2 should be marked for download (unmodified), app1 should not
-        $downloadEntries | Should -Not -Contain '- None' -Because "the unmodified app2 should be identified for download"
-        ($downloadEntries | Where-Object { $_ -like '*app2*' }) | Should -Not -BeNullOrEmpty -Because "app2 was not modified and should be downloaded from baseline"
-        ($downloadEntries | Where-Object { $_ -like '*app1*' }) | Should -BeNullOrEmpty -Because "app1 was modified and should NOT be downloaded from baseline"
+        $entries = Get-DownloadEntries -section 'appFolders' -output $script:capturedOutput
+        $entries | Should -Not -Contain '- None' -Because 'unmodified app2 should be identified for download'
+        ($entries | Where-Object { $_ -like '*app2*' }) | Should -Not -BeNullOrEmpty -Because 'app2 is unmodified'
+        ($entries | Where-Object { $_ -like '*app1*' }) | Should -BeNullOrEmpty -Because 'app1 is modified'
     }
 
     AfterEach {
