@@ -235,7 +235,7 @@ Describe 'CompileFromWorkspace.psm1 Tests' {
             # Re-dot-source here so it's available inside Pester's It blocks.
             . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
             # Trace-Information is from TelemetryHelper.psm1 which isn't loaded in tests
-            function Trace-Information { param([string]$Message) }
+            function Trace-Information { param([string]$Message) $null = $Message }
         }
 
         It 'Returns empty hashtable when no override scripts exist' {
@@ -419,6 +419,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder)
+                $null = $ALToolPath, $WorkspaceFile, $OutFolder
                 # Verify PackageCachePath defaults to compiler\symbols
                 $PackageCachePath | Should -BeLike '*compiler*symbols'
                 return @()
@@ -439,6 +440,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder)
+                $null = $ALToolPath, $WorkspaceFile, $OutFolder
                 $PackageCachePath | Should -Be $customCachePath
                 return @()
             } -ModuleName CompileFromWorkspace -ParameterFilter { $PackageCachePath -eq $customCachePath }
@@ -455,6 +457,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers, $PreprocessorSymbols, $Features, $GenerateReportLayout, $Ruleset, $SourceRepositoryUrl, $SourceCommit, $BuildBy, $BuildUrl, $ReportSuppressedDiagnostics, $EnableExternalRulesets, $MaxCpuCount)
+                $null = $ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers, $PreprocessorSymbols, $Features, $GenerateReportLayout, $Ruleset, $SourceRepositoryUrl, $SourceCommit, $BuildBy, $BuildUrl, $ReportSuppressedDiagnostics, $EnableExternalRulesets
                 # MaxCpuCount should be capped to processor count
                 $MaxCpuCount | Should -BeLessOrEqual ([System.Environment]::ProcessorCount)
                 return @()
@@ -480,6 +483,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             $preCompileScript = {
                 param($appType, $compilationParams)
+                $null = $appType, $compilationParams
                 $script:preCompileInvoked = $true
             }
 
@@ -501,6 +505,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             $postCompileScript = {
                 param($appFiles, $appType, $compilationParams)
+                $null = $appType, $compilationParams
                 $script:postCompileInvoked = $true
                 @($appFiles).Count | Should -Be 2
             }
@@ -533,6 +538,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers)
+                $null = $ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths
                 $Analyzers | Should -Contain 'CodeCop'
                 $Analyzers | Should -Contain 'UICop'
                 return @()
@@ -711,6 +717,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             Mock Invoke-WebRequest {
                 param($Uri, $OutFile)
+                $null = $Uri
                 Set-Content -Path $OutFile -Value 'mock-dll'
             } -ModuleName CompileFromWorkspace
 

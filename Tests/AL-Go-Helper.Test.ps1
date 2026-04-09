@@ -123,6 +123,7 @@
                 artifact = "https://bcartifacts.azureedge.net/sandbox/24.5.26928.27583/us"
                 repoVersion = "3.1.200"
             }
+            $null = $baseSettings # variable is used in It blocks
         }
 
         It 'Default versioning strategy returns settings appBuild and appRevision' {

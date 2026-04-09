@@ -108,6 +108,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
         # calls Invoke-WebRequest with a scriptblock that runs in the module scope
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3, 4, 5))
         } -ModuleName DownloadProjectDependencies
 
@@ -129,6 +130,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
 
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             Copy-Item -Path $zipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
@@ -155,6 +157,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
 
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             Copy-Item -Path $zipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
@@ -183,6 +186,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
 
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             Copy-Item -Path $outerZipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
@@ -203,6 +207,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
 
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             Copy-Item -Path $zipPath -Destination $OutFile -Force
         } -ModuleName DownloadProjectDependencies
 
@@ -219,6 +224,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
     It 'Handles URL with query parameters' {
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3, 4, 5))
         } -ModuleName DownloadProjectDependencies
 
@@ -231,6 +237,7 @@ Describe "DownloadProjectDependencies - Get-AppFilesFromUrl Tests" {
     It 'Generates GUID filename when URL path contains only invalid characters' {
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3, 4, 5))
         } -ModuleName DownloadProjectDependencies
 
@@ -469,6 +476,7 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
 
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing, $Uri
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3))
         } -ModuleName DownloadProjectDependencies
 
@@ -493,6 +501,7 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         $script:capturedUrl = $null
         Mock Invoke-WebRequest {
             param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $null = $Method, $UseBasicParsing
             $script:capturedUrl = $Uri
             [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3))
         } -ModuleName DownloadProjectDependencies
