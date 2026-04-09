@@ -18,7 +18,9 @@ try {
     $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $branchForRelease
     if ($latestRelease) {
         Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
-        DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $previousAppsPath -mask "Apps" -unpack
+        # Use the project name for asset matching; for root projects (".") use wildcard to match repo-named assets
+        $releaseProject = if ($project -eq '.' -or $project -eq '') { '*' } else { $project }
+        DownloadRelease -token $token -projects $releaseProject -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $previousAppsPath -mask "Apps" -unpack
         $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
         Write-Host "Downloaded $($previousApps.Count) previous release app(s)"
     }
