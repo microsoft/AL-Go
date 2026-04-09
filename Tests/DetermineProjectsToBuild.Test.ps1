@@ -1226,7 +1226,7 @@ Describe "ConvertTo-RepoRelativePath" {
     }
 
     It 'resolves a standard .\ prefixed folder to a repo-relative path' {
-        $appDir = New-Item -Path "$baseFolder/app" -ItemType Directory -Force
+        New-Item -Path "$baseFolder/app" -ItemType Directory -Force | Out-Null
         $result = ConvertTo-RepoRelativePath -folder '.\app' -projectPath $baseFolder -baseFolder $baseFolder
         $result | Should -Be 'app'
     }
@@ -1260,7 +1260,7 @@ Describe "ConvertTo-RepoRelativePath" {
     }
 
     It 'handles baseFolder with trailing separator' {
-        $appDir = New-Item -Path "$baseFolder/app" -ItemType Directory -Force
+        New-Item -Path "$baseFolder/app" -ItemType Directory -Force | Out-Null
         $baseFolderWithTrailing = $baseFolder + [System.IO.Path]::DirectorySeparatorChar
         $result = ConvertTo-RepoRelativePath -folder '.\app' -projectPath $baseFolder -baseFolder $baseFolderWithTrailing
         $result | Should -Be 'app'
