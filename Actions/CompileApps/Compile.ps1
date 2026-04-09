@@ -197,13 +197,7 @@ try {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
     }
 
-    # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
-    $dependencyApps += $appFiles
-    $dependencyTestApps += $testAppFiles
     Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
-
-    ConvertTo-Json $dependencyApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyAppsJson
-    ConvertTo-Json $dependencyTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $dependencyTestAppsJson
 } finally {
     Pop-Location
 }
