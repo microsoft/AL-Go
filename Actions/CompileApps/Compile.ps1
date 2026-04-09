@@ -160,6 +160,7 @@ try {
     # Start compilation
     $appFiles = @()
     $testAppFiles = @()
+    $bcptTestAppFiles = @()
     try {
         if ($settings.appFolders.Count -gt 0) {
             # Compile Apps
@@ -187,7 +188,7 @@ try {
             }
 
             # Compile BCPT Test Apps
-            $testAppFiles += Build-AppsInWorkspace @buildParams `
+            $bcptTestAppFiles = Build-AppsInWorkspace @buildParams `
                 -Folders $settings.bcptTestFolders `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'bcptApp'
@@ -197,7 +198,7 @@ try {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
     }
 
-    Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps and $(@($testAppFiles).Count) test apps."
+    Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps, $(@($testAppFiles).Count) test apps and $(@($bcptTestAppFiles).Count) BCPT test apps."
 } finally {
     Pop-Location
 }
