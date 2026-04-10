@@ -119,18 +119,18 @@ try {
         Write-Host "Incremental builds based on modified apps is not yet implemented."
     }
 
-    $previousApps = @()
-    if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
-        $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
-        if ($previousApps.Count -gt 0) {
-            # Copy previous apps to the package cache so AppSourceCop can resolve them alongside their dependencies
-            $previousApps | ForEach-Object {
-                Copy-Item -Path $_ -Destination $packageCachePath -Force
+    if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
+        $previousApps = @()
+        if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
+            $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
+            if ($previousApps.Count -gt 0) {
+                # Copy previous apps to the package cache so AppSourceCop can resolve them alongside their dependencies
+                $previousApps | ForEach-Object {
+                    Copy-Item -Path $_ -Destination $packageCachePath -Force
+                }
             }
         }
-    }
 
-    if ($settings.enableAppSourceCop) {
         # Generate AppSourceCop.json files for app folders with baseline version and settings
         # Use packageCachePath as baseline cache since it contains both previous apps and their dependencies (symbols)
         New-AppSourceCopJson -AppFolders $settings.appFolders -PreviousApps $previousApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings

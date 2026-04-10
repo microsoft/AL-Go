@@ -200,7 +200,7 @@ function Get-ALTool {
 .PARAMETER EnableExternalRulesets
     Switch to enable external rulesets for code analysis.
 .PARAMETER AppType
-    Type of apps being compiled: 'app' or 'testApp'.
+    Type of apps being compiled: 'app', 'testApp', or 'bcptApp'.
 .PARAMETER PreCompileApp
     Scriptblock to execute before compiling each app.
 .PARAMETER PostCompileApp
@@ -252,7 +252,7 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $false)]
         [switch]$EnableExternalRulesets,
         [Parameter(Mandatory = $false)]
-        [ValidateSet('app', 'testApp')]
+        [ValidateSet('app', 'testApp', 'bcptApp')]
         [string]$AppType,
         [Parameter(Mandatory = $false)]
         [scriptblock]$PreCompileApp,
