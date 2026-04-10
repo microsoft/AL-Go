@@ -15,6 +15,7 @@ Downloads the latest release apps for use as a baseline in AppSourceCop validati
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| token | | The GitHub token running the action | github.token |
 | project | | The AL-Go project for which to download previous release apps | '.' |
 
 ## OUTPUT
