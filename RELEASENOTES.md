@@ -1,3 +1,7 @@
+### Support for workspace compilation (Continued)
+- Added support for upgrade tests and using previously released artifacts as baselines for appsourcecop.json
+- Added support for BCPT app compilation with workspace compilation
+
 ### Issues
 
 - Issue 2204 - Workspace compilation ignores vsixFile setting
