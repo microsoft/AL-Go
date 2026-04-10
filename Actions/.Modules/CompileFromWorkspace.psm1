@@ -593,7 +593,7 @@ function Get-DotnetRuntimeVersionInstalled {
                 }
                 $runtimes[$runtime.name] += $version
             } catch {
-                # Skip versions that can't be parsed
+                OutputDebug -message "Skipping runtime version '$($runtime.version)' that could not be parsed: $_"
             }
         }
 
