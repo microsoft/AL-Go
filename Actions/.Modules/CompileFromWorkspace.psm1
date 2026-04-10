@@ -169,12 +169,6 @@ function Get-ALTool {
     Path to the output folder for compiled .app files. Defaults to PackageCachePath.
 .PARAMETER LogDirectory
     Path to the directory for compilation log files.
-.PARAMETER MajorMinorVersion
-    Major.Minor version to stamp into the compiled apps.
-.PARAMETER BuildNumber
-    Build number to stamp into the compiled apps.
-.PARAMETER RevisionNumber
-    Revision number to stamp into the compiled apps.
 .PARAMETER MaxCpuCount
     Maximum number of parallel compilation processes. Defaults to 1.
 .PARAMETER AssemblyProbingPaths
@@ -220,12 +214,6 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
         # Optional parameters
-        [Parameter(Mandatory = $false)]
-        [string]$MajorMinorVersion = "",
-        [Parameter(Mandatory = $false)]
-        [int] $BuildNumber = 0,
-        [Parameter(Mandatory = $false)]
-        [int] $RevisionNumber = 0,
         [Parameter(Mandatory = $false)]
         [int]$MaxCpuCount = 1,
         # Optional compiler parameters
