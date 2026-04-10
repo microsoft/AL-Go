@@ -879,17 +879,22 @@ function New-AppSourceCopJson {
         }
     }
 
-    # Create AppSourceCop.json for each app folder with the previous version as baseline and settings from the project configuration
+    # Create/update AppSourceCop.json for each app folder with the previous version as baseline and settings from the project configuration
     foreach ($folder in $AppFolders) {
         $appSourceCopJsonFile = Join-Path $folder "AppSourceCop.json"
-        $appSourceCopJson = @{}
 
-        # Set mandatory affixes if specified in settings
+        # Start from existing content if present, preserving any user-managed settings
+        $appSourceCopJson = @{}
+        if (Test-Path $appSourceCopJsonFile) {
+            $existingContent = Get-Content -Path $appSourceCopJsonFile -Raw | ConvertFrom-Json
+            $existingContent.PSObject.Properties | ForEach-Object { $appSourceCopJson[$_.Name] = $_.Value }
+        }
+
+        # Set/override AL-Go managed fields
         if ($Settings.appSourceCopMandatoryAffixes -and $Settings.appSourceCopMandatoryAffixes.Count -gt 0) {
             $appSourceCopJson["mandatoryAffixes"] = @() + $Settings.appSourceCopMandatoryAffixes
         }
 
-        # Set obsolete tag minimum allowed major.minor version if specified in settings
         if ($Settings.obsoleteTagMinAllowedMajorMinor) {
             $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
         }
@@ -907,9 +912,6 @@ function New-AppSourceCopJson {
         if ($appSourceCopJson.Count -gt 0) {
             Write-Host "Creating AppSourceCop.json for $folder"
             $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content -Encoding UTF8 $appSourceCopJsonFile
-        }
-        elseif (Test-Path $appSourceCopJsonFile) {
-            Remove-Item $appSourceCopJsonFile -Force
         }
     }
 }
