@@ -547,6 +547,18 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -CompilerFolder $script:mockCompilerFolder -Analyzers @('CodeCop', 'UICop')
         }
+
+        It 'Accepts bcptApp as AppType for BCPT workspace compilation' {
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace { return @() } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj-bcpt') -AppFolders @(
+                @{ Name = "BcptApp"; Id = "88888888-8888-8888-8888-888888888888" }
+            )
+
+            { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -CompilerFolder $script:mockCompilerFolder -AppType 'bcptApp' } | Should -Not -Throw
+        }
     }
 
     Describe 'Copy-CompiledAppsToOutput' {
