@@ -953,22 +953,9 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Does not create file when no previous app matches and no settings apply' {
-            Mock RunAndCheck {
-                return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
-            } -ModuleName CompileFromWorkspace
-
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
-                appSourceCopMandatoryAffixes = @()
-                obsoleteTagMinAllowedMajorMinor = ""
-            }
-
-            Test-Path (Join-Path $script:appFolder "AppSourceCop.json") | Should -Be $false
-        }
-
-        It 'Removes existing AppSourceCop.json when nothing to write' {
-            # Pre-create an AppSourceCop.json
+            # Ensure no pre-existing AppSourceCop.json
             $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
-            '{"old":"content"}' | Set-Content $copJsonPath
+            if (Test-Path $copJsonPath) { Remove-Item $copJsonPath -Force }
 
             Mock RunAndCheck {
                 return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
@@ -980,6 +967,44 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
 
             Test-Path $copJsonPath | Should -Be $false
+        }
+
+        It 'Preserves existing AppSourceCop.json when nothing new to write' {
+            # Pre-create an AppSourceCop.json with custom settings
+            $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
+            '{"supportedCountries":["us","ca"]}' | Set-Content $copJsonPath
+
+            Mock RunAndCheck {
+                return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            Test-Path $copJsonPath | Should -Be $true
+            $result = Get-Content $copJsonPath -Raw | ConvertFrom-Json
+            $result.supportedCountries | Should -Be @("us", "ca")
+        }
+
+        It 'Merges AL-Go settings into existing AppSourceCop.json' {
+            # Pre-create an AppSourceCop.json with custom settings
+            $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
+            '{"supportedCountries":["us","ca"],"customSetting":"keep"}' | Set-Content $copJsonPath
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            $result = Get-Content $copJsonPath -Raw | ConvertFrom-Json
+            # AL-Go managed fields are set
+            $result.mandatoryAffixes | Should -Be @("Test")
+            $result.Version | Should -Be "1.0.0.0"
+            # User-managed fields are preserved
+            $result.supportedCountries | Should -Be @("us", "ca")
+            $result.customSetting | Should -Be "keep"
         }
 
         It 'Handles multiple app folders, only writing for matching ones' {
