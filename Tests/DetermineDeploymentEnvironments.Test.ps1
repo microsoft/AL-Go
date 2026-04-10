@@ -369,11 +369,13 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $env:GITHUB_REF_NAME = "feature/my-feature"
 
         # Should succeed but output a warning
-        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' 3>&1 -WarningVariable warningOutput | Out-Null
+        # OutputWarning uses Write-Warning when running locally, but Write-Host (::Warning::) on GitHub Actions.
+        # Capture all output streams so we can check for the message in either case.
+        $allOutput = . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' *>&1
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 0
-        # Verify the warning was emitted (OutputWarning writes to warning stream when running locally)
-        $warningOutput | Should -Match "No environments matched deployment criteria"
+        # Verify the warning was emitted in any output stream
+        $allOutput | Should -Match "No environments matched deployment criteria"
     }
 
     # noMatchingEnvironmentsAction = error - should throw when all environments are filtered out by branch policy
