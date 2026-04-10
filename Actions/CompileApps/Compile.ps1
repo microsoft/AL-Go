@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'buildMode', Justification = 'Accepted from workflow; reserved for future incremental build support')]
 Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
@@ -137,9 +138,6 @@ try {
         AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
         PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
-        MajorMinorVersion           = $versionNumber.MajorMinorVersion
-        BuildNumber                 = $versionNumber.BuildNumber
-        RevisionNumber              = $versionNumber.RevisionNumber
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism
         SourceRepositoryUrl         = $buildMetadata.SourceRepositoryUrl
         SourceCommit                = $buildMetadata.SourceCommit
