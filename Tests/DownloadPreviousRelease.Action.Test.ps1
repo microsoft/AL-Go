@@ -96,5 +96,16 @@ Describe "DownloadPreviousRelease Action Tests" {
 
             Should -Invoke DownloadRelease -Times 1 -ParameterFilter { $projects -eq '*' }
         }
+
+        It 'Passes named project to DownloadRelease for sub-projects' {
+            $mockRelease = @{ name = 'v1.0'; tag_name = '1.0.0' }
+            Mock GetLatestRelease { return $mockRelease }
+            Mock DownloadRelease {}
+
+            DownloadPreviousRelease -token 'dummy' -project 'Project1'
+
+            Should -Invoke DownloadRelease -Times 1 -ParameterFilter { $projects -eq 'Project1' }
+        }
+
     }
 }

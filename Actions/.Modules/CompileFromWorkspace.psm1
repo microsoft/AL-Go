@@ -904,7 +904,7 @@ function New-AppSourceCopJson {
         if (Test-Path $appJsonPath) {
             $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
             if ($previousAppVersions.ContainsKey($appJson.id)) {
-                $appSourceCopJson["Version"] = $previousAppVersions[$appJson.id]
+                $appSourceCopJson["version"] = $previousAppVersions[$appJson.id]
                 $appSourceCopJson["baselinePackageCachePath"] = $BaselinePackageCachePath
             }
         }

@@ -911,7 +911,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
-            $result.Version | Should -Be "1.0.0.0"
+            $result.version | Should -Be "1.0.0.0"
             $result.baselinePackageCachePath | Should -Be $script:baselinePackageCachePath
             $result.PSObject.Properties.Name | Should -Not -Contain "Publisher"
             $result.PSObject.Properties.Name | Should -Not -Contain "Name"
@@ -950,7 +950,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
-            $result.Version | Should -Be "1.0.0.0"
+            $result.version | Should -Be "1.0.0.0"
             $result.mandatoryAffixes | Should -Be @("Test")
             $result.obsoleteTagMinAllowedMajorMinor | Should -Be "23.0"
         }
@@ -1004,7 +1004,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result = Get-Content $copJsonPath -Raw | ConvertFrom-Json
             # AL-Go managed fields are set
             $result.mandatoryAffixes | Should -Be @("Test")
-            $result.Version | Should -Be "1.0.0.0"
+            $result.version | Should -Be "1.0.0.0"
             # User-managed fields are preserved
             $result.supportedCountries | Should -Be @("us", "ca")
             $result.customSetting | Should -Be "keep"
