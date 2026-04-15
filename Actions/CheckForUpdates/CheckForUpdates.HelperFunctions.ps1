@@ -24,11 +24,15 @@ function DownloadTemplateRepository {
     $templateRepositoryUrl = $templateUrl.Split('@')[0]
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
 
+    # Construct API URL
+    $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
+
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
+    # Use the API URL (not the HTML URL) because github.com returns 401 for cross-org tokens on public repos
     OutputDebug -message "Getting template repository ($templateRepository) with GITHUB_TOKEN"
     $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
     try {
-        $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Method Head -Uri $templateRepositoryUrl
+        $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Method Head -Uri $apiUrl
         OutputDebug -message ($response | Format-List | Out-String)
     }
     catch {
@@ -43,9 +47,6 @@ function DownloadTemplateRepository {
         # NOTE that the GitHub app needs to be installed in the template repository for this to work
         $headers = GetHeaders -token $token -repository $templateRepository
     }
-
-    # Construct API URL
-    $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
 
     Write-Host "TemplateUrl: $templateUrl"
     Write-Host "TemplateSha: $($templateSha.Value)"
