@@ -4,252 +4,6 @@ Import-Module (Join-Path -Path $PSScriptRoot "../Github-Helper.psm1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
 
 $script:alTool = $null
-$script:alCompilerPackageName = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
-
-<#
-.SYNOPSIS
-    Resolves the AL compiler version to install.
-.DESCRIPTION
-    Determines the version constraint for the AL compiler NuGet package using this priority:
-    1. Explicit version from settings (exact version or wildcard like "26.*")
-    2. Major version derived from artifact URL (e.g. "26.*" from a v26 artifact)
-    3. Latest available version ("*")
-.PARAMETER CompilerVersion
-    Optional explicit version from settings. Can be an exact version (e.g. "26.0.12345.67890")
-    or a wildcard (e.g. "26.*").
-.PARAMETER ArtifactUrl
-    Optional artifact URL. The BC major version is extracted from the URL path to derive a
-    version constraint (e.g. "26.*").
-.OUTPUTS
-    A version string suitable for 'dotnet tool install --version'.
-#>
-function Get-CompilerVersionConstraint {
-    param(
-        [Parameter(Mandatory = $false)]
-        [string] $CompilerVersion = '',
-
-        [Parameter(Mandatory = $false)]
-        [string] $ArtifactUrl = ''
-    )
-
-    # 1. Explicit setting takes priority
-    if ($CompilerVersion) {
-        OutputDebug "Using compiler version from settings: $CompilerVersion"
-        return $CompilerVersion
-    }
-
-    # 2. Derive runtime version from artifact URL
-    # NuGet package is versioned by AL runtime version, not BC internal version.
-    # The mapping is: runtime = BC internal major - 11 (e.g. BC 28.0 → runtime 17.0)
-    if ($ArtifactUrl) {
-        try {
-            $versionSegment = $ArtifactUrl.Split('?')[0].Split('/')[4]
-            $bcMajor = [int]($versionSegment.Split('.')[0])
-            $runtimeMajor = $bcMajor - 11
-            if ($runtimeMajor -gt 0) {
-                $constraint = "$runtimeMajor.*"
-                OutputDebug "Derived compiler version constraint from artifact URL (BC $bcMajor → runtime $runtimeMajor): $constraint"
-                return $constraint
-            }
-        }
-        catch {
-            OutputDebug "Could not parse version from artifact URL '$ArtifactUrl': $_"
-        }
-    }
-
-    # 3. Fall back to latest
-    OutputDebug "No version constraint available. Using latest compiler version."
-    return '*'
-}
-
-<#
-.SYNOPSIS
-    Installs the AL compiler from a NuGet package.
-.DESCRIPTION
-    Uses 'dotnet tool install' to install the AL compiler tool from the
-    Microsoft.Dynamics.BusinessCentral.Development.Tools NuGet package.
-    Creates a compiler folder with tool/ and symbols/ subfolders.
-
-    Version is resolved in this order:
-    1. Explicit compilerVersion setting
-    2. Major version derived from artifact URL
-    3. Latest available version
-.PARAMETER CompilerFolder
-    The root folder where the compiler will be installed.
-.PARAMETER CompilerVersion
-    Optional explicit version to install (from settings). Supports wildcards (e.g. "26.*").
-.PARAMETER ArtifactUrl
-    Optional artifact URL used to derive the BC major version for version matching.
-.OUTPUTS
-    The path to the compiler folder.
-#>
-function Install-ALCompiler {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder,
-
-        [Parameter(Mandatory = $false)]
-        [string] $CompilerVersion = '',
-
-        [Parameter(Mandatory = $false)]
-        [string] $ArtifactUrl = '',
-
-        [Parameter(Mandatory = $false)]
-        [string] $AdditionalNuGetSource = ''
-    )
-
-    $versionConstraint = Get-CompilerVersionConstraint -CompilerVersion $CompilerVersion -ArtifactUrl $ArtifactUrl
-    $isExplicitVersion = [bool]$CompilerVersion
-
-    $toolPath = Join-Path $CompilerFolder 'tool'
-    $symbolsPath = Join-Path $CompilerFolder 'symbols'
-
-    # Clean up any previous compiler folder to ensure idempotent installs
-    if (Test-Path $CompilerFolder) {
-        Remove-Item -Path $CompilerFolder -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    # Create folder structure
-    New-Item -Path $CompilerFolder -ItemType Directory -Force | Out-Null
-    New-Item -Path $toolPath -ItemType Directory -Force | Out-Null
-    New-Item -Path $symbolsPath -ItemType Directory -Force | Out-Null
-
-    OutputColor "Installing AL compiler $($script:alCompilerPackageName) version $versionConstraint..." -Color Green
-    $arguments = @("tool", "install", "--tool-path", $toolPath, $script:alCompilerPackageName, "--version", $versionConstraint)
-    if ($AdditionalNuGetSource) {
-        $arguments += @("--add-source", $AdditionalNuGetSource)
-    }
-    try {
-        RunAndCheck "dotnet" @arguments | Out-Host
-    }
-    catch {
-        if ($isExplicitVersion) {
-            throw
-        }
-        # Fall back to latest if the auto-derived version is not available on NuGet
-        OutputWarning "Could not install compiler version '$versionConstraint'. Falling back to latest version."
-        Remove-Item -Path $toolPath -Recurse -Force -ErrorAction SilentlyContinue
-        New-Item -Path $toolPath -ItemType Directory -Force | Out-Null
-        $arguments = @("tool", "install", "--tool-path", $toolPath, $script:alCompilerPackageName)
-        RunAndCheck "dotnet" @arguments | Out-Host
-    }
-
-    # Workaround: dotnet tool install places analyzer DLLs in the 'any' folder alongside the compiler,
-    # but the al tool looks for them at '../Analyzers/' relative to that folder. Copy them to the expected location.
-    $toolsNetFolder = Get-ChildItem -Path (Join-Path $toolPath ".store") -Recurse -Directory -Filter "net*" |
-        Where-Object { Test-Path (Join-Path $_.FullName "any") } |
-        Select-Object -First 1
-    if ($toolsNetFolder) {
-        $anyFolder = Join-Path $toolsNetFolder.FullName "any"
-        $analyzersFolder = Join-Path $toolsNetFolder.FullName "Analyzers"
-        if (-not (Test-Path $analyzersFolder)) {
-            New-Item -Path $analyzersFolder -ItemType Directory -Force | Out-Null
-            Get-ChildItem -Path $anyFolder -File | Where-Object { $_.Name -like '*Analyzers*' -or $_.Name -like '*Cop*' } | ForEach-Object {
-                Copy-Item -Path $_.FullName -Destination $analyzersFolder -Force
-            }
-            OutputDebug "Created Analyzers folder at $analyzersFolder"
-        }
-    }
-
-    OutputColor "AL compiler installed to $toolPath" -Color Green
-    return $CompilerFolder
-}
-
-<#
-.SYNOPSIS
-    Downloads missing external dependencies from NuGet feeds for all workspace projects.
-.DESCRIPTION
-    Invokes 'altool workspace restore' to resolve and download app dependencies
-    from NuGet feeds into the package cache folder. The tool resolves the correct
-    versions based on the compiler version and app.json dependencies.
-.PARAMETER ALToolPath
-    The path to the AL tool executable.
-.PARAMETER WorkspaceFile
-    The path to the workspace file describing the apps.
-.PARAMETER PackageCachePath
-    The folder where downloaded dependency .app files will be stored.
-.PARAMETER Country
-    The country/region code for symbol resolution (e.g. 'w1', 'us', 'dk'). Defaults to 'w1'.
-#>
-function Invoke-WorkspaceRestore {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $ALToolPath,
-
-        [Parameter(Mandatory = $true)]
-        [string] $WorkspaceFile,
-
-        [Parameter(Mandatory = $true)]
-        [string] $PackageCachePath,
-
-        [Parameter(Mandatory = $false)]
-        [string] $Country = 'w1'
-    )
-
-    if (-not (Test-Path $PackageCachePath)) {
-        New-Item -Path $PackageCachePath -ItemType Directory -Force | Out-Null
-    }
-
-    OutputColor "Restoring workspace dependencies (country: $Country)..." -Color Green
-    $arguments = @("workspace", "restore", $WorkspaceFile, "--packagecachepath", $PackageCachePath, "--symbolscountryregion", $Country)
-    RunAndCheck $ALToolPath @arguments | Out-Host
-    OutputColor "Workspace dependencies restored to $PackageCachePath" -Color Green
-}
-
-<#
-.SYNOPSIS
-    Downloads and installs assembly probing DLLs from BC platform artifacts.
-.DESCRIPTION
-    Downloads the Business Central platform artifacts and extracts the DLLs
-    needed for assembly probing during compilation. This is only needed when
-    AL code references .NET types via the DotNet data type.
-.PARAMETER ArtifactUrl
-    The Business Central artifact URL to download platform DLLs from.
-.PARAMETER CompilerFolder
-    The compiler folder where DLLs will be installed under a 'dlls' subfolder.
-#>
-function Install-AssemblyProbingDLLs {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $ArtifactUrl,
-
-        [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder
-    )
-
-    OutputColor "Downloading assembly probing DLLs from platform artifacts..." -Color Green
-
-    $artifactPaths = Download-Artifacts -artifactUrl $ArtifactUrl -includePlatform
-    $platformArtifactPath = $artifactPaths[1]
-
-    $dllsPath = Join-Path $CompilerFolder "dlls"
-    New-Item -Path $dllsPath -ItemType Directory -Force | Out-Null
-
-    # Copy Service tier DLLs
-    $serviceTierFolder = Join-Path $platformArtifactPath "ServiceTier\*\Microsoft Dynamics NAV\*\Service" -Resolve
-    Copy-Item -Path $serviceTierFolder -Filter '*.dll' -Destination $dllsPath -Recurse
-    # Remove folders not needed for compilation
-    Remove-Item -Path (Join-Path $dllsPath 'Service\Management') -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $dllsPath 'Service\WindowsServiceInstaller') -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $dllsPath 'Service\SideServices') -Recurse -Force -ErrorAction SilentlyContinue
-
-    # Copy OpenXML DLL
-    New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
-    Copy-Item -Path (Join-Path $dllsPath 'Service\DocumentFormat.OpenXml.dll') -Destination (Join-Path $dllsPath 'OpenXML') -Force -ErrorAction SilentlyContinue
-
-    # Copy Test Assemblies
-    $testAssembliesFolder = Join-Path $platformArtifactPath "Test Assemblies" -Resolve
-    $testAssembliesDestination = Join-Path $dllsPath "Test Assemblies"
-    New-Item -Path $testAssembliesDestination -ItemType Directory -Force | Out-Null
-    Copy-Item -Path (Join-Path $testAssembliesFolder 'Newtonsoft.Json.dll') -Destination $testAssembliesDestination -Force -ErrorAction SilentlyContinue
-    Copy-Item -Path (Join-Path $testAssembliesFolder 'Microsoft.Dynamics.Framework.UI.Client.dll') -Destination $testAssembliesDestination -Force
-
-    # Copy Mock Assemblies
-    $mockAssembliesFolder = Join-Path $testAssembliesFolder "Mock Assemblies" -Resolve
-    Copy-Item -Path $mockAssembliesFolder -Filter '*.dll' -Destination $dllsPath -Recurse
-
-    OutputColor "Assembly probing DLLs installed to $dllsPath" -Color Green
-}
 
 <#
 .SYNOPSIS
@@ -313,21 +67,11 @@ function Get-CustomAnalyzers {
         return $analyzers
     }
 
-    # Find the Analyzers directory - check both new (dotnet tool) and old (vsix) structures
-    $analyzerDownloadDir = Join-Path $CompilerFolder 'analyzers'
-    if (-not (Test-Path $analyzerDownloadDir)) {
-        $legacyBinPath = Join-Path $CompilerFolder 'compiler/extension/bin'
-        if (Test-Path (Join-Path $legacyBinPath 'Analyzers')) {
-            $analyzerDownloadDir = Join-Path $legacyBinPath 'Analyzers'
-        }
-        else {
-            New-Item -Path $analyzerDownloadDir -ItemType Directory -Force | Out-Null
-        }
-    }
-
+    # Analyzers/ directory exists in the compiler folder by default
+    $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
-            $analyzerFileName = Join-Path $analyzerDownloadDir (Split-Path $customCodeCop -Leaf)
+            $analyzerFileName = Join-Path $binPath "Analyzers/$(Split-Path $customCodeCop -Leaf)"
             try {
                 Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName -ErrorAction Stop
             } catch {
@@ -382,25 +126,7 @@ function Get-ALTool {
         return $script:alTool
     }
 
-    # Check new dotnet tool install location first (tool/ subfolder)
-    $toolPath = Join-Path $CompilerFolder "tool"
-    if (Test-Path $toolPath) {
-        if ($IsLinux) {
-            $candidates = @("altool", "al")
-        }
-        else {
-            $candidates = @("altool.exe", "al.exe")
-        }
-        foreach ($candidate in $candidates) {
-            $alExe = Join-Path $toolPath $candidate
-            if (Test-Path $alExe) {
-                $script:alTool = $alExe
-                return $script:alTool
-            }
-        }
-    }
-
-    # Fall back to legacy vsix-based path (compiler/extension/bin/<platform>/)
+    # Select the platform-specific AL tool binary
     if ($IsLinux) {
         $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/linux"
         $alExe = Join-Path $platformFolder "altool"
@@ -482,8 +208,6 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $true)]
         [string]$CompilerFolder,
         [Parameter(Mandatory = $false)]
-        [string]$WorkspaceFile,
-        [Parameter(Mandatory = $false)]
         [string]$PackageCachePath,
         [Parameter(Mandatory = $false)]
         [string]$OutFolder,
@@ -550,18 +274,14 @@ function Build-AppsInWorkspace {
     # Get AL tool path
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
 
-    # Reuse provided workspace file or create a new one
-    $createdWorkspaceFile = $false
-    if (-not $WorkspaceFile) {
-        $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
-        $WorkspaceFile = Join-Path (Get-Location) "tempWorkspace$datetimeStamp.code-workspace"
-        New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $WorkspaceFile -AltoolPath $alToolPath
-        $createdWorkspaceFile = $true
-    }
+    # Create workspace file in temp directory
+    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
+    $workspaceFile = Join-Path (Get-Location) "tempWorkspace$datetimeStamp.code-workspace"
+    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
 
     $compilationParameters = @{
         ALToolPath = $alToolPath
-        WorkspaceFile = $WorkspaceFile
+        WorkspaceFile = $workspaceFile
         PackageCachePath = $PackageCachePath
         OutFolder = $OutputFolder
         LogDirectory = $LogDirectory
@@ -594,10 +314,8 @@ function Build-AppsInWorkspace {
         Invoke-Command -ScriptBlock $PostCompileApp -ArgumentList $appFiles, $AppType, $compilationParameters
     }
 
-    # Remove the workspace file only if we created it
-    if ($createdWorkspaceFile) {
-        Remove-Item $WorkspaceFile -Force -ErrorAction SilentlyContinue
-    }
+    # Remove the workspace file again
+    Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
 
     return $appFiles
 }
@@ -928,17 +646,12 @@ function Get-AssemblyProbingPaths {
     $probingPaths = @()
 
     $compilerFolderDllsPath = Join-Path $CompilerFolder "dlls"
-
-    # If dlls/ folder does not exist, assembly probing is not configured
-    if (-not (Test-Path $compilerFolderDllsPath)) {
-        OutputDebug "No dlls folder found in compiler folder. Assembly probing paths will be empty."
-        return $probingPaths
-    }
-
     $compilerFolderSharedPath = Join-Path $compilerFolderDllsPath "shared"
 
     # Use Service and Mock Assemblies folders if they exist from the compiler folder
-    $probingPaths += @((Join-Path $compilerFolderDllsPath "Service"),(Join-Path $compilerFolderDllsPath "Mock Assemblies"))
+    if (Test-Path $compilerFolderDllsPath) {
+        $probingPaths += @((Join-Path $compilerFolderDllsPath "Service"),(Join-Path $compilerFolderDllsPath "Mock Assemblies"))
+    }
 
     # Use OpenXML and shared folder if they exist
     if (Test-Path $compilerFolderSharedPath) {
@@ -1068,89 +781,6 @@ function Update-AppJsonProperties {
 
 <#
 .SYNOPSIS
-    Converts AL compiler output lines to GitHub Actions workflow annotations.
-.DESCRIPTION
-    Parses AL compiler output and converts error/warning lines into GitHub Actions
-    annotation format (::error, ::warning) with file, line, and column information.
-    Optionally fails the build based on diagnostic severity.
-.PARAMETER AlcOutput
-    Array of output lines from the AL compiler.
-.PARAMETER BasePath
-    Base path to strip from file paths to create relative paths in annotations.
-.PARAMETER FailOn
-    Criteria for failing the build: 'none', 'error', 'warning', or 'newWarning'.
-#>
-function Write-CompilerDiagnostics {
-    param(
-        [Parameter(Mandatory = $true)]
-        [AllowEmptyCollection()]
-        [AllowEmptyString()]
-        [AllowNull()]
-        [string[]] $AlcOutput,
-
-        [Parameter(Mandatory = $false)]
-        [string] $BasePath = '',
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet('none','error','warning','newWarning')]
-        [string] $FailOn = 'none'
-    )
-
-    if (-not $AlcOutput) { return }
-
-    if ($BasePath) {
-        $BasePath = "$($BasePath.TrimEnd('\'))\"
-    }
-    $hasError = $false
-    $hasWarning = $false
-
-    foreach ($line in $AlcOutput) {
-        $newLine = $line
-        switch -regex ($line) {
-            # file(line,col): error CODE: message
-            "^(.*)\((\d+),(\d+)\): error (\w{2,3}\d{4}): (.*)$" {
-                $file = $Matches[1]
-                if ($file -like "$($BasePath)*") { $file = ".\$($file.SubString($BasePath.Length))".Replace('\','/') }
-                $newLine = "::error file=$($file),line=$($Matches[2]),col=$($Matches[3])::$($Matches[4]) $($Matches[5])"
-                $hasError = $true
-                break
-            }
-            # error CODE: message (no file)
-            "^(.*)error (\w{2,3}\d{4}): (.*)$" {
-                $newLine = "::error::$($Matches[2]) $($Matches[3])"
-                $hasError = $true
-                break
-            }
-            # file(line,col): warning CODE: message
-            "^(.*)\((\d+),(\d+)\): warning (\w{2,3}\d{4}): (.*)$" {
-                $file = $Matches[1]
-                if ($file -like "$($BasePath)*") { $file = ".\$($file.SubString($BasePath.Length))".Replace('\','/') }
-                $newLine = "::warning file=$($file),line=$($Matches[2]),col=$($Matches[3])::$($Matches[4]) $($Matches[5])"
-                $hasWarning = $true
-                break
-            }
-            # warning CODE: message (no file)
-            "^warning (\w{2,3}\d{4}):(.*)$" {
-                $newLine = "::warning::$($Matches[1]) $($Matches[2])"
-                $hasWarning = $true
-                break
-            }
-        }
-        Write-Host $newLine
-    }
-
-    if ($FailOn -eq 'warning' -and $hasWarning) {
-        Write-Host "::Error::Failing build as warnings were reported"
-        $host.SetShouldExit(1)
-    }
-    elseif ($FailOn -eq 'error' -and $hasError) {
-        Write-Host "::Error::Failing build as errors were reported"
-        $host.SetShouldExit(1)
-    }
-}
-
-<#
-.SYNOPSIS
     Creates a consolidated build output file from individual log files.
 .DESCRIPTION
     Collects all .log files from the specified build artifact folder, sanitizes their content,
@@ -1192,9 +822,9 @@ function New-BuildOutputFile {
             $sanitizedLines = Get-Content -Path $logFile | ForEach-Object { $_ -replace '^\[OUT\]\s?', '' }
             Add-Content -Path $buildOutputPath -Value $sanitizedLines
 
-            # Print build output to console as GitHub Actions annotations
+            # Print build output to console (aggregated), preserving line formatting
             if ($DisplayInConsole) {
-                Write-CompilerDiagnostics -AlcOutput $sanitizedLines -BasePath $BasePath -FailOn $FailOn
+                Convert-AlcOutputToAzureDevOps -basePath $BasePath -AlcOutput $sanitizedLines -gitHubActions -FailOn $FailOn
             }
         }
     } finally {
@@ -1211,9 +841,3 @@ Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
-Export-ModuleMember -Function Get-CompilerVersionConstraint
-Export-ModuleMember -Function Install-ALCompiler
-Export-ModuleMember -Function Invoke-WorkspaceRestore
-Export-ModuleMember -Function Install-AssemblyProbingDLLs
-Export-ModuleMember -Function Get-ALTool
-Export-ModuleMember -Function New-WorkspaceFromFolders

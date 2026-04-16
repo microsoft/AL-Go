@@ -1,9 +1,3 @@
-### Workspace compilation now uses NuGet-based compiler
-
-Workspace compilation no longer depends on `New-BcCompilerFolder` from BcContainerHelper. The AL compiler is now installed directly from the `Microsoft.Dynamics.BusinessCentral.Development.Tools` NuGet package, and app dependencies (symbols) are resolved via `altool DownloadDependencies`. This eliminates the need to download the full ~2GB Business Central platform artifacts for compilation.
-
-A new setting `workspaceCompilation.includeAssemblyProbing` (default: `false`) controls whether platform DLLs are downloaded for assembly probing. This is only needed when AL code references .NET types via the `DotNet` data type. Most apps do not need this, resulting in significantly faster build setup.
-
 ### Issues
 
 - Issue 2204 - Workspace compilation ignores vsixFile setting

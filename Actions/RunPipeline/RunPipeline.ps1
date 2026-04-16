@@ -23,14 +23,6 @@ $projectPath = $null
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
-
-    # Read settings early to allow fast exit when workspace compilation handles everything
-    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-    if ($settings.workspaceCompilation.enabled -and $settings.doNotPublishApps) {
-        OutputColor -Message "Workspace compilation complete; doNotPublishApps is set. Exiting." -Color Yellow
-        return
-    }
-
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
@@ -84,12 +76,18 @@ try {
     $workflowName = "$env:GITHUB_WORKFLOW".Trim()
 
     Write-Host "use settings and secrets"
+    $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
     # ENV:Secrets is not set when running Pull_Request trigger
     if ($env:Secrets) {
         $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
     }
     else {
         $secrets = @{}
+    }
+
+    if ($settings.workspaceCompilation.enabled -and $settings.doNotPublishApps) {
+        OutputColor -Message "Workspace compilation complete; doNotPublishApps is set. Exiting." -Color Yellow
+        return
     }
 
     'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {

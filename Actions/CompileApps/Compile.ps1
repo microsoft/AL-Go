@@ -22,6 +22,7 @@ Param(
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+DownloadAndImportBcContainerHelper
 
 # ANALYZE - Analyze the repository and determine settings
 $baseFolder = (Get-BasePath)
@@ -93,53 +94,23 @@ try {
         }
     }
 
-    # Set up the compiler folder
-    if ($settings.vsixFile) {
-        OutputWarning "The 'vsixFile' setting is ignored when workspace compilation is enabled. The AL compiler is installed from NuGet instead."
-    }
-    # TEMPORARY: Download custom nupkg for testing workspace restore
-    $releaseBaseUrl = "https://github.com/Aholstrup1-PersonalOrg/BugBash7/releases/download/ALTool"
-    $localNugetSource = Join-Path $ENV:RUNNER_TEMP "custom-nuget"
-    New-Item -Path $localNugetSource -ItemType Directory -Force | Out-Null
-    @(
-        "Microsoft.Dynamics.BusinessCentral.Development.Tools.18.0.0-beta.nupkg",
-        "Microsoft.Dynamics.BusinessCentral.Development.Tools.Linux.18.0.0-beta.nupkg",
-        "Microsoft.Dynamics.BusinessCentral.Development.Tools.Win.18.0.0-beta.nupkg",
-        "Microsoft.Dynamics.BusinessCentral.Development.Tools.Altpgen.18.0.0-beta.nupkg"
-    ) | ForEach-Object {
-        Invoke-WebRequest -Uri "$releaseBaseUrl/$_" -OutFile (Join-Path $localNugetSource $_)
-    }
-    OutputColor "Downloaded custom AL compiler nupkgs for testing" -Color Yellow
-
+    # Set up a compiler folder
     $containerName = GetContainerName($project)
-    $compilerFolder = Join-Path $ENV:RUNNER_TEMP "$($containerName)compiler"
-    Install-ALCompiler -CompilerFolder $compilerFolder -CompilerVersion "18.0.0-beta" -AdditionalNuGetSource $localNugetSource
+    $cacheFolder = ""
+    if ($settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*") {
+        # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
+        $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
+    }
+    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -vsixFile $settings.vsixFile -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
     $packageCachePath = Join-Path $compilerFolder "symbols"
 
-    # Get AL tool path early — needed for workspace restore and workspace creation
-    $alToolPath = Get-ALTool -CompilerFolder $compilerFolder
-
-    # Create workspace file and restore dependencies from NuGet feeds
-    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
-    $workspaceFile = Join-Path $projectFolder "tempWorkspace$datetimeStamp.code-workspace"
-    New-WorkspaceFromFolders -Folders ($settings.appFolders + $settings.testFolders) -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
-
-    # Download symbols (Microsoft app dependencies) from NuGet feeds
-    Invoke-WorkspaceRestore -ALToolPath $alToolPath -WorkspaceFile $workspaceFile -PackageCachePath $packageCachePath -Country $settings.country
-
-    # Copy project dependency apps to the package cache so the compiler can resolve them
+    # Copy dependency apps to the package cache so the compiler can resolve them
     foreach ($appFile in $dependencyApps) {
         $appFile = $appFile.Trim('()')
         if ($appFile -and (Test-Path $appFile)) {
             Copy-Item -Path $appFile -Destination $packageCachePath -Force
             OutputDebug "Copied dependency app to package cache: $(Split-Path $appFile -Leaf)"
         }
-    }
-
-    # Optionally install assembly probing DLLs (only needed for apps referencing .NET types)
-    if ($settings.workspaceCompilation.includeAssemblyProbing) {
-        DownloadAndImportBcContainerHelper
-        Install-AssemblyProbingDLLs -ArtifactUrl $artifact -CompilerFolder $compilerFolder
     }
 
     # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
@@ -161,7 +132,6 @@ try {
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
         CompilerFolder              = $compilerFolder
-        WorkspaceFile               = $workspaceFile
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
@@ -205,7 +175,6 @@ try {
 
     } finally {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
-        Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
     }
 
     # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
