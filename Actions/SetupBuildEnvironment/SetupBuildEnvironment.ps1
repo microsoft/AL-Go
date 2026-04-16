@@ -29,8 +29,9 @@ if ($settings.doNotPublishApps) {
 $hasTests = ($settings.testFolders -and $settings.testFolders.Count -gt 0)
 $hasBcptTests = ($settings.bcptTestFolders -and $settings.bcptTestFolders.Count -gt 0)
 $hasPageScriptingTests = ($settings.pageScriptingTests -and $settings.pageScriptingTests.Count -gt 0)
+$needsTestToolkit = $settings.installTestRunner -or $settings.installTestFramework -or $settings.installTestLibraries -or $settings.installPerformanceToolkit
 
-$wantsUnitTests = $hasTests -and -not $settings.doNotRunTests
+$wantsUnitTests = ($hasTests -or $needsTestToolkit) -and -not $settings.doNotRunTests
 $wantsBcptTests = $hasBcptTests -and -not $settings.doNotRunBcptTests
 $wantsPageScriptingTests = $hasPageScriptingTests -and -not $settings.doNotRunPageScriptingTests
 
