@@ -153,6 +153,13 @@ jobs:
           path: ${{ runner.temp }}/.artifactcache
           key: ${{ env.artifactCacheKey }}
 
+      - name: Warmup Build Environment
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.doNotPublishApps != 'True'
+        uses: microsoft/AL-Go-Actions/WarmupBuildEnvironment@main
+        with:
+          shell: ${{ inputs.shell }}
+          artifact: ${{ env.artifact }}
+
       - name: Download Project Dependencies
         id: DownloadProjectDependencies
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'

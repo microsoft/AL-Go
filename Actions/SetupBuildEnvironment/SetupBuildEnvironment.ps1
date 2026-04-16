@@ -58,9 +58,9 @@ $password = [guid]::NewGuid().ToString().Substring(0, 20) + "Ab1!"
 Write-Host "::add-mask::$password"
 $credential = New-Object pscredential 'admin', (ConvertTo-SecureString -String $password -AsPlainText -Force)
 
-# Pull generic image
+# Determine generic image (WarmupBuildEnvironment already started the pull in background)
 $genericImageName = Get-BestGenericImageName
-Write-Host "Pulling generic image $genericImageName"
+Write-Host "Waiting for docker image $genericImageName (background pull should be in progress)"
 docker pull --quiet $genericImageName
 
 # Handle volume mapping for self-hosted runners
