@@ -214,11 +214,8 @@ if (-not $settings.skipUpgrade) {
 if ($compiledApps) {
     OutputGroupStart -Message "Publishing compiled apps"
     $sortedCompiledApps = Sort-AppFilesByDependencies -appFiles $compiledApps -WarningAction SilentlyContinue
-    $sortedCompiledApps | ForEach-Object {
-        $installedApp = Get-BcContainerAppInfo -containerName $containerName -tenantSpecificProperties | Where-Object { $_.IsInstalled -and "$($_.AppId)" -eq (Get-AppJsonFromAppFile -appFile $_).id }
-        Publish-BcContainerApp -containerName $containerName -tenant $tenant -credential $credential `
-            -appFile $_ -skipVerification -sync -install:(!$installedApp) -upgrade:([bool]$installedApp)
-    }
+    Publish-BcContainerApp -containerName $containerName -tenant $tenant -credential $credential `
+        -appFile $sortedCompiledApps -skipVerification -sync -install -upgrade -ignoreIfAppExists
     OutputGroupEnd
 }
 
