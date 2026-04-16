@@ -191,6 +191,7 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+          artifact: ${{ env.artifact }}
 
       - name: Publish Apps
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.needsContainer == 'true'

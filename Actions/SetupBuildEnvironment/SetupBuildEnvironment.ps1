@@ -1,6 +1,8 @@
 Param(
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
-    [string] $project = ""
+    [string] $project = "",
+    [Parameter(HelpMessage = "ArtifactUrl to use", Mandatory = $false)]
+    [string] $artifact = ""
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -12,6 +14,9 @@ $baseFolder = $ENV:GITHUB_WORKSPACE
 $projectPath = Join-Path $baseFolder $project
 
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+if ($artifact) {
+    $settings.artifact = $artifact
+}
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 
 # Determine if container is needed: we need it for publishing and running tests
