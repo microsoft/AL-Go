@@ -31,9 +31,14 @@ $hasBcptTests = ($settings.bcptTestFolders -and $settings.bcptTestFolders.Count 
 $hasPageScriptingTests = ($settings.pageScriptingTests -and $settings.pageScriptingTests.Count -gt 0)
 $needsTestToolkit = $settings.installTestRunner -or $settings.installTestFramework -or $settings.installTestLibraries -or $settings.installPerformanceToolkit
 
+Write-Host "hasTests: $hasTests, hasBcptTests: $hasBcptTests, hasPageScriptingTests: $hasPageScriptingTests, needsTestToolkit: $needsTestToolkit"
+Write-Host "installTestRunner: $($settings.installTestRunner), doNotRunTests: $($settings.doNotRunTests)"
+
 $wantsUnitTests = ($hasTests -or $needsTestToolkit) -and -not $settings.doNotRunTests
 $wantsBcptTests = $hasBcptTests -and -not $settings.doNotRunBcptTests
 $wantsPageScriptingTests = $hasPageScriptingTests -and -not $settings.doNotRunPageScriptingTests
+
+Write-Host "wantsUnitTests: $wantsUnitTests, wantsBcptTests: $wantsBcptTests, wantsPageScriptingTests: $wantsPageScriptingTests"
 
 if (-not ($wantsUnitTests -or $wantsBcptTests -or $wantsPageScriptingTests)) {
     Write-Host "No tests to run - no container needed"
