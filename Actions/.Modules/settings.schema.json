@@ -543,14 +543,6 @@
                 "parallelism": {
                     "type": "integer",
                     "description": "The number of parallel processes to use for workspace compilation. Set to 0 or -1 to use all available processors."
-                },
-                "includeAssemblyProbing": {
-                    "type": "boolean",
-                    "description": "If true, download Business Central platform DLLs for assembly probing during compilation. Only needed when AL code references .NET types via the DotNet data type. Default: false."
-                },
-                "compilerVersion": {
-                    "type": "string",
-                    "description": "Override the AL compiler version to install from NuGet. Supports exact versions (e.g. '26.0.12345.67890') or wildcards (e.g. '26.*'). If not set, the version is derived from the artifact URL or defaults to latest."
                 }
             },
             "additionalProperties": false
