@@ -21,6 +21,22 @@ if (-not $isWindows) {
     return
 }
 
+# Check if there are actually tests to run — no point warming up a container otherwise
+$settings = AnalyzeRepo -settings $settings -baseFolder $ENV:GITHUB_WORKSPACE -project '' -doNotCheckArtifactSetting
+
+$hasTests = ($settings.testFolders -and $settings.testFolders.Count -gt 0)
+$hasBcptTests = ($settings.bcptTestFolders -and $settings.bcptTestFolders.Count -gt 0)
+$hasPageScriptingTests = ($settings.pageScriptingTests -and $settings.pageScriptingTests.Count -gt 0)
+
+$wantsUnitTests = $hasTests -and -not $settings.doNotRunTests
+$wantsBcptTests = $hasBcptTests -and -not $settings.doNotRunBcptTests
+$wantsPageScriptingTests = $hasPageScriptingTests -and -not $settings.doNotRunPageScriptingTests
+
+if (-not ($wantsUnitTests -or $wantsBcptTests -or $wantsPageScriptingTests)) {
+    Write-Host "No tests to run - skipping warmup"
+    return
+}
+
 # 1) Start docker pull as background process
 $genericImageName = Get-BestGenericImageName
 Write-Host "Starting background docker pull for $genericImageName"

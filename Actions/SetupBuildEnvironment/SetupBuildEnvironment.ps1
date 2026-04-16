@@ -26,8 +26,16 @@ if ($settings.doNotPublishApps) {
     return
 }
 
-if ($settings.doNotRunTests -and $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
-    Write-Host "All test types are disabled - no container needed"
+$hasTests = ($settings.testFolders -and $settings.testFolders.Count -gt 0)
+$hasBcptTests = ($settings.bcptTestFolders -and $settings.bcptTestFolders.Count -gt 0)
+$hasPageScriptingTests = ($settings.pageScriptingTests -and $settings.pageScriptingTests.Count -gt 0)
+
+$wantsUnitTests = $hasTests -and -not $settings.doNotRunTests
+$wantsBcptTests = $hasBcptTests -and -not $settings.doNotRunBcptTests
+$wantsPageScriptingTests = $hasPageScriptingTests -and -not $settings.doNotRunPageScriptingTests
+
+if (-not ($wantsUnitTests -or $wantsBcptTests -or $wantsPageScriptingTests)) {
+    Write-Host "No tests to run - no container needed"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "needsContainer=false"
     return
 }
