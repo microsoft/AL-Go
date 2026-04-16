@@ -49,7 +49,7 @@ $keyVaultClientId = ""
 }
 
 # Generate container credentials
-$password = GetRandomPassword
+$password = [guid]::NewGuid().ToString().Substring(0, 20) + "Ab1!"
 Write-Host "::add-mask::$password"
 $credential = New-Object pscredential 'admin', (ConvertTo-SecureString -String $password -AsPlainText -Force)
 
