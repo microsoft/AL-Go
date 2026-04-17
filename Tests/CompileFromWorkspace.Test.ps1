@@ -709,8 +709,8 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
         It 'Downloads URL-based analyzers to compiler folder' {
             $compilerFolder = Join-Path $TestDrive 'compiler-analyzers'
-            $analyzersBin = Join-Path $compilerFolder 'compiler\extension\bin\Analyzers'
-            New-Item -Path $analyzersBin -ItemType Directory -Force | Out-Null
+            $analyzersDir = Join-Path $compilerFolder 'analyzers'
+            New-Item -Path $analyzersDir -ItemType Directory -Force | Out-Null
 
             Mock Invoke-WebRequest {
                 param($Uri, $OutFile)
@@ -721,6 +721,23 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             $result.Count | Should -Be 1
             $result[0] | Should -BeLike '*MyAnalyzer.dll'
+        }
+
+        It 'Falls back to legacy vsix analyzer path when it exists' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-analyzers-legacy'
+            $legacyAnalyzersDir = Join-Path $compilerFolder 'compiler\extension\bin\Analyzers'
+            New-Item -Path $legacyAnalyzersDir -ItemType Directory -Force | Out-Null
+
+            Mock Invoke-WebRequest {
+                param($Uri, $OutFile)
+                Set-Content -Path $OutFile -Value 'mock-dll'
+            } -ModuleName CompileFromWorkspace
+
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/LegacyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeLike '*LegacyAnalyzer.dll'
+            $result[0] | Should -BeLike '*compiler\extension\bin\Analyzers*'
         }
     }
 
@@ -753,6 +770,230 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
 
             ($result -like '*shared') | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Returns empty array when dlls folder does not exist' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-no-dlls'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            @($result).Count | Should -Be 0
+        }
+    }
+
+    Describe 'Get-ALTool' {
+        It 'Finds altool in dotnet tool path first' {
+            InModuleScope CompileFromWorkspace {
+                $script:alTool = $null
+                $compilerFolder = Join-Path $TestDrive 'compiler-altool-new'
+                $toolPath = Join-Path $compilerFolder 'tool'
+                New-Item -Path $toolPath -ItemType Directory -Force | Out-Null
+                Set-Content -Path (Join-Path $toolPath 'altool.exe') -Value 'mock'
+
+                $result = Get-ALTool -CompilerFolder $compilerFolder
+
+                $result | Should -BeLike '*tool*altool.exe'
+            }
+        }
+
+        It 'Falls back to legacy vsix path when tool folder does not exist' {
+            InModuleScope CompileFromWorkspace {
+                $script:alTool = $null
+                $compilerFolder = Join-Path $TestDrive 'compiler-altool-legacy'
+                $legacyPath = Join-Path $compilerFolder 'compiler\extension\bin\win32'
+                New-Item -Path $legacyPath -ItemType Directory -Force | Out-Null
+                Set-Content -Path (Join-Path $legacyPath 'altool.exe') -Value 'mock'
+
+                $result = Get-ALTool -CompilerFolder $compilerFolder
+
+                $result | Should -BeLike '*win32*altool.exe'
+            }
+        }
+
+        It 'Throws when altool is not found in any location' {
+            InModuleScope CompileFromWorkspace {
+                $script:alTool = $null
+                $compilerFolder = Join-Path $TestDrive 'compiler-altool-missing'
+                New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+
+                { Get-ALTool -CompilerFolder $compilerFolder } | Should -Throw '*Could not find AL tool*'
+            }
+        }
+    }
+
+    Describe 'Get-CompilerVersionConstraint' {
+        It 'Returns explicit compilerVersion when set' {
+            $result = Get-CompilerVersionConstraint -CompilerVersion '26.0.12345.67890'
+
+            $result | Should -Be '26.0.12345.67890'
+        }
+
+        It 'Returns wildcard from explicit compilerVersion' {
+            $result = Get-CompilerVersionConstraint -CompilerVersion '26.*'
+
+            $result | Should -Be '26.*'
+        }
+
+        It 'Derives runtime version wildcard from artifact URL' {
+            $result = Get-CompilerVersionConstraint -ArtifactUrl 'https://bcartifacts.azureedge.net/sandbox/26.0.12345.67890/w1'
+
+            $result | Should -Be '15.*'
+        }
+
+        It 'Prefers explicit compilerVersion over artifact URL' {
+            $result = Get-CompilerVersionConstraint -CompilerVersion '25.0.100.200' -ArtifactUrl 'https://bcartifacts.azureedge.net/sandbox/26.0.12345.67890/w1'
+
+            $result | Should -Be '25.0.100.200'
+        }
+
+        It 'Falls back to wildcard when no version info available' {
+            $result = Get-CompilerVersionConstraint
+
+            $result | Should -Be '*'
+        }
+
+        It 'Falls back to wildcard when artifact URL is malformed' {
+            $result = Get-CompilerVersionConstraint -ArtifactUrl 'not-a-url'
+
+            $result | Should -Be '*'
+        }
+    }
+
+    Describe 'Install-ALCompiler' {
+        It 'Creates folder structure and calls dotnet tool install' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedDotnetArgs = @()
+                Mock RunAndCheck {
+                    $script:capturedDotnetArgs = $args
+                }
+
+                $compilerFolder = Join-Path $TestDrive 'compiler-install'
+                $result = Install-ALCompiler -CompilerFolder $compilerFolder -ArtifactUrl 'https://bcartifacts.azureedge.net/sandbox/26.0.100.200/w1'
+
+                $result | Should -Be $compilerFolder
+                Test-Path (Join-Path $compilerFolder 'tool') | Should -BeTrue
+                Test-Path (Join-Path $compilerFolder 'symbols') | Should -BeTrue
+                $script:capturedDotnetArgs[0] | Should -Be 'dotnet'
+                $script:capturedDotnetArgs | Should -Contain '--tool-path'
+                $script:capturedDotnetArgs | Should -Contain '--version'
+                $script:capturedDotnetArgs | Should -Contain '15.*'
+            }
+        }
+
+        It 'Uses explicit compilerVersion over artifact URL' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedDotnetArgs = @()
+                Mock RunAndCheck {
+                    $script:capturedDotnetArgs = $args
+                }
+
+                $compilerFolder = Join-Path $TestDrive 'compiler-install-version'
+                Install-ALCompiler -CompilerFolder $compilerFolder -CompilerVersion '25.0.50.100' -ArtifactUrl 'https://bcartifacts.azureedge.net/sandbox/26.0.100.200/w1'
+
+                $script:capturedDotnetArgs | Should -Contain '25.0.50.100'
+            }
+        }
+
+        It 'Falls back to latest when no version info available' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedDotnetArgs = @()
+                Mock RunAndCheck {
+                    $script:capturedDotnetArgs = $args
+                }
+
+                $compilerFolder = Join-Path $TestDrive 'compiler-install-latest'
+                Install-ALCompiler -CompilerFolder $compilerFolder
+
+                $script:capturedDotnetArgs | Should -Contain '*'
+            }
+        }
+
+        It 'Falls back to latest when auto-derived version is not found on NuGet' {
+            InModuleScope CompileFromWorkspace {
+                $script:callCount = 0
+                $script:capturedDotnetArgs = @()
+                Mock RunAndCheck {
+                    $script:callCount++
+                    if ($script:callCount -eq 1) {
+                        throw "version 99.* not found"
+                    }
+                    $script:capturedDotnetArgs = $args
+                }
+
+                $compilerFolder = Join-Path $TestDrive 'compiler-install-fallback'
+                Install-ALCompiler -CompilerFolder $compilerFolder -ArtifactUrl 'https://bcartifacts.azureedge.net/sandbox/99.0.100.200/w1'
+
+                # Second call should NOT contain --version (fallback to latest)
+                $script:capturedDotnetArgs | Should -Not -Contain '--version'
+            }
+        }
+
+        It 'Throws when explicit compilerVersion is not found on NuGet' {
+            InModuleScope CompileFromWorkspace {
+                Mock RunAndCheck {
+                    throw "version not found"
+                }
+
+                $compilerFolder = Join-Path $TestDrive 'compiler-install-explicit-fail'
+                { Install-ALCompiler -CompilerFolder $compilerFolder -CompilerVersion '99.0.0.0' } | Should -Throw '*version not found*'
+            }
+        }
+    }
+
+    Describe 'Invoke-WorkspaceRestore' {
+        It 'Calls altool with workspace restore command and country' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArgs = @()
+                Mock RunAndCheck {
+                    $script:capturedArgs = $args
+                }
+
+                $wsFile = Join-Path $TestDrive 'deps.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $cachePath = Join-Path $TestDrive 'deps-symbols'
+                New-Item -Path $cachePath -ItemType Directory -Force | Out-Null
+
+                Invoke-WorkspaceRestore -ALToolPath 'al.exe' -WorkspaceFile $wsFile -PackageCachePath $cachePath -Country 'us'
+
+                $script:capturedArgs[0] | Should -Be 'al.exe'
+                $script:capturedArgs | Should -Contain 'workspace'
+                $script:capturedArgs | Should -Contain 'restore'
+                $script:capturedArgs | Should -Contain '--packagecachepath'
+                $script:capturedArgs | Should -Contain '--symbolscountryregion'
+                $script:capturedArgs | Should -Contain 'us'
+            }
+        }
+
+        It 'Defaults country to w1' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArgs = @()
+                Mock RunAndCheck {
+                    $script:capturedArgs = $args
+                }
+
+                $wsFile = Join-Path $TestDrive 'deps2.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $cachePath = Join-Path $TestDrive 'deps-symbols2'
+
+                Invoke-WorkspaceRestore -ALToolPath 'al.exe' -WorkspaceFile $wsFile -PackageCachePath $cachePath
+
+                $script:capturedArgs | Should -Contain 'w1'
+            }
+        }
+
+        It 'Creates PackageCachePath if it does not exist' {
+            InModuleScope CompileFromWorkspace {
+                Mock RunAndCheck { }
+
+                $wsFile = Join-Path $TestDrive 'deps3.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $cachePath = Join-Path $TestDrive 'new-deps-symbols'
+
+                Invoke-WorkspaceRestore -ALToolPath 'al.exe' -WorkspaceFile $wsFile -PackageCachePath $cachePath
+
+                Test-Path $cachePath | Should -BeTrue
+            }
         }
     }
 
