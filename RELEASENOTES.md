@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 2204 - Workspace compilation ignores vsixFile setting
+- Issue 2211 - Cannot create a release if a project contains only test apps
 
 ## v9.0
 
