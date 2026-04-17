@@ -53,17 +53,24 @@ $projects | ForEach-Object {
     $buildVersion = "$buildVersion"
     if ($buildVersion -eq "latest") {
         Write-Host "Grab latest"
-        $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*.*.*.*" -or $_.name -like "$project-$refname-TestApps-*.*.*.*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*.*.*.*" } | Select-Object -First 1
+        $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*.*.*.*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*.*.*.*" } | Select-Object -First 1
     }
     else {
-        Write-Host "Search for $project-$refname-Apps-$buildVersion or $project-$refname-TestApps-$buildVersion or $project-$refname-PowerPlatformSolution-$buildVersion"
-        $artifact = $allArtifacts | Where-Object { $_.name -eq "$project-$refname-Apps-$buildVersion" -or $_.name -eq "$project-$refname-TestApps-$buildVersion" -or $_.name -eq "$project-$refname-PowerPlatformSolution-$buildVersion" } | Select-Object -First 1
+        Write-Host "Search for $project-$refname-Apps-$buildVersion or $project-$refname-PowerPlatformSolution-$buildVersion"
+        $artifact = $allArtifacts | Where-Object { $_.name -eq "$project-$refname-Apps-$buildVersion" -or $_.name -eq "$project-$refname-PowerPlatformSolution-$buildVersion" } | Select-Object -First 1
     }
     if ($artifact) {
         $startIndex = $artifact.name.LastIndexOf('-') + 1
         $artifactsVersion = $artifact.name.SubString($startIndex)
     }
     else {
+        # No release artifacts (Apps or PowerPlatformSolution) were found for this project.
+        # This can happen when a project contains only test apps - in that case, skip the project
+        # rather than failing the release, as test apps are not part of the release.
+        if ($allArtifacts | Where-Object { $_.name -like "$project-$refname-TestApps-*.*.*.*" }) {
+            Write-Host "::Warning::No release artifacts found for project $project, only test artifacts are available. Skipping project for release."
+            return
+        }
         throw "No artifacts found for this project"
     }
     if ($sha) {
