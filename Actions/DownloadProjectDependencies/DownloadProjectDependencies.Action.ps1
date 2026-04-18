@@ -134,6 +134,24 @@ try {
     Write-Host "::endgroup::"
 }
 
+Write-Host "::group::Downloading runtime packages from NuGet (MSAppsV2)"
+$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+$settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+$projectFolder = Join-Path $baseFolder $project
+$allFolders = @($settings.appFolders) + @($settings.testFolders) | Where-Object { $_ }
+if ($allFolders.Count -gt 0) {
+    $runtimeApps = Get-RuntimePackagesFromNuGet `
+        -ProjectFolder $projectFolder `
+        -AppFolders $settings.appFolders `
+        -TestFolders $settings.testFolders `
+        -DestinationPath $destinationPath `
+        -Country $settings.country
+} else {
+    Write-Host "No app or test folders found - skipping NuGet runtime package download"
+    $runtimeApps = @()
+}
+Write-Host "::endgroup::"
+
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -151,6 +169,9 @@ $downloadedDependencies | ForEach-Object {
 # Add dependencies from settings
 $downloadedApps += $settingsDependencies.Apps
 $downloadedTestApps += $settingsDependencies.TestApps
+
+# Add runtime packages from NuGet
+$downloadedApps += $runtimeApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps

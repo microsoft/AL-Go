@@ -328,4 +328,143 @@ function Get-DependenciesFromInstallApps {
     return $install
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps
+<#
+    .SYNOPSIS
+    Downloads runtime app packages from NuGet feeds based on app.json dependencies.
+    .DESCRIPTION
+    Reads app.json files from the project's app and test folders, creates a temporary
+    workspace file, then uses 'altool workspace restore' to download dependency .app
+    files (runtime packages) from the specified NuGet feed.
+
+    This is used to get Microsoft first-party app dependencies (like Base Application,
+    System Application, etc.) as runtime packages from the MSAppsV2 feed.
+    .PARAMETER ProjectFolder
+    The root folder of the project containing app folders.
+    .PARAMETER AppFolders
+    Array of app folder names to include in the workspace.
+    .PARAMETER TestFolders
+    Array of test folder names to include in the workspace.
+    .PARAMETER DestinationPath
+    The folder where downloaded .app files will be placed.
+    .PARAMETER Country
+    The country/region code for symbol resolution (e.g. 'us', 'dk'). Defaults to 'us'.
+    .PARAMETER CompilerFolder
+    Path to the compiler folder containing the AL tool. If not provided, the compiler
+    will be installed from NuGet.
+    .PARAMETER NuGetFeed
+    The NuGet feed URL to use for downloading runtime packages.
+    .OUTPUTS
+    An array of paths to downloaded .app files.
+#>
+function Get-RuntimePackagesFromNuGet {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectFolder,
+
+        [Parameter(Mandatory = $true)]
+        [string[]] $AppFolders,
+
+        [Parameter(Mandatory = $false)]
+        [string[]] $TestFolders = @(),
+
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationPath,
+
+        [Parameter(Mandatory = $false)]
+        [string] $Country = 'us',
+
+        [Parameter(Mandatory = $false)]
+        [string] $CompilerFolder = '',
+
+        [Parameter(Mandatory = $false)]
+        [string] $NuGetFeed = 'https://dynamicssmb2.pkgs.visualstudio.com/_packaging/MSAppsV2/nuget/v3/index.json'
+    )
+
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "../.Modules/CompileFromWorkspace.psm1" -Resolve) -DisableNameChecking
+
+    $allFolders = @($AppFolders) + @($TestFolders) | Where-Object { $_ }
+    if ($allFolders.Count -eq 0) {
+        Write-Host "No app folders specified - skipping NuGet runtime package download"
+        return @()
+    }
+
+    # If no compiler folder provided, install a temporary one
+    $tempCompiler = $false
+    if (-not $CompilerFolder -or -not (Test-Path $CompilerFolder)) {
+        $CompilerFolder = Join-Path (GetTemporaryPath) "nuget-restore-compiler"
+        $artifact = $env:artifact
+        Install-ALCompiler -CompilerFolder $CompilerFolder -ArtifactUrl $artifact
+        $tempCompiler = $true
+    }
+
+    try {
+        $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+        $packageCachePath = Join-Path $CompilerFolder "symbols"
+        if (-not (Test-Path $packageCachePath)) {
+            New-Item -Path $packageCachePath -ItemType Directory -Force | Out-Null
+        }
+
+        # Create a temporary workspace file
+        $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
+        $workspaceFile = Join-Path $ProjectFolder "tempRestore$datetimeStamp.code-workspace"
+
+        Push-Location $ProjectFolder
+        try {
+            New-WorkspaceFromFolders -Folders $allFolders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
+
+            # Set the NuGet config to only use the specified feed
+            $nugetConfigPath = Join-Path $ProjectFolder "nuget.config"
+            $nugetConfigCreated = $false
+            if (-not (Test-Path $nugetConfigPath)) {
+                @"
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <packageSources>
+        <clear />
+        <add key="MSAppsV2" value="$NuGetFeed" />
+    </packageSources>
+</configuration>
+"@ | Set-Content -Path $nugetConfigPath -Encoding UTF8
+                $nugetConfigCreated = $true
+            }
+
+            try {
+                # Run workspace restore to download runtime packages
+                Invoke-WorkspaceRestore -ALToolPath $alToolPath -WorkspaceFile $workspaceFile -PackageCachePath $packageCachePath -Country $Country
+            }
+            finally {
+                if ($nugetConfigCreated -and (Test-Path $nugetConfigPath)) {
+                    Remove-Item -Path $nugetConfigPath -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        finally {
+            Pop-Location
+            if (Test-Path $workspaceFile) {
+                Remove-Item -Path $workspaceFile -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        # Copy downloaded .app files to destination
+        if (-not (Test-Path $DestinationPath)) {
+            New-Item -Path $DestinationPath -ItemType Directory -Force | Out-Null
+        }
+
+        $downloadedApps = @()
+        Get-ChildItem -Path $packageCachePath -Filter "*.app" -File | ForEach-Object {
+            $destFile = Join-Path $DestinationPath $_.Name
+            Copy-Item -Path $_.FullName -Destination $destFile -Force
+            $downloadedApps += $destFile
+            Write-Host "Downloaded runtime package: $($_.Name)"
+        }
+
+        return $downloadedApps
+    }
+    finally {
+        if ($tempCompiler -and (Test-Path $CompilerFolder)) {
+            Remove-Item -Path $CompilerFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-RuntimePackagesFromNuGet
