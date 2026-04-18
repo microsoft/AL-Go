@@ -135,10 +135,16 @@ try {
         }
     }
 
-    # Create workspace file for compilation
+    # Create separate workspace files for apps and test apps
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
-    $workspaceFile = Join-Path $projectFolder "tempWorkspace$datetimeStamp.code-workspace"
-    New-WorkspaceFromFolders -Folders ($settings.appFolders + $settings.testFolders) -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
+    $appWorkspaceFile = Join-Path $projectFolder "tempWorkspaceApps$datetimeStamp.code-workspace"
+    $testWorkspaceFile = Join-Path $projectFolder "tempWorkspaceTestApps$datetimeStamp.code-workspace"
+    if ($settings.appFolders.Count -gt 0) {
+        New-WorkspaceFromFolders -Folders $settings.appFolders -WorkspaceFile $appWorkspaceFile -AltoolPath $alToolPath
+    }
+    if ($settings.testFolders.Count -gt 0) {
+        New-WorkspaceFromFolders -Folders $settings.testFolders -WorkspaceFile $testWorkspaceFile -AltoolPath $alToolPath
+    }
 
     # Optionally install assembly probing DLLs (only needed for apps referencing .NET types)
     if ($settings.workspaceCompilation.includeAssemblyProbing) {
@@ -165,7 +171,6 @@ try {
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
         CompilerFolder              = $compilerFolder
-        WorkspaceFile               = $workspaceFile
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
@@ -190,6 +195,7 @@ try {
         if ($settings.appFolders.Count -gt 0) {
             # Compile Apps
             $appFiles = Build-AppsInWorkspace @buildParams `
+                -WorkspaceFile $appWorkspaceFile `
                 -Folders $settings.appFolders `
                 -OutFolder $appOutputFolder `
                 -AppType 'app'
@@ -202,6 +208,7 @@ try {
 
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
+                -WorkspaceFile $testWorkspaceFile `
                 -Folders $settings.testFolders `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
@@ -209,7 +216,8 @@ try {
 
     } finally {
         New-BuildOutputFile -BuildArtifactFolder $buildArtifactFolder -BuildOutputPath (Join-Path $projectFolder "BuildOutput.txt") -DisplayInConsole -FailOn $settings.failOn
-        Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
+        Remove-Item $appWorkspaceFile -Force -ErrorAction SilentlyContinue
+        Remove-Item $testWorkspaceFile -Force -ErrorAction SilentlyContinue
     }
 
     # OUTPUT - Output the updated list of dependency apps and test apps to JSON files for downstream steps
