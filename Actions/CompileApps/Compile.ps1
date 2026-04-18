@@ -119,15 +119,7 @@ try {
     # Get AL tool path early — needed for workspace restore and workspace creation
     $alToolPath = Get-ALTool -CompilerFolder $compilerFolder
 
-    # Create workspace file and restore dependencies from NuGet feeds
-    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
-    $workspaceFile = Join-Path $projectFolder "tempWorkspace$datetimeStamp.code-workspace"
-    New-WorkspaceFromFolders -Folders ($settings.appFolders + $settings.testFolders) -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
-
-    # Download symbols (Microsoft app dependencies) from NuGet feeds
-    Invoke-WorkspaceRestore -ALToolPath $alToolPath -WorkspaceFile $workspaceFile -PackageCachePath $packageCachePath -Country $settings.country
-
-    # Copy project dependency apps to the package cache so the compiler can resolve them
+    # Copy project dependency apps to the package cache BEFORE restore so the restore can skip them
     foreach ($appFile in $dependencyApps) {
         $appFile = $appFile.Trim('()')
         if ($appFile -and (Test-Path $appFile)) {
@@ -135,6 +127,14 @@ try {
             OutputDebug "Copied dependency app to package cache: $(Split-Path $appFile -Leaf)"
         }
     }
+
+    # Create workspace file and restore any remaining dependencies from NuGet feeds
+    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
+    $workspaceFile = Join-Path $projectFolder "tempWorkspace$datetimeStamp.code-workspace"
+    New-WorkspaceFromFolders -Folders ($settings.appFolders + $settings.testFolders) -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
+
+    # Download only missing symbols from NuGet feeds — already-cached packages are skipped
+    Invoke-WorkspaceRestore -ALToolPath $alToolPath -WorkspaceFile $workspaceFile -PackageCachePath $packageCachePath -Country $settings.country
 
     # Optionally install assembly probing DLLs (only needed for apps referencing .NET types)
     if ($settings.workspaceCompilation.includeAssemblyProbing) {
