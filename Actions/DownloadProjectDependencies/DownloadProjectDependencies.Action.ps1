@@ -23,7 +23,21 @@ function DownloadDependenciesFromProbingPaths {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
-        return GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+        $dependencies = GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+
+        # GetDependencies may return .zip files (from DownloadArtifact/DownloadRelease).
+        # Extract .app files from any zips so downstream consumers receive clean .app paths.
+        return @($dependencies | ForEach-Object {
+            $isTestApp = $_.StartsWith('(')
+            $filePath = $_.Trim('()')
+            if ($filePath -and (Test-Path $filePath) -and (Test-IsZipFile -Path $filePath)) {
+                $appFiles = Expand-ZipFileToAppFiles -ZipFile $filePath -DestinationPath $destinationPath
+                if ($isTestApp) { $appFiles | ForEach-Object { "($_)" } } else { $appFiles }
+            }
+            else {
+                $_
+            }
+        })
     }
 }
 
@@ -148,7 +162,7 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-# Add dependencies from settings
+# Add dependencies from settings (these are already resolved to .app files)
 $downloadedApps += $settingsDependencies.Apps
 $downloadedTestApps += $settingsDependencies.TestApps
 

@@ -104,12 +104,15 @@ try {
     $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -vsixFile $settings.vsixFile -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
     $packageCachePath = Join-Path $compilerFolder "symbols"
 
-    # Copy dependency apps to the package cache so the compiler can resolve them
-    foreach ($appFile in $dependencyApps) {
+    # Copy dependency apps and test apps to the package cache so the compiler can resolve them
+    foreach ($appFile in ($dependencyApps + $dependencyTestApps)) {
         $appFile = $appFile.Trim('()')
         if ($appFile -and (Test-Path $appFile)) {
             Copy-Item -Path $appFile -Destination $packageCachePath -Force
             OutputDebug "Copied dependency app to package cache: $(Split-Path $appFile -Leaf)"
+        }
+        elseif ($appFile) {
+            OutputWarning -message "Dependency app file not found: $appFile"
         }
     }
 

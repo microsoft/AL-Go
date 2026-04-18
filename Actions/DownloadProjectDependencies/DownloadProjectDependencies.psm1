@@ -328,4 +328,4 @@ function Get-DependenciesFromInstallApps {
     return $install
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Expand-ZipFileToAppFiles, Test-IsZipFile
