@@ -135,6 +135,11 @@ try {
         }
     }
 
+    # Create workspace file for compilation
+    $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
+    $workspaceFile = Join-Path $projectFolder "tempWorkspace$datetimeStamp.code-workspace"
+    New-WorkspaceFromFolders -Folders ($settings.appFolders + $settings.testFolders) -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
+
     # Optionally install assembly probing DLLs (only needed for apps referencing .NET types)
     if ($settings.workspaceCompilation.includeAssemblyProbing) {
         DownloadAndImportBcContainerHelper
