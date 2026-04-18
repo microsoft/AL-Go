@@ -377,7 +377,7 @@ function Get-RuntimePackagesFromNuGet {
         [string] $CompilerFolder = '',
 
         [Parameter(Mandatory = $false)]
-        [string] $NuGetFeed = 'https://dynamicssmb2.pkgs.visualstudio.com/_packaging/MSAppsV2/nuget/v3/index.json'
+        [string] $NuGetFeed = ''
     )
 
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "../.Modules/CompileFromWorkspace.psm1" -Resolve) -DisableNameChecking
@@ -409,7 +409,7 @@ function Get-RuntimePackagesFromNuGet {
             }
         }
 
-        Install-ALCompiler -CompilerFolder $CompilerFolder -CompilerVersion "18.0.0-beta" -AdditionalNuGetSource $localNugetSource
+        Install-ALCompiler -CompilerFolder $CompilerFolder -CompilerVersion "18.0.0-beta" -AdditionalNuGetSource $localNugetSource | Out-Null
         $tempCompiler = $true
     }
 
@@ -428,10 +428,10 @@ function Get-RuntimePackagesFromNuGet {
         try {
             New-WorkspaceFromFolders -Folders $allFolders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
 
-            # Set the NuGet config to only use the specified feed
+            # Set the NuGet config to only use the specified feed (if provided)
             $nugetConfigPath = Join-Path $ProjectFolder "nuget.config"
             $nugetConfigCreated = $false
-            if (-not (Test-Path $nugetConfigPath)) {
+            if ($NuGetFeed -and -not (Test-Path $nugetConfigPath)) {
                 @"
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>

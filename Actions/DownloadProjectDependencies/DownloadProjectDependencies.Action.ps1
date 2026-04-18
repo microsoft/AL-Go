@@ -134,18 +134,25 @@ try {
     Write-Host "::endgroup::"
 }
 
-Write-Host "::group::Downloading runtime packages from NuGet (MSAppsV2)"
+Write-Host "::group::Downloading runtime packages from NuGet"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
 $projectFolder = Join-Path $baseFolder $project
 $allFolders = @($settings.appFolders) + @($settings.testFolders) | Where-Object { $_ }
 if ($allFolders.Count -gt 0) {
+    # Use MSAppsV2 feed (runtime packages) when we'll need a container for publishing/testing
+    # Use default feeds (symbol packages) when compile-only
+    $nugetFeedParams = @{}
+    if (-not $settings.doNotPublishApps) {
+        $nugetFeedParams['NuGetFeed'] = 'https://dynamicssmb2.pkgs.visualstudio.com/_packaging/MSAppsV2/nuget/v3/index.json'
+    }
     $runtimeApps = Get-RuntimePackagesFromNuGet `
         -ProjectFolder $projectFolder `
         -AppFolders $settings.appFolders `
         -TestFolders $settings.testFolders `
         -DestinationPath $destinationPath `
-        -Country $settings.country
+        -Country $settings.country `
+        @nugetFeedParams
 } else {
     Write-Host "No app or test folders found - skipping NuGet runtime package download"
     $runtimeApps = @()
