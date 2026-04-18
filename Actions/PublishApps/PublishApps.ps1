@@ -114,25 +114,17 @@ foreach ($app in $installTestApps) {
 # Step 1: Install dependency apps to container
 if ($dependencyApps) {
     OutputGroupStart -Message "Installing dependency apps"
-    $tmpAppFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
-    try {
-        $appFiles = @()
-        foreach ($app in $dependencyApps) {
-            $appPath = "$app".Trim('()')
-            if ($appPath -and (Test-Path $appPath)) {
-                $appFiles += CopyAppFilesToFolder -appFiles $appPath -folder $tmpAppFolder
-            }
-        }
-        if ($appFiles) {
-            $sortedAppFiles = Sort-AppFilesByDependencies -appFiles $appFiles -WarningAction SilentlyContinue
-            Publish-BcContainerApp -containerName $containerName -tenant $tenant -credential $credential `
-                -appFile $sortedAppFiles -skipVerification -sync -install -upgrade -ignoreIfAppExists
+    $appFiles = @()
+    foreach ($app in $dependencyApps) {
+        $appPath = "$app".Trim('()')
+        if ($appPath -and (Test-Path $appPath)) {
+            $appFiles += $appPath
         }
     }
-    finally {
-        if (Test-Path $tmpAppFolder) {
-            Remove-Item -Path $tmpAppFolder -Recurse -Force
-        }
+    if ($appFiles) {
+        $sortedAppFiles = Sort-AppFilesByDependencies -appFiles $appFiles -WarningAction SilentlyContinue
+        Publish-BcContainerApp -containerName $containerName -tenant $tenant -credential $credential `
+            -appFile $sortedAppFiles -skipVerification -sync -install -upgrade -ignoreIfAppExists
     }
     OutputGroupEnd
 }
@@ -156,25 +148,17 @@ if ($needTestToolkit) {
 # Step 3: Install dependency test apps to container
 if ($dependencyTestApps) {
     OutputGroupStart -Message "Installing dependency test apps"
-    $tmpAppFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
-    try {
-        $appFiles = @()
-        foreach ($app in $dependencyTestApps) {
-            $appPath = "$app".Trim('()')
-            if ($appPath -and (Test-Path $appPath)) {
-                $appFiles += CopyAppFilesToFolder -appFiles $appPath -folder $tmpAppFolder
-            }
-        }
-        if ($appFiles) {
-            $sortedAppFiles = Sort-AppFilesByDependencies -appFiles $appFiles -WarningAction SilentlyContinue
-            Publish-BcContainerApp -containerName $containerName -tenant $tenant -credential $credential `
-                -appFile $sortedAppFiles -skipVerification -sync -install -upgrade -ignoreIfAppExists
+    $appFiles = @()
+    foreach ($app in $dependencyTestApps) {
+        $appPath = "$app".Trim('()')
+        if ($appPath -and (Test-Path $appPath)) {
+            $appFiles += $appPath
         }
     }
-    finally {
-        if (Test-Path $tmpAppFolder) {
-            Remove-Item -Path $tmpAppFolder -Recurse -Force
-        }
+    if ($appFiles) {
+        $sortedAppFiles = Sort-AppFilesByDependencies -appFiles $appFiles -WarningAction SilentlyContinue
+        Publish-BcContainerApp -containerName $containerName -tenant $tenant -credential $credential `
+            -appFile $sortedAppFiles -skipVerification -sync -install -upgrade -ignoreIfAppExists
     }
     OutputGroupEnd
 }
