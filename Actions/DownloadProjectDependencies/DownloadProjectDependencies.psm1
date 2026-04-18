@@ -392,8 +392,24 @@ function Get-RuntimePackagesFromNuGet {
     $tempCompiler = $false
     if (-not $CompilerFolder -or -not (Test-Path $CompilerFolder)) {
         $CompilerFolder = Join-Path (GetTemporaryPath) "nuget-restore-compiler"
-        $artifact = $env:artifact
-        Install-ALCompiler -CompilerFolder $CompilerFolder -ArtifactUrl $artifact
+
+        # TEMPORARY: Download custom nupkg for testing workspace restore
+        $releaseBaseUrl = "https://github.com/Aholstrup1-PersonalOrg/BugBash7/releases/download/ALTool"
+        $localNugetSource = Join-Path (GetTemporaryPath) "custom-nuget-deps"
+        New-Item -Path $localNugetSource -ItemType Directory -Force | Out-Null
+        @(
+            "Microsoft.Dynamics.BusinessCentral.Development.Tools.18.0.0-beta.nupkg",
+            "Microsoft.Dynamics.BusinessCentral.Development.Tools.Linux.18.0.0-beta.nupkg",
+            "Microsoft.Dynamics.BusinessCentral.Development.Tools.Win.18.0.0-beta.nupkg",
+            "Microsoft.Dynamics.BusinessCentral.Development.Tools.Altpgen.18.0.0-beta.nupkg"
+        ) | ForEach-Object {
+            $destFile = Join-Path $localNugetSource $_
+            if (-not (Test-Path $destFile)) {
+                Invoke-WebRequest -Uri "$releaseBaseUrl/$_" -OutFile $destFile
+            }
+        }
+
+        Install-ALCompiler -CompilerFolder $CompilerFolder -CompilerVersion "18.0.0-beta" -AdditionalNuGetSource $localNugetSource
         $tempCompiler = $true
     }
 
