@@ -22,7 +22,6 @@ Param(
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-DownloadAndImportBcContainerHelper
 
 # ANALYZE - Analyze the repository and determine settings
 $baseFolder = (Get-BasePath)
@@ -94,14 +93,11 @@ try {
         }
     }
 
-    # Set up a compiler folder
-    $containerName = GetContainerName($project)
-    $cacheFolder = ""
-    if ($settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*") {
-        # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
-        $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
+    # Set up the compiler folder
+    if ($settings.vsixFile) {
+        OutputWarning "The 'vsixFile' setting is ignored when workspace compilation is enabled. The AL compiler is installed from NuGet instead."
     }
-    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -vsixFile $settings.vsixFile -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
+    $compilerFolder = Install-ALCompiler -ArtifactUrl $artifact -CompilerVersion $settings.workspaceCompilation.compilerVersion
     $packageCachePath = Join-Path $compilerFolder "symbols"
 
     # Copy dependency apps to the package cache so the compiler can resolve them
@@ -111,6 +107,22 @@ try {
             Copy-Item -Path $appFile -Destination $packageCachePath -Force
             OutputDebug "Copied dependency app to package cache: $(Split-Path $appFile -Leaf)"
         }
+    }
+
+    # Resolve symbols
+    $symbolsSource = if ($settings.workspaceCompilation.ContainsKey('symbolsSource')) { $settings.workspaceCompilation.symbolsSource } else { 'nuget' }
+    Resolve-DependencySymbols -SymbolsSource $symbolsSource `
+        -PackageCachePath $packageCachePath `
+        -Folders ($settings.appFolders + $settings.testFolders) `
+        -Country $settings.country `
+        -ArtifactUrl $artifact `
+        -VsixFile $settings.vsixFile `
+        -GitHubRunner $settings.gitHubRunner
+
+    # Optionally install assembly probing DLLs (only needed for apps referencing .NET types)
+    if ($settings.workspaceCompilation.includeAssemblyProbing) {
+        DownloadAndImportBcContainerHelper
+        Install-AssemblyProbingDLLs -ArtifactUrl $artifact -CompilerFolder $compilerFolder
     }
 
     # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable

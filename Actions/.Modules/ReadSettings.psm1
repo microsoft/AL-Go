@@ -216,6 +216,9 @@ function GetDefaultSettings
         "workspaceCompilation"                          = [ordered]@{
             "enabled"                                   = $false
             "parallelism"                               = 1
+            "includeAssemblyProbing"                    = $false
+            "compilerVersion"                           = ""
+            "symbolsSource"                             = "nuget"
         }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{
