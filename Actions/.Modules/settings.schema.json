@@ -330,7 +330,7 @@
             "properties": {
                 "enabled": {
                     "type": "boolean",
-                    "description": "Enable partitioned test runs. When true, AL-Go invokes Run-TestsInBcContainer once per entry in 'partitions' (each with its own test runner) plus one fallback call covering everything else under 'defaultRunnerCodeunitId'. See https://aka.ms/ALGoSettings#testIsolation"
+                    "description": "Enable partitioned test runs. When true, AL-Go invokes Run-TestsInBcContainer once per entry in 'partitions' (each with its own test runner) plus one fallback call covering everything else under 'defaultRunnerCodeunitId'."
                 },
                 "defaultRunnerCodeunitId": {
                     "type": "integer",

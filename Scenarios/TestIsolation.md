@@ -87,6 +87,8 @@ The normal AL-Go settings cascade applies. To use partitioning only in your nigh
 
 Each entry in `partitions` adds one `Run-TestsInBcContainer` call per test app, plus one trailing default-runner call. For N partitions and M test apps, that is `(N + 1) * M` invocations — versus 1 invocation per test app today. Each call has fixed per-invocation overhead (BC test page setup, control population). Enable `testIsolation` only when isolation requirements actually demand it.
 
+The trailing default-runner call fires unconditionally when `testIsolation.enabled` is `true`. If your `partitions` filters happen to cover every test codeunit in the app, the default-runner call still executes with a filter that matches nothing — zero tests run, but the test page setup still costs ~1 extra invocation per test app. To avoid it, remove partitions until coverage is non-exhaustive, or don't enable `testIsolation` for that project.
+
 ## Related
 
 - [TestIsolation property](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/properties/devenv-testisolation-property)

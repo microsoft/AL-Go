@@ -1,10 +1,14 @@
-# Test Isolation module for AL-Go for GitHub
-# Builds a scriptblock compatible with Run-AlPipeline's -RunTestsInBcContainer
-# override. The scriptblock invokes Run-TestsInBcContainer once per declared
-# partition (each with its own test runner and codeunit-range filter), plus one
-# trailing call under the default runner whose filter excludes every codeunit
-# matched by the explicit partitions.
-# See TestIsolation-Plan.md at the repo root.
+<#
+.SYNOPSIS
+Test Isolation module for AL-Go for GitHub.
+
+.DESCRIPTION
+Builds a scriptblock compatible with Run-AlPipeline's -RunTestsInBcContainer
+override. The scriptblock invokes Run-TestsInBcContainer once per declared
+partition (each with its own test runner and codeunit-range filter), plus one
+trailing call under the default runner whose filter excludes every codeunit
+matched by the explicit partitions.
+#>
 
 function New-PartitionedTestRunnerScriptBlock {
     <#

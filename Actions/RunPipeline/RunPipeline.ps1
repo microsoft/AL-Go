@@ -488,7 +488,7 @@ try {
     $runAlPipelineParams["features"] = $settings.features
 
     if ($settings.testIsolation.enabled -and -not $settings.doNotRunTests) {
-        Import-Module (Join-Path $PSScriptRoot "..\.Modules\TestIsolation.psm1" -Resolve)
+        Import-Module (Join-Path $PSScriptRoot '../.Modules/TestIsolation.psm1' -Resolve)
         Write-Host "Test isolation enabled - $($settings.testIsolation.partitions.Count) explicit partition(s) + default runner ($($settings.testIsolation.defaultRunnerCodeunitId))"
         $runAlPipelineParams["RunTestsInBcContainer"] = New-PartitionedTestRunnerScriptBlock -Settings $settings.testIsolation
     }

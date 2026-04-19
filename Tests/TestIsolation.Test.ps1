@@ -5,9 +5,12 @@ Describe 'TestIsolation' {
     Context 'New-PartitionedTestRunnerScriptBlock' {
 
         BeforeAll {
-            # The generated scriptblock looks up Run-TestsInBcContainer through
-            # the global function table. Install a global stub that records every
-            # invocation so each test can assert on the call sequence.
+            # Installed as a global function (not a Pester Mock) because the
+            # scriptblock returned by New-PartitionedTestRunnerScriptBlock
+            # resolves Run-TestsInBcContainer at invocation time through the
+            # global function table — Mock's command-lookup scope does not
+            # reach across the .GetNewClosure() boundary. The AfterAll block
+            # removes the stub so no other *.Test.ps1 sees it.
             function global:Run-TestsInBcContainer {
                 [CmdletBinding()]
                 Param(
