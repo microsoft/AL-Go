@@ -1,3 +1,4 @@
+Param(
     [switch] $local
 )
 
