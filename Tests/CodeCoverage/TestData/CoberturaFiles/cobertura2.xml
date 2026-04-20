@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage line-rate="0.75" branch-rate="0.0" version="1.0" timestamp="1710166900">
+<coverage line-rate="0.75" branch-rate="0.0" lines-covered="6" lines-valid="7" version="1.0" timestamp="1710166900">
   <packages>
     <package name="TestApp" line-rate="0.75" branch-rate="0.0">
       <classes>
