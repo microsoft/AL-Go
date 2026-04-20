@@ -91,6 +91,9 @@ $projects | ForEach-Object {
         throw "No artifacts found for version $artifactsVersion"
     }
 }
+if ($include.Count -eq 0 -or -not $sha) {
+    throw "No release artifacts found for any project. Ensure that at least one project produces release artifacts (Apps or PowerPlatformSolution) before creating a release."
+}
 $artifacts = @{ "include" = $include }
 $artifactsJson = $artifacts | ConvertTo-Json -compress
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "artifacts=$artifactsJson"
