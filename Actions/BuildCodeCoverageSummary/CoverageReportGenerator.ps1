@@ -382,12 +382,14 @@ function Get-CoverageSummaryMD {
     # Safely check for property existence (strict mode compatible)
     $hasExcludedStats = $stats -and ($stats | Get-Member -Name 'ExcludedObjectCount' -MemberType NoteProperty) -and $stats.ExcludedObjectCount -gt 0
     if ($hasExcludedStats) {
+        $excludedLinesExecuted = if ($stats | Get-Member -Name 'ExcludedLinesExecuted' -MemberType NoteProperty) { $stats.ExcludedLinesExecuted } else { 0 }
+        $excludedTotalHits = if ($stats | Get-Member -Name 'ExcludedTotalHits' -MemberType NoteProperty) { $stats.ExcludedTotalHits } else { 0 }
         $summarySb.AppendLine("### External Code Executed") | Out-Null
         $summarySb.AppendLine("") | Out-Null
         $summarySb.AppendLine(":information_source: **$($stats.ExcludedObjectCount)** objects executed from external apps (no source available)") | Out-Null
         $summarySb.AppendLine("") | Out-Null
-        $summarySb.AppendLine("- Lines executed: **$($stats.ExcludedLinesExecuted)**") | Out-Null
-        $summarySb.AppendLine("- Total hits: **$($stats.ExcludedTotalHits)**") | Out-Null
+        $summarySb.AppendLine("- Lines executed: **$excludedLinesExecuted**") | Out-Null
+        $summarySb.AppendLine("- Total hits: **$excludedTotalHits**") | Out-Null
         $summarySb.AppendLine("") | Out-Null
     }
 
