@@ -6,6 +6,8 @@
     to enable accurate Cobertura output with proper filenames and method names.
 #>
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 <#
 .SYNOPSIS
     Parses an app.json file to extract app metadata
@@ -26,13 +28,13 @@ function Read-AppJson {
         return $null
     }
 
-    $appJson = Get-Content -Path $AppJsonPath -Raw | ConvertFrom-Json
+    $appJson = Get-Content -Path $AppJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
     return [PSCustomObject]@{
-        Id        = $appJson.id
-        Name      = $appJson.name
-        Publisher = $appJson.publisher
-        Version   = $appJson.version
+        Id        = if ($null -ne $appJson.PSObject.Properties['id']) { $appJson.id } else { $null }
+        Name      = if ($null -ne $appJson.PSObject.Properties['name']) { $appJson.name } else { $null }
+        Publisher = if ($null -ne $appJson.PSObject.Properties['publisher']) { $appJson.publisher } else { $null }
+        Version   = if ($null -ne $appJson.PSObject.Properties['version']) { $appJson.version } else { $null }
     }
 }
 
@@ -94,7 +96,9 @@ function Get-ALObjectMap {
     if ($ExcludePatterns.Count -gt 0 -and $alFiles.Count -gt 0) {
         $beforeCount = $alFiles.Count
         $alFiles = @($alFiles | Where-Object {
-            $relativePath = $_.FullName.Substring($normalizedSourcePath.Length + 1)
+            $relativePath = if ($_.FullName.Length -gt $normalizedSourcePath.Length + 1) {
+                $_.FullName.Substring($normalizedSourcePath.Length + 1)
+            } else { $_.Name }
             $excluded = $false
             foreach ($pattern in $ExcludePatterns) {
                 if ($relativePath -like $pattern -or $_.Name -like $pattern) {
@@ -111,7 +115,7 @@ function Get-ALObjectMap {
     }
 
     foreach ($file in $alFiles) {
-        $content = Get-Content -Path $file.FullName -Raw -ErrorAction SilentlyContinue
+        $content = Get-Content -Path $file.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
         if (-not $content) { continue }
 
         # Parse object definition: type ID name
@@ -140,7 +144,9 @@ function Get-ALObjectMap {
             $executableInfo = Get-ALExecutableLines -Content $content
 
             # Calculate relative path (normalizedSourcePath is already normalized at function start)
-            $relativePath = $file.FullName.Substring($normalizedSourcePath.Length + 1)
+            $relativePath = if ($file.FullName.Length -gt $normalizedSourcePath.Length + 1) {
+                $file.FullName.Substring($normalizedSourcePath.Length + 1)
+            } else { $file.Name }
 
             $objectMap[$key] = [PSCustomObject]@{
                 ObjectType            = $normalizedType
@@ -536,6 +542,5 @@ Export-ModuleMember -Function @(
     'Get-NormalizedObjectType',
     'Get-ALProcedures',
     'Find-ProcedureForLine',
-    'Find-ALSourceFolders',
     'Get-ALExecutableLines'
 )

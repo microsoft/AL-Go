@@ -6,11 +6,21 @@
     standardized coverage reports from BC code coverage .dat files.
 #>
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 # Import sub-modules
 $scriptPath = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
 Import-Module (Join-Path $scriptPath "BCCoverageParser.psm1") -Force
 Import-Module (Join-Path $scriptPath "ALSourceParser.psm1") -Force
 Import-Module (Join-Path $scriptPath "CoberturaFormatter.psm1") -Force
+
+# Helper to safely check for a property on either a hashtable or PSCustomObject under strict mode
+function Test-PropertyExists {
+    param($InputObject, [string]$PropertyName)
+    if ($null -eq $InputObject) { return $false }
+    if ($InputObject -is [hashtable]) { return $InputObject.ContainsKey($PropertyName) }
+    return $null -ne $InputObject.PSObject.Properties[$PropertyName]
+}
 
 <#
 .SYNOPSIS
@@ -159,7 +169,7 @@ function Convert-BCCoverageToCobertura {
     $coveredLines = 0
 
     foreach ($obj in $groupedCoverage.Values) {
-        $objTotalLines = if ($obj.SourceInfo -and $obj.SourceInfo.ExecutableLines -gt 0) {
+        $objTotalLines = if ((Test-PropertyExists $obj 'SourceInfo') -and $obj.SourceInfo -and (Test-PropertyExists $obj.SourceInfo 'ExecutableLines') -and $obj.SourceInfo.ExecutableLines -gt 0) {
             $obj.SourceInfo.ExecutableLines
         } else {
             $obj.Lines.Count
@@ -176,8 +186,12 @@ function Convert-BCCoverageToCobertura {
     }
 
     # Calculate stats for excluded objects (external/base app code)
-    $excludedLinesExecuted = ($excludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
-    $excludedTotalHits = ($excludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
+    $excludedLinesExecuted = 0
+    $excludedTotalHits = 0
+    if ($excludedObjectsData.Count -gt 0) {
+        $excludedLinesExecuted = ($excludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
+        $excludedTotalHits = ($excludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
+    }
 
     $stats = [PSCustomObject]@{
         TotalLines           = $totalExecutableLines
@@ -369,7 +383,7 @@ function Merge-BCCoverageToCobertura {
     $coveredLines = 0
 
     foreach ($obj in $groupedCoverage.Values) {
-        $objTotalLines = if ($obj.SourceInfo -and $obj.SourceInfo.ExecutableLines -gt 0) {
+        $objTotalLines = if ((Test-PropertyExists $obj 'SourceInfo') -and $obj.SourceInfo -and (Test-PropertyExists $obj.SourceInfo 'ExecutableLines') -and $obj.SourceInfo.ExecutableLines -gt 0) {
             $obj.SourceInfo.ExecutableLines
         } else {
             $obj.Lines.Count
@@ -385,8 +399,12 @@ function Merge-BCCoverageToCobertura {
     }
 
     # Calculate stats for excluded objects (external/base app code)
-    $excludedLinesExecuted = ($excludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
-    $excludedTotalHits = ($excludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
+    $excludedLinesExecuted = 0
+    $excludedTotalHits = 0
+    if ($excludedObjectsData.Count -gt 0) {
+        $excludedLinesExecuted = ($excludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
+        $excludedTotalHits = ($excludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
+    }
 
     $stats = [PSCustomObject]@{
         TotalLines           = $totalExecutableLines

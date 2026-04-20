@@ -6,6 +6,16 @@
     for use with coverage visualization tools and GitHub Actions.
 #>
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+# Helper to safely check for a property on either a hashtable or PSCustomObject under strict mode
+function Test-PropertyExists {
+    param($InputObject, [string]$PropertyName)
+    if ($null -eq $InputObject) { return $false }
+    if ($InputObject -is [hashtable]) { return $InputObject.ContainsKey($PropertyName) }
+    return $null -ne $InputObject.PSObject.Properties[$PropertyName]
+}
+
 <#
 .SYNOPSIS
     Creates a Cobertura XML document from coverage data
@@ -40,7 +50,7 @@ function New-CoberturaDocument {
         # Prefer source-based count for total lines (accurate for XMLport 130470)
         # Fall back to coverage data line count if no source info available
         $objTotalLines = 0
-        if ($obj.SourceInfo -and $obj.SourceInfo.ExecutableLines) {
+        if ((Test-PropertyExists $obj 'SourceInfo') -and $obj.SourceInfo -and (Test-PropertyExists $obj.SourceInfo 'ExecutableLines') -and $obj.SourceInfo.ExecutableLines) {
             $objTotalLines = $obj.SourceInfo.ExecutableLines
         } elseif ($obj.Lines.Count -gt 0) {
             $objTotalLines = $obj.Lines.Count
@@ -95,7 +105,7 @@ function New-CoberturaDocument {
     $packageName = if ($AppInfo -and $AppInfo.Name) { $AppInfo.Name } else { "BCApp" }
     $package = $xml.CreateElement("package")
     $package.SetAttribute("name", $packageName)
-    $package.SetAttribute("line-rate", $lineRate.ToString())
+    $package.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $package.SetAttribute("branch-rate", "0")
     $package.SetAttribute("complexity", "0")
     $packages.AppendChild($package) | Out-Null
@@ -137,7 +147,7 @@ function New-CoberturaClass {
     # Calculate class statistics
     # Prefer source-based count for total lines (accurate for XMLport 130470)
     $totalExecutableLines = 0
-    if ($ObjectData.SourceInfo -and $ObjectData.SourceInfo.ExecutableLines) {
+    if ((Test-PropertyExists $ObjectData 'SourceInfo') -and $ObjectData.SourceInfo -and (Test-PropertyExists $ObjectData.SourceInfo 'ExecutableLines') -and $ObjectData.SourceInfo.ExecutableLines) {
         $totalExecutableLines = $ObjectData.SourceInfo.ExecutableLines
     } elseif ($ObjectData.Lines.Count -gt 0) {
         $totalExecutableLines = $ObjectData.Lines.Count
@@ -153,7 +163,7 @@ function New-CoberturaClass {
     $class.SetAttribute("name", $className)
 
     # Filename - use source file path if available, otherwise construct a logical name
-    $filename = if ($ObjectData.SourceInfo -and $ObjectData.SourceInfo.RelativePath) {
+    $filename = if ((Test-PropertyExists $ObjectData 'SourceInfo') -and $ObjectData.SourceInfo -and (Test-PropertyExists $ObjectData.SourceInfo 'RelativePath') -and $ObjectData.SourceInfo.RelativePath) {
         $ObjectData.SourceInfo.RelativePath
     } else {
         "$($ObjectData.ObjectType)/$($ObjectData.ObjectId).al"
@@ -169,7 +179,7 @@ function New-CoberturaClass {
     $class.AppendChild($methods) | Out-Null
 
     # Group lines by procedure if source info available and there are lines to process
-    if ($ObjectData.SourceInfo -and $ObjectData.SourceInfo.Procedures -and $ObjectData.Lines -and $ObjectData.Lines.Count -gt 0) {
+    if ((Test-PropertyExists $ObjectData 'SourceInfo') -and $ObjectData.SourceInfo -and (Test-PropertyExists $ObjectData.SourceInfo 'Procedures') -and $ObjectData.SourceInfo.Procedures -and $ObjectData.Lines -and $ObjectData.Lines.Count -gt 0) {
         $procedureCoverage = Get-ProcedureCoverage -Lines $ObjectData.Lines -Procedures $ObjectData.SourceInfo.Procedures
 
         foreach ($proc in $procedureCoverage) {
@@ -189,7 +199,7 @@ function New-CoberturaClass {
     }
 
     # If we have source info with executable line numbers, include all of them
-    if ($ObjectData.SourceInfo -and $ObjectData.SourceInfo.ExecutableLineNumbers) {
+    if ((Test-PropertyExists $ObjectData 'SourceInfo') -and $ObjectData.SourceInfo -and (Test-PropertyExists $ObjectData.SourceInfo 'ExecutableLineNumbers') -and $ObjectData.SourceInfo.ExecutableLineNumbers) {
         foreach ($lineNo in $ObjectData.SourceInfo.ExecutableLineNumbers | Sort-Object) {
             $lineElement = $Xml.CreateElement("line")
             $lineElement.SetAttribute("number", $lineNo.ToString())
@@ -237,10 +247,10 @@ function New-CoberturaMethod {
     $method.SetAttribute("signature", "()")  # AL doesn't have traditional signatures
 
     $totalLines = $ProcedureData.Lines.Count
-    $coveredLines = ($ProcedureData.Lines | Where-Object { $_.IsCovered }).Count
+    $coveredLines = @($ProcedureData.Lines | Where-Object { $_.IsCovered }).Count
     $lineRate = if ($totalLines -gt 0) { [math]::Round($coveredLines / $totalLines, 4) } else { 0 }
 
-    $method.SetAttribute("line-rate", $lineRate.ToString())
+    $method.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $method.SetAttribute("branch-rate", "0")
     $method.SetAttribute("complexity", "0")
 
@@ -287,14 +297,14 @@ function Get-ProcedureCoverage {
     }
 
     foreach ($proc in $Procedures) {
-        $procLines = $Lines | Where-Object {
+        $procLines = @($Lines | Where-Object {
             $_.LineNo -ge $proc.StartLine -and $_.LineNo -le $proc.EndLine
-        }
+        })
 
         if ($procLines.Count -gt 0) {
             $result += [PSCustomObject]@{
                 Name  = $proc.Name
-                Type  = $proc.Type
+                Type  = if (Test-PropertyExists $proc 'Type') { $proc.Type } else { 'procedure' }
                 Lines = $procLines
             }
         }
@@ -376,7 +386,7 @@ function New-CoberturaSummary {
     $xml.AppendChild($declaration) | Out-Null
 
     $coverage = $xml.CreateElement("coverage")
-    $coverage.SetAttribute("line-rate", $lineRate.ToString())
+    $coverage.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $coverage.SetAttribute("branch-rate", "0")
     $coverage.SetAttribute("lines-covered", $CoveredLines.ToString())
     $coverage.SetAttribute("lines-valid", $TotalLines.ToString())
@@ -396,7 +406,7 @@ function New-CoberturaSummary {
     $packages = $xml.CreateElement("packages")
     $package = $xml.CreateElement("package")
     $package.SetAttribute("name", $PackageName)
-    $package.SetAttribute("line-rate", $lineRate.ToString())
+    $package.SetAttribute("line-rate", $lineRate.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     $package.SetAttribute("branch-rate", "0")
     $package.SetAttribute("complexity", "0")
     $packages.AppendChild($package) | Out-Null
@@ -413,6 +423,5 @@ Export-ModuleMember -Function @(
     'New-CoberturaClass',
     'New-CoberturaMethod',
     'Get-ProcedureCoverage',
-    'Save-CoberturaFile',
-    'New-CoberturaSummary'
+    'Save-CoberturaFile'
 )

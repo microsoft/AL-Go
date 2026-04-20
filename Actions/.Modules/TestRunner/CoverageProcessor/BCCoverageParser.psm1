@@ -9,6 +9,8 @@
     Encoding can be UTF-8 or UTF-16 LE.
 #>
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 # Object type mapping from BC internal IDs to names
 $script:ObjectTypeMap = @{
     1  = 'TableData'
@@ -260,7 +262,7 @@ function Read-BCCoverageCsvFile {
         $content = Get-Content -Path $Path -Encoding UTF8
 
         # Validate first line looks like coverage data
-        if ($content.Count -gt 0) {
+        if ($null -ne $content -and $content.Count -gt 0) {
             $firstLine = $content[0]
             $parts = $firstLine.Split(',')
             # If first line doesn't have 5 parts or second part isn't numeric, try Unicode
@@ -381,7 +383,7 @@ function Get-CoverageStatistics {
     )
 
     $totalLines = $CoverageEntries.Count
-    $coveredLines = ($CoverageEntries | Where-Object { $_.IsCovered }).Count
+    $coveredLines = @($CoverageEntries | Where-Object { $_.IsCovered }).Count
     $notCoveredLines = $totalLines - $coveredLines
     $coveragePercent = if ($totalLines -gt 0) {
         [math]::Round(($coveredLines / $totalLines) * 100, 2)
@@ -425,6 +427,5 @@ Export-ModuleMember -Function @(
     'Read-BCCoverageCsvFile',
     'Group-CoverageByObject',
     'Get-CoverageStatistics',
-    'Get-ObjectTypeName',
     'Get-ObjectTypeId'
 )
