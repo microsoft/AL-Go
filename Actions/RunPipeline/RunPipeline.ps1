@@ -467,7 +467,11 @@ try {
         $codeCoverageSetup = if ($settings.ContainsKey('codeCoverageSetup')) { $settings.codeCoverageSetup } else { $null }
         $ccSetup = @{}
         if ($codeCoverageSetup) {
-            $codeCoverageSetup.GetEnumerator() | ForEach-Object { $ccSetup[$_.Key] = $_.Value }
+            if ($codeCoverageSetup -is [hashtable]) {
+                $codeCoverageSetup.GetEnumerator() | ForEach-Object { $ccSetup[$_.Key] = $_.Value }
+            } else {
+                $codeCoverageSetup.PSObject.Properties | ForEach-Object { $ccSetup[$_.Name] = $_.Value }
+            }
         }
         $ccTrackingType = if ($ccSetup['trackingType']) { $ccSetup['trackingType'] } else { 'PerRun' }
         $ccProduceMap = if ($ccSetup['produceCodeCoverageMap']) { $ccSetup['produceCodeCoverageMap'] } else { 'PerCodeunit' }
