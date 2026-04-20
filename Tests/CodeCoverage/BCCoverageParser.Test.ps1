@@ -27,8 +27,8 @@ Describe "BCCoverageParser - CSV Format" {
             $csvFile = Join-Path $script:testDataPath "sample-coverage.dat"
             $result = Read-BCCoverageCsvFile -Path $csvFile
 
-            $coveredLines = $result | Where-Object { $_.CoverageStatusName -eq 'Covered' }
-            $notCoveredLines = $result | Where-Object { $_.CoverageStatusName -eq 'NotCovered' }
+            $coveredLines = @($result | Where-Object { $_.CoverageStatusName -eq 'Covered' })
+            $notCoveredLines = @($result | Where-Object { $_.CoverageStatusName -eq 'NotCovered' })
 
             # Count actual covered vs not covered from test data
             $coveredLines.Count | Should -Be 9
@@ -50,9 +50,9 @@ Describe "BCCoverageParser - CSV Format" {
             $csvFile = Join-Path $script:testDataPath "sample-coverage.dat"
             $result = Read-BCCoverageCsvFile -Path $csvFile
 
-            $codeunits = $result | Where-Object { $_.ObjectType -eq 'Codeunit' }
-            $tables = $result | Where-Object { $_.ObjectType -eq 'Table' }
-            $pages = $result | Where-Object { $_.ObjectType -eq 'Page' }
+            $codeunits = @($result | Where-Object { $_.ObjectType -eq 'Codeunit' })
+            $tables = @($result | Where-Object { $_.ObjectType -eq 'Table' })
+            $pages = @($result | Where-Object { $_.ObjectType -eq 'Page' })
 
             $codeunits.Count | Should -Be 8
             $tables.Count | Should -Be 2
@@ -111,8 +111,8 @@ Describe "BCCoverageParser - XML Format" {
             $xmlFile = Join-Path $script:testDataPath "sample-coverage.xml"
             $result = Read-BCCoverageXmlFile -Path $xmlFile
 
-            $covered = $result | Where-Object { $_.CoverageStatusName -eq 'Covered' }
-            $notCovered = $result | Where-Object { $_.CoverageStatusName -eq 'NotCovered' }
+            $covered = @($result | Where-Object { $_.CoverageStatusName -eq 'Covered' })
+            $notCovered = @($result | Where-Object { $_.CoverageStatusName -eq 'NotCovered' })
 
             $covered.Count | Should -Be 6
             $notCovered.Count | Should -Be 2
@@ -189,7 +189,7 @@ Describe "BCCoverageParser - Grouping and Statistics" {
             $stats.TotalLines | Should -Be 11
             # 8 with status 0 (Covered) + 0 with status 2 (PartiallyCovered) = 8 covered
             # But let's check the actual data
-            $covered = ($rawData | Where-Object { $_.IsCovered }).Count
+            $covered = @($rawData | Where-Object { $_.IsCovered }).Count
             $stats.CoveredLines | Should -Be $covered
         }
 
