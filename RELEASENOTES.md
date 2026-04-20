@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 2204 - Workspace compilation ignores vsixFile setting
+- Issue 2214 - Workspace compilation not working with external dependencies
 
 ## v9.0
 
