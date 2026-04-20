@@ -241,6 +241,194 @@ Describe "ALSourceParser - Find-ProcedureForLine" {
     }
 }
 
+Describe "ALSourceParser - Get-ALObjectMap AppSourcePaths" {
+    BeforeAll {
+        # Create two separate app source directories with distinct .al files
+        $script:appDir1 = Join-Path $TestDrive "App1"
+        $script:appDir2 = Join-Path $TestDrive "App2"
+        $script:rootDir = $TestDrive
+        New-Item -Path $script:appDir1 -ItemType Directory -Force | Out-Null
+        New-Item -Path $script:appDir2 -ItemType Directory -Force | Out-Null
+
+        Set-Content -Path (Join-Path $script:appDir1 "cu1.al") -Value @'
+codeunit 60001 "AppSource CU1"
+{
+    procedure Hello()
+    begin
+        Message('hello');
+    end;
+}
+'@ -Encoding UTF8
+
+        Set-Content -Path (Join-Path $script:appDir2 "cu2.al") -Value @'
+codeunit 60002 "AppSource CU2"
+{
+    procedure World()
+    begin
+        Message('world');
+    end;
+}
+'@ -Encoding UTF8
+
+        # Place a file in root that should NOT be found when AppSourcePaths is used
+        Set-Content -Path (Join-Path $TestDrive "rootonly.al") -Value @'
+codeunit 60099 "Root Only CU"
+{
+    procedure RootProc()
+    begin
+        Message('root');
+    end;
+}
+'@ -Encoding UTF8
+    }
+
+    It "Should scan only specified AppSourcePaths directories" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:rootDir -AppSourcePaths @($script:appDir1)
+
+        $objectMap.Keys | Should -Contain "Codeunit.60001"
+        $objectMap.Keys | Should -Not -Contain "Codeunit.60002"
+        $objectMap.Keys | Should -Not -Contain "Codeunit.60099"
+    }
+
+    It "Should warn but not crash for non-existent AppSourcePaths" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:rootDir -AppSourcePaths @((Join-Path $TestDrive "NoSuchDir")) -WarningVariable warnings 3>$null
+
+        $objectMap.Count | Should -Be 0
+    }
+
+    It "Should find files from multiple AppSourcePaths" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:rootDir -AppSourcePaths @($script:appDir1, $script:appDir2)
+
+        $objectMap.Keys | Should -Contain "Codeunit.60001"
+        $objectMap.Keys | Should -Contain "Codeunit.60002"
+        $objectMap.Keys | Should -Not -Contain "Codeunit.60099"
+    }
+}
+
+Describe "ALSourceParser - Get-ALObjectMap ExcludePatterns" {
+    BeforeAll {
+        $script:excludeDir = Join-Path $TestDrive "ExcludeTests"
+        New-Item -Path $script:excludeDir -ItemType Directory -Force | Out-Null
+
+        Set-Content -Path (Join-Path $script:excludeDir "MyCodeunit.al") -Value @'
+codeunit 70001 "Keep CU"
+{
+    procedure Proc1()
+    begin
+        Message('keep');
+    end;
+}
+'@ -Encoding UTF8
+
+        Set-Content -Path (Join-Path $script:excludeDir "MyPerms.PermissionSet.al") -Value @'
+permissionset 70002 "My Perms"
+{
+    Assignable = true;
+}
+'@ -Encoding UTF8
+
+        Set-Content -Path (Join-Path $script:excludeDir "MyPermsExt.PermissionSetExtension.al") -Value @'
+permissionsetextension 70003 "My Perms Ext" extends "My Perms"
+{
+    Assignable = true;
+}
+'@ -Encoding UTF8
+    }
+
+    It "Should exclude files matching a single pattern" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:excludeDir -ExcludePatterns @('*.PermissionSet.al')
+
+        $objectMap.Keys | Should -Contain "Codeunit.70001"
+        $objectMap.Keys | Should -Not -Contain "PermissionSet.70002"
+    }
+
+    It "Should exclude files matching any of multiple patterns" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:excludeDir -ExcludePatterns @('*.PermissionSet.al', '*.PermissionSetExtension.al')
+
+        $objectMap.Keys | Should -Contain "Codeunit.70001"
+        $objectMap.Keys | Should -Not -Contain "PermissionSet.70002"
+        $objectMap.Keys | Should -Not -Contain "PermissionSetExtension.70003"
+    }
+
+    It "Should keep all files when pattern matches nothing" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:excludeDir -ExcludePatterns @('*.NoMatch.xyz')
+
+        $objectMap.Count | Should -Be 3
+    }
+
+    It "Should return empty map when pattern matches all files" {
+        $objectMap = Get-ALObjectMap -SourcePath $script:excludeDir -ExcludePatterns @('*.al')
+
+        $objectMap.Count | Should -Be 0
+    }
+}
+
+Describe "ALSourceParser - Read-AppJson" {
+    It "Should parse valid app.json with all fields" {
+        $appJsonDir = Join-Path $TestDrive "ReadAppJson"
+        New-Item -Path $appJsonDir -ItemType Directory -Force | Out-Null
+        $appJsonPath = Join-Path $appJsonDir "app.json"
+        Set-Content -Path $appJsonPath -Value '{"id":"11111111-2222-3333-4444-555555555555","name":"TestApp","publisher":"TestPublisher","version":"1.0.0.0"}' -Encoding UTF8
+
+        $result = Read-AppJson -AppJsonPath $appJsonPath
+
+        $result | Should -Not -BeNullOrEmpty
+        $result.Id | Should -Be "11111111-2222-3333-4444-555555555555"
+        $result.Name | Should -Be "TestApp"
+        $result.Publisher | Should -Be "TestPublisher"
+        $result.Version | Should -Be "1.0.0.0"
+    }
+
+    It "Should return null for missing file" {
+        $result = Read-AppJson -AppJsonPath (Join-Path $TestDrive "nonexistent.json") -WarningVariable warnings 3>$null
+
+        $result | Should -BeNullOrEmpty
+    }
+
+    It "Should handle malformed JSON gracefully" {
+        $badJsonPath = Join-Path $TestDrive "bad-app.json"
+        Set-Content -Path $badJsonPath -Value '{ this is not json }' -Encoding UTF8
+
+        { Read-AppJson -AppJsonPath $badJsonPath } | Should -Throw
+    }
+}
+
+Describe "ALSourceParser - Get-NormalizedObjectType" {
+    It "Should normalize common AL types to PascalCase" {
+        Get-NormalizedObjectType -ObjectType 'codeunit' | Should -Be 'Codeunit'
+        Get-NormalizedObjectType -ObjectType 'table' | Should -Be 'Table'
+        Get-NormalizedObjectType -ObjectType 'page' | Should -Be 'Page'
+        Get-NormalizedObjectType -ObjectType 'report' | Should -Be 'Report'
+    }
+
+    It "Should normalize extension types" {
+        Get-NormalizedObjectType -ObjectType 'tableextension' | Should -Be 'TableExtension'
+        Get-NormalizedObjectType -ObjectType 'pageextension' | Should -Be 'PageExtension'
+        Get-NormalizedObjectType -ObjectType 'enumextension' | Should -Be 'EnumExtension'
+        Get-NormalizedObjectType -ObjectType 'permissionsetextension' | Should -Be 'PermissionSetExtension'
+    }
+
+    It "Should normalize other known types" {
+        Get-NormalizedObjectType -ObjectType 'query' | Should -Be 'Query'
+        Get-NormalizedObjectType -ObjectType 'xmlport' | Should -Be 'XMLport'
+        Get-NormalizedObjectType -ObjectType 'enum' | Should -Be 'Enum'
+        Get-NormalizedObjectType -ObjectType 'interface' | Should -Be 'Interface'
+        Get-NormalizedObjectType -ObjectType 'permissionset' | Should -Be 'PermissionSet'
+        Get-NormalizedObjectType -ObjectType 'profile' | Should -Be 'Profile'
+        Get-NormalizedObjectType -ObjectType 'controladdin' | Should -Be 'ControlAddIn'
+    }
+
+    It "Should be case-insensitive" {
+        Get-NormalizedObjectType -ObjectType 'CODEUNIT' | Should -Be 'Codeunit'
+        Get-NormalizedObjectType -ObjectType 'Table' | Should -Be 'Table'
+        Get-NormalizedObjectType -ObjectType 'PageExtension' | Should -Be 'PageExtension'
+    }
+
+    It "Should return original value for unknown types" {
+        Get-NormalizedObjectType -ObjectType 'SomeFutureType' | Should -Be 'SomeFutureType'
+    }
+}
+
 Describe "ALSourceParser - Integration" {
     Context "Full object parsing workflow" {
         It "Should parse multiple AL files in directory" {

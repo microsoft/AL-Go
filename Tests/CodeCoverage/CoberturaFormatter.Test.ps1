@@ -221,9 +221,8 @@ Describe "CoberturaFormatter - New-CoberturaDocument" {
             $xml = New-CoberturaDocument -CoverageData $coverageData
 
             $methods = $xml.coverage.packages.package.classes.class.methods.method
-            if ($methods) {
-                $methods.name | Should -Contain "TestProcedure"
-            }
+            $methods | Should -Not -BeNullOrEmpty
+            $methods.name | Should -Contain "TestProcedure"
         }
     }
 }

@@ -204,3 +204,59 @@ Describe "BCCoverageParser - Grouping and Statistics" {
         }
     }
 }
+
+Describe "BCCoverageParser - PartiallyCovered status" {
+    It "Should treat PartiallyCovered (status 2) as covered" {
+        $tempFile = Join-Path $TestDrive "partial-coverage.dat"
+        # Status 2 = PartiallyCovered, should be treated as IsCovered = $true
+        @(
+            "5,50100,10,0,5"     # Covered
+            "5,50100,11,2,3"     # PartiallyCovered
+            "5,50100,12,1,0"     # NotCovered
+        ) | Set-Content -Path $tempFile -Encoding UTF8
+
+        $result = Read-BCCoverageCsvFile -Path $tempFile
+
+        $result.Count | Should -Be 3
+        $covered = @($result | Where-Object { $_.IsCovered })
+        $covered.Count | Should -Be 2
+        ($result | Where-Object { $_.LineNo -eq 11 }).IsCovered | Should -BeTrue
+    }
+}
+
+Describe "BCCoverageParser - Malformed input" {
+    It "Should handle malformed CSV file gracefully" {
+        $malformedFile = Join-Path $script:testDataPath "malformed-coverage.dat"
+
+        $result = Read-BCCoverageCsvFile -Path $malformedFile
+
+        # Should not throw; returns null or empty
+        @($result).Count | Should -Be 0
+    }
+
+    It "Should handle empty CSV file gracefully" {
+        $emptyFile = Join-Path $script:testDataPath "empty-coverage.dat"
+
+        $result = Read-BCCoverageCsvFile -Path $emptyFile
+
+        @($result).Count | Should -Be 0
+    }
+}
+
+Describe "BCCoverageParser - Get-ObjectTypeId" {
+    It "Should return correct ID for known type names" {
+        Get-ObjectTypeId -ObjectTypeName "Codeunit" | Should -Be 5
+        Get-ObjectTypeId -ObjectTypeName "Table" | Should -Be 3
+        Get-ObjectTypeId -ObjectTypeName "Page" | Should -Be 8
+        Get-ObjectTypeId -ObjectTypeName "Report" | Should -Be 14
+    }
+
+    It "Should return 0 for unknown type names" {
+        Get-ObjectTypeId -ObjectTypeName "UnknownType" | Should -Be 0
+    }
+
+    It "Should be case-insensitive" {
+        Get-ObjectTypeId -ObjectTypeName "CODEUNIT" | Should -Be 5
+        Get-ObjectTypeId -ObjectTypeName "codeunit" | Should -Be 5
+    }
+}
