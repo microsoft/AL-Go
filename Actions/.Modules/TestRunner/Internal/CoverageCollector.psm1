@@ -1,6 +1,8 @@
 # Code coverage result collection functions.
 # Extracted from ALTestRunnerInternal.psm1.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 . "$PSScriptRoot\Constants.ps1"
 
 $script:_ccFileIndex = 0
@@ -34,10 +36,13 @@ function CollectCoverageResults {
             $CCInfo = $CCInfoControl.StringValue
             if($CCInfo -ne $script:CCCollectedResult){
                 $CCInfo = $CCInfo -replace ",","-"
+                foreach ($c in [System.IO.Path]::GetInvalidFileNameChars()) {
+                    $CCInfo = $CCInfo.Replace([string]$c, '_')
+                }
                 $script:_ccFileIndex++
                 $CCOutputFilename = $CodeCoverageFilePrefix +"_${CCInfo}_$($script:_ccFileIndex).dat"
-                Write-Host "Storing coverage results of $CCInfo in:  $OutputPath\$CCOutputFilename"
-                Set-Content -Path "$OutputPath\$CCOutputFilename" -Value $CCResult
+                Write-Host "Storing coverage results of $CCInfo in:  $(Join-Path $OutputPath $CCOutputFilename)"
+                Set-Content -Path (Join-Path $OutputPath $CCOutputFilename) -Value $CCResult -Encoding UTF8
             }
         } while ($CCInfo -ne $script:CCCollectedResult)
 
@@ -87,7 +92,7 @@ function SaveCodeCoverageMap {
             New-Item $codeCoverageMapFileName -ItemType File
         }
 
-        Add-Content -Path $codeCoverageMapFileName -Value $CCMap
+        Add-Content -Path $codeCoverageMapFileName -Value $CCMap -Encoding UTF8
 
         $clientContext.CloseForm($form)
     }

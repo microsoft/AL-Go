@@ -22,6 +22,69 @@ function Test-PropertyExists {
     return $null -ne $InputObject.PSObject.Properties[$PropertyName]
 }
 
+# Shared helper: compute coverage stats, build stats object, and save JSON
+function Build-CoverageStatsAndSave {
+    param(
+        [hashtable]$GroupedCoverage,
+        [System.Collections.Generic.List[object]]$ExcludedObjectsData,
+        [string]$SourcePath,
+        [string[]]$AppSourcePaths,
+        [string]$OutputPath
+    )
+
+    $totalExecutableLines = 0
+    $coveredLines = 0
+
+    foreach ($obj in $GroupedCoverage.Values) {
+        $objTotalLines = if ((Test-PropertyExists $obj 'SourceInfo') -and $obj.SourceInfo -and (Test-PropertyExists $obj.SourceInfo 'ExecutableLines') -and $obj.SourceInfo.ExecutableLines -gt 0) {
+            $obj.SourceInfo.ExecutableLines
+        } else {
+            $obj.Lines.Count
+        }
+        $totalExecutableLines += $objTotalLines
+        $coveredLines += @($obj.Lines | Where-Object { $_.IsCovered }).Count
+    }
+
+    $coveragePercent = if ($totalExecutableLines -gt 0) {
+        [math]::Round(($coveredLines / $totalExecutableLines) * 100, 2)
+    } else {
+        0
+    }
+
+    $excludedLinesExecuted = 0
+    $excludedTotalHits = 0
+    if ($ExcludedObjectsData.Count -gt 0) {
+        $excludedLinesExecuted = ($ExcludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
+        $excludedTotalHits = ($ExcludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
+    }
+
+    $stats = [PSCustomObject]@{
+        TotalLines           = $totalExecutableLines
+        CoveredLines         = $coveredLines
+        NotCoveredLines      = $totalExecutableLines - $coveredLines
+        CoveragePercent      = $coveragePercent
+        LineRate             = if ($totalExecutableLines -gt 0) { $coveredLines / $totalExecutableLines } else { 0 }
+        ObjectCount          = $GroupedCoverage.Count
+        ExcludedObjectCount  = $ExcludedObjectsData.Count
+        ExcludedLinesExecuted = $excludedLinesExecuted
+        ExcludedTotalHits    = $excludedTotalHits
+        ExcludedObjects      = $ExcludedObjectsData
+        AppSourcePaths       = @($AppSourcePaths | ForEach-Object {
+            $normalizedSrc = [System.IO.Path]::GetFullPath($SourcePath).TrimEnd('\', '/')
+            $normalizedApp = [System.IO.Path]::GetFullPath($_).TrimEnd('\', '/')
+            if ($normalizedApp.StartsWith($normalizedSrc, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $normalizedApp.Substring($normalizedSrc.Length + 1).Replace('\', '/')
+            } else { $normalizedApp.Replace('\', '/') }
+        })
+    }
+
+    $statsOutputPath = [System.IO.Path]::ChangeExtension($OutputPath, '.stats.json')
+    $stats | ConvertTo-Json -Depth 10 | Set-Content -Path $statsOutputPath -Encoding UTF8
+    Write-Host "  Saved coverage stats to: $statsOutputPath"
+
+    return $stats
+}
+
 <#
 .SYNOPSIS
     Processes BC code coverage files and generates Cobertura XML output
@@ -160,64 +223,12 @@ function Convert-BCCoverageToCobertura {
     Save-CoberturaFile -XmlDocument $coberturaXml -OutputPath $OutputPath
 
     # Calculate and return statistics
-    # Always prefer source-based executable line count when available.
-    # XMLport 130470 only exports covered lines, making Lines.Count inaccurate
-    # as a denominator (it equals covered-line count, not total executable lines).
-    # XMLport 130007 exports all executable lines, so Lines.Count would be correct,
-    # but source-based count is still preferred for consistency.
-    $totalExecutableLines = 0
-    $coveredLines = 0
-
-    foreach ($obj in $groupedCoverage.Values) {
-        $objTotalLines = if ((Test-PropertyExists $obj 'SourceInfo') -and $obj.SourceInfo -and (Test-PropertyExists $obj.SourceInfo 'ExecutableLines') -and $obj.SourceInfo.ExecutableLines -gt 0) {
-            $obj.SourceInfo.ExecutableLines
-        } else {
-            $obj.Lines.Count
-        }
-
-        $totalExecutableLines += $objTotalLines
-        $coveredLines += @($obj.Lines | Where-Object { $_.IsCovered }).Count
-    }
-
-    $coveragePercent = if ($totalExecutableLines -gt 0) {
-        [math]::Round(($coveredLines / $totalExecutableLines) * 100, 2)
-    } else {
-        0
-    }
-
-    # Calculate stats for excluded objects (external/base app code)
-    $excludedLinesExecuted = 0
-    $excludedTotalHits = 0
-    if ($excludedObjectsData.Count -gt 0) {
-        $excludedLinesExecuted = ($excludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
-        $excludedTotalHits = ($excludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
-    }
-
-    $stats = [PSCustomObject]@{
-        TotalLines           = $totalExecutableLines
-        CoveredLines         = $coveredLines
-        NotCoveredLines      = $totalExecutableLines - $coveredLines
-        CoveragePercent      = $coveragePercent
-        LineRate             = if ($totalExecutableLines -gt 0) { $coveredLines / $totalExecutableLines } else { 0 }
-        ObjectCount          = $groupedCoverage.Count
-        ExcludedObjectCount  = $excludedObjectsData.Count
-        ExcludedLinesExecuted = $excludedLinesExecuted
-        ExcludedTotalHits    = $excludedTotalHits
-        ExcludedObjects      = $excludedObjectsData
-        AppSourcePaths       = @($AppSourcePaths | ForEach-Object {
-            # Store paths relative to SourcePath for portability
-            $normalizedSrc = [System.IO.Path]::GetFullPath($SourcePath).TrimEnd('\', '/')
-            $normalizedApp = [System.IO.Path]::GetFullPath($_).TrimEnd('\', '/')
-            if ($normalizedApp.StartsWith($normalizedSrc, [System.StringComparison]::OrdinalIgnoreCase)) {
-                $normalizedApp.Substring($normalizedSrc.Length + 1).Replace('\', '/')
-            } else { $normalizedApp.Replace('\', '/') }
-        })
-    }
-
-    # Save extended stats to JSON file alongside Cobertura XML
-    $statsOutputPath = [System.IO.Path]::ChangeExtension($OutputPath, '.stats.json')
-    $stats | ConvertTo-Json -Depth 10 | Set-Content -Path $statsOutputPath -Encoding UTF8
-    Write-Host "  Saved coverage stats to: $statsOutputPath"
+    $stats = Build-CoverageStatsAndSave `
+        -GroupedCoverage $groupedCoverage `
+        -ExcludedObjectsData $excludedObjectsData `
+        -SourcePath $SourcePath `
+        -AppSourcePaths $AppSourcePaths `
+        -OutputPath $OutputPath
 
     Write-Host "`n=== Coverage Summary (User Code Only) ==="
     Write-Host "  Objects:       $($stats.ObjectCount)"
@@ -377,59 +388,13 @@ function Merge-BCCoverageToCobertura {
     $coberturaXml = New-CoberturaDocument -CoverageData $groupedCoverage -SourcePath $SourcePath -AppInfo $appInfo
     Save-CoberturaFile -XmlDocument $coberturaXml -OutputPath $OutputPath
 
-    # Calculate stats from filtered/grouped coverage (user code only), consistent with Convert-BCCoverageToCobertura
-    # Always prefer source-based executable line count — see Convert-BCCoverageToCobertura for rationale
-    $totalExecutableLines = 0
-    $coveredLines = 0
-
-    foreach ($obj in $groupedCoverage.Values) {
-        $objTotalLines = if ((Test-PropertyExists $obj 'SourceInfo') -and $obj.SourceInfo -and (Test-PropertyExists $obj.SourceInfo 'ExecutableLines') -and $obj.SourceInfo.ExecutableLines -gt 0) {
-            $obj.SourceInfo.ExecutableLines
-        } else {
-            $obj.Lines.Count
-        }
-        $totalExecutableLines += $objTotalLines
-        $coveredLines += @($obj.Lines | Where-Object { $_.IsCovered }).Count
-    }
-
-    $coveragePercent = if ($totalExecutableLines -gt 0) {
-        [math]::Round(($coveredLines / $totalExecutableLines) * 100, 2)
-    } else {
-        0
-    }
-
-    # Calculate stats for excluded objects (external/base app code)
-    $excludedLinesExecuted = 0
-    $excludedTotalHits = 0
-    if ($excludedObjectsData.Count -gt 0) {
-        $excludedLinesExecuted = ($excludedObjectsData | Measure-Object -Property LinesExecuted -Sum).Sum
-        $excludedTotalHits = ($excludedObjectsData | Measure-Object -Property TotalHits -Sum).Sum
-    }
-
-    $stats = [PSCustomObject]@{
-        TotalLines           = $totalExecutableLines
-        CoveredLines         = $coveredLines
-        NotCoveredLines      = $totalExecutableLines - $coveredLines
-        CoveragePercent      = $coveragePercent
-        LineRate             = if ($totalExecutableLines -gt 0) { $coveredLines / $totalExecutableLines } else { 0 }
-        ObjectCount          = $groupedCoverage.Count
-        ExcludedObjectCount  = $excludedObjectsData.Count
-        ExcludedLinesExecuted = $excludedLinesExecuted
-        ExcludedTotalHits    = $excludedTotalHits
-        ExcludedObjects      = $excludedObjectsData
-        AppSourcePaths       = @($AppSourcePaths | ForEach-Object {
-            $normalizedSrc = [System.IO.Path]::GetFullPath($SourcePath).TrimEnd('\', '/')
-            $normalizedApp = [System.IO.Path]::GetFullPath($_).TrimEnd('\', '/')
-            if ($normalizedApp.StartsWith($normalizedSrc, [System.StringComparison]::OrdinalIgnoreCase)) {
-                $normalizedApp.Substring($normalizedSrc.Length + 1).Replace('\', '/')
-            } else { $normalizedApp.Replace('\', '/') }
-        })
-    }
-
-    # Save extended stats to JSON file
-    $statsOutputPath = [System.IO.Path]::ChangeExtension($OutputPath, '.stats.json')
-    $stats | ConvertTo-Json -Depth 10 | Set-Content -Path $statsOutputPath -Encoding UTF8
-    Write-Host "  Saved coverage stats to: $statsOutputPath"
+    # Calculate and return statistics
+    $stats = Build-CoverageStatsAndSave `
+        -GroupedCoverage $groupedCoverage `
+        -ExcludedObjectsData $excludedObjectsData `
+        -SourcePath $SourcePath `
+        -AppSourcePaths $AppSourcePaths `
+        -OutputPath $OutputPath
 
     Write-Host "`n=== Merged Coverage Summary (User Code Only) ==="
     Write-Host "  Objects:       $($stats.ObjectCount)"
