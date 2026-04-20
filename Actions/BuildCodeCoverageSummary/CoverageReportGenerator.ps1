@@ -225,12 +225,18 @@ function Read-CoberturaFile {
 
     $coverage = $xml.coverage
 
+    # Use GetAttribute() to safely read optional XML attributes (avoids errors under Set-StrictMode -Version 2.0)
+    $lineRateStr = $coverage.GetAttribute('line-rate')
+    $branchRateStr = $coverage.GetAttribute('branch-rate')
+    $linesCoveredStr = $coverage.GetAttribute('lines-covered')
+    $linesValidStr = $coverage.GetAttribute('lines-valid')
+
     $result = @{
-        LineRate       = [double]$coverage.'line-rate'
-        BranchRate     = [double]$coverage.'branch-rate'
-        LinesCovered   = [int]$coverage.'lines-covered'
-        LinesValid     = [int]$coverage.'lines-valid'
-        Timestamp      = $coverage.timestamp
+        LineRate       = if ($lineRateStr) { [double]$lineRateStr } else { 0.0 }
+        BranchRate     = if ($branchRateStr) { [double]$branchRateStr } else { 0.0 }
+        LinesCovered   = if ($linesCoveredStr) { [int]$linesCoveredStr } else { 0 }
+        LinesValid     = if ($linesValidStr) { [int]$linesValidStr } else { 0 }
+        Timestamp      = $coverage.GetAttribute('timestamp')
         Packages       = @()
     }
 
@@ -241,9 +247,10 @@ function Read-CoberturaFile {
     }
 
     foreach ($package in $packagesNode.package) {
+        $pkgLineRateStr = $package.GetAttribute('line-rate')
         $packageData = @{
             Name       = $package.name
-            LineRate   = [double]$package.'line-rate'
+            LineRate   = if ($pkgLineRateStr) { [double]$pkgLineRateStr } else { 0.0 }
             Classes    = @()
         }
 
@@ -270,9 +277,10 @@ function Read-CoberturaFile {
                     $methodCovered = @($methodLines | Where-Object { [int]$_.hits -gt 0 }).Count
                     $methodTotal = $methodLines.Count
 
+                    $methodLineRateStr = $method.GetAttribute('line-rate')
                     $methods += @{
                         Name        = $method.name
-                        LineRate    = [double]$method.'line-rate'
+                        LineRate    = if ($methodLineRateStr) { [double]$methodLineRateStr } else { 0.0 }
                         LinesCovered = $methodCovered
                         LinesTotal  = $methodTotal
                     }
@@ -288,10 +296,11 @@ function Read-CoberturaFile {
             $classCovered = @($classLines | Where-Object { [int]$_.hits -gt 0 }).Count
             $classTotal = $classLines.Count
 
+            $classLineRateStr = $class.GetAttribute('line-rate')
             $packageData.Classes += @{
                 Name         = $class.name
                 Filename     = $class.filename
-                LineRate     = [double]$class.'line-rate'
+                LineRate     = if ($classLineRateStr) { [double]$classLineRateStr } else { 0.0 }
                 LinesCovered = $classCovered
                 LinesTotal   = $classTotal
                 Methods      = $methods
@@ -300,6 +309,20 @@ function Read-CoberturaFile {
         }
 
         $result.Packages += $packageData
+    }
+
+    # Compute LinesCovered/LinesValid from parsed data when root attributes were missing
+    if (-not $linesCoveredStr -or -not $linesValidStr) {
+        $computedCovered = 0
+        $computedValid = 0
+        foreach ($pkg in $result.Packages) {
+            foreach ($cls in $pkg.Classes) {
+                $computedCovered += $cls.LinesCovered
+                $computedValid += $cls.LinesTotal
+            }
+        }
+        $result.LinesCovered = $computedCovered
+        $result.LinesValid = $computedValid
     }
 
     return $result
