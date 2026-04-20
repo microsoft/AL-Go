@@ -29,14 +29,17 @@ $coberturaFiles | ForEach-Object {
     Write-Host "  [$artifactName] $($_.FullName)"
 }
 
-if ($coberturaFiles.Count -eq 1) {
-    Write-Host "Only one coverage file found, using it directly (no merge needed)"
-    $mergedFile = $coberturaFiles[0].FullName
-} else {
-    # Merge all cobertura files
-    $mergedOutputDir = Join-Path $coveragePath "_merged"
-    $mergedFile = Join-Path $mergedOutputDir "cobertura.xml"
+# Always write to _merged/ directory so the workflow upload step finds the file
+$mergedOutputDir = Join-Path $coveragePath "_merged"
+$mergedFile = Join-Path $mergedOutputDir "cobertura.xml"
 
+if ($coberturaFiles.Count -eq 1) {
+    Write-Host "Only one coverage file found, copying to merged output (no merge needed)"
+    if (-not (Test-Path $mergedOutputDir)) {
+        New-Item -ItemType Directory -Path $mergedOutputDir -Force | Out-Null
+    }
+    Copy-Item -Path $coberturaFiles[0].FullName -Destination $mergedFile -Force
+} else {
     Merge-CoberturaFiles `
         -CoberturaFiles ($coberturaFiles.FullName) `
         -OutputPath $mergedFile | Out-Null
@@ -69,7 +72,7 @@ if ($coverageResult.SummaryMD) {
 
     # Warn if build had failures (some jobs may not have produced coverage data)
     $incompleteWarning = ""
-    if ($env:BUILD_RESULT -eq 'failure') {
+    if ($env:_BUILD_RESULT -eq 'failure') {
         $incompleteWarning = "> :warning: **Incomplete coverage data** - some build jobs failed and did not produce coverage results. Actual coverage may be higher than reported.`n`n"
         OutputWarning -message "Coverage data is incomplete - some build jobs failed and did not produce coverage results."
     }
@@ -101,7 +104,3 @@ if ($coverageResult.SummaryMD) {
 
     Write-Host "Coverage summary written to GITHUB_STEP_SUMMARY"
 }
-
-# Set output
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "mergedCoverageFile=$mergedFile"
-Write-Host "Merged coverage file: $mergedFile"

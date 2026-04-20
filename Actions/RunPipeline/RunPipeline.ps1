@@ -464,10 +464,10 @@ try {
     # Add RunTestsInBcContainer override to use ALTestRunner with code coverage support
     if ($settings.enableCodeCoverage) {
         # Read codeCoverageSetup settings with defaults
-        $codeCoverageSetup = if ($settings.PSObject.Properties.Name -contains 'codeCoverageSetup') { $settings.codeCoverageSetup } else { $null }
+        $codeCoverageSetup = if ($settings.ContainsKey('codeCoverageSetup')) { $settings.codeCoverageSetup } else { $null }
         $ccSetup = @{}
         if ($codeCoverageSetup) {
-            $codeCoverageSetup.PSObject.Properties | ForEach-Object { $ccSetup[$_.Name] = $_.Value }
+            $codeCoverageSetup.GetEnumerator() | ForEach-Object { $ccSetup[$_.Key] = $_.Value }
         }
         $ccTrackingType = if ($ccSetup['trackingType']) { $ccSetup['trackingType'] } else { 'PerRun' }
         $ccProduceMap = if ($ccSetup['produceCodeCoverageMap']) { $ccSetup['produceCodeCoverageMap'] } else { 'PerCodeunit' }
@@ -602,7 +602,7 @@ try {
                     if ($checkResultsFile -and (Test-Path $checkResultsFile)) {
                         # Parse results to determine pass/fail
                         try {
-                            [xml]$testResults = Get-Content $checkResultsFile
+                            [xml]$testResults = Get-Content $checkResultsFile -Encoding UTF8
                             if ($testResults.testsuites) {
                                 $failures = 0; $errors = 0
                                 if ($testResults.testsuites.testsuite) {
@@ -629,8 +629,8 @@ try {
                             }
                             else {
                                 try {
-                                    [xml]$source = Get-Content $tempResultsFilePath
-                                    [xml]$target = Get-Content $resultsFilePath
+                                    [xml]$source = Get-Content $tempResultsFilePath -Encoding UTF8
+                                    [xml]$target = Get-Content $resultsFilePath -Encoding UTF8
                                     $rootElement = if ($resultsFormat -eq 'JUnit') { 'testsuites' } else { 'assemblies' }
                                     foreach ($node in $source.$rootElement.ChildNodes) {
                                         if ($node.NodeType -eq 'Element') {
@@ -785,10 +785,10 @@ try {
 
                     # Walk project dependencies to collect parent projects' app folders
                     try {
-                        $projectDeps = $projectDependenciesJson | ConvertFrom-Json
+                        $projectDeps = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
                         $parentProjects = @()
-                        if ($projectDeps -and $project -and $projectDeps.PSObject.Properties.Name -contains $project) {
-                            $parentProjects = @($projectDeps.$project)
+                        if ($projectDeps -and $project -and $projectDeps.ContainsKey($project)) {
+                            $parentProjects = @($projectDeps[$project])
                         }
                         if ($parentProjects.Count -gt 0) {
                             Write-Host "Resolving app folders from $($parentProjects.Count) parent project(s): $($parentProjects -join ', ')"
