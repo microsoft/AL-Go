@@ -328,4 +328,45 @@ function Get-DependenciesFromInstallApps {
     return $install
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Expand-ZipFileToAppFiles, Test-IsZipFile
+<#
+    .SYNOPSIS
+    Resolves dependency file paths by extracting .app files from any zip archives.
+    .DESCRIPTION
+    Takes an array of dependency file paths (which may be .app files or .zip archives)
+    and returns an array of .app file paths. Zip archives are extracted and the contained
+    .app files are copied to the destination path. Test app markers (parentheses wrapping)
+    are preserved through extraction.
+    .PARAMETER Dependencies
+    An array of dependency file paths. Test apps are wrapped in parentheses, e.g. "(path.zip)".
+    .PARAMETER DestinationPath
+    The path where extracted .app files should be placed.
+    .OUTPUTS
+    An array of resolved .app file paths, with test app markers preserved.
+#>
+function Resolve-DependencyFiles {
+    Param(
+        [Parameter(Mandatory = $false)]
+        [string[]] $Dependencies = @(),
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationPath
+    )
+
+    if (-not $Dependencies -or $Dependencies.Count -eq 0) {
+        return @()
+    }
+
+    return @($Dependencies | ForEach-Object {
+        $isTestApp = $_.StartsWith('(')
+        $filePath = $_.Trim('()')
+        if ($filePath -and (Test-Path $filePath) -and (Test-IsZipFile -Path $filePath)) {
+            $appFiles = Expand-ZipFileToAppFiles -ZipFile $filePath -DestinationPath $DestinationPath
+            Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue
+            if ($isTestApp) { $appFiles | ForEach-Object { "($_)" } } else { $appFiles }
+        }
+        else {
+            $_
+        }
+    })
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Resolve-DependencyFiles

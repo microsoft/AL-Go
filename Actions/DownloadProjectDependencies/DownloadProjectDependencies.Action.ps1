@@ -27,17 +27,7 @@ function DownloadDependenciesFromProbingPaths {
 
         # GetDependencies may return .zip files (from DownloadArtifact/DownloadRelease).
         # Extract .app files from any zips so downstream consumers receive clean .app paths.
-        return @($dependencies | ForEach-Object {
-            $isTestApp = $_.StartsWith('(')
-            $filePath = $_.Trim('()')
-            if ($filePath -and (Test-Path $filePath) -and (Test-IsZipFile -Path $filePath)) {
-                $appFiles = Expand-ZipFileToAppFiles -ZipFile $filePath -DestinationPath $destinationPath
-                if ($isTestApp) { $appFiles | ForEach-Object { "($_)" } } else { $appFiles }
-            }
-            else {
-                $_
-            }
-        })
+        return Resolve-DependencyFiles -Dependencies $dependencies -DestinationPath $destinationPath
     }
 }
 
