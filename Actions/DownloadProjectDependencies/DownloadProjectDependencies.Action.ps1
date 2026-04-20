@@ -111,7 +111,7 @@ function DownloadDependenciesFromCurrentBuild {
         }
     }
 
-    return $downloadedDependencies
+    return Resolve-DependencyFiles -Dependencies $downloadedDependencies -DestinationPath $destinationPath
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
