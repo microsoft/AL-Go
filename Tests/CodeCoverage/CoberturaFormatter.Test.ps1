@@ -120,7 +120,7 @@ Describe "CoberturaFormatter - New-CoberturaDocument" {
 
             $xml = New-CoberturaDocument -CoverageData $coverageData
 
-            $packages = $xml.coverage.packages.package
+            $packages = @($xml.coverage.packages.package)
             $packages.Count | Should -BeGreaterThan 0
         }
 
@@ -191,7 +191,7 @@ Describe "CoberturaFormatter - New-CoberturaDocument" {
 
             $xml = New-CoberturaDocument -CoverageData $coverageData
 
-            $lines = $xml.coverage.packages.package.classes.class.lines.line
+            $lines = @($xml.coverage.packages.package.classes.class.lines.line)
             $lines.Count | Should -BeGreaterThan 1
             $zeroHitLine = $lines | Where-Object { $_.number -eq "15" }
             $zeroHitLine.hits | Should -Be "0"
