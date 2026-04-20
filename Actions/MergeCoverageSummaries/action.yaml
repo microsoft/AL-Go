@@ -12,10 +12,6 @@ inputs:
     description: Path to the source code checkout (for app root path resolution)
     required: false
     default: ''
-outputs:
-  mergedCoverageFile:
-    description: Path to the merged Cobertura XML file
-    value: ${{ steps.merge.outputs.mergedCoverageFile }}
 runs:
   using: composite
   steps:
