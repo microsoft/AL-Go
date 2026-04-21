@@ -10,7 +10,6 @@ Merges multiple Cobertura XML coverage files from different build jobs into a si
   with:
     shell: powershell
     coveragePath: '.coverage-inputs'
-    sourcePath: '.'
 ```
 
 ## Inputs
@@ -19,13 +18,6 @@ Merges multiple Cobertura XML coverage files from different build jobs into a si
 |------|-------------|----------|---------|
 | `shell` | Shell to run the action in (powershell or pwsh) | No | `powershell` |
 | `coveragePath` | Path containing downloaded coverage artifacts (each in a subfolder) | Yes | |
-| `sourcePath` | Path to the source code checkout (for app root path resolution) | No | `''` |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| `mergedCoverageFile` | Path to the merged Cobertura XML file |
 
 ## How It Works
 
@@ -86,7 +78,6 @@ MergeCoverage:
       uses: microsoft/AL-Go/Actions/MergeCoverageSummaries@main
       with:
         coveragePath: '.coverage-inputs'
-        sourcePath: '.'
 
     - name: Publish Merged Coverage
       uses: actions/upload-artifact@v4

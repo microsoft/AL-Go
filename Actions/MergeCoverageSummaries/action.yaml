@@ -8,22 +8,16 @@ inputs:
   coveragePath:
     description: Path containing downloaded coverage artifacts (each in a subfolder)
     required: true
-  sourcePath:
-    description: Path to the source code checkout (for app root path resolution)
-    required: false
-    default: ''
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
-      id: merge
       env:
         _coveragePath: ${{ inputs.coveragePath }}
-        _sourcePath: ${{ inputs.sourcePath }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "MergeCoverageSummaries" -Action {
-          ${{ github.action_path }}/MergeCoverageSummaries.ps1 -coveragePath $ENV:_coveragePath -sourcePath $ENV:_sourcePath
+          ${{ github.action_path }}/MergeCoverageSummaries.ps1 -coveragePath $ENV:_coveragePath
         }
 branding:
   icon: bar-chart-2

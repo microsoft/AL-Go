@@ -1,8 +1,6 @@
 Param(
     [Parameter(HelpMessage = "Path containing downloaded coverage artifacts", Mandatory = $true)]
-    [string] $coveragePath,
-    [Parameter(HelpMessage = "Path to source code checkout", Mandatory = $false)]
-    [string] $sourcePath = ''
+    [string] $coveragePath
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
