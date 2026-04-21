@@ -1311,7 +1311,11 @@ Describe "Get-UnmodifiedAppsFromBaselineWorkflowRun" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
 
         if (-not (Get-Command 'Trace-Information' -ErrorAction SilentlyContinue)) {
-            function global:Trace-Information { param([string]$Message, $AdditionalData) }
+            function global:Trace-Information {
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Message', Justification = 'Stub function for testing.')]
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'AdditionalData', Justification = 'Stub function for testing.')]
+                param([string]$Message, $AdditionalData)
+            }
         }
         $env:GITHUB_API_URL = 'https://api.github.com'
         $env:GITHUB_REPOSITORY = 'test/repo'
