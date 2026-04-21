@@ -4,7 +4,9 @@
 
 ### Issues
 
+- Incremental builds (`modifiedApps` mode) now correctly identify unmodified apps for projects whose `appFolders` reference paths outside the project directory (e.g. using `../`)
 - Issue 2204 - Workspace compilation ignores vsixFile setting
+- Issue 2214 - Workspace compilation not working with external dependencies
 
 ## v9.0
 
