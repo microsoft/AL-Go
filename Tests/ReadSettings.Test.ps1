@@ -310,6 +310,98 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
         }
 
+        It 'testIsolation default shape is correct' {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.enabled | Should -Be $false
+            $defaultSettings.testIsolation.defaultRunnerCodeunitId | Should -Be 0
+            $defaultSettings.testIsolation.partitions | Should -BeNullOrEmpty
+        }
+
+        It 'testIsolation accepts a populated partitions array' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.enabled = $true
+            $defaultSettings.testIsolation.defaultRunnerCodeunitId = 130450
+            $defaultSettings.testIsolation.partitions = @(
+                [ordered]@{ runnerCodeunitId = 130451; codeunits = '60100|60200..60299' }
+                [ordered]@{ runnerCodeunitId = 130452; codeunits = '60300' }
+            )
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
+        }
+
+        It 'testIsolation rejects unknown top-level keys' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.typoKey = 'oops'
+            try {
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
+            }
+            catch {
+                $_.Exception.Message | Should -Match '/testIsolation/typoKey'
+            }
+        }
+
+        It 'testIsolation rejects negative defaultRunnerCodeunitId' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.defaultRunnerCodeunitId = -1
+            try {
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
+            }
+            catch {
+                $_.Exception.Message | Should -Match 'defaultRunnerCodeunitId'
+            }
+        }
+
+        It 'testIsolation rejects partition entry with runnerCodeunitId = 0' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.partitions = @(
+                [ordered]@{ runnerCodeunitId = 0; codeunits = '60100' }
+            )
+            try {
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
+            }
+            catch {
+                $_.Exception.Message | Should -Match 'runnerCodeunitId'
+            }
+        }
+
+        It 'testIsolation rejects partition entry with empty codeunits' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.partitions = @(
+                [ordered]@{ runnerCodeunitId = 130451; codeunits = '' }
+            )
+            try {
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
+            }
+            catch {
+                $_.Exception.Message | Should -Match 'codeunits'
+            }
+        }
+
+        It 'testIsolation rejects partition entry missing required keys' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.partitions = @(
+                [ordered]@{ runnerCodeunitId = 130451 }
+            )
+            try {
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
+            }
+            catch {
+                $_.Exception.Message | Should -Match 'codeunits'
+            }
+        }
+
+        It 'testIsolation rejects unknown keys inside a partition entry' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $defaultSettings = GetDefaultSettings
+            $defaultSettings.testIsolation.partitions = @(
+                [ordered]@{ runnerCodeunitId = 130451; codeunits = '60100'; extraKey = 'oops' }
+            )
+            try {
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
+            }
+            catch {
+                $_.Exception.Message | Should -Match 'extraKey'
+            }
+        }
+
         It 'overwriteSettings property resets settings from destination object (simple types)' {
             $dst = [ordered]@{
                 setting1 = "value1"

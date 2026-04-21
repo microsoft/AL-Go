@@ -175,6 +175,11 @@ function GetDefaultSettings
         "doNotRunTests"                                 = $false
         "doNotRunBcptTests"                             = $false
         "doNotRunPageScriptingTests"                    = $false
+        "testIsolation"                                 = [ordered]@{
+            "enabled"                                   = $false
+            "defaultRunnerCodeunitId"                   = 0
+            "partitions"                                = @()
+        }
         "doNotPublishApps"                              = $false
         "doNotSignApps"                                 = $false
         "configPackages"                                = @()

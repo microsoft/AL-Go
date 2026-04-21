@@ -323,6 +323,44 @@
         "treatTestFailuresAsWarnings": {
             "type": "boolean"
         },
+        "testIsolation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [ "enabled", "defaultRunnerCodeunitId", "partitions" ],
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable partitioned test runs. When true, AL-Go invokes Run-TestsInBcContainer once per entry in 'partitions' (each with its own test runner) plus one fallback call covering everything else under 'defaultRunnerCodeunitId'."
+                },
+                "defaultRunnerCodeunitId": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Test runner codeunit ID used for codeunits not matched by any 'partitions' entry. 0 = the BcContainerHelper default runner."
+                },
+                "partitions": {
+                    "type": "array",
+                    "description": "Each entry runs the codeunits matching its 'codeunits' BC filter under the configured 'runnerCodeunitId'. Codeunits not matched by any entry fall through to 'defaultRunnerCodeunitId'.",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [ "runnerCodeunitId", "codeunits" ],
+                        "properties": {
+                            "runnerCodeunitId": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "ID of a Subtype = TestRunner codeunit whose TestIsolation property satisfies the codeunits matched below."
+                            },
+                            "codeunits": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "BC filter expression against the codeunit ID (e.g. '60100|60200..60299'). Same syntax as the BC Test Tool's TestCodeunitRangeFilter."
+                            }
+                        }
+                    }
+                }
+            },
+            "description": "See https://aka.ms/ALGoSettings#testIsolation"
+        },
         "rulesetFile": {
             "type": "string"
         },

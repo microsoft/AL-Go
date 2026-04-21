@@ -1,3 +1,26 @@
+### Test Isolation - run selected test codeunits under a custom test runner
+
+Business Central test codeunits can declare a `RequiredTestIsolation` value (BC runtime 16+) that tells the runtime which transactional isolation they need. The standard test runner shipped by BC has a single fixed `TestIsolation` value and cannot satisfy multiple requirements at once. AL-Go for GitHub now supports running tests under multiple runners in a single pipeline pass.
+
+When `testIsolation.enabled` is set in your settings, AL-Go partitions the test stage: each entry in `partitions` runs the matched codeunits under the configured `runnerCodeunitId`, and everything else runs under `defaultRunnerCodeunitId`. Results are merged back into the same JUnit file downstream reporting already consumes; container lifecycle and `disabledTests.json` handling are unchanged.
+
+Enable it by adding:
+
+```json
+{
+  "testIsolation": {
+    "enabled": true,
+    "defaultRunnerCodeunitId": 0,
+    "partitions": [
+      { "runnerCodeunitId": 130451, "codeunits": "60200..60299" },
+      { "runnerCodeunitId": 130452, "codeunits": "60300|60301" }
+    ]
+  }
+}
+```
+
+Requires BC 15+ (the test page must expose the `TestCodeunitRangeFilter` control used by BcContainerHelper for codeunit-range filtering). See the full settings reference and compatibility notes in [Test Isolation](Scenarios/TestIsolation.md). The feature is opt-in - existing projects are unaffected unless they set `testIsolation.enabled = true`.
+
 ### Issues
 
 - Incremental builds (`modifiedApps` mode) now correctly identify unmodified apps for projects whose `appFolders` reference paths outside the project directory (e.g. using `../`)
