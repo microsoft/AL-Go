@@ -630,9 +630,11 @@ Describe "DownloadProjectDependencies - Resolve-DependencyFiles Tests" {
     }
 
     It 'Passes through non-existent paths unchanged' {
-        $result = @(Resolve-DependencyFiles -Dependencies @("C:\nonexistent\fake.zip") -DestinationPath $destFolder)
+        $nonExistentZipFile = Join-Path $testFolder "nonexistent-fake.zip"
+
+        $result = @(Resolve-DependencyFiles -Dependencies @($nonExistentZipFile) -DestinationPath $destFolder)
 
         $result | Should -HaveCount 1
-        $result[0] | Should -Be "C:\nonexistent\fake.zip"
+        $result[0] | Should -Be $nonExistentZipFile
     }
 }
