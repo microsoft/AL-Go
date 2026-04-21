@@ -29,9 +29,32 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Download artifacts from current build
+    - name: Compute dependency artifact pattern
+      id: computePattern
+      shell: ${{ inputs.shell }}
+      env:
+        _project: ${{ inputs.project }}
+        _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
+      run: |
+        . (Join-Path ${{ github.action_path }} "../AL-Go-Helper.ps1" -Resolve)
+        Import-Module (Join-Path ${{ github.action_path }} "DownloadProjectDependencies.psm1" -Resolve) -Force -DisableNameChecking
+        $projectDependencies = $ENV:_projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+        $pattern = Get-DependencyArtifactPattern -Project $ENV:_project -ProjectDependencies $projectDependencies
+        if ($pattern) {
+          Write-Host "Dependency artifact pattern: $pattern"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "hasPattern=true"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "pattern=$pattern"
+        }
+        else {
+          Write-Host "No dependency projects found, skipping artifact download"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "hasPattern=false"
+        }
+
+    - name: Download dependency artifacts from current build
+      if: steps.computePattern.outputs.hasPattern == 'true'
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
+        pattern: ${{ steps.computePattern.outputs.pattern }}
         path: ${{ github.workspace }}/.dependencies
 
     - name: Download project dependencies

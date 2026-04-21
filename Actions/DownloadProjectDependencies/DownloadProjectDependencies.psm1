@@ -328,4 +328,56 @@ function Get-DependenciesFromInstallApps {
     return $install
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps
+<#
+    .SYNOPSIS
+    Computes a minimatch-compatible glob pattern for downloading only dependency-project artifacts.
+    .DESCRIPTION
+    Given a project and its dependency map (from projectDependenciesJson), constructs a brace-expansion
+    pattern that matches only the Apps, TestApps, and Dependencies artifacts for the dependency projects.
+    This pattern is designed for use with the actions/download-artifact 'pattern' input (which uses minimatch).
+
+    The pattern uses '*Apps' to match both 'Apps' and 'TestApps' as well as build-mode-prefixed variants
+    (e.g. 'CleanApps', 'CleanTestApps'). Similarly '*Dependencies' matches 'Dependencies' and variants.
+    .PARAMETER Project
+    The name of the current AL-Go project.
+    .PARAMETER ProjectDependencies
+    A hashtable mapping project names to arrays of their dependency project names (direct + transitive).
+    .OUTPUTS
+    A minimatch glob pattern string, or $null if the project has no dependencies.
+#>
+function Get-DependencyArtifactPattern {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Project,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $ProjectDependencies
+    )
+
+    $dependencyProjects = @()
+    if ($ProjectDependencies.Keys -contains $Project) {
+        $dependencyProjects = @($ProjectDependencies."$Project")
+    }
+
+    if ($dependencyProjects.Count -eq 0) {
+        return $null
+    }
+
+    # Determine the branch name using the same logic as CalculateArtifactNames.ps1
+    $branchName = $ENV:GITHUB_HEAD_REF
+    if (-not $branchName) {
+        $branchName = $ENV:GITHUB_REF_NAME
+    }
+    $branchName = $branchName.Replace('\', '_').Replace('/', '_')
+
+    # Build brace-expansion entries: 2 per dependency project (*Apps covers Apps+TestApps+buildMode variants)
+    $entries = @()
+    foreach ($dep in $dependencyProjects) {
+        $sanitizedDep = $dep.Replace('\', '_').Replace('/', '_')
+        $entries += "$sanitizedDep-$branchName-*Apps-*"
+        $entries += "$sanitizedDep-$branchName-*Dependencies-*"
+    }
+
+    return "{$($entries -join ',')}"
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern

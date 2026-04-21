@@ -1,3 +1,7 @@
+### Optimized dependency artifact downloads for multi-project repositories
+
+The `DownloadProjectDependencies` action now downloads only artifacts from dependency projects instead of all workflow artifacts. For repositories with many AL-Go projects, this reduces build runner bandwidth and speeds up the dependency download step.
+
 ### Issues
 
 - Issue 2204 - Workspace compilation ignores vsixFile setting
