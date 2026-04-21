@@ -1,6 +1,8 @@
 # Example test script for using Cloud Migration APIs E2E
 # API documentation is here: https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/cloudmigrationapi/cloud-migration-api-overview?branch=cloud-migration-api
 # Run the "Install-Module -Name MSAL.PS" command on the first run, unless you have installed MSAL.PS. This function is used to obtain the token
+# NOTE: This file installs MSAL.PS as a side effect of being dot-sourced. This is ported infrastructure
+# from the BC test runner. Do not dot-source this file unless AAD authentication is actually needed.
 
 # Specify the name of the module you want to check/install
 $moduleName = "MSAL.PS"

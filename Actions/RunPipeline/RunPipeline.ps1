@@ -551,6 +551,8 @@ try {
                         AutorizationType = 'NavUserPassword'
                         TestSuite = if ($parameters.testSuite) { $parameters.testSuite } else { 'DEFAULT' }
                         Detailed = $true
+                        # SSL verification is disabled because this connects to a local Docker container
+                        # which uses self-signed certificates. The ServiceUrl is always a local container URL.
                         DisableSSLVerification = $true
                         ResultsFormat = $resultsFormat
                         CodeCoverageTrackingType = $ccTrackingTypeCapture

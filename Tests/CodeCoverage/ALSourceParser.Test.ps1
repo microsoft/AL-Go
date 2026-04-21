@@ -1,8 +1,8 @@
 BeforeAll {
-    . (Join-Path $PSScriptRoot "..\..\Actions\AL-Go-Helper.ps1" -Resolve)
-    Import-Module (Join-Path $PSScriptRoot "..\..\Actions\.Modules\TestRunner\CoverageProcessor\ALSourceParser.psm1" -Resolve) -Force
+    . (Join-Path $PSScriptRoot "../../Actions/AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot "../../Actions/.Modules/TestRunner/CoverageProcessor/ALSourceParser.psm1" -Resolve) -Force
 
-    $script:testDataPath = Join-Path $PSScriptRoot "TestData\ALFiles"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData/ALFiles"
 }
 
 Describe "ALSourceParser - Get-ALObjectMap" {

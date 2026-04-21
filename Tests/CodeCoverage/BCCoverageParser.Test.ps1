@@ -1,8 +1,8 @@
 BeforeAll {
-    . (Join-Path $PSScriptRoot "..\..\Actions\AL-Go-Helper.ps1" -Resolve)
-    Import-Module (Join-Path $PSScriptRoot "..\..\Actions\.Modules\TestRunner\CoverageProcessor\BCCoverageParser.psm1" -Resolve) -Force
+    . (Join-Path $PSScriptRoot "../../Actions/AL-Go-Helper.ps1" -Resolve)
+    Import-Module (Join-Path $PSScriptRoot "../../Actions/.Modules/TestRunner/CoverageProcessor/BCCoverageParser.psm1" -Resolve) -Force
 
-    $script:testDataPath = Join-Path $PSScriptRoot "TestData\CoverageFiles"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData/CoverageFiles"
 }
 
 Describe "BCCoverageParser - CSV Format" {
@@ -93,7 +93,7 @@ Describe "BCCoverageParser - XML Format" {
             $xmlFile = Join-Path $script:testDataPath "sample-coverage.xml"
             $result = Read-BCCoverageXmlFile -Path $xmlFile
 
-            $allCodeunits = $result | Where-Object { $_.ObjectType -eq 'Codeunit' }
+            $allCodeunits = @($result | Where-Object { $_.ObjectType -eq 'Codeunit' })
             $allCodeunits.Count | Should -Be 8
         }
 
