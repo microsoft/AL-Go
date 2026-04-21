@@ -1,4 +1,4 @@
-function Setup-Enviroment
+function Setup-Environment
 (
     [ValidateSet("PROD","OnPrem")]
     [string] $Environment = $script:DefaultEnvironment,
@@ -168,7 +168,7 @@ function Run-NextTest
     [switch] $SingleRun
 )
 {
-    Setup-Enviroment -Environment $Environment -SandboxName $SandboxName -Credential $Credential -Token $Token -ClientId $ClientId -RedirectUri $RedirectUri -AadTenantId $AadTenantId
+    Setup-Environment -Environment $Environment -SandboxName $SandboxName -Credential $Credential -Token $Token -ClientId $ClientId -RedirectUri $RedirectUri -AadTenantId $AadTenantId
     if ($Environment -ne 'OnPrem')
     {
         $ServiceUrl = Get-SaaSServiceURL
@@ -271,7 +271,7 @@ function Get-NoOfIterations
 
     #>
 
-    Setup-Enviroment -Environment $Environment -SandboxName $SandboxName -Credential $Credential -Token $Token -ClientId $ClientId -RedirectUri $RedirectUri -AadTenantId $AadTenantId
+    Setup-Environment -Environment $Environment -SandboxName $SandboxName -Credential $Credential -Token $Token -ClientId $ClientId -RedirectUri $RedirectUri -AadTenantId $AadTenantId
     if ($Environment -ne 'OnPrem')
     {
         $ServiceUrl = Get-SaaSServiceURL

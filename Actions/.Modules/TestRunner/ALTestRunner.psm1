@@ -214,7 +214,7 @@ function Report-ErrorsInAzureDevOps
     foreach($failedTest in $failedTests)
     {
         $methodName = $failedTest.method;
-        $errorMessage = $failedTests.message
+        $errorMessage = $failedTest.message
         Write-Host "##vso[task.logissue type=$AzureDevOps;sourcepath=$methodName;]$errorMessage"
     }
 }
