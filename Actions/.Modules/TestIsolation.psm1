@@ -84,8 +84,9 @@ function New-PartitionedTestRunnerScriptBlock {
         foreach ($k in $parameters.Keys) { $defaultCall[$k] = $parameters[$k] }
         if ($defaultRangeFilter) { $defaultCall['testCodeunitRange'] = $defaultRangeFilter }
         if ($capturedDefaultRunner -gt 0) { $defaultCall['testRunnerCodeunitId'] = "$capturedDefaultRunner" }
+        $defaultRunnerDisplay = if ($capturedDefaultRunner -gt 0) { "$capturedDefaultRunner" } else { "BC default" }
 
-        Write-Host "Running default partition runner=$capturedDefaultRunner range='$defaultRangeFilter' app=$appId"
+        Write-Host "Running default partition runner=$defaultRunnerDisplay range='$defaultRangeFilter' app=$appId"
         $invocations++
 
         $passed = Run-TestsInBcContainer @defaultCall
