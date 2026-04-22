@@ -389,6 +389,41 @@ function Get-BuildAllApps {
 
 <#
 .Synopsis
+    Converts a project-relative folder path to a repo-relative path.
+.Description
+    Converts a project-relative folder path (from settings.appFolders etc.) to a repo-relative path
+    that matches the format used by skipFolders (produced by GetFoldersFromAllProjects).
+    Settings folders may use ../ to reference paths above the project folder,
+    so the function resolves to an absolute path first, then strips the base folder prefix
+    to produce a clean repo-relative path.
+.Parameter folder
+    The project-relative folder path to convert (e.g. '.\app' or '..\..\..\src\Apps\MyApp\App').
+.Parameter projectPath
+    The absolute path to the project directory.
+.Parameter baseFolder
+    The absolute path to the repository root.
+.Outputs
+    A repo-relative path string, or $null if the folder cannot be resolved or is outside the base folder.
+#>
+function ConvertTo-RepoRelativePath {
+    param(
+        [string] $folder,
+        [string] $projectPath,
+        [string] $baseFolder
+    )
+    $fullPath = Join-Path $projectPath $folder -Resolve -ErrorAction SilentlyContinue
+    if (-not $fullPath) {
+        return $null
+    }
+    $normalizedBase = $baseFolder.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    if ($fullPath.StartsWith($normalizedBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $fullPath.Substring($normalizedBase.Length)
+    }
+    return $null
+}
+
+<#
+.Synopsis
     Downloads unmodified artifacts from the baseline workflow run
 .Outputs
     An array of objects containing the type, mask and a list of downloaded app file names.
@@ -430,15 +465,9 @@ function Get-UnmodifiedAppsFromBaselineWorkflowRun {
     Sort-AppFoldersByDependencies -appFolders $allFolders -baseFolder $baseFolder -skippedApps ([ref] $skipFolders) -unknownDependencies ([ref]$unknownDependencies) -knownApps ([ref] $knownApps) -selectSubordinates $modifiedFolders | Out-Null
     OutputMessageAndArray -message "Skip folders" -arrayOfStrings $skipFolders
 
-    $projectWithSeperator = ''
-    if ($project) {
-        $projectWithSeperator = "$project$([System.IO.Path]::DirectorySeparatorChar)"
-    }
-
-    # AppFolders, TestFolders and BcptTestFolders in settings are always preceded by ./ or .\, so we need to remove that (hence Substring(2))
-    $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
-    $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
-    $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains "$projectWithSeperator$($_.SubString(2))" })
+    $downloadAppFolders = @($settings.appFolders | Where-Object { $skipFolders -contains (ConvertTo-RepoRelativePath -folder $_ -projectPath $projectPath -baseFolder $baseFolder) })
+    $downloadTestFolders = @($settings.testFolders | Where-Object { $skipFolders -contains (ConvertTo-RepoRelativePath -folder $_ -projectPath $projectPath -baseFolder $baseFolder) })
+    $downloadBcptTestFolders = @($settings.bcptTestFolders | Where-Object { $skipFolders -contains (ConvertTo-RepoRelativePath -folder $_ -projectPath $projectPath -baseFolder $baseFolder) })
 
     OutputMessageAndArray -message "Download appFolders" -arrayOfStrings $downloadAppFolders
     OutputMessageAndArray -message "Download testFolders" -arrayOfStrings $downloadTestFolders
