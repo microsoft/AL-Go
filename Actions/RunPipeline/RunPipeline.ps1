@@ -19,6 +19,31 @@ Param(
 
 $containerBaseFolder = $null
 $projectPath = $null
+$dockerPullJob = $null
+
+function Wait-ForDockerPull {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.Job] $job,
+        [Parameter(Mandatory = $true)]
+        [string] $imageName
+    )
+
+    Write-Host "Waiting for background Docker pull to complete..."
+    $job | Wait-Job | Out-Null
+    if ($job.State -eq 'Completed') {
+        $job | Receive-Job | Out-Null
+        Write-Host "Docker image '$imageName' pulled successfully"
+        return
+    }
+    # Background pull failed, retry using RetryCommand
+    Write-Host "::Warning::Background Docker pull failed. Retrying..."
+    RetryCommand -Command {
+        Param($imageName)
+        docker pull --quiet $imageName
+    } -ArgumentList $imageName
+    Write-Host "Docker image '$imageName' pulled successfully"
+}
 
 try {
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -30,9 +55,9 @@ try {
         Assert-DockerIsRunning
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
-        Start-Job -ScriptBlock {
+        $dockerPullJob = Start-Job -ScriptBlock {
             docker pull --quiet $using:genericImageName
-        } | Out-Null
+        }
     }
 
     $containerName = GetContainerName($project)
@@ -487,6 +512,10 @@ try {
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
 
+    if ($dockerPullJob) {
+        Wait-ForDockerPull -job $dockerPullJob -imageName $genericImageName
+    }
+
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -accept_insiderEula `
@@ -573,6 +602,9 @@ finally {
     }
     catch {
         Write-Host "Error getting event log from container: $($_.Exception.Message)"
+    }
+    if ($dockerPullJob) {
+        $dockerPullJob | Remove-Job -Force -ErrorAction SilentlyContinue
     }
     if ($containerBaseFolder -and (Test-Path $containerBaseFolder) -and $projectPath -and (Test-Path $projectPath)) {
         Write-Host "Removing temp folder"
