@@ -23,7 +23,11 @@ function DownloadDependenciesFromProbingPaths {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
-        return GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+        $dependencies = GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+
+        # GetDependencies may return .zip files (from DownloadArtifact/DownloadRelease).
+        # Extract .app files from any zips so downstream consumers receive clean .app paths.
+        return Resolve-DependencyFiles -Dependencies $dependencies -DestinationPath $destinationPath
     }
 }
 
@@ -107,7 +111,7 @@ function DownloadDependenciesFromCurrentBuild {
         }
     }
 
-    return $downloadedDependencies
+    return Resolve-DependencyFiles -Dependencies $downloadedDependencies -DestinationPath $destinationPath
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -148,7 +152,7 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-# Add dependencies from settings
+# Add dependencies from settings (these are already resolved to .app files)
 $downloadedApps += $settingsDependencies.Apps
 $downloadedTestApps += $settingsDependencies.TestApps
 
