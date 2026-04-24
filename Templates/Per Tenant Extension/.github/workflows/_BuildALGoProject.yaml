@@ -120,6 +120,12 @@ jobs:
           project: ${{ inputs.project }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
+      - name: Pull Docker Image
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useCompilerFolder == 'False' && runner.os == 'Windows'
+        uses: microsoft/AL-Go-Actions/PullDockerImage@main
+        with:
+          shell: ${{ inputs.shell }}
+
       - name: Read secrets
         id: ReadSecrets
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'

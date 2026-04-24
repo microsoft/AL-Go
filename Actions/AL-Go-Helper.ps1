@@ -2238,6 +2238,53 @@ function RetryCommand {
     }
 }
 
+<#
+.SYNOPSIS
+    Waits for a background Docker pull process to complete and retries if it failed.
+.DESCRIPTION
+    The PullDockerImage action starts a background OS process to pull the Docker image.
+    This function waits for that process to finish, checks the exit code, and retries
+    with exponential backoff using Invoke-CommandWithRetry if the initial pull failed.
+.PARAMETER processId
+    The process ID of the background Docker pull started by the PullDockerImage action.
+.PARAMETER imageName
+    The name of the Docker image being pulled.
+#>
+function Wait-ForDockerPull {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [int] $processId,
+        [Parameter(Mandatory = $true)]
+        [string] $imageName
+    )
+
+    Write-Host "Waiting for background Docker pull (PID $processId) to complete..."
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+    if ($process) {
+        $process | Wait-Process
+        $exitCode = $process.ExitCode
+    }
+    else {
+        # Process already exited, check if the image is available
+        $exitCode = $null
+    }
+
+    if ($exitCode -eq 0 -or $null -eq $exitCode) {
+        Write-Host "Docker image '$imageName' pulled successfully"
+        return
+    }
+
+    # Background pull failed, retry with exponential backoff
+    Write-Host "::Warning::Background Docker pull failed (exit code $exitCode). Retrying..."
+    Invoke-CommandWithRetry -ScriptBlock {
+        docker pull --quiet $imageName
+        if ($LASTEXITCODE -ne 0) {
+            throw "Docker pull failed with exit code $LASTEXITCODE"
+        }
+    }
+    Write-Host "Docker image '$imageName' pulled successfully"
+}
+
 function GetMatchingProjects {
     Param(
         [string[]] $projects,
