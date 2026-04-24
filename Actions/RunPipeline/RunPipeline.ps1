@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
-    [string] $baselineWorkflowSHA = ''
+    [string] $baselineWorkflowSHA = '',
+    [Parameter(HelpMessage = "Dependencies of the built project in compressed JSON format", Mandatory = $false)]
+    [string] $projectDependenciesJson = '{}'
 )
 
 $containerBaseFolder = $null
@@ -25,6 +27,10 @@ try {
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+
+    # Import Code Coverage module for ALTestRunner functionality
+    # This makes Run-AlTests available globally for custom RunTestsInBcContainer overrides
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\TestRunner\ALTestRunner.psm1" -Resolve) -Force -DisableNameChecking
 
     if ($isWindows) {
         Assert-DockerIsRunning
@@ -455,6 +461,208 @@ try {
         }
     }
 
+    # Add RunTestsInBcContainer override to use ALTestRunner with code coverage support
+    if ($settings.enableCodeCoverage) {
+        # Read codeCoverageSetup settings with defaults
+        $codeCoverageSetup = if ($settings.ContainsKey('codeCoverageSetup')) { $settings.codeCoverageSetup } else { $null }
+        $ccSetup = @{}
+        if ($codeCoverageSetup) {
+            if ($codeCoverageSetup -is [hashtable]) {
+                $codeCoverageSetup.GetEnumerator() | ForEach-Object { $ccSetup[$_.Key] = $_.Value }
+            } else {
+                $codeCoverageSetup.PSObject.Properties | ForEach-Object { $ccSetup[$_.Name] = $_.Value }
+            }
+        }
+        $ccTrackingType = if ($ccSetup['trackingType']) { $ccSetup['trackingType'] } else { 'PerRun' }
+        $ccProduceMap = if ($ccSetup['produceCodeCoverageMap']) { $ccSetup['produceCodeCoverageMap'] } else { 'PerCodeunit' }
+        [string[]]$ccExcludePatterns = @()
+        if ($ccSetup['excludeFilesPattern']) { $ccExcludePatterns = @($ccSetup['excludeFilesPattern']) }
+        if ($ccExcludePatterns.Count -gt 0) {
+            Write-Host "Code coverage exclude patterns: $($ccExcludePatterns -join ', ')"
+        }
+
+        if ($runAlPipelineParams.Keys -notcontains 'RunTestsInBcContainer') {
+            Write-Host "Adding RunTestsInBcContainer override with code coverage support"
+
+            # Capture variables for use in scriptblock
+            $ccBuildArtifactFolder = $buildArtifactFolder
+            $ccTrackingTypeCapture = $ccTrackingType
+            $ccProduceMapCapture = $ccProduceMap
+
+            $runAlPipelineParams += @{
+                "RunTestsInBcContainer" = {
+                    Param([Hashtable]$parameters)
+
+                    $containerName = $parameters.containerName
+                    $credential = $parameters.credential
+                    $extensionId = $parameters.extensionId
+                    $appName = $parameters.appName
+
+                    # Handle both JUnit and XUnit result file names
+                    $resultsFilePath = $null
+                    $resultsFormat = 'JUnit'
+                    if ($parameters.JUnitResultFileName) {
+                        $resultsFilePath = $parameters.JUnitResultFileName
+                        $resultsFormat = 'JUnit'
+                    } elseif ($parameters.XUnitResultFileName) {
+                        $resultsFilePath = $parameters.XUnitResultFileName
+                        $resultsFormat = 'XUnit'
+                    }
+
+                    # Handle append mode for result file accumulation across test apps
+                    $appendToResults = $false
+                    $tempResultsFilePath = $null
+                    if ($resultsFilePath -and ($parameters.AppendToJUnitResultFile -or $parameters.AppendToXUnitResultFile)) {
+                        $appendToResults = $true
+                        $tempResultsFilePath = Join-Path ([System.IO.Path]::GetDirectoryName($resultsFilePath)) "TempTestResults_$([Guid]::NewGuid().ToString('N')).xml"
+                    }
+
+                    # Get container web client URL for connecting from host
+                    $containerConfig = Get-BcContainerServerConfiguration -ContainerName $containerName
+                    $publicWebBaseUrl = $containerConfig.PublicWebBaseUrl
+                    if (-not $publicWebBaseUrl) {
+                        # Fallback to constructing URL from container name
+                        $publicWebBaseUrl = "http://$($containerName):80/BC/"
+                    }
+                    # Ensure tenant parameter is included (required for client services connection)
+                    $tenant = if ($parameters.tenant) { $parameters.tenant } else { "default" }
+                    if ($publicWebBaseUrl -notlike "*tenant=*") {
+                        if ($publicWebBaseUrl.Contains("?")) {
+                            $serviceUrl = "$publicWebBaseUrl&tenant=$tenant"
+                        } else {
+                            $serviceUrl = "$($publicWebBaseUrl.TrimEnd('/'))/?tenant=$tenant"
+                        }
+                    } else {
+                        $serviceUrl = $publicWebBaseUrl
+                    }
+                    Write-Host "Using ServiceUrl: $serviceUrl"
+
+                    # Code coverage output path
+                    $codeCoverageOutputPath = Join-Path $ccBuildArtifactFolder "CodeCoverage"
+                    if (-not (Test-Path $codeCoverageOutputPath)) {
+                        New-Item -Path $codeCoverageOutputPath -ItemType Directory | Out-Null
+                    }
+                    Write-Host "Code coverage output path: $codeCoverageOutputPath"
+
+                    # Run tests with ALTestRunner from the host
+                    $testRunParams = @{
+                        ServiceUrl = $serviceUrl
+                        Credential = $credential
+                        AutorizationType = 'NavUserPassword'
+                        TestSuite = if ($parameters.testSuite) { $parameters.testSuite } else { 'DEFAULT' }
+                        Detailed = $true
+                        # SSL verification is disabled because this connects to a local Docker container
+                        # which uses self-signed certificates. The ServiceUrl is always a local container URL.
+                        DisableSSLVerification = $true
+                        ResultsFormat = $resultsFormat
+                        CodeCoverageTrackingType = $ccTrackingTypeCapture
+                        ProduceCodeCoverageMap = $ccProduceMapCapture
+                        CodeCoverageOutputPath = $codeCoverageOutputPath
+                        CodeCoverageFilePrefix = "CodeCoverage_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+                    }
+
+                    if ($extensionId) {
+                        $testRunParams.ExtensionId = $extensionId
+                    }
+
+                    if ($appName) {
+                        $testRunParams.AppName = $appName
+                    }
+
+                    if ($resultsFilePath) {
+                        $testRunParams.ResultsFilePath = if ($appendToResults) { $tempResultsFilePath } else { $resultsFilePath }
+                        $testRunParams.SaveResultFile = $true
+                    }
+
+                    # Forward optional pipeline parameters
+                    if ($parameters.disabledTests) {
+                        $testRunParams.DisabledTests = $parameters.disabledTests
+                    }
+                    if ($parameters.testCodeunitRange) {
+                        $testRunParams.TestCodeunitsRange = $parameters.testCodeunitRange
+                    }
+                    elseif ($parameters.testCodeunit -and $parameters.testCodeunit -ne "*") {
+                        $testRunParams.TestCodeunitsRange = $parameters.testCodeunit
+                    }
+                    if ($parameters.testFunction -and $parameters.testFunction -ne "*") {
+                        $testRunParams.TestProcedureRange = $parameters.testFunction
+                    }
+                    if ($parameters.requiredTestIsolation) {
+                        $testRunParams.RequiredTestIsolation = $parameters.requiredTestIsolation
+                    }
+                    if ($parameters.testType) {
+                        $testRunParams.TestType = $parameters.testType
+                    }
+                    if ($parameters.testRunnerCodeunitId) {
+                        # Map BCApps test runner codeunit IDs to Run-AlTests TestIsolation values
+                        # 130450 = Codeunit isolation (default), 130451 = Disabled isolation
+                        $testRunParams.TestIsolation = if ($parameters.testRunnerCodeunitId -eq "130451") { "Disabled" } else { "Codeunit" }
+                    }
+
+                    Run-AlTests @testRunParams
+
+                    # Determine which file to check for this app's results
+                    $checkResultsFile = if ($appendToResults) { $tempResultsFilePath } else { $resultsFilePath }
+                    $testsPassed = $true
+
+                    if ($checkResultsFile -and (Test-Path $checkResultsFile)) {
+                        # Parse results to determine pass/fail
+                        try {
+                            [xml]$testResults = Get-Content $checkResultsFile -Encoding UTF8
+                            if ($testResults.testsuites) {
+                                $failures = 0; $errors = 0
+                                if ($testResults.testsuites.testsuite) {
+                                    foreach ($ts in $testResults.testsuites.testsuite) {
+                                        if ($ts.failures) { $failures += [int]$ts.failures }
+                                        if ($ts.errors) { $errors += [int]$ts.errors }
+                                    }
+                                }
+                                $testsPassed = ($failures -eq 0 -and $errors -eq 0)
+                            }
+                            elseif ($testResults.assemblies) {
+                                $failed = if ($testResults.assemblies.assembly.failed) { [int]$testResults.assemblies.assembly.failed } else { 0 }
+                                $testsPassed = ($failed -eq 0)
+                            }
+                        }
+                        catch {
+                            Write-Host "Warning: Could not parse test results file: $_"
+                        }
+
+                        # Merge this app's results into the consolidated file if append mode
+                        if ($appendToResults) {
+                            if (-not (Test-Path $resultsFilePath)) {
+                                Copy-Item -Path $tempResultsFilePath -Destination $resultsFilePath
+                            }
+                            else {
+                                try {
+                                    [xml]$source = Get-Content $tempResultsFilePath -Encoding UTF8
+                                    [xml]$target = Get-Content $resultsFilePath -Encoding UTF8
+                                    $rootElement = if ($resultsFormat -eq 'JUnit') { 'testsuites' } else { 'assemblies' }
+                                    foreach ($node in $source.$rootElement.ChildNodes) {
+                                        if ($node.NodeType -eq 'Element') {
+                                            $imported = $target.ImportNode($node, $true)
+                                            $target.$rootElement.AppendChild($imported) | Out-Null
+                                        }
+                                    }
+                                    $target.Save($resultsFilePath)
+                                }
+                                catch {
+                                    Write-Host "Warning: Could not merge test results, copying instead: $_"
+                                    Copy-Item -Path $tempResultsFilePath -Destination $resultsFilePath -Force
+                                }
+                            }
+                            Remove-Item $tempResultsFilePath -Force -ErrorAction SilentlyContinue
+                        }
+                    }
+
+                    return $testsPassed
+                }.GetNewClosure()
+            }
+        } else {
+            OutputWarning -message "enableCodeCoverage is set to true, but a custom RunTestsInBcContainer override was found. The custom override will be used and code coverage data may not be collected. To use the built-in code coverage support, remove your custom RunTestsInBcContainer override."
+        }
+    }
+
     "enableTaskScheduler",
     "assignPremiumPlan",
     "doNotBuildTests",
@@ -486,6 +694,11 @@ try {
     }
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
+
+    # Set environment variable for buildArtifactFolder so custom override scripts can access it
+    # This is needed for code coverage support in repos with custom RunTestsInBcContainer overrides
+    $env:AL_GO_BUILD_ARTIFACT_FOLDER = $buildArtifactFolder
+    Write-Host "Build artifact folder: $buildArtifactFolder"
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
@@ -543,6 +756,104 @@ try {
         Copy-Item -Path (Join-Path $projectPath "bcptTestResults*.json") -Destination $destFolder
         Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
+    }
+
+    # Process code coverage files to Cobertura format
+    if ($settings.enableCodeCoverage) {
+        $codeCoveragePath = Join-Path $buildArtifactFolder "CodeCoverage"
+        if (Test-Path $codeCoveragePath) {
+            $coverageFiles = @(Get-ChildItem -Path $codeCoveragePath -Filter "*.dat" -File -ErrorAction SilentlyContinue)
+            if ($coverageFiles.Count -gt 0) {
+                Write-Host "Processing $($coverageFiles.Count) code coverage file(s) to Cobertura format..."
+                try {
+                    $coverageProcessorModule = Join-Path $PSScriptRoot "..\.Modules\TestRunner\CoverageProcessor\CoverageProcessor.psm1"
+                    Import-Module $coverageProcessorModule -Force -DisableNameChecking
+
+                    $coberturaOutputPath = Join-Path $codeCoveragePath "cobertura.xml"
+
+                    # Resolve app source paths for coverage denominator
+                    # Collect appFolders from this project + parent projects (dependency chain)
+                    # This ensures test-only projects measure coverage against the correct app source
+                    $sourcePath = $ENV:GITHUB_WORKSPACE
+                    $appSourcePaths = @()
+
+                    # Add current project's app folders
+                    if ($settings.appFolders -and $settings.appFolders.Count -gt 0) {
+                        foreach ($folder in $settings.appFolders) {
+                            $absPath = Join-Path $projectPath $folder
+                            if (Test-Path $absPath) {
+                                $appSourcePaths += @((Resolve-Path $absPath).Path)
+                            }
+                        }
+                        Write-Host "Project app folders ($($appSourcePaths.Count) resolved):"
+                        $appSourcePaths | ForEach-Object { Write-Host "  $_" }
+                    }
+
+                    # Walk project dependencies to collect parent projects' app folders
+                    try {
+                        $projectDeps = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+                        $parentProjects = @()
+                        if ($projectDeps -and $project -and $projectDeps.ContainsKey($project)) {
+                            $parentProjects = @($projectDeps[$project])
+                        }
+                        if ($parentProjects.Count -gt 0) {
+                            Write-Host "Resolving app folders from $($parentProjects.Count) parent project(s): $($parentProjects -join ', ')"
+                            foreach ($parentProject in $parentProjects) {
+                                $parentSettings = ReadSettings -project $parentProject -baseFolder $baseFolder
+                                ResolveProjectFolders -baseFolder $baseFolder -project $parentProject -projectSettings ([ref] $parentSettings)
+                                $parentProjectPath = Join-Path $baseFolder $parentProject
+                                if ($parentSettings.appFolders -and $parentSettings.appFolders.Count -gt 0) {
+                                    foreach ($folder in $parentSettings.appFolders) {
+                                        $absPath = Join-Path $parentProjectPath $folder
+                                        if (Test-Path $absPath) {
+                                            $resolved = (Resolve-Path $absPath).Path
+                                            if ($appSourcePaths -notcontains $resolved) {
+                                                $appSourcePaths += @($resolved)
+                                                Write-Host "  + $resolved (from $parentProject)"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch {
+                        OutputWarning -message "Could not resolve project dependencies for coverage: $($_.Exception.Message)"
+                    }
+
+                    if ($appSourcePaths.Count -eq 0) {
+                        Write-Host "No app source paths resolved, scanning entire workspace for source files"
+                    } else {
+                        Write-Host "Coverage source: $($appSourcePaths.Count) app folder(s) resolved"
+                    }
+                    Write-Host "Source path root: $sourcePath"
+
+                    if ($coverageFiles.Count -eq 1) {
+                        # Single coverage file
+                        $coverageStats = Convert-BCCoverageToCobertura `
+                            -CoverageFilePath $coverageFiles[0].FullName `
+                            -SourcePath $sourcePath `
+                            -AppSourcePaths $appSourcePaths `
+                            -ExcludePatterns $ccExcludePatterns `
+                            -OutputPath $coberturaOutputPath
+                    } else {
+                        # Multiple coverage files - merge them
+                        $coverageStats = Merge-BCCoverageToCobertura `
+                            -CoverageFiles ($coverageFiles.FullName) `
+                            -SourcePath $sourcePath `
+                            -AppSourcePaths $appSourcePaths `
+                            -ExcludePatterns $ccExcludePatterns `
+                            -OutputPath $coberturaOutputPath
+                    }
+
+                    if ($coverageStats) {
+                        Write-Host "Code coverage: $($coverageStats.CoveragePercent)% ($($coverageStats.CoveredLines)/$($coverageStats.TotalLines) lines)"
+                    }
+                }
+                catch {
+                    OutputWarning -message "Failed to process code coverage to Cobertura format: $($_.Exception.Message)"
+                }
+            }
+        }
     }
 
     # check for new warnings

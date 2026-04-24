@@ -209,6 +209,7 @@ jobs:
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+          projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
 
       - name: Sign
         id: sign
@@ -280,6 +281,14 @@ jobs:
           path: '${{ inputs.project }}/.buildartifacts/TestResults.xml'
           if-no-files-found: ignore
 
+      - name: Publish artifacts - code coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/CodeCoverage/*',inputs.project)) != '')
+        with:
+          name: ${{ steps.calculateArtifactsNames.outputs.CodeCoverageArtifactsName }}
+          path: '${{ inputs.project }}/.buildartifacts/CodeCoverage/'
+          if-no-files-found: ignore
+
       - name: Publish artifacts - bcpt test results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/bcptTestResults.json',inputs.project)) != '')
@@ -339,6 +348,13 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           testType: "pageScripting"
+
+      - name: Build Code Coverage Summary
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/CodeCoverage/cobertura.xml',inputs.project)) != '')
+        uses: microsoft/AL-Go-Actions/BuildCodeCoverageSummary@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
 
       - name: Cleanup
         if: always() && steps.DetermineBuildProject.outputs.BuildIt == 'True'

@@ -1,0 +1,25 @@
+name: Build Code Coverage Summary
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  project:
+    description: Project to analyze coverage for
+    required: false
+    default: '.'
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _project: ${{ inputs.project }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "BuildCodeCoverageSummary" -Action {
+          ${{ github.action_path }}/BuildCodeCoverageSummary.ps1 -project $ENV:_project
+        }
+branding:
+  icon: bar-chart-2
+  color: green

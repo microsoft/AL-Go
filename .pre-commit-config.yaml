@@ -15,6 +15,7 @@ repos:
       - id: check-case-conflict
       - id: check-json
       - id: check-xml
+        exclude: 'Tests/CodeCoverage/TestData/CoberturaFiles/cobertura-malformed\.xml$'
       - id: check-yaml
       - id: check-merge-conflict
       - id: detect-private-key
