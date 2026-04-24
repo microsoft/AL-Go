@@ -330,6 +330,20 @@ try {
     $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
     $runAlPipelineParams += $scriptOverrides
 
+    if ($runAlPipelineParams.Keys -notcontains 'DockerPull') {
+        $runAlPipelineParams += @{
+            "DockerPull" = {
+                Param($imageName)
+                Invoke-CommandWithRetry -ScriptBlock {
+                    docker pull --quiet $imageName
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "Docker pull failed with exit code $LASTEXITCODE"
+                    }
+                }
+            }
+        }
+    }
+
     if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
             "RemoveBcContainer" = {
