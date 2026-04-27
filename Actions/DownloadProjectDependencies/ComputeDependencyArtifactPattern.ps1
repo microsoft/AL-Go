@@ -3,7 +3,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 . (Join-Path $PSScriptRoot "../AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot "DownloadProjectDependencies.psm1" -Resolve) -Force -DisableNameChecking
 
-$projectDependencies = $ENV:_projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
+$projectDependencies = $ENV:_projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $pattern = Get-DependencyArtifactPattern -Project $ENV:_project -ProjectDependencies $projectDependencies
 
 if ($pattern) {
