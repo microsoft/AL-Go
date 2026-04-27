@@ -362,12 +362,7 @@ function Get-DependencyArtifactPattern {
         return $null
     }
 
-    # Determine the branch name using the same logic as CalculateArtifactNames.ps1
-    $branchName = $ENV:GITHUB_HEAD_REF
-    if (-not $branchName) {
-        $branchName = $ENV:GITHUB_REF_NAME
-    }
-    $branchName = $branchName.Replace('\', '_').Replace('/', '_')
+    $branchName = Get-CurrentBranchName
 
     # Build brace-expansion entries: 2 per dependency project (*Apps covers Apps+TestApps+buildMode variants)
     $entries = @()
