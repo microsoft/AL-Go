@@ -531,6 +531,139 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
     }
 }
 
+Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Tests" {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubHeadRef', Justification = 'False positive.')]
+        $originalGitHubHeadRef = $ENV:GITHUB_HEAD_REF
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubRefName', Justification = 'False positive.')]
+        $originalGitHubRefName = $ENV:GITHUB_REF_NAME
+    }
+
+    AfterEach {
+        $ENV:GITHUB_HEAD_REF = $originalGitHubHeadRef
+        $ENV:GITHUB_REF_NAME = $originalGitHubRefName
+    }
+
+    It 'Returns null when project is not in the dependency map' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{}
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'MyProject'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeNullOrEmpty
+        }
+    }
+
+    It 'Returns null when project has an empty dependency array' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{ 'MyProject' = @() }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'MyProject'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeNullOrEmpty
+        }
+    }
+
+    It 'Returns correct pattern for a single dependency on the default branch' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{ 'App' = @('Base') }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'App'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-main-*Apps-*,Base-main-*Dependencies-*}'
+        }
+    }
+
+    It 'Uses GITHUB_HEAD_REF over GITHUB_REF_NAME and sanitizes branch slashes' {
+        $ENV:GITHUB_HEAD_REF = 'feature/auth'
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{ 'App' = @('Base') }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'App'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-feature_auth-*Apps-*,Base-feature_auth-*Dependencies-*}'
+        }
+    }
+}
+
+Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced Tests" {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalHeadRef', Justification = 'False positive.')]
+        $originalHeadRef = $ENV:GITHUB_HEAD_REF
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalRefName', Justification = 'False positive.')]
+        $originalRefName = $ENV:GITHUB_REF_NAME
+
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+    }
+
+    AfterEach {
+        $ENV:GITHUB_HEAD_REF = $originalHeadRef
+        $ENV:GITHUB_REF_NAME = $originalRefName
+    }
+
+    It 'Returns pattern with 4 brace entries for two dependencies' {
+        $projectDependencies = @{ "App" = @("Base", "Common") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be "{Base-main-*Apps-*,Base-main-*Dependencies-*,Common-main-*Apps-*,Common-main-*Dependencies-*}"
+        }
+    }
+
+    It 'Returns pattern with 6 brace entries for three flattened transitive dependencies' {
+        $projectDependencies = @{ "App" = @("Base", "Common", "Core") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -BeLike "*Base-main-*"
+            $result | Should -BeLike "*Common-main-*"
+            $result | Should -BeLike "*Core-main-*"
+            # 3 deps x 2 entries each = 6 entries = 5 commas
+            ($result.ToCharArray() | Where-Object { $_ -eq ',' }).Count | Should -Be 5
+        }
+    }
+
+    It 'Sanitizes forward slashes in project dependency names' {
+        $projectDependencies = @{ "App" = @("src/Common") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeLike "*src_Common-main-*"
+            $result | Should -Not -BeLike "*src/Common*"
+        }
+    }
+
+    It 'Sanitizes forward slashes in branch name from GITHUB_REF_NAME' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'release/v2.0'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeLike "*Base-release_v2.0-*"
+            $result | Should -Not -BeLike "*release/v2.0*"
+        }
+    }
+
+    It 'Returns null when project is not in the dependencies map even if other projects exist' {
+        $projectDependencies = @{ "Other" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeNullOrEmpty
+        }
+    }
+}
+
 Describe "DownloadProjectDependencies - Resolve-DependencyFiles Tests" {
     BeforeEach {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFolder', Justification = 'False positive.')]

@@ -18,13 +18,7 @@ if ($project -eq ".") {
     $project = $settings.repoName
 }
 
-$branchName = $ENV:GITHUB_HEAD_REF
-# $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
-if (!$branchName) {
-    $branchName = $ENV:GITHUB_REF_NAME
-}
-
-$branchName = $branchName.Replace('\', '_').Replace('/', '_')
+$branchName = Get-CurrentBranchName
 $projectName = $project.Replace('\', '_').Replace('/', '_')
 
 # If the buildmode is default, then we don't want to add it to the artifact name
