@@ -42,7 +42,20 @@ runs:
       run: Start-Sleep -Seconds 60
 
     - name: Retry download artifacts from current build
+      id: downloadAttempt2
       if: steps.downloadAttempt1.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        path: ${{ github.workspace }}/.dependencies
+
+    - name: Wait before final retry
+      if: steps.downloadAttempt1.outcome == 'failure' && steps.downloadAttempt2.outcome == 'failure'
+      shell: pwsh
+      run: Start-Sleep -Seconds 100
+
+    - name: Final retry download artifacts from current build
+      if: steps.downloadAttempt1.outcome == 'failure' && steps.downloadAttempt2.outcome == 'failure'
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         path: ${{ github.workspace }}/.dependencies
