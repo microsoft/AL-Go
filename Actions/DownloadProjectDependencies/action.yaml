@@ -36,7 +36,9 @@ runs:
         _project: ${{ inputs.project }}
         _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
       run: |
-        ${{ github.action_path }}/ComputeDependencyArtifactPattern.ps1
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ComputeDependencyArtifactPattern" -Action {
+          ${{ github.action_path }}/ComputeDependencyArtifactPattern.ps1
+        }
 
     - name: Download dependency artifacts from current build
       if: steps.computePattern.outputs.hasPattern == 'true'
