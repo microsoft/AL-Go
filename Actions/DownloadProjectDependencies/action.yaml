@@ -39,7 +39,7 @@ runs:
     - name: Wait before retry
       if: steps.downloadAttempt1.outcome == 'failure'
       shell: pwsh
-      run: Start-Sleep -Seconds 15
+      run: Start-Sleep -Seconds 60
 
     - name: Retry download artifacts from current build
       if: steps.downloadAttempt1.outcome == 'failure'

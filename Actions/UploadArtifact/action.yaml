@@ -32,7 +32,7 @@ runs:
     - name: Wait before retry
       if: steps.attempt1.outcome == 'failure'
       shell: pwsh
-      run: Start-Sleep -Seconds 15
+      run: Start-Sleep -Seconds 60
 
     - name: Upload artifact (attempt 2)
       if: steps.attempt1.outcome == 'failure'
