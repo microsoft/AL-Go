@@ -604,7 +604,21 @@ function ValidateSettings {
             }
 
             if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
+                # Write JSON to a temp file to avoid exceeding the Windows command-line length limit
+                $tempJsonFile = [System.IO.Path]::GetTempFileName()
+                try {
+                    [System.IO.File]::WriteAllText($tempJsonFile, $settingsJson, [System.Text.Encoding]::UTF8)
+                    $fileCommand = [scriptblock] {
+                        $jsonContent = [System.IO.File]::ReadAllText($args[0], [System.Text.Encoding]::UTF8)
+                        $result = ''
+                        Test-Json -Json $jsonContent -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
+                        return $result
+                    }
+                    $result = pwsh -noprofile -Command $fileCommand -args $tempJsonFile, $settingsSchemaFile
+                }
+                finally {
+                    Remove-Item -Path $tempJsonFile -Force -ErrorAction SilentlyContinue
+                }
             }
             else {
                 $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
