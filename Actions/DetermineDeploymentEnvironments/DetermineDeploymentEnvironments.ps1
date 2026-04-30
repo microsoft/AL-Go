@@ -270,7 +270,15 @@ else {
                 }
             }
             if (!$includeEnvironment) {
-                Write-Host "Environment $environmentName is not setup for deployments from branch $ENV:GITHUB_REF_NAME"
+                if ($deploymentSettings.BranchesFromPolicy -and $deploymentSettings.BranchesFromPolicy.Count -gt 0) {
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (GitHub policy allows branches: $($deploymentSettings.BranchesFromPolicy -join ', '))"
+                }
+                elseif ($deploymentSettings.Branches -and $deploymentSettings.Branches.Count -gt 0) {
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (allowed branches in settings: $($deploymentSettings.Branches -join ', '))"
+                }
+                else {
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (no branch policy defined - only 'main' is allowed by default)"
+                }
             }
         }
         if ($includeEnvironment) {
@@ -304,3 +312,18 @@ Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
 Write-Host "UnknownEnvironment=$unknownEnvironment"
+
+# Handle noMatchingEnvironmentsAction when environments were found but all filtered out
+if ($deploymentEnvironments.Keys.Count -eq 0 -and $environments -and @($environments).Count -gt 0) {
+    $noMatchAction = if ($settings.ContainsKey('noMatchingEnvironmentsAction')) { $settings.noMatchingEnvironmentsAction } else { 'ignore' }
+    $message = "No environments matched deployment criteria. $(@($environments).Count) environment(s) were found ($($environments -join ', ')) but all were excluded by branch policies or deployment type filters. Current branch: $ENV:GITHUB_REF_NAME"
+    switch ($noMatchAction) {
+        'warning' {
+            OutputWarning $message
+        }
+        'error' {
+            throw $message
+        }
+        # 'ignore' - current behavior, do nothing
+    }
+}
