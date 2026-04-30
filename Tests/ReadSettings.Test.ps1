@@ -529,17 +529,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = @{ "largeProp" = $largeValue }
 
             if ($PSVersionTable.PSVersion.Major -ge 6) {
-                # On PS7+, we can't trigger the PS5.1 code path directly.
-                # Instead, verify that ValidateSettings does NOT skip (uses Invoke-Command path).
-                # The schema validation will run in-process without hitting the length limit.
-                { ValidateSettings -settings $settings } | Should -Not -Throw
+                # On PS7+, the Invoke-Command path is used in-process without length limits.
+                ValidateSettings -settings $settings
             }
             else {
                 # On PS5.1, shadow pwsh so that if it is called, the test fails
                 Mock pwsh { throw "pwsh should not be called for oversized JSON" }
 
-                # Run ValidateSettings - should not throw
-                { ValidateSettings -settings $settings } | Should -Not -Throw
+                ValidateSettings -settings $settings
 
                 # Verify pwsh was NOT called
                 Should -Invoke -CommandName pwsh -Times 0
