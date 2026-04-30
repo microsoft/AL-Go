@@ -375,7 +375,8 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 0
         # Verify the warning was emitted in any output stream
-        $allOutput | Should -Match "No environments matched deployment criteria"
+        # Use Out-String so Should -Match checks the combined text rather than requiring every element to match
+        ($allOutput | Out-String) | Should -Match "No environments matched deployment criteria"
     }
 
     # noMatchingEnvironmentsAction = error - should throw when all environments are filtered out by branch policy
