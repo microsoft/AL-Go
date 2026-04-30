@@ -29,6 +29,9 @@ switch ($testType) {
             -baseLinePath $bcptBaseLineFile `
             -thresholdsPath $bcptThresholdsFile `
             -bcptThresholds ($settings.bcptThresholds | ConvertTo-HashTable)
+        if (-not $testResultsSummaryMD -and (Test-Path -Path $bcptTestResultsFile -PathType Leaf)) {
+            OutputWarning "BCPT tests were run but produced no results. The BCPT test suite may have failed to start or the test codeunits exited without recording any measurements."
+        }
         $testTitle = "Performance test results"
     }
     'pageScripting' {

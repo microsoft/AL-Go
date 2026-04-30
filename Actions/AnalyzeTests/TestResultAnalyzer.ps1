@@ -295,8 +295,12 @@ function GetBcptSummaryMD {
     )
 
     $bcpt = ReadBcptFile -bcptTestResultsFile $bcptTestResultsFile
-    if (-not $bcpt) {
+    if ($null -eq $bcpt) {
         return ''
+    }
+    if ($bcpt.Count -eq 0) {
+        # File exists but contained no log entries - test run produced no output
+        return "No BCPT results were recorded. The BCPT test suite may have failed to start or the test codeunits exited without recording any measurements.`n`n> Verify that the BCPT suite definition matches the published test codeunit IDs and that the test codeunits are reachable from the test runner."
     }
     $baseLine = ReadBcptFile -bcptTestResultsFile $baseLinePath
     if ($baseLine) {
