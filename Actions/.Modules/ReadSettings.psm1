@@ -606,7 +606,6 @@ function ValidateSettings {
             if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
                 # Skip validation if the settings JSON is too large for the Windows command-line length limit
                 if ($settingsJson.Length -gt 30000) {
-                    OutputWarning "Schema validation was skipped because the serialized settings JSON is too large for the PowerShell 5.1 command-line fallback. Run under pwsh / PowerShell 7+ to validate settings in-process."
                     continue
                 }
                 $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile

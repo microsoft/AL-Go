@@ -520,10 +520,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'ValidateSettings skips validation and emits warning on PS5.1 when JSON exceeds 30000 chars' {
+        It 'ValidateSettings skips pwsh invocation on PS5.1 when JSON exceeds 30000 chars' {
             Mock Write-Host { }
             Mock Out-Host { }
-            Mock OutputWarning { } -Verifiable
 
             # Build a settings hashtable whose JSON serialization exceeds 30000 characters
             $largeValue = 'x' * 31000
@@ -534,7 +533,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 # Instead, verify that ValidateSettings does NOT skip (uses Invoke-Command path).
                 # The schema validation will run in-process without hitting the length limit.
                 { ValidateSettings -settings $settings } | Should -Not -Throw
-                Should -Invoke -CommandName OutputWarning -Times 0 -ParameterFilter { $message -like '*Schema validation was skipped*' }
             }
             else {
                 # On PS5.1, shadow pwsh so that if it is called, the test fails
@@ -543,8 +541,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 # Run ValidateSettings - should not throw
                 { ValidateSettings -settings $settings } | Should -Not -Throw
 
-                # Verify the warning was emitted
-                Should -Invoke -CommandName OutputWarning -ParameterFilter { $message -like '*Schema validation was skipped*' } -Times 1
+                # Verify pwsh was NOT called
+                Should -Invoke -CommandName pwsh -Times 0
             }
         }
     }
