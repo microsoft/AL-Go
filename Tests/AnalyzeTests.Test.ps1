@@ -82,7 +82,7 @@ Describe "AnalyzeTests Action Tests" {
         . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
         $bcpt = ReadBcptFile -bcptTestResultsFile 'non-existent-file.json'
-        $bcpt | Should -BeNullOrEmpty
+        $bcpt | Should -Be $null
     }
 
     It 'Test GetBcptSummaryMD returns empty string when file does not exist' {
@@ -96,11 +96,14 @@ Describe "AnalyzeTests Action Tests" {
         . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
         . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
         $emptyResultsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).json"
+        $script:warningCount = 0
+        Mock OutputWarning { Param([string] $message) Write-Host "WARNING: $message"; $script:warningCount++ }
         try {
-            $null | ConvertTo-Json -Depth 99 | Set-Content -Path $emptyResultsFile -Encoding UTF8
+            Set-Content -Path $emptyResultsFile -Value '[]' -Encoding UTF8
             $md = GetBcptSummaryMD -bcptTestResultsFile $emptyResultsFile
             $md | Should -Not -BeNullOrEmpty
             $md | Should -Match 'No BCPT results were recorded'
+            $script:warningCount | Should -Be 1
         }
         finally {
             Remove-Item -Path $emptyResultsFile -Force -ErrorAction SilentlyContinue
