@@ -8,6 +8,7 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2204 - Workspace compilation ignores vsixFile setting
 - Issue 2211 - Cannot create a release if a project contains only test apps
 - Issue 2214 - Workspace compilation not working with external dependencies
+- Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
 
 ## v9.0
 
