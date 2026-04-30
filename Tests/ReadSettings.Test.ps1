@@ -520,7 +520,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'ValidateSettings skips pwsh invocation on PS5.1 when JSON exceeds 30000 chars' {
+        It 'ValidateSettings skips pwsh invocation on PS5.1 when JSON exceeds 30000 chars without warning' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -541,6 +541,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 # Verify pwsh was NOT called
                 Should -Invoke -CommandName pwsh -Times 0
             }
+
+            # Verify no warning was output
+            Should -Invoke -CommandName Write-Host -Times 0 -ParameterFilter { $Object -like '*::Warning::*' }
         }
     }
 }
