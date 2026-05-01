@@ -31,8 +31,10 @@ Describe "BuildCodeCoverageSummary - GetStringByteSize" {
         $size | Should -Be 0
     }
 
+    # BC object/procedure names can contain non-ASCII characters (e.g. Danish, German)
+    # which are multi-byte in UTF-8, affecting the GitHub job summary 1MB size limit.
     It "Should handle multi-byte characters" {
-        $size = GetStringByteSize("ä")
+        $size = GetStringByteSize([string][char]0x00E4)
         $size | Should -BeGreaterThan 1
     }
 }

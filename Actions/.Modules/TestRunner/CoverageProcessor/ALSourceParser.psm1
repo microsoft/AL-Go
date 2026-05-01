@@ -500,20 +500,20 @@ function Get-ALExecutableLines {
             continue
         }
 
-        # Bare `else` / `else begin` — branch target keywords, not executable statements.
+        # Bare `else` / `else begin` - branch target keywords, not executable statements.
         # BC's runtime does not instrument these as separate lines.
         if ($lineNoComment -match '(?i)^else(\s+begin)?\s*$') {
             continue
         }
 
-        # Case labels (e.g., `MyEnum::Value:` or `1:`) — match labels, not executable.
+        # Case labels (e.g., `MyEnum::Value:` or `1:`) - match labels, not executable.
         # BC instruments the code within case branches, not the label itself.
         # These lines end with `:` (the label separator), don't contain `:=`, and aren't keywords.
         if ($lineNoComment -match ':\s*$' -and $lineNoComment -notmatch ':=' -and $lineNoComment -notmatch '(?i)^(begin|end|if|else|for|foreach|while|repeat|exit|error|message|case)') {
             continue
         }
 
-        # Skip continuation lines — they are part of a multi-line statement
+        # Skip continuation lines - they are part of a multi-line statement
         # and should not count as separate executable lines
         if ($isLineContinuation) {
             continue

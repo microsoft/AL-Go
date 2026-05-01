@@ -171,7 +171,7 @@ function Merge-CoberturaFiles {
             $classElement.SetAttribute("branch-rate", "0")
             $classElement.SetAttribute("complexity", "0")
 
-            # Methods (omitted in merged output — per-job detail is sufficient)
+            # Methods (omitted in merged output - per-job detail is sufficient)
             $methods = $xml.CreateElement("methods")
             $classElement.AppendChild($methods) | Out-Null
 
