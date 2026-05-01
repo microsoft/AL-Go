@@ -369,7 +369,7 @@ function Get-DependencyArtifactPattern {
 
     # Build brace-expansion entries per dependency project.
     # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.
-    # *BuildOutput is included to ensure the pattern always matches ≥2 artifacts,
+    # *BuildOutput is included to ensure the pattern always matches >=2 artifacts,
     # preventing download-artifact v8 from flattening a single artifact into the
     # destination root (which breaks the subdirectory structure GetDependencies expects).
     $entries = @()
