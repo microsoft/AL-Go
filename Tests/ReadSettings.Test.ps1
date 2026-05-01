@@ -521,8 +521,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
 
         It 'ValidateSettings skips pwsh invocation on PS5.1 when JSON exceeds 30000 chars without warning' {
-            Mock Write-Host { }
-            Mock Out-Host { }
+            Mock OutputWarning { }
 
             # Build a settings hashtable whose JSON serialization exceeds 30000 characters
             $largeValue = 'x' * 31000
@@ -543,7 +542,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
 
             # Verify no warning was output
-            Should -Invoke -CommandName Write-Host -Times 0 -ParameterFilter { $Object -like '*::Warning::*' }
+            Should -Invoke -CommandName OutputWarning -Times 0
         }
     }
 }
