@@ -16,7 +16,11 @@ $CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectS
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
-        [PSCustomObject] $src
+        [PSCustomObject] $src,
+        # Settings already explicitly overwritten by a prior user source. Template sources must not re-apply these.
+        [string[]] $overwrittenSettings = @(),
+        # True when the source file is a template-managed file (*.doNotEdit.json). Used together with $overwrittenSettings.
+        [bool] $isTemplateSource = $false
     )
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
@@ -39,6 +43,11 @@ function MergeCustomObjectIntoOrderedDictionary {
 
         # Skip overwriteSettings property as it's only used to remove settings from the destination object and is specific to the source object
         if ($prop -eq "overwriteSettings") {
+            return
+        }
+
+        # Template sources must not re-introduce a property that was explicitly overwritten by a user source
+        if ($isTemplateSource -and $overwrittenSettings -contains $prop) {
             return
         }
 
@@ -67,6 +76,11 @@ function MergeCustomObjectIntoOrderedDictionary {
     @($dst.Keys) | ForEach-Object {
         $prop = $_
         if ($src.PSObject.Properties.Name -eq $prop) {
+            # Template sources must not overwrite a setting that was explicitly overwritten by a user source
+            if ($isTemplateSource -and $overwrittenSettings -contains $prop) {
+                OutputDebug "Skipping template merge of explicitly overwritten setting $prop"
+                return
+            }
             $dstProp = $dst."$prop"
             $srcProp = $src."$prop"
             $dstPropType = $dstProp.GetType().Name
@@ -479,11 +493,27 @@ function ReadSettings {
         }
     }
 
+    # Tracks settings names that were explicitly overwritten by a user-controlled source.
+    # Template sources (*.doNotEdit.json) that appear later in the merge order must not re-apply these.
+    $overwrittenSettings = @()
+
     foreach($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
+            $isTemplateSource = $settingsObject.Source -like "*.doNotEdit.json"
             OutputDebug "Applying settings from $($settingsObject.Source) ($($settingsObject.Type))"
-            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -overwrittenSettings $overwrittenSettings -isTemplateSource $isTemplateSource
+
+            # After a non-template source is merged, record which settings it declared as overwritten.
+            # Subsequent template sources must not re-apply those settings.
+            if (-not $isTemplateSource -and $settingsJson.PSObject.Properties.Name -contains "overwriteSettings") {
+                $settingsJson.overwriteSettings | ForEach-Object {
+                    if ($_ -notin $overwrittenSettings) {
+                        $overwrittenSettings += $_
+                    }
+                }
+            }
+
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                 foreach($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
@@ -505,7 +535,7 @@ function ReadSettings {
                         }
                         if ($conditionMet) {
                             OutputDebug "Applying conditional settings for $($conditions -join ", ")"
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -overwrittenSettings $overwrittenSettings -isTemplateSource $isTemplateSource
                         }
                     }
                 }
