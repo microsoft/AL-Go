@@ -349,14 +349,14 @@ function Find-ALSourceFolders {
 
     # If no common folders found, check for .al files in root
     if ($sourceFolders.Count -eq 0) {
-        $alFiles = Get-ChildItem -Path $ProjectPath -Filter "*.al" -File -ErrorAction SilentlyContinue
+        $alFiles = @(Get-ChildItem -Path $ProjectPath -Filter "*.al" -File -ErrorAction SilentlyContinue)
         if ($alFiles.Count -gt 0) {
             $sourceFolders += $ProjectPath
         }
     }
 
     # Also look for subfolders that contain app.json (multi-app repos)
-    $appJsonFiles = Get-ChildItem -Path $ProjectPath -Filter "app.json" -Recurse -File -Depth 2 -ErrorAction SilentlyContinue
+    $appJsonFiles = @(Get-ChildItem -Path $ProjectPath -Filter "app.json" -Recurse -File -Depth 2 -ErrorAction SilentlyContinue)
     foreach ($appJson in $appJsonFiles) {
         $appFolder = $appJson.DirectoryName
         if ($appFolder -ne $ProjectPath -and $sourceFolders -notcontains $appFolder) {
@@ -542,5 +542,6 @@ Export-ModuleMember -Function @(
     'Get-NormalizedObjectType',
     'Get-ALProcedures',
     'Find-ProcedureForLine',
-    'Get-ALExecutableLines'
+    'Get-ALExecutableLines',
+    'Find-ALSourceFolders'
 )
