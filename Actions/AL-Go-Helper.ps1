@@ -225,6 +225,15 @@ function ConvertTo-HashTable() {
     }
 }
 
+function Get-CurrentBranchName {
+    # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+    $branchName = $ENV:GITHUB_HEAD_REF
+    if (!$branchName) {
+        $branchName = $ENV:GITHUB_REF_NAME
+    }
+    return $branchName.Replace('\', '_').Replace('/', '_')
+}
+
 function GetUniqueFolderName {
     Param(
         [string] $baseFolder,
