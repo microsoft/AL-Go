@@ -17,6 +17,7 @@ If the workflow is run on a schedule, the branches are determined based on the `
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | false | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
+| workflowEventName | false | The GitHub event name that triggered the workflow. *(override for reusable workflows)* | github.event_name |
 | includeBranches | false | Comma-separated value of branch name patterns to include if they exist. If not specified, only the current branch is returned. Wildcards are supported. |''|
 
 ## OUTPUT

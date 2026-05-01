@@ -77,6 +77,7 @@ if ($deliveryTarget -eq "AppSource") {
 Write-Host "Artifacts $artifacts"
 Write-Host "Projects:"
 $sortedProjectList | Out-Host
+$alreadyDeliveredPackages = @()
 
 $secrets = $env:Secrets | ConvertFrom-Json
 foreach ($thisProject in $sortedProjectList) {
@@ -256,15 +257,25 @@ foreach ($thisProject in $sortedProjectList) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
                     $packageName = Get-BcNuGetPackageId -publisher $appJson.publisher -name $appJson.name -id $appJson.id -version $appJson.version
-                    $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $appJson.version -select Exact -allowPrerelease
-                    if (-not $feed) {
-                        $parameters = @{
-                            "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                            "preReleaseTag"    = $preReleaseTag
-                            "appFile"          = $_.FullName
+                    if ($alreadyDeliveredPackages -contains $packageName) {
+                        Write-Host "Package $packageName has already been delivered in this run, skipping"
+                    }
+                    else {
+                        $searchVersion = $appJson.version
+                        if ($preReleaseTag) {
+                            $searchVersion += "-$preReleaseTag"
                         }
-                        $package = New-BcNuGetPackage @parameters
-                        Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
+                        $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $searchVersion -select Exact -allowPrerelease
+                        if (-not $feed) {
+                            $parameters = @{
+                                "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                                "preReleaseTag"    = $preReleaseTag
+                                "appFile"          = $_.FullName
+                            }
+                            $package = New-BcNuGetPackage @parameters
+                            Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
+                            $alreadyDeliveredPackages += $packageName
+                        }
                     }
                 }
             }

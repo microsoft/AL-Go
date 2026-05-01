@@ -1,3 +1,6 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Mock/callback parameters must match function signatures')]
+param()
+
 Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -525,5 +528,246 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         } | ConvertTo-Json -Depth 10
 
         { Get-DependenciesFromInstallApps -DestinationPath $downloadPath } | Should -Throw "*unknown secret 'missingSecret'*"
+    }
+}
+
+Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Tests" {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubHeadRef', Justification = 'False positive.')]
+        $originalGitHubHeadRef = $ENV:GITHUB_HEAD_REF
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubRefName', Justification = 'False positive.')]
+        $originalGitHubRefName = $ENV:GITHUB_REF_NAME
+    }
+
+    AfterEach {
+        $ENV:GITHUB_HEAD_REF = $originalGitHubHeadRef
+        $ENV:GITHUB_REF_NAME = $originalGitHubRefName
+    }
+
+    It 'Returns null when project is not in the dependency map' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{}
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'MyProject'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeNullOrEmpty
+        }
+    }
+
+    It 'Returns null when project has an empty dependency array' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{ 'MyProject' = @() }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'MyProject'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeNullOrEmpty
+        }
+    }
+
+    It 'Returns correct pattern for a single dependency on the default branch' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{ 'App' = @('Base') }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'App'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-main-*Apps-*,Base-main-*Dependencies-*}'
+        }
+    }
+
+    It 'Uses GITHUB_HEAD_REF over GITHUB_REF_NAME and sanitizes branch slashes' {
+        $ENV:GITHUB_HEAD_REF = 'feature/auth'
+        $ENV:GITHUB_REF_NAME = 'main'
+
+        $projectDependencies = @{ 'App' = @('Base') }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'App'; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-feature_auth-*Apps-*,Base-feature_auth-*Dependencies-*}'
+        }
+    }
+}
+
+Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced Tests" {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalHeadRef', Justification = 'False positive.')]
+        $originalHeadRef = $ENV:GITHUB_HEAD_REF
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalRefName', Justification = 'False positive.')]
+        $originalRefName = $ENV:GITHUB_REF_NAME
+
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'main'
+    }
+
+    AfterEach {
+        $ENV:GITHUB_HEAD_REF = $originalHeadRef
+        $ENV:GITHUB_REF_NAME = $originalRefName
+    }
+
+    It 'Returns pattern with 4 brace entries for two dependencies' {
+        $projectDependencies = @{ "App" = @("Base", "Common") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be "{Base-main-*Apps-*,Base-main-*Dependencies-*,Common-main-*Apps-*,Common-main-*Dependencies-*}"
+        }
+    }
+
+    It 'Returns pattern with 6 brace entries for three flattened transitive dependencies' {
+        $projectDependencies = @{ "App" = @("Base", "Common", "Core") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -BeLike "*Base-main-*"
+            $result | Should -BeLike "*Common-main-*"
+            $result | Should -BeLike "*Core-main-*"
+            # 3 deps x 2 entries each = 6 entries = 5 commas
+            ($result.ToCharArray() | Where-Object { $_ -eq ',' }).Count | Should -Be 5
+        }
+    }
+
+    It 'Sanitizes forward slashes in project dependency names' {
+        $projectDependencies = @{ "App" = @("src/Common") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeLike "*src_Common-main-*"
+            $result | Should -Not -BeLike "*src/Common*"
+        }
+    }
+
+    It 'Sanitizes forward slashes in branch name from GITHUB_REF_NAME' {
+        $ENV:GITHUB_HEAD_REF = ''
+        $ENV:GITHUB_REF_NAME = 'release/v2.0'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeLike "*Base-release_v2.0-*"
+            $result | Should -Not -BeLike "*release/v2.0*"
+        }
+    }
+
+    It 'Returns null when project is not in the dependencies map even if other projects exist' {
+        $projectDependencies = @{ "Other" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -BeNullOrEmpty
+        }
+    }
+}
+
+Describe "DownloadProjectDependencies - Resolve-DependencyFiles Tests" {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFolder', Justification = 'False positive.')]
+        $testFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'destFolder', Justification = 'False positive.')]
+        $destFolder = (New-Item -ItemType Directory -Path (Join-Path $testFolder "dest")).FullName
+    }
+
+    AfterEach {
+        if (Test-Path $testFolder) {
+            Remove-Item -Path $testFolder -Recurse -Force
+        }
+    }
+
+    It 'Returns empty array for empty input' {
+        $result = Resolve-DependencyFiles -Dependencies @() -DestinationPath $destFolder
+        $result | Should -HaveCount 0
+    }
+
+    It 'Returns empty array for null input' {
+        $result = Resolve-DependencyFiles -Dependencies $null -DestinationPath $destFolder
+        $result | Should -HaveCount 0
+    }
+
+    It 'Passes through .app file paths unchanged' {
+        $appFile = Join-Path $testFolder "myapp.app"
+        Set-Content -Path $appFile -Value "fake app content"
+
+        $result = @(Resolve-DependencyFiles -Dependencies @($appFile) -DestinationPath $destFolder)
+
+        $result | Should -HaveCount 1
+        $result[0] | Should -Be $appFile
+    }
+
+    It 'Passes through test app markers for .app files' {
+        $appFile = Join-Path $testFolder "testapp.app"
+        Set-Content -Path $appFile -Value "fake test app"
+
+        $result = @(Resolve-DependencyFiles -Dependencies @("($appFile)") -DestinationPath $destFolder)
+
+        $result | Should -HaveCount 1
+        $result[0] | Should -Be "($appFile)"
+    }
+
+    It 'Extracts .app files from zip archives' {
+        $appFile = Join-Path $testFolder "Foundation_1.0.0.0.app"
+        Set-Content -Path $appFile -Value "fake app content"
+        $zipFile = Join-Path $testFolder "Foundation-main-Apps-1.0.0.0.zip"
+        Compress-Archive -Path $appFile -DestinationPath $zipFile
+
+        $result = @(Resolve-DependencyFiles -Dependencies @($zipFile) -DestinationPath $destFolder)
+
+        $result | Should -HaveCount 1
+        $result[0] | Should -BeLike "*Foundation_1.0.0.0.app"
+        Test-Path $result[0] | Should -Be $true
+    }
+
+    It 'Removes source zip after extraction' {
+        $appFile = Join-Path $testFolder "app.app"
+        Set-Content -Path $appFile -Value "fake"
+        $zipFile = Join-Path $testFolder "deps.zip"
+        Compress-Archive -Path $appFile -DestinationPath $zipFile
+
+        Resolve-DependencyFiles -Dependencies @($zipFile) -DestinationPath $destFolder
+
+        Test-Path $zipFile | Should -Be $false
+    }
+
+    It 'Preserves test app markers when extracting zips' {
+        $appFile = Join-Path $testFolder "testlib.app"
+        Set-Content -Path $appFile -Value "fake test lib"
+        $zipFile = Join-Path $testFolder "TestApps-1.0.0.0.zip"
+        Compress-Archive -Path $appFile -DestinationPath $zipFile
+
+        $result = @(Resolve-DependencyFiles -Dependencies @("($zipFile)") -DestinationPath $destFolder)
+
+        $result | Should -HaveCount 1
+        $result[0] | Should -Match '^\('
+        $result[0] | Should -Match '\)$'
+        $result[0].Trim('()') | Should -BeLike "*testlib.app"
+    }
+
+    It 'Handles mixed .app and .zip dependencies' {
+        $appFile = Join-Path $testFolder "direct.app"
+        Set-Content -Path $appFile -Value "direct app"
+
+        $zippedApp = Join-Path $testFolder "zipped.app"
+        Set-Content -Path $zippedApp -Value "zipped app"
+        $zipFile = Join-Path $testFolder "deps.zip"
+        Compress-Archive -Path $zippedApp -DestinationPath $zipFile
+
+        $result = @(Resolve-DependencyFiles -Dependencies @($appFile, $zipFile) -DestinationPath $destFolder)
+
+        $result | Should -HaveCount 2
+        $result[0] | Should -Be $appFile
+        $result[1] | Should -BeLike "*zipped.app"
+    }
+
+    It 'Passes through non-existent paths unchanged' {
+        $nonExistentZipFile = Join-Path $testFolder "nonexistent-fake.zip"
+
+        $result = @(Resolve-DependencyFiles -Dependencies @($nonExistentZipFile) -DestinationPath $destFolder)
+
+        $result | Should -HaveCount 1
+        $result[0] | Should -Be $nonExistentZipFile
     }
 }

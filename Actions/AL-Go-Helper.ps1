@@ -27,12 +27,13 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$defaultBcContainerHelperVersion = "preview" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
+$defaultBcContainerHelperVersion = "preview"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
     "NewBcContainer"
+    "NewBcCompilerFolder"
     "ImportTestToolkitToBcContainer"
     "CompileAppInBcContainer"
     "GetBcContainerAppInfo"
@@ -43,13 +44,50 @@ $runAlPipelineOverrides = @(
     "ImportTestDataInBcContainer"
     "RunTestsInBcContainer"
     "GetBcContainerAppRuntimePackage"
+    "GetBcContainerEventLog"
     "RemoveBcContainer"
+    "RemoveBcCompilerFolder"
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
     "PipelineInitialize"
     "PipelineFinalize"
 )
+
+<#
+    .SYNOPSIS
+        Gets script overrides from the AL-Go folder.
+    .DESCRIPTION
+        Checks the specified AL-Go folder for .ps1 scripts matching the provided override names.
+        Returns a hashtable mapping each found override name to its script block.
+    .PARAMETER ALGoFolderName
+        The folder where the AL-Go scripts are located.
+    .PARAMETER OverrideScriptNames
+        An array of script names to look for (without .ps1 extension).
+    .OUTPUTS
+        Hashtable with override script names as keys and their script blocks as values.
+#>
+function Get-ScriptOverrides() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALGoFolderName,
+        [Parameter(Mandatory = $true)]
+        [string[]] $OverrideScriptNames
+    )
+    $overrides = @{}
+    foreach ($scriptName in $OverrideScriptNames) {
+        $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
+        if (Test-Path -Path $scriptPath -Type Leaf) {
+            OutputDebug "Add override for $scriptName ($scriptPath)"
+            $scriptBlock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            if (-not $scriptBlock) {
+                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+            }
+            $overrides[$scriptName] = $scriptBlock
+        }
+    }
+    return $overrides
+}
 
 # Well known AppIds
 $platformAppId = "8874ed3a-0643-4247-9ced-7a7002f7135d"
@@ -185,6 +223,15 @@ function ConvertTo-HashTable() {
         }
         $ht
     }
+}
+
+function Get-CurrentBranchName {
+    # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+    $branchName = $ENV:GITHUB_HEAD_REF
+    if (!$branchName) {
+        $branchName = $ENV:GITHUB_REF_NAME
+    }
+    return $branchName.Replace('\', '_').Replace('/', '_')
 }
 
 function GetUniqueFolderName {
@@ -714,12 +761,33 @@ function AnalyzeRepo {
         if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
+    $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
-        $settings.doNotRunTests = $true
+        if ($isTestProject) {
+            # Test projects run tests from upstream projects via installTestApps, not from local testFolders
+            Write-Host "Test project: tests will be run from installed test apps"
+            if (-not $settings.installTestRunner) {
+                Write-Host "Test project: installTestRunner will be set to true as it is required to run tests."
+            }
+            $settings.installTestRunner = $true
+            if (-not $settings.installTestFramework) {
+                Write-Host "Test project: installTestFramework is not set. Add it to the project settings if upstream test apps depend on the test framework."
+            }
+            if (-not $settings.installTestLibraries) {
+                Write-Host "Test project: installTestLibraries is not set. Add it to the project settings if upstream test apps depend on test libraries."
+            }
+            if (-not $settings.runTestsInAllInstalledTestApps) {
+                Write-Host "runTestsInAllInstalledTestApps is false, but will be forced to true as no tests would be run otherwise."
+            }
+            $settings.runTestsInAllInstalledTestApps = $true
+        }
+        else {
+            if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+            $settings.doNotRunTests = $true
+        }
     }
     if (-not $settings.appFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
+        if (!$isTestProject -and !$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
     }
 
     $settings
@@ -1546,16 +1614,7 @@ function CreateDevEnv {
 
         Push-Location $projectFolder
         try {
-            $runAlPipelineOverrides | ForEach-Object {
-                $scriptName = $_
-                $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-                if (Test-Path -Path $scriptPath -Type Leaf) {
-                    Write-Host "Add override for $scriptName"
-                    $runAlPipelineParams += @{
-                        "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-                    }
-                }
-            }
+            $runAlPipelineParams += (Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides)
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{
@@ -1753,6 +1812,44 @@ function CheckAndCreateProjectFolder {
     }
 }
 
+function TestIfProjectHasDependents {
+    Param(
+        [string] $project,
+        [string[]] $projects,
+        [hashtable] $appDependencies,
+        [array] $projectsOrder,
+        [hashtable] $testProjectTargets = @{}
+    )
+
+    $hasRemainingDependents = $false
+    foreach($otherProject in $projects) {
+        if ($otherProject -ne $project) {
+            # Grab dependencies from other project, which haven't been included in the build order yet
+            $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
+                $dependency = $_
+                $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
+                return -not $alreadyBuilt
+            }
+            Write-Host "Other project $otherProject has dependencies that are not in the build order yet: $($otherDependencies -join ", ")"
+            foreach($dependency in $otherDependencies) {
+                if ($appDependencies."$project".apps -contains $dependency) {
+                    Write-Host "Project $project is still a dependency for project $otherProject"
+                    $hasRemainingDependents = $true
+                }
+            }
+            # Check whether the other project is a test project that targets the current project
+            if ($testProjectTargets.Keys -contains $otherProject -and $testProjectTargets."$otherProject" -contains $project) {
+                Write-Host "Project $project is a test target for test project $otherProject"
+                $hasRemainingDependents = $true
+            }
+        }
+    }
+    if (!$hasRemainingDependents) {
+        Write-Host "Project $project has no dependents, can be built later"
+    }
+    return $hasRemainingDependents
+}
+
 Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
@@ -1767,10 +1864,14 @@ Function AnalyzeProjectDependencies {
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
+    $projectsThatCanBePostponed = @()
     foreach($project in $projects) {
-        Write-Host "- Analyzing project: $project"
+        Write-Host -NoNewline "Analyzing project: $project, "
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.postponeProjectInBuildOrder) {
+            $projectsThatCanBePostponed += $project
+        }
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
@@ -1784,7 +1885,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
+        OutputMessageAndArray -Message "folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -1813,8 +1914,56 @@ Function AnalyzeProjectDependencies {
     #         "dependencies" = @("appid7", "appid8")
     #     }
     # }
+
+    # Handle projectsToTest settings: build a mapping of test projects to their target projects
+    # First pass: collect all test projects so we can validate that no project depends on a test project
+    $testProjectNames = @{}
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.projectsToTest -and $projectSettings.projectsToTest.Count -gt 0) {
+            # Validate that test projects do not contain buildable code
+            $buildableFolders = @($appDependencies."$project".apps)
+            if ($buildableFolders.Count -gt 0) {
+                throw "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting."
+            }
+            $testProjectNames[$project] = $projectSettings.projectsToTest
+        }
+    }
+    # Second pass: resolve and validate target projects, build the testProjectTargets mapping
+    # testProjectTargets maps each test project to an array of resolved target project names
+    $testProjectTargets = @{}
+    foreach($project in $testProjectNames.Keys) {
+        Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
+        $resolvedTargets = @()
+        foreach($targetProject in $testProjectNames[$project]) {
+            # Resolve target project name: must be the full project path
+            # Normalize slashes to match how project keys are stored (OS-dependent)
+            $normalizedTarget = $targetProject.Replace('/', [System.IO.Path]::DirectorySeparatorChar).Replace('\', [System.IO.Path]::DirectorySeparatorChar)
+            $resolvedTarget = $null
+            if ($appDependencies.Keys -contains $normalizedTarget) {
+                $resolvedTarget = $normalizedTarget
+            }
+            if (-not $resolvedTarget) {
+                OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository. Use the full project path (e.g. 'projects/MyProject')."
+                throw
+            }
+            # Validate that the target is not itself a test project
+            if ($testProjectNames.Keys -contains $resolvedTarget) {
+                OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
+                throw
+            }
+            $resolvedTargets += @($resolvedTarget)
+        }
+        $testProjectTargets[$project] = $resolvedTargets
+    }
+
     $no = 1
     $projectsOrder = @()
+    # Collect projects without dependents, which can be built later
+    # This is done to avoid building projects at an earlier stage than needed and increase the time until next job subsequently
+    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependents
+    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependents)
+    $projectsWithoutDependents = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1829,6 +1978,11 @@ Function AnalyzeProjectDependencies {
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
+                # Check whether dependency is already resolved by a previous build project
+                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
+                if ($depProject.Count -gt 0) {
+                    continue
+                }
                 # Find the project that contains the app for which the current project has a dependency
                 $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
@@ -1836,6 +1990,18 @@ Function AnalyzeProjectDependencies {
                     $foundDependencies += $depProject
                     if ($projectDependencies.Keys -contains $depProject) {
                         $foundDependencies += $projectDependencies."$depProject"
+                    }
+                }
+            }
+            # If this project is a test project, add its target projects as direct dependencies
+            # Only add target projects that haven't been built yet (still in $projects), matching the normal dependency resolution pattern
+            if ($testProjectTargets.Keys -contains $project) {
+                foreach($targetProject in $testProjectTargets."$project") {
+                    if ($projects -contains $targetProject) {
+                        $foundDependencies += $targetProject
+                        if ($projectDependencies.Keys -contains $targetProject) {
+                            $foundDependencies += $projectDependencies."$targetProject"
+                        }
                     }
                 }
             }
@@ -1881,11 +2047,28 @@ Function AnalyzeProjectDependencies {
         if ($thisJob.Count -eq 0) {
             throw "Circular project reference encountered, cannot determine build order"
         }
+
+        # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
+        $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
+            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder -testProjectTargets $testProjectTargets)
+        })
+
+        # Remove projects in this job from the list of projects to be built (including the projects without dependents)
+        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
+
+        # Do not build jobs without dependents until the last job, remove them from this job
+        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependents -notcontains $_ })
+
+        if ($projects.Count -eq 0) {
+            # Last job, add jobs without dependents
+            Write-Host "Adding projects without dependents to last build job"
+            $thisJob += $projectsWithoutDependents
+        }
+
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
 
-        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
 
@@ -2047,7 +2230,6 @@ function RetryCommand {
         try {
             Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
-                $host.SetShouldExit(0);
                 throw "Command failed with exit code $LASTEXITCODE"
             }
             break
@@ -2259,7 +2441,52 @@ function RunAndCheck {
     & $args[0] $rest
     $ErrorActionPreference = 'STOP'
     if ($LASTEXITCODE -ne 0) {
-        $host.SetShouldExit(0)
         throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $LASTEXITCODE"
+    }
+}
+
+<#
+.SYNOPSIS
+Get the version number components based on the versioning strategy
+.DESCRIPTION
+Get the version number components based on the versioning strategy defined in the settings.
+.PARAMETER Settings
+The settings object containing versioning information.
+.RETURNS
+A PSCustomObject with MajorMinorVersion, BuildNumber, and RevisionNumber properties.
+#>
+function Get-VersionNumber() {
+    param(
+        [Parameter(Mandatory=$true)]
+        $Settings
+    )
+    $majorMinorVersion = ""
+    $appBuild = $Settings.appBuild
+    $appRevision = $Settings.appRevision
+
+    if ($Settings.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$Settings.artifact.Split('/')[4]
+        $majorMinorVersion = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+        $appBuild = $artifactVersion.Build
+        $appRevision = $artifactVersion.Revision
+    } elseif (($Settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$Settings.repoVersion
+        $majorMinorVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
+        if (($Settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                OutputWarning -message "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
+    }
+
+    # Construct object to return
+    return [PSCustomObject]@{
+        MajorMinorVersion = $majorMinorVersion
+        BuildNumber = $appBuild
+        RevisionNumber = $appRevision
     }
 }

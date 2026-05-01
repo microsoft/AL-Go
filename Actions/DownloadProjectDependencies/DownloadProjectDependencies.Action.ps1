@@ -23,7 +23,11 @@ function DownloadDependenciesFromProbingPaths {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
-        return GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+        $dependencies = GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+
+        # GetDependencies may return .zip files (from DownloadArtifact/DownloadRelease).
+        # Extract .app files from any zips so downstream consumers receive clean .app paths.
+        return Resolve-DependencyFiles -Dependencies $dependencies -DestinationPath $destinationPath
     }
 }
 
@@ -48,7 +52,7 @@ function DownloadDependenciesFromCurrentBuild {
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
 
     # For each dependency project, calculate the corresponding probing path
-    $dependeciesProbingPaths = @()
+    $dependenciesProbingPaths = @()
     foreach($dependencyProject in $dependencyProjects) {
         Write-Host "Reading settings for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
@@ -72,7 +76,7 @@ function DownloadDependenciesFromCurrentBuild {
             $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
-        $dependeciesProbingPaths += @(@{
+        $dependenciesProbingPaths += @(@{
             "release_status"  = "thisBuild"
             "version"         = "latest"
             "buildMode"       = $dependencyBuildMode
@@ -87,7 +91,7 @@ function DownloadDependenciesFromCurrentBuild {
 
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
-    foreach($probingPath in $dependeciesProbingPaths) {
+    foreach($probingPath in $dependenciesProbingPaths) {
         $buildMode = $probingPath.buildMode
         $project = $probingPath.projects
         $branch = $probingPath.branch
@@ -107,7 +111,7 @@ function DownloadDependenciesFromCurrentBuild {
         }
     }
 
-    return $downloadedDependencies
+    return Resolve-DependencyFiles -Dependencies $downloadedDependencies -DestinationPath $destinationPath
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -148,7 +152,7 @@ $downloadedDependencies | ForEach-Object {
     }
 }
 
-# Add dependencies from settings
+# Add dependencies from settings (these are already resolved to .app files)
 $downloadedApps += $settingsDependencies.Apps
 $downloadedTestApps += $settingsDependencies.TestApps
 
