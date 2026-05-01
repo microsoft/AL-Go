@@ -15,12 +15,8 @@ Import-Module (Join-Path $scriptPath "ALSourceParser.psm1") -Force
 Import-Module (Join-Path $scriptPath "CoberturaFormatter.psm1") -Force
 
 # Helper to safely check for a property on either a hashtable or PSCustomObject under strict mode
-function Test-PropertyExists {
-    param($InputObject, [string]$PropertyName)
-    if ($null -eq $InputObject) { return $false }
-    if ($InputObject -is [hashtable]) { return $InputObject.ContainsKey($PropertyName) }
-    return $null -ne $InputObject.PSObject.Properties[$PropertyName]
-}
+# (defined in CoverageUtilities.ps1)
+. (Join-Path $PSScriptRoot "CoverageUtilities.ps1")
 
 # Shared helper: compute coverage stats, build stats object, and save JSON
 function Build-CoverageStatsAndSave {

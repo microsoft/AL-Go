@@ -8,13 +8,11 @@
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+# Shared utility functions (Test-PropertyExists, etc.)
+. (Join-Path $PSScriptRoot "CoverageUtilities.ps1")
+
 # Helper to safely check for a property on either a hashtable or PSCustomObject under strict mode
-function Test-PropertyExists {
-    param($InputObject, [string]$PropertyName)
-    if ($null -eq $InputObject) { return $false }
-    if ($InputObject -is [hashtable]) { return $InputObject.ContainsKey($PropertyName) }
-    return $null -ne $InputObject.PSObject.Properties[$PropertyName]
-}
+# (defined in CoverageUtilities.ps1)
 
 <#
 .SYNOPSIS
