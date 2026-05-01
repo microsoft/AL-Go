@@ -85,6 +85,10 @@ function Install-WcfDependencies {
     }
 }
 
+# Initialize guard variables before first use (required under Set-StrictMode -Version 2.0)
+if (-not (Test-Path variable:script:TypesLoaded)) { $script:TypesLoaded = $false }
+if (-not (Test-Path variable:script:ActiveDirectoryDllsLoaded)) { $script:ActiveDirectoryDllsLoaded = $false }
+
 if(!$script:TypesLoaded)
 {
     # Load order matters - dependencies must be loaded before the client DLL

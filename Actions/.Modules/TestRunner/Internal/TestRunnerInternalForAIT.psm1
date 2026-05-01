@@ -792,6 +792,9 @@ $script:ClientAssembly1 = "Microsoft.Dynamics.Framework.UI.Client.dll"
 $script:ClientAssembly2 = "NewtonSoft.Json.dll"
 $script:ClientAssembly3 = "Microsoft.Internal.AntiSSRF.dll"
 
+# Initialize guard variable before first use (required under Set-StrictMode -Version 2.0)
+if (-not (Test-Path variable:script:TypesLoaded)) { $script:TypesLoaded = $false }
+
 if (!$script:TypesLoaded) {
     Add-type -Path "$PSScriptRoot\Microsoft.Dynamics.Framework.UI.Client.dll"
     Add-type -Path "$PSScriptRoot\NewtonSoft.Json.dll"
