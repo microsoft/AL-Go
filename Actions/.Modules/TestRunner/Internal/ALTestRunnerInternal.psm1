@@ -1,6 +1,8 @@
 # Core test execution logic.
 # Helper modules are imported for client session management, form helpers, and coverage collection.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 . "$PSScriptRoot\Constants.ps1"
 . "$PSScriptRoot\ModuleInit.ps1"
 

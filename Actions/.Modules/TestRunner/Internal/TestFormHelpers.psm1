@@ -1,6 +1,8 @@
 # Test form UI control helpers.
 # These functions interact with the BC test tool page via the ClientContext.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 . "$PSScriptRoot\Constants.ps1"
 
 function Open-TestForm(

@@ -1,6 +1,8 @@
 # Client session management and SSL handling.
 # Extracted from ALTestRunnerInternal.psm1 for clarity and PS7 SSL support.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 . "$PSScriptRoot\Constants.ps1"
 
 function Open-ClientSessionWithWait

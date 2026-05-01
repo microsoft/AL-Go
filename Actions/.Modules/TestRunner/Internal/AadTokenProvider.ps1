@@ -4,6 +4,8 @@
 # NOTE: This file installs MSAL.PS as a side effect of being dot-sourced. This is ported infrastructure
 # from the BC test runner. Do not dot-source this file unless AAD authentication is actually needed.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 # Specify the name of the module you want to check/install
 $moduleName = "MSAL.PS"
 

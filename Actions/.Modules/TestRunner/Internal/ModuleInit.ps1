@@ -2,6 +2,8 @@
 # Extracted from ALTestRunnerInternal.psm1.
 # This script is dot-sourced once during module import.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 function Install-WcfDependencies {
     <#
     .SYNOPSIS

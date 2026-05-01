@@ -1,3 +1,5 @@
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 function Setup-Environment
 (
     [ValidateSet("PROD","OnPrem")]

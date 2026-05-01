@@ -2,6 +2,8 @@
 using namespace Microsoft.Dynamics.Framework.UI.Client
 using namespace Microsoft.Dynamics.Framework.UI.Client.Interactions
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 class ClientContext {
 
     $events = @()

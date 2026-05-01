@@ -1,6 +1,8 @@
 # Shared constants for the CodeCoverage test runner module.
 # Dot-sourced by ALTestRunner.psm1 and Internal modules.
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 # Line types
 $script:CodeunitLineType = '0'
 $script:FunctionLineType = '1'
