@@ -50,6 +50,33 @@ The coverage output is available in the build artifacts under the `CodeCoverage`
 
 - **Custom `RunTestsInBcContainer` overrides:** If your repository has a custom `RunTestsInBcContainer.ps1` override in the `.AL-Go` folder, it will take precedence over the built-in code coverage override. A warning will be emitted in the build log. To collect code coverage with a custom override, your script must use `Run-AlTests` (imported automatically by AL-Go) with the appropriate code coverage parameters.
 - **Work-in-progress:** The AL Test Runner is a new component and may not support all test configurations that the standard BcContainerHelper test runner supports. If you experience test failures or missing test results after enabling code coverage, disable the setting and report the issue.
+- **Method-level detail lost in multi-job merge:** When coverage is collected across multiple build jobs, the merge uses union semantics at the line level. Method-level detail from individual jobs is not preserved in the merged output.
+- **No branch coverage:** Business Central does not expose branch-level coverage data. Only line-level coverage (hit/not hit) is reported.
+- **No threshold enforcement:** Coverage data is informational only. There is no built-in mechanism to fail the build if coverage drops below a threshold.
+- **Performance impact:** Coverage collection adds overhead to test execution. Large codebases with many test apps may see increased build times. Use `trackingType: PerRun` (the default) for best performance.
+- **File size:** Coverage data files can be significant for large codebases. The GitHub Step Summary is automatically truncated if it exceeds size limits; download the CodeCoverage artifact for full details.
+
+## Integration with Third-Party Tools
+
+The `cobertura.xml` output follows the standard [Cobertura XML format](https://cobertura.github.io/cobertura/), which is widely supported by coverage visualization and CI/CD tools. You can download the `CodeCoverage` artifact from your workflow run and upload it to services such as:
+
+- **SonarQube / SonarCloud** — Import via the `sonar.coverageReportPaths` property
+- **Codecov.io** — Upload using the [Codecov GitHub Action](https://github.com/codecov/codecov-action) with the artifact path
+- **Azure DevOps** — Use the [Publish Code Coverage Results](https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/test/publish-code-coverage-results) task
+
+Example workflow step to upload coverage to a third-party tool after the build:
+
+```yaml
+- name: Download coverage artifact
+  uses: actions/download-artifact@v4
+  with:
+    name: MergedCodeCoverage
+    path: .coverage
+- name: Upload to Codecov
+  uses: codecov/codecov-action@v4
+  with:
+    files: .coverage/cobertura.xml
+```
 
 ## Using Code Coverage with a Custom Override
 

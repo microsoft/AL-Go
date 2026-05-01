@@ -1,3 +1,18 @@
+<#
+.SYNOPSIS
+    Executes AL test suites against a Business Central service endpoint.
+.DESCRIPTION
+    Connects to a BC instance via client services, runs the specified tests, and optionally
+    collects code coverage data. Results are saved in JUnit or XUnit XML format.
+.PARAMETER ServiceUrl
+    The BC client services URL to connect to (mandatory).
+.PARAMETER TestSuite
+    Test suite name to run. Defaults to 'DEFAULT'.
+.PARAMETER CodeCoverageTrackingType
+    Coverage tracking granularity: Disabled, PerRun, PerCodeunit, or PerTest.
+.PARAMETER ResultsFormat
+    Output format for test results: JUnit or XUnit. Defaults to JUnit.
+#>
 function Run-AlTests
 (
     [string] $TestSuite = $script:DefaultTestSuite,
@@ -81,6 +96,14 @@ function Run-AlTests
     }
 }
 
+<#
+.SYNOPSIS
+    Verifies AL test results and throws if any tests failed.
+.PARAMETER TestResultsFolder
+    Path to the folder containing XUnit XML result files.
+.PARAMETER IgnoreErrorIfNoTestsExecuted
+    If set, does not throw when no test codeunits were executed.
+#>
 function Invoke-ALTestResultVerification
 (
     [string] $TestResultsFolder = $(throw "Missing argument TestResultsFolder"),
@@ -128,6 +151,12 @@ function Invoke-ALTestResultVerification
     }
 }
 
+<#
+.SYNOPSIS
+    Parses XUnit XML result files and returns a list of failed tests.
+.PARAMETER TestResultsFolder
+    Path to the folder containing XUnit XML result files.
+#>
 function Get-FailedTestsFromXMLFiles
 (
     [string] $TestResultsFolder = $(throw "Missing argument TestResultsFolder")
@@ -168,6 +197,16 @@ function Get-FailedTestsFromXMLFiles
     return $failedTestList
 }
 
+<#
+.SYNOPSIS
+    Writes failed tests to a JSON file for use as a disabled tests list.
+.PARAMETER FailedTests
+    Array of failed test objects from Get-FailedTestsFromXMLFiles.
+.PARAMETER OutputFolder
+    Directory where the JSON file will be created.
+.PARAMETER FileName
+    Name of the output file. Defaults to 'DisabledTests.json'.
+#>
 function Write-DisabledTestsJson
 (
     $FailedTests,
@@ -196,6 +235,14 @@ function Write-DisabledTestsJson
     Add-Content -Value (ConvertTo-Json $testsToDisable) -Path $outputFile
 }
 
+<#
+.SYNOPSIS
+    Reports test failures as Azure DevOps pipeline annotations.
+.PARAMETER AzureDevOps
+    Annotation level: 'no' (disabled), 'error', or 'warning'.
+.PARAMETER TestRunResultObject
+    The test run result object containing test execution data.
+#>
 function Report-ErrorsInAzureDevOps
 (
     [ValidateSet('no','error','warning')]
@@ -219,6 +266,12 @@ function Report-ErrorsInAzureDevOps
     }
 }
 
+<#
+.SYNOPSIS
+    Reads a disabled tests JSON file and returns the test list.
+.PARAMETER DisabledTestsPath
+    Path to the DisabledTests.json file.
+#>
 function Get-DisabledAlTests
 (
     [string] $DisabledTestsPath
@@ -233,6 +286,12 @@ function Get-DisabledAlTests
     return $DisabledTests
 }
 
+<#
+.SYNOPSIS
+    Maps a TestIsolation mode to the corresponding test runner codeunit ID.
+.PARAMETER TestIsolation
+    Isolation mode: 'Codeunit' (130450) or 'Disabled' (130451).
+#>
 function Get-TestRunnerId
 (
     [ValidateSet("Disabled", "Codeunit")]
@@ -252,11 +311,19 @@ function Get-TestRunnerId
     }
 }
 
+<#
+.SYNOPSIS
+    Returns the codeunit ID for disabled test isolation (130451).
+#>
 function Get-DisabledTestIsolationTestRunnerId()
 {
     return $global:TestRunnerIsolationDisabled
 }
 
+<#
+.SYNOPSIS
+    Returns the codeunit ID for codeunit-level test isolation (130450).
+#>
 function Get-CodeunitTestIsolationTestRunnerId()
 {
     return $global:TestRunnerIsolationCodeunit
