@@ -34,13 +34,13 @@ $success = $false
 # TypeNotFound records from the TestRunner module are expected because those files
 # reference BC client types (via 'using namespace Microsoft.Dynamics.Framework.UI.Client')
 # that are only available at runtime inside a BC container, not during static analysis.
-$testRunnerPath = [System.IO.Path]::GetFullPath((Join-Path $Path '.Modules/TestRunner'))
+$testRunnerPath = '.Modules' + [System.IO.Path]::DirectorySeparatorChar + 'TestRunner' + [System.IO.Path]::DirectorySeparatorChar
 
 Write-Output "Modules installed, now running tests."
 while (-not $success -and $retryCount -lt $maxRetries) {
     Try {
         Invoke-ScriptAnalyzer @htPSA -Verbose |
-            Where-Object { -not ($_.RuleName -eq 'TypeNotFound' -and $_.ScriptPath.StartsWith($testRunnerPath)) } |
+            Where-Object { -not ($_.RuleName -eq 'TypeNotFound' -and $_.ScriptPath.Contains($testRunnerPath)) } |
             ConvertTo-SARIF @htCTS
         $success = $true
     } Catch {
