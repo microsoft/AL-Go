@@ -455,3 +455,85 @@ Describe "ALSourceParser - Integration" {
         }
     }
 }
+
+Describe "ALSourceParser - Find-ALSourceFolders" {
+    Context "Common folder structures" {
+        It "Should find src folder when present" {
+            $projectPath = Join-Path "TestDrive:" "project1"
+            New-Item -Path (Join-Path $projectPath "src") -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $projectPath "src\table.al") -ItemType File -Force | Out-Null
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            $result | Should -Contain (Join-Path $projectPath "src")
+        }
+
+        It "Should find app folder when present" {
+            $projectPath = Join-Path "TestDrive:" "project2"
+            New-Item -Path (Join-Path $projectPath "app") -ItemType Directory -Force | Out-Null
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            $result | Should -Contain (Join-Path $projectPath "app")
+        }
+
+        It "Should find multiple common folders" {
+            $projectPath = Join-Path "TestDrive:" "project3"
+            New-Item -Path (Join-Path $projectPath "src") -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $projectPath "app") -ItemType Directory -Force | Out-Null
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            $result.Count | Should -BeGreaterOrEqual 2
+        }
+    }
+
+    Context "Fallback to root" {
+        It "Should use root folder when no common folders exist but .al files present" {
+            $projectPath = Join-Path "TestDrive:" "project4"
+            New-Item -Path $projectPath -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $projectPath "mytable.al") -ItemType File -Force | Out-Null
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            $result | Should -Contain $projectPath
+        }
+
+        It "Should return empty when no common folders and no .al files" {
+            $projectPath = Join-Path "TestDrive:" "project5"
+            New-Item -Path $projectPath -ItemType Directory -Force | Out-Null
+            New-Item -Path (Join-Path $projectPath "readme.md") -ItemType File -Force | Out-Null
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            @($result).Count | Should -Be 0
+        }
+    }
+
+    Context "Multi-app repos with app.json" {
+        It "Should find subfolders containing app.json" {
+            $projectPath = Join-Path (Get-Item TestDrive:\).FullName "project6"
+            $subApp = Join-Path $projectPath "SubApp"
+            New-Item -Path $subApp -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $subApp "app.json") -Value '{"id":"test"}' -Encoding UTF8
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            $result | Should -Contain $subApp
+        }
+
+        It "Should not duplicate project root when it contains app.json" {
+            $projectPath = Join-Path (Get-Item TestDrive:\).FullName "project7"
+            New-Item -Path (Join-Path $projectPath "src") -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $projectPath "app.json") -Value '{"id":"test"}' -Encoding UTF8
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            $uniqueResult = @($result | Select-Object -Unique)
+            $uniqueResult.Count | Should -Be @($result).Count
+        }
+    }
+
+    Context "Empty directory" {
+        It "Should handle empty project directory" {
+            $projectPath = Join-Path "TestDrive:" "project8"
+            New-Item -Path $projectPath -ItemType Directory -Force | Out-Null
+
+            $result = Find-ALSourceFolders -ProjectPath $projectPath
+            @($result).Count | Should -Be 0
+        }
+    }
+}
