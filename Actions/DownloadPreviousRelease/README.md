@@ -1,6 +1,7 @@
 # Download Previous Release
 
-Downloads the latest release apps for use as a baseline in AppSourceCop validation and upgrade testing.
+Downloads the latest release apps for the current branch, for use as a baseline in AppSourceCop validation and upgrade testing.
+The release is determined based on the target branch (for pull requests) or the current branch (for pushes).
 
 ## INPUT
 

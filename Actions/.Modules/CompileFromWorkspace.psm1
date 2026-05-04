@@ -843,10 +843,10 @@ function New-BuildOutputFile {
     and obsolete tag settings from the project settings.
 .PARAMETER AppFolders
     Array of app folder paths to generate AppSourceCop.json for.
-.PARAMETER PreviousApps
-    Array of file paths to previous release .app files.
+.PARAMETER BaselineApps
+    Array of file paths to baseline release .app files.
 .PARAMETER BaselinePackageCachePath
-    Path to the folder containing the previous release .app files (used for baselinePackageCachePath in AppSourceCop.json).
+    Path to the folder containing the baseline .app files and their dependencies (used for baselinePackageCachePath in AppSourceCop.json).
 .PARAMETER CompilerFolder
     Path to the compiler folder containing the AL tool.
 .PARAMETER Settings
@@ -857,7 +857,7 @@ function New-AppSourceCopJson {
         [Parameter(Mandatory = $true)]
         [string[]] $AppFolders,
         [Parameter(Mandatory = $false)]
-        [string[]] $PreviousApps = @(),
+        [string[]] $BaselineApps = @(),
         [Parameter(Mandatory = $false)]
         [string] $BaselinePackageCachePath = '',
         [Parameter(Mandatory = $true)]
@@ -866,13 +866,13 @@ function New-AppSourceCopJson {
         [hashtable] $Settings
     )
 
-    # Extract version info from previous apps using the AL tool, keyed by app ID
-    $previousAppVersions = @{}
+    # Extract version info from baseline apps using the AL tool, keyed by app ID
+    $baselineAppVersions = @{}
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
-    foreach ($appFile in $PreviousApps) {
+    foreach ($appFile in $BaselineApps) {
         try {
             $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json
-            $previousAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
+            $baselineAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
         }
         catch {
             OutputWarning -message "Failed to read manifest from '$appFile': $($_.Exception.Message)"
@@ -899,12 +899,12 @@ function New-AppSourceCopJson {
             $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
         }
 
-        # Match previous app version by app ID
+        # Match baseline app version by app ID
         $appJsonPath = Join-Path $folder "app.json"
         if (Test-Path $appJsonPath) {
             $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
-            if ($previousAppVersions.ContainsKey($appJson.id)) {
-                $appSourceCopJson["version"] = $previousAppVersions[$appJson.id]
+            if ($baselineAppVersions.ContainsKey($appJson.id)) {
+                $appSourceCopJson["version"] = $baselineAppVersions[$appJson.id]
                 $appSourceCopJson["baselinePackageCachePath"] = $BaselinePackageCachePath
             }
         }

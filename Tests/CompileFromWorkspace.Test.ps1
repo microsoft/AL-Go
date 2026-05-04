@@ -1,4 +1,4 @@
-﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Mock/callback parameters must match function signatures')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Mock/callback parameters must match function signatures')]
 param()
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -905,7 +905,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Creates AppSourceCop.json with baseline version from previous app' {
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -923,7 +923,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 obsoleteTagMinAllowedMajorMinor = ""
             }
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
             $result.mandatoryAffixes | Should -Be @("Test", "Contoso")
@@ -935,7 +935,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 obsoleteTagMinAllowedMajorMinor = "24.0"
             }
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
             $result.obsoleteTagMinAllowedMajorMinor | Should -Be "24.0"
@@ -947,7 +947,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 obsoleteTagMinAllowedMajorMinor = "23.0"
             }
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
             $result.version | Should -Be "1.0.0.0"
@@ -964,7 +964,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
             } -ModuleName CompileFromWorkspace
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -981,7 +981,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
             } -ModuleName CompileFromWorkspace
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -996,7 +996,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
             '{"supportedCountries":["us","ca"],"customSetting":"keep"}' | Set-Content $copJsonPath
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
                 appSourceCopMandatoryAffixes = @("Test")
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1021,7 +1021,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             } | ConvertTo-Json | Set-Content (Join-Path $appFolder2 "app.json")
 
             # RunAndCheck returns app ID matching only MyApp
-            New-AppSourceCopJson -AppFolders @($script:appFolder, $appFolder2) -PreviousApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder, $appFolder2) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1036,7 +1036,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Mock RunAndCheck { throw "Failed to read app" } -ModuleName CompileFromWorkspace
             Mock OutputWarning {} -ModuleName CompileFromWorkspace
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -PreviousApps @("bad.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("bad.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
                 appSourceCopMandatoryAffixes = @("Test")
                 obsoleteTagMinAllowedMajorMinor = ""
             }

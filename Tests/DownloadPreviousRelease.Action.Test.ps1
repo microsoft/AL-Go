@@ -82,7 +82,7 @@ Describe "DownloadPreviousRelease Action Tests" {
 
             DownloadPreviousRelease -token 'dummy' -project '.'
 
-            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -eq 'No previous release found' }
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -eq "No previous release found for branch 'main'" }
             $output = Get-Content $script:githubOutputFile -Raw
             $output | Should -Match 'PreviousAppsPath='
         }

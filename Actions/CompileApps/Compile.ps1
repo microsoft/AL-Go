@@ -135,7 +135,7 @@ try {
 
         # Generate AppSourceCop.json files for app folders with baseline version and settings
         # Use packageCachePath as baseline cache since it contains both previous apps and their dependencies (symbols)
-        New-AppSourceCopJson -AppFolders $settings.appFolders -PreviousApps $previousApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
+        New-AppSourceCopJson -AppFolders $settings.appFolders -BaselineApps $previousApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
