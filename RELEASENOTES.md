@@ -2,9 +2,16 @@
 - Added support for upgrade tests and using previously released artifacts as baselines for appsourcecop.json
 - Added support for BCPT app compilation with workspace compilation
 
+### Optimized dependency artifact downloads for multi-project repositories
+
+The `DownloadProjectDependencies` action now downloads only artifacts from dependency projects instead of all workflow artifacts. For repositories with many AL-Go projects, this reduces build runner bandwidth and speeds up the dependency download step.
+
 ### Issues
 
+- Incremental builds (`modifiedApps` mode) now correctly identify unmodified apps for projects whose `appFolders` reference paths outside the project directory (e.g. using `../`)
 - Issue 2204 - Workspace compilation ignores vsixFile setting
+- Issue 2211 - Cannot create a release if a project contains only test apps
+- Issue 2214 - Workspace compilation not working with external dependencies
 
 ## v9.0
 
