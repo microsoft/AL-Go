@@ -333,11 +333,14 @@ function Get-DependenciesFromInstallApps {
     Computes a minimatch-compatible glob pattern for downloading only dependency-project artifacts.
     .DESCRIPTION
     Given a project and its dependency map (from projectDependenciesJson), constructs a brace-expansion
-    pattern that matches only the Apps, TestApps, and Dependencies artifacts for the dependency projects.
+    pattern that matches only the Apps, TestApps, Dependencies, and BuildOutput artifacts for the dependency projects.
     This pattern is designed for use with the actions/download-artifact 'pattern' input (which uses minimatch).
 
     The pattern uses '*Apps' to match both 'Apps' and 'TestApps' as well as build-mode-prefixed variants
     (e.g. 'CleanApps', 'CleanTestApps'). Similarly '*Dependencies' matches 'Dependencies' and variants.
+    '*BuildOutput' is included to ensure the pattern matches multiple artifacts, preventing download-artifact
+    v8 from flattening a single artifact directly into the destination path (which breaks the subdirectory
+    structure that GetDependencies expects).
     .PARAMETER Project
     The name of the current AL-Go project.
     .PARAMETER ProjectDependencies
@@ -364,12 +367,17 @@ function Get-DependencyArtifactPattern {
 
     $branchName = Get-CurrentBranchName
 
-    # Build brace-expansion entries: 2 per dependency project (*Apps covers Apps+TestApps+buildMode variants)
+    # Build brace-expansion entries per dependency project.
+    # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.
+    # *BuildOutput is included to ensure the pattern always matches >=2 artifacts,
+    # preventing download-artifact v8 from flattening a single artifact into the
+    # destination root (which breaks the subdirectory structure GetDependencies expects).
     $entries = @()
     foreach ($dep in $dependencyProjects) {
         $sanitizedDep = $dep.Replace('\', '_').Replace('/', '_')
         $entries += "$sanitizedDep-$branchName-*Apps-*"
         $entries += "$sanitizedDep-$branchName-*Dependencies-*"
+        $entries += "$sanitizedDep-$branchName-*BuildOutput-*"
     }
 
     return "{$($entries -join ',')}"
