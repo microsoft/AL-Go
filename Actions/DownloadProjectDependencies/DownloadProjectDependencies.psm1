@@ -328,4 +328,100 @@ function Get-DependenciesFromInstallApps {
     return $install
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps
+<#
+    .SYNOPSIS
+    Computes a minimatch-compatible glob pattern for downloading only dependency-project artifacts.
+    .DESCRIPTION
+    Given a project and its dependency map (from projectDependenciesJson), constructs a brace-expansion
+    pattern that matches only the Apps, TestApps, Dependencies, and BuildOutput artifacts for the dependency projects.
+    This pattern is designed for use with the actions/download-artifact 'pattern' input (which uses minimatch).
+
+    The pattern uses '*Apps' to match both 'Apps' and 'TestApps' as well as build-mode-prefixed variants
+    (e.g. 'CleanApps', 'CleanTestApps'). Similarly '*Dependencies' matches 'Dependencies' and variants.
+    '*BuildOutput' is included to ensure the pattern matches multiple artifacts, preventing download-artifact
+    v8 from flattening a single artifact directly into the destination path (which breaks the subdirectory
+    structure that GetDependencies expects).
+    .PARAMETER Project
+    The name of the current AL-Go project.
+    .PARAMETER ProjectDependencies
+    A hashtable mapping project names to arrays of their dependency project names (direct + transitive).
+    .OUTPUTS
+    A minimatch glob pattern string, or $null if the project has no dependencies.
+#>
+function Get-DependencyArtifactPattern {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Project,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $ProjectDependencies
+    )
+
+    $dependencyProjects = @()
+    if ($ProjectDependencies.Keys -contains $Project) {
+        $dependencyProjects = @($ProjectDependencies."$Project")
+    }
+
+    if ($dependencyProjects.Count -eq 0) {
+        return $null
+    }
+
+    $branchName = Get-CurrentBranchName
+
+    # Build brace-expansion entries per dependency project.
+    # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.
+    # *BuildOutput is included to ensure the pattern always matches >=2 artifacts,
+    # preventing download-artifact v8 from flattening a single artifact into the
+    # destination root (which breaks the subdirectory structure GetDependencies expects).
+    $entries = @()
+    foreach ($dep in $dependencyProjects) {
+        $sanitizedDep = $dep.Replace('\', '_').Replace('/', '_')
+        $entries += "$sanitizedDep-$branchName-*Apps-*"
+        $entries += "$sanitizedDep-$branchName-*Dependencies-*"
+        $entries += "$sanitizedDep-$branchName-*BuildOutput-*"
+    }
+
+    return "{$($entries -join ',')}"
+}
+
+<#
+    .SYNOPSIS
+    Resolves dependency file paths by extracting .app files from any zip archives.
+    .DESCRIPTION
+    Takes an array of dependency file paths (which may be .app files or .zip archives)
+    and returns an array of .app file paths. Zip archives are extracted and the contained
+    .app files are copied to the destination path. Test app markers (parentheses wrapping)
+    are preserved through extraction.
+    .PARAMETER Dependencies
+    An array of dependency file paths. Test apps are wrapped in parentheses, e.g. "(path.zip)".
+    .PARAMETER DestinationPath
+    The path where extracted .app files should be placed.
+    .OUTPUTS
+    An array of resolved .app file paths, with test app markers preserved.
+#>
+function Resolve-DependencyFiles {
+    Param(
+        [Parameter(Mandatory = $false)]
+        [string[]] $Dependencies = @(),
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationPath
+    )
+
+    if (-not $Dependencies -or $Dependencies.Count -eq 0) {
+        return @()
+    }
+
+    return @($Dependencies | ForEach-Object {
+        $isTestApp = $_.StartsWith('(')
+        $filePath = $_.Trim('()')
+        if ($filePath -and (Test-Path $filePath) -and (Test-IsZipFile -Path $filePath)) {
+            $appFiles = Expand-ZipFileToAppFiles -ZipFile $filePath -DestinationPath $DestinationPath
+            Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue
+            if ($isTestApp) { $appFiles | ForEach-Object { "($_)" } } else { $appFiles }
+        }
+        else {
+            $_
+        }
+    })
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles

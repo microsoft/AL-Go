@@ -354,6 +354,7 @@ function CreateNewAppInFolder {
         "name" = $name
         "version" = $version
         "publisher" = $publisher
+        "runtime" = $runtime
         "dependencies" = $dependencies
         "application" = $application
         "idRanges" = @( @{ "from" = $objID; "to" = $objID } )
