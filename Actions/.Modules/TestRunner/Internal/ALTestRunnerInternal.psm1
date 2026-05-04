@@ -79,7 +79,7 @@ function Run-AlTestsInternal
         {
             $numberOfUnexpectedFailures++
 
-            $stackTrace = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace
+            $testStackTrace = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace
             $testMethodResult = @{
                 method = "Unexpected Failure"
                 codeUnit = "Unexpected Failure"
@@ -87,7 +87,7 @@ function Run-AlTestsInternal
                 finishTime = ($(Get-Date).ToString($script:DateTimeFormat))
                 result = $script:FailureTestResultType
                 message = $_.Exception.Message
-                stackTrace = $stackTrace
+                stackTrace = $testStackTrace
             }
 
             $testRunResultObject = @{

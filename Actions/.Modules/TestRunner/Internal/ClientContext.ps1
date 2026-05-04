@@ -168,6 +168,7 @@ class ClientContext {
             }
         }
         catch {
+            # Intentional: suppress errors during session cleanup
         }
     }
 
@@ -360,7 +361,7 @@ class ClientContext {
 
     [bool]HasWarningOrInfoForms() {
         $form = $this.clientSession.TopMostInteractiveForm;
-        if($form -eq $null) {
+        if($null -eq $form) {
             return $false
         }
 

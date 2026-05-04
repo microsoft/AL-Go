@@ -80,7 +80,7 @@ function Open-ClientSession
         "AAD"
         {
             $AadTokenProvider = $global:AadTokenProvider
-            if ($AadTokenProvider -eq $null)
+            if ($null -eq $AadTokenProvider)
             {
                 throw "You need to specify the AadTokenProvider for obtaining the token if using AAD authentication"
             }

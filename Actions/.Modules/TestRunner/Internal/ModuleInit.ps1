@@ -143,7 +143,7 @@ if(!$script:TypesLoaded)
                 try {
                     Add-Type -Path $dllPath -ErrorAction SilentlyContinue
                 } catch {
-                    # Ignore errors for already loaded assemblies
+                    # Expected for assemblies already loaded in the AppDomain
                 }
             }
         }
@@ -163,7 +163,7 @@ if(!$script:TypesLoaded)
         if ((Test-Path $antiSSRFdll) -and (Test-Path $threadingExtDll)) {
             $Threading = [Reflection.Assembly]::LoadFile($threadingExtDll)
             $onAssemblyResolve = [System.ResolveEventHandler] {
-                param($sender, $e)
+                param($resolveEventSender, $e)
                 if ($e.Name -like "System.Threading.Tasks.Extensions, Version=*, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51") {
                     return $Threading
                 }

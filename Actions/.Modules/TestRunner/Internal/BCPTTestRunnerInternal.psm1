@@ -52,8 +52,6 @@ function Setup-Environment
 
 function Get-SaaSServiceURL()
 {
-     $status = ''
-
      $provisioningTimeout = new-timespan -Minutes 15
      $stopWatch = [diagnostics.stopwatch]::StartNew()
      while ($stopWatch.elapsed -lt $provisioningTimeout)
