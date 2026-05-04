@@ -154,7 +154,7 @@ function Print-TestResults
         }
     }
 
-    if($TestRunResultObject.testResults)
+    if($TestRunResultObject.PSObject.Properties['testResults'] -and $TestRunResultObject.testResults)
     {
         foreach($testFunctionResult in $TestRunResultObject.testResults)
         {

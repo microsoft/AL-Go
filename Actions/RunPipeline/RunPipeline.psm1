@@ -156,16 +156,25 @@ function New-ALTestRunnerOverride {
                 [xml]$testResults = Get-Content $checkResultsFile -Encoding UTF8
                 if ($testResults.testsuites) {
                     $failures = 0; $errors = 0
-                    if ($testResults.testsuites.testsuite) {
-                        foreach ($ts in $testResults.testsuites.testsuite) {
-                            if ($ts.failures) { $failures += [int]$ts.failures }
-                            if ($ts.errors) { $errors += [int]$ts.errors }
+                    # Handle both single testsuite and multiple testsuites
+                    $suites = @($testResults.testsuites.testsuite)
+                    foreach ($ts in $suites) {
+                        if ($null -ne $ts) {
+                            $f = $ts.GetAttribute("failures")
+                            $e = $ts.GetAttribute("errors")
+                            if ($f) { $failures += [int]$f }
+                            if ($e) { $errors += [int]$e }
                         }
                     }
                     $testsPassed = ($failures -eq 0 -and $errors -eq 0)
                 }
                 elseif ($testResults.assemblies) {
-                    $failed = if ($testResults.assemblies.assembly.failed) { [int]$testResults.assemblies.assembly.failed } else { 0 }
+                    $failed = 0
+                    $assembly = $testResults.assemblies.assembly
+                    if ($null -ne $assembly) {
+                        $f = $assembly.GetAttribute("failed")
+                        if ($f) { $failed = [int]$f }
+                    }
                     $testsPassed = ($failed -eq 0)
                 }
             }
