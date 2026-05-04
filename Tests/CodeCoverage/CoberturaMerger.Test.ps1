@@ -5,7 +5,7 @@ BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot "../../Actions/MergeCoverageSummaries"
     Import-Module (Join-Path $scriptPath "CoberturaMerger.psm1") -Force
 
-    $testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
 }
 
 Describe "CoberturaMerger - Merge-CoberturaFiles" {
@@ -13,8 +13,8 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
     Context "File merging" {
         It "Should merge multiple Cobertura files" {
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "cobertura2.xml")
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "cobertura2.xml")
             )
             $outputPath = Join-Path $TestDrive "merged.xml"
 
@@ -25,18 +25,18 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         }
 
         It "Should handle single file" {
-            $files = @((Join-Path $testDataPath "cobertura1.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura1.xml"))
             $outputPath = Join-Path $TestDrive "single.xml"
 
-            $stats = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
+            $null = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
 
             $outputPath | Should -Exist
         }
 
         It "Should skip missing files with warning" {
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "nonexistent.xml")
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "nonexistent.xml")
             )
             $outputPath = Join-Path $TestDrive "missing.xml"
 
@@ -45,7 +45,7 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         }
 
         It "Should handle all missing files gracefully" {
-            $files = @((Join-Path $testDataPath "nonexistent1.xml"), (Join-Path $testDataPath "nonexistent2.xml"))
+            $files = @((Join-Path $script:testDataPath "nonexistent1.xml"), (Join-Path $script:testDataPath "nonexistent2.xml"))
             $outputPath = Join-Path $TestDrive "allmissing.xml"
 
             $stats = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
@@ -56,8 +56,8 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
 
         It "Should skip malformed XML files" {
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "cobertura-malformed.xml")
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "cobertura-malformed.xml")
             )
             $outputPath = Join-Path $TestDrive "malformed.xml"
 
@@ -69,8 +69,8 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         It "Should take maximum hit count for duplicate lines" {
             # When the same line appears in multiple files, take max hits
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "cobertura2.xml")
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "cobertura2.xml")
             )
             $outputPath = Join-Path $TestDrive "maxhits.xml"
 
@@ -82,8 +82,8 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
 
         It "Should deduplicate lines by filename and line number" {
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "cobertura1.xml")  # Same file twice
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "cobertura1.xml")  # Same file twice
             )
             $outputPath = Join-Path $TestDrive "dedup.xml"
 
@@ -95,8 +95,8 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
 
         It "Should maintain line number ordering" {
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "cobertura2.xml")
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "cobertura2.xml")
             )
             $outputPath = Join-Path $TestDrive "ordered.xml"
 
@@ -115,12 +115,12 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
     Context "Statistics calculation" {
         It "Should recalculate line-rate after merge" {
             $files = @(
-                (Join-Path $testDataPath "cobertura1.xml"),
-                (Join-Path $testDataPath "cobertura2.xml")
+                (Join-Path $script:testDataPath "cobertura1.xml"),
+                (Join-Path $script:testDataPath "cobertura2.xml")
             )
             $outputPath = Join-Path $TestDrive "stats.xml"
 
-            $stats = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
+            $null = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
 
             [xml]$merged = Get-Content $outputPath -Raw
             [double]$lineRate = $merged.coverage.'line-rate'
@@ -129,7 +129,7 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         }
 
         It "Should calculate total lines-valid correctly" {
-            $files = @((Join-Path $testDataPath "cobertura1.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura1.xml"))
             $outputPath = Join-Path $TestDrive "linesvalid.xml"
 
             Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
@@ -140,7 +140,7 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         }
 
         It "Should calculate total lines-covered correctly" {
-            $files = @((Join-Path $testDataPath "cobertura1.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura1.xml"))
             $outputPath = Join-Path $TestDrive "linescovered.xml"
 
             Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
@@ -153,7 +153,7 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
 
     Context "XML structure" {
         It "Should produce valid Cobertura XML" {
-            $files = @((Join-Path $testDataPath "cobertura1.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura1.xml"))
             $outputPath = Join-Path $TestDrive "valid.xml"
 
             Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
@@ -166,7 +166,7 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         }
 
         It "Should maintain package structure" {
-            $files = @((Join-Path $testDataPath "cobertura1.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura1.xml"))
             $outputPath = Join-Path $TestDrive "packages.xml"
 
             Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
@@ -176,7 +176,7 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
         }
 
         It "Should maintain class structure" {
-            $files = @((Join-Path $testDataPath "cobertura1.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura1.xml"))
             $outputPath = Join-Path $TestDrive "classes.xml"
 
             Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
@@ -189,10 +189,10 @@ Describe "CoberturaMerger - Merge-CoberturaFiles" {
 
     Context "Empty coverage handling" {
         It "Should handle empty coverage files" {
-            $files = @((Join-Path $testDataPath "cobertura-empty.xml"))
+            $files = @((Join-Path $script:testDataPath "cobertura-empty.xml"))
             $outputPath = Join-Path $TestDrive "empty.xml"
 
-            $stats = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
+            $null = Merge-CoberturaFiles -CoberturaFiles $files -OutputPath $outputPath
 
             $outputPath | Should -Exist
         }
@@ -278,3 +278,4 @@ Describe "CoberturaMerger - Merge-CoverageStats" {
         }
     }
 }
+

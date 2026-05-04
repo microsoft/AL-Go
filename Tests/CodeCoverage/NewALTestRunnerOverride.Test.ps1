@@ -1,3 +1,7 @@
+﻿# Test credentials use plaintext passwords — this is intentional for test stubs.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
+param()
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 BeforeAll {
@@ -6,15 +10,13 @@ BeforeAll {
     # Define stub functions that record calls for verification.
     # .GetNewClosure() scriptblocks resolve commands in the module scope, bypassing Pester mocks.
     # We use global stubs with call recording instead.
+    # Only parameters we assert on need to be declared; PowerShell accepts extra named params silently.
     $global:_RunAlTestsCalls = @()
     function global:Run-AlTests {
-        param($ServiceUrl, $Credential, $AutorizationType, $TestSuite, [bool]$Detailed, [switch]$DisableSSLVerification,
-              $ResultsFormat, $CodeCoverageTrackingType, $ProduceCodeCoverageMap, $CodeCoverageOutputPath,
-              $CodeCoverageFilePrefix, $ExtensionId, $AppName, $ResultsFilePath, [bool]$SaveResultFile,
-              $DisabledTests, $TestCodeunitsRange, $TestProcedureRange, $RequiredTestIsolation, $TestType, $TestIsolation)
+        param($ServiceUrl, $CodeCoverageTrackingType, $ProduceCodeCoverageMap, $ExtensionId, $TestIsolation, [bool]$SaveResultFile, $ResultsFilePath)
         $global:_RunAlTestsCalls += @{ ServiceUrl = $ServiceUrl; CodeCoverageTrackingType = $CodeCoverageTrackingType; ProduceCodeCoverageMap = $ProduceCodeCoverageMap; ExtensionId = $ExtensionId; TestIsolation = $TestIsolation; SaveResultFile = $SaveResultFile; ResultsFilePath = $ResultsFilePath }
     }
-    function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "" } }
+    function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "" } }
 }
 
 AfterAll {
@@ -47,35 +49,35 @@ Describe "New-ALTestRunnerOverride" {
         }
 
         It "Should construct URL with tenant parameter for standard URL" {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
             $sb = New-ALTestRunnerOverride -BuildArtifactFolder "TestDrive:\artifacts" -TrackingType "PerRun" -ProduceMap "PerCodeunit"
             & $sb @{ containerName = "testcontainer"; credential = [pscredential]::new("admin", (ConvertTo-SecureString "pass" -AsPlainText -Force)); extensionId = ""; appName = ""; JUnitResultFileName = "" }
             $global:_RunAlTestsCalls[0].ServiceUrl | Should -Be "http://testcontainer:80/BC/?tenant=default"
         }
 
         It "Should append tenant to URL with existing query parameters" {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/?company=CRONUS" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/?company=CRONUS" } }
             $sb = New-ALTestRunnerOverride -BuildArtifactFolder "TestDrive:\artifacts" -TrackingType "PerRun" -ProduceMap "PerCodeunit"
             & $sb @{ containerName = "testcontainer"; credential = [pscredential]::new("admin", (ConvertTo-SecureString "pass" -AsPlainText -Force)); extensionId = ""; appName = ""; JUnitResultFileName = "" }
             $global:_RunAlTestsCalls[0].ServiceUrl | Should -Be "http://testcontainer:80/BC/?company=CRONUS&tenant=default"
         }
 
         It "Should not add tenant if URL already contains tenant parameter" {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/?tenant=mytenant" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/?tenant=mytenant" } }
             $sb = New-ALTestRunnerOverride -BuildArtifactFolder "TestDrive:\artifacts" -TrackingType "PerRun" -ProduceMap "PerCodeunit"
             & $sb @{ containerName = "testcontainer"; credential = [pscredential]::new("admin", (ConvertTo-SecureString "pass" -AsPlainText -Force)); extensionId = ""; appName = ""; JUnitResultFileName = "" }
             $global:_RunAlTestsCalls[0].ServiceUrl | Should -Be "http://testcontainer:80/BC/?tenant=mytenant"
         }
 
         It "Should fallback to container name URL when PublicWebBaseUrl is empty" {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "" } }
             $sb = New-ALTestRunnerOverride -BuildArtifactFolder "TestDrive:\artifacts" -TrackingType "PerRun" -ProduceMap "PerCodeunit"
             & $sb @{ containerName = "mycontainer"; credential = [pscredential]::new("admin", (ConvertTo-SecureString "pass" -AsPlainText -Force)); extensionId = ""; appName = ""; JUnitResultFileName = "" }
             $global:_RunAlTestsCalls[0].ServiceUrl | Should -Be "http://mycontainer:80/BC/?tenant=default"
         }
 
         It "Should use tenant from parameters when provided" {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
             $sb = New-ALTestRunnerOverride -BuildArtifactFolder "TestDrive:\artifacts" -TrackingType "PerRun" -ProduceMap "PerCodeunit"
             & $sb @{ containerName = "testcontainer"; credential = [pscredential]::new("admin", (ConvertTo-SecureString "pass" -AsPlainText -Force)); extensionId = ""; appName = ""; JUnitResultFileName = ""; tenant = "customtenant" }
             $global:_RunAlTestsCalls[0].ServiceUrl | Should -Be "http://testcontainer:80/BC/?tenant=customtenant"
@@ -84,7 +86,7 @@ Describe "New-ALTestRunnerOverride" {
 
     Context "Result file parsing - JUnit format" {
         BeforeEach {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
             New-Item -Path "TestDrive:\artifacts" -ItemType Directory -Force | Out-Null
         }
 
@@ -105,7 +107,7 @@ Describe "New-ALTestRunnerOverride" {
 
     Context "Result file parsing - XUnit format" {
         BeforeEach {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
             New-Item -Path "TestDrive:\artifacts" -ItemType Directory -Force | Out-Null
         }
 
@@ -126,7 +128,7 @@ Describe "New-ALTestRunnerOverride" {
 
     Context "Code coverage settings" {
         BeforeEach {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
         }
 
         It "Should create CodeCoverage subdirectory under build artifact folder" {
@@ -149,7 +151,7 @@ Describe "New-ALTestRunnerOverride" {
 
     Context "Parameter forwarding" {
         BeforeEach {
-            function global:Get-BcContainerServerConfiguration { param($ContainerName) return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
+            function global:Get-BcContainerServerConfiguration { return @{ PublicWebBaseUrl = "http://testcontainer:80/BC/" } }
             New-Item -Path "TestDrive:\artifacts" -ItemType Directory -Force | Out-Null
         }
 

@@ -8,7 +8,6 @@ BeforeAll {
 Describe "ALSourceParser - Get-ALObjectMap" {
     Context "Parse AL source files" {
         It "Should parse codeunit object" {
-            $codeunitFile = Join-Path $script:testDataPath "sample-codeunit.al"
             $objectMap = Get-ALObjectMap -SourcePath $script:testDataPath
 
             $objectMap.Keys | Should -Contain "Codeunit.50100"

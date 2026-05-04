@@ -2,6 +2,8 @@
 using namespace Microsoft.Dynamics.Framework.UI.Client
 using namespace Microsoft.Dynamics.Framework.UI.Client.Interactions
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+param()
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 class ClientContext {
@@ -168,7 +170,7 @@ class ClientContext {
             }
         }
         catch {
-            # Intentional: suppress errors during session cleanup
+            Write-Host "Warning: Error during session cleanup: $($_.Exception.Message)"
         }
     }
 
@@ -211,7 +213,7 @@ class ClientContext {
         {
             $ErrorMessage = $_.Exception.Message
             $FailedItem = $_.Exception.ItemName
-            Write-Host "Error:" $ErrorMessage "Item: " $FailedItem
+            Write-Host -Object "Error: $ErrorMessage Item: $FailedItem"
         }
         finally {
             Unregister-Event -SourceIdentifier $formToShowEvent.Name

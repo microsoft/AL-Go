@@ -223,8 +223,8 @@ function Save-ResultsAsJUnit {
                     $failedTests++
                     $JUnitFailure = $JUnitDoc.CreateElement("failure")
                     $JUnitFailure.SetAttribute("message", $testMethod.message)
-                    $stackTrace = $($testMethod.stackTrace).Replace(";", "`n")
-                    $JUnitFailure.InnerText = $stackTrace
+                    $testStackTrace = $($testMethod.stackTrace).Replace(";", "`n")
+                    $JUnitFailure.InnerText = $testStackTrace
                     $JUnitTestCase.AppendChild($JUnitFailure) | Out-Null
                 }
                 3 { # Skipped

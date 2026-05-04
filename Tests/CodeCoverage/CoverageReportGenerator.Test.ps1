@@ -5,7 +5,7 @@ BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot "../../Actions/BuildCodeCoverageSummary/CoverageReportGenerator.ps1"
     . $scriptPath
 
-    $testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
 }
 
 Describe "CoverageReportGenerator - Get-CoverageStatusIcon" {
@@ -72,7 +72,7 @@ Describe "CoverageReportGenerator - Read-CoberturaFile" {
 
     Context "File parsing" {
         It "Should parse valid Cobertura XML" {
-            $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
             $data = Read-CoberturaFile -CoverageFile $coverageFile
 
@@ -82,7 +82,7 @@ Describe "CoverageReportGenerator - Read-CoberturaFile" {
         }
 
         It "Should extract coverage statistics" {
-            $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
             $data = Read-CoberturaFile -CoverageFile $coverageFile
 
@@ -91,7 +91,7 @@ Describe "CoverageReportGenerator - Read-CoberturaFile" {
         }
 
         It "Should group classes by package" {
-            $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
             $data = Read-CoberturaFile -CoverageFile $coverageFile
 
@@ -99,7 +99,7 @@ Describe "CoverageReportGenerator - Read-CoberturaFile" {
         }
 
         It "Should handle empty coverage file" {
-            $coverageFile = Join-Path $testDataPath "cobertura-empty.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura-empty.xml"
 
             $data = Read-CoberturaFile -CoverageFile $coverageFile
 
@@ -404,7 +404,7 @@ Describe "CoverageReportGenerator - Get-CoverageSummaryMD" {
 
     Context "Markdown generation" {
         It "Should generate markdown summary" {
-            $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
             $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
@@ -414,7 +414,7 @@ Describe "CoverageReportGenerator - Get-CoverageSummaryMD" {
         }
 
         It "Should include overall coverage percentage" {
-            $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
             $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
@@ -422,7 +422,7 @@ Describe "CoverageReportGenerator - Get-CoverageSummaryMD" {
         }
 
         It "Should include module/package breakdown in details" {
-            $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
             $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
@@ -431,7 +431,7 @@ Describe "CoverageReportGenerator - Get-CoverageSummaryMD" {
         }
 
         It "Should handle empty coverage" {
-            $coverageFile = Join-Path $testDataPath "cobertura-empty.xml"
+            $coverageFile = Join-Path $script:testDataPath "cobertura-empty.xml"
 
             $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
@@ -443,7 +443,7 @@ Describe "CoverageReportGenerator - Get-CoverageSummaryMD" {
             $statsFile = Join-Path $TestDrive "test.cobertura.stats.json"
 
             # Copy test coverage file
-            Copy-Item (Join-Path $testDataPath "cobertura1.xml") $coverageFile
+            Copy-Item (Join-Path $script:testDataPath "cobertura1.xml") $coverageFile
 
             # Create matching stats file
             @{

@@ -4,8 +4,6 @@ Import-Module (Join-Path $PSScriptRoot '../TestActionsHelper.psm1')
 BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot "../../Actions/.Modules/TestRunner/CoverageProcessor"
     Import-Module (Join-Path $scriptPath "CoberturaFormatter.psm1") -Force
-
-    $testDataPath = Join-Path $PSScriptRoot "TestData"
 }
 
 Describe "CoberturaFormatter - New-CoberturaDocument" {

@@ -143,7 +143,7 @@ if(!$script:TypesLoaded)
                 try {
                     Add-Type -Path $dllPath -ErrorAction SilentlyContinue
                 } catch {
-                    # Expected for assemblies already loaded in the AppDomain
+                    Write-Host "Assembly $dll already loaded, skipping"
                 }
             }
         }

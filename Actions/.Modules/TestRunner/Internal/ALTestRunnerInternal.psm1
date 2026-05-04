@@ -14,7 +14,7 @@ Import-Module "$PSScriptRoot\CoverageCollector.psm1" -Force -DisableNameChecking
 .SYNOPSIS
     Writes a log message to the host output.
 #>
-function Write-Log {
+function Write-TestLog {
     param(
         [Parameter(Position=0)]
         [string]$Message
@@ -232,7 +232,7 @@ function Setup-TestRun
     [bool] $StabilityRun
 )
 {
-    Write-Log "Setting up test run: $CodeCoverageTrackingType - $CodeCoverageOutputPath"
+    Write-TestLog "Setting up test run: $CodeCoverageTrackingType - $CodeCoverageOutputPath"
     if($CodeCoverageTrackingType -ne 'Disabled')
     {
         if (-not (Test-Path -Path $CodeCoverageOutputPath))
@@ -273,7 +273,7 @@ function Setup-TestRun
         {
             $clientContext.Dispose()
         }
-        Write-Log "Complete Test Setup"
+        Write-TestLog "Complete Test Setup"
     }
 }
 

@@ -5,15 +5,15 @@ BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot "../../Actions/.Modules/TestRunner/CoverageProcessor"
     Import-Module (Join-Path $scriptPath "CoverageProcessor.psm1") -Force
 
-    $testDataPath = Join-Path $PSScriptRoot "TestData"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData"
 }
 
 Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
 
     Context "Single file conversion" {
         It "Should convert BC coverage to Cobertura XML" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "output.cobertura.xml"
 
             $stats = Convert-BCCoverageToCobertura `
@@ -28,8 +28,8 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
         }
 
         It "Should create stats JSON file alongside Cobertura XML" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "output2.cobertura.xml"
             $statsPath = Join-Path $TestDrive "output2.cobertura.stats.json"
 
@@ -45,7 +45,7 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
         }
 
         It "Should handle coverage file without source path" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
             $outputPath = Join-Path $TestDrive "nosource.cobertura.xml"
 
             $stats = Convert-BCCoverageToCobertura `
@@ -57,7 +57,7 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
         }
 
         It "Should return null for empty coverage file" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/empty-coverage.dat"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/empty-coverage.dat"
             $outputPath = Join-Path $TestDrive "empty.cobertura.xml"
 
             $stats = Convert-BCCoverageToCobertura `
@@ -68,8 +68,8 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
         }
 
         It "Should calculate coverage statistics correctly" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "stats-test.cobertura.xml"
 
             $stats = Convert-BCCoverageToCobertura `
@@ -84,8 +84,8 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
         }
 
         It "Should load app metadata from app.json" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "appinfo.cobertura.xml"
 
             # Create a test app.json
@@ -96,7 +96,7 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
                 publisher = "Test Publisher"
             } | ConvertTo-Json | Set-Content $appJsonPath -Encoding UTF8
 
-            $stats = Convert-BCCoverageToCobertura `
+            $null = Convert-BCCoverageToCobertura `
                 -CoverageFilePath $coverageFile `
                 -SourcePath $sourcePath `
                 -OutputPath $outputPath `
@@ -108,8 +108,8 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
 
     Context "Source filtering" {
         It "Should filter to only include objects with source files" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "filtered.cobertura.xml"
 
             $stats = Convert-BCCoverageToCobertura `
@@ -123,8 +123,8 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
 
         It "Should include source objects with no coverage" {
             # This tests that objects in source with 0 hits are included
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "zero-coverage.cobertura.xml"
 
             $stats = Convert-BCCoverageToCobertura `
@@ -137,11 +137,11 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
         }
 
         It "Should respect exclude patterns" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "excluded.cobertura.xml"
 
-            $stats = Convert-BCCoverageToCobertura `
+            $null = Convert-BCCoverageToCobertura `
                 -CoverageFilePath $coverageFile `
                 -SourcePath $sourcePath `
                 -OutputPath $outputPath `
@@ -153,8 +153,8 @@ Describe "CoverageProcessor - Convert-BCCoverageToCobertura" {
 
     Context "XML output validation" {
         It "Should generate valid Cobertura XML" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "valid.cobertura.xml"
 
             Convert-BCCoverageToCobertura `
@@ -177,10 +177,10 @@ Describe "CoverageProcessor - Merge-BCCoverageToCobertura" {
     Context "Multiple file merging" {
         It "Should merge multiple coverage files" {
             $coverageFiles = @(
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"),
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat")
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"),
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat")
             )
-            $sourcePath = Join-Path $testDataPath "ALFiles"
+            $sourcePath = Join-Path $script:testDataPath "ALFiles"
             $outputPath = Join-Path $TestDrive "merged.cobertura.xml"
 
             $stats = Merge-BCCoverageToCobertura `
@@ -194,11 +194,11 @@ Describe "CoverageProcessor - Merge-BCCoverageToCobertura" {
 
         It "Should handle single file as merge input" {
             $coverageFiles = @(
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat")
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat")
             )
             $outputPath = Join-Path $TestDrive "single-merge.cobertura.xml"
 
-            $stats = Merge-BCCoverageToCobertura `
+            $null = Merge-BCCoverageToCobertura `
                 -CoverageFiles $coverageFiles `
                 -OutputPath $outputPath
 
@@ -207,8 +207,8 @@ Describe "CoverageProcessor - Merge-BCCoverageToCobertura" {
 
         It "Should handle missing files gracefully" {
             $coverageFiles = @(
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"),
-                (Join-Path $testDataPath "CoverageFiles/nonexistent.dat")
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"),
+                (Join-Path $script:testDataPath "CoverageFiles/nonexistent.dat")
             )
             $outputPath = Join-Path $TestDrive "missing-file.cobertura.xml"
 
@@ -219,8 +219,8 @@ Describe "CoverageProcessor - Merge-BCCoverageToCobertura" {
 
         It "Should return null when all files empty or missing" {
             $coverageFiles = @(
-                (Join-Path $testDataPath "CoverageFiles/empty-coverage.dat"),
-                (Join-Path $testDataPath "CoverageFiles/nonexistent.dat")
+                (Join-Path $script:testDataPath "CoverageFiles/empty-coverage.dat"),
+                (Join-Path $script:testDataPath "CoverageFiles/nonexistent.dat")
             )
             $outputPath = Join-Path $TestDrive "all-empty.cobertura.xml"
 
@@ -234,8 +234,8 @@ Describe "CoverageProcessor - Merge-BCCoverageToCobertura" {
         It "Should deduplicate line entries and take max hits" {
             # When same line appears in multiple files, take max hit count
             $coverageFiles = @(
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"),
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat")
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"),
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat")
             )
             $outputPath = Join-Path $TestDrive "dedup.cobertura.xml"
 
@@ -249,7 +249,7 @@ Describe "CoverageProcessor - Merge-BCCoverageToCobertura" {
 
         It "Should create stats JSON for merged output" {
             $coverageFiles = @(
-                (Join-Path $testDataPath "CoverageFiles/sample-coverage.dat")
+                (Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat")
             )
             $outputPath = Join-Path $TestDrive "merged-stats.cobertura.xml"
             $statsPath = Join-Path $TestDrive "merged-stats.cobertura.stats.json"
@@ -267,7 +267,7 @@ Describe "CoverageProcessor - Find-CoverageFiles" {
 
     Context "File discovery" {
         It "Should find .dat files in directory" {
-            $directory = Join-Path $testDataPath "CoverageFiles"
+            $directory = Join-Path $script:testDataPath "CoverageFiles"
 
             $files = Find-CoverageFiles -Directory $directory
 
@@ -276,7 +276,7 @@ Describe "CoverageProcessor - Find-CoverageFiles" {
         }
 
         It "Should respect custom pattern" {
-            $directory = Join-Path $testDataPath "CoverageFiles"
+            $directory = Join-Path $script:testDataPath "CoverageFiles"
 
             $files = Find-CoverageFiles -Directory $directory -Pattern "*.xml"
 
@@ -284,7 +284,7 @@ Describe "CoverageProcessor - Find-CoverageFiles" {
         }
 
         It "Should return empty array for missing directory" {
-            $directory = Join-Path $testDataPath "NonExistent"
+            $directory = Join-Path $script:testDataPath "NonExistent"
 
             $files = Find-CoverageFiles -Directory $directory
 
@@ -292,7 +292,7 @@ Describe "CoverageProcessor - Find-CoverageFiles" {
         }
 
         It "Should search recursively" {
-            $directory = Join-Path $testDataPath "CoverageFiles"
+            $directory = Join-Path $script:testDataPath "CoverageFiles"
 
             $files = Find-CoverageFiles -Directory $directory -Pattern "*"
 
@@ -306,7 +306,7 @@ Describe "CoverageProcessor - Get-BCCoverageSummary" {
 
     Context "Quick summary generation" {
         It "Should generate summary without Cobertura output" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
 
             $summary = Get-BCCoverageSummary -CoverageFilePath $coverageFile
 
@@ -316,7 +316,7 @@ Describe "CoverageProcessor - Get-BCCoverageSummary" {
         }
 
         It "Should include object breakdown" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/sample-coverage.dat"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/sample-coverage.dat"
 
             $summary = Get-BCCoverageSummary -CoverageFilePath $coverageFile
 
@@ -327,7 +327,7 @@ Describe "CoverageProcessor - Get-BCCoverageSummary" {
         }
 
         It "Should handle empty coverage file" {
-            $coverageFile = Join-Path $testDataPath "CoverageFiles/empty-coverage.dat"
+            $coverageFile = Join-Path $script:testDataPath "CoverageFiles/empty-coverage.dat"
 
             $summary = Get-BCCoverageSummary -CoverageFilePath $coverageFile
 
@@ -336,3 +336,4 @@ Describe "CoverageProcessor - Get-BCCoverageSummary" {
         }
     }
 }
+

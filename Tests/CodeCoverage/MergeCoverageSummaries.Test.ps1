@@ -5,7 +5,7 @@ BeforeAll {
     . (Join-Path $PSScriptRoot "../../Actions/BuildCodeCoverageSummary/CoverageReportGenerator.ps1")
     Import-Module (Join-Path $PSScriptRoot "../../Actions/MergeCoverageSummaries/CoberturaMerger.psm1") -Force -DisableNameChecking
 
-    $testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
 }
 
 Describe "MergeCoverageSummaries - Artifact discovery" {
@@ -16,8 +16,8 @@ Describe "MergeCoverageSummaries - Artifact discovery" {
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job1-CodeCoverage") -Force | Out-Null
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job2-CodeCoverage") -Force | Out-Null
 
-            Copy-Item (Join-Path $testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1-CodeCoverage/cobertura.xml")
-            Copy-Item (Join-Path $testDataPath "cobertura2.xml") (Join-Path $artifactDir "job2-CodeCoverage/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1-CodeCoverage/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura2.xml") (Join-Path $artifactDir "job2-CodeCoverage/cobertura.xml")
 
             $files = @(Get-ChildItem -Path $artifactDir -Filter "cobertura.xml" -Recurse -File)
 
@@ -48,7 +48,7 @@ Describe "MergeCoverageSummaries - Single file bypass" {
         $jobDir = Join-Path $artifactDir "job1-CodeCoverage"
         New-Item -ItemType Directory -Path $jobDir -Force | Out-Null
 
-        $sourceFile = Join-Path $testDataPath "cobertura1.xml"
+        $sourceFile = Join-Path $script:testDataPath "cobertura1.xml"
         Copy-Item $sourceFile (Join-Path $jobDir "cobertura.xml")
 
         $coberturaFiles = @(Get-ChildItem -Path $artifactDir -Filter "cobertura.xml" -Recurse -File)
@@ -68,8 +68,8 @@ Describe "MergeCoverageSummaries - Multi-file merge" {
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job1") -Force | Out-Null
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job2") -Force | Out-Null
 
-            Copy-Item (Join-Path $testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1/cobertura.xml")
-            Copy-Item (Join-Path $testDataPath "cobertura2.xml") (Join-Path $artifactDir "job2/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura2.xml") (Join-Path $artifactDir "job2/cobertura.xml")
 
             $coberturaFiles = @(Get-ChildItem -Path $artifactDir -Filter "cobertura.xml" -Recurse -File)
             $mergedOutputDir = Join-Path $artifactDir "_merged"
@@ -89,8 +89,8 @@ Describe "MergeCoverageSummaries - Multi-file merge" {
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job1") -Force | Out-Null
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job2") -Force | Out-Null
 
-            Copy-Item (Join-Path $testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1/cobertura.xml")
-            Copy-Item (Join-Path $testDataPath "cobertura2.xml") (Join-Path $artifactDir "job2/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura2.xml") (Join-Path $artifactDir "job2/cobertura.xml")
 
             $coberturaFiles = @(Get-ChildItem -Path $artifactDir -Filter "cobertura.xml" -Recurse -File)
             $mergedFile = Join-Path $artifactDir "_merged/cobertura.xml"
@@ -140,7 +140,7 @@ Describe "MergeCoverageSummaries - Summary generation" {
         It "Should generate markdown from merged file" {
             $artifactDir = Join-Path $TestDrive "summary-gen"
             New-Item -ItemType Directory -Path (Join-Path $artifactDir "job1") -Force | Out-Null
-            Copy-Item (Join-Path $testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1/cobertura.xml")
+            Copy-Item (Join-Path $script:testDataPath "cobertura1.xml") (Join-Path $artifactDir "job1/cobertura.xml")
 
             $coberturaFiles = @(Get-ChildItem -Path $artifactDir -Filter "cobertura.xml" -Recurse -File)
             $mergedFile = $coberturaFiles[0].FullName

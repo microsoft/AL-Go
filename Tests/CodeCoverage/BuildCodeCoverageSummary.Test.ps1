@@ -8,7 +8,7 @@ Import-Module (Join-Path $PSScriptRoot '../TestActionsHelper.psm1')
 BeforeAll {
     . (Join-Path $PSScriptRoot "../../Actions/BuildCodeCoverageSummary/CoverageReportGenerator.ps1")
 
-    $testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
+    $script:testDataPath = Join-Path $PSScriptRoot "TestData/CoberturaFiles"
 }
 
 Describe "BuildCodeCoverageSummary - GetStringByteSize" {
@@ -48,7 +48,7 @@ Describe "BuildCodeCoverageSummary - Coverage file discovery" {
         # Create expected directory structure
         $coverageDir = Join-Path $workspace "$project/.buildartifacts/CodeCoverage"
         New-Item -ItemType Directory -Path $coverageDir -Force | Out-Null
-        Copy-Item (Join-Path $testDataPath "cobertura1.xml") (Join-Path $coverageDir "cobertura.xml")
+        Copy-Item (Join-Path $script:testDataPath "cobertura1.xml") (Join-Path $coverageDir "cobertura.xml")
 
         $coverageFile = Join-Path $workspace "$project/.buildartifacts/CodeCoverage/cobertura.xml"
         Test-Path -Path $coverageFile -PathType Leaf | Should -BeTrue
@@ -64,7 +64,7 @@ Describe "BuildCodeCoverageSummary - Coverage file discovery" {
 Describe "BuildCodeCoverageSummary - Summary generation" {
 
     It "Should generate coverage summary from Cobertura file" {
-        $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+        $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
 
         $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
@@ -80,7 +80,7 @@ Describe "BuildCodeCoverageSummary - Summary generation" {
     }
 
     It "Should handle empty coverage data" {
-        $coverageFile = Join-Path $testDataPath "cobertura-empty.xml"
+        $coverageFile = Join-Path $script:testDataPath "cobertura-empty.xml"
 
         $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
@@ -113,7 +113,7 @@ Describe "BuildCodeCoverageSummary - Size limit handling" {
     }
 
     It "Should keep small summaries under limit" {
-        $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+        $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
         $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
         $titleSize = GetStringByteSize("## Code Coverage`n`n")
@@ -129,7 +129,7 @@ Describe "BuildCodeCoverageSummary - Step summary output" {
         $stepSummaryFile = Join-Path $TestDrive "step-summary.md"
         Set-Content -Path $stepSummaryFile -Value "" -Encoding UTF8
 
-        $coverageFile = Join-Path $testDataPath "cobertura1.xml"
+        $coverageFile = Join-Path $script:testDataPath "cobertura1.xml"
         $result = Get-CoverageSummaryMD -CoverageFile $coverageFile
 
         if ($result.SummaryMD) {

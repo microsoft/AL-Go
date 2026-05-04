@@ -1,3 +1,6 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+param()
+
 <#
 .SYNOPSIS
     Executes AL test suites against a Business Central service endpoint.
@@ -115,7 +118,7 @@ function Invoke-ALTestResultVerification
     if($failedTestList.Count -gt 0)
     {
         $testsExecuted = $true;
-        Write-Log "Failed tests:"
+        Write-TestLog "Failed tests:"
         $testsFailed = ""
         foreach($failedTest in $failedTestList)
         {

@@ -32,6 +32,8 @@ function New-ALTestRunnerOverride {
         [string] $ProduceMap
     )
 
+    Write-Host "Creating test runner override: TrackingType=$TrackingType, ProduceMap=$ProduceMap, OutputFolder=$BuildArtifactFolder"
+
     # Return a scriptblock that captures these parameters via closure
     return {
         Param([Hashtable]$parameters)

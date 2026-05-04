@@ -16,12 +16,12 @@ BeforeAll {
         }
     }
 
-    function script:New-TestMethod([string]$method, [int]$result, [string]$message = "", [string]$stackTrace = "") {
+    function script:New-TestMethod([string]$method, [int]$result, [string]$message = "", [string]$testStackTrace = "") {
         return [PSCustomObject]@{
             method     = $method
             result     = $result
             message    = $message
-            stackTrace = $stackTrace
+            stackTrace = $testStackTrace
             startTime  = [DateTime]::new(2026, 1, 1, 10, 0, 0)
             finishTime = [DateTime]::new(2026, 1, 1, 10, 0, 1)
         }
