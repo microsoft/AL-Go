@@ -278,4 +278,3 @@ Describe "CoberturaMerger - Merge-CoverageStats" {
         }
     }
 }
-

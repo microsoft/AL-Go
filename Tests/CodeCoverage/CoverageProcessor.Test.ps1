@@ -336,4 +336,3 @@ Describe "CoverageProcessor - Get-BCCoverageSummary" {
         }
     }
 }
-
