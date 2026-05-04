@@ -546,7 +546,44 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
-        It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
+        It 'overwriteSettings in a user source without the property value does not block template sources from merging that setting' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            try {
+                # Template repo settings add probing paths
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "template-repo"; "version" = "latest" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder $CustomTemplateRepoSettingsFileName) -Encoding utf8 -Force
+
+                # User repo settings declare overwriteSettings for appDependencyProbingPaths but do NOT provide the property value.
+                # This must not block template sources from contributing appDependencyProbingPaths.
+                @{ "overwriteSettings" = @("appDependencyProbingPaths") } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+                $ENV:ALGoOrgSettings = ''
+                $ENV:ALGoRepoSettings = ''
+
+                $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+
+                # appDependencyProbingPaths must contain the template entry because the user source did not provide a value
+                $settings.appDependencyProbingPaths | Should -Not -BeNullOrEmpty
+                $settings.appDependencyProbingPaths.repo | Should -Contain 'template-repo'
+            }
+            finally {
+                Pop-Location
+                Remove-Item $tempName -Recurse -Force
+            }
+        }
+
+
             Mock Write-Host { }
             Mock Out-Host { }
 

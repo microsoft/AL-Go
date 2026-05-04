@@ -506,9 +506,12 @@ function ReadSettings {
 
             # After a non-template source is merged, record which settings it declared as overwritten.
             # Subsequent template sources must not re-apply those settings.
+            # A setting is only considered overwritten when the source both declares it in overwriteSettings
+            # and also provides the property value. This mirrors the guard in MergeCustomObjectIntoOrderedDictionary
+            # that only removes a destination setting when the source contains the property as well.
             if (-not $isTemplateSource -and $settingsJson.PSObject.Properties.Name -contains "overwriteSettings") {
                 $settingsJson.overwriteSettings | ForEach-Object {
-                    if ($_ -notin $overwrittenSettings) {
+                    if ($_ -notin $overwrittenSettings -and $settingsJson.PSObject.Properties.Name -contains $_) {
                         $overwrittenSettings += $_
                     }
                 }
