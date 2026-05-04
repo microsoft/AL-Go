@@ -282,6 +282,7 @@ class ClientContext {
                 [int] $indent
             )
 
+            $null = $indent
             $output = @{
                 "name" = $control.Name
                 "type" = $control.GetType().Name

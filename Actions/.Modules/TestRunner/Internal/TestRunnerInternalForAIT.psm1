@@ -119,7 +119,7 @@ function Initialize-TestRunner(
                 throw 'You need to initialize and set the $global:AadTokenProvider. Example: ' + $example
             }
             $tenantDomain = ''
-            if ($Token -ne $null) {
+            if ($null -ne $Token) {
                 $tenantDomain = ($Token.UserName.Substring($Token.UserName.IndexOf('@') + 1))
             }
             else {
@@ -184,10 +184,10 @@ function Initialize-TestRunner(
     switch ($script:AuthorizationType) {
         # -Credential or -Token should be specified if authorization type is AAD.
         "AAD" {
-            if ($null -eq $Credential -and $Token -eq $null) {
+            if ($null -eq $Credential -and $null -eq $Token) {
                 throw "Parameter -Credential or -Token should be defined when selecting 'AAD' authorization type."
             }
-            if ($null -ne $Credential -and $Token -ne $null) {
+            if ($null -ne $Credential -and $null -ne $Token) {
                 throw "Specify only one parameter -Credential or -Token when selecting 'AAD' authorization type."
             }
         }
@@ -519,6 +519,7 @@ function Get-AITSuiteTestMethodLinesInternal {
         [string] $ProcedureName
     )
 
+    $null = $ProcedureName
     if ($TestRunVersion -lt 0) {
         throw "TestRunVersion should be 0 or greater"
     }
@@ -649,6 +650,7 @@ function Build-TestMethodLineAPIFilter() {
         [string] $ProcedureName
     )
 
+    $null = $ProcedureName
     $filter = "`$filter=aitCode eq '" + $SuiteCode + "'"
     if ($TestRunVersion -ne 0) {
         $filter += " and version eq " + $TestRunVersion

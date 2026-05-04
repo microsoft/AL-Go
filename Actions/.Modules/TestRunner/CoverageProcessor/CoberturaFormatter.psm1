@@ -137,6 +137,7 @@ function New-CoberturaDocument {
     XmlElement for the class
 #>
 function New-CoberturaClass {
+    [OutputType([System.Xml.XmlElement])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -235,6 +236,7 @@ function New-CoberturaClass {
     XmlElement for the method
 #>
 function New-CoberturaMethod {
+    [OutputType([System.Xml.XmlElement])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -282,6 +284,7 @@ function New-CoberturaMethod {
     Array of procedure coverage objects
 #>
 function Get-ProcedureCoverage {
+    [OutputType([System.Object[]])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]

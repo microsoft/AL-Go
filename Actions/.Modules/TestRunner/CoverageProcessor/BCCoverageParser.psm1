@@ -73,6 +73,7 @@ $script:ObjectTypeNameMap = @{
     Integer ID or 0 if not found
 #>
 function Get-ObjectTypeId {
+    [OutputType([int])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -144,6 +145,7 @@ function Read-BCCoverageFile {
     Array of coverage entry objects
 #>
 function Read-BCCoverageXmlFile {
+    [OutputType([System.Object[]])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -236,6 +238,7 @@ function Read-BCCoverageXmlFile {
     Array of coverage entry objects
 #>
 function Read-BCCoverageCsvFile {
+    [OutputType([System.Object[]])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -339,6 +342,7 @@ function Read-BCCoverageCsvFile {
     Hashtable keyed by "ObjectType.ObjectId" containing grouped entries
 #>
 function Group-CoverageByObject {
+    [OutputType([hashtable])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -409,6 +413,7 @@ function Get-CoverageStatistics {
     String name of the object type
 #>
 function Get-ObjectTypeName {
+    [OutputType([string])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]

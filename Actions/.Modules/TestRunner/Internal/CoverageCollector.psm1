@@ -13,8 +13,6 @@ $script:_ccFileIndex = 0
 #>
 function CollectCoverageResults {
     param (
-        [ValidateSet('PerRun', 'PerCodeunit', 'PerTest')]
-        [string] $TrackingType,
         [string] $OutputPath,
         [switch] $DisableSSLVerification,
         [ValidateSet('Windows','NavUserPassword','AAD')]

@@ -36,7 +36,7 @@ function Setup-Environment
                 throw 'You need to initialize and set the $global:AadTokenProvider. Example: ' + $example
             }
             $tenantDomain = ''
-            if ($Token -ne $null)
+            if ($null -ne $Token)
             {
                 $tenantDomain = ($Token.UserName.Substring($Token.UserName.IndexOf('@') + 1))
             }

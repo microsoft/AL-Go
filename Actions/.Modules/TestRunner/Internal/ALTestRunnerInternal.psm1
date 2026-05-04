@@ -80,9 +80,9 @@ function Run-AlTestsInternal
 
             $testRunResultObject = ConvertFrom-Json $testResult
             if($CodeCoverageTrackingType -ne 'Disabled') {
-                $null = CollectCoverageResults -TrackingType $CodeCoverageTrackingType -OutputPath $CodeCoverageOutputPath -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -CodeCoverageFilePrefix $CodeCoverageFilePrefix -TestPage $TestPage -ProduceCodeCoverageMap $ProduceCodeCoverageMap
+                $null = CollectCoverageResults -OutputPath $CodeCoverageOutputPath -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -CodeCoverageFilePrefix $CodeCoverageFilePrefix -TestPage $TestPage -ProduceCodeCoverageMap $ProduceCodeCoverageMap
             }
-       }
+        }
         catch
         {
             $numberOfUnexpectedFailures++

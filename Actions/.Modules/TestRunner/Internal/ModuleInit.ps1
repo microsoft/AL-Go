@@ -164,6 +164,7 @@ if(!$script:TypesLoaded)
             $Threading = [Reflection.Assembly]::LoadFile($threadingExtDll)
             $onAssemblyResolve = [System.ResolveEventHandler] {
                 param($resolveEventSender, $e)
+                $null = $resolveEventSender
                 if ($e.Name -like "System.Threading.Tasks.Extensions, Version=*, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51") {
                     return $Threading
                 }

@@ -418,6 +418,7 @@ function Merge-BCCoverageToCobertura {
     Array of file paths
 #>
 function Find-CoverageFiles {
+    [OutputType([System.Object[]])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]

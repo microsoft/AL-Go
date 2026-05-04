@@ -55,6 +55,7 @@ function Read-AppJson {
     Hashtable mapping "ObjectType.ObjectId" to file and metadata info
 #>
 function Get-ALObjectMap {
+    [OutputType([hashtable])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -176,6 +177,7 @@ function Get-ALObjectMap {
     Normalized type name
 #>
 function Get-NormalizedObjectType {
+    [OutputType([string])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
