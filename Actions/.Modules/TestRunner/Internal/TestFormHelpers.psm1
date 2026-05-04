@@ -1,6 +1,10 @@
 # Test form UI control helpers.
 # These functions interact with the BC test tool page via the ClientContext.
 
+# These Set-* functions modify in-memory BC form objects, not system state.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Scope='Function', Target='*')]
+param()
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 . "$PSScriptRoot\Constants.ps1"

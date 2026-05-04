@@ -1,3 +1,7 @@
+# Set-* and Reset-* functions modify in-memory BC form/session objects, not system state.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Scope='Function', Target='*')]
+param()
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 <#

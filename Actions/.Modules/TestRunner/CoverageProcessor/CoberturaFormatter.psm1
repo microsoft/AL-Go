@@ -1,3 +1,7 @@
+# New-Cobertura* functions create in-memory XML objects, not system state.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Scope='Function', Target='*')]
+param()
+
 <#
 .SYNOPSIS
     Formats code coverage data as Cobertura XML
