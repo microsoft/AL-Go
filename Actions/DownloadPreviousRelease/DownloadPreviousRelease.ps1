@@ -30,7 +30,7 @@ try {
 }
 catch {
     OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
-    exit 1
+    throw
 }
 finally {
     OutputGroupEnd

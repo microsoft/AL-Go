@@ -838,9 +838,17 @@ function New-BuildOutputFile {
 .SYNOPSIS
     Generates AppSourceCop.json files for app folders with baseline version information.
 .DESCRIPTION
-    For each app folder, creates an AppSourceCop.json file containing the previous version
-    of the app as a baseline for breaking change detection. Also includes mandatory affixes
-    and obsolete tag settings from the project settings.
+    For each app folder, creates or updates an AppSourceCop.json file with baseline information
+    for breaking change detection. If the file already exists, it is merged with AL-Go-managed
+    fields rather than overwritten.
+
+    AL-Go-managed keys (set/overwritten by this function):
+    - version
+    - baselinePackageCachePath
+    - mandatoryAffixes
+    - obsoleteTagMinAllowedMajorMinor
+
+    Any other keys in an existing AppSourceCop.json are preserved.
 .PARAMETER AppFolders
     Array of app folder paths to generate AppSourceCop.json for.
 .PARAMETER BaselineApps
@@ -871,7 +879,7 @@ function New-AppSourceCopJson {
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
     foreach ($appFile in $BaselineApps) {
         try {
-            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json
+            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse
             $baselineAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
         }
         catch {
@@ -886,8 +894,13 @@ function New-AppSourceCopJson {
         # Start from existing content if present, preserving any user-managed settings
         $appSourceCopJson = @{}
         if (Test-Path $appSourceCopJsonFile) {
-            $existingContent = Get-Content -Path $appSourceCopJsonFile -Raw | ConvertFrom-Json
-            $existingContent.PSObject.Properties | ForEach-Object { $appSourceCopJson[$_.Name] = $_.Value }
+            try {
+                $appSourceCopJson = Get-Content -Path $appSourceCopJsonFile -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            }
+            catch {
+                OutputWarning -message "Failed to parse existing AppSourceCop.json in '$folder': $($_.Exception.Message). Creating new file."
+                $appSourceCopJson = @{}
+            }
         }
 
         # Set/override AL-Go managed fields
@@ -902,7 +915,7 @@ function New-AppSourceCopJson {
         # Match baseline app version by app ID
         $appJsonPath = Join-Path $folder "app.json"
         if (Test-Path $appJsonPath) {
-            $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
+            $appJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
             if ($baselineAppVersions.ContainsKey($appJson.id)) {
                 $appSourceCopJson["version"] = $baselineAppVersions[$appJson.id]
                 $appSourceCopJson["baselinePackageCachePath"] = $BaselinePackageCachePath
