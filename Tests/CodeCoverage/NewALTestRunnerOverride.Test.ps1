@@ -1,5 +1,7 @@
 ﻿# Test credentials use plaintext passwords — this is intentional for test stubs.
+# Global variables are used for call recording because .GetNewClosure() scriptblocks bypass Pester mocks.
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '')]
 param()
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
