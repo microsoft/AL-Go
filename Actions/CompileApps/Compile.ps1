@@ -124,21 +124,22 @@ try {
         Write-Host "Incremental builds based on modified apps is not yet implemented."
     }
 
-    if ((-not $settings.skipUpgrade) -and $settings.enableAppSourceCop) {
-        $previousApps = @()
-        if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
-            $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
-            if ($previousApps.Count -gt 0) {
-                # Copy previous apps to the package cache so AppSourceCop can resolve them alongside their dependencies
-                $previousApps | ForEach-Object {
+    if ($settings.enableAppSourceCop) {
+        # Collect baseline apps for upgrade testing (only when skipUpgrade is false)
+        $baselineApps = @()
+        if ((-not $settings.skipUpgrade) -and $previousAppsPath -and (Test-Path $previousAppsPath)) {
+            $baselineApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
+            if ($baselineApps.Count -gt 0) {
+                # Copy baseline apps to the package cache so AppSourceCop can resolve them alongside their dependencies
+                $baselineApps | ForEach-Object {
                     Copy-Item -Path $_ -Destination $packageCachePath -Force
                 }
             }
         }
 
-        # Generate AppSourceCop.json files for app folders with baseline version and settings
-        # Use packageCachePath as baseline cache since it contains both previous apps and their dependencies (symbols)
-        New-AppSourceCopJson -AppFolders $settings.appFolders -BaselineApps $previousApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
+        # Generate AppSourceCop.json with mandatory affixes / obsoleteTag settings (always when AppSourceCop is enabled)
+        # When baseline apps are available, also include the baseline version + package cache path for breaking change detection
+        New-AppSourceCopJson -AppFolders $settings.appFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
