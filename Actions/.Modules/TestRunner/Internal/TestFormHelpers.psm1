@@ -5,6 +5,10 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 . "$PSScriptRoot\Constants.ps1"
 
+<#
+.SYNOPSIS
+    Opens the BC test tool page via the ClientContext.
+#>
 function Open-TestForm(
     [int] $TestPage = $global:DefaultTestPage,
     [ClientContext] $ClientContext
@@ -19,6 +23,10 @@ function Open-TestForm(
     return $form;
 }
 
+<#
+.SYNOPSIS
+    Sets the test codeunit range filter on the test form.
+#>
 function Set-TestCodeunits
 (
     [string] $TestCodeunitsFilter,
@@ -35,6 +43,10 @@ function Set-TestCodeunits
     $ClientContext.SaveValue($testCodeunitRangeFilterControl, $TestCodeunitsFilter)
 }
 
+<#
+.SYNOPSIS
+    Sets the test runner codeunit ID on the test form.
+#>
 function Set-TestRunner
 (
     [int] $TestRunnerId,
@@ -51,6 +63,10 @@ function Set-TestRunner
     $ClientContext.SaveValue($testRunnerCodeunitIdControl, $TestRunnerId)
 }
 
+<#
+.SYNOPSIS
+    Clears test results on the test form.
+#>
 function Clear-TestResults
 (
     [ClientContext] $ClientContext,
@@ -60,6 +76,10 @@ function Clear-TestResults
     $ClientContext.InvokeAction($ClientContext.GetActionByName($Form, "ClearTestResults"))
 }
 
+<#
+.SYNOPSIS
+    Sets the extension ID filter on the test form.
+#>
 function Set-ExtensionId
 (
     [string] $ExtensionId,
@@ -76,6 +96,10 @@ function Set-ExtensionId
     $ClientContext.SaveValue($extensionIdControl, $ExtensionId)
 }
 
+<#
+.SYNOPSIS
+    Sets the required test isolation level on the test form.
+#>
 function Set-RequiredTestIsolation {
     param (
         [ValidateSet('None','Disabled','Codeunit','Function')]
@@ -93,6 +117,10 @@ function Set-RequiredTestIsolation {
     $ClientContext.SaveValue($testIsolationControl, $TestIsolationValues[$RequiredTestIsolation])
 }
 
+<#
+.SYNOPSIS
+    Sets the test type filter on the test form.
+#>
 function Set-TestType {
     param (
         [ValidateSet("UnitTest","IntegrationTest","Uncategorized")]
@@ -109,6 +137,10 @@ function Set-TestType {
     $ClientContext.SaveValue($testTypeControl, $TypeValues[$TestType])
 }
 
+<#
+.SYNOPSIS
+    Sets the test suite name on the test form.
+#>
 function Set-TestSuite
 (
     [string] $TestSuite = $script:DefaultTestSuite,
@@ -120,6 +152,10 @@ function Set-TestSuite
     $ClientContext.SaveValue($suiteControl, $TestSuite)
 }
 
+<#
+.SYNOPSIS
+    Sets the test procedure range filter on the test form.
+#>
 function Set-TestProcedures
 {
     param (
@@ -131,6 +167,10 @@ function Set-TestProcedures
     $ClientContext.SaveValue($Control, $Filter)
 }
 
+<#
+.SYNOPSIS
+    Marks specified test methods as disabled on the test form.
+#>
 function Set-RunFalseOnDisabledTests
 (
     [ClientContext] $ClientContext,
@@ -151,6 +191,10 @@ function Set-RunFalseOnDisabledTests
     }
 }
 
+<#
+.SYNOPSIS
+    Sets the stability run flag on the test form.
+#>
 function Set-StabilityRun
 (
     [bool] $StabilityRun,
@@ -162,6 +206,10 @@ function Set-StabilityRun
     $ClientContext.SaveValue($stabilityRunControl, $StabilityRun)
 }
 
+<#
+.SYNOPSIS
+    Sets the code coverage tracking type on the test form.
+#>
 function Set-CCTrackingType
 {
     param (
@@ -180,6 +228,10 @@ function Set-CCTrackingType
     $ClientContext.SaveValue($suiteControl, $TypeValues[$Value])
 }
 
+<#
+.SYNOPSIS
+    Enables code coverage tracking for all sessions on the test form.
+#>
 function Set-CCTrackAllSessions
 {
     param (
@@ -193,6 +245,10 @@ function Set-CCTrackAllSessions
     }
 }
 
+<#
+.SYNOPSIS
+    Sets the code coverage exporter ID on the test form.
+#>
 function Set-CCExporterID
 {
     param (
@@ -206,6 +262,10 @@ function Set-CCExporterID
     }
 }
 
+<#
+.SYNOPSIS
+    Sets the code coverage map production granularity on the test form.
+#>
 function Set-CCProduceCodeCoverageMap
 {
 
@@ -224,6 +284,10 @@ function Set-CCProduceCodeCoverageMap
     $ClientContext.SaveValue($suiteControl, $TypeValues[$Value])
 }
 
+<#
+.SYNOPSIS
+    Clears code coverage results on the test form.
+#>
 function Clear-CCResults
 {
     param (

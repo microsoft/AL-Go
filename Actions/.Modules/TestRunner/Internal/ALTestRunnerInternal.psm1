@@ -10,6 +10,10 @@ Import-Module "$PSScriptRoot\ClientSessionManager.psm1" -Force -DisableNameCheck
 Import-Module "$PSScriptRoot\TestFormHelpers.psm1" -Force -DisableNameChecking
 Import-Module "$PSScriptRoot\CoverageCollector.psm1" -Force -DisableNameChecking
 
+<#
+.SYNOPSIS
+    Writes a log message to the host output.
+#>
 function Write-Log {
     param(
         [Parameter(Position=0)]
@@ -18,6 +22,10 @@ function Write-Log {
     Write-Host $Message
 }
 
+<#
+.SYNOPSIS
+    Executes AL tests internally with full configuration for coverage and result handling.
+#>
 function Run-AlTestsInternal
 (
     [string] $TestSuite = $script:DefaultTestSuite,
@@ -111,6 +119,10 @@ function Run-AlTestsInternal
     throw "Expected to end the test execution, something went wrong with returning test results."
 }
 
+<#
+.SYNOPSIS
+    Displays test results with color-coded pass/fail status and execution time.
+#>
 function Print-TestResults
 (
     $TestRunResultObject
@@ -187,6 +199,10 @@ function Print-TestResults
     }
 }
 
+<#
+.SYNOPSIS
+    Initializes the test form with filters, settings, and code coverage configuration.
+#>
 function Setup-TestRun
 (
     [switch] $DisableSSLVerification,
@@ -261,6 +277,10 @@ function Setup-TestRun
     }
 }
 
+<#
+.SYNOPSIS
+    Invokes the RunNextTest action on the test form and retrieves the result.
+#>
 function Run-NextTest
 (
     [switch] $DisableSSLVerification,
@@ -299,6 +319,10 @@ function Run-NextTest
     }
 }
 
+<#
+.SYNOPSIS
+    Safely converts a date/time string, returning empty on parse failure.
+#>
 function Convert-ResultStringToDateTimeSafe([string] $DateTimeString)
 {
     [datetime]$parsedDateTime = New-Object DateTime

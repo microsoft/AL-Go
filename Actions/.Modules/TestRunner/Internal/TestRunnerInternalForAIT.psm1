@@ -1,6 +1,9 @@
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 <#
+.SYNOPSIS
+    Initializes the test runner with connection and authentication parameters.
+.DESCRIPTION
     Function to initialize the test runner with the necessary parameters. The parameters are mainly used to open the connection to the client session. The parameters are saved as script variables for further use.
     This functions needs to be called before any other functions in this module.
 #>
@@ -205,6 +208,10 @@ function Initialize-TestRunner(
     Test-AITestToolkitConnection
 }
 
+<#
+.SYNOPSIS
+    Extracts the tenant name from a service URL query string.
+#>
 function GetTenantFromServiceUrl([Uri]$Uri)
 {
     # Extract the query string part of the URI
@@ -274,7 +281,10 @@ function Test-AITestToolkitConnection {
     }
 }
 
-# Reset the test suite pending tests
+<#
+.SYNOPSIS
+    Resets the AI test suite to prepare for a new run.
+#>
 function Reset-AITTestSuite {
     param (
         [Parameter(Mandatory = $true)]
@@ -305,7 +315,10 @@ function Reset-AITTestSuite {
     }
 }
 
-# Invoke the AI Test Suite
+<#
+.SYNOPSIS
+    Executes an AI test suite and collects results.
+#>
 function Invoke-AITSuite
 (
     [Parameter(Mandatory = $true)]
@@ -397,8 +410,10 @@ function Invoke-NextTest {
     }
 }
 
-# Get Suite Test Result for specified version
-# If version is not provided then get the latest version
+<#
+.SYNOPSIS
+    Retrieves test results from the AI test suite via API.
+#>
 function Get-AITSuiteTestResultInternal {
     param (
         [Parameter(Mandatory = $true)]
@@ -441,8 +456,10 @@ function Get-AITSuiteTestResultInternal {
 }
 
 
-# Get Suite Test Result for specified version
-# If version is not provided then get the latest version
+<#
+.SYNOPSIS
+    Retrieves evaluation results from the AI test suite via API.
+#>
 function Get-AITSuiteEvaluationResultInternal {
     param (
         [Parameter(Mandatory = $true)]
@@ -483,7 +500,10 @@ function Get-AITSuiteEvaluationResultInternal {
     return $AITEvaluationLogEntriesJson
 }
 
-# Get Test Method Lines for a Suite
+<#
+.SYNOPSIS
+    Retrieves test method line details from the AI test suite via API.
+#>
 function Get-AITSuiteTestMethodLinesInternal {
     param (
         [Parameter(Mandatory = $true)]
@@ -512,6 +532,10 @@ function Get-AITSuiteTestMethodLinesInternal {
     return $AITTestMethodLinesJson
 }
 
+<#
+.SYNOPSIS
+    Constructs the API endpoint URL for AI test log entries.
+#>
 function Get-DefaultAPIEndpointForAITLogEntries {
     $CompanyPath = ''
     if ($script:CompanyId -ne [guid]::Empty -and $null -ne $script:CompanyId) {
@@ -529,6 +553,10 @@ function Get-DefaultAPIEndpointForAITLogEntries {
     return $APIEndpoint
 }
 
+<#
+.SYNOPSIS
+    Constructs the API endpoint URL for AI test method lines.
+#>
 function Get-DefaultAPIEndpointForAITTestMethodLines {
     $CompanyPath = ''
     if ($script:CompanyId -ne [guid]::Empty -and $null -ne $script:CompanyId) {
@@ -546,6 +574,10 @@ function Get-DefaultAPIEndpointForAITTestMethodLines {
     return $APIEndpoint
 }
 
+<#
+.SYNOPSIS
+    Constructs the API endpoint URL for AI test evaluation log entries.
+#>
 function Get-DefaultAPIEndpointForAITEvaluationLogEntries {
     $CompanyPath = ''
     if ($script:CompanyId -ne [guid]::Empty -and $null -ne $script:CompanyId) {
@@ -563,6 +595,10 @@ function Get-DefaultAPIEndpointForAITEvaluationLogEntries {
     return $APIEndpoint
 }
 
+<#
+.SYNOPSIS
+    Constructs an OData filter query for AI test log entries.
+#>
 function Build-LogEntryAPIFilter() {
     param (
         [Parameter(Mandatory = $true)]
@@ -594,6 +630,10 @@ function Build-LogEntryAPIFilter() {
     return $filter
 }
 
+<#
+.SYNOPSIS
+    Constructs an OData filter query for test method lines.
+#>
 function Build-TestMethodLineAPIFilter() {
     param (
         [Parameter(Mandatory = $true)]
@@ -622,6 +662,10 @@ function Build-TestMethodLineAPIFilter() {
     return $filter
 }
 
+<#
+.SYNOPSIS
+    Constructs an OData filter query for evaluation log entries.
+#>
 function Build-LogEvaluationEntryAPIFilter() {
     param (
         [Parameter(Mandatory = $true)]
@@ -645,7 +689,10 @@ function Build-LogEvaluationEntryAPIFilter() {
     return $filter
 }
 
-# Upload the input dataset needed to run the AI Test Suite
+<#
+.SYNOPSIS
+    Uploads input dataset to the test form for AI test execution.
+#>
 function Set-InputDatasetInternal {
     param(
         [Parameter(Mandatory = $true)]
@@ -683,7 +730,10 @@ function Set-InputDatasetInternal {
     }
 }
 
-#Upload the XML test suite definition needed to setup the AI Test Suite
+<#
+.SYNOPSIS
+    Uploads XML test suite definition to the test form.
+#>
 function  Set-SuiteDefinitionInternal {
     param (
         [Parameter(Mandatory = $true)]
@@ -723,6 +773,10 @@ function  Set-SuiteDefinitionInternal {
     }
 }
 
+<#
+.SYNOPSIS
+    Extracts and formats validation errors from a BC form.
+#>
 function Get-FormError {
     param (
         [ClientLogicalForm]
@@ -738,6 +792,10 @@ function Get-FormError {
     }
 }
 
+<#
+.SYNOPSIS
+    Invokes a REST method against a BC API endpoint with authentication.
+#>
 function Invoke-BCRestMethod {
     param (
         [string]$Uri
@@ -768,6 +826,10 @@ function Invoke-BCRestMethod {
     }
 }
 
+<#
+.SYNOPSIS
+    Writes a message with tenant and timestamp prefix.
+#>
 function Write-HostWithTimestamp {
     param (
         [string] $Message

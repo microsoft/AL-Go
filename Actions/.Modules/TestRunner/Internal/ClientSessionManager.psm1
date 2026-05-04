@@ -5,6 +5,10 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 . "$PSScriptRoot\Constants.ps1"
 
+<#
+.SYNOPSIS
+    Opens a BC client session with retry logic and timeout handling.
+#>
 function Open-ClientSessionWithWait
 (
     [ValidateSet('Windows','NavUserPassword','AAD')]
@@ -36,6 +40,10 @@ function Open-ClientSessionWithWait
         throw "Could not open the client session. Check if the web server is running and you can log in. Last error: $lastErrorMessage"
 }
 
+<#
+.SYNOPSIS
+    Opens a BC client session with the specified authentication type.
+#>
 function Open-ClientSession
 (
     [switch] $DisableSSLVerification,
@@ -94,6 +102,10 @@ function Open-ClientSession
     return $clientContext;
 }
 
+<#
+.SYNOPSIS
+    Disables SSL certificate validation for REST calls (Windows PowerShell 5.1 only).
+#>
 function Disable-SslVerification
 {
     # On PS7/.NET Core, ServicePointManager.ServerCertificateValidationCallback does not
@@ -119,6 +131,10 @@ public static class SslVerification
     [SslVerification]::Disable()
 }
 
+<#
+.SYNOPSIS
+    Re-enables SSL certificate validation for REST calls (Windows PowerShell 5.1 only).
+#>
 function Enable-SslVerification
 {
     if ($PSVersionTable.PSVersion.Major -ge 6) {

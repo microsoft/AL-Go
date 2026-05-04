@@ -7,6 +7,10 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 $script:_ccFileIndex = 0
 
+<#
+.SYNOPSIS
+    Collects code coverage results from the BC test form and saves them to .dat files.
+#>
 function CollectCoverageResults {
     param (
         [ValidateSet('PerRun', 'PerCodeunit', 'PerTest')]
@@ -60,6 +64,10 @@ function CollectCoverageResults {
     }
 }
 
+<#
+.SYNOPSIS
+    Retrieves and saves the code coverage map from the BC test form.
+#>
 function SaveCodeCoverageMap {
     param (
         [string] $OutputPath,
