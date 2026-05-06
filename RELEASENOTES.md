@@ -9,6 +9,7 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2211 - Cannot create a release if a project contains only test apps
 - Issue 2214 - Workspace compilation not working with external dependencies
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
+- Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
 
 ## v9.0
 
