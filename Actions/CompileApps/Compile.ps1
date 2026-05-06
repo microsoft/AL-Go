@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'buildMode', Justification = 'Accepted from workflow; reserved for future incremental build support')]
 Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
@@ -54,6 +55,7 @@ try {
 
     # Check for precompile and postcompile overrides
     $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
+    $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
 
     # Prepare build metadata
     $buildMetadata = Get-BuildMetadata
@@ -99,15 +101,18 @@ try {
         # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
         $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
     }
-    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
+    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -vsixFile $settings.vsixFile -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
     $packageCachePath = Join-Path $compilerFolder "symbols"
 
-    # Copy dependency apps to the package cache so the compiler can resolve them
-    foreach ($appFile in $dependencyApps) {
+    # Copy dependency apps and test apps to the package cache so the compiler can resolve them
+    foreach ($appFile in ($dependencyApps + $dependencyTestApps)) {
         $appFile = $appFile.Trim('()')
         if ($appFile -and (Test-Path $appFile)) {
             Copy-Item -Path $appFile -Destination $packageCachePath -Force
             OutputDebug "Copied dependency app to package cache: $(Split-Path $appFile -Leaf)"
+        }
+        elseif ($appFile) {
+            OutputWarning -message "Dependency app file not found: $appFile"
         }
     }
 
@@ -136,9 +141,6 @@ try {
         AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
         PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
-        MajorMinorVersion           = $versionNumber.MajorMinorVersion
-        BuildNumber                 = $versionNumber.BuildNumber
-        RevisionNumber              = $versionNumber.RevisionNumber
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism
         SourceRepositoryUrl         = $buildMetadata.SourceRepositoryUrl
         SourceCommit                = $buildMetadata.SourceCommit

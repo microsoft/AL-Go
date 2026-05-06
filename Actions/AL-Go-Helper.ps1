@@ -79,7 +79,6 @@ function Get-ScriptOverrides() {
         $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
         if (Test-Path -Path $scriptPath -Type Leaf) {
             OutputDebug "Add override for $scriptName ($scriptPath)"
-            Trace-Information -Message "Using override for $scriptName"
             $scriptBlock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
             if (-not $scriptBlock) {
                 OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
@@ -224,6 +223,15 @@ function ConvertTo-HashTable() {
         }
         $ht
     }
+}
+
+function Get-CurrentBranchName {
+    # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+    $branchName = $ENV:GITHUB_HEAD_REF
+    if (!$branchName) {
+        $branchName = $ENV:GITHUB_REF_NAME
+    }
+    return $branchName.Replace('\', '_').Replace('/', '_')
 }
 
 function GetUniqueFolderName {

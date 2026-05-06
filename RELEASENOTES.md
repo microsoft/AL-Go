@@ -1,3 +1,17 @@
+### Optimized dependency artifact downloads for multi-project repositories
+
+The `DownloadProjectDependencies` action now downloads only artifacts from dependency projects instead of all workflow artifacts. For repositories with many AL-Go projects, this reduces build runner bandwidth and speeds up the dependency download step.
+
+### Issues
+
+- Incremental builds (`modifiedApps` mode) now correctly identify unmodified apps for projects whose `appFolders` reference paths outside the project directory (e.g. using `../`)
+- Issue 2204 - Workspace compilation ignores vsixFile setting
+- Issue 2211 - Cannot create a release if a project contains only test apps
+- Issue 2214 - Workspace compilation not working with external dependencies
+- Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
+
+## v9.0
+
 ### Needs Context in Build job moved from environment variable to file
 
 `NeedsContext` is currently available as an environment variable in the build step of AL-Go. In some cases on repos with a large amount of projects, it's possible for this variable to exceed the max size GitHub allows for such variables. To work around this issue, we now place the contents of `NeedsContext` in a json file, where `NeedsContext` is the path to that file.

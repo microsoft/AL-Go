@@ -45,13 +45,21 @@ function Get-CodeAnalyzers {
     Gets the list of custom code analyzers to use for compilation.
 .DESCRIPTION
     Returns an array of custom code analyzer paths based on the settings provided.
-    If the custom code cop is a URL, it will be downloaded to the compiler folder and the local path will be returned.
+    URL-based entries are downloaded to the compiler folder. Relative file paths
+    are resolved against the project folder so that workspace compilation passes
+    rooted paths to altool/alc.exe (altool only resolves the first comma-separated
+    --customanalyzers entry against the project root, so relative paths beyond the
+    first one fail to load).
 .PARAMETER Settings
     Hashtable containing the build settings with custom code cop paths or URLs.
 .PARAMETER CompilerFolder
-    The folder where the AL compiler tool is located, used for downloading custom analyzers if URLs are provided.
+    The folder where the AL compiler tool is located, used for downloading custom
+    analyzers if URLs are provided.
+.PARAMETER ProjectFolder
+    Folder used as the base for resolving relative customCodeCops entries.
+    Defaults to the current location, which Compile.ps1 sets to the project folder.
 .OUTPUTS
-    Array of custom analyzer paths to use for compilation.
+    Array of absolute custom analyzer paths to use for compilation.
 #>
 function Get-CustomAnalyzers {
     param(
@@ -59,7 +67,10 @@ function Get-CustomAnalyzers {
         [hashtable] $Settings,
 
         [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder
+        [string] $CompilerFolder,
+
+        [Parameter(Mandatory = $false)]
+        [string] $ProjectFolder = (Get-Location).Path
     )
 
     $analyzers = @()
@@ -79,8 +90,14 @@ function Get-CustomAnalyzers {
             }
             $analyzers += $analyzerFileName
         }
-        else {
+        elseif ([System.IO.Path]::IsPathRooted($customCodeCop)) {
             $analyzers += $customCodeCop
+        }
+        else {
+            # Resolve relative paths against the project folder. Use GetFullPath so
+            # this works whether or not the file exists yet (e.g. a PreCompileApp
+            # override may download it later). Combine first so we are PS5-compatible.
+            $analyzers += [System.IO.Path]::GetFullPath((Join-Path $ProjectFolder $customCodeCop))
         }
     }
 
@@ -169,12 +186,6 @@ function Get-ALTool {
     Path to the output folder for compiled .app files. Defaults to PackageCachePath.
 .PARAMETER LogDirectory
     Path to the directory for compilation log files.
-.PARAMETER MajorMinorVersion
-    Major.Minor version to stamp into the compiled apps.
-.PARAMETER BuildNumber
-    Build number to stamp into the compiled apps.
-.PARAMETER RevisionNumber
-    Revision number to stamp into the compiled apps.
 .PARAMETER MaxCpuCount
     Maximum number of parallel compilation processes. Defaults to 1.
 .PARAMETER AssemblyProbingPaths
@@ -220,12 +231,6 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
         # Optional parameters
-        [Parameter(Mandatory = $false)]
-        [string]$MajorMinorVersion = "",
-        [Parameter(Mandatory = $false)]
-        [int] $BuildNumber = 0,
-        [Parameter(Mandatory = $false)]
-        [int] $RevisionNumber = 0,
         [Parameter(Mandatory = $false)]
         [int]$MaxCpuCount = 1,
         # Optional compiler parameters
@@ -605,7 +610,7 @@ function Get-DotnetRuntimeVersionInstalled {
                 }
                 $runtimes[$runtime.name] += $version
             } catch {
-                # Skip versions that can't be parsed
+                OutputDebug -message "Skipping runtime version '$($runtime.version)' that could not be parsed: $_"
             }
         }
 
