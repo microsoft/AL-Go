@@ -27,7 +27,7 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$defaultBcContainerHelperVersion = "preview"
+$defaultBcContainerHelperVersion = "https://github.com/microsoft/navcontainerhelper/archive/refs/heads/fix/docker-pull-transient-retry.zip"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
