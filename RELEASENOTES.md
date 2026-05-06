@@ -13,6 +13,7 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2204 - Workspace compilation ignores vsixFile setting
 - Issue 2211 - Cannot create a release if a project contains only test apps
 - Issue 2214 - Workspace compilation not working with external dependencies
+- Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
 
 ## v9.0
 

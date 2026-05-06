@@ -712,11 +712,61 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             @($result).Count | Should -Be 0
         }
 
-        It 'Returns local paths as-is' {
-            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('C:\analyzers\MyAnalyzer.dll') } -CompilerFolder $TestDrive
+        It 'Returns rooted local paths as-is' {
+            $rooted = Join-Path $TestDrive 'analyzers/MyAnalyzer.dll'
+            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @($rooted) } -CompilerFolder $TestDrive
 
             @($result).Count | Should -Be 1
-            $result | Should -Contain 'C:\analyzers\MyAnalyzer.dll'
+            $result | Should -Contain $rooted
+        }
+
+        It 'Resolves relative paths against the project folder' {
+            $projectFolder = Join-Path $TestDrive 'project-relative'
+            New-Item -Path $projectFolder -ItemType Directory -Force | Out-Null
+
+            $settings = @{ CustomCodeCops = @('.alcops/A.dll', '.alcops/B.dll') }
+            $result = @(Get-CustomAnalyzers -Settings $settings -CompilerFolder $TestDrive -ProjectFolder $projectFolder)
+
+            $result.Count | Should -Be 2
+            foreach ($path in $result) {
+                [System.IO.Path]::IsPathRooted($path) | Should -BeTrue
+                $path | Should -BeLike "$projectFolder*"
+            }
+            $result[0] | Should -BeLike '*A.dll'
+            $result[1] | Should -BeLike '*B.dll'
+        }
+
+        It 'Resolves relative paths even when the analyzer file does not exist yet' {
+            # PreCompileApp overrides may download analyzer DLLs after Get-CustomAnalyzers
+            # has been called, so resolution must not require the file to exist.
+            $projectFolder = Join-Path $TestDrive 'project-missing'
+            New-Item -Path $projectFolder -ItemType Directory -Force | Out-Null
+
+            $result = @(Get-CustomAnalyzers `
+                -Settings @{ CustomCodeCops = @('.alcops/Not.Yet.Downloaded.dll') } `
+                -CompilerFolder $TestDrive `
+                -ProjectFolder $projectFolder)
+
+            $result.Count | Should -Be 1
+            [System.IO.Path]::IsPathRooted($result[0]) | Should -BeTrue
+            $result[0] | Should -BeLike '*Not.Yet.Downloaded.dll'
+        }
+
+        It 'Defaults ProjectFolder to the current location when not specified' {
+            $projectFolder = Join-Path $TestDrive 'project-default'
+            New-Item -Path $projectFolder -ItemType Directory -Force | Out-Null
+
+            Push-Location $projectFolder
+            try {
+                $result = @(Get-CustomAnalyzers `
+                    -Settings @{ CustomCodeCops = @('.alcops/X.dll') } `
+                    -CompilerFolder $TestDrive)
+            } finally {
+                Pop-Location
+            }
+
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeLike "$projectFolder*X.dll"
         }
 
         It 'Downloads URL-based analyzers to compiler folder' {
