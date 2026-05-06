@@ -51,7 +51,7 @@ jobs:
         id: app-token
         if: ${{ vars.E2E_APP_ID != '' }}
         with:
-          app-id: ${{ vars.E2E_APP_ID }}
+          client-id: ${{ vars.E2E_APP_ID }}
           private-key: ${{ secrets.E2E_PRIVATE_KEY }}
           owner: ${{ steps.getGitHubOwner.outputs.githubOwner }}
 
