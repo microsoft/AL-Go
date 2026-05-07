@@ -14,7 +14,9 @@ Param(
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
-    [string] $baselineWorkflowSHA = ''
+    [string] $baselineWorkflowSHA = '',
+    [Parameter(HelpMessage = "Dependencies of the built project in compressed JSON format", Mandatory = $false)]
+    [string] $projectDependenciesJson = '{}'
 )
 
 $containerBaseFolder = $null
@@ -25,6 +27,10 @@ try {
     Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
     DownloadAndImportBcContainerHelper
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+
+    # Import Code Coverage module for ALTestRunner functionality
+    # This makes Run-AlTests available globally for custom RunTestsInBcContainer overrides
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\.Modules\TestRunner\ALTestRunner.psm1" -Resolve) -Force -DisableNameChecking
 
     if ($isWindows) {
         Assert-DockerIsRunning
@@ -455,6 +461,41 @@ try {
         }
     }
 
+    # Add RunTestsInBcContainer override to use ALTestRunner with code coverage support
+    if ($settings.enableCodeCoverage) {
+        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "RunPipeline.psm1" -Resolve) -Force -DisableNameChecking
+
+        # Read codeCoverageSetup settings with defaults
+        $codeCoverageSetup = if ($settings.ContainsKey('codeCoverageSetup')) { $settings.codeCoverageSetup } else { $null }
+        $ccSetup = @{}
+        if ($codeCoverageSetup) {
+            if ($codeCoverageSetup -is [hashtable]) {
+                $codeCoverageSetup.GetEnumerator() | ForEach-Object { $ccSetup[$_.Key] = $_.Value }
+            } else {
+                $codeCoverageSetup.PSObject.Properties | ForEach-Object { $ccSetup[$_.Name] = $_.Value }
+            }
+        }
+        $ccTrackingType = if ($ccSetup['trackingType']) { $ccSetup['trackingType'] } else { 'PerRun' }
+        $ccProduceMap = if ($ccSetup['produceCodeCoverageMap']) { $ccSetup['produceCodeCoverageMap'] } else { 'PerCodeunit' }
+        [string[]]$ccExcludePatterns = @()
+        if ($ccSetup['excludeFilesPattern']) { $ccExcludePatterns = @($ccSetup['excludeFilesPattern']) }
+        if ($ccExcludePatterns.Count -gt 0) {
+            Write-Host "Code coverage exclude patterns: $($ccExcludePatterns -join ', ')"
+        }
+
+        if ($runAlPipelineParams.Keys -notcontains 'RunTestsInBcContainer') {
+            Write-Host "Adding RunTestsInBcContainer override with code coverage support"
+            $runAlPipelineParams += @{
+                "RunTestsInBcContainer" = New-ALTestRunnerOverride `
+                    -BuildArtifactFolder $buildArtifactFolder `
+                    -TrackingType $ccTrackingType `
+                    -ProduceMap $ccProduceMap
+            }
+        } else {
+            OutputWarning -message "enableCodeCoverage is set to true, but a custom RunTestsInBcContainer override was found. The custom override will be used and code coverage data may not be collected. To use the built-in code coverage support, remove your custom RunTestsInBcContainer override."
+        }
+    }
+
     "enableTaskScheduler",
     "assignPremiumPlan",
     "doNotBuildTests",
@@ -486,6 +527,11 @@ try {
     }
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
+
+    # Set environment variable for buildArtifactFolder so custom override scripts can access it
+    # This is needed for code coverage support in repos with custom RunTestsInBcContainer overrides
+    $env:AL_GO_BUILD_ARTIFACT_FOLDER = $buildArtifactFolder
+    Write-Host "Build artifact folder: $buildArtifactFolder"
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
@@ -543,6 +589,104 @@ try {
         Copy-Item -Path (Join-Path $projectPath "bcptTestResults*.json") -Destination $destFolder
         Copy-Item -Path $buildOutputFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
         Copy-Item -Path $containerEventLogFile -Destination $destFolder -Force -ErrorAction SilentlyContinue
+    }
+
+    # Process code coverage files to Cobertura format
+    if ($settings.enableCodeCoverage) {
+        $codeCoveragePath = Join-Path $buildArtifactFolder "CodeCoverage"
+        if (Test-Path $codeCoveragePath) {
+            $coverageFiles = @(Get-ChildItem -Path $codeCoveragePath -Filter "*.dat" -File -ErrorAction SilentlyContinue)
+            if ($coverageFiles.Count -gt 0) {
+                Write-Host "Processing $($coverageFiles.Count) code coverage file(s) to Cobertura format..."
+                try {
+                    $coverageProcessorModule = Join-Path $PSScriptRoot "..\.Modules\TestRunner\CoverageProcessor\CoverageProcessor.psm1"
+                    Import-Module $coverageProcessorModule -Force -DisableNameChecking
+
+                    $coberturaOutputPath = Join-Path $codeCoveragePath "cobertura.xml"
+
+                    # Resolve app source paths for coverage denominator
+                    # Collect appFolders from this project + parent projects (dependency chain)
+                    # This ensures test-only projects measure coverage against the correct app source
+                    $sourcePath = $ENV:GITHUB_WORKSPACE
+                    $appSourcePaths = @()
+
+                    # Add current project's app folders
+                    if ($settings.appFolders -and $settings.appFolders.Count -gt 0) {
+                        foreach ($folder in $settings.appFolders) {
+                            $absPath = Join-Path $projectPath $folder
+                            if (Test-Path $absPath) {
+                                $appSourcePaths += @((Resolve-Path $absPath).Path)
+                            }
+                        }
+                        Write-Host "Project app folders ($($appSourcePaths.Count) resolved):"
+                        $appSourcePaths | ForEach-Object { Write-Host "  $_" }
+                    }
+
+                    # Walk project dependencies to collect parent projects' app folders
+                    try {
+                        $projectDeps = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+                        $parentProjects = @()
+                        if ($projectDeps -and $project -and $projectDeps.ContainsKey($project)) {
+                            $parentProjects = @($projectDeps[$project])
+                        }
+                        if ($parentProjects.Count -gt 0) {
+                            Write-Host "Resolving app folders from $($parentProjects.Count) parent project(s): $($parentProjects -join ', ')"
+                            foreach ($parentProject in $parentProjects) {
+                                $parentSettings = ReadSettings -project $parentProject -baseFolder $baseFolder
+                                ResolveProjectFolders -baseFolder $baseFolder -project $parentProject -projectSettings ([ref] $parentSettings)
+                                $parentProjectPath = Join-Path $baseFolder $parentProject
+                                if ($parentSettings.appFolders -and $parentSettings.appFolders.Count -gt 0) {
+                                    foreach ($folder in $parentSettings.appFolders) {
+                                        $absPath = Join-Path $parentProjectPath $folder
+                                        if (Test-Path $absPath) {
+                                            $resolved = (Resolve-Path $absPath).Path
+                                            if ($appSourcePaths -notcontains $resolved) {
+                                                $appSourcePaths += @($resolved)
+                                                Write-Host "  + $resolved (from $parentProject)"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch {
+                        OutputWarning -message "Could not resolve project dependencies for coverage: $($_.Exception.Message)"
+                    }
+
+                    if ($appSourcePaths.Count -eq 0) {
+                        Write-Host "No app source paths resolved, scanning entire workspace for source files"
+                    } else {
+                        Write-Host "Coverage source: $($appSourcePaths.Count) app folder(s) resolved"
+                    }
+                    Write-Host "Source path root: $sourcePath"
+
+                    if ($coverageFiles.Count -eq 1) {
+                        # Single coverage file
+                        $coverageStats = Convert-BCCoverageToCobertura `
+                            -CoverageFilePath $coverageFiles[0].FullName `
+                            -SourcePath $sourcePath `
+                            -AppSourcePaths $appSourcePaths `
+                            -ExcludePatterns $ccExcludePatterns `
+                            -OutputPath $coberturaOutputPath
+                    } else {
+                        # Multiple coverage files - merge them
+                        $coverageStats = Merge-BCCoverageToCobertura `
+                            -CoverageFiles ($coverageFiles.FullName) `
+                            -SourcePath $sourcePath `
+                            -AppSourcePaths $appSourcePaths `
+                            -ExcludePatterns $ccExcludePatterns `
+                            -OutputPath $coberturaOutputPath
+                    }
+
+                    if ($coverageStats) {
+                        Write-Host "Code coverage: $($coverageStats.CoveragePercent)% ($($coverageStats.CoveredLines)/$($coverageStats.TotalLines) lines)"
+                    }
+                }
+                catch {
+                    OutputWarning -message "Failed to process code coverage to Cobertura format: $($_.Exception.Message)"
+                }
+            }
+        }
     }
 
     # check for new warnings

@@ -350,6 +350,37 @@
         "doNotRunPageScriptingTests": {
             "type": "boolean"
         },
+        "enableCodeCoverage": {
+            "type": "boolean",
+            "description": "Enable code coverage tracking during test runs. Exports coverage data to Cobertura XML format. See https://aka.ms/ALGoSettings#enableCodeCoverage"
+        },
+        "codeCoverageSetup": {
+            "type": "object",
+            "description": "Configuration for code coverage tracking. See https://aka.ms/ALGoSettings#codeCoverageSetup",
+            "additionalProperties": false,
+            "properties": {
+                "trackingType": {
+                    "type": "string",
+                    "enum": ["PerRun", "PerCodeunit", "PerTest"],
+                    "default": "PerRun",
+                    "description": "Granularity of coverage tracking"
+                },
+                "produceCodeCoverageMap": {
+                    "type": "string",
+                    "enum": ["Disabled", "PerCodeunit", "PerTest"],
+                    "default": "PerCodeunit",
+                    "description": "Granularity of coverage map output"
+                },
+                "excludeFilesPattern": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Glob patterns for files to exclude from coverage"
+                }
+            }
+        },
         "doNotPublishApps": {
             "type": "boolean"
         },

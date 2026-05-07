@@ -1,0 +1,24 @@
+name: Merge Code Coverage Summaries
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  coveragePath:
+    description: Path containing downloaded coverage artifacts (each in a subfolder)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _coveragePath: ${{ inputs.coveragePath }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "MergeCoverageSummaries" -Action {
+          ${{ github.action_path }}/MergeCoverageSummaries.ps1 -coveragePath $ENV:_coveragePath
+        }
+branding:
+  icon: bar-chart-2
+  color: blue

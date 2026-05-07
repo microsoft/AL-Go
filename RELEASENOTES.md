@@ -10,6 +10,16 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2214 - Workspace compilation not working with external dependencies
 - Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
 
+### Code Coverage (Preview)
+
+AL-Go now supports collecting code coverage data during test runs. Enable it by setting `enableCodeCoverage` to `true` in your AL-Go settings file. When enabled, AL-Go uses the AL Test Runner to execute tests and collect line-level coverage data, which is output in Cobertura XML format as a build artifact.
+
+> **Note:** This feature is work-in-progress and is not guaranteed to work in all scenarios and setups yet. If you encounter issues, please disable the setting and report the problem.
+
+If you have a custom `RunTestsInBcContainer.ps1` override, a warning will be emitted when code coverage is enabled, as the custom override will take precedence and may not support code coverage collection.
+
+Read more at [enableCodeCoverage](https://aka.ms/ALGoSettings#enableCodeCoverage) and [Code Coverage](Scenarios/CodeCoverage.md).
+
 ## v9.0
 
 ### Needs Context in Build job moved from environment variable to file

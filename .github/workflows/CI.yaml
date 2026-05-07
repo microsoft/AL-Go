@@ -40,6 +40,10 @@ jobs:
         run: |
           . (Join-Path "." "Tests/runtests.ps1") -Path "Tests"
 
+      - name: Test Code Coverage Modules (${{ matrix.psVersion }})
+        run: |
+          . (Join-Path "." "Tests/runtests.ps1") -Path "Tests/CodeCoverage"
+
       - name: Test AL-Go Workflows (${{ matrix.psVersion }})
         if: github.repository_owner == 'microsoft'
         run: |
