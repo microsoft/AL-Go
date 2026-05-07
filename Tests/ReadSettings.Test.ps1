@@ -167,6 +167,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
 
             # Test that conditional settings are applied correctly
+            $previousGitHubEventName = $ENV:GITHUB_EVENT_NAME
+            $ENV:GITHUB_EVENT_NAME = 'push'
+
             $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchy' -userName 'user'
             $conditionalSettings.property3 | Should -Be 'branchxy'
             $conditionalSettings.property4 | Should -Be 'branchxy'
@@ -202,6 +205,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $conditionalSettings = ReadSettings -baseFolder $tempName -project 'projecty' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchx' -userName 'user'
             $conditionalSettings.property3 | Should -Be 'bpxy'
             $conditionalSettings.property4 | Should -Be 'bpxy'
+
+            $ENV:GITHUB_EVENT_NAME = $previousGitHubEventName
 
             # Invalid Org(var) setting should throw
             $ENV:ALGoOrgSettings = 'this is not json'
