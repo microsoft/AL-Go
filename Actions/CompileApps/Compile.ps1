@@ -1,4 +1,3 @@
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'buildMode', Justification = 'Accepted from workflow; reserved for future incremental build support')]
 Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
@@ -28,6 +27,7 @@ DownloadAndImportBcContainerHelper
 
 # ANALYZE - Analyze the repository and determine settings
 $baseFolder = (Get-BasePath)
+if ($project -eq ".") { $project = "" }
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
@@ -118,10 +118,59 @@ try {
         }
     }
 
-    # Incremental Builds - Determine unmodified apps from baseline workflow run if applicable
+    # Incremental Builds - Determine which folders need to be built vs downloaded from baseline
+    $appFoldersToBuild = $settings.appFolders
+    $testFoldersToBuild = $settings.testFolders
+    $bcptTestFoldersToBuild = $settings.bcptTestFolders
+
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
-        #TODO: Implement support for incremental builds (AB#620492)
-        Write-Host "Incremental builds based on modified apps is not yet implemented."
+        try {
+            $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+        }
+        catch {
+            OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
+            $buildAll = $true
+        }
+
+        if (!$buildAll) {
+            Write-Host "Incremental build: downloading unmodified apps from baseline workflow run"
+
+            # Snapshot existing files before the download so we can identify what was added
+            $appsBefore = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+            $testAppsBefore = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+
+            Get-UnmodifiedAppsFromBaselineWorkflowRun `
+                -token $token `
+                -settings $settings `
+                -baseFolder $baseFolder `
+                -project $project `
+                -baselineWorkflowRunId $baselineWorkflowRunId `
+                -modifiedFiles $modifiedFiles `
+                -buildArtifactFolder $buildArtifactFolder `
+                -buildMode $buildMode `
+                -projectPath $projectFolder
+
+            # Identify only the newly downloaded baseline apps (exclude files that existed before the download)
+            $downloadedApps = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Where-Object { $appsBefore -notcontains $_.Name })
+            $downloadedTestApps = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Where-Object { $testAppsBefore -notcontains $_.Name })
+
+            # Copy downloaded baseline apps to the package cache so the compiler can resolve them as dependencies
+            ($downloadedApps + $downloadedTestApps) | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination $packageCachePath -Force
+            }
+
+            # Filter folders: only compile folders whose app was NOT already downloaded from the baseline
+            $downloadedAppNames = @($downloadedApps + $downloadedTestApps | ForEach-Object { $_.Name })
+            $appFoldersToBuild = @($settings.appFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
+            $testFoldersToBuild = @($settings.testFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
+            $bcptTestFoldersToBuild = @($settings.bcptTestFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
+
+            OutputMessageAndArray -message "Folders to compile (apps)" -arrayOfStrings $appFoldersToBuild
+            OutputMessageAndArray -message "Folders to compile (test)" -arrayOfStrings $testFoldersToBuild
+            OutputMessageAndArray -message "Folders to compile (bcpt)" -arrayOfStrings $bcptTestFoldersToBuild
+        }
     }
 
     if ($settings.enableAppSourceCop) {
@@ -167,39 +216,39 @@ try {
         CustomAnalyzers             = (Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
     }
 
-    # Start compilation
+    # Start compilation - only compile folders that need building (all in full build, modified-only in incremental)
     $appFiles = @()
     $testAppFiles = @()
     $bcptTestAppFiles = @()
     try {
-        if ($settings.appFolders.Count -gt 0) {
+        if ($appFoldersToBuild.Count -gt 0) {
             # Compile Apps
             $appFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.appFolders `
+                -Folders $appFoldersToBuild `
                 -OutFolder $appOutputFolder `
                 -AppType 'app'
         }
 
-        if ($settings.testFolders.Count -gt 0) {
+        if ($testFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
             }
 
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.testFolders `
+                -Folders $testFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
         }
 
-        if ($settings.bcptTestFolders.Count -gt 0) {
+        if ($bcptTestFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
             }
 
             # Compile BCPT Test Apps
             $bcptTestAppFiles = Build-AppsInWorkspace @buildParams `
-                -Folders $settings.bcptTestFolders `
+                -Folders $bcptTestFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'bcptApp'
         }

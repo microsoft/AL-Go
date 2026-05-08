@@ -946,6 +946,40 @@ function New-AppSourceCopJson {
     }
 }
 
+<#
+.SYNOPSIS
+    Checks whether an app folder's compiled .app file exists in a list of downloaded app file names.
+.DESCRIPTION
+    Reads app.json from the specified folder and checks if a matching .app file (by Publisher_Name prefix)
+    exists in the provided list of downloaded file names. Used by incremental builds to determine which
+    folders can be skipped because their app was already downloaded from a baseline workflow run.
+.PARAMETER folder
+    The app folder path containing app.json.
+.PARAMETER downloadedAppNames
+    Array of .app file names that were downloaded from the baseline.
+.OUTPUTS
+    Boolean indicating whether the app was found in the downloaded list.
+#>
+function Test-BaselineAppDownloaded {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $folder,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]] $downloadedAppNames
+    )
+
+    $appJsonPath = Join-Path $folder "app.json"
+    if (-not (Test-Path $appJsonPath)) {
+        return $false
+    }
+
+    $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
+    $appPrefix = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_"
+
+    return @($downloadedAppNames | Where-Object { $_.StartsWith($appPrefix) }).Count -gt 0
+}
+
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
@@ -954,3 +988,4 @@ Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
 Export-ModuleMember -Function New-AppSourceCopJson
+Export-ModuleMember -Function Test-BaselineAppDownloaded
