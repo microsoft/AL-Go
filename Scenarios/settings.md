@@ -186,6 +186,7 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 - **branches** settings will be applied to branches matching the patterns
 - **workflows** settings will be applied to workflows matching the patterns
 - **users** settings will be applied for users matching the patterns
+- **triggers** settings will be applied when `GITHUB_EVENT_NAME` matches values (for example `push`, `pull_request`, `schedule`, `workflow_dispatch`)
 
 **Note:** You can use `workflowDefaultInputs` within conditional settings to apply workflow input defaults only when certain conditions are met. For example, you could set different default values for specific workflows or branches.
 

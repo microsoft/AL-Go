@@ -154,6 +154,10 @@ InModuleScope ReadSettings { # Allows testing of private functions
                         "settings" = @{ "property3" = "userxy"; "property4" = "userxy" }
                     }
                     @{
+                        "triggers" = @( 'schedule', 'workflow_dispatch' )
+                        "settings" = @{ "property3" = "triggerxy"; "property4" = "triggerxy" }
+                    }
+                    @{
                         "branches" = @( 'branchx', 'branchy' )
                         "projects" = @( 'projectx', 'projecty' )
                         "settings" = @{ "property3" = "bpxy"; "property4" = "bpxy" }
@@ -163,6 +167,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
 
             # Test that conditional settings are applied correctly
+            $previousGitHubEventName = $ENV:GITHUB_EVENT_NAME
+            $ENV:GITHUB_EVENT_NAME = 'push'
+
             $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchy' -userName 'user'
             $conditionalSettings.property3 | Should -Be 'branchxy'
             $conditionalSettings.property4 | Should -Be 'branchxy'
@@ -183,9 +190,23 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $conditionalSettings.property3 | Should -Be 'userxy'
             $conditionalSettings.property4 | Should -Be 'userxy'
 
+            $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user' -trigger 'schedule'
+            $conditionalSettings.property3 | Should -Be 'triggerxy'
+            $conditionalSettings.property4 | Should -Be 'triggerxy'
+
+            $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user' -trigger 'workflow_dispatch'
+            $conditionalSettings.property3 | Should -Be 'triggerxy'
+            $conditionalSettings.property4 | Should -Be 'triggerxy'
+
+            $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user' -trigger 'push'
+            $conditionalSettings.property3 | Should -Be 'repo3'
+            $conditionalSettings.property4 | Should -BeNullOrEmpty
+
             $conditionalSettings = ReadSettings -baseFolder $tempName -project 'projecty' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchx' -userName 'user'
             $conditionalSettings.property3 | Should -Be 'bpxy'
             $conditionalSettings.property4 | Should -Be 'bpxy'
+
+            $ENV:GITHUB_EVENT_NAME = $previousGitHubEventName
 
             # Invalid Org(var) setting should throw
             $ENV:ALGoOrgSettings = 'this is not json'
