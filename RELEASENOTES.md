@@ -1,3 +1,7 @@
+### GH_TOKEN environment variable available during build
+
+The `_BuildALGoProject` workflow now passes `github.token` as the `GH_TOKEN` environment variable to the RunPipeline action. This allows script overrides (e.g. `RunTestsInBcContainer`) to use the GitHub CLI (`gh`) for repository operations during the build step.
+
 ### Conditional settings now support workflow trigger events
 
 `ConditionalSettings` now supports a `triggers` condition, allowing you to apply settings based on `GITHUB_EVENT_NAME` values such as `push`, `pull_request`, `schedule`, and `workflow_dispatch`.

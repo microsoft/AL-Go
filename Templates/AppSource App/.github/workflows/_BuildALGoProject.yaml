@@ -200,6 +200,7 @@ jobs:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
           NeedsContext: ${{ env.NeedsContext }}
+          GH_TOKEN: ${{ github.token }}
         with:
           shell: ${{ inputs.shell }}
           artifact: ${{ env.artifact }}
