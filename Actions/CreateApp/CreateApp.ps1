@@ -59,10 +59,10 @@ try {
                 $sampleApp = (Get-Item -Path $sampleApp).FullName
             }
             else {
-                $sampleApp = Get-ChildItem -Path $folders[1] -Filter "Microsoft_Performance Toolkit Samples.app" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+                $sampleApp = Get-ChildItem -Path $folders[1] -Filter "Microsoft_Performance Toolkit Samples.app" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
             }
             if (!$sampleApp -or !(Test-Path -Path $sampleApp)) {
-                throw "Could not locate sample app for the Business Central version"
+                throw "Could not locate 'Microsoft_Performance Toolkit Samples.app' under '$($folders[1])'"
             }
 
             Extract-AppFileToFolder -appFilename $sampleApp -generateAppJson -appFolder $tmpFolder
