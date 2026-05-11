@@ -54,6 +54,15 @@ $runAlPipelineOverrides = @(
     "PipelineFinalize"
 )
 
+# AL-Go-native overrides (independent of BcContainerHelper / Run-AlPipeline).
+# Each entry must correspond to a script named <Name>.ps1 in the project's
+# .AL-Go folder. Override scripts are invoked with a single [Hashtable]
+# $parameters argument (same calling convention as BCH overrides).
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alGoOverrides', Justification = 'Used by RunOverride action and Invoke-ScriptOverride helper.')]
+$alGoOverrides = @(
+    "BuildInitialize"
+)
+
 <#
     .SYNOPSIS
         Gets script overrides from the AL-Go folder.
@@ -87,6 +96,87 @@ function Get-ScriptOverrides() {
         }
     }
     return $overrides
+}
+
+<#
+    .SYNOPSIS
+        Invokes a single AL-Go script override if it exists.
+    .DESCRIPTION
+        Looks for a script named <OverrideName>.ps1 in the specified AL-Go folder
+        using Get-ScriptOverrides. If the script exists, it is invoked with a
+        single [Hashtable] $parameters argument (matching the BCH override
+        calling convention). If the script does not exist, the function silently
+        returns without taking any action — callers can therefore invoke this
+        unconditionally from workflows or other actions.
+    .PARAMETER ALGoFolderName
+        The folder where AL-Go override scripts are located (typically the
+        project's .AL-Go folder).
+    .PARAMETER OverrideName
+        The name of the override script to invoke (without the .ps1 extension).
+    .PARAMETER Parameters
+        Optional hashtable of parameters to pass to the override script.
+    .EXAMPLE
+        Invoke-ScriptOverride -ALGoFolderName '.AL-Go' -OverrideName 'BuildInitialize' -Parameters @{ project = '.' }
+#>
+function Invoke-ScriptOverride() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALGoFolderName,
+        [Parameter(Mandatory = $true)]
+        [string] $OverrideName,
+        [Parameter(Mandatory = $false)]
+        [hashtable] $Parameters = @{}
+    )
+    $overrides = Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames @($OverrideName)
+    if (-not $overrides.ContainsKey($OverrideName)) {
+        Write-Host "No override script '$OverrideName.ps1' found in '$ALGoFolderName' - skipping."
+        return
+    }
+    Trace-Information -Message "Using override for $OverrideName"
+    Write-Host "Invoking override '$OverrideName'"
+    $scriptBlock = $overrides[$OverrideName]
+    Invoke-Command -ScriptBlock $scriptBlock -ArgumentList $Parameters
+}
+
+<#
+    .SYNOPSIS
+        Invokes an AL-Go-native override for a given project.
+    .DESCRIPTION
+        High-level entry point for running an AL-Go-native override
+        (independent of BcContainerHelper). Validates the requested override
+        name against the $alGoOverrides allow-list, resolves the project's
+        .AL-Go folder against $ENV:GITHUB_WORKSPACE (falling back to the
+        current location), and delegates to Invoke-ScriptOverride. If the
+        override script does not exist, this is a silent no-op.
+    .PARAMETER Project
+        Project folder path, relative to the workspace root. Defaults to '.'.
+    .PARAMETER OverrideName
+        Name of the override to run. Must be one of the values in
+        $alGoOverrides.
+    .PARAMETER Parameters
+        Optional hashtable of parameters to pass to the override script.
+    .EXAMPLE
+        Invoke-ALGoOverride -Project '.' -OverrideName 'BuildInitialize' -Parameters @{ project = '.' }
+#>
+function Invoke-ALGoOverride() {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string] $Project = ".",
+        [Parameter(Mandatory = $true)]
+        [string] $OverrideName,
+        [Parameter(Mandatory = $false)]
+        [hashtable] $Parameters = @{}
+    )
+    if ($alGoOverrides -notcontains $OverrideName) {
+        throw "Override name '$OverrideName' is not a recognized AL-Go override. Allowed values: $($alGoOverrides -join ', ')."
+    }
+    $baseFolder = $ENV:GITHUB_WORKSPACE
+    if (-not $baseFolder) {
+        $baseFolder = (Get-Location).Path
+    }
+    $projectPath = Join-Path $baseFolder $Project
+    $alGoFolder = Join-Path $projectPath $ALGoFolderName
+    Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName $OverrideName -Parameters $Parameters
 }
 
 # Well known AppIds
