@@ -103,6 +103,13 @@ jobs:
           ref: ${{ inputs.checkoutRef }}
           lfs: true
 
+      - name: BuildInitialize
+        uses: microsoft/AL-Go-Actions/RunOverride@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          overrideName: BuildInitialize
+
       - name: Read settings
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
