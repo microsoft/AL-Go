@@ -28,34 +28,40 @@ Describe "CreateApp Action Tests" {
     It 'Should find Performance Toolkit sample app regardless of directory casing' {
         # Simulate artifact folder structure with varying casing (as seen in BC28+)
         $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-        $sampleAppDir = Join-Path $tempDir "Applications" "TestFramework" "performancetoolkit"
-        New-Item -Path $sampleAppDir -ItemType Directory -Force | Out-Null
-        $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
-        Set-Content -Path $sampleAppFile -Value "dummy"
+        try {
+            $sampleAppDir = Join-Path $tempDir "Applications" "TestFramework" "performancetoolkit"
+            New-Item -Path $sampleAppDir -ItemType Directory -Force | Out-Null
+            $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
+            Set-Content -Path $sampleAppFile -Value "dummy"
 
-        # Use the same lookup logic as in CreateApp.ps1
-        $result = Get-ChildItem -Path $tempDir -Filter "Microsoft_Performance Toolkit Samples.app" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+            # Use the same lookup logic as in CreateApp.ps1
+            $result = Get-ChildItem -Path $tempDir -Filter "Microsoft_Performance Toolkit Samples.app" -Recurse | Select-Object -First 1 -ExpandProperty FullName
 
-        $result | Should -Not -BeNullOrEmpty
-        $result | Should -Be $sampleAppFile
-
-        Remove-Item -Path $tempDir -Recurse -Force
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -Be $sampleAppFile
+        }
+        finally {
+            Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It 'Should find Performance Toolkit sample app with legacy lowercase casing' {
         # Simulate artifact folder structure with old casing (pre-BC28)
         $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-        $sampleAppDir = Join-Path $tempDir "applications" "testframework" "performancetoolkit"
-        New-Item -Path $sampleAppDir -ItemType Directory -Force | Out-Null
-        $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
-        Set-Content -Path $sampleAppFile -Value "dummy"
+        try {
+            $sampleAppDir = Join-Path $tempDir "applications" "testframework" "performancetoolkit"
+            New-Item -Path $sampleAppDir -ItemType Directory -Force | Out-Null
+            $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
+            Set-Content -Path $sampleAppFile -Value "dummy"
 
-        # Use the same lookup logic as in CreateApp.ps1
-        $result = Get-ChildItem -Path $tempDir -Filter "Microsoft_Performance Toolkit Samples.app" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+            # Use the same lookup logic as in CreateApp.ps1
+            $result = Get-ChildItem -Path $tempDir -Filter "Microsoft_Performance Toolkit Samples.app" -Recurse | Select-Object -First 1 -ExpandProperty FullName
 
-        $result | Should -Not -BeNullOrEmpty
-        $result | Should -Be $sampleAppFile
-
-        Remove-Item -Path $tempDir -Recurse -Force
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -Be $sampleAppFile
+        }
+        finally {
+            Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
