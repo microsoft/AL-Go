@@ -59,9 +59,9 @@ try {
                 $sampleApp = (Get-Item -Path $sampleApp).FullName
             }
             else {
-                $sampleApp = Join-Path $folders[1] "Applications\testframework\performancetoolkit\Microsoft_Performance Toolkit Samples.app"
+                $sampleApp = Get-ChildItem -Path $folders[1] -Filter "Microsoft_Performance Toolkit Samples.app" -Recurse | Select-Object -First 1 -ExpandProperty FullName
             }
-            if (!(Test-Path -Path $sampleApp)) {
+            if (!$sampleApp -or !(Test-Path -Path $sampleApp)) {
                 throw "Could not locate sample app for the Business Central version"
             }
 
