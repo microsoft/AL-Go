@@ -103,7 +103,8 @@ jobs:
           ref: ${{ inputs.checkoutRef }}
           lfs: true
 
-      - name: BuildInitialize
+      - name: Run Build Initialize override
+        if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
         uses: microsoft/AL-Go-Actions/RunOverride@main
         with:
           shell: ${{ inputs.shell }}
