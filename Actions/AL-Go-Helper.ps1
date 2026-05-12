@@ -180,8 +180,7 @@ function Invoke-ALGoOverride() {
     # Populate default context keys so override authors can rely on them being
     # present. Caller-supplied values in $Parameters take precedence.
     $effectiveParameters = @{
-        project      = $Project
-        overrideName = $OverrideName
+        project = $Project
     }
     foreach ($key in $Parameters.Keys) {
         $effectiveParameters[$key] = $Parameters[$key]

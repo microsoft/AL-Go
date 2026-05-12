@@ -17,13 +17,12 @@ Add a PowerShell script named `<overrideName>.ps1` to your project's
 `.AL-Go` folder. The script is invoked with a single `[Hashtable] $parameters`
 argument (the same calling convention used by BCH script overrides).
 
-The hashtable always contains at least the following context keys, which are
+The hashtable always contains at least the following context key, which is
 populated automatically:
 
 | Key | Description |
 | :-- | :-- |
 | `project` | The project folder, relative to the repository root. |
-| `overrideName` | The name of the override that was invoked. |
 
 Any keys supplied via `parametersJson` are merged on top of these defaults
 (caller-supplied values win on key collision).

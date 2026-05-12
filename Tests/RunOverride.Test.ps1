@@ -64,7 +64,7 @@ Param([Hashtable]`$parameters)
             Should -Throw -ExpectedMessage "*must deserialize to a JSON object*"
     }
 
-    It 'Auto-populates project and overrideName in $parameters' {
+    It 'Auto-populates project in $parameters' {
         $sentinelPath = Join-Path $script:workspace 'auto.json'
         Set-Content -Path (Join-Path $script:projectPath '.AL-Go/BuildInitialize.ps1') -Value @"
 Param([Hashtable]`$parameters)
@@ -75,7 +75,7 @@ Param([Hashtable]`$parameters)
 
         $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
         $payload.project | Should -Be 'project'
-        $payload.overrideName | Should -Be 'BuildInitialize'
+        $payload.PSObject.Properties.Name | Should -Not -Contain 'overrideName'
     }
 
     It 'Caller-supplied keys in parametersJson override auto-populated defaults' {
@@ -89,7 +89,6 @@ Param([Hashtable]`$parameters)
 
         $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
         $payload.project | Should -Be 'custom'
-        $payload.overrideName | Should -Be 'BuildInitialize'
         $payload.extra | Should -Be 'value'
     }
 }
