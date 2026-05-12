@@ -1,3 +1,20 @@
+### Conditional settings now support workflow trigger events
+
+`ConditionalSettings` now supports a `triggers` condition, allowing you to apply settings based on `GITHUB_EVENT_NAME` values such as `push`, `pull_request`, `schedule`, and `workflow_dispatch`.
+
+Example:
+
+```json
+"ConditionalSettings": [
+  {
+    "triggers": ["schedule", "workflow_dispatch"],
+    "settings": {
+      "additionalCountries": ["de", "us"]
+    }
+  }
+]
+```
+
 ### Support for workspace compilation (Continued)
 
 - Added support for upgrade tests and using previously released artifacts as baselines for appsourcecop.json
