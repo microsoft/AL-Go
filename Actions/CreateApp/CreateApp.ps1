@@ -59,7 +59,10 @@ try {
                 $sampleApp = (Get-Item -Path $sampleApp).FullName
             }
             else {
-                $sampleApp = Get-ChildItem -Path $folders[1] -Filter "Microsoft_Performance Toolkit Samples.app" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+                # Narrow the search to the Applications subdirectory if present, to avoid traversing the entire artifact tree
+                $searchRoot = Get-ChildItem -Path $folders[1] -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Applications' -or $_.Name -eq 'applications' } | Select-Object -First 1 -ExpandProperty FullName
+                if (!$searchRoot) { $searchRoot = $folders[1] }
+                $sampleApp = Get-ChildItem -Path $searchRoot -Filter "Microsoft_Performance Toolkit Samples.app" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
             }
             if (!$sampleApp -or !(Test-Path -Path $sampleApp)) {
                 throw "Could not locate 'Microsoft_Performance Toolkit Samples.app' under '$($folders[1])'"

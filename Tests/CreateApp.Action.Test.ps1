@@ -37,8 +37,10 @@ Describe "CreateApp Action Tests" {
             $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
             Set-Content -Path $sampleAppFile -Value "dummy"
 
-            # Use the same lookup logic as in CreateApp.ps1
-            $result = Get-ChildItem -Path $tempDir -Filter "Microsoft_Performance Toolkit Samples.app" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+            # Use the same lookup logic as in CreateApp.ps1: narrow to Applications subdirectory first
+            $searchRoot = Get-ChildItem -Path $tempDir -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Applications' -or $_.Name -eq 'applications' } | Select-Object -First 1 -ExpandProperty FullName
+            if (!$searchRoot) { $searchRoot = $tempDir }
+            $result = Get-ChildItem -Path $searchRoot -Filter "Microsoft_Performance Toolkit Samples.app" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
 
             $result | Should -Not -BeNullOrEmpty
             $result | Should -Be $sampleAppFile
