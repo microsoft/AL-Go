@@ -109,7 +109,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
 
       - name: Determine whether to build project
         id: DetermineBuildProject
@@ -166,6 +166,14 @@ jobs:
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
+      - name: Download Previous Release
+        id: DownloadPreviousRelease
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.skipUpgrade == 'False'
+        uses: microsoft/AL-Go-Actions/DownloadPreviousRelease@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+
       - name: Compile Apps
         id: compile
         uses: microsoft/AL-Go-Actions/CompileApps@main
@@ -182,6 +190,7 @@ jobs:
           dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+          previousAppsPath: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
 
       - name: Save needs context to file
         shell: pwsh
@@ -209,6 +218,7 @@ jobs:
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+          previousAppsPath: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
 
       - name: Sign
         id: sign
