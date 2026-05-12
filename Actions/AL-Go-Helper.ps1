@@ -106,7 +106,7 @@ function Get-ScriptOverrides() {
         using Get-ScriptOverrides. If the script exists, it is invoked with a
         single [Hashtable] $parameters argument (matching the BCH override
         calling convention). If the script does not exist, the function silently
-        returns without taking any action — callers can therefore invoke this
+        returns without taking any action - callers can therefore invoke this
         unconditionally from workflows or other actions.
     .PARAMETER ALGoFolderName
         The folder where AL-Go override scripts are located (typically the
