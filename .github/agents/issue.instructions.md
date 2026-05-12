@@ -164,7 +164,7 @@ This section describes the typical steps for implementing a full feature in AL-G
 
 1. **Identify which template(s) need the workflow** — PTE, AppSource, or both.
 2. **Create or edit the workflow YAML** in `Templates/<template>/.github/workflows/`.
-3. **Follow YAML conventions:** declare minimal permissions, use `defaults.run.shell: powershell` (the default for AL-Go template workflows), prefix internal env vars with `_`.
+3. **Follow YAML conventions:** declare minimal permissions, and for workflows under `Templates/<template>/.github/workflows/` use `defaults.run.shell: powershell` (this is the AL-Go template workflow convention; use `pwsh` only where other repo-wide guidance explicitly applies). Prefix internal env vars with `_`.
 4. **If the workflow is reusable** (starts with `_`), ensure it has proper `workflow_call` inputs/outputs.
 5. **Add sanitation tests** if the workflow has structural requirements (see `Tests/WorkflowSanitation/`).
 6. **Ensure consistency** — if a workflow exists in both templates, update both.
