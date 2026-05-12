@@ -2,16 +2,16 @@
 
 You are an AI agent assigned to an issue in the **AL-Go for GitHub** repository. Your job is to understand the issue, implement a solution, and open a pull request. Follow these instructions carefully.
 
----
+______________________________________________________________________
 
 ## 1. Before You Start
 
 1. **Read the issue thoroughly.** Understand the problem or feature request, including any linked issues, discussions, or referenced files.
-2. **Read `.github/copilot-instructions.md`** — it contains project-wide coding conventions (PowerShell style, error handling, JSON processing, security, YAML, testing, and documentation requirements). Everything in that file applies to your work.
-3. **Check `DEPRECATIONS.md`** before using or introducing any settings. Do not use deprecated settings.
-4. **Explore the relevant area of the codebase** before writing code. Understand how similar features are implemented.
+1. **Read `.github/copilot-instructions.md`** — it contains project-wide coding conventions (PowerShell style, error handling, JSON processing, security, YAML, testing, and documentation requirements). Everything in that file applies to your work.
+1. **Check `DEPRECATIONS.md`** before using or introducing any settings. Do not use deprecated settings.
+1. **Explore the relevant area of the codebase** before writing code. Understand how similar features are implemented.
 
----
+______________________________________________________________________
 
 ## 2. Required Checklist for Every PR
 
@@ -54,7 +54,7 @@ Before opening your pull request, verify each of the following:
 - [ ] Follow the PR template in `.github/pull_request_template.md`.
 - [ ] Keep changes focused — one logical change per PR.
 
----
+______________________________________________________________________
 
 ## 3. Repository Architecture
 
@@ -103,6 +103,7 @@ Actions/
 ```
 
 **Action anatomy:**
+
 - `action.yaml` defines inputs, outputs, and a composite `runs` block.
 - The `runs` block calls `Invoke-AlGoAction.ps1`, which wraps the action script with error handling and telemetry.
 - Input parameters are passed via environment variables (prefixed with `_`) to avoid injection.
@@ -116,6 +117,7 @@ Templates contain the workflow files that get deployed to consumer repositories.
 - **AppSource App** — for AppSource apps (includes `PublishToAppSource` workflow).
 
 Both templates share most workflows. Key workflows include:
+
 - `CICD.yaml` — main CI/CD pipeline triggered on push.
 - `PullRequestHandler.yaml` — PR validation pipeline.
 - `_BuildALGoProject.yaml` — reusable build workflow (called by CICD and PR workflows).
@@ -134,10 +136,11 @@ Both templates share most workflows. Key workflows include:
 ### Shared Modules (`Actions/.Modules/`)
 
 Reusable PowerShell modules shared across multiple actions:
+
 - `ReadSettings.psm1` — reads and merges settings from multiple sources.
 - `settings.schema.json` — JSON Schema for all AL-Go settings; keep this in sync with `Scenarios/settings.md`.
 
----
+______________________________________________________________________
 
 ## 4. How to Add a New Feature
 
@@ -146,37 +149,38 @@ This section describes the typical steps for implementing a full feature in AL-G
 ### 4.1 Adding or Modifying a Setting
 
 1. **Define the setting** in `Actions/.Modules/ReadSettings.psm1` (add to the defaults hashtable if it needs a default value).
-2. **Add the setting to the JSON schema** in `Actions/.Modules/settings.schema.json` with proper `type`, `description`, `default`, and `enum` (if applicable).
-3. **Document the setting** in `Scenarios/settings.md` with a description, type, default value, and which workflows/templates use it.
-4. **Read the setting** in the relevant action script using the `$settings` hashtable (populated by `ReadSettings`).
-5. **Add tests** in `Tests/ReadSettings.Test.ps1` or the relevant action test file to verify the setting is read and applied correctly.
+1. **Add the setting to the JSON schema** in `Actions/.Modules/settings.schema.json` with proper `type`, `description`, `default`, and `enum` (if applicable).
+1. **Document the setting** in `Scenarios/settings.md` with a description, type, default value, and which workflows/templates use it.
+1. **Read the setting** in the relevant action script using the `$settings` hashtable (populated by `ReadSettings`).
+1. **Add tests** in `Tests/ReadSettings.Test.ps1` or the relevant action test file to verify the setting is read and applied correctly.
 
 ### 4.2 Adding a New Action
 
 1. **Create the action folder** under `Actions/<ActionName>/`.
-2. **Create `action.yaml`** following the composite action pattern (see existing actions for reference). Use environment variables (prefixed with `_`) for inputs.
-3. **Create `<ActionName>.ps1`** — the main script. Dot-source `AL-Go-Helper.ps1` at the top. Use the `Invoke-AlGoAction.ps1` wrapper in `action.yaml`.
-4. **Add unit tests** in `Tests/<ActionName>.Test.ps1` or `Tests/<ActionName>.Action.Test.ps1`.
-5. **Update the relevant template workflows** if the action needs to be called from a workflow.
-6. **Update `RELEASENOTES.md`** with a description of the new action.
+1. **Create `action.yaml`** following the composite action pattern (see existing actions for reference). Use environment variables (prefixed with `_`) for inputs.
+1. **Create `<ActionName>.ps1`** — the main script. Dot-source `AL-Go-Helper.ps1` at the top. Use the `Invoke-AlGoAction.ps1` wrapper in `action.yaml`.
+1. **Add unit tests** in `Tests/<ActionName>.Test.ps1` or `Tests/<ActionName>.Action.Test.ps1`.
+1. **Update the relevant template workflows** if the action needs to be called from a workflow.
+1. **Update `RELEASENOTES.md`** with a description of the new action.
 
 ### 4.3 Adding or Modifying a Workflow
 
 1. **Identify which template(s) need the workflow** — PTE, AppSource, or both.
-2. **Create or edit the workflow YAML** in `Templates/<template>/.github/workflows/`.
-3. **Follow YAML conventions:** declare minimal permissions, and for workflows under `Templates/<template>/.github/workflows/` use `defaults.run.shell: powershell` (this is the AL-Go template workflow convention; use `pwsh` only where other repo-wide guidance explicitly applies). Prefix internal env vars with `_`.
-4. **If the workflow is reusable** (starts with `_`), ensure it has proper `workflow_call` inputs/outputs.
-5. **Add sanitation tests** if the workflow has structural requirements (see `Tests/WorkflowSanitation/`).
-6. **Ensure consistency** — if a workflow exists in both templates, update both.
+1. **Create or edit the workflow YAML** in `Templates/<template>/.github/workflows/`.
+1. **Follow YAML conventions:** declare minimal permissions, and for workflows under `Templates/<template>/.github/workflows/` use `defaults.run.shell: powershell` (this is the AL-Go template workflow convention; use `pwsh` only where other repo-wide guidance explicitly applies). Prefix internal env vars with `_`.
+1. **If the workflow is reusable** (starts with `_`), ensure it has proper `workflow_call` inputs/outputs.
+1. **Add sanitation tests** if the workflow has structural requirements (see `Tests/WorkflowSanitation/`).
+1. **Ensure consistency** — if a workflow exists in both templates, update both.
 
 ### 4.4 Modifying Shared Helpers
 
 When modifying `AL-Go-Helper.ps1`, `Github-Helper.psm1`, or modules in `.Modules/`:
-1. **Check all callers** — these files are used by many actions. Search for usages before changing function signatures.
-2. **Maintain backward compatibility** — use optional parameters with defaults.
-3. **Add tests** for new or changed functions.
 
----
+1. **Check all callers** — these files are used by many actions. Search for usages before changing function signatures.
+1. **Maintain backward compatibility** — use optional parameters with defaults.
+1. **Add tests** for new or changed functions.
+
+______________________________________________________________________
 
 ## 5. Common Pitfalls
 
@@ -188,7 +192,7 @@ When modifying `AL-Go-Helper.ps1`, `Github-Helper.psm1`, or modules in `.Modules
 - **Introducing deprecated settings.** Always check `DEPRECATIONS.md` before using settings.
 - **Not updating the schema.** If you add a setting to code but not to `settings.schema.json`, schema validation tests will fail.
 
----
+______________________________________________________________________
 
 ## 6. Running Tests Locally
 
@@ -207,14 +211,15 @@ You can run the Pester unit tests locally:
 
 Tests must pass on both PowerShell 5 (Windows) and PowerShell 7 (cross-platform).
 
----
+______________________________________________________________________
 
 ## 7. Summary
 
 When working on an issue:
+
 1. Understand the issue and explore the relevant code.
-2. Make focused, minimal changes that fully address the issue.
-3. Add or update tests.
-4. Update documentation (`RELEASENOTES.md`, `Scenarios/settings.md`, schema, scenarios).
-5. Follow all conventions in `.github/copilot-instructions.md`.
-6. Reference the issue in your PR.
+1. Make focused, minimal changes that fully address the issue.
+1. Add or update tests.
+1. Update documentation (`RELEASENOTES.md`, `Scenarios/settings.md`, schema, scenarios).
+1. Follow all conventions in `.github/copilot-instructions.md`.
+1. Reference the issue in your PR.
