@@ -53,6 +53,45 @@ Param([Hashtable]`$parameters)
         { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson 'not-json' } |
             Should -Throw -ExpectedMessage "*Failed to parse parametersJson*"
     }
+
+    It 'Throws when parametersJson is a JSON array (not an object)' {
+        { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '[1,2,3]' } |
+            Should -Throw -ExpectedMessage "*must deserialize to a JSON object*"
+    }
+
+    It 'Throws when parametersJson is a JSON scalar (not an object)' {
+        { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '42' } |
+            Should -Throw -ExpectedMessage "*must deserialize to a JSON object*"
+    }
+
+    It 'Auto-populates project and overrideName in $parameters' {
+        $sentinelPath = Join-Path $script:workspace 'auto.json'
+        Set-Content -Path (Join-Path $script:projectPath '.AL-Go/BuildInitialize.ps1') -Value @"
+Param([Hashtable]`$parameters)
+`$parameters | ConvertTo-Json -Depth 5 | Set-Content -Path '$sentinelPath' -Encoding UTF8
+"@
+
+        & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '{}'
+
+        $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
+        $payload.project | Should -Be 'project'
+        $payload.overrideName | Should -Be 'BuildInitialize'
+    }
+
+    It 'Caller-supplied keys in parametersJson override auto-populated defaults' {
+        $sentinelPath = Join-Path $script:workspace 'override.json'
+        Set-Content -Path (Join-Path $script:projectPath '.AL-Go/BuildInitialize.ps1') -Value @"
+Param([Hashtable]`$parameters)
+`$parameters | ConvertTo-Json -Depth 5 | Set-Content -Path '$sentinelPath' -Encoding UTF8
+"@
+
+        & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '{"project":"custom","extra":"value"}'
+
+        $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
+        $payload.project | Should -Be 'custom'
+        $payload.overrideName | Should -Be 'BuildInitialize'
+        $payload.extra | Should -Be 'value'
+    }
 }
 
 Describe 'Invoke-ScriptOverride helper' {

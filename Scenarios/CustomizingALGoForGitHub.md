@@ -149,7 +149,7 @@ Which basically launches a script located in the script folder in the repository
 
 In addition to the BcContainerHelper-based `Run-AlPipeline` script overrides described above, AL-Go for GitHub provides a separate set of AL-Go-native overrides that are independent of BcContainerHelper. These overrides are invoked by the [`RunOverride`](https://github.com/microsoft/AL-Go-Actions/tree/main/RunOverride) action and will continue to work after BcContainerHelper is deprecated.
 
-To use one, add a script named `<OverrideName>.ps1` in your project's `.AL-Go` folder. The script receives a single `[Hashtable] $parameters` argument (same calling convention as the BCH overrides above):
+To use one, add a script named `<OverrideName>.ps1` in your project's `.AL-Go` folder. The script receives a single `[Hashtable] $parameters` argument (same calling convention as the BCH overrides above). The hashtable always contains at least `project` (the project folder, relative to the repository root) and `overrideName` (the name of the override that was invoked); additional keys may be added over time or supplied by callers.
 
 ```powershell
 Param([Hashtable] $parameters)

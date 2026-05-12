@@ -129,7 +129,7 @@ function Invoke-ScriptOverride() {
     )
     $overrides = Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames @($OverrideName)
     if (-not $overrides.ContainsKey($OverrideName)) {
-        Write-Host "No override script '$OverrideName.ps1' found in '$ALGoFolderName' - skipping."
+        OutputDebug "No override script '$OverrideName.ps1' found in '$ALGoFolderName' - skipping."
         return
     }
     Trace-Information -Message "Using override for $OverrideName"
@@ -176,7 +176,18 @@ function Invoke-ALGoOverride() {
     }
     $projectPath = Join-Path $baseFolder $Project
     $alGoFolder = Join-Path $projectPath $ALGoFolderName
-    Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName $OverrideName -Parameters $Parameters
+
+    # Populate default context keys so override authors can rely on them being
+    # present. Caller-supplied values in $Parameters take precedence.
+    $effectiveParameters = @{
+        project      = $Project
+        overrideName = $OverrideName
+    }
+    foreach ($key in $Parameters.Keys) {
+        $effectiveParameters[$key] = $Parameters[$key]
+    }
+
+    Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName $OverrideName -Parameters $effectiveParameters
 }
 
 # Well known AppIds

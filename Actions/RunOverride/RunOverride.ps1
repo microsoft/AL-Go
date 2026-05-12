@@ -13,15 +13,15 @@ $parameters = @{}
 if ($parametersJson) {
     try {
         $parsed = $parametersJson | ConvertFrom-Json
-        if ($null -ne $parsed) {
-            $parameters = ConvertTo-HashTable $parsed -recurse
-        }
     }
     catch {
         throw "Failed to parse parametersJson as JSON: $($_.Exception.Message)"
     }
-    if ($parameters -isnot [hashtable]) {
-        throw "parametersJson must deserialize to a JSON object (hashtable), not $($parameters.GetType().Name)."
+    if ($null -ne $parsed) {
+        if ($parsed -isnot [System.Management.Automation.PSCustomObject]) {
+            throw "parametersJson must deserialize to a JSON object, not $($parsed.GetType().Name)."
+        }
+        $parameters = ConvertTo-HashTable $parsed -recurse
     }
 }
 
