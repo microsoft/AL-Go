@@ -39,14 +39,14 @@ Before opening your pull request, verify each of the following:
 
 ### Code Quality
 
-- [ ] Every new PowerShell script must start with the standard header:
+- [ ] Every new PowerShell script must start with the standard header (note: this repo uses camelCase `$errorActionPreference` by convention):
   ```powershell
   $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
   ```
 - [ ] Mask secrets with `Write-Host "::add-mask::$secret"` before any output.
 - [ ] Use `ConvertTo-HashTable -recurse` after `ConvertFrom-Json`.
 - [ ] Specify `-Encoding UTF8` when reading or writing files.
-- [ ] YAML workflows must declare minimal permissions and use `defaults.run.shell: pwsh`.
+- [ ] YAML workflows must declare minimal permissions. Template workflows (under `Templates/`) use `defaults.run.shell: powershell`; the repo's own CI workflows (under `.github/workflows/`) use `pwsh`.
 
 ### PR Hygiene
 
