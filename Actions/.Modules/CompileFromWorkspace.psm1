@@ -974,7 +974,7 @@ function Test-BaselineAppDownloaded {
         return $false
     }
 
-    $appJson = Get-Content -Path $appJsonPath -Raw | ConvertFrom-Json
+    $appJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $appPrefix = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_"
 
     return @($downloadedAppNames | Where-Object { $_.StartsWith($appPrefix) }).Count -gt 0

@@ -135,41 +135,49 @@ try {
         }
 
         if (!$buildAll) {
-            Write-Host "Incremental build: downloading unmodified apps from baseline workflow run"
+            try {
+                Write-Host "Incremental build: downloading unmodified apps from baseline workflow run"
 
-            # Snapshot existing files before the download so we can identify what was added
-            $appsBefore = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
-            $testAppsBefore = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+                # Snapshot existing files before the download so we can identify what was added
+                $appsBefore = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+                $testAppsBefore = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
 
-            Get-UnmodifiedAppsFromBaselineWorkflowRun `
-                -token $token `
-                -settings $settings `
-                -baseFolder $baseFolder `
-                -project $project `
-                -baselineWorkflowRunId $baselineWorkflowRunId `
-                -modifiedFiles $modifiedFiles `
-                -buildArtifactFolder $buildArtifactFolder `
-                -buildMode $buildMode `
-                -projectPath $projectFolder
+                Get-UnmodifiedAppsFromBaselineWorkflowRun `
+                    -token $token `
+                    -settings $settings `
+                    -baseFolder $baseFolder `
+                    -project $project `
+                    -baselineWorkflowRunId $baselineWorkflowRunId `
+                    -modifiedFiles $modifiedFiles `
+                    -buildArtifactFolder $buildArtifactFolder `
+                    -buildMode $buildMode `
+                    -projectPath $projectFolder
 
-            # Identify only the newly downloaded baseline apps (exclude files that existed before the download)
-            $downloadedApps = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Where-Object { $appsBefore -notcontains $_.Name })
-            $downloadedTestApps = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Where-Object { $testAppsBefore -notcontains $_.Name })
+                # Identify only the newly downloaded baseline apps (exclude files that existed before the download)
+                $downloadedApps = @(Get-ChildItem -Path $appOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Where-Object { $appsBefore -notcontains $_.Name })
+                $downloadedTestApps = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | Where-Object { $testAppsBefore -notcontains $_.Name })
 
-            # Copy downloaded baseline apps to the package cache so the compiler can resolve them as dependencies
-            ($downloadedApps + $downloadedTestApps) | ForEach-Object {
-                Copy-Item -Path $_.FullName -Destination $packageCachePath -Force
+                # Copy downloaded baseline apps to the package cache so the compiler can resolve them as dependencies
+                ($downloadedApps + $downloadedTestApps) | ForEach-Object {
+                    Copy-Item -Path $_.FullName -Destination $packageCachePath -Force
+                }
+
+                # Filter folders: only compile folders whose app was NOT already downloaded from the baseline
+                $downloadedAppNames = @($downloadedApps + $downloadedTestApps | ForEach-Object { $_.Name })
+                $appFoldersToBuild = @($settings.appFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
+                $testFoldersToBuild = @($settings.testFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
+                $bcptTestFoldersToBuild = @($settings.bcptTestFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
+
+                OutputMessageAndArray -message "Folders to compile (apps)" -arrayOfStrings $appFoldersToBuild
+                OutputMessageAndArray -message "Folders to compile (test)" -arrayOfStrings $testFoldersToBuild
+                OutputMessageAndArray -message "Folders to compile (bcpt)" -arrayOfStrings $bcptTestFoldersToBuild
             }
-
-            # Filter folders: only compile folders whose app was NOT already downloaded from the baseline
-            $downloadedAppNames = @($downloadedApps + $downloadedTestApps | ForEach-Object { $_.Name })
-            $appFoldersToBuild = @($settings.appFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
-            $testFoldersToBuild = @($settings.testFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
-            $bcptTestFoldersToBuild = @($settings.bcptTestFolders | Where-Object { -not (Test-BaselineAppDownloaded -folder (Join-Path $projectFolder $_) -downloadedAppNames $downloadedAppNames) })
-
-            OutputMessageAndArray -message "Folders to compile (apps)" -arrayOfStrings $appFoldersToBuild
-            OutputMessageAndArray -message "Folders to compile (test)" -arrayOfStrings $testFoldersToBuild
-            OutputMessageAndArray -message "Folders to compile (bcpt)" -arrayOfStrings $bcptTestFoldersToBuild
+            catch {
+                OutputNotice -message "Failed to download unmodified apps from baseline workflow run $baselineWorkflowRunId, building all apps. Error: $($_.Exception.Message)"
+                $appFoldersToBuild = $settings.appFolders
+                $testFoldersToBuild = $settings.testFolders
+                $bcptTestFoldersToBuild = $settings.bcptTestFolders
+            }
         }
     }
 

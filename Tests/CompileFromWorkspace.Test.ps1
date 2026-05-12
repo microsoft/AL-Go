@@ -1142,5 +1142,26 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_99.99.99.99.app')
             $result | Should -Be $true
         }
+
+        It 'matches publisher names containing non-ASCII characters (UTF-8 encoded app.json)' {
+            $appFolder = Join-Path $TestDrive 'baseline-test6'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            $appJsonContent = @{ id = "55555555-5555-5555-5555-555555555555"; name = "MyApp"; publisher = "Müller GmbH"; version = "1.0.0.0" } | ConvertTo-Json
+            Set-Content -Path (Join-Path $appFolder "app.json") -Value $appJsonContent -Encoding UTF8
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Müller GmbH_MyApp_1.0.0.0.app')
+            $result | Should -Be $true
+        }
+
+        It 'strips invalid filename characters from publisher/name before matching' {
+            $appFolder = Join-Path $TestDrive 'baseline-test7'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            @{ id = "66666666-6666-6666-6666-666666666666"; name = "My<App>"; publisher = "Con:toso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json")
+
+            # The function strips chars from GetInvalidFileNameChars() before comparing,
+            # so "Con:toso_My<App>" with `:<>` stripped becomes "Contoso_MyApp"
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_1.0.0.0.app')
+            $result | Should -Be $true
+        }
     }
 }
