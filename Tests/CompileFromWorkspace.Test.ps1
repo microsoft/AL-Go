@@ -1102,7 +1102,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'returns true when a matching app file is in the downloaded list' {
             $appFolder = Join-Path $TestDrive 'baseline-test1'
             New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
-            @{ id = "11111111-1111-1111-1111-111111111111"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json")
+            @{ id = "11111111-1111-1111-1111-111111111111"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
 
             $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_1.0.0.0.app', 'Other_Other_2.0.0.0.app')
             $result | Should -Be $true
@@ -1111,7 +1111,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'returns false when no matching app file is in the downloaded list' {
             $appFolder = Join-Path $TestDrive 'baseline-test2'
             New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
-            @{ id = "22222222-2222-2222-2222-222222222222"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json")
+            @{ id = "22222222-2222-2222-2222-222222222222"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
 
             $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Other_Other_2.0.0.0.app')
             $result | Should -Be $false
@@ -1120,7 +1120,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'returns false when the downloaded list is empty' {
             $appFolder = Join-Path $TestDrive 'baseline-test3'
             New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
-            @{ id = "33333333-3333-3333-3333-333333333333"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json")
+            @{ id = "33333333-3333-3333-3333-333333333333"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
 
             $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @()
             $result | Should -Be $false
@@ -1137,7 +1137,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'matches by prefix regardless of version number' {
             $appFolder = Join-Path $TestDrive 'baseline-test5'
             New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
-            @{ id = "44444444-4444-4444-4444-444444444444"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json")
+            @{ id = "44444444-4444-4444-4444-444444444444"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
 
             $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_99.99.99.99.app')
             $result | Should -Be $true
@@ -1156,7 +1156,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'strips invalid filename characters from publisher/name before matching' {
             $appFolder = Join-Path $TestDrive 'baseline-test7'
             New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
-            @{ id = "66666666-6666-6666-6666-666666666666"; name = "My<App>"; publisher = "Con:toso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json")
+            @{ id = "66666666-6666-6666-6666-666666666666"; name = "My<App>"; publisher = "Con:toso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
 
             # The function strips chars from GetInvalidFileNameChars() before comparing,
             # so "Con:toso_My<App>" with `:<>` stripped becomes "Contoso_MyApp"
