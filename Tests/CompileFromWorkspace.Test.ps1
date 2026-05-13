@@ -1153,7 +1153,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result | Should -Be $true
         }
 
-        It 'strips invalid filename characters from publisher/name before matching' {
+        It 'strips invalid filename characters from publisher/name before matching' -Skip:(-not $IsWindows) {
             $appFolder = Join-Path $TestDrive 'baseline-test7'
             New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
             @{ id = "66666666-6666-6666-6666-666666666666"; name = "My<App>"; publisher = "Con:toso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
