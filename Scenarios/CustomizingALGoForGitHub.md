@@ -165,6 +165,9 @@ The currently supported AL-Go hooks are:
 
 If the script does not exist in `.AL-Go`, the corresponding workflow step is a silent no-op.
 
+> [!WARNING]
+> AL-Go hooks are an **experimental** feature. The set of supported hook names, the parameters passed to hook scripts, the location and timing of hook invocations, and the names of the underlying action and helpers may all change in future versions of AL-Go for GitHub. Anything you build on top of this first iteration may break in a later update.
+
 > [!NOTE]
 > AL-Go hooks are still a new feature and will be expanded as functionality gets moved out of BcContainerHelper.
 
