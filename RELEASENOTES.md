@@ -25,6 +25,11 @@ Example:
 ]
 ```
 
+### Support for workspace compilation (Continued)
+
+- Added support for upgrade tests and using previously released artifacts as baselines for appsourcecop.json
+- Added support for BCPT app compilation with workspace compilation
+
 ### Optimized dependency artifact downloads for multi-project repositories
 
 The `DownloadProjectDependencies` action now downloads only artifacts from dependency projects instead of all workflow artifacts. For repositories with many AL-Go projects, this reduces build runner bandwidth and speeds up the dependency download step.
