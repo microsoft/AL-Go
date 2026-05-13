@@ -211,7 +211,7 @@ function Get-ALTool {
 .PARAMETER EnableExternalRulesets
     Switch to enable external rulesets for code analysis.
 .PARAMETER AppType
-    Type of apps being compiled: 'app' or 'testApp'.
+    Type of apps being compiled: 'app', 'testApp', or 'bcptApp'.
 .PARAMETER PreCompileApp
     Scriptblock to execute before compiling each app.
 .PARAMETER PostCompileApp
@@ -257,7 +257,7 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $false)]
         [switch]$EnableExternalRulesets,
         [Parameter(Mandatory = $false)]
-        [ValidateSet('app', 'testApp')]
+        [ValidateSet('app', 'testApp', 'bcptApp')]
         [string]$AppType,
         [Parameter(Mandatory = $false)]
         [scriptblock]$PreCompileApp,
@@ -851,6 +851,101 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
+<#
+.SYNOPSIS
+    Generates AppSourceCop.json files for app folders with baseline version information.
+.DESCRIPTION
+    For each app folder, creates or updates an AppSourceCop.json file with baseline information
+    for breaking change detection. If the file already exists, it is merged with AL-Go-managed
+    fields rather than overwritten.
+
+    AL-Go-managed keys (set/overwritten by this function):
+    - version
+    - baselinePackageCachePath
+    - mandatoryAffixes
+    - obsoleteTagMinAllowedMajorMinor
+
+    Any other keys in an existing AppSourceCop.json are preserved.
+.PARAMETER AppFolders
+    Array of app folder paths to generate AppSourceCop.json for.
+.PARAMETER BaselineApps
+    Array of file paths to baseline release .app files.
+.PARAMETER BaselinePackageCachePath
+    Path to the folder containing the baseline .app files and their dependencies (used for baselinePackageCachePath in AppSourceCop.json).
+.PARAMETER CompilerFolder
+    Path to the compiler folder containing the AL tool.
+.PARAMETER Settings
+    Hashtable containing the build settings with AppSourceCop configuration.
+#>
+function New-AppSourceCopJson {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $AppFolders,
+        [Parameter(Mandatory = $false)]
+        [string[]] $BaselineApps = @(),
+        [Parameter(Mandatory = $false)]
+        [string] $BaselinePackageCachePath = '',
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings
+    )
+
+    # Extract version info from baseline apps using the AL tool, keyed by app ID
+    $baselineAppVersions = @{}
+    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    foreach ($appFile in $BaselineApps) {
+        try {
+            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $baselineAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
+        }
+        catch {
+            OutputWarning -message "Failed to read manifest from '$appFile': $($_.Exception.Message)"
+        }
+    }
+
+    # Create/update AppSourceCop.json for each app folder with the previous version as baseline and settings from the project configuration
+    foreach ($folder in $AppFolders) {
+        $appSourceCopJsonFile = Join-Path $folder "AppSourceCop.json"
+
+        # Start from existing content if present, preserving any user-managed settings
+        $appSourceCopJson = @{}
+        if (Test-Path $appSourceCopJsonFile) {
+            try {
+                $appSourceCopJson = Get-Content -Path $appSourceCopJsonFile -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            }
+            catch {
+                OutputWarning -message "Failed to parse existing AppSourceCop.json in '$folder': $($_.Exception.Message). Creating new file."
+                $appSourceCopJson = @{}
+            }
+        }
+
+        # Set/override AL-Go managed fields
+        if ($Settings.appSourceCopMandatoryAffixes -and $Settings.appSourceCopMandatoryAffixes.Count -gt 0) {
+            $appSourceCopJson["mandatoryAffixes"] = @() + $Settings.appSourceCopMandatoryAffixes
+        }
+
+        if ($Settings.obsoleteTagMinAllowedMajorMinor) {
+            $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
+        }
+
+        # Match baseline app version by app ID
+        $appJsonPath = Join-Path $folder "app.json"
+        if (Test-Path $appJsonPath) {
+            $appJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            if ($baselineAppVersions.ContainsKey($appJson.id)) {
+                $appSourceCopJson["version"] = $baselineAppVersions[$appJson.id]
+                $appSourceCopJson["baselinePackageCachePath"] = $BaselinePackageCachePath
+            }
+        }
+
+        if ($appSourceCopJson.Count -gt 0) {
+            Write-Host "Creating AppSourceCop.json for $folder"
+            $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content -Encoding UTF8 $appSourceCopJsonFile
+        }
+    }
+}
+
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
@@ -858,3 +953,4 @@ Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
+Export-ModuleMember -Function New-AppSourceCopJson
