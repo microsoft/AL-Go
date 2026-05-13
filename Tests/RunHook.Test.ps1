@@ -5,12 +5,12 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
 
-Describe 'RunOverride action' {
+Describe 'RunHook action' {
     BeforeAll {
         # Trace-Information is from TelemetryHelper.psm1 which isn't loaded in tests
         function Trace-Information { param([string]$Message) }
 
-        $script:RunOverrideScript = (Join-Path $PSScriptRoot "../Actions/RunOverride/RunOverride.ps1" -Resolve)
+        $script:RunHookScript = (Join-Path $PSScriptRoot "../Actions/RunHook/RunHook.ps1" -Resolve)
     }
 
     BeforeEach {
@@ -25,18 +25,18 @@ Describe 'RunOverride action' {
         $env:GITHUB_WORKSPACE = $null
     }
 
-    It 'Is a silent no-op when the override script does not exist' {
-        { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '{}' } | Should -Not -Throw
+    It 'Is a silent no-op when the hook script does not exist' {
+        { & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson '{}' } | Should -Not -Throw
     }
 
-    It 'Invokes the override script and forwards parameters as a hashtable' {
+    It 'Invokes the hook script and forwards parameters as a hashtable' {
         $sentinelPath = Join-Path $script:workspace 'sentinel.json'
         Set-Content -Path (Join-Path $script:projectPath '.AL-Go/BuildInitialize.ps1') -Value @"
 Param([Hashtable]`$parameters)
 `$parameters | ConvertTo-Json -Depth 5 | Set-Content -Path '$sentinelPath' -Encoding UTF8
 "@
 
-        & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '{"foo":"bar","nested":{"answer":42}}'
+        & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson '{"foo":"bar","nested":{"answer":42}}'
 
         Test-Path $sentinelPath | Should -BeTrue
         $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
@@ -44,23 +44,23 @@ Param([Hashtable]`$parameters)
         $payload.nested.answer | Should -Be 42
     }
 
-    It 'Throws a clear error when overrideName is not in the allow-list' {
-        { & $script:RunOverrideScript -project 'project' -overrideName 'NotARealOverride' -parametersJson '{}' } |
-            Should -Throw -ExpectedMessage "*'NotARealOverride'*not a recognized AL-Go override*"
+    It 'Throws a clear error when hookName is not in the allow-list' {
+        { & $script:RunHookScript -project 'project' -hookName 'NotARealHook' -parametersJson '{}' } |
+            Should -Throw -ExpectedMessage "*'NotARealHook'*not a recognized AL-Go hook*"
     }
 
     It 'Throws when parametersJson is not valid JSON' {
-        { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson 'not-json' } |
+        { & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson 'not-json' } |
             Should -Throw -ExpectedMessage "*Failed to parse parametersJson*"
     }
 
     It 'Throws when parametersJson is a JSON array (not an object)' {
-        { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '[1,2,3]' } |
+        { & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson '[1,2,3]' } |
             Should -Throw -ExpectedMessage "*must deserialize to a JSON object*"
     }
 
     It 'Throws when parametersJson is a JSON scalar (not an object)' {
-        { & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '42' } |
+        { & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson '42' } |
             Should -Throw -ExpectedMessage "*must deserialize to a JSON object*"
     }
 
@@ -71,11 +71,11 @@ Param([Hashtable]`$parameters)
 `$parameters | ConvertTo-Json -Depth 5 | Set-Content -Path '$sentinelPath' -Encoding UTF8
 "@
 
-        & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '{}'
+        & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson '{}'
 
         $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
         $payload.project | Should -Be 'project'
-        $payload.PSObject.Properties.Name | Should -Not -Contain 'overrideName'
+        $payload.PSObject.Properties.Name | Should -Not -Contain 'hookName'
     }
 
     It 'Caller-supplied keys in parametersJson override auto-populated defaults' {
@@ -85,7 +85,7 @@ Param([Hashtable]`$parameters)
 `$parameters | ConvertTo-Json -Depth 5 | Set-Content -Path '$sentinelPath' -Encoding UTF8
 "@
 
-        & $script:RunOverrideScript -project 'project' -overrideName 'BuildInitialize' -parametersJson '{"project":"custom","extra":"value"}'
+        & $script:RunHookScript -project 'project' -hookName 'BuildInitialize' -parametersJson '{"project":"custom","extra":"value"}'
 
         $payload = Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | ConvertFrom-Json
         $payload.project | Should -Be 'custom'
@@ -93,20 +93,20 @@ Param([Hashtable]`$parameters)
     }
 }
 
-Describe 'Invoke-ScriptOverride helper' {
+Describe 'Invoke-ScriptHook helper' {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         function Trace-Information { param([string]$Message) }
     }
 
-    It 'Does nothing when no override script exists' {
+    It 'Does nothing when no hook script exists' {
         $alGoFolder = Join-Path $TestDrive 'invoke-noop'
         New-Item -ItemType Directory -Path $alGoFolder | Out-Null
 
-        { Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName 'BuildInitialize' -Parameters @{} } | Should -Not -Throw
+        { Invoke-ScriptHook -ALGoFolderName $alGoFolder -HookName 'BuildInitialize' -Parameters @{} } | Should -Not -Throw
     }
 
-    It 'Invokes the override script with the supplied hashtable' {
+    It 'Invokes the hook script with the supplied hashtable' {
         $alGoFolder = Join-Path $TestDrive 'invoke-run'
         New-Item -ItemType Directory -Path $alGoFolder | Out-Null
         $sentinelPath = Join-Path $TestDrive 'invoke-run-sentinel.txt'
@@ -115,13 +115,13 @@ Param([Hashtable]`$parameters)
 Set-Content -Path '$sentinelPath' -Value `$parameters.message -Encoding UTF8
 "@
 
-        Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName 'BuildInitialize' -Parameters @{ message = 'hello' }
+        Invoke-ScriptHook -ALGoFolderName $alGoFolder -HookName 'BuildInitialize' -Parameters @{ message = 'hello' }
 
         Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | Should -Match 'hello'
     }
 }
 
-Describe 'Invoke-ALGoOverride helper' {
+Describe 'Invoke-ALGoHook helper' {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
         function Trace-Information { param([string]$Message) }
@@ -139,28 +139,28 @@ Describe 'Invoke-ALGoOverride helper' {
         $env:GITHUB_WORKSPACE = $null
     }
 
-    It 'Throws when overrideName is not in the allow-list' {
-        { Invoke-ALGoOverride -Project 'project' -OverrideName 'NotARealOverride' -Parameters @{} } |
-            Should -Throw -ExpectedMessage "*'NotARealOverride'*not a recognized AL-Go override*"
+    It 'Throws when hookName is not in the allow-list' {
+        { Invoke-ALGoHook -Project 'project' -HookName 'NotARealHook' -Parameters @{} } |
+            Should -Throw -ExpectedMessage "*'NotARealHook'*not a recognized AL-Go hook*"
     }
 
-    It 'Resolves project path against GITHUB_WORKSPACE and invokes the override' {
+    It 'Resolves project path against GITHUB_WORKSPACE and invokes the hook' {
         $sentinelPath = Join-Path $script:workspace2 'algo-sentinel.txt'
         Set-Content -Path (Join-Path $script:projectPath2 '.AL-Go/BuildInitialize.ps1') -Value @"
 Param([Hashtable]`$parameters)
 Set-Content -Path '$sentinelPath' -Value `$parameters.value -Encoding UTF8
 "@
 
-        Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{ value = 'resolved' }
+        Invoke-ALGoHook -Project 'project' -HookName 'BuildInitialize' -Parameters @{ value = 'resolved' }
 
         Get-Content -Path $sentinelPath -Encoding UTF8 -Raw | Should -Match 'resolved'
     }
 
-    It 'Is a silent no-op when the override script does not exist' {
-        { Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{} } | Should -Not -Throw
+    It 'Is a silent no-op when the hook script does not exist' {
+        { Invoke-ALGoHook -Project 'project' -HookName 'BuildInitialize' -Parameters @{} } | Should -Not -Throw
     }
 
-    It 'Runs the override script with the project folder as the current location' {
+    It 'Runs the hook script with the project folder as the current location' {
         $sentinelPath = Join-Path $script:workspace2 'cwd.txt'
         Set-Content -Path (Join-Path $script:projectPath2 '.AL-Go/BuildInitialize.ps1') -Value @"
 Param([Hashtable]`$parameters)
@@ -168,7 +168,7 @@ Param([Hashtable]`$parameters)
 "@
         $callerLocation = (Get-Location).Path
 
-        Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{}
+        Invoke-ALGoHook -Project 'project' -HookName 'BuildInitialize' -Parameters @{}
 
         $observed = (Get-Content -Path $sentinelPath -Encoding UTF8 -Raw).Trim()
         $expected = (Resolve-Path $script:projectPath2).Path
@@ -177,14 +177,14 @@ Param([Hashtable]`$parameters)
         (Get-Location).Path | Should -Be $callerLocation
     }
 
-    It 'Restores the caller location even when the override throws' {
+    It 'Restores the caller location even when the hook throws' {
         Set-Content -Path (Join-Path $script:projectPath2 '.AL-Go/BuildInitialize.ps1') -Value @"
 Param([Hashtable]`$parameters)
 throw 'boom'
 "@
         $callerLocation = (Get-Location).Path
 
-        { Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{} } | Should -Throw
+        { Invoke-ALGoHook -Project 'project' -HookName 'BuildInitialize' -Parameters @{} } | Should -Throw
 
         (Get-Location).Path | Should -Be $callerLocation
     }

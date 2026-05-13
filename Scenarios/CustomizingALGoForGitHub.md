@@ -145,11 +145,11 @@ Which basically launches a script located in the script folder in the repository
 > [!CAUTION]
 > Script overrides will almost certainly be broken in the future. The current script overrides is very much tied to the current implementation of the `Run-AlPipeline` function in BcContainerHelper. In the future, we will move this functionality to GitHub actions and no longer depend on BcContainerHelper and Run-AlPipeline. At that time, these script overrides will have to be changed to follow the new implementation.
 
-#### AL-Go-native script overrides
+#### AL-Go hooks
 
-In addition to the BcContainerHelper-based `Run-AlPipeline` script overrides described above, AL-Go for GitHub provides a separate set of AL-Go-native overrides that are independent of BcContainerHelper. These overrides are invoked by the [`RunOverride`](https://github.com/microsoft/AL-Go-Actions/tree/main/RunOverride) action and will continue to work after BcContainerHelper is deprecated.
+In addition to the BcContainerHelper-based `Run-AlPipeline` script overrides described above, AL-Go for GitHub provides a set of AL-Go hooks that let you plug custom logic into well-known extension points in AL-Go workflows. Hooks are independent of BcContainerHelper and are invoked by the [`RunHook`](https://github.com/microsoft/AL-Go-Actions/tree/main/RunHook) action; they will continue to work after BcContainerHelper is deprecated.
 
-To use one, add a script named `<OverrideName>.ps1` in your project's `.AL-Go` folder. The script receives a single `[Hashtable] $parameters` argument (same calling convention as the BCH overrides above). The hashtable always contains at least `project` (the project folder, relative to the repository root); additional keys may be added over time or supplied by callers.
+To use one, add a script named `<HookName>.ps1` in your project's `.AL-Go` folder. The script receives a single `[Hashtable] $parameters` argument. The hashtable always contains at least `project` (the project folder, relative to the repository root); additional keys may be added over time or supplied by callers.
 
 ```powershell
 Param([Hashtable] $parameters)
@@ -157,16 +157,16 @@ Param([Hashtable] $parameters)
 Write-Host "Running custom logic for project '$($parameters.project)'"
 ```
 
-The currently supported AL-Go-native overrides are:
+The currently supported AL-Go hooks are:
 
-| Override | Where it runs | Notes |
+| Hook | Where it runs | Notes |
 | :-- | :-- | :-- |
-| `BuildInitialize` | First step of the build workflow, immediately after Checkout | Runs **before** `Read settings`, so AL-Go settings, secrets and most environment variables are not yet available. |
+| `BuildInitialize` | Build workflow, immediately after `Read settings` | AL-Go settings are available as environment variables; secrets are not yet read at this point. |
 
 If the script does not exist in `.AL-Go`, the corresponding workflow step is a silent no-op.
 
 > [!NOTE]
-> AL-Go native overrides are still a new feature and will be expanded as functionality gets moved out of BcContainerHelper.
+> AL-Go hooks are still a new feature and will be expanded as functionality gets moved out of BcContainerHelper.
 
 ### Adding custom jobs
 

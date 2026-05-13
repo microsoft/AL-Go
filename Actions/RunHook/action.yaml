@@ -1,4 +1,4 @@
-name: Run AL-Go Override
+name: Run AL-Go Hook
 author: Microsoft Corporation
 inputs:
   shell:
@@ -9,11 +9,11 @@ inputs:
     description: Project folder
     required: false
     default: '.'
-  overrideName:
-    description: Name of the override to run (must match a name in the AL-Go-native overrides allow-list)
+  hookName:
+    description: Name of the hook to run (must match a name in the AL-Go hooks allow-list)
     required: true
   parametersJson:
-    description: Compressed JSON string with parameters to pass to the override script as a hashtable
+    description: Compressed JSON string with parameters to pass to the hook script as a hashtable
     required: false
     default: '{}'
 runs:
@@ -23,11 +23,11 @@ runs:
       shell: ${{ inputs.shell }}
       env:
         _project: ${{ inputs.project }}
-        _overrideName: ${{ inputs.overrideName }}
+        _hookName: ${{ inputs.hookName }}
         _parametersJson: ${{ inputs.parametersJson }}
       run: |
-        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunOverride" -Action {
-          ${{ github.action_path }}/RunOverride.ps1 -project $env:_project -overrideName $env:_overrideName -parametersJson $env:_parametersJson
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunHook" -Action {
+          ${{ github.action_path }}/RunHook.ps1 -project $env:_project -hookName $env:_hookName -parametersJson $env:_parametersJson
         }
 branding:
   icon: terminal

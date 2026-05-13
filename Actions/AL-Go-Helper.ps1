@@ -54,12 +54,12 @@ $runAlPipelineOverrides = @(
     "PipelineFinalize"
 )
 
-# AL-Go-native overrides (independent of BcContainerHelper / Run-AlPipeline).
+# AL-Go hooks (independent of BcContainerHelper / Run-AlPipeline).
 # Each entry must correspond to a script named <Name>.ps1 in the project's
-# .AL-Go folder. Override scripts are invoked with a single [Hashtable]
-# $parameters argument (same calling convention as BCH overrides).
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alGoOverrides', Justification = 'Used by RunOverride action and Invoke-ScriptOverride helper.')]
-$alGoOverrides = @(
+# .AL-Go folder. Hook scripts are invoked with a single [Hashtable]
+# $parameters argument.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alGoHooks', Justification = 'Used by RunHook action and Invoke-ALGoHook helper.')]
+$alGoHooks = @(
     "BuildInitialize"
 )
 
@@ -100,84 +100,80 @@ function Get-ScriptOverrides() {
 
 <#
     .SYNOPSIS
-        Invokes a single AL-Go script override if it exists.
+        Invokes a single AL-Go hook script if it exists.
     .DESCRIPTION
-        Looks for a script named <OverrideName>.ps1 in the specified AL-Go folder
+        Looks for a script named <HookName>.ps1 in the specified AL-Go folder
         using Get-ScriptOverrides. If the script exists, it is invoked with a
-        single [Hashtable] $parameters argument (matching the BCH override
-        calling convention). If the script does not exist, the function silently
-        returns without taking any action - callers can therefore invoke this
-        unconditionally from workflows or other actions.
+        single [Hashtable] $parameters argument. If the script does not
+        exist, the function silently returns without taking any action -
+        callers can therefore invoke this unconditionally from workflows or
+        other actions.
     .PARAMETER ALGoFolderName
-        The folder where AL-Go override scripts are located (typically the
+        The folder where AL-Go hook scripts are located (typically the
         project's .AL-Go folder).
-    .PARAMETER OverrideName
-        The name of the override script to invoke (without the .ps1 extension).
+    .PARAMETER HookName
+        The name of the hook script to invoke (without the .ps1 extension).
     .PARAMETER Parameters
-        Optional hashtable of parameters to pass to the override script.
+        Optional hashtable of parameters to pass to the hook script.
     .EXAMPLE
-        Invoke-ScriptOverride -ALGoFolderName '.AL-Go' -OverrideName 'BuildInitialize' -Parameters @{ project = '.' }
+        Invoke-ScriptHook -ALGoFolderName '.AL-Go' -HookName 'BuildInitialize' -Parameters @{ project = '.' }
 #>
-function Invoke-ScriptOverride() {
+function Invoke-ScriptHook() {
     param(
         [Parameter(Mandatory = $true)]
         [string] $ALGoFolderName,
         [Parameter(Mandatory = $true)]
-        [string] $OverrideName,
+        [string] $HookName,
         [Parameter(Mandatory = $false)]
         [hashtable] $Parameters = @{}
     )
-    $overrides = Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames @($OverrideName)
-    if (-not $overrides.ContainsKey($OverrideName)) {
-        OutputDebug "No override script '$OverrideName.ps1' found in '$ALGoFolderName' - skipping."
+    $hooks = Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames @($HookName)
+    if (-not $hooks.ContainsKey($HookName)) {
+        OutputDebug "No hook script '$HookName.ps1' found in '$ALGoFolderName' - skipping."
         return
     }
-    Trace-Information -Message "Using override for $OverrideName"
-    Write-Host "Invoking override '$OverrideName'"
-    $scriptBlock = $overrides[$OverrideName]
+    Trace-Information -Message "Using hook for $HookName"
+    Write-Host "Invoking hook '$HookName'"
+    $scriptBlock = $hooks[$HookName]
     Invoke-Command -ScriptBlock $scriptBlock -ArgumentList $Parameters
 }
 
 <#
     .SYNOPSIS
-        Invokes an AL-Go-native override for a given project.
+        Invokes an AL-Go hook for a given project.
     .DESCRIPTION
-        High-level entry point for running an AL-Go-native override
-        (independent of BcContainerHelper). Validates the requested override
-        name against the $alGoOverrides allow-list, resolves the project's
-        .AL-Go folder against $ENV:GITHUB_WORKSPACE (falling back to the
-        current location), and delegates to Invoke-ScriptOverride. If the
-        override script does not exist, this is a silent no-op.
+        High-level entry point for running an AL-Go hook (independent of
+        BcContainerHelper). Validates the requested hook name against the
+        $alGoHooks allow-list, resolves the project's .AL-Go folder against
+        the repository base path (Get-BasePath), and delegates to
+        Invoke-ScriptHook. If the hook script does not exist, this is a
+        silent no-op.
     .PARAMETER Project
-        Project folder path, relative to the workspace root. Defaults to '.'.
-    .PARAMETER OverrideName
-        Name of the override to run. Must be one of the values in
-        $alGoOverrides.
+        Project folder path, relative to the repository base path. Defaults to '.'.
+    .PARAMETER HookName
+        Name of the hook to run. Must be one of the values in $alGoHooks.
     .PARAMETER Parameters
-        Optional hashtable of parameters to pass to the override script.
+        Optional hashtable of parameters to pass to the hook script.
     .EXAMPLE
-        Invoke-ALGoOverride -Project '.' -OverrideName 'BuildInitialize' -Parameters @{ project = '.' }
+        Invoke-ALGoHook -Project '.' -HookName 'BuildInitialize' -Parameters @{ project = '.' }
 #>
-function Invoke-ALGoOverride() {
+function Invoke-ALGoHook() {
     param(
         [Parameter(Mandatory = $false)]
         [string] $Project = ".",
         [Parameter(Mandatory = $true)]
-        [string] $OverrideName,
+        [string] $HookName,
         [Parameter(Mandatory = $false)]
         [hashtable] $Parameters = @{}
     )
-    if ($alGoOverrides -notcontains $OverrideName) {
-        throw "Override name '$OverrideName' is not a recognized AL-Go override. Allowed values: $($alGoOverrides -join ', ')."
+    if ($alGoHooks -notcontains $HookName) {
+        throw "Hook name '$HookName' is not a recognized AL-Go hook. Allowed values: $($alGoHooks -join ', ')."
     }
-    $baseFolder = $ENV:GITHUB_WORKSPACE
-    if (-not $baseFolder) {
-        $baseFolder = (Get-Location).Path
-    }
+    $baseFolder = Get-BasePath
     $projectPath = Join-Path $baseFolder $Project
     $alGoFolder = Join-Path $projectPath $ALGoFolderName
 
-    # Populate default context keys so override authors can rely on them being
+    # Populate default context keys so hook authors can rely on them being
     # present. Caller-supplied values in $Parameters take precedence.
     $effectiveParameters = @{
         project = $Project
@@ -186,9 +182,11 @@ function Invoke-ALGoOverride() {
         $effectiveParameters[$key] = $Parameters[$key]
     }
 
+    # Run the hook with the project folder as the current working directory
+    # so project-relative paths in user scripts resolve naturally.
     Push-Location $projectPath
     try {
-        Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName $OverrideName -Parameters $effectiveParameters
+        Invoke-ScriptHook -ALGoFolderName $alGoFolder -HookName $HookName -Parameters $effectiveParameters
     }
     finally {
         Pop-Location

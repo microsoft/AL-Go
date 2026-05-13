@@ -1,9 +1,9 @@
 Param(
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = ".",
-    [Parameter(HelpMessage = "Name of the override to run", Mandatory = $true)]
-    [string] $overrideName,
-    [Parameter(HelpMessage = "Compressed JSON string with parameters to pass to the override script", Mandatory = $false)]
+    [Parameter(HelpMessage = "Name of the hook to run", Mandatory = $true)]
+    [string] $hookName,
+    [Parameter(HelpMessage = "Compressed JSON string with parameters to pass to the hook script", Mandatory = $false)]
     [string] $parametersJson = '{}'
 )
 
@@ -25,4 +25,4 @@ if ($parametersJson) {
     }
 }
 
-Invoke-ALGoOverride -Project $project -OverrideName $overrideName -Parameters $parameters
+Invoke-ALGoHook -Project $project -HookName $hookName -Parameters $parameters

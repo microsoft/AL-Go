@@ -1,21 +1,21 @@
-# Run AL-Go Override
+# Run AL-Go Hook
 
-Runs an AL-Go-native script override from the project's `.AL-Go` folder.
+Runs an AL-Go hook script from the project's `.AL-Go` folder.
 
 This action provides a generic mechanism for invoking customer-supplied
-override scripts at well-known extension points in AL-Go workflows. It is
+hook scripts at well-known extension points in AL-Go workflows. It is
 independent of BcContainerHelper and the `Run-AlPipeline` script overrides
 (which are still applied internally by the `RunPipeline` action).
 
-If the project does not contain an override script for the requested
-`overrideName`, the action is a silent no-op so that workflows can call it
+If the project does not contain a hook script for the requested
+`hookName`, the action is a silent no-op so that workflows can call it
 unconditionally.
 
-## How to author an override
+## How to author a hook
 
-Add a PowerShell script named `<overrideName>.ps1` to your project's
+Add a PowerShell script named `<hookName>.ps1` to your project's
 `.AL-Go` folder. The script is invoked with a single `[Hashtable] $parameters`
-argument (the same calling convention used by BCH script overrides).
+argument.
 
 The hashtable always contains at least the following context key, which is
 populated automatically:
@@ -33,14 +33,14 @@ Example `.AL-Go/BuildInitialize.ps1`:
 Param(
     [Hashtable] $parameters
 )
-Write-Host "BuildInitialize running for project '$($parameters.project)'"
+Write-Host "BuildInitialize hook running for project '$($parameters.project)'"
 ```
 
-## Supported override names
+## Supported hook names
 
-| Override name | Where it runs | Notes |
+| Hook name | Where it runs | Notes |
 | :-- | :-- | :-- |
-| `BuildInitialize` | First step of the build workflow (`_BuildALGoProject.yaml`), immediately after Checkout | Runs **before** `Read settings`, so AL-Go settings, secrets and most environment variables are not yet available. |
+| `BuildInitialize` | Build workflow (`_BuildALGoProject.yaml`), immediately after `Read settings` | AL-Go settings are available as environment variables; secrets are not yet read at this point. |
 
 ## INPUT
 
@@ -54,8 +54,8 @@ none
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | project | | Project folder (relative to repository root) | . |
-| overrideName | Yes | Name of the override to run. Must be one of the supported override names. | |
-| parametersJson | | Compressed JSON object with parameters to pass to the override script as a hashtable | `{}` |
+| hookName | Yes | Name of the hook to run. Must be one of the supported hook names. | |
+| parametersJson | | Compressed JSON object with parameters to pass to the hook script as a hashtable | `{}` |
 
 ## OUTPUT
 

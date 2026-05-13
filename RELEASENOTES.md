@@ -1,10 +1,10 @@
-### New AL-Go-native script overrides
+### New AL-Go hooks
 
-AL-Go for GitHub now supports a new generic script override mechanism that is independent of BcContainerHelper. A new `RunOverride` action invokes scripts placed in the project's `.AL-Go` folder at well-known extension points in the workflows. The first such extension point is `BuildInitialize`, which runs as the first step of the build workflow (immediately after Checkout, before `Read settings`).
+AL-Go for GitHub now supports a new generic hook mechanism that is independent of BcContainerHelper. A new `RunHook` action invokes scripts placed in the project's `.AL-Go` folder at well-known extension points in the workflows. The first such extension point is `BuildInitialize`, which runs in the build workflow immediately after `Read settings` (so AL-Go settings are available as environment variables).
 
 To use it, add a `.AL-Go/BuildInitialize.ps1` script that accepts a `[Hashtable] $parameters` argument. If the script does not exist, the step is a silent no-op.
 
-This override mechanism is intended to gradually replace the BcContainerHelper-based `Run-AlPipeline` script overrides as AL-Go moves away from `Run-AlPipeline`. See [Customizing AL-Go for GitHub](https://github.com/microsoft/AL-Go/blob/main/Scenarios/CustomizingALGoForGitHub.md#al-go-native-script-overrides) for details and the list of supported override names.
+The hook mechanism is intended to gradually replace the BcContainerHelper-based `Run-AlPipeline` script overrides as AL-Go moves away from `Run-AlPipeline`. See [Customizing AL-Go for GitHub](https://github.com/microsoft/AL-Go/blob/main/Scenarios/CustomizingALGoForGitHub.md#al-go-hooks) for details and the list of supported hook names.
 
 ### Conditional settings now support workflow trigger events
 
