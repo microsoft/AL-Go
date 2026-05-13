@@ -186,7 +186,13 @@ function Invoke-ALGoOverride() {
         $effectiveParameters[$key] = $Parameters[$key]
     }
 
-    Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName $OverrideName -Parameters $effectiveParameters
+    Push-Location $projectPath
+    try {
+        Invoke-ScriptOverride -ALGoFolderName $alGoFolder -OverrideName $OverrideName -Parameters $effectiveParameters
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 # Well known AppIds

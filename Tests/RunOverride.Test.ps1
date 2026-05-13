@@ -159,4 +159,33 @@ Set-Content -Path '$sentinelPath' -Value `$parameters.value -Encoding UTF8
     It 'Is a silent no-op when the override script does not exist' {
         { Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{} } | Should -Not -Throw
     }
+
+    It 'Runs the override script with the project folder as the current location' {
+        $sentinelPath = Join-Path $script:workspace2 'cwd.txt'
+        Set-Content -Path (Join-Path $script:projectPath2 '.AL-Go/BuildInitialize.ps1') -Value @"
+Param([Hashtable]`$parameters)
+(Get-Location).Path | Set-Content -Path '$sentinelPath' -Encoding UTF8
+"@
+        $callerLocation = (Get-Location).Path
+
+        Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{}
+
+        $observed = (Get-Content -Path $sentinelPath -Encoding UTF8 -Raw).Trim()
+        $expected = (Resolve-Path $script:projectPath2).Path
+        $observed | Should -Be $expected
+        # Caller's location must be restored after invocation.
+        (Get-Location).Path | Should -Be $callerLocation
+    }
+
+    It 'Restores the caller location even when the override throws' {
+        Set-Content -Path (Join-Path $script:projectPath2 '.AL-Go/BuildInitialize.ps1') -Value @"
+Param([Hashtable]`$parameters)
+throw 'boom'
+"@
+        $callerLocation = (Get-Location).Path
+
+        { Invoke-ALGoOverride -Project 'project' -OverrideName 'BuildInitialize' -Parameters @{} } | Should -Throw
+
+        (Get-Location).Path | Should -Be $callerLocation
+    }
 }
