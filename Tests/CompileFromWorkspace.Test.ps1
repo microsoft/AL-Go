@@ -816,6 +816,135 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             ($result -like '*shared') | Should -Not -BeNullOrEmpty
         }
+
+        It 'Passes the major version from manifest.json to Get-DotnetRuntimeVersionInstalled' {
+            if ($isLinux -or $isMacOS) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-manifest'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8.0.10' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith {
+                param($RequiredMajorVersion)
+                if ($RequiredMajorVersion -eq 8) { return [System.Version]'8.0.10' }
+                return $null
+            }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*8.0.10*') | Should -Not -BeNullOrEmpty
+            ($result -like '*Microsoft.AspNetCore.App*8.0.10*') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -ParameterFilter { $RequiredMajorVersion -eq 8 }
+        }
+
+        It 'Skips versioned .NET probing paths when no installed runtime matches the manifest major' {
+            if ($isLinux -or $isMacOS) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-manifest-no-match'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '9.0.0' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith { return $null }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*Microsoft.AspNetCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -Times 1
+        }
+
+        It 'Skips versioned .NET probing paths when no manifest.json is present' {
+            if ($isLinux -or $isMacOS) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-no-manifest'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith { return [System.Version]'8.0.10' }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -Times 0
+        }
+
+        It 'Ignores a malformed manifest.json and skips versioned .NET probing paths' {
+            if ($isLinux -or $isMacOS) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-manifest-malformed'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Value 'not-json' -Encoding UTF8
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith { return [System.Version]'8.0.10' }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -Times 0
+        }
+    }
+
+    Describe 'Get-RequiredDotnetMajorVersionFromManifest' {
+        It 'Returns 0 when no manifest.json exists' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-no-manifest'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
+
+        It 'Returns the major version from manifest.json' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-with-manifest'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8.0.10' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 8
+            }
+        }
+
+        It 'Returns 0 when manifest.json has no dotNetVersion property' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-manifest-no-dotnet'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ version = '26.0.0.0' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
+
+        It 'Returns 0 when manifest.json is malformed' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-manifest-malformed'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Value '{ not valid json' -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
     }
 
     Describe 'CompileAppsInWorkspace argument construction' {

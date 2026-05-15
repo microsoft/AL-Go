@@ -1,3 +1,7 @@
+### Use artifact manifest to pick .NET runtime for assembly probing
+
+When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If no installed runtime matches the required major, AL-Go falls back to the previous behavior.
+
 ### New AL-Go hooks (experimental)
 
 AL-Go for GitHub now supports a new generic hook mechanism that is independent of BcContainerHelper. A new `RunHook` action invokes scripts placed in the project's `.AL-Go` folder at well-known extension points in the workflows. The first such extension point is `BuildInitialize`, which runs in the build workflow immediately after `Read settings` (so AL-Go settings are available as environment variables).
