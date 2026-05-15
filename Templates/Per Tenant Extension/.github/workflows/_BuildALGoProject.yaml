@@ -111,6 +111,14 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
 
+      - name: Run Build Initialize hook
+        if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
+        uses: microsoft/AL-Go-Actions/RunHook@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          hookName: BuildInitialize
+
       - name: Determine whether to build project
         id: DetermineBuildProject
         uses: microsoft/AL-Go-Actions/DetermineBuildProject@main
