@@ -571,6 +571,19 @@ function CompileAppsInWorkspace {
 
 <#
 .SYNOPSIS
+    Returns the raw output of 'dotnet --list-runtimes'.
+.DESCRIPTION
+    Thin wrapper around the native dotnet CLI so the runtime detection logic in
+    Get-DotnetRuntimeVersionInstalled can be unit tested by mocking this function.
+.OUTPUTS
+    The lines emitted by 'dotnet --list-runtimes', or $null if the command produced no output.
+#>
+function Get-DotnetListRuntimes {
+    return dotnet --list-runtimes
+}
+
+<#
+.SYNOPSIS
     Gets the highest installed .NET runtime version matching the requested major.
 .DESCRIPTION
     Uses 'dotnet --list-runtimes' to detect installed .NET runtimes. Returns the highest
@@ -589,7 +602,7 @@ function Get-DotnetRuntimeVersionInstalled {
     )
 
     try {
-        $runtimeOutput = dotnet --list-runtimes
+        $runtimeOutput = Get-DotnetListRuntimes
 
         if (-not $runtimeOutput) {
             OutputDebug -message "Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
@@ -664,9 +677,19 @@ function Get-RequiredDotnetMajorVersionFromManifest {
     }
 
     try {
-        $manifest = Get-Content -Path $manifestFile -Encoding UTF8 -Raw | ConvertFrom-Json
-        if ($manifest.dotNetVersion) {
-            return ([System.Version]$manifest.dotNetVersion).Major
+        $manifest = Get-Content -Path $manifestFile -Encoding UTF8 -Raw | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        if ($manifest.ContainsKey('dotNetVersion') -and $manifest.dotNetVersion) {
+            try {
+                return ([System.Version]$manifest.dotNetVersion).Major
+            }
+            catch {
+                # [System.Version] requires at least major.minor; fall back to extracting
+                # the leading integer so single-segment values like "8" still resolve to a major.
+                if ($manifest.dotNetVersion -match '^(\d+)') {
+                    return [int]$Matches[1]
+                }
+                throw
+            }
         }
     }
     catch {

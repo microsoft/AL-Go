@@ -818,7 +818,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Passes the major version from manifest.json to Get-DotnetRuntimeVersionInstalled' {
-            if ($isLinux -or $isMacOS) {
+            if ($script:isLinux -or $script:isMacOS) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -842,7 +842,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Skips versioned .NET probing paths when no installed runtime matches the manifest major' {
-            if ($isLinux -or $isMacOS) {
+            if ($script:isLinux -or $script:isMacOS) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -863,7 +863,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Skips versioned .NET probing paths when no manifest.json is present' {
-            if ($isLinux -or $isMacOS) {
+            if ($script:isLinux -or $script:isMacOS) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -882,7 +882,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Ignores a malformed manifest.json and skips versioned .NET probing paths' {
-            if ($isLinux -or $isMacOS) {
+            if ($script:isLinux -or $script:isMacOS) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -924,6 +924,28 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
         }
 
+        It 'Returns the major version for a 2-segment dotNetVersion' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-with-manifest-2segment'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8.0' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 8
+            }
+        }
+
+        It 'Returns the major version for a single-segment dotNetVersion via the fallback parser' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-with-manifest-1segment'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 8
+            }
+        }
+
         It 'Returns 0 when manifest.json has no dotNetVersion property' {
             $compilerFolder = Join-Path $TestDrive 'compiler-manifest-no-dotnet'
             New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
@@ -943,6 +965,90 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
                 param($Folder)
                 Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
+    }
+
+    Describe 'Get-DotnetRuntimeVersionInstalled' {
+        # Sample 'dotnet --list-runtimes' output: lines like
+        # "Microsoft.AspNetCore.App 6.0.36 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]"
+        # We mock the wrapper Get-DotnetListRuntimes to return canned strings.
+
+        It 'Returns the highest installed version matching the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 6.0.36 [path]',
+                        'Microsoft.AspNetCore.App 8.0.5 [path]',
+                        'Microsoft.AspNetCore.App 8.0.10 [path]',
+                        'Microsoft.NETCore.App 6.0.36 [path]',
+                        'Microsoft.NETCore.App 8.0.5 [path]',
+                        'Microsoft.NETCore.App 8.0.10 [path]'
+                    )
+                }
+
+                $result = Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8
+
+                $result | Should -Be ([System.Version]'8.0.10')
+            }
+        }
+
+        It 'Returns $null when no installed runtime matches the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 6.0.36 [path]',
+                        'Microsoft.NETCore.App 6.0.36 [path]'
+                    )
+                }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 9 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when only Microsoft.NETCore.App is installed for the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.NETCore.App 8.0.10 [path]'
+                    )
+                }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when only Microsoft.AspNetCore.App is installed for the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 8.0.10 [path]'
+                    )
+                }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when matching versions exist in NETCore.App but not in AspNetCore.App' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 8.0.5 [path]',
+                        'Microsoft.NETCore.App 8.0.10 [path]'
+                    )
+                }
+
+                # 8.0.10 is only in NETCore.App; 8.0.5 is only in AspNetCore.App; no overlap
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when dotnet --list-runtimes produces no output' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes { return $null }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
             }
         }
     }
