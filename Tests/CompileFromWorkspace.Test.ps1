@@ -818,7 +818,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Passes the major version from manifest.json to Get-DotnetRuntimeVersionInstalled' {
-            if ($script:isLinux -or $script:isMacOS) {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -842,7 +842,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Skips versioned .NET probing paths when no installed runtime matches the manifest major' {
-            if ($script:isLinux -or $script:isMacOS) {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -863,7 +863,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Skips versioned .NET probing paths when no manifest.json is present' {
-            if ($script:isLinux -or $script:isMacOS) {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
@@ -882,7 +882,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Ignores a malformed manifest.json and skips versioned .NET probing paths' {
-            if ($script:isLinux -or $script:isMacOS) {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
                 Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
                 return
             }
