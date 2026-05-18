@@ -571,28 +571,38 @@ function CompileAppsInWorkspace {
 
 <#
 .SYNOPSIS
-    Gets the highest compatible .NET runtime version installed on the system.
+    Returns the raw output of 'dotnet --list-runtimes'.
+.DESCRIPTION
+    Thin wrapper around the native dotnet CLI so the runtime detection logic in
+    Get-DotnetRuntimeVersionInstalled can be unit tested by mocking this function.
+.OUTPUTS
+    The lines emitted by 'dotnet --list-runtimes', or $null if the command produced no output.
+#>
+function Get-DotnetListRuntimes {
+    return dotnet --list-runtimes
+}
+
+<#
+.SYNOPSIS
+    Gets the highest installed .NET runtime version matching the requested major.
 .DESCRIPTION
     Uses 'dotnet --list-runtimes' to detect installed .NET runtimes. Returns the highest
-    version that is within the supported major version range. Requires both Microsoft.NETCore.App
-    and Microsoft.AspNetCore.App runtimes to be installed for a version to be considered.
-.PARAMETER MinimumSupportedMajorVersion
-    The minimum major version of .NET runtime to consider.
-.PARAMETER MaximumSupportedMajorVersion
-    The maximum major version of .NET runtime to consider.
+    installed version whose major equals RequiredMajorVersion and where both
+    Microsoft.NETCore.App and Microsoft.AspNetCore.App runtimes are installed.
+.PARAMETER RequiredMajorVersion
+    The exact major version of .NET runtime to look for (typically read from the BC artifact's
+    manifest.json dotNetVersion field).
 .OUTPUTS
-    System.Version of the highest compatible .NET runtime installed, or $null if none found.
+    System.Version of the highest matching .NET runtime installed, or $null if none found.
 #>
 function Get-DotnetRuntimeVersionInstalled {
     param(
-        [Parameter(Mandatory = $false)]
-        [int] $MinimumSupportedMajorVersion = 6, # TODO: Find a better way to determine minimum supported version and maximum supported version
-        [Parameter(Mandatory = $false)]
-        [int] $MaximumSupportedMajorVersion = 8
+        [Parameter(Mandatory = $true)]
+        [int] $RequiredMajorVersion
     )
 
     try {
-        $runtimeOutput = dotnet --list-runtimes
+        $runtimeOutput = Get-DotnetListRuntimes
 
         if (-not $runtimeOutput) {
             OutputDebug -message "Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
@@ -623,10 +633,9 @@ function Get-DotnetRuntimeVersionInstalled {
             return $null
         }
 
-        # Find the highest version present in both, within the supported major version range
+        # Pick the highest installed version with the requested major where both runtimes are present.
         $compatibleVersions = $netCoreVersions | Where-Object {
-            $_.Major -ge $MinimumSupportedMajorVersion -and
-            $_.Major -le $MaximumSupportedMajorVersion -and
+            $_.Major -eq $RequiredMajorVersion -and
             $aspNetVersions -contains $_
         } | Sort-Object -Descending
 
@@ -640,6 +649,54 @@ function Get-DotnetRuntimeVersionInstalled {
         OutputDebug -message "Failed to detect .NET runtime version: $_"
         return $null
     }
+}
+
+<#
+.SYNOPSIS
+    Reads the required .NET major version from the BC artifact manifest.
+.DESCRIPTION
+    BcContainerHelper copies the artifact's manifest.json into the compiler folder. If the
+    manifest contains a dotNetVersion, this function returns its major version so the assembly
+    probing paths can target the exact .NET runtime the artifact was built against. Returns 0
+    when no manifest is present or the manifest does not declare a dotNetVersion.
+.PARAMETER CompilerFolder
+    The folder where the AL compiler tool is located (and where BcContainerHelper places
+    manifest.json).
+.OUTPUTS
+    The required .NET major version as an integer, or 0 when not declared.
+#>
+function Get-RequiredDotnetMajorVersionFromManifest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder
+    )
+
+    $manifestFile = Join-Path $CompilerFolder "manifest.json"
+    if (-not (Test-Path $manifestFile)) {
+        return 0
+    }
+
+    try {
+        $manifest = Get-Content -Path $manifestFile -Encoding UTF8 -Raw | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        if ($manifest.ContainsKey('dotNetVersion') -and $manifest.dotNetVersion) {
+            try {
+                return ([System.Version]$manifest.dotNetVersion).Major
+            }
+            catch {
+                # [System.Version] requires at least major.minor; fall back to extracting
+                # the leading integer so single-segment values like "8" still resolve to a major.
+                if ($manifest.dotNetVersion -match '^(\d+)') {
+                    return [int]$Matches[1]
+                }
+                throw
+            }
+        }
+    }
+    catch {
+        OutputWarning -message "Could not read manifest.json from compiler folder: $($_.Exception.Message)"
+    }
+
+    return 0
 }
 
 <#
@@ -676,14 +733,27 @@ function Get-AssemblyProbingPaths {
     } elseif ($isLinux -or $isMacOS) {
         $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
     } else {
-        $dotNetRuntimeVersion = (Get-DotnetRuntimeVersionInstalled)
-        if ($dotNetRuntimeVersion) {
-            $dotnetRoot = Split-Path (Get-Command dotnet).Source
-            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), (Join-Path $dotnetRoot "shared\Microsoft.NETCore.App\$dotNetRuntimeVersion"), (Join-Path $dotnetRoot "shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion")) + $probingPaths
+        # The BC artifact's manifest.json (copied into the compiler folder by BcContainerHelper)
+        # declares which .NET version the platform was built against. Pick the matching installed
+        # runtime so the compiler resolves the same assemblies BC will load at runtime.
+        $dotNetSharedPaths = @()
+        $requiredMajor = Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $CompilerFolder
+        if ($requiredMajor -gt 0) {
+            OutputDebug -message "Artifact manifest requires .NET major version $requiredMajor"
+            $dotNetRuntimeVersion = Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion $requiredMajor
+            if ($dotNetRuntimeVersion) {
+                OutputDebug -message "Using .NET runtime version $dotNetRuntimeVersion for assembly probing paths"
+                $dotnetRoot = Split-Path (Get-Command dotnet).Source
+                $dotNetSharedPaths = @((Join-Path $dotnetRoot "shared\Microsoft.NETCore.App\$dotNetRuntimeVersion"), (Join-Path $dotnetRoot "shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion"))
+            }
+            else {
+                OutputWarning -message "No installed .NET runtime matches the major version ($requiredMajor) required by the artifact manifest. .NET assembly probing paths will not be added."
+            }
         }
         else {
-            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
+            OutputDebug -message "Artifact manifest does not declare a dotNetVersion; skipping versioned .NET assembly probing paths."
         }
+        $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $dotNetSharedPaths + $probingPaths
     }
 
     OutputArray -Message "Probing Paths:" -Array $probingPaths
