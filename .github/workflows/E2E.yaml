@@ -66,49 +66,15 @@ jobs:
 
       - name: Check secrets
         id: check
-        env:
+        uses: ./.github/actions/E2ECheckSecrets
+        with:
           githubOwner: ${{ github.event.inputs.githubOwner }}
-        run: |
-          $err = $false
-          if (('${{ vars.E2E_APP_ID }}' -eq '') -or ('${{ secrets.E2E_PRIVATE_KEY }}' -eq '')){
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
-            $err = $true
-          }
-          if ('${{ Secrets.ALGOAUTHAPP }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called ALGOAUTHAPP"
-            $err = $true
-          }
-          if ('${{ Secrets.adminCenterApiCredentials }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a Secret called adminCenterApiCredentials"
-            $err = $true
-          }
-          if ('${{ Secrets.E2E_GHPackagesPAT }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a secret called E2E_GHPackagesPAT"
-            $err = $true
-          }
-          if ('${{ Secrets.E2EAZURECREDENTIALS }}' -eq '') {
-            Write-Host "::Error::In order to run end to end tests, you need a secret called E2EAZURECREDENTIALS"
-            $err = $true
-          }
-          if ($err) {
-            exit 1
-          }
-          $githubOwner = $ENV:githubOwner
-          $maxParallel = 99
-          if (!($githubOwner)) {
-              $githubOwner = "$ENV:GITHUB_REPOSITORY_OWNER"
-          }
-          $orgmap = Get-Content -path (Join-Path "." "e2eTests\orgmap.json") -encoding UTF8 -raw | ConvertFrom-Json
-          if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
-            $githubOwner = $orgmap."$githubOwner"
-          }
-          if ($githubOwner -eq $ENV:GITHUB_REPOSITORY_OWNER) {
-            $maxParallel = 8
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "maxParallel=$maxParallel"
-          Write-Host "maxParallel=$maxParallel"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "githubOwner=$githubOwner"
-          Write-Host "githubOwner=$githubOwner"
+          e2eAppId: ${{ vars.E2E_APP_ID }}
+          e2ePrivateKey: ${{ secrets.E2E_PRIVATE_KEY }}
+          algoAuthApp: ${{ secrets.ALGOAUTHAPP }}
+          adminCenterApiCredentials: ${{ secrets.adminCenterApiCredentials }}
+          e2eGHPackagesPAT: ${{ secrets.E2E_GHPackagesPAT }}
+          e2eAzureCredentials: ${{ secrets.E2EAZURECREDENTIALS }}
 
   SetupRepositories:
     runs-on: [ ubuntu-latest ]
@@ -137,12 +103,11 @@ jobs:
 
       - name: Setup Repositories
         id: setup
-        env:
-          _bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          . (Join-Path "." "e2eTests/SetupRepositories.ps1") -githubOwner '${{ needs.Check.outputs.githubowner }}' -bcContainerHelperVersion $ENV:_bcContainerHelperVersion
+        uses: ./.github/actions/E2ESetupRepositories
+        with:
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          bcContainerHelperVersion: ${{ github.event.inputs.bcContainerHelperVersion }}
+          token: ${{ steps.app-token.outputs.token }}
 
   Analyze:
     runs-on: [ ubuntu-latest ]
@@ -172,106 +137,12 @@ jobs:
 
       - name: Analyze
         id: Analyze
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          _scenariosFilter: ${{ github.event.inputs.scenariosFilter }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $modulePath = Join-Path "." "e2eTests\e2eTestHelper.psm1" -resolve
-          Import-Module $modulePath -DisableNameChecking
-          $maxParallel = [int]'${{ needs.Check.outputs.maxParallel }}'
-
-          $publicTestruns = @{
-            "max-parallel" = $maxParallel
-            "fail-fast" = $false
-            "matrix" = @{
-              "include" = @()
-            }
-          }
-          $privateTestruns = @{
-            "max-parallel" = $maxParallel
-            "fail-fast" = $false
-            "matrix" = @{
-              "include" = @()
-            }
-          }
-          @('appSourceApp','PTE') | ForEach-Object {
-            $type = $_
-            @('linux','windows') | ForEach-Object {
-              $os = $_
-              @('multiProject','singleProject') | ForEach-Object {
-                $style = $_
-                $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-                $privateTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-                if ($type -eq "PTE") {
-                  # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
-                  $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
-                }
-              }
-            }
-          }
-          $publicTestrunsJson = $publicTestruns | ConvertTo-Json -depth 99 -compress
-          $privateTestrunsJson = $privateTestruns | ConvertTo-Json -depth 99 -compress
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "publictestruns=$publicTestrunsJson"
-          Write-Host "publictestruns=$publicTestrunsJson"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "privatetestruns=$privateTestrunsJson"
-          Write-Host "privatetestruns=$privateTestrunsJson"
-
-          $releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] }) | Where-Object { [Version]($_.trimStart('v')) -ge [Version]("$env:TestUpgradesFromVersion".TrimStart('v')) }
-          $releasesJson = @{
-            "matrix" = @{
-              "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
-            };
-            "max-parallel" = $maxParallel
-            "fail-fast" = $false
-          } | ConvertTo-Json -depth 99 -compress
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
-          Write-Host "releases=$releasesJson"
-
-          $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-          $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
-          $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
-
-          # Load disabled scenarios from config file (optional)
-          $disabledScenariosConfigPath = Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json"
-          $disabledScenariosConfig = @()
-          if (Test-Path -Path $disabledScenariosConfigPath) {
-            $disabledScenariosContent = Get-Content -Path $disabledScenariosConfigPath -Encoding UTF8 -Raw
-            if (-not [string]::IsNullOrWhiteSpace($disabledScenariosContent)) {
-              $disabledScenariosConfig = $disabledScenariosContent | ConvertFrom-Json
-            }
-          }
-          else {
-            Write-Host "No disabled-scenarios.json found; proceeding with all scenarios enabled."
-          }
-          $disabledScenarios = @()
-          if ($disabledScenariosConfig -and $disabledScenariosConfig.Count -gt 0) {
-            $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
-          }
-          Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"
-
-          # Filter out disabled scenarios
-          $scenariosBeforeDisabledFilter = $filteredScenarios
-          $beforeFilter = $filteredScenarios.Count
-          $filteredScenarios = $filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ }
-          $afterFilter = $filteredScenarios.Count
-          if ($beforeFilter -ne $afterFilter) {
-            Write-Host "Filtered out $($beforeFilter - $afterFilter) disabled scenario(s)"
-            $disabledScenariosConfig | Where-Object { ($scenariosBeforeDisabledFilter -contains $_.scenario) -and ($filteredScenarios -notcontains $_.scenario) } | ForEach-Object {
-              Write-Host "  - $($_.scenario): $($_.reason)"
-            }
-          }
-          Write-Host "Scenarios to run: $($filteredScenarios -join ', ')"
-
-          $scenariosJson = @{
-            "matrix" = @{
-              "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
-            };
-            "max-parallel" = $maxParallel
-            "fail-fast" = $false
-          } | ConvertTo-Json -depth 99 -compress
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
-          Write-Host "scenarios=$scenariosJson"
+        uses: ./.github/actions/E2EAnalyze
+        with:
+          maxParallel: ${{ needs.Check.outputs.maxParallel }}
+          testUpgradesFromVersion: ${{ env.TestUpgradesFromVersion }}
+          scenariosFilter: ${{ github.event.inputs.scenariosFilter }}
+          token: ${{ steps.app-token.outputs.token }}
 
   ScenariosOnWindows:
     runs-on: [ windows-latest ]
@@ -291,24 +162,25 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
-          Write-Host "repoName=$repoName"
-          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+        uses: ./.github/actions/E2ECalculateRepoName
+        with:
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
 
       - name: Run test on Windows
-        run: |
-          try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
-          }
-          catch {
-            Write-Host $_.Exception.Message
-            Write-Host $_.ScriptStackTrace
-            Write-Host "::Error::$($_.Exception.Message)"
-            $host.SetShouldExit(1)
-          }
+        uses: ./.github/actions/E2ERunScenario
+        with:
+          scenario: ${{ matrix.scenario }}
+          linux: false
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          repoName: ${{ steps.calculateParams.outputs.repoName }}
+          e2eAppId: ${{ vars.E2E_APP_ID }}
+          e2eAppKey: ${{ secrets.E2E_PRIVATE_KEY }}
+          algoAuthApp: ${{ secrets.ALGOAUTHAPP }}
+          pteTemplate: ${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
+          appSourceTemplate: ${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}
+          adminCenterApiCredentials: ${{ secrets.adminCenterApiCredentials }}
+          azureCredentials: ${{ secrets.E2EAzureCredentials }}
+          githubPackagesToken: ${{ secrets.E2E_GHPackagesPAT }}
 
   ScenariosOnLinux:
     runs-on: [ windows-latest ]
@@ -328,24 +200,25 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
-          Write-Host "repoName=$repoName"
-          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+        uses: ./.github/actions/E2ECalculateRepoName
+        with:
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
 
       - name: Run tests
-        run: |
-          try {
-            . (Join-Path "." "e2eTests/scenarios/${{ matrix.scenario }}/runtest.ps1") -github -linux -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName '${{ steps.calculateParams.outputs.repoName }}' -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -pteTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}' -appSourceTemplate '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}' -adminCenterApiCredentials '${{ Secrets.adminCenterApiCredentials }}' -azureCredentials '${{ Secrets.E2EAzureCredentials }}' -githubPackagesToken '${{ Secrets.E2E_GHPackagesPAT }}'
-          }
-          catch {
-            Write-Host $_.Exception.Message
-            Write-Host $_.ScriptStackTrace
-            Write-Host "::Error::$($_.Exception.Message)"
-            $host.SetShouldExit(1)
-          }
+        uses: ./.github/actions/E2ERunScenario
+        with:
+          scenario: ${{ matrix.scenario }}
+          linux: true
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          repoName: ${{ steps.calculateParams.outputs.repoName }}
+          e2eAppId: ${{ vars.E2E_APP_ID }}
+          e2eAppKey: ${{ secrets.E2E_PRIVATE_KEY }}
+          algoAuthApp: ${{ secrets.ALGOAUTHAPP }}
+          pteTemplate: ${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
+          appSourceTemplate: ${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}
+          adminCenterApiCredentials: ${{ secrets.adminCenterApiCredentials }}
+          azureCredentials: ${{ secrets.E2EAzureCredentials }}
+          githubPackagesToken: ${{ secrets.E2E_GHPackagesPAT }}
 
   TestAlGoPublic:
     runs-on: [ ubuntu-latest ]
@@ -365,36 +238,32 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $adminCenterApiCredentials = ''
-          if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
-            $adminCenterApiCredentials = '${{ Secrets.adminCenterApiCredentials }}'
-          }
-          if ('${{ matrix.type }}' -eq 'appSourceApp') {
-            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
-          }
-          else {
-            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
-          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
-          Write-Host "repoName='$repoName'"
-          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+        uses: ./.github/actions/E2ECalculateTestParams
+        with:
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          matrixType: ${{ matrix.type }}
+          matrixStyle: ${{ matrix.style }}
+          matrixOs: ${{ matrix.os }}
+          adminCenterApiCredentialsSecret: ${{ secrets.adminCenterApiCredentials }}
+          appSourceAppRepo: ${{ needs.SetupRepositories.outputs.appSourceAppRepo }}
+          perTenantExtensionRepo: ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
 
       - name: Run tests
-        run: |
-          try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
-          }
-          catch {
-            Write-Host $_.Exception.Message
-            Write-Host $_.ScriptStackTrace
-            Write-Host "::Error::$($_.Exception.Message)"
-            $host.SetShouldExit(1)
-          }
+        uses: ./.github/actions/E2ERunTest
+        with:
+          testType: test
+          private: false
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          repoName: ${{ steps.calculateParams.outputs.repoName }}
+          e2eAppId: ${{ vars.E2E_APP_ID }}
+          e2eAppKey: ${{ secrets.E2E_PRIVATE_KEY }}
+          algoAuthApp: ${{ secrets.ALGOAUTHAPP }}
+          template: ${{ steps.calculateParams.outputs.template }}
+          adminCenterApiCredentials: ${{ steps.calculateParams.outputs.adminCenterApiCredentials }}
+          multiProject: ${{ matrix.style == 'multiProject' }}
+          appSource: ${{ matrix.type == 'appSourceApp' }}
+          linux: ${{ matrix.os == 'linux' }}
+          useCompilerFolder: ${{ matrix.Compiler == 'CompilerFolder' }}
 
   TestAlGoPrivate:
     runs-on: [ ubuntu-latest ]
@@ -414,36 +283,32 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          $adminCenterApiCredentials = ''
-          if ('${{ matrix.type }}' -eq 'PTE' -and '${{ matrix.style }}' -eq 'singleProject' -and '${{ matrix.os }}' -eq 'windows') {
-            $adminCenterApiCredentials = '${{ Secrets.adminCenterApiCredentials }}'
-          }
-          if ('${{ matrix.type }}' -eq 'appSourceApp') {
-            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
-          }
-          else {
-            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials='$adminCenterApiCredentials'"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
-          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
-          Write-Host "repoName='$repoName'"
-          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+        uses: ./.github/actions/E2ECalculateTestParams
+        with:
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          matrixType: ${{ matrix.type }}
+          matrixStyle: ${{ matrix.style }}
+          matrixOs: ${{ matrix.os }}
+          adminCenterApiCredentialsSecret: ${{ secrets.adminCenterApiCredentials }}
+          appSourceAppRepo: ${{ needs.SetupRepositories.outputs.appSourceAppRepo }}
+          perTenantExtensionRepo: ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
 
       - name: Run tests
-        run: |
-          try {
-            . (Join-Path "." "e2eTests/Test-AL-Go.ps1") -private -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -adminCenterApiCredentials ${{ steps.calculateParams.outputs.adminCenterApiCredentials }} -multiProject:('${{ matrix.style }}' -eq 'multiProject') -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -linux:('${{ matrix.os }}' -eq 'linux') -useCompilerFolder:('${{ matrix.Compiler }}' -eq 'CompilerFolder')
-          }
-          catch {
-            Write-Host $_.Exception.Message
-            Write-Host $_.ScriptStackTrace
-            Write-Host "::Error::$($_.Exception.Message)"
-            $host.SetShouldExit(1)
-          }
+        uses: ./.github/actions/E2ERunTest
+        with:
+          testType: test
+          private: true
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          repoName: ${{ steps.calculateParams.outputs.repoName }}
+          e2eAppId: ${{ vars.E2E_APP_ID }}
+          e2eAppKey: ${{ secrets.E2E_PRIVATE_KEY }}
+          algoAuthApp: ${{ secrets.ALGOAUTHAPP }}
+          template: ${{ steps.calculateParams.outputs.template }}
+          adminCenterApiCredentials: ${{ steps.calculateParams.outputs.adminCenterApiCredentials }}
+          multiProject: ${{ matrix.style == 'multiProject' }}
+          appSource: ${{ matrix.type == 'appSourceApp' }}
+          linux: ${{ matrix.os == 'linux' }}
+          useCompilerFolder: ${{ matrix.Compiler == 'CompilerFolder' }}
 
   TestAlGoUpgrade:
     runs-on: [ ubuntu-latest ]
@@ -463,31 +328,23 @@ jobs:
 
       - name: Calculate parameters
         id: calculateParams
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          if ('${{ matrix.type }}' -eq 'appSourceApp') {
-            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.appSourceAppRepo }}'
-            $contentPath = 'appsourceapp'
-          }
-          else {
-            $template = '${{ needs.Check.outputs.githubowner }}/${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}'
-            $contentPath = 'pte'
-          }
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template='$template'"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentPath='$contentPath'"
-          $reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName='$repoName'"
-          Write-Host "repoName='$repoName'"
-          Write-Host "Repo URL: https://github.com/${{ needs.Check.outputs.githubowner }}/$repoName"
+        uses: ./.github/actions/E2ECalculateTestParams
+        with:
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          matrixType: ${{ matrix.type }}
+          appSourceAppRepo: ${{ needs.SetupRepositories.outputs.appSourceAppRepo }}
+          perTenantExtensionRepo: ${{ needs.SetupRepositories.outputs.perTenantExtensionRepo }}
 
       - name: Run tests
-        run: |
-          try {
-            . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") -github -githubOwner '${{ needs.Check.outputs.githubowner }}' -repoName ${{ steps.calculateParams.outputs.repoName }} -e2eAppId '${{ vars.E2E_APP_ID }}' -e2eAppKey '${{ secrets.E2E_PRIVATE_KEY }}' -algoauthapp '${{ Secrets.ALGOAUTHAPP }}' -template ${{ steps.calculateParams.outputs.template }} -appSource:('${{ matrix.type }}' -eq 'appSourceApp') -release '${{ matrix.release }}' -contentPath ${{ steps.calculateParams.outputs.contentPath }}
-          }
-          catch {
-            Write-Host $_.Exception.Message
-            Write-Host $_.ScriptStackTrace
-            Write-Host "::Error::$($_.Exception.Message)"
-            $host.SetShouldExit(1)
-          }
+        uses: ./.github/actions/E2ERunTest
+        with:
+          testType: upgrade
+          githubOwner: ${{ needs.Check.outputs.githubowner }}
+          repoName: ${{ steps.calculateParams.outputs.repoName }}
+          e2eAppId: ${{ vars.E2E_APP_ID }}
+          e2eAppKey: ${{ secrets.E2E_PRIVATE_KEY }}
+          algoAuthApp: ${{ secrets.ALGOAUTHAPP }}
+          template: ${{ steps.calculateParams.outputs.template }}
+          appSource: ${{ matrix.type == 'appSourceApp' }}
+          release: ${{ matrix.release }}
+          contentPath: ${{ steps.calculateParams.outputs.contentPath }}

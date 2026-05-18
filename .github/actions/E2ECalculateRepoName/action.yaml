@@ -1,0 +1,28 @@
+name: E2E Calculate Repo Name
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: pwsh
+  githubOwner:
+    description: GitHub owner for test repositories (optional, for logging purposes)
+    required: false
+    default: ''
+outputs:
+  repoName:
+    description: Generated repository name
+    value: ${{ steps.run.outputs.repoName }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _githubOwner: ${{ inputs.githubOwner }}
+      run: |
+        ${{ github.action_path }}/E2ECalculateRepoName.ps1 -githubOwner $ENV:_githubOwner
+branding:
+  icon: hash
+  color: blue
