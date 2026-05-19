@@ -21,6 +21,10 @@ on:
         default: ''
   workflow_call:
     inputs:
+      caller:
+        description: Name of the calling workflow (use github.workflow as value when calling)
+        type: string
+        required: true
       templateUrl:
         description: Template Repository URL (current is {TEMPLATEURL})
         type: string
@@ -50,6 +54,7 @@ defaults:
     shell: powershell
 
 env:
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
@@ -76,12 +81,13 @@ jobs:
         uses: microsoft/AL-Go-Actions/GetWorkflowMultiRunBranches@main
         with:
           shell: powershell
-          includeBranches: ${{ github.event.inputs.includeBranches }}
+          workflowEventName: ${{ env.WorkflowEventName }}
+          includeBranches: ${{ inputs.includeBranches }}
 
       - name: Determine Template URL
         id: DetermineTemplateUrl
         env:
-          TemplateUrlAsInput: '${{ github.event.inputs.templateUrl }}'
+          TemplateUrlAsInput: '${{ inputs.templateUrl }}'
         run: |
             $templateUrl = $env:templateUrl # Available from ReadSettings step
             if ($ENV:TemplateUrlAsInput) {
@@ -133,12 +139,12 @@ jobs:
 
       - name: Calculate Commit Options
         env:
-          directCommit: '${{ github.event.inputs.directCommit }}'
-          downloadLatest: '${{ github.event.inputs.downloadLatest }}'
+          directCommit: '${{ inputs.directCommit }}'
+          downloadLatest: '${{ inputs.downloadLatest }}'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-          if('${{ github.event_name }}' -in 'workflow_dispatch', 'workflow_call') {
-            Write-Host "Using inputs from ${{ github.event_name }} event"
+          if($env:WorkflowEventName -in 'workflow_dispatch', 'workflow_call') {
+            Write-Host "Using inputs from $($env:WorkflowEventName) event"
             $directCommit = $env:directCommit
             $downloadLatest = $env:downloadLatest
           }
