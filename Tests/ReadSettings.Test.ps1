@@ -540,5 +540,30 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
+
+        It 'ValidateSettings skips pwsh invocation on PS5.1 when JSON exceeds 30000 chars without warning' {
+            Mock OutputWarning { }
+
+            # Build a settings hashtable whose JSON serialization exceeds 30000 characters
+            $largeValue = 'x' * 31000
+            $settings = @{ "largeProp" = $largeValue }
+
+            if ($PSVersionTable.PSVersion.Major -ge 6) {
+                # On PS7+, the Invoke-Command path is used in-process without length limits.
+                ValidateSettings -settings $settings
+            }
+            else {
+                # On PS5.1, shadow pwsh so that if it is called, the test fails
+                Mock pwsh { throw "pwsh should not be called for oversized JSON" }
+
+                ValidateSettings -settings $settings
+
+                # Verify pwsh was NOT called
+                Should -Invoke -CommandName pwsh -Times 0
+            }
+
+            # Verify no warning was output
+            Should -Invoke -CommandName OutputWarning -Times 0
+        }
     }
 }
