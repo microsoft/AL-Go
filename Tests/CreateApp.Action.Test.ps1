@@ -25,4 +25,28 @@ Describe "CreateApp Action Tests" {
 
     # Call action
 
+    It 'Should find Performance Toolkit sample app with <Casing> directory casing' -TestCases @(
+        @{ Casing = 'PascalCase'; Dirs = @('Applications', 'TestFramework', 'performancetoolkit') }
+        @{ Casing = 'lowercase';  Dirs = @('applications', 'testframework', 'performancetoolkit') }
+    ) {
+        param($Casing, $Dirs)
+        $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        try {
+            $sampleAppDir = Join-Path $tempDir $Dirs[0] $Dirs[1] $Dirs[2]
+            New-Item -Path $sampleAppDir -ItemType Directory -Force | Out-Null
+            $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
+            Set-Content -Path $sampleAppFile -Value "dummy"
+
+            # Use the same lookup logic as in CreateApp.ps1: narrow to Applications subdirectory first
+            $searchRoot = Get-ChildItem -Path $tempDir -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -ieq 'Applications' } | Select-Object -First 1 -ExpandProperty FullName
+            if (!$searchRoot) { $searchRoot = $tempDir }
+            $result = Get-ChildItem -Path $searchRoot -Filter "Microsoft_Performance Toolkit Samples.app" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -Be $sampleAppFile
+        }
+        finally {
+            Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
