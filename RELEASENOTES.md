@@ -41,6 +41,7 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 
 ### Issues
 
+- Issue 2236 - `GetDependencies` `buildMode` prefix leaks across dependency iterations, causing incorrect artifact mask names when multiple `appDependencyProbingPaths` entries use different build modes
 - Incremental builds (`modifiedApps` mode) now correctly identify unmodified apps for projects whose `appFolders` reference paths outside the project directory (e.g. using `../`)
 - Issue 2204 - Workspace compilation ignores vsixFile setting
 - Issue 2211 - Cannot create a release if a project contains only test apps
