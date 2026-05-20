@@ -606,12 +606,8 @@ function ValidateSettings {
                 return $result
             }
 
-            if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                # Skip validation if the settings JSON is too large for the Windows command-line length limit
-                if ($settingsJson.Length -gt 30000) {
-                    continue
-                }
-                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
+            if($PSVersionTable.PSVersion.Major -lt 7) {
+                continue
             }
             else {
                 $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
