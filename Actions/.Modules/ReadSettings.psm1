@@ -595,6 +595,10 @@ function ValidateSettings {
         $settings
     )
     Process {
+        if ($PSVersionTable.PSVersion.Major -lt 7) {
+            return
+        }
+
         $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
         $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
 
@@ -606,12 +610,7 @@ function ValidateSettings {
                 return $result
             }
 
-            if($PSVersionTable.PSVersion.Major -lt 7) {
-                continue
-            }
-            else {
-                $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
-            }
+            $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
         }
         catch {
             OutputWarning "Error validating settings. Error: $($_.Exception.Message)"
