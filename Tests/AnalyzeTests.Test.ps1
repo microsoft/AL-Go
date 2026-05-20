@@ -141,6 +141,33 @@ Describe "AnalyzeTests Action Tests" {
         $output | Should -BeOfType 'hashtable'
     }
 
+    It 'Test GetTestResultSummaryMD handles empty failure stack traces' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+
+        $testResultsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).xml"
+        try {
+            @'
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="Suite" tests="1" failures="1" skipped="0" time="1.0">
+    <properties>
+      <property name="appName" value="App" />
+    </properties>
+    <testcase name="Case" time="1.0">
+      <failure message="boom"></failure>
+    </testcase>
+  </testsuite>
+</testsuites>
+'@ | Set-Content -Path $testResultsFile -Encoding UTF8
+
+            { GetTestResultSummaryMD -testResultsFile $testResultsFile } | Should -Not -Throw
+        }
+        finally {
+            Remove-Item -Path $testResultsFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     AfterAll {
         Remove-Item -Path $bcptFilename -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine1 -Force -ErrorAction SilentlyContinue
