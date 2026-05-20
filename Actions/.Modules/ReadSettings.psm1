@@ -604,13 +604,7 @@ function ValidateSettings {
 
         $result = ""
         try{
-            $command  = [scriptblock] {
-                $result = ''
-                Test-Json -Json $args[0] -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
-                return $result
-            }
-
-            $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
+            Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
         }
         catch {
             OutputWarning "Error validating settings. Error: $($_.Exception.Message)"
