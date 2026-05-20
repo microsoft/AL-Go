@@ -547,6 +547,18 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -CompilerFolder $script:mockCompilerFolder -Analyzers @('CodeCop', 'UICop')
         }
+
+        It 'Accepts bcptApp as AppType for BCPT workspace compilation' {
+            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
+            Mock CompileAppsInWorkspace { return @() } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj-bcpt') -AppFolders @(
+                @{ Name = "BcptApp"; Id = "88888888-8888-8888-8888-888888888888" }
+            )
+
+            { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -CompilerFolder $script:mockCompilerFolder -AppType 'bcptApp' } | Should -Not -Throw
+        }
     }
 
     Describe 'Copy-CompiledAppsToOutput' {
@@ -804,6 +816,241 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             ($result -like '*shared') | Should -Not -BeNullOrEmpty
         }
+
+        It 'Passes the major version from manifest.json to Get-DotnetRuntimeVersionInstalled' {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-manifest'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8.0.10' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith {
+                param($RequiredMajorVersion)
+                if ($RequiredMajorVersion -eq 8) { return [System.Version]'8.0.10' }
+                return $null
+            }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*8.0.10*') | Should -Not -BeNullOrEmpty
+            ($result -like '*Microsoft.AspNetCore.App*8.0.10*') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -ParameterFilter { $RequiredMajorVersion -eq 8 }
+        }
+
+        It 'Skips versioned .NET probing paths when no installed runtime matches the manifest major' {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-manifest-no-match'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '9.0.0' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith { return $null }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*Microsoft.AspNetCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -Times 1
+        }
+
+        It 'Skips versioned .NET probing paths when no manifest.json is present' {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-no-manifest'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith { return [System.Version]'8.0.10' }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -Times 0
+        }
+
+        It 'Ignores a malformed manifest.json and skips versioned .NET probing paths' {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
+                Set-ItResult -Skipped -Because 'manifest-driven runtime resolution only applies on Windows'
+                return
+            }
+
+            $compilerFolder = Join-Path $TestDrive 'compiler-probing-manifest-malformed'
+            $dllsPath = Join-Path $compilerFolder 'dlls'
+            New-Item -Path (Join-Path $dllsPath 'OpenXML') -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Value 'not-json' -Encoding UTF8
+
+            Mock Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -MockWith { return [System.Version]'8.0.10' }
+
+            $result = Get-AssemblyProbingPaths -CompilerFolder $compilerFolder
+
+            ($result -like '*Microsoft.NETCore.App*') | Should -BeNullOrEmpty
+            ($result -like '*OpenXML') | Should -Not -BeNullOrEmpty
+            Should -Invoke Get-DotnetRuntimeVersionInstalled -ModuleName CompileFromWorkspace -Times 0
+        }
+    }
+
+    Describe 'Get-RequiredDotnetMajorVersionFromManifest' {
+        It 'Returns 0 when no manifest.json exists' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-no-manifest'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
+
+        It 'Returns the major version from manifest.json' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-with-manifest'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8.0.10' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 8
+            }
+        }
+
+        It 'Returns the major version for a 2-segment dotNetVersion' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-with-manifest-2segment'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8.0' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 8
+            }
+        }
+
+        It 'Returns the major version for a single-segment dotNetVersion via the fallback parser' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-with-manifest-1segment'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ dotNetVersion = '8' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 8
+            }
+        }
+
+        It 'Returns 0 when manifest.json has no dotNetVersion property' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-manifest-no-dotnet'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            @{ version = '26.0.0.0' } | ConvertTo-Json | Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
+
+        It 'Returns 0 when manifest.json is malformed' {
+            $compilerFolder = Join-Path $TestDrive 'compiler-manifest-malformed'
+            New-Item -Path $compilerFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $compilerFolder 'manifest.json') -Value '{ not valid json' -Encoding UTF8
+
+            InModuleScope CompileFromWorkspace -Parameters @{ Folder = $compilerFolder } {
+                param($Folder)
+                Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $Folder | Should -Be 0
+            }
+        }
+    }
+
+    Describe 'Get-DotnetRuntimeVersionInstalled' {
+        # Sample 'dotnet --list-runtimes' output: lines like
+        # "Microsoft.AspNetCore.App 6.0.36 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]"
+        # We mock the wrapper Get-DotnetListRuntimes to return canned strings.
+
+        It 'Returns the highest installed version matching the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 6.0.36 [path]',
+                        'Microsoft.AspNetCore.App 8.0.5 [path]',
+                        'Microsoft.AspNetCore.App 8.0.10 [path]',
+                        'Microsoft.NETCore.App 6.0.36 [path]',
+                        'Microsoft.NETCore.App 8.0.5 [path]',
+                        'Microsoft.NETCore.App 8.0.10 [path]'
+                    )
+                }
+
+                $result = Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8
+
+                $result | Should -Be ([System.Version]'8.0.10')
+            }
+        }
+
+        It 'Returns $null when no installed runtime matches the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 6.0.36 [path]',
+                        'Microsoft.NETCore.App 6.0.36 [path]'
+                    )
+                }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 9 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when only Microsoft.NETCore.App is installed for the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.NETCore.App 8.0.10 [path]'
+                    )
+                }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when only Microsoft.AspNetCore.App is installed for the requested major' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 8.0.10 [path]'
+                    )
+                }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when matching versions exist in NETCore.App but not in AspNetCore.App' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes {
+                    @(
+                        'Microsoft.AspNetCore.App 8.0.5 [path]',
+                        'Microsoft.NETCore.App 8.0.10 [path]'
+                    )
+                }
+
+                # 8.0.10 is only in NETCore.App; 8.0.5 is only in AspNetCore.App; no overlap
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'Returns $null when dotnet --list-runtimes produces no output' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-DotnetListRuntimes { return $null }
+
+                Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion 8 | Should -BeNullOrEmpty
+            }
+        }
     }
 
     Describe 'CompileAppsInWorkspace argument construction' {
@@ -917,6 +1164,239 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
                 $script:capturedArguments | Should -Contain '--logdirectory'
             }
+        }
+    }
+
+    Describe 'New-AppSourceCopJson' {
+        BeforeEach {
+            # Create app folders with app.json
+            $script:appFolder = Join-Path $TestDrive "MyApp"
+            New-Item -Path $script:appFolder -ItemType Directory -Force | Out-Null
+            @{
+                id = "11111111-1111-1111-1111-111111111111"
+                name = "MyApp"
+                publisher = "Contoso"
+                version = "2.0.0.0"
+            } | ConvertTo-Json | Set-Content (Join-Path $script:appFolder "app.json")
+
+            $script:baselinePackageCachePath = Join-Path $TestDrive "previousApps"
+            New-Item -Path $script:baselinePackageCachePath -ItemType Directory -Force | Out-Null
+
+            # Mock the AL tool to return manifest info from previous apps (matching app ID)
+            Mock Get-ALTool { return "altool.exe" } -ModuleName CompileFromWorkspace
+            Mock RunAndCheck {
+                return '{"Id":"11111111-1111-1111-1111-111111111111","Publisher":"Contoso","Name":"MyApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+        }
+
+        It 'Creates AppSourceCop.json with baseline version from previous app' {
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.version | Should -Be "1.0.0.0"
+            $result.baselinePackageCachePath | Should -Be $script:baselinePackageCachePath
+            $result.PSObject.Properties.Name | Should -Not -Contain "Publisher"
+            $result.PSObject.Properties.Name | Should -Not -Contain "Name"
+        }
+
+        It 'Includes mandatory affixes from settings' {
+            $settings = @{
+                appSourceCopMandatoryAffixes = @("Test", "Contoso")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.mandatoryAffixes | Should -Be @("Test", "Contoso")
+        }
+
+        It 'Includes obsoleteTagMinAllowedMajorMinor from settings' {
+            $settings = @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = "24.0"
+            }
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.obsoleteTagMinAllowedMajorMinor | Should -Be "24.0"
+        }
+
+        It 'Combines settings and baseline version in one file' {
+            $settings = @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = "23.0"
+            }
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.version | Should -Be "1.0.0.0"
+            $result.mandatoryAffixes | Should -Be @("Test")
+            $result.obsoleteTagMinAllowedMajorMinor | Should -Be "23.0"
+        }
+
+        It 'Does not create file when no previous app matches and no settings apply' {
+            # Ensure no pre-existing AppSourceCop.json
+            $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
+            if (Test-Path $copJsonPath) { Remove-Item $copJsonPath -Force }
+
+            Mock RunAndCheck {
+                return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            Test-Path $copJsonPath | Should -Be $false
+        }
+
+        It 'Preserves existing AppSourceCop.json when nothing new to write' {
+            # Pre-create an AppSourceCop.json with custom settings
+            $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
+            '{"supportedCountries":["us","ca"]}' | Set-Content $copJsonPath
+
+            Mock RunAndCheck {
+                return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
+            } -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            Test-Path $copJsonPath | Should -Be $true
+            $result = Get-Content $copJsonPath -Raw | ConvertFrom-Json
+            $result.supportedCountries | Should -Be @("us", "ca")
+        }
+
+        It 'Merges AL-Go settings into existing AppSourceCop.json' {
+            # Pre-create an AppSourceCop.json with custom settings
+            $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
+            '{"supportedCountries":["us","ca"],"customSetting":"keep"}' | Set-Content $copJsonPath
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            $result = Get-Content $copJsonPath -Raw | ConvertFrom-Json
+            # AL-Go managed fields are set
+            $result.mandatoryAffixes | Should -Be @("Test")
+            $result.version | Should -Be "1.0.0.0"
+            # User-managed fields are preserved
+            $result.supportedCountries | Should -Be @("us", "ca")
+            $result.customSetting | Should -Be "keep"
+        }
+
+        It 'Handles multiple app folders, only writing for matching ones' {
+            $appFolder2 = Join-Path $TestDrive "OtherApp"
+            New-Item -Path $appFolder2 -ItemType Directory -Force | Out-Null
+            @{
+                id = "22222222-2222-2222-2222-222222222222"
+                name = "OtherApp"
+                publisher = "OtherPublisher"
+                version = "1.0.0.0"
+            } | ConvertTo-Json | Set-Content (Join-Path $appFolder2 "app.json")
+
+            # RunAndCheck returns app ID matching only MyApp
+            New-AppSourceCopJson -AppFolders @($script:appFolder, $appFolder2) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @()
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            # MyApp should have AppSourceCop.json (app ID match)
+            Test-Path (Join-Path $script:appFolder "AppSourceCop.json") | Should -Be $true
+            # OtherApp should not (no match from RunAndCheck mock)
+            Test-Path (Join-Path $appFolder2 "AppSourceCop.json") | Should -Be $false
+        }
+
+        It 'Warns and continues when reading manifest fails' {
+            Mock RunAndCheck { throw "Failed to read app" } -ModuleName CompileFromWorkspace
+            Mock OutputWarning {} -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("bad.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            # Should still create the file with just the affixes
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.mandatoryAffixes | Should -Be @("Test")
+            Should -Invoke OutputWarning -ModuleName CompileFromWorkspace -Times 1
+        }
+    }
+
+    Describe 'Test-BaselineAppDownloaded' {
+        It 'returns true when a matching app file is in the downloaded list' {
+            $appFolder = Join-Path $TestDrive 'baseline-test1'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            @{ id = "11111111-1111-1111-1111-111111111111"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_1.0.0.0.app', 'Other_Other_2.0.0.0.app')
+            $result | Should -Be $true
+        }
+
+        It 'returns false when no matching app file is in the downloaded list' {
+            $appFolder = Join-Path $TestDrive 'baseline-test2'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            @{ id = "22222222-2222-2222-2222-222222222222"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Other_Other_2.0.0.0.app')
+            $result | Should -Be $false
+        }
+
+        It 'returns false when the downloaded list is empty' {
+            $appFolder = Join-Path $TestDrive 'baseline-test3'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            @{ id = "33333333-3333-3333-3333-333333333333"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @()
+            $result | Should -Be $false
+        }
+
+        It 'returns false when app.json does not exist' {
+            $appFolder = Join-Path $TestDrive 'baseline-test4'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_1.0.0.0.app')
+            $result | Should -Be $false
+        }
+
+        It 'matches by prefix regardless of version number' {
+            $appFolder = Join-Path $TestDrive 'baseline-test5'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            @{ id = "44444444-4444-4444-4444-444444444444"; name = "MyApp"; publisher = "Contoso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_99.99.99.99.app')
+            $result | Should -Be $true
+        }
+
+        It 'matches publisher names containing non-ASCII characters (UTF-8 encoded app.json)' {
+            $appFolder = Join-Path $TestDrive 'baseline-test6'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            $appJsonContent = @{ id = "55555555-5555-5555-5555-555555555555"; name = "MyApp"; publisher = "Müller GmbH"; version = "1.0.0.0" } | ConvertTo-Json
+            Set-Content -Path (Join-Path $appFolder "app.json") -Value $appJsonContent -Encoding UTF8
+
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Müller GmbH_MyApp_1.0.0.0.app')
+            $result | Should -Be $true
+        }
+
+        It 'strips invalid filename characters from publisher/name before matching' -Skip:(-not $IsWindows) {
+            $appFolder = Join-Path $TestDrive 'baseline-test7'
+            New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+            @{ id = "66666666-6666-6666-6666-666666666666"; name = "My<App>"; publisher = "Con:toso"; version = "1.0.0.0" } | ConvertTo-Json | Set-Content (Join-Path $appFolder "app.json") -Encoding UTF8
+
+            # The function strips chars from GetInvalidFileNameChars() before comparing,
+            # so "Con:toso_My<App>" with `:<>` stripped becomes "Contoso_MyApp"
+            $result = Test-BaselineAppDownloaded -folder $appFolder -downloadedAppNames @('Contoso_MyApp_1.0.0.0.app')
+            $result | Should -Be $true
         }
     }
 }
