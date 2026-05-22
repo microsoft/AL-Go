@@ -543,21 +543,19 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
         It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
             Mock OutputWarning { }
+            Mock Test-Json { }
 
             $settings = @{ "someProp" = "someValue" }
 
+            ValidateSettings -settings $settings
+
             if ($PSVersionTable.PSVersion.Major -ge 7) {
-                # On PS7+, the Invoke-Command path is used in-process.
-                ValidateSettings -settings $settings
+                # On PS7+, Test-Json is called directly for validation
+                Should -Invoke -CommandName Test-Json -Times 1
             }
             else {
-                # On PS < 7, validation is skipped entirely; pwsh should never be called
-                Mock pwsh { throw "pwsh should not be called on PS < 7" }
-
-                ValidateSettings -settings $settings
-
-                # Verify pwsh was NOT called
-                Should -Invoke -CommandName pwsh -Times 0
+                # On PS < 7, validation is skipped entirely
+                Should -Invoke -CommandName Test-Json -Times 0
             }
 
             # Verify no warning was output
