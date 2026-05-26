@@ -56,7 +56,7 @@ try {
     }
 
     # Check for precompile and postcompile overrides
-    $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp", "NewBcCompilerFolder")
+    $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp", "PreNewBcCompilerFolder", "PostNewBcCompilerFolder")
     $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
 
     # Prepare build metadata
@@ -103,7 +103,27 @@ try {
         # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
         $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
     }
-    $compilerFolder = New-BcCompilerFolder -artifactUrl $artifact -vsixFile $settings.vsixFile -containerName "$($containerName)compiler" -cacheFolder $cacheFolder
+
+    $newCompilerFolderParameters = @{
+        artifactUrl          = $artifact
+        vsixFile             = $settings.vsixFile
+        containerName        = "$($containerName)compiler"
+        cacheFolder          = $cacheFolder
+    }
+
+    # Run PreNewBcCompilerFolder override if available (can modify parameters)
+    if ($scriptOverrides['PreNewBcCompilerFolder']) {
+        & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
+    }
+
+    # Create the compiler folder
+    $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
+
+    # Run PostNewBcCompilerFolder override if available
+    if ($scriptOverrides['PostNewBcCompilerFolder']) {
+        & $scriptOverrides['PostNewBcCompilerFolder'] -parameters $newCompilerFolderParameters -compilerFolder $compilerFolder
+    }
+
     $packageCachePath = Join-Path $compilerFolder "symbols"
 
     # Copy dependency apps and test apps to the package cache so the compiler can resolve them
