@@ -111,7 +111,7 @@ try {
         cacheFolder          = $cacheFolder
     }
 
-    # Run PreNewBcCompilerFolder override if available (can modify parameters)
+    # Run PreNewBcCompilerFolder hook if available (can modify parameters)
     if ($scriptOverrides['PreNewBcCompilerFolder']) {
         & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
     }
@@ -119,7 +119,7 @@ try {
     # Create the compiler folder
     $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
 
-    # Run PostNewBcCompilerFolder override if available
+    # Run PostNewBcCompilerFolder hook if available
     if ($scriptOverrides['PostNewBcCompilerFolder']) {
         & $scriptOverrides['PostNewBcCompilerFolder'] -parameters $newCompilerFolderParameters -compilerFolder $compilerFolder
     }
