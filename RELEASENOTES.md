@@ -1,6 +1,3 @@
-### Support for overriding `NewBcCompilerFolder` during compilation
-
-AL-Go now allows repositories to override the `NewBcCompilerFolder` script during compilation. Place a `NewBcCompilerFolder.ps1` script in the project's `.AL-Go` folder to customize how the BC compiler folder is created. The script must accept a `[Hashtable] $parameters` argument and return the compiler folder path. If the script does not exist, the default `New-BcCompilerFolder` behavior is used.
 
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
