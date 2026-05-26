@@ -1,3 +1,7 @@
+### Support for overriding `NewBcCompilerFolder` during compilation
+
+AL-Go now allows repositories to override the `NewBcCompilerFolder` script during compilation. Place a `NewBcCompilerFolder.ps1` script in the project's `.AL-Go` folder to customize how the BC compiler folder is created. The script must accept a `[Hashtable] $parameters` argument and return the compiler folder path. If the script does not exist, the default `New-BcCompilerFolder` behavior is used.
+
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
 When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If the manifest does not declare a `dotNetVersion`, or no installed runtime matches the required major, versioned .NET assembly probing paths are omitted (a warning is logged in the latter case).
