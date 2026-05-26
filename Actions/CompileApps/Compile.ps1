@@ -56,7 +56,7 @@ try {
     }
 
     # Check for precompile and postcompile overrides
-    $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp")
+    $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp", "NewBcCompilerFolder")
     $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
 
     # Prepare build metadata
