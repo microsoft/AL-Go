@@ -347,11 +347,16 @@ You can configure multiple trusted NuGet feeds for dependency resolution:
 - **Token expiration**: Regularly rotate your personal access tokens
 - **Compressed JSON**: Always use compressed JSON format for secrets to avoid masking issues
 
-#### Protect the environments used for delivery
+#### Protect the branches that publish to delivery targets
 
-GitHub *environments* are the security boundary around the context secrets that AL-Go uses to publish your apps (for example `GitHubPackagesContext`, `NuGetContext`, `StorageContext`, `AppSourceContext`, or any custom `<DeliveryTarget>Context`). When a `DeliverTo<Target>` configuration targets an environment - or when you store the context secret as an *environment secret* - restrict which branches are allowed to deploy to that environment and require reviewers for sensitive targets (production feeds, AppSource, customer-facing storage). The `Branches` list on `DeliverTo<Target>` should match the environment's allowed branches so the two reinforce each other.
+Unlike the deployment jobs in AL-Go (which run inside a GitHub *environment* and can therefore be gated by environment protection rules), the `Deliver` jobs in the AL-Go CI/CD workflows do not declare a GitHub `environment:`. Their context secrets (`GitHubPackagesContext`, `NuGetContext`, `StorageContext`, `AppSourceContext`, or any custom `<DeliveryTarget>Context`) are read as repository or organization secrets, so GitHub *deployment branches and tags* and *required reviewers* do **not** apply to delivery as currently shipped.
 
-For the available controls and step-by-step instructions, see the official GitHub documentation: [Managing environments for deployment](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and the [Deployment protection rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-protection-rules) reference (including [Deployment branches and tags](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-branches-and-tags) and [Required reviewers](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#required-reviewers)).
+In practice, this means the security boundary for delivery is the set of branches that are allowed to run the delivery step. Hardening recommendations:
+
+- **Restrict the delivery branches in AL-Go.** Always set `DeliverTo<Target>.Branches` to an explicit allowlist (for example `["main", "release/*"]`). Without it, delivery may run from any branch that triggers CI/CD.
+- **Protect the listed branches.** Add a [branch protection rule or ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) on every branch named in `DeliverTo<Target>.Branches` that requires pull requests, reviews, a passing AL-Go build status check, restricts who can push directly, and disallows bypassing the rule. This is what prevents arbitrary code on those branches from running with the delivery secret.
+- **Scope the secret to the smallest audience.** Use a repository secret (rather than an organization secret) when only one repository needs to publish, and use the most restrictive credential available for each target: PATs scoped to `write:packages` only for GitHub Packages, dedicated feed-scoped tokens (or federated credentials) for NuGet, SAS tokens with the minimum required permissions and a short expiry for Azure Storage, and S2S/federated credentials for AppSource. Rotate them on a schedule.
+- **Keep an eye on settings changes.** Because `DeliverTo<Target>.Branches` lives in `.github/AL-Go-Settings.json`, the branch protection rule on your release branches is also what prevents this allowlist from being silently widened.
 
 ### Limitations
 
