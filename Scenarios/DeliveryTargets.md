@@ -347,6 +347,12 @@ You can configure multiple trusted NuGet feeds for dependency resolution:
 - **Token expiration**: Regularly rotate your personal access tokens
 - **Compressed JSON**: Always use compressed JSON format for secrets to avoid masking issues
 
+#### Protect the environments used for delivery
+
+GitHub *environments* are the security boundary around the context secrets that AL-Go uses to publish your apps (for example `GitHubPackagesContext`, `NuGetContext`, `StorageContext`, `AppSourceContext`, or any custom `<DeliveryTarget>Context`). When a `DeliverTo<Target>` configuration targets an environment - or when you store the context secret as an *environment secret* - restrict which branches are allowed to deploy to that environment and require reviewers for sensitive targets (production feeds, AppSource, customer-facing storage). The `Branches` list on `DeliverTo<Target>` should match the environment's allowed branches so the two reinforce each other.
+
+For the available controls and step-by-step instructions, see the official GitHub documentation: [Managing environments for deployment](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and the [Deployment protection rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-protection-rules) reference (including [Deployment branches and tags](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-branches-and-tags) and [Required reviewers](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#required-reviewers)).
+
 ### Limitations
 
 - **Fine-grained tokens**: GitHub Packages doesn't support fine-grained personal access tokens yet
