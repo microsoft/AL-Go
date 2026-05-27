@@ -130,7 +130,7 @@ jobs:
           parametersJson: | 
             {
               "buildMode": "${{ inputs.buildMode }}",
-              "buildIt": "${{ steps.DetermineBuildProject.outputs.BuildIt }}"
+              "buildIt": ${{ steps.DetermineBuildProject.outputs.BuildIt == 'True' }}
             }
 
       - name: Read secrets
