@@ -369,3 +369,16 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+
+      - name: Run Build Cleanup hook
+        if: always() && hashFiles(format('{0}/.AL-Go/BuildCleanup.ps1', inputs.project)) != '' && steps.DetermineBuildProject.outcome != 'skipped'
+        uses: microsoft/AL-Go-Actions/RunHook@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          hookName: BuildCleanup
+          parametersJson: |
+            {
+              "buildMode": "${{ inputs.buildMode }}",
+              "buildIt": ${{ steps.DetermineBuildProject.outputs.BuildIt == 'True' }}
+            }

@@ -60,7 +60,8 @@ $runAlPipelineOverrides = @(
 # $parameters argument.
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alGoHooks', Justification = 'Used by RunHook action and Invoke-ALGoHook helper.')]
 $alGoHooks = @(
-    "BuildInitialize"
+    "BuildInitialize",
+    "BuildCleanup"
 )
 
 <#
