@@ -1,3 +1,13 @@
+### Enhanced `customALGoFiles` setting
+
+The `customALGoFiles` setting of a custom template was only applied on the next Update (from `AL-Go-TemplateRepoSettings.doNotEdit.json`). Now the up-to-date settings of the custom template are used directly during "Update AL-Go System Files". The template's `filesToInclude`, `filesToExclude`, and `filesToRemove` settings are merged with the consumer repo's settings before resolution.
+
+- **`filesToInclude`** now also resolves files from the original AL-Go template. Files present in the official template that are not overridden by your custom template are propagated to consumer repos. When a file exists in both, the custom template version takes precedence.
+- **`filesToExclude`** now also resolves files from the original AL-Go template (same dual-resolution as `filesToInclude`). Files resolved by `filesToInclude` whose source matches a `filesToExclude` entry are not copied to consumer repos, and existing copies are removed.
+- **`filesToRemove`** (new property): Unconditionally removes matching files from consumer repos. Files are searched in both the template and end repository. Takes precedence over `filesToInclude`. Entries use `sourceFolder` (relative to the template), `filter`, and optionally `destinationFolder` and `perProject`.
+
+Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
+
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
 When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If the manifest does not declare a `dotNetVersion`, or no installed runtime matches the required major, versioned .NET assembly probing paths are omitted (a warning is logged in the latter case).

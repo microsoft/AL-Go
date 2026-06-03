@@ -52,7 +52,7 @@ if ($token) {
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
 # Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
-$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
+$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 
 # If templateUrl has changed, download latest version of the template repository (ignore templateSha)
@@ -61,6 +61,7 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $originalTemplateFolder = $null
+$templateRepoSettings = $null
 $templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 $templateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder
 Write-Host "Template Folder: $templateFolder"
@@ -71,42 +72,40 @@ $templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
-    $templateRepoSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-    if (Test-Path -Path $templateRepoSettingsFile -PathType Leaf) {
-        $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
-        if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
-            # The template repository is a url to another AL-Go repository (a custom template repository)
-            Trace-Information -Message "Using custom AL-Go template repository"
+    # Get template Repo settings as a hashtable (do NOT read any variable settings, specific project settings, nor any specific workflow, user or branch settings)
+    $templateRepoSettings = ReadSettings -baseFolder $templateFolder -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue ''  | ConvertTo-HashTable -recurse
+    if ($templateRepoSettings.templateUrl -and $templateRepoSettings.templateUrl -ne $templateUrl) {
+        # The template repository is a url to another AL-Go repository (a custom template repository)
+        Trace-Information -Message "Using custom AL-Go template repository"
 
-            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the custom template repository points to the "original" template repository
-            # Copy files and folders from the custom template repository, but grab the unmodified file from the "original" template repository if it exists and apply customizations
-            # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.doNotEdit.json (will be read before .github/AL-Go-Settings.json in the final repo)
-            # Copy .AL-Go/settings.json to .github/templateProjectSettings.doNotEdit.json (will be read before .AL-Go/settings.json in the final repo)
+        # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the custom template repository points to the "original" template repository
+        # Copy files and folders from the custom template repository, but grab the unmodified file from the "original" template repository if it exists and apply customizations
+        # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.doNotEdit.json (will be read before .github/AL-Go-Settings.json in the final repo)
+        # Copy .AL-Go/settings.json to .github/templateProjectSettings.doNotEdit.json (will be read before .AL-Go/settings.json in the final repo)
 
-            Write-Host "Custom AL-Go template repository detected, downloading the 'original' template repository"
-            $originalTemplateUrl = $templateRepoSettings.templateUrl
-            if ($templateRepoSettings.Keys -contains "templateSha") {
-                $originalTemplateSha = $templateRepoSettings.templateSha
-            }
-            else {
-                $originalTemplateSha = ""
-            }
+        Write-Host "Custom AL-Go template repository detected, downloading the 'original' template repository"
+        $originalTemplateUrl = $templateRepoSettings.templateUrl
+        if ($templateRepoSettings.Keys -contains "templateSha") {
+            $originalTemplateSha = $templateRepoSettings.templateSha
+        }
+        else {
+            $originalTemplateSha = ""
+        }
 
-            # Download the "original" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
-            $originalTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $originalTemplateUrl -templateSha ([ref]$originalTemplateSha) -downloadLatest ($originalTemplateSha -eq '')
-            $originalTemplateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateFolder
+        # Download the "original" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
+        $originalTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $originalTemplateUrl -templateSha ([ref]$originalTemplateSha) -downloadLatest ($originalTemplateSha -eq '')
+        $originalTemplateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateFolder
 
-            Write-Host "Original Template Folder: $originalTemplateFolder"
+        Write-Host "Original Template Folder: $originalTemplateFolder"
 
-            # Set TemplateBranch and TemplateOwner
-            # Keep TemplateUrl and TemplateSha pointing to the custom template repository
-            $templateBranch = $originalTemplateUrl.Split('@')[1]
-            $templateOwner = $originalTemplateUrl.Split('/')[3]
+        # Set TemplateBranch and TemplateOwner
+        # Keep TemplateUrl and TemplateSha pointing to the custom template repository
+        $templateBranch = $originalTemplateUrl.Split('@')[1]
+        $templateOwner = $originalTemplateUrl.Split('/')[3]
 
-            $isDirectALGo = IsDirectALGo -templateUrl $originalTemplateUrl
-            if ($isDirectALGo) {
-                Trace-Information -Message "Original template repository is direct AL-Go"
-            }
+        $isDirectALGo = IsDirectALGo -templateUrl $originalTemplateUrl
+        if ($isDirectALGo) {
+            Trace-Information -Message "Original template repository is direct AL-Go"
         }
     }
 }
@@ -115,7 +114,7 @@ if (-not $isDirectALGo) {
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
-$filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+$filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateRepoSettings -originalTemplateFolder $originalTemplateFolder
 
 # $updateFiles will hold an array of files, which needs to be updated
 $updateFiles = @()
@@ -203,8 +202,8 @@ foreach($fileToInclude in $filesToInclude) {
 }
 
 Push-Location -Path $baseFolder
-# Remove files that are in $filesToExclude and exist in the repository
-$removeFiles = $filesToExclude | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
+# Remove files that are in $filesToExclude or $filesToRemove and exist in the repository
+$removeFiles = @($filesToExclude) + @($filesToRemove) | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
     $relativePath = Resolve-Path -Path $_.destinationFullPath -Relative
     Write-Host "File marked for removal: $relativePath"
     $relativePath

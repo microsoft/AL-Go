@@ -31,8 +31,12 @@ Write-Host -ForegroundColor Yellow @'
 #  - Create a new repository based on the PTE template with 1 app, using compilerfolder and donotpublishapps (this will be the "final" template repository)
 #  - Run Update AL-Go System Files in final repo (using custom template repository as template)
 #  - Run Update AL-Go System files in custom template repository
+#  - Validate that custom AL-Go files are applied in custom template repository
 #  - Validate that custom job is present in custom template repository
 #  - Run Update AL-Go System files in final repo
+#  - Validate that custom AL-Go files of template repository are applied in final repository
+#  - Run Update AL-Go System files in final repo
+#  - Validate that custom AL-Go files of template repository and final repository are applied in final repository
 #  - Validate that custom job is present in final repo
 #
 '@
@@ -55,6 +59,8 @@ $template = "https://github.com/$pteTemplate"
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
+#region create repositories
+
 # Create template repository
 CreateAlGoRepository `
     -github:$github `
@@ -63,6 +69,9 @@ CreateAlGoRepository `
     -repository $templateRepository `
     -branch $branch
 $templateRepoPath = (Get-Location).Path
+
+# Stop all currently running workflows on template repository
+CancelAllWorkflows -repository $templateRepository
 
 Set-Location $prevLocation
 
@@ -76,14 +85,25 @@ CreateAlGoRepository `
     -template $template `
     -repository $repository `
     -branch $branch `
+    -addRepoSettings @{ "useCompilerFolder" = $true; "doNotPublishApps" = $true } `
     -contentScript {
         Param([string] $path)
         $null = CreateNewAppInFolder -folder $path -name $appName -publisher $publisherName
     }
 $finalRepoPath = (Get-Location).Path
 
+# Stop all currently running workflows on final repository
+CancelAllWorkflows -repository $repository
+
 # Update AL-Go System Files to use template repository
 RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
+
+# Stop all currently running workflows on final repository
+CancelAllWorkflows -repository $repository
+
+#endregion
+
+#region setup template repository customizations
 
 Set-Location $templateRepoPath
 
@@ -154,6 +174,10 @@ on:
     branches:
       - main
 
+defaults:
+  run:
+    shell: powershell
+
 jobs:
   CustomJob:
     runs-on: [ windows-latest ]
@@ -166,22 +190,100 @@ jobs:
 "@
 Set-Content -Path $customWorkflowFile -Value $customWorkflowContent
 
+$finalRepoCustomWorkflowContent = $customWorkflowContent
 if($linux) {
-    # Modify workflow to run on ubuntu-latest if the test is running on linux. AL-Go will not modify workflow files based on platform, so we need to do it here to ensure the test works correctly.
-    $customWorkflowContent = $customWorkflowContent -replace 'windows-latest', 'ubuntu-latest'
+    $finalRepoCustomWorkflowContent = $finalRepoCustomWorkflowContent -replace 'windows-latest', 'ubuntu-latest'
+    $finalRepoCustomWorkflowContent = $finalRepoCustomWorkflowContent -replace 'shell: powershell', 'shell: pwsh'
 }
 
-# Add another custom file in the template repository (to be ignored unless specifically added via the settings)
-$customFileName = 'CustomTemplateFile.txt'
-$customFile = Join-Path $templateRepoPath $customFileName
-$customFileContent = "This is a custom file in the template repository."
-Set-Content -Path $customFile -Value $customFileContent
+# Add custom files in the template repository
+$defaultCustomFileName = 'CustomTemplateFile.Default.txt'
+$defaultCustomFile = Join-Path $templateRepoPath $defaultCustomFileName
+$defaultCustomFileContent = "This is a default custom file in the template repository."
+Set-Content -Path $defaultCustomFile -Value $defaultCustomFileContent
+
+$optionalCustomFileName = 'CustomTemplateFile.Optional.txt'
+$optionalCustomFile = Join-Path $templateRepoPath $optionalCustomFileName
+$optionalCustomFileContent = "This is an optional custom file in the template repository."
+Set-Content -Path $optionalCustomFile -Value $optionalCustomFileContent
+
+$legacyCustomFileName = 'CustomTemplateFile.Legacy.txt'
+
+# Remove workflow files from template repository
+$excludedWorkflowFileName = 'DeployReferenceDocumentation.yaml'
+$excludedWorkflowFileRelativePath = Join-Path '.github/workflows' $excludedWorkflowFileName
+$excludedWorkflowFile = Join-Path $templateRepoPath $excludedWorkflowFileRelativePath
+Remove-Item -Path $excludedWorkflowFile -Force | Out-Null
+
+$missingWorkflowFileName = 'Troubleshooting.yaml'
+$missingWorkflowFileRelativePath = Join-Path '.github/workflows' $missingWorkflowFileName
+$missingWorkflowFile = Join-Path $templateRepoPath $missingWorkflowFileRelativePath
+Remove-Item -Path $missingWorkflowFile -Force | Out-Null
+
+# Add customALGoFiles settings to the template repository
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{
+    "customALGoFiles" = @{
+        "filesToInclude" = @( @{ "filter" = $defaultCustomFileName } )
+        "filesToExclude" = @( @{ "sourceFolder" = ".github/workflows"; "filter" = $excludedWorkflowFileName } )
+        "filesToRemove"  = @( @{ "filter" = $legacyCustomFileName } )
+    }
+}
 
 # Push
-CommitAndPush -commitMessage 'Add template customizations'
+CommitAndPush -commitMessage 'Add template customizations [skip ci]'
 
-# Do not run workflows on template repository
+#endregion
+
+#region update template repository with template repository customizations
+
+# Update AL-Go System Files for template repository to update customizations from template repository
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $template -ghTokenWorkflow $algoauthapp -repository $templateRepository -branch $branch | Out-Null
+
+# Stop all currently running workflows on template repository
 CancelAllWorkflows -repository $templateRepository
+
+# Pull changes
+Pull
+
+# Check that custom workflow file is present
+(Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $customWorkflowContent.Replace("`r", "").TrimEnd("`n")
+
+# Check that default custom file is present
+(Join-Path (Get-Location) $defaultCustomFileName) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $defaultCustomFileName) | Should -Be $defaultCustomFileContent.Replace("`r", "").TrimEnd("`n")
+# Check that optional custom file is present
+(Join-Path (Get-Location) $optionalCustomFileName) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $optionalCustomFileName) | Should -Be $optionalCustomFileContent.Replace("`r", "").TrimEnd("`n")
+# Check that legacy custom file is NOT present
+(Join-Path (Get-Location) $legacyCustomFileName) | Should -Not -Exist
+
+# Check that excluded workflow file is NOT present (in template's filesToExclude)
+(Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
+# Check that missing workflow file is present (in default filesToExclude)
+(Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
+
+# Remove missing workflow files from template repository again
+Remove-Item -Path $missingWorkflowFile -Force | Out-Null
+
+# Push
+CommitAndPush -commitMessage 'Restore template customizations [skip ci]'
+
+#endregion
+
+#region validate template repository CI/CD workflow
+
+# Run CICD
+$run = RunCICD -repository $templateRepository -branch $branch -wait
+
+# Check Custom Jobs
+Test-LogContainsFromRun -repository $templateRepository -runid $run.id -jobName 'CustomJob-TemplateInit' -stepName 'Init' -expectedText 'CustomJob-TemplateInit was here!'
+Test-LogContainsFromRun -repository $templateRepository -runid $run.id -jobName 'CustomJob-TemplateDeploy' -stepName 'Deploy' -expectedText 'CustomJob-TemplateDeploy was here!'
+{ Test-LogContainsFromRun -repository $templateRepository -runid $run.id -jobName 'JustSomeTemplateJob' -stepName 'JustSomeTemplateStep' -expectedText 'JustSomeTemplateJob was here!' } | Should -Throw
+
+#endregion
+
+#region setup final repository customizations
 
 # Add local customizations to the final repository
 Set-Location $finalRepoPath
@@ -245,14 +347,39 @@ $cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepositor
 # save
 $cicdYaml.Save($cicdWorkflow)
 
+# Add custom files in the final repository
+$legacyCustomFileContent = "This is a removed custom file that will be removed in the final repository."
+Set-Content -Path (Join-Path (Get-Location) $legacyCustomFileName) -Value $legacyCustomFileContent
+
+# Remove workflow files from final repository
+Remove-Item -Path (Join-Path (Get-Location) $missingWorkflowFileRelativePath) -Force | Out-Null
+
+# Check that custom workflow file is NOT present
+(Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Not -Exist
+
+# Check that default custom file is NOT present in final repository
+(Join-Path (Get-Location) $defaultCustomFileName) | Should -Not -Exist
+# Check that optional custom file is NOT present in final repository
+(Join-Path (Get-Location) $optionalCustomFileName) | Should -Not -Exist
+# Check that legacy workflow file is present in final repository
+(Join-Path (Get-Location) $legacyCustomFileName) | Should -Exist
+
+# Check that excluded workflow file is present in final repository
+(Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Exist
+# Check that missing workflow file is NOT present in final repository
+(Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Not -Exist
 
 # Push
-CommitAndPush -commitMessage 'Add final repo customizations'
+CommitAndPush -commitMessage 'Add final repo customizations [skip ci]'
 
-# Update AL-Go System Files to uptake UseProjectDependencies setting
+#endregion
+
+#region update final repository with template repository customizations
+
+# Update AL-Go System Files for the final repository to uptake customizations from template repository
 RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
 
-# Stop all currently running workflows and run a new CI/CD workflow
+# Stop all currently running workflows on final repository
 CancelAllWorkflows -repository $repository
 
 # Pull changes
@@ -263,39 +390,82 @@ Pull
 
 # Check that custom workflow file is present
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
-Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $customWorkflowContent.Replace("`r", "").TrimEnd("`n")
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $finalRepoCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
 
-# Check that custom file is NOT present
-(Join-Path (Get-Location) $customFileName) | Should -Not -Exist # Custom file should not be copied by default
+# Check that default custom file is present (in template's filesToInclude)
+(Join-Path (Get-Location) $defaultCustomFileName) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $defaultCustomFileName) | Should -Be $defaultCustomFileContent.Replace("`r", "").TrimEnd("`n")
+# Check that optional custom file is NOT present (not in default or template's filesToInclude)
+(Join-Path (Get-Location) $optionalCustomFileName) | Should -Not -Exist
+# Check that legacy custom file is NOT present (in template's filesToRemove)
+(Join-Path (Get-Location) $legacyCustomFileName) | Should -Not -Exist
 
-# Add custom file to be copied via settings
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "customALGoFiles" = @{ "filesToInclude" = @( @{ "filter" = $customFileName } ) } }
+# Check that excluded workflow file is NOT present (in default filesToInclude and template's filesToExclude)
+(Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
+# Check that missing workflow file is present (in default filesToInclude, propagated from PTE template)
+(Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
+
+# Add customALGoFiles settings to the final reppository
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{
+    "customALGoFiles" = @{
+        "filesToInclude" = @( @{ "filter" = $optionalCustomFileName } )
+        "filesToExclude" = @( @{ "filter" = $defaultCustomFileName } )
+    }
+}
 
 # Push
-CommitAndPush -commitMessage 'Add custom file to be updated when updating AL-Go system files [skip ci]'
+CommitAndPush -commitMessage 'Add custom files to be updated when updating AL-Go system files [skip ci]'
 
-# Update AL-Go System Files to uptake custom file
+#endregion
+
+#region update final repository with template and final repository customizations
+
+# Update AL-Go System Files for final repository to uptake customizations from final repository
 RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
+
+# Stop all currently running workflows on final repository
+CancelAllWorkflows -repository $repository
 
 # Pull changes
 Pull
 
-# Check that custom file is now present
-(Join-Path (Get-Location) $customFileName) | Should -Exist
-Get-ContentLF -Path (Join-Path (Get-Location) $customFileName)| Should -Be $customFileContent.Replace("`r", "").TrimEnd("`n")
+# Check that custom workflow file is present
+(Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $finalRepoCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
+
+# Check that default custom file is NOT present (in repos's filesToExclude and template's filesToInclude)
+(Join-Path (Get-Location) $defaultCustomFileName) | Should -Not -Exist
+# Check that optional custom file is present (in repos's filesToInclude)
+(Join-Path (Get-Location) $optionalCustomFileName) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $optionalCustomFileName) | Should -Be $optionalCustomFileContent.Replace("`r", "").TrimEnd("`n")
+# Check that legacy custom file is NOT present (in template's filesToRemove)
+(Join-Path (Get-Location) $legacyCustomFileName) | Should -Not -Exist
+
+# Check that excluded workflow file is NOT present (in default filesToInclude and template's filesToExclude)
+(Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
+# Check that missing workflow file is present (in default filesToInclude, propagated from PTE template)
+(Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
+
+#endregion
+
+#region validate final repository CI/CD workflow
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait
 
 # Check Custom Jobs
-Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-TemplateInit' -stepName 'Init' -expectedText 'CustomJob-TemplateInit was here!'
-Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-TemplateDeploy' -stepName 'Deploy' -expectedText 'CustomJob-TemplateDeploy was here!'
-Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-PreDeploy' -stepName 'PreDeploy' -expectedText 'CustomJob-PreDeploy was here!'
-Test-LogContainsFromRun -runid $run.id -jobName 'CustomJob-PostDeploy' -stepName 'PostDeploy' -expectedText 'CustomJob-PostDeploy was here!'
-{ Test-LogContainsFromRun -runid $run.id -jobName 'JustSomeJob' -stepName 'JustSomeStep' -expectedText 'JustSomeJob was here!' } | Should -Throw
-{ Test-LogContainsFromRun -runid $run.id -jobName 'JustSomeTemplateJob' -stepName 'JustSomeTemplateStep' -expectedText 'JustSomeTemplateJob was here!' } | Should -Throw
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'CustomJob-TemplateInit' -stepName 'Init' -expectedText 'CustomJob-TemplateInit was here!'
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'CustomJob-TemplateDeploy' -stepName 'Deploy' -expectedText 'CustomJob-TemplateDeploy was here!'
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'CustomJob-PreDeploy' -stepName 'PreDeploy' -expectedText 'CustomJob-PreDeploy was here!'
+Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'CustomJob-PostDeploy' -stepName 'PostDeploy' -expectedText 'CustomJob-PostDeploy was here!'
+{ Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'JustSomeJob' -stepName 'JustSomeStep' -expectedText 'JustSomeJob was here!' } | Should -Throw
+{ Test-LogContainsFromRun -repository $repository -runid $run.id -jobName 'JustSomeTemplateJob' -stepName 'JustSomeTemplateStep' -expectedText 'JustSomeTemplateJob was here!' } | Should -Throw
+
+#endregion
 
 Set-Location $prevLocation
 
+RefreshToken -repository $repository
 RemoveRepository -repository $repository -path $finalRepoPath
+RefreshToken -repository $templateRepository
 RemoveRepository -repository $templateRepository -path $templateRepoPath
