@@ -1085,9 +1085,9 @@ function GetDefaultFilesToExclude {
     1. filesToInclude: Files to copy from the template or original template to the destination.
        Built from default files to include and customALGoFiles.filesToInclude in settings and templateSettings, resolved against the template folder and original template folder (if any).
     2. filesToExclude: Files to skip from copying; if they already exist in the destination they should be deleted.
-       Built from default files to exclude, customALGoFiles.filesToExclude, and customALGoFiles.filesToRemove in settings and templateSettings, resolved against the template folder and original template folder (if any).
+       Built from default files to exclude and customALGoFiles.filesToExclude in settings and templateSettings, resolved against the template folder and original template folder (if any).
     3. filesToRemove: Files to unconditionally delete from the destination.
-       Built from customALGoFiles.filesToRemove in settings and templateSettings and resolved against the destination folder (not the template folder).
+       Built from customALGoFiles.filesToRemove in settings and templateSettings and resolved against template folder, the original template folder (if any), and the destination folder.
 
     The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
     filesToExclude with a deprecation warning.
