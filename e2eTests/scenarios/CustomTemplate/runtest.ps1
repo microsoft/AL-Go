@@ -405,7 +405,7 @@ Get-ContentLF -Path (Join-Path (Get-Location) $defaultCustomFileName) | Should -
 # Check that missing workflow file is present (in default filesToInclude, propagated from PTE template)
 (Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
 
-# Add customALGoFiles settings to the final reppository
+# Add customALGoFiles settings to the final repository
 $null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{
     "customALGoFiles" = @{
         "filesToInclude" = @( @{ "filter" = $optionalCustomFileName } )
