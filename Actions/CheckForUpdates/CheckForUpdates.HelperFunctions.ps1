@@ -824,6 +824,8 @@ function ResolveFilePaths {
         return @()
     }
 
+    $sourceFolder = Join-Path $sourceFolder '' # Ensure source folder has a trailing slash for correct path resolution
+
     $fullFilePaths = @()
     foreach($file in $files) {
         if($file.Keys -notcontains 'sourceFolder') {
@@ -1170,7 +1172,7 @@ function GetFilesToUpdate {
     }
     $filesToInclude += @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
     # Remove duplicates based on destinationFullPath, keeping the last one (setting > template settings > defaults; template folder > original template folder)
-    $filesToInclude = @($filesToInclude | Group-Object -Property destinationFullPath | ForEach-Object { $_.Group[-1] })
+    $filesToInclude = @($filesToInclude | Group-Object { $_.destinationFullPath } | Sort-Object -Property Name | ForEach-Object { $_.Group[-1] })
 
     # Determine files to exclude
     $filesToExcludeUnresolved = GetDefaultFilesToExclude -settings $settings
@@ -1184,7 +1186,7 @@ function GetFilesToUpdate {
     }
     $filesToExclude += @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExcludeUnresolved -projects $projects)
     # Remove duplicates based on destinationFullPath, keeping the last one (setting > template settings > defaults; template folder > original template folder)
-    $filesToExclude = @($filesToExclude | Group-Object -Property destinationFullPath | ForEach-Object { $_.Group[-1] })
+    $filesToExclude = @($filesToExclude | Group-Object { $_.destinationFullPath } | Sort-Object -Property Name | ForEach-Object { $_.Group[-1] })
 
     # Determine files to remove
     $filesToRemoveUnresolved = @()
@@ -1199,7 +1201,7 @@ function GetFilesToUpdate {
     $filesToRemove += @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToRemoveUnresolved -projects $projects)
     $filesToRemove += @(ResolveFilePathsInDestinationFolder -destinationFolder $baseFolder -files $filesToRemoveUnresolved -projects $projects)
     # Remove duplicates based on destinationFullPath, keeping the last one (settings > template settings; base folder > template folder > original template folder)
-    $filesToRemove = @($filesToRemove | Group-Object -Property destinationFullPath | ForEach-Object { $_.Group[-1] })
+    $filesToRemove = @($filesToRemove | Group-Object { $_.destinationFullPath } | Sort-Object -Property Name | ForEach-Object { $_.Group[-1] })
 
     # Exclude files from filesToInclude that are in filesToRemove (based on destination)
     $filesToInclude = @($filesToInclude | Where-Object {

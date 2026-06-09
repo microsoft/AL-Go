@@ -1474,6 +1474,30 @@ Describe "ResolveFilePaths" {
         if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
     }
 
+    It 'ResolveFilePaths skips files in folder whose name starts with source folder name' {
+        # Create a external file in folder whose name starts with the same prefix as sourceFolder
+        $externalFolder = "${sourceFolder}-external"
+        if (-not (Test-Path $externalFolder)) { New-Item -Path $externalFolder -ItemType Directory | Out-Null }
+        $externalFile = Join-Path $externalFolder "outside.txt"
+        Set-Content -Path $externalFile -Value "outside"
+
+        $destinationFolder = "destinationFolder"
+        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+
+        $files = @(
+            @{ "sourceFolder" = "../sourceFolder-external"; "filter" = "*.txt" }
+        )
+
+        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+        # The file in the prefix-colliding folder must NOT be included
+        $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -BeLike "${externalFolder}*" }
+
+        # Cleanup
+        if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
+        if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+    }
+
     It 'ResolveFilePaths returns empty when no files match filter' {
         $destinationFolder = "destinationFolder"
         $destinationFolder = Join-Path $rootFolder $destinationFolder
@@ -2098,7 +2122,6 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         # .
         # ├── test.ps1
         # ├── test.txt
-        # ├── test2.txt
         # ├── test.base.ps1
         # ├── test.base.txt
         # ├── subfolder
