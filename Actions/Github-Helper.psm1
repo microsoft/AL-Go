@@ -141,6 +141,8 @@ function GetDependencies {
             $projects = $dependency.projects
             $buildMode = $dependency.buildMode
 
+            # Use local copies to avoid mutating the outer loop variable
+            $currentMask = $mask
             if ($mask -eq 'TestApps') {
                 $altMask = 'Apps'
             }
@@ -149,11 +151,11 @@ function GetDependencies {
             }
             # change the mask to include the build mode
             if($buildMode -ne "Default") {
-                $mask = "$buildMode$mask"
+                $currentMask = "$buildMode$currentMask"
                 $altMask = "$buildMode$altMask"
             }
 
-            Write-Host "Locating $mask artifacts for projects: $projects"
+            Write-Host "Locating $currentMask artifacts for projects: $projects"
 
             if ($dependency.release_status -eq "thisBuild") {
                 $missingProjects = @()
@@ -161,12 +163,12 @@ function GetDependencies {
                     $branchName = $dependency.branch.Replace('\', '_').Replace('/', '_')
                     $project = $project.Replace('\','_').Replace('/','_') # sanitize project name
 
-                    $downloadName = Join-Path $saveToPath "$project-$branchName-$mask-*"
+                    $downloadName = Join-Path $saveToPath "$project-$branchName-$currentMask-*"
 
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
                         Get-ChildItem -Path $folder | ForEach-Object {
-                            if ($mask -like '*TestApps') {
+                            if ($currentMask -like '*TestApps') {
                                 $downloadedList += @("($($_.FullName))")
                             }
                             else {
@@ -175,7 +177,7 @@ function GetDependencies {
                             Write-Host "$($_.FullName) found from previous job"
                         }
                     }
-                    elseif ($mask -like '*Apps') {
+                    elseif ($currentMask -like '*Apps') {
                         # Check whether Apps/TestApps exists before determining that project isn't built
                         $altDownloadName = Join-Path $saveToPath "$project-$branchName-$altMask-*"
                         if (!(Test-Path $altDownloadName -PathType Container)) {
@@ -183,7 +185,7 @@ function GetDependencies {
                             $missingProjects += @($project)
                         }
                         else {
-                            Write-Host "$project built, but $mask not found"
+                            Write-Host "$project built, but $currentMask not found"
                         }
                     }
                 }
@@ -197,12 +199,12 @@ function GetDependencies {
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/").TrimEnd("/")
             if ($dependency.release_status -eq "latestBuild") {
                 $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
-                $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $mask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
+                $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $currentMask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
                 if ($artifacts) {
                     $artifacts | ForEach-Object {
                         $download = DownloadArtifact -path $saveToPath -token $token -artifact $_
                         if ($download) {
-                            if ($mask -like '*TestApps') {
+                            if ($currentMask -like '*TestApps') {
                                 $downloadedList += @("($download)")
                             }
                             else {
@@ -215,7 +217,7 @@ function GetDependencies {
                     }
                 }
                 else {
-                    Write-Host -ForegroundColor Red "Could not find any $mask artifacts for projects $projects, version $($dependency.version)"
+                    Write-Host -ForegroundColor Red "Could not find any $currentMask artifacts for projects $projects, version $($dependency.version)"
                 }
             }
             elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -ne "include") {
@@ -236,9 +238,9 @@ function GetDependencies {
                     throw "Could not find a release that matches the criteria."
                 }
 
-                $download = DownloadRelease -token $token -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $mask
+                $download = DownloadRelease -token $token -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $currentMask
                 if ($download) {
-                    if ($mask -like '*TestApps') {
+                    if ($currentMask -like '*TestApps') {
                         $downloadedList += @("($download)")
                     }
                     else {
