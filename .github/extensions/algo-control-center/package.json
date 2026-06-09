@@ -1,0 +1,8 @@
+{
+  "name": "algo-control-center",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AL-Go Control Center canvas: manage many AL-Go repos in one org-level dashboard.",
+  "main": "extension.mjs",
+  "type": "module"
+}

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AL-Go Control Center</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.88 2.34.67.07-.52.28-.88.5-1.08-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      <span class="brand-title">AL-Go Control Center</span>
+    </div>
+    <div class="org-switcher">
+      <label for="org-select" class="sr-only">Organization</label>
+      <select id="org-select" class="select">
+        <option value="">Loading orgs…</option>
+      </select>
+      <button id="refresh" class="btn" title="Refresh fleet">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 2.5a5.5 5.5 0 1 0 5.39 6.5h1.52a7 7 0 1 1-1.93-6.4L15 1v4h-4l1.61-1.61A5.48 5.48 0 0 0 8 2.5Z"/></svg>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="fleet">Overview</button>
+    <button class="tab" data-view="runs">Runs</button>
+    <button class="tab" data-view="health">Settings</button>
+  </nav>
+
+  <main id="main">
+    <section id="view-fleet" class="view active">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="selection-summary">
+            <span id="sel-count">0</span> of <span id="total-count">0</span> selected
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <input id="filter" class="input" placeholder="Filter repos…" />
+        </div>
+      </div>
+
+      <div id="action-bar" class="action-bar" data-disabled="true">
+        <div class="action-bar-left">
+          <strong id="action-bar-count">0</strong> repos selected
+        </div>
+        <div class="action-bar-right">
+          <button class="btn primary" data-action="update-algo" title="Trigger UpdateGitHubGoSystemFiles.yaml on each selected repo">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.78 6.28-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l1.47 1.47 3.97-3.97a.75.75 0 0 1 1.06 1.06z"/></svg>
+            Update AL-Go System Files
+          </button>
+          <button class="btn" data-action="rerun-failed" title="Re-run failed jobs of the most recent failed run on each selected repo">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 2.5a5.5 5.5 0 1 0 5.39 6.5h1.52a7 7 0 1 1-1.93-6.4L15 1v4h-4l1.61-1.61A5.48 5.48 0 0 0 8 2.5Z"/></svg>
+            Re-run failed
+          </button>
+          <details class="dropdown">
+            <summary class="btn">More ▾</summary>
+            <div class="dropdown-menu">
+              <div class="dropdown-row">
+                <input id="custom-workflow" class="input" placeholder="Workflow file, e.g. CICD.yaml" />
+                <button class="btn" data-action="trigger-workflow">Trigger</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div id="fleet-status" class="status muted">Pick an org to begin.</div>
+      <div id="discovery-banner" class="banner" hidden>
+        <span id="discovery-msg"></span>
+        <button id="deep-scan" class="btn small">Switch to deep scan</button>
+      </div>
+      <div class="table-wrap">
+        <table class="repo-table">
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="check-all" /></th>
+              <th class="sortable" data-sort-key="name">Repository<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="algoVersion">AL-Go version<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="repoVersion">Repo version<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="type">Type<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="ci">CI<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="nextMajor">Next Major<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="pushedAt">Last activity<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="openPRs">PRs<span class="sort-indicator"></span></th>
+            </tr>
+          </thead>
+          <tbody id="fleet-body"></tbody>
+        </table>
+      </div>
+
+      <details id="bulk-log-wrap" class="log-wrap">
+        <summary>Activity log</summary>
+        <div id="bulk-log" class="bulk-log"></div>
+      </details>
+    </section>
+
+    <section id="view-runs" class="view">
+      <div class="runs-toolbar">
+        <select id="runs-workflow" class="select"><option value="">All workflows</option></select>
+        <select id="runs-conclusion" class="select">
+          <option value="">All statuses</option>
+          <option value="success">Success</option>
+          <option value="failure">Failure</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="skipped">Skipped</option>
+          <option value="in_progress">In progress</option>
+          <option value="queued">Queued</option>
+        </select>
+        <select id="runs-repo" class="select"><option value="">All repositories</option></select>
+        <input id="runs-filter" class="input" placeholder="Filter…" />
+        <div class="muted runs-count"><span id="runs-shown">0</span> runs · last <span id="runs-window">7</span> days</div>
+      </div>
+      <div id="runs-status" class="status muted">Pick an org to begin.</div>
+      <ul id="runs-list" class="runs-list"></ul>
+      <div id="runs-sentinel" class="runs-sentinel" hidden>Loading more…</div>
+      <div id="runs-end" class="runs-end muted" hidden>End of runs.</div>
+    </section>
+
+    <section id="view-health" class="view">
+      <div id="fleet-deps" class="fleet-deps" hidden></div>
+      <div class="settings-split">
+        <div class="settings-list-wrap">
+          <input id="settings-filter" class="input" placeholder="Filter repos…" />
+          <ul id="settings-repos" class="settings-repos"></ul>
+        </div>
+        <aside id="settings-panel" class="settings-panel">
+          <div class="settings-empty">Pick a repo to inspect its settings.</div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
