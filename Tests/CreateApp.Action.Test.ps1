@@ -29,10 +29,10 @@ Describe "CreateApp Action Tests" {
         @{ Casing = 'PascalCase'; Dirs = @('Applications', 'TestFramework', 'performancetoolkit') }
         @{ Casing = 'lowercase';  Dirs = @('applications', 'testframework', 'performancetoolkit') }
     ) {
-        param($Casing, $Dirs)
+        param($Dirs)
         $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         try {
-            $sampleAppDir = Join-Path $tempDir $Dirs[0] $Dirs[1] $Dirs[2]
+            $sampleAppDir = Join-Path (Join-Path (Join-Path $tempDir $Dirs[0]) $Dirs[1]) $Dirs[2]
             New-Item -Path $sampleAppDir -ItemType Directory -Force | Out-Null
             $sampleAppFile = Join-Path $sampleAppDir "Microsoft_Performance Toolkit Samples.app"
             Set-Content -Path $sampleAppFile -Value "dummy"
