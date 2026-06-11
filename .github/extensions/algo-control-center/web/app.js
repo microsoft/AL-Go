@@ -1139,15 +1139,30 @@ function wireEvents() {
     io.observe(anchor);
   }
 
+  // Populate the "More ▾" workflow dropdown with all AL-Go workflows except
+  // reusable callees (_*) and ones already wired to dedicated buttons.
+  const workflowSelect = $("#custom-workflow");
+  if (workflowSelect) {
+    const skip = new Set(["UpdateGitHubGoSystemFiles.yaml"]);
+    const options = AL_GO_WORKFLOWS
+      .filter((w) => !w.file.startsWith("_") && !skip.has(w.file))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    workflowSelect.innerHTML =
+      '<option value="">Select a workflow…</option>' +
+      options.map((w) => `<option value="${w.file}">${escapeHtml(w.name)}</option>`).join("");
+  }
+
   $$('button[data-action]').forEach((b) => b.addEventListener("click", (e) => {
     if (b.closest('.action-bar') && b.closest('.action-bar').dataset.disabled === 'true') return;
     const action = b.dataset.action;
     if (action === "update-algo") runBulk("/api/bulk/update-algo", {}, "Update AL-Go System Files");
     else if (action === "rerun-failed") runBulk("/api/bulk/rerun-failed", {}, "Re-run failed");
     else if (action === "trigger-workflow") {
-      const workflow = $("#custom-workflow").value.trim();
-      if (!workflow) return toast("Enter a workflow file name");
-      runBulk("/api/bulk/trigger", { workflow }, `Trigger ${workflow}`);
+      const sel = $("#custom-workflow");
+      const workflow = sel.value;
+      if (!workflow) return toast("Pick a workflow");
+      const label = sel.options[sel.selectedIndex]?.textContent || workflow;
+      runBulk("/api/bulk/trigger", { workflow }, `Trigger ${label}`);
       // close the dropdown after submit
       const dd = b.closest('details');
       if (dd) dd.open = false;
