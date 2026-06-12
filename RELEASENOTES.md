@@ -1,7 +1,3 @@
-### Issues
-
-- Issue 2277 Auto-exclude the `copilot` GitHub environment from CI/CD deployments. When the GitHub Copilot coding agent is enabled on a repository, GitHub auto-creates an environment named `copilot`. AL-Go now treats it the same way as `github-pages` and never attempts to deploy to it.
-
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
 When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If the manifest does not declare a `dotNetVersion`, or no installed runtime matches the required major, versioned .NET assembly probing paths are omitted (a warning is logged in the latter case).
@@ -54,6 +50,7 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 
 ### Issues
 
+- Issue 2277 Auto-exclude the `copilot` GitHub environment from CI/CD deployments. When the GitHub Copilot coding agent is enabled on a repository, GitHub auto-creates an environment named `copilot`. AL-Go now treats it the same way as `github-pages` and never attempts to deploy to it.
 - Issue 2236 - `GetDependencies` `buildMode` prefix leaks across dependency iterations, causing incorrect artifact mask names when multiple `appDependencyProbingPaths` entries use different build modes
 - Incremental builds (`modifiedApps` mode) now correctly identify unmodified apps for projects whose `appFolders` reference paths outside the project directory (e.g. using `../`)
 - Issue 2204 - Workspace compilation ignores vsixFile setting
