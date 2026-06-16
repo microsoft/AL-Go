@@ -92,7 +92,7 @@ Write-Host "Environment pattern to use: $getEnvironments"
 $ghEnvironments = @(GetGitHubEnvironments)
 
 Write-Host "Reading environments from settings"
-$settings.excludeEnvironments += @('github-pages')
+$settings.excludeEnvironments += @('github-pages', 'copilot')
 if ($settings.Keys -contains 'UpdateALGoSystemFilesEnvironment' -and $settings.updateALGoSystemFilesEnvironment) {
     $settings.excludeEnvironments += @($settings.updateALGoSystemFilesEnvironment)
 }

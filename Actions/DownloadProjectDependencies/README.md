@@ -4,6 +4,8 @@ Downloads artifacts from AL-Go projects, that are dependencies of a given AL-Go 
 
 The action constructs arrays of paths to .app files, that are dependencies of the apps in an AL-Go project
 
+To optimize build performance, only artifacts from dependency projects are downloaded from the current workflow run (using a minimatch pattern filter), rather than downloading all artifacts.
+
 ## INPUT
 
 ### ENV variables
