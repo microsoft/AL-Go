@@ -728,9 +728,9 @@ function GetModifiedSettingsContent {
 
             # Make sure the $schema property is the first property in the object
             # PS5-safe: explicitly list properties instead of using wildcard to avoid literal '*' being added
-            $otherProperties = @($dstSettings.PSObject.Properties.Name | Where-Object { $_ -ne '$schema' })
-            $selectProperties = @('$schema') + $otherProperties
-            $dstSettings = $dstSettings | Select-Object $selectProperties
+            $otherProperties = @($dstSettings.PSObject.Properties.Name | Where-Object { $_ -ne $schemaKey })
+            $selectProperties = @($schemaKey) + $otherProperties
+            $dstSettings = $dstSettings | Select-Object -Property $selectProperties
         }
     }
 
