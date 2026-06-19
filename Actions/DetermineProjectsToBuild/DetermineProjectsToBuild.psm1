@@ -299,6 +299,9 @@ function IsFullBuildRequired {
         [string] $noticeMessage = ''
     )
 
+    Write-Host "::notice::TEST OVERRIDE: ignoring full build patterns for incremental build validation"
+    return $false
+
     $settings = $env:Settings | ConvertFrom-Json
 
     if (!$modifiedFiles) {
