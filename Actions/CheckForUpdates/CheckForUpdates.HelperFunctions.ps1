@@ -727,7 +727,10 @@ function GetModifiedSettingsContent {
             $dstSettings | Add-Member -MemberType NoteProperty -Name "$schemaKey" -Value $schemaValue -Force
 
             # Make sure the $schema property is the first property in the object
-            $dstSettings = $dstSettings | Select-Object @{ Name = '$schema'; Expression = { $_.'$schema' } }, * -ExcludeProperty '$schema'
+            # PS5-safe: explicitly list properties instead of using wildcard to avoid literal '*' being added
+            $otherProperties = @($dstSettings.PSObject.Properties.Name | Where-Object { $_ -ne '$schema' })
+            $selectProperties = @('$schema') + $otherProperties
+            $dstSettings = $dstSettings | Select-Object $selectProperties
         }
     }
 
