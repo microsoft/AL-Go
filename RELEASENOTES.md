@@ -1,7 +1,3 @@
-### Fix GitHub App authentication on runners with minor clock drift
-
-The JSON Web Token (JWT) used for GitHub App authentication now backdates its `iat` ("issued at") claim by 60 seconds instead of 10, as [recommended by GitHub](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app#about-json-web-tokens-jwts) to protect against clock drift. Previously, a runner whose clock ran more than ~10 seconds ahead of GitHub would have its JWT rejected with a `401 (Unauthorized)` error (typically seen on self-hosted runners that aren't tightly time-synced). The wider tolerance allows authentication to succeed with up to ~60 seconds of clock drift. Note that keeping the runner's clock synchronized (for example, via the Network Time Protocol) is still recommended.
-
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
 When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If the manifest does not declare a `dotNetVersion`, or no installed runtime matches the required major, versioned .NET assembly probing paths are omitted (a warning is logged in the latter case).
@@ -63,6 +59,7 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2214 - Workspace compilation not working with external dependencies
 - Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
 - Issue 2265 - Creating a Performance Test App fails on Linux due to case-sensitive path lookup for the Performance Toolkit sample app
+- Issue 2284 - GitHub App authentication fails with `401 (Unauthorized)` on runners with minor clock drift. The JWT `iat` claim is now backdated by 60 seconds instead of 10, as recommended by GitHub, to tolerate runners whose clock runs slightly ahead of GitHub.
 
 ## v9.0
 
