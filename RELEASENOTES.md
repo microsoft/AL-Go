@@ -1,3 +1,7 @@
+### Fix GitHub App authentication on runners with minor clock drift
+
+The JSON Web Token (JWT) used for GitHub App authentication now backdates its `iat` ("issued at") claim by 60 seconds instead of 10, as [recommended by GitHub](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app#about-json-web-tokens-jwts) to protect against clock drift. Previously, a runner whose clock ran more than ~10 seconds ahead of GitHub would have its JWT rejected with a `401 (Unauthorized)` error (typically seen on self-hosted runners that aren't tightly time-synced). The wider tolerance allows authentication to succeed with up to ~60 seconds of clock drift. Note that keeping the runner's clock synchronized (for example, via the Network Time Protocol) is still recommended.
+
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
 When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If the manifest does not declare a `dotNetVersion`, or no installed runtime matches the required major, versioned .NET assembly probing paths are omitted (a warning is logged in the latter case).
