@@ -12,7 +12,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
         # Import Github-Helper so Invoke-CommandWithRetry is available and its Start-Sleep can be mocked.
-        Import-Module (Join-Path $scriptRoot '..\Github-Helper.psm1' -Resolve) -DisableNameChecking -Force
+        Import-Module (Join-Path $scriptRoot '..\Github-Helper.psm1' -Resolve) -DisableNameChecking
         $ENV:GITHUB_REPOSITORY = "organization/repository"
         $ENV:GITHUB_RUN_ID = "123456"
     }
