@@ -32,7 +32,7 @@ function PullRequestStatusCheck()
     Write-Host "Checking PR Build status for run $RunId in repository $Repository"
 
     $workflowJobs = Invoke-CommandWithRetry -RetryCount 5 -FirstDelay 5 -MaxWaitBetweenRetries 60 -ScriptBlock {
-        $jobsJson = gh api /repos/$Repository/actions/runs/$RunId/jobs?per_page=50 --paginate --slurp -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28"
+        $jobsJson = gh api "/repos/$Repository/actions/runs/$RunId/jobs?per_page=50" --paginate --slurp -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28"
         if ($LASTEXITCODE) {
             throw "Failed to get jobs for run $RunId in repository $Repository (gh exit code $LASTEXITCODE)."
         }
