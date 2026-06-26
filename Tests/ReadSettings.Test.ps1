@@ -540,5 +540,367 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
+
+        It 'importantSettings from higher priority source prevents overwrite from lower priority' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: important settings includes "country", set country = "de"
+            @{ "importantSettings" = @("country"); "country" = "de" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+
+            # Project settings: try to override country = "ch"
+            @{ "country" = "ch" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Important setting from repo should prevent project from overwriting
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'de'   # Org/Repo important value wins
+            $settings.importantSettings | Should -Contain 'country'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Multiple importantSettings are respected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: mark both country and keyVaultName as important
+            @{
+                "importantSettings" = @("country", "keyVaultName")
+                "country"           = "de"
+                "keyVaultName"      = "orgVault"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override both
+            @{
+                "country"      = "ch"
+                "keyVaultName" = "projectVault"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'de'
+            $settings.keyVaultName | Should -Be 'orgVault'
+            $settings.importantSettings | Should -Contain 'country'
+            $settings.importantSettings | Should -Contain 'keyVaultName'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Normal settings from higher priority level override important settings from lower priority' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $ALGoFolder = Join-Path $tempName $ALGoFolderName
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $ALGoFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings (via variable): mark country as important and set to "de"
+            $ENV:ALGoOrgSettings = @{
+                "importantSettings" = @("country")
+                "country"           = "de"
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: try to override country with normal (non-important) setting = "us"
+            @{ "country" = "us" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override with important setting = "ch"
+            @{
+                "importantSettings" = @("country")
+                "country"           = "ch"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Important setting from Org (highest level) should win: expected "de"
+            # (even though Project marks it as important, Org's important setting has higher priority)
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'de'   # Org important wins over all others
+
+            $ENV:ALGoOrgSettings = ''
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'importantSettings marked arrays are still merged with lower priority arrays' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: mark additionalCountries as important with specific values
+            @{
+                "importantSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to add more countries
+            @{
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Important array settings are still merged with lower priority arrays (exception: if overwriteSettings is used)
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # Org + Project values merged
+            $settings.importantSettings | Should -Contain "additionalCountries"
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'importantSettings can be overridden using overwriteSettings in lower priority' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: mark additionalCountries as important
+            @{
+                "importantSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: use overwriteSettings to override additionalCountries (force replacement instead of merge)
+            @{
+                "overwriteSettings"   = @("additionalCountries")
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # When overwriteSettings is used, it overrides the importantSettings behavior
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("ch", "be")   # Only project values (org values replaced)
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Non-important array settings are merged normally (baseline)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: additionalCountries WITHOUT marking as important
+            @{
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: add more countries
+            @{
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Without important marking, arrays should be merged
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # All values merged
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Empty importantSettings has no effect (backward compatibility)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: importantSettings is empty
+            @{
+                "importantSettings" = @()
+                "country"           = "us"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: override country
+            @{
+                "country" = "ch"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Without important marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'ch'   # Project wins (normal behavior)
+            $settings.importantSettings | Should -Be @()   # Empty array preserved
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'importantSettings in ConditionalSetting prevents override from repo settings' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+
+            # Repo settings: set country to "us" (no important marking)
+            @{
+                "country" = "us"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Workflow settings with ConditionalSetting for buildModes = "Clean"
+            # The conditional setting marks country as important and sets it to "de"
+            @{
+                "conditionalSettings" = @(
+                    @{
+                        "buildModes" = @("Clean")
+                        "settings"   = @{
+                            "importantSettings" = @("country")
+                            "country"           = "de"
+                        }
+                    }
+                )
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "Workflow.settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # When reading settings for buildMode "Clean", the country from ConditionalSetting (de) with important marking should win
+            $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName '' -buildMode 'Clean' -userName ''
+            $settings.country | Should -Be 'de'   # Conditional important setting wins over repo setting
+            $settings.importantSettings | Should -Contain 'country'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'ConditionalSetting with importantSettings at org level overrides project setting for specific buildMode' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: ConditionalSetting for buildMode "ValidateUS" with important country marking
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("ValidateUS")
+                        "settings" = @{
+                            "importantSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    }
+                )
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: country = "w1", buildModes include "ValidateUS"
+            @{
+                "country"    = "w1"
+                "buildModes" = @("Default", "ValidateUS")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # When reading for buildMode "Default", project country "w1" should be used
+            $settingsDefault = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'Default' -userName ''
+            $settingsDefault.country | Should -Be 'w1'   # No org conditional applies for "Default"
+
+            # When reading for buildMode "ValidateUS", org conditional with important marking should override project
+            $settingsValidateUS = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName ''
+            $settingsValidateUS.country | Should -Be 'us'   # Org conditional important setting wins
+            $settingsValidateUS.buildModes | Should -Contain 'ValidateUS'
+            $settingsValidateUS.importantSettings | Should -Contain 'country'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
     }
 }

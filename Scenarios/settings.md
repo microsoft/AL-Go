@@ -316,6 +316,83 @@ then, after merging, the result settings object will contain the following value
 
 > _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value.
 
+## Important settings <a id="importantSettings"></a>
+
+By default, AL-Go follows a standard settings hierarchy where settings from higher priority levels (closer to deployment) override settings from lower priority levels. However, you can mark specific settings as **important** to protect them from being overridden by lower priority settings using the `importantSettings` array.
+
+When a setting is marked as important at a higher level in the hierarchy, it cannot be overridden by settings from lower priority levels. This is useful for enforcing organizational or repository-wide policies that should not be changed at the project or workflow level.
+
+_Example_:
+Say, `ALGoOrgSettings` (organization level) contains the following values:
+
+```json
+{
+    "importantSettings": ["country", "keyVaultName"],
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+and `.AL-Go\settings.json` (project level, lower priority) contains the following values:
+
+```json
+{
+    "country": "us",
+    "keyVaultName": "ProjectVault"
+}
+```
+
+then, after merging, the result settings object will contain the following values:
+
+```json
+{
+    "importantSettings": ["country", "keyVaultName"],
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+The `country` and `keyVaultName` settings from the organization level are protected and cannot be overridden by the project level settings.
+
+_Example with ConditionalSettings_:
+Say, `ALGoOrgSettings` (organization level) contains conditional settings that set country based on buildMode:
+
+```json
+{
+    "ConditionalSettings": [
+        {
+            "buildModes": ["ValidateUS"],
+            "settings": {
+                "importantSettings": ["country"],
+                "country": "us"
+            }
+        }
+    ]
+}
+```
+
+and `.AL-Go\settings.json` (project level) contains:
+
+```json
+{
+    "country": "w1",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+When reading settings for buildMode `ValidateUS`, the conditional setting from the organization level will apply. The result will be:
+
+```json
+{
+    "country": "us",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+Even though the project specifies `country: "w1"`, the conditional setting from the organization level marked the country as important for the `ValidateUS` buildMode, so it takes precedence.
+
+> _**Note**_: `importantSettings` is an array of setting names that should be protected from being overridden by lower priority settings. When a setting is marked as important at a higher level, it will not be overridden by normal (non-important) settings from lower levels. If a setting is marked as important at multiple levels, the value from the highest priority level wins (following normal hierarchy rules). Only top-level setting names can be marked as important; nested properties within complex objects cannot be individually marked as important. Array settings marked as important are still merged with lower-priority arrays, unless `overwriteSettings` is used to force replacement.
+
 <a id="customdelivery"></a>
 
 ## Custom Delivery

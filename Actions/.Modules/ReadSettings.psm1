@@ -16,8 +16,15 @@ $CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectS
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
-        [PSCustomObject] $src
+        [PSCustomObject] $src,
+        [string[]] $importantSettingsFromHigherPriority = @(),
+        [ref]$importantSettingsAtThisLevel
     )
+
+    # Initialize importantSettingsAtThisLevel if passed
+    if ($null -eq $importantSettingsAtThisLevel) {
+        $importantSettingsAtThisLevel = [ref]@()
+    }
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
     if ($src.PSObject.Properties.Name -contains "overwriteSettings") {
@@ -31,14 +38,22 @@ function MergeCustomObjectIntoOrderedDictionary {
         }
     }
 
+    # Collect important settings from this level
+    # Only set if importantSettings is explicitly defined; otherwise set to $null to signal no update
+    if ($src.PSObject.Properties.Name -contains "importantSettings") {
+        $importantSettingsAtThisLevel.Value = @($src.importantSettings)
+    } else {
+        $importantSettingsAtThisLevel.Value = $null
+    }
+
     # Loop through all properties in the source object
     # If the property does not exist in the destination object, add it with the right type, but no value
     # Types supported: PSCustomObject, Object[] and simple types
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
 
-        # Skip overwriteSettings property as it's only used to remove settings from the destination object and is specific to the source object
-        if ($prop -eq "overwriteSettings") {
+        # Skip overwriteSettings and importantSettings properties as they're only used for configuration, not actual settings
+        if ($prop -eq "overwriteSettings" -or $prop -eq "importantSettings") {
             return
         }
 
@@ -62,15 +77,22 @@ function MergeCustomObjectIntoOrderedDictionary {
     # If the property exists in the source object, but is of a different type, throw an error
     # If the property exists in the source object:
     # If the property is an Object, call this function recursively to merge values
-    # If the property is an Object[], merge the arrays
+    # If the property is an Object[], merge the arrays (even if important - arrays always merge)
     # If the property is a simple type, replace the value in the destination object with the value from the source object
     @($dst.Keys) | ForEach-Object {
         $prop = $_
+
         if ($src.PSObject.Properties.Name -eq $prop) {
             $dstProp = $dst."$prop"
             $srcProp = $src."$prop"
             $dstPropType = $dstProp.GetType().Name
             $srcPropType = $srcProp.GetType().Name
+
+            # For non-array properties: skip if this setting is marked as important from higher priority source
+            if ($importantSettingsFromHigherPriority -contains $prop -and $srcPropType -ne "Object[]") {
+                OutputDebug "Skipping important setting '$prop' marked from higher priority source (non-array type)"
+                return
+            }
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
@@ -262,6 +284,7 @@ function GetDefaultSettings
             "filesToExclude"                            = @()
         }
         "postponeProjectInBuildOrder"                  = $false
+        "importantSettings"                            = @()
     }
 }
 
@@ -482,11 +505,18 @@ function ReadSettings {
         }
     }
 
+    $currentImportantSettings = @()
     foreach($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
             OutputDebug "Applying settings from $($settingsObject.Source) ($($settingsObject.Type))"
-            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+            $importantAtThisLevel = @()
+            $importantRef = [ref]$importantAtThisLevel
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -importantSettingsFromHigherPriority $currentImportantSettings -importantSettingsAtThisLevel $importantRef
+            # Only update currentImportantSettings if this level explicitly defined importantSettings (not null)
+            if ($null -ne $importantAtThisLevel) {
+                $currentImportantSettings = $importantAtThisLevel
+            }
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                 foreach($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
@@ -508,7 +538,13 @@ function ReadSettings {
                         }
                         if ($conditionMet) {
                             OutputDebug "Applying conditional settings for $($conditions -join ", ")"
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                            $importantAtThisLevel = @()
+                            $importantRef = [ref]$importantAtThisLevel
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -importantSettingsFromHigherPriority $currentImportantSettings -importantSettingsAtThisLevel $importantRef
+                            # Only update currentImportantSettings if conditional settings explicitly defined importantSettings
+                            if ($null -ne $importantAtThisLevel) {
+                                $currentImportantSettings = $importantAtThisLevel
+                            }
                         }
                     }
                 }

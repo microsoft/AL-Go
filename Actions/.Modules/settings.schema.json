@@ -730,6 +730,14 @@
             },
             "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
         },
+        "importantSettings": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": [],
+            "description": "An array of setting names that should take precedence over normal inheritance hierarchy. Settings listed here will override settings from lower priority sources. See https://aka.ms/ALGoSettings#importantSettings"
+        },
         "reportSuppressedDiagnostics": {
             "type": "boolean",
             "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
