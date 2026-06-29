@@ -622,11 +622,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
             $githubFolder = Join-Path $tempName ".github"
-            $ALGoFolder = Join-Path $tempName $ALGoFolderName
             $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
 
             New-Item $githubFolder -ItemType Directory | Out-Null
-            New-Item $ALGoFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
             # Org settings (via variable): mark country as important and set to "de"
