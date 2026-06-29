@@ -82,7 +82,6 @@ function MergeCustomObjectIntoOrderedDictionary {
             # For non-array properties: skip if this setting is marked as important from higher priority source,
             # unless the lower-priority source also marks this property as important.
             if ($dstImportantSettings -contains $prop -and $srcPropType -ne "Object[]" -and $srcImportantSettings -notcontains $prop) {
-                #$dstImportantSettings : better would be dest.
                 OutputDebug "Skipping important setting '$prop' marked from higher priority source (non-array type)"
                 return
             }
@@ -109,7 +108,7 @@ function MergeCustomObjectIntoOrderedDictionary {
                         }
                         else {
                             # Add source element to destination array, but only if it does not already exist
-                            $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique) #TODO: nur wenn dieses property hier auch definiert wurde.
+                            $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique)
                         }
                     }
                 }
@@ -508,7 +507,7 @@ function ReadSettings {
             }
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -srcImportantSettings $srcImportantSettings -dstImportantSettings $currentImportantSettings
             if ($settingsJson.PSObject.Properties.Name -contains "importantSettings") {
-                $currentImportantSettings = $srcImportantSettings
+                $currentImportantSettings = @($currentImportantSettings + $srcImportantSettings | Select-Object -Unique)
             }
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                 foreach ($conditionalSetting in $settingsJson.ConditionalSettings) {
@@ -537,7 +536,7 @@ function ReadSettings {
                             }
                             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -srcImportantSettings $srcImportantSettings -dstImportantSettings $currentImportantSettings
                             if ($conditionalSetting.settings.PSObject.Properties.Name -contains "importantSettings") {
-                                $currentImportantSettings = $srcImportantSettings
+                                $currentImportantSettings = @($currentImportantSettings + $srcImportantSettings | Select-Object -Unique)
                             }
                         }
                     }

@@ -553,20 +553,20 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: important settings includes "country", set country = "de"
+            # Repo settings: important settings includes "country", set country = "de"
             @{ "importantSettings" = @("country"); "country" = "de" } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
 
             # Project settings: try to override country = "ch"
             @{ "country" = "ch" } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
 
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
             # Important setting from repo should prevent project from overwriting
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.country | Should -Be 'de'   # Org/Repo important value wins
+            $settings.country | Should -Be 'de'   # Repo important value wins
             $settings.importantSettings | Should -Contain 'country'
 
             # Clean up
@@ -586,7 +586,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: mark both country and keyVaultName as important
+            # Repo settings: mark both country and keyVaultName as important
             @{
                 "importantSettings" = @("country", "keyVaultName")
                 "country"           = "de"
@@ -670,7 +670,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: mark additionalCountries as important with specific values
+            # Repo settings: mark additionalCountries as important with specific values
             @{
                 "importantSettings"   = @("additionalCountries")
                 "additionalCountries" = @("de", "at")
@@ -708,7 +708,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: mark additionalCountries as important
+            # Repo settings: mark additionalCountries as important
             @{
                 "importantSettings"   = @("additionalCountries")
                 "additionalCountries" = @("de", "at")
@@ -781,7 +781,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: additionalCountries WITHOUT marking as important
+            # Repo settings: additionalCountries WITHOUT marking as important
             @{
                 "additionalCountries" = @("de", "at")
             } | ConvertTo-Json -Depth 99 |
@@ -817,7 +817,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: importantSettings is empty
+            # Repo settings: importantSettings is empty
             @{
                 "importantSettings" = @()
                 "country"           = "us"
@@ -828,7 +828,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             @{
                 "country" = "ch"
             } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
 
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
@@ -843,7 +843,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'ConditionalSetting with importantSettings at org level overrides project setting for specific buildMode' {
+        It 'ConditionalSetting with importantSettings at repo level overrides project setting for specific buildMode' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -855,12 +855,12 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: ConditionalSetting for buildMode "ValidateUS" with important country marking
+            # Repo settings: ConditionalSetting for buildMode "ValidateUS" with important country marking
             @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("ValidateUS")
-                        "settings" = @{
+                        "settings"   = @{
                             "importantSettings" = @("country")
                             "country"           = "us"
                         }
@@ -883,11 +883,61 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settingsDefault = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'Default' -userName ''
             $settingsDefault.country | Should -Be 'w1'   # No org conditional applies for "Default"
 
-            # When reading for buildMode "ValidateUS", org conditional with important marking should override project
+            # When reading for buildMode "ValidateUS", repo conditional with important marking should override project
             $settingsValidateUS = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName ''
-            $settingsValidateUS.country | Should -Be 'us'   # Org conditional important setting wins
+            $settingsValidateUS.country | Should -Be 'us'   # Repo conditional important setting wins
             $settingsValidateUS.buildModes | Should -Contain 'ValidateUS'
             $settingsValidateUS.importantSettings | Should -Contain 'country'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'importantSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: importantSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "importantSettings" = @("country")
+                "country"           = "us"
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another important setting
+            $ENV:ALGoRepoSettings = @{
+                "importantSettings" = @("companyName")
+                "country"           = "de"
+                "companyName"       = "MyCompany"
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another important setting
+            @{
+                "importantSettings" = @("keyVaultName")
+                "country"           = "ch"
+                "keyVaultName"      = "mykv"
+                "companyName"       = "AnotherCompany"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without important marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.importantSettings | Should -Contain 'country'    # from repo settings
+            $settings.importantSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.importantSettings | Should -Contain 'keyVaultName'   # from project settings
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
 
             # Clean up
             Pop-Location
