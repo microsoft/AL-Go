@@ -941,5 +941,131 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
+        It 'conditional importantSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: importantSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{
+                            "importantSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another important setting
+            $ENV:ALGoRepoSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{   "importantSettings" = @("companyName")
+                            "country"                         = "de"
+                            "companyName"                     = "MyCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another important setting
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{ "importantSettings" = @("keyVaultName")
+                            "country"                       = "ch"
+                            "keyVaultName"                  = "mykv"
+                            "companyName"                   = "AnotherCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without important marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
+            $settings.importantSettings | Should -Contain 'country'    # from repo settings
+            $settings.importantSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.importantSettings | Should -Contain 'keyVaultName'   # from project settings
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+        It 'mixed importantSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: importantSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{
+                            "importantSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another important setting
+            $ENV:ALGoRepoSettings = @{
+                "importantSettings" = @("companyName")
+                "country"           = "de"
+                "companyName"       = "MyCompany"
+
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another important setting
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{ "importantSettings" = @("keyVaultName")
+                            "country"                       = "ch"
+                            "keyVaultName"                  = "mykv"
+                            "companyName"                   = "AnotherCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without important marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
+            $settings.importantSettings | Should -Contain 'country'    # from repo settings
+            $settings.importantSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.importantSettings | Should -Contain 'keyVaultName'   # from project settings
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
     }
 }
