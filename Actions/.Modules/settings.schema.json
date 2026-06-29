@@ -395,7 +395,7 @@
                         "type": "string",
                         "enum": ["includeDependencies"]
                     },
-                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. If a setting is marked as important in higher-priority settings, overwrite is ignored unless the current source also marks that same setting as important. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -650,7 +650,7 @@
                     "type": "string",
                     "enum": ["includeProjects", "excludeProjects"]
                 },
-                "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                "description": "An array of settings to be overwritten by the current alDoc setting. If a setting is marked as important in higher-priority settings, overwrite is ignored unless the current source also marks that same setting as important. See https://aka.ms/ALGoSettings#overwriteSettings"
             }
         },
         "commitOptions": {
@@ -680,7 +680,7 @@
                         "type": "string",
                         "enum": ["pullRequestLabels"]
                     },
-                    "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                    "description": "An array of settings to be overwritten by the current commitOptions setting. If a setting is marked as important in higher-priority settings, overwrite is ignored unless the current source also marks that same setting as important. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -728,7 +728,7 @@
                 "type": "string",
                 "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
             },
-            "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
+            "description": "An array of settings to be overwritten by the current settings. If a setting is marked as important in higher-priority settings, overwrite is ignored unless the current source also marks that same setting as important. See https://aka.ms/ALGoSettings#overwriteSettings"
         },
         "importantSettings": {
             "type": "array",
@@ -736,7 +736,7 @@
                 "type": "string"
             },
             "default": [],
-            "description": "An array of setting names that should take precedence over normal inheritance hierarchy. Settings listed here will override settings from lower priority sources. See https://aka.ms/ALGoSettings#importantSettings"
+            "description": "An array of top-level setting names that are protected from non-important lower-priority overrides. If the same setting is marked as important in both source and destination, the source value is allowed to override. See https://aka.ms/ALGoSettings#importantSettings"
         },
         "reportSuppressedDiagnostics": {
             "type": "boolean",

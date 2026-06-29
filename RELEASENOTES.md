@@ -11,10 +11,10 @@ A new `importantSettings` setting allows you to protect specific settings from b
 ```
 
 **Behavior:**
-- Settings marked as important in organization or repository settings cannot be overridden by project, workflow, user, or environment settings
-- Important settings from higher priority sources always win, even if lower levels mark the same setting as important
-- Important arrays are still merged (not replaced) with lower-priority arrays, unless `overwriteSettings` is explicitly used
-- The `overwriteSettings` mechanism can override important settings when explicitly specified
+- Settings marked as important in organization or repository settings cannot be overridden by non-important values from project, workflow, user, or environment settings
+- If a lower-priority source also marks the same setting as important, the lower-priority value is allowed to override
+- Important arrays are still merged by default
+- The `overwriteSettings` mechanism can replace an important setting only when the source also marks that same setting as important
 - `ConditionalSettings` respect importantSettings markings, allowing you to enforce conditional important settings based on buildMode, branch, trigger, or user
 
 **Example with ConditionalSettings:**

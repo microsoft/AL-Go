@@ -320,7 +320,7 @@ then, after merging, the result settings object will contain the following value
 
 By default, AL-Go follows a standard settings hierarchy where settings from higher priority levels (closer to deployment) override settings from lower priority levels. However, you can mark specific settings as **important** to protect them from being overridden by lower priority settings using the `importantSettings` array.
 
-When a setting is marked as important at a higher level in the hierarchy, it cannot be overridden by settings from lower priority levels. This is useful for enforcing organizational or repository-wide policies that should not be changed at the project or workflow level.
+When a setting is marked as important at a higher level in the hierarchy, it cannot be overridden by non-important values from lower priority levels. If a lower-priority source also marks the same setting as important, then the lower-priority value is allowed to override.
 
 _Example_:
 Say, `ALGoOrgSettings` (organization level) contains the following values:
@@ -389,9 +389,9 @@ When reading settings for buildMode `ValidateUS`, the conditional setting from t
 }
 ```
 
-Even though the project specifies `country: "w1"`, the conditional setting from the organization level marked the country as important for the `ValidateUS` buildMode, so it takes precedence.
+Even though the project specifies `country: "w1"`, the conditional setting from the organization level marked the country as important for the `ValidateUS` buildMode and the project value is not marked important, so the conditional value takes precedence.
 
-> _**Note**_: `importantSettings` is an array of setting names that should be protected from being overridden by lower priority settings. When a setting is marked as important at a higher level, it will not be overridden by normal (non-important) settings from lower levels. If a setting is marked as important at multiple levels, the value from the highest priority level wins (following normal hierarchy rules). Only top-level setting names can be marked as important; nested properties within complex objects cannot be individually marked as important. Array settings marked as important are still merged with lower-priority arrays, unless `overwriteSettings` is used to force replacement.
+> _**Note**_: `importantSettings` is an array of setting names that should be protected from non-important overrides from lower priority settings. If the same setting is marked as important at both levels, the source (lower-priority) value is allowed to override the destination value. Only top-level setting names can be marked as important; nested properties within complex objects cannot be individually marked as important. Array settings marked as important are still merged with lower-priority arrays. `overwriteSettings` can force replacement for important settings only when the source also marks that same setting as important.
 
 <a id="customdelivery"></a>
 
