@@ -8,6 +8,10 @@ The `customALGoFiles` setting of a custom template was only applied on the next 
 
 Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
 
+### Resilient Pull Request Status Check for large builds
+
+The Pull Request Status Check action no longer fails on builds with more than one page of jobs (more than 100 jobs). The jobs API call now uses `--slurp` so multi-page responses are parsed as a single JSON array (previously `gh api --paginate | ConvertFrom-Json` failed with "Invalid JSON primitive" when more than one page was returned). The call is also retried, and requests a smaller page size, to tolerate the intermittent HTTP 502 responses that the GitHub jobs endpoint returns for large builds.
+
 ### Use artifact manifest to pick .NET runtime for assembly probing
 
 When compiling apps with the workspace compiler, AL-Go now reads the `dotNetVersion` from the BC artifact's `manifest.json` (copied into the compiler folder by BcContainerHelper) and selects an installed .NET runtime whose major version matches. This avoids version drift between the build agent's highest installed runtime and the platform the artifact was built against. If the manifest does not declare a `dotNetVersion`, or no installed runtime matches the required major, versioned .NET assembly probing paths are omitted (a warning is logged in the latter case).
