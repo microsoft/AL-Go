@@ -441,6 +441,7 @@ try {
     "doNotRunTests",
     "doNotRunBcptTests",
     "doNotRunPageScriptingTests",
+    "doNotPerformUpgrade",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",
