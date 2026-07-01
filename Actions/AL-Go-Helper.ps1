@@ -450,13 +450,18 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
             $tempName = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
             Write-Host "Downloading BcContainerHelper developer version from $bcContainerHelperVersion"
             try {
-                $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
+                Invoke-CommandWithRetry -ScriptBlock {
+                    $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
+                } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 30
             }
             catch {
                 $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
                 $bcContainerHelperVersion = "preview"
                 Write-Host "Download failed, downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-                $webclient.DownloadFile("https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+                $bcContainerHelperDownloadUrl = "https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip"
+                Invoke-CommandWithRetry -ScriptBlock {
+                    $webclient.DownloadFile($bcContainerHelperDownloadUrl, "$tempName.zip")
+                } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 30
             }
         }
         else {
@@ -466,7 +471,10 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
                 $bcContainerHelperVersion = 'preview'
             }
             Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            $bcContainerHelperDownloadUrl = "https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip"
+            Invoke-CommandWithRetry -ScriptBlock {
+                $webclient.DownloadFile($bcContainerHelperDownloadUrl, "$tempName.zip")
+            } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 30
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $bcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
