@@ -540,5 +540,25 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
+
+        It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
+            Mock OutputWarning { }
+
+            $settings = @{ "someProp" = "someValue" }
+
+            if ($PSVersionTable.PSVersion.Major -ge 7) {
+                Mock Test-Json { }
+                ValidateSettings -settings $settings
+                # On PS7+, Test-Json is called directly for validation
+                Should -Invoke -CommandName Test-Json -Times 1
+            }
+            else {
+                # On PS < 7, validation is skipped entirely; Test-Json doesn't exist so we just verify no warning
+                ValidateSettings -settings $settings
+            }
+
+            # Verify no warning was output
+            Should -Invoke -CommandName OutputWarning -Times 0
+        }
     }
 }
