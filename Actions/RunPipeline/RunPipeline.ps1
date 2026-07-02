@@ -312,6 +312,15 @@ try {
     $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
     $containerEventLogFile = Join-Path $projectPath "ContainerEventLog.evtx"
 
+    # When workspace compilation is enabled, the apps are already compiled by the CompileApps action
+    # and the compiler output (including warnings) is written to $buildOutputFile. Run-AlPipeline
+    # deletes its buildOutputFile at startup, so pass an empty value to preserve the compiler output
+    # for the build output artifact and the new-warning check.
+    $runAlPipelineBuildOutputFile = $buildOutputFile
+    if ($settings.workspaceCompilation.enabled) {
+        $runAlPipelineBuildOutputFile = ''
+    }
+
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
     Set-Location $projectPath
@@ -493,7 +502,7 @@ try {
         -bcptTestFolders $bcptTestFolders `
         -pageScriptingTests $settings.pageScriptingTests `
         -restoreDatabases $settings.restoreDatabases `
-        -buildOutputFile $buildOutputFile `
+        -buildOutputFile $runAlPipelineBuildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
@@ -526,14 +535,18 @@ try {
     }
 
     # check for new warnings
-    Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
+    # When workspace compilation is enabled, the apps are compiled by the CompileApps action,
+    # which is where the compiler warnings are produced and where the new-warning check runs.
+    if (-not $settings.workspaceCompilation.enabled) {
+        Import-Module (Join-Path $PSScriptRoot "..\.Modules\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
 
-    Test-ForNewWarnings -token $token `
-        -project $project `
-        -settings $settings `
-        -buildMode $buildMode `
-        -baselineWorkflowRunId $baselineWorkflowRunId `
-        -prBuildOutputFile $buildOutputFile
+        Test-ForNewWarnings -token $token `
+            -project $project `
+            -settings $settings `
+            -buildMode $buildMode `
+            -baselineWorkflowRunId $baselineWorkflowRunId `
+            -prBuildOutputFile $buildOutputFile
+    }
 }
 catch {
     throw
