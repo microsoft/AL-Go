@@ -115,6 +115,7 @@ function GetDefaultSettings
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
         "projects"                                      = @()
+        "projectScanDepth"                              = 2
         "powerPlatformSolutionFolder"                   = ""
         "country"                                       = "us"
         "artifact"                                      = ""
