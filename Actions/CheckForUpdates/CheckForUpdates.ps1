@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "Base64 encoded GhTokenWorkflow secret", Mandatory = $false)]
@@ -113,7 +113,7 @@ if (-not $isDirectALGo) {
 
 # Get the list of projects in the current repository
 $baseFolder = $ENV:GITHUB_WORKSPACE
-$projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
+$projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects -scanDepth $repoSettings.projectScanDepth)
 
 $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
 

@@ -167,12 +167,13 @@ function Get-ProjectsToBuild {
     Push-Location $baseFolder
     try {
         $settings = $env:Settings | ConvertFrom-Json
-        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
+        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -scanDepth $settings.projectScanDepth)
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
         $modifiedProjects = @()
         $projectsToBuild = @()
         $projectsOrderToBuild = @()
+        $projectBuildInfo = @{ projectDependencies = @{}; FullProjectsOrder = @(); AdditionalProjectsToBuild = @{} }
 
         if ($projects) {
             # Calculate the full projects order

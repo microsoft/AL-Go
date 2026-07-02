@@ -2405,7 +2405,7 @@ function GetFoldersFromAllProjects {
     Push-Location $baseFolder
     try {
         $settings = ReadSettings -baseFolder $baseFolder
-        $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
+        $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -scanDepth $settings.projectScanDepth
         $folders = @()
         foreach($project in $projects) {
             $projectSettings = ReadSettings -project $project -baseFolder $baseFolder

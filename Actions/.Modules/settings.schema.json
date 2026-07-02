@@ -23,6 +23,12 @@
             },
             "description": "An array of AL-Go projects. See https://aka.ms/ALGoSettings#projects"
         },
+        "projectScanDepth": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 2,
+            "description": "Maximum directory depth for automatic project discovery when 'projects' is not set. Increase if your projects are nested deeper than 2 levels from the repository root."
+        },
         "powerPlatformSolutionFolder": {
             "type": "string",
             "description": "Folder containing the Power Platform solution. See https://aka.ms/ALGoSettings#powerplatformsolutionfolder"

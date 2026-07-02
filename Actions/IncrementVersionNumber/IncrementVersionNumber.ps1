@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -48,7 +48,7 @@ else {
 }
 
 # Collect all projects (AL and PowerPlatform Solution)
-$projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+$projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects -scanDepth $settings.projectScanDepth)
 $PPprojects = @(GetMatchingProjects -projects @($settings.powerPlatformSolutionFolder) -selectProjects $projects)
 if ($projectList.Count -eq 0 -and $PPprojects.Count -eq 0) {
     throw "No projects matches '$projects'"
