@@ -188,24 +188,24 @@ function ModifyBuildWorkflows {
             # First build job needs to have a dependency on the Initialization job only
             # Example (depth 1):
             #    needs: [ Initialization ]
-            #    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
-            $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
+            #    if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.buildOrderJson != '' && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+            $if = "if: (!failure()) && (!cancelled()) && needs.Initialization.outputs.buildOrderJson != '' && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
         }
         else {
             # Subsequent build jobs needs to have a dependency on all previous build jobs
             # Example (depth 2):
             #    needs: [ Initialization, Build1 ]
-            #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+            #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.buildOrderJson != '' && fromJson(needs.Initialization.outputs.buildOrderJson)[1].projectsCount > 0
             # Another example (depth 3):
             #    needs: [ Initialization, Build2, Build1 ]
-            #    if: (!failure()) && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+            #    if: (!failure()) && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && needs.Initialization.outputs.buildOrderJson != '' && fromJson(needs.Initialization.outputs.buildOrderJson)[2].projectsCount > 0
             $newBuild += @('')
             $ifpart = ""
             $index..1 | ForEach-Object {
                 $needs += @("Build$_")
                 $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
             }
-            $if = "if: (!failure()) && (!cancelled())$ifpart && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
+            $if = "if: (!failure()) && (!cancelled())$ifpart && needs.Initialization.outputs.buildOrderJson != '' && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
         }
 
         # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
