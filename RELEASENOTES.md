@@ -1,3 +1,13 @@
+### Enhanced `customALGoFiles` setting
+
+The `customALGoFiles` setting of a custom template was only applied on the next Update (from `AL-Go-TemplateRepoSettings.doNotEdit.json`). Now the up-to-date settings of the custom template are used directly during "Update AL-Go System Files". The template's `filesToInclude`, `filesToExclude`, and `filesToRemove` settings are merged with the consumer repo's settings before resolution.
+
+- **`filesToInclude`** now also resolves files from the original AL-Go template. Files present in the official template that are not overridden by your custom template are propagated to consumer repos. When a file exists in both, the custom template version takes precedence.
+- **`filesToExclude`** now also resolves files from the original AL-Go template (same dual-resolution as `filesToInclude`). Files resolved by `filesToInclude` whose source matches a `filesToExclude` entry are not copied to consumer repos, and existing copies are removed.
+- **`filesToRemove`** (new property): Unconditionally removes matching files from consumer repos. Files are searched in both the template and end repository. Takes precedence over `filesToInclude`. Entries use `sourceFolder` (relative to the template), `filter`, and optionally `destinationFolder` and `perProject`.
+
+Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
+
 ### Resilient Pull Request Status Check for large builds
 
 The Pull Request Status Check action no longer fails on builds with more than one page of jobs (more than 100 jobs). The jobs API call now uses `--slurp` so multi-page responses are parsed as a single JSON array (previously `gh api --paginate | ConvertFrom-Json` failed with "Invalid JSON primitive" when more than one page was returned). The call is also retried, and requests a smaller page size, to tolerate the intermittent HTTP 502 responses that the GitHub jobs endpoint returns for large builds.
