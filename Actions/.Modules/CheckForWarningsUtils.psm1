@@ -32,11 +32,25 @@ function Get-Warnings {
 
     if (Test-Path $BuildFile) {
         Get-Content $BuildFile | ForEach-Object {
+            # Container/compiler-folder compilation writes GitHub Actions warning annotations to the build output:
+            #   ::warning file=<file>,line=<line>,col=<col>::<Id> <description>
             if ($_  -match "::warning file=(.+),line=([0-9]{1,5}),col=([0-9]{1,5})::([A-Z]{2}[0-9]{4}) (.+)")
             {
                 $warnings += New-Object -Type PSObject -Property @{
                     Id = $Matches[4]
                     File= $Matches[1]
+                    Description = $Matches[5]
+                    Line = $Matches[2]
+                    Col = $Matches[3]
+                }
+            }
+            # Workspace compilation writes the raw AL compiler output to the build output:
+            #   <file>(<line>,<col>): warning <Id>: <description>
+            elseif ($_ -match "^(.+)\(([0-9]{1,7}),([0-9]{1,7})\): warning ([A-Z]{2}[0-9]{4}): (.+)$")
+            {
+                $warnings += New-Object -Type PSObject -Property @{
+                    Id = $Matches[4]
+                    File = $Matches[1]
                     Description = $Matches[5]
                     Line = $Matches[2]
                     Col = $Matches[3]

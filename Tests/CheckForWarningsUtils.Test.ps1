@@ -14,6 +14,9 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
 
         $script:warningLine1 = '::warning file=App/MyCodeunit.al,line=10,col=5::AA0001 The variable is never used.'
         $script:warningLine2 = '::warning file=App/MyPage.al,line=42,col=9::AL0603 The property has been deprecated.'
+        # Raw AL compiler format emitted by workspace compilation into BuildOutput.txt
+        $script:alcWarningLine1 = "Codeunits\MyCodeunit.al(10,5): warning AA0001: The variable is never used."
+        $script:alcWarningLine2 = "Pages\MyPage.al(42,9): warning AL0603: The property has been deprecated."
     }
 
     Context 'Get-Warnings' {
@@ -42,6 +45,20 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
         It 'Returns nothing when the build file does not exist' {
             InModuleScope CheckForWarningsUtils {
                 @(Get-Warnings -BuildFile (Join-Path $TestDrive 'does-not-exist.txt')).Count | Should -Be 0
+            }
+        }
+
+        It 'Parses raw AL compiler (workspace compilation) warning format' {
+            InModuleScope CheckForWarningsUtils -Parameters @{ alcLine = $alcWarningLine1 } {
+                param($alcLine)
+                $file = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                Set-Content -Path $file -Value @($alcLine, 'Compilation completed successfully.') -Encoding UTF8
+                $warnings = @(Get-Warnings -BuildFile $file)
+                $warnings.Count | Should -Be 1
+                $warnings[0].Id | Should -Be 'AA0001'
+                $warnings[0].File | Should -Be 'Codeunits\MyCodeunit.al'
+                $warnings[0].Line | Should -Be '10'
+                $warnings[0].Col | Should -Be '5'
             }
         }
     }
@@ -77,6 +94,17 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 Set-Content -Path $reference -Value @($warningLine1, $warningLine2) -Encoding UTF8
                 Set-Content -Path $pr -Value @($warningLine1) -Encoding UTF8
                 { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+            }
+        }
+
+        It 'Throws when the PR introduces a new warning in raw AL compiler (workspace) format' {
+            InModuleScope CheckForWarningsUtils -Parameters @{ alcWarningLine1 = $alcWarningLine1; alcWarningLine2 = $alcWarningLine2 } {
+                param($alcWarningLine1, $alcWarningLine2)
+                $reference = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                Set-Content -Path $reference -Value @($alcWarningLine1) -Encoding UTF8
+                Set-Content -Path $pr -Value @($alcWarningLine1, $alcWarningLine2) -Encoding UTF8
+                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Throw '*New warnings were introduced*'
             }
         }
     }
