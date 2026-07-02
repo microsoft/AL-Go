@@ -107,6 +107,20 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Throw '*New warnings were introduced*'
             }
         }
+
+        It 'Does not throw when only an embedded build version in the description differs' {
+            InModuleScope CheckForWarningsUtils {
+                # Same AL0523 warning, but the referenced base app version differs between builds
+                # (the build/revision numbers come from the workflow run number).
+                $refLine = "Bank\PostedDepositLine.Table.al(10,5): warning AL0523: The Table 'Posted Deposit Line' already defines a method called 'ShowDimensions' with the same parameter types in 'Base Application by Microsoft (29.0.2147483647.75423)'. This warning will become an error in a future release."
+                $prLine = "Bank\PostedDepositLine.Table.al(10,5): warning AL0523: The Table 'Posted Deposit Line' already defines a method called 'ShowDimensions' with the same parameter types in 'Base Application by Microsoft (29.0.2147483647.75450)'. This warning will become an error in a future release."
+                $reference = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                Set-Content -Path $reference -Value @($refLine) -Encoding UTF8
+                Set-Content -Path $pr -Value @($prLine) -Encoding UTF8
+                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+            }
+        }
     }
 
     Context 'Test-ForNewWarnings guards' {

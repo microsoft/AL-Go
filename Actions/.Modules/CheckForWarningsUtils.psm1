@@ -17,6 +17,27 @@ function Initialize-Directory {
 
 <#
     .SYNOPSIS
+    Normalizes a warning description so that volatile substrings do not cause false "new warning" hits.
+    .DESCRIPTION
+    Some AL diagnostics embed a build version in their message text (e.g. AL0523 references another
+    app as 'Base Application by Microsoft (29.0.2147483647.75450)'). Because AL-Go stamps the build
+    and revision numbers from the workflow run number, that version differs between the baseline build
+    and the pull request build, which would make an otherwise unchanged warning look new. This function
+    replaces any four-part version number (major.minor.build.revision) with a stable placeholder so the
+    comparison is not affected by build-to-build version differences.
+#>
+function Get-NormalizedWarningDescription {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [string] $Description
+    )
+
+    return [regex]::Replace($Description, '\d+\.\d+\.\d+\.\d+', '{version}')
+}
+
+<#
+    .SYNOPSIS
     This function parses a build log file and returns the AL warnings found in it.
     .DESCRIPTION
     This function parses a build log file and returns the AL warnings found in it.
@@ -40,6 +61,7 @@ function Get-Warnings {
                     Id = $Matches[4]
                     File= $Matches[1]
                     Description = $Matches[5]
+                    NormalizedDescription = (Get-NormalizedWarningDescription -Description $Matches[5])
                     Line = $Matches[2]
                     Col = $Matches[3]
                 }
@@ -52,6 +74,7 @@ function Get-Warnings {
                     Id = $Matches[4]
                     File = $Matches[1]
                     Description = $Matches[5]
+                    NormalizedDescription = (Get-NormalizedWarningDescription -Description $Matches[5])
                     Line = $Matches[2]
                     Col = $Matches[3]
                 }
@@ -82,7 +105,7 @@ function Compare-Files {
     Write-Host "Found $($refWarnings.Count) warnings in reference build."
     Write-Host "Found $($prWarnings.Count) warnings in PR build."
 
-    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Col -PassThru |
+    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,NormalizedDescription,Col -PassThru |
         Where-Object { $_.SideIndicator -eq "=>" } |
         Select-Object -Property Id,File,Description,Line,Col -Unique
 
