@@ -1,3 +1,7 @@
+### Workspace compilation supports framework-dependent AL Language extensions
+
+Workspace compilation now finds altool both in the platform-specific subfolder (`compiler/extension/bin/win32` or `.../linux`) and directly under `compiler/extension/bin`, so a `vsixFile` using the flat (framework-dependent / marketplace) layout no longer fails with "Could not find AL tool in the compiler folder". URL-based `customCodeCops` are likewise downloaded to the flat `bin` folder when no `Analyzers` subfolder is present.
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
