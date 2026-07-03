@@ -312,14 +312,10 @@ try {
     $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
     $containerEventLogFile = Join-Path $projectPath "ContainerEventLog.evtx"
 
-    # When workspace compilation is enabled, the apps are already compiled by the CompileApps action
-    # and the compiler output (including warnings) is written to $buildOutputFile. Run-AlPipeline
-    # deletes its buildOutputFile at startup, so pass an empty value to preserve the compiler output
-    # for the build output artifact and the new-warning check.
-    $runAlPipelineBuildOutputFile = $buildOutputFile
-    if ($settings.workspaceCompilation.enabled) {
-        $runAlPipelineBuildOutputFile = ''
-    }
+    # In workspace compilation mode BuildOutput.txt is produced by the CompileApps action and holds the
+    # compiler warnings. Pass '' so Run-AlPipeline doesn't delete it at startup (it purges buildOutputFile
+    # even though it won't recompile the prebuilt apps), preserving it for the build output artifact.
+    $runAlPipelineBuildOutputFile = if ($settings.workspaceCompilation.enabled) { '' } else { $buildOutputFile }
 
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
