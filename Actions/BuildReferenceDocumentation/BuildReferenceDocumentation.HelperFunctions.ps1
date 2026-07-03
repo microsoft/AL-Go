@@ -17,8 +17,6 @@
         Write-Host "Downloading aldoc"
         $folder = Download-Artifacts $artifactUrl
         OutputDebug -message "Downloaded artifacts to $folder"
-        # Remember the artifact folder so its platform symbols (e.g. System.app) can be added to the aldoc package cache
-        $ENV:aldocSymbolsPath = $folder
         $alLanguageVsix = Join-Path $folder '*.vsix' -Resolve
         $tempFolder = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
         OutputDebug -message "Copying $alLanguageVsix to $($tempFolder).zip"
@@ -227,14 +225,6 @@ function GenerateDocsSite {
         @($apps + $dependencyApps | Select-Object -Unique) | ForEach-Object {
             if (Test-Path -Path $_) {
                 Copy-Item -Path $_ -Destination $packageCachePath -Force
-            }
-        }
-        # Add the base/platform symbols (e.g. System.app) from the artifact aldoc was downloaded from,
-        # so references to platform modules that are not built in the repository also resolve.
-        if ($ENV:aldocSymbolsPath -and (Test-Path -Path $ENV:aldocSymbolsPath)) {
-            Get-ChildItem -Path $ENV:aldocSymbolsPath -Filter '*.app' -File | ForEach-Object {
-                Write-Host "Adding platform symbol $($_.FullName) to package cache"
-                Copy-Item -Path $_.FullName -Destination $packageCachePath -Force
             }
         }
 
