@@ -126,7 +126,9 @@ Describe "BuildReferenceDocumentation Action Tests" {
             return ''
         }
         Mock CmdDo { }
+        Mock Get-ChildItem { return @([PSCustomObject]@{ FullName = 'c:\artifact\System.app' }) }
 
+        $ENV:aldocSymbolsPath = 'c:\artifact'
         $allApps = @{ 'dummy' = @('c:\artifacts\proj\App1.app') }
         $allDependencies = @{ 'dummy' = @('c:\artifacts\proj\Dep1.app') }
 
@@ -135,6 +137,9 @@ Describe "BuildReferenceDocumentation Action Tests" {
         # Both the documented app and its dependency are copied into the package cache
         Assert-MockCalled Copy-Item -Scope It -ParameterFilter { $Path -eq 'c:\artifacts\proj\App1.app' }
         Assert-MockCalled Copy-Item -Scope It -ParameterFilter { $Path -eq 'c:\artifacts\proj\Dep1.app' }
+
+        # The platform symbols (e.g. System.app) from the artifact are copied into the package cache
+        Assert-MockCalled Copy-Item -Scope It -ParameterFilter { $Path -eq 'c:\artifact\System.app' }
 
         # aldoc 'build' is invoked with a --packagecache argument so references between modules resolve
         Assert-MockCalled CmdDo -Scope It -ParameterFilter {
