@@ -353,6 +353,10 @@
         "doNotPublishApps": {
             "type": "boolean"
         },
+        "doNotPerformUpgrade": {
+            "type": "boolean",
+            "description": "Do not perform upgrade during Run-AlPipeline. See https://aka.ms/ALGoSettings#doNotPerformUpgrade"
+        },
         "doNotSignApps": {
             "type": "boolean"
         },
