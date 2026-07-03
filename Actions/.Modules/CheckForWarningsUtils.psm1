@@ -67,7 +67,9 @@ function Get-Warnings {
                 if ($line -match $pattern) {
                     $warnings += New-Object -Type PSObject -Property @{
                         Id = $Matches[4]
-                        File = $Matches[1]
+                        # Normalize path separators so the same warning matches regardless of whether it was
+                        # produced by container compilation (forward slashes) or workspace compilation (backslashes).
+                        File = ($Matches[1] -replace '\\', '/')
                         Description = $Matches[5]
                         NormalizedDescription = (Get-NormalizedWarningDescription -Description $Matches[5])
                         Line = $Matches[2]

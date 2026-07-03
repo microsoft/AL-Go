@@ -29,6 +29,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $warnings.Count | Should -Be 1
                 $warnings[0].Id | Should -Be 'AA0001'
                 $warnings[0].File | Should -Be 'App/MyCodeunit.al'
+                $warnings[0].Description | Should -Be 'The variable is never used.'
                 $warnings[0].Line | Should -Be '10'
                 $warnings[0].Col | Should -Be '5'
             }
@@ -56,7 +57,9 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $warnings = @(Get-Warnings -BuildFile $file)
                 $warnings.Count | Should -Be 1
                 $warnings[0].Id | Should -Be 'AA0001'
-                $warnings[0].File | Should -Be 'Codeunits\MyCodeunit.al'
+                # File separators are normalized to forward slashes regardless of source format.
+                $warnings[0].File | Should -Be 'Codeunits/MyCodeunit.al'
+                $warnings[0].Description | Should -Be 'The variable is never used.'
                 $warnings[0].Line | Should -Be '10'
                 $warnings[0].Col | Should -Be '5'
             }
@@ -119,6 +122,53 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 Set-Content -Path $reference -Value @($refLine) -Encoding UTF8
                 Set-Content -Path $pr -Value @($prLine) -Encoding UTF8
                 { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+            }
+        }
+
+        It 'Does not throw when the same warning appears in different compilation formats' {
+            InModuleScope CheckForWarningsUtils {
+                # A project that switches between container and workspace compilation will have a baseline
+                # in one format and a PR build in the other. The same warning must match across formats,
+                # including the path separator difference (forward slash vs backslash).
+                $refLine = '::warning file=Bank/MyCodeunit.al,line=10,col=5::AA0001 The variable is never used.'
+                $prLine = "Bank\MyCodeunit.al(10,5): warning AA0001: The variable is never used."
+                $reference = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
+                Set-Content -Path $reference -Value @($refLine) -Encoding UTF8
+                Set-Content -Path $pr -Value @($prLine) -Encoding UTF8
+                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+            }
+        }
+    }
+
+    Context 'Get-NormalizedWarningDescription' {
+        It 'Replaces a four-part version number with a placeholder' {
+            InModuleScope CheckForWarningsUtils {
+                Get-NormalizedWarningDescription -Description "references 'App (1.2.3.4)'" | Should -Be "references 'App ({version})'"
+            }
+        }
+
+        It 'Replaces multiple four-part version numbers in one description' {
+            InModuleScope CheckForWarningsUtils {
+                Get-NormalizedWarningDescription -Description 'from (1.0.0.1) to (2.0.0.2)' | Should -Be 'from ({version}) to ({version})'
+            }
+        }
+
+        It 'Leaves a three-part version untouched' {
+            InModuleScope CheckForWarningsUtils {
+                Get-NormalizedWarningDescription -Description 'version 1.2.3 is fine' | Should -Be 'version 1.2.3 is fine'
+            }
+        }
+
+        It 'Leaves a description without a version unchanged' {
+            InModuleScope CheckForWarningsUtils {
+                Get-NormalizedWarningDescription -Description 'The variable is never used.' | Should -Be 'The variable is never used.'
+            }
+        }
+
+        It 'Returns an empty string for empty input' {
+            InModuleScope CheckForWarningsUtils {
+                Get-NormalizedWarningDescription -Description '' | Should -Be ''
             }
         }
     }
