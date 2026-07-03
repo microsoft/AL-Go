@@ -23,16 +23,18 @@ if (!(Test-Path $artifactsFolder)) {
 }
 if ($artifacts -ne ".artifacts") {
     Write-Host "::group::Downloading artifacts"
-    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
-    if ($allArtifacts) {
-        $allArtifacts | ForEach-Object {
-            $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-            if (!(Test-Path $filename)) {
-                throw "Unable to download artifact $($_.name)"
+    foreach($mask in 'Apps', 'Dependencies') {
+        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $mask -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
+        if ($allArtifacts) {
+            $allArtifacts | ForEach-Object {
+                $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+                if (!(Test-Path $filename)) {
+                    throw "Unable to download artifact $($_.name)"
+                }
+                $destFolder = Join-Path $artifactsFolder ([System.IO.Path]::GetFileNameWithoutExtension($filename))
+                Expand-Archive -Path $filename -DestinationPath $destFolder -Force
+                Remove-Item -Path $filename -Force
             }
-            $destFolder = Join-Path $artifactsFolder ([System.IO.Path]::GetFileNameWithoutExtension($filename))
-            Expand-Archive -Path $filename -DestinationPath $destFolder -Force
-            Remove-Item -Path $filename -Force
         }
     }
     Write-Host "::endgroup::"
