@@ -2,6 +2,8 @@
 
 Previously, the `failOn: newWarning` setting (which fails a pull request when it introduces new AL compiler warnings) only took effect when compiling in a container or compiler folder. It had no effect when `workspaceCompilation` was enabled, because the new-warning comparison only ran in the `RunPipeline` action, whereas workspace compilation produces the compiler output in the `CompileApps` action. The check now also runs in `CompileApps`, so `failOn: newWarning` is honored with workspace compilation.
 
+As part of this, the warning comparison now also parses the raw AL compiler output format emitted by workspace compilation (in addition to the GitHub Actions annotation format), and it ignores embedded build version numbers in warning messages so that version differences between the baseline build and the pull request build no longer produce false "new warning" failures.
+
 ### Resilient Pull Request Status Check for large builds
 
 The Pull Request Status Check action no longer fails on builds with more than one page of jobs (more than 100 jobs). The jobs API call now uses `--slurp` so multi-page responses are parsed as a single JSON array (previously `gh api --paginate | ConvertFrom-Json` failed with "Invalid JSON primitive" when more than one page was returned). The call is also retried, and requests a smaller page size, to tolerate the intermittent HTTP 502 responses that the GitHub jobs endpoint returns for large builds.
