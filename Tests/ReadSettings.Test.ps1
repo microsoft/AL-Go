@@ -331,23 +331,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'testIsolation rejects unknown top-level keys' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.testIsolation.typoKey = 'oops'
-            try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
-            }
-            catch {
-                $_.Exception.Message | Should -Match '/testIsolation/typoKey'
-            }
+            { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*testIsolation/typoKey*'
         }
 
         It 'testIsolation rejects negative defaultRunnerCodeunitId' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.testIsolation.defaultRunnerCodeunitId = -1
-            try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
-            }
-            catch {
-                $_.Exception.Message | Should -Match 'defaultRunnerCodeunitId'
-            }
+            { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*defaultRunnerCodeunitId*'
         }
 
         It 'testIsolation rejects partition entry with runnerCodeunitId = 0' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
@@ -355,12 +345,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings.testIsolation.partitions = @(
                 [ordered]@{ runnerCodeunitId = 0; codeunits = '60100' }
             )
-            try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
-            }
-            catch {
-                $_.Exception.Message | Should -Match 'runnerCodeunitId'
-            }
+            { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*runnerCodeunitId*'
         }
 
         It 'testIsolation rejects partition entry with empty codeunits' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
@@ -368,11 +353,16 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings.testIsolation.partitions = @(
                 [ordered]@{ runnerCodeunitId = 130451; codeunits = '' }
             )
-            try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
-            }
-            catch {
-                $_.Exception.Message | Should -Match 'codeunits'
+            { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*codeunits*'
+        }
+
+        It 'testIsolation rejects codeunits filter syntax outside the supported subset' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            foreach ($invalidFilter in @('<>60100', '60100..', '..60100', '60100&60200')) {
+                $defaultSettings = GetDefaultSettings
+                $defaultSettings.testIsolation.partitions = @(
+                    [ordered]@{ runnerCodeunitId = 130451; codeunits = $invalidFilter }
+                )
+                { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*codeunits*' -Because "'$invalidFilter' should be rejected"
             }
         }
 
@@ -381,12 +371,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings.testIsolation.partitions = @(
                 [ordered]@{ runnerCodeunitId = 130451 }
             )
-            try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
-            }
-            catch {
-                $_.Exception.Message | Should -Match 'codeunits'
-            }
+            { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*codeunits*'
         }
 
         It 'testIsolation rejects unknown keys inside a partition entry' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
@@ -394,12 +379,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings.testIsolation.partitions = @(
                 [ordered]@{ runnerCodeunitId = 130451; codeunits = '60100'; extraKey = 'oops' }
             )
-            try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop
-            }
-            catch {
-                $_.Exception.Message | Should -Match 'extraKey'
-            }
+            { Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema -ErrorAction Stop } | Should -Throw -ExpectedMessage '*extraKey*'
         }
 
         It 'overwriteSettings property resets settings from destination object (simple types)' {

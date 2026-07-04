@@ -2,7 +2,7 @@
 
 Business Central test codeunits can declare a `RequiredTestIsolation` value (BC runtime 16+) that tells the runtime which transactional isolation they need. The standard test runner shipped by BC has a single fixed `TestIsolation` value and cannot satisfy multiple requirements at once. AL-Go for GitHub now supports running tests under multiple runners in a single pipeline pass.
 
-When `testIsolation.enabled` is set in your settings, AL-Go partitions the test stage: each entry in `partitions` runs the matched codeunits under the configured `runnerCodeunitId`, and everything else runs under `defaultRunnerCodeunitId`. Results are merged back into the same JUnit file downstream reporting already consumes; container lifecycle and `disabledTests.json` handling are unchanged.
+When `testIsolation.enabled` is set in your settings, AL-Go partitions the test stage: each entry in `partitions` runs the matched codeunits under the configured `runnerCodeunitId`, and everything else runs under `defaultRunnerCodeunitId`. Results are merged back into the same JUnit file downstream reporting already consumes; container lifecycle and `disabledTests.json` handling are unchanged, and an existing `RunTestsInBcContainer.ps1` override is wrapped (each partitioned call is routed through it) rather than replaced.
 
 Enable it by adding:
 

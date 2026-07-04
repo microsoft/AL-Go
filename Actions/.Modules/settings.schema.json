@@ -353,7 +353,8 @@
                             "codeunits": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "BC filter expression against the codeunit ID (e.g. '60100|60200..60299'). Same syntax as the BC Test Tool's TestCodeunitRangeFilter."
+                                "pattern": "^\\s*\\d+(\\.\\.\\d+)?(\\s*\\|\\s*\\d+(\\.\\.\\d+)?)*\\s*$",
+                                "description": "Codeunit IDs to run under 'runnerCodeunitId': single IDs and closed ranges joined by '|' (e.g. '60100|60200..60299'). Only this subset of the BC filter syntax is supported, because AL-Go derives the complement of all partitions for the default-runner call."
                             }
                         }
                     }
