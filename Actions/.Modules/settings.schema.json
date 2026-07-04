@@ -295,7 +295,7 @@
                 "required": [],
                 "properties": {}
             },
-            "description": "See https://aka.ms/ALGoSettings#customcodecops"
+            "description": "Array of paths or URLs to custom Code Cop DLLs to enable when building. Relative paths are resolved against the project folder (the folder containing .AL-Go/settings.json). See https://aka.ms/ALGoSettings#customcodecops"
         },
         "preprocessorSymbols": {
             "type": "array",
@@ -391,6 +391,10 @@
         },
         "doNotPublishApps": {
             "type": "boolean"
+        },
+        "doNotPerformUpgrade": {
+            "type": "boolean",
+            "description": "Do not perform upgrade during Run-AlPipeline. See https://aka.ms/ALGoSettings#doNotPerformUpgrade"
         },
         "doNotSignApps": {
             "type": "boolean"
