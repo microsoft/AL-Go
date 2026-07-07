@@ -240,7 +240,6 @@ else {
         $repoWriteToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
         $env:GH_TOKEN = $repoWriteToken
         $env:GH_HOST = ([Uri]$env:GITHUB_SERVER_URL).Host
-        Write-Host "Use Host: $($env:GH_HOST)"
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
             OutputWarning "Pull request already exists for $($commitMessage): $($existingPullRequest.html_url)."
