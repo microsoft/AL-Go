@@ -931,10 +931,10 @@ function CheckAppDependencyProbingPaths {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
             if ($dependency.Repo -eq ".") {
-                $dependency.Repo = "https://github.com/$repository"
+                $dependency.Repo = "$($ENV:GITHUB_SERVER_URL)/$repository"
             }
             elseif ($dependency.Repo -notlike "https://*") {
-                $dependency.Repo = "https://github.com/$($dependency.Repo)"
+                $dependency.Repo = "$($ENV:GITHUB_SERVER_URL)/$($dependency.Repo)"
             }
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
@@ -988,7 +988,7 @@ function CheckAppDependencyProbingPaths {
             }
 
             if ($dependency.release_status -eq "include") {
-                if ($dependency.Repo -ne "https://github.com/$repository") {
+                if ($dependency.Repo -ne "$($ENV:GITHUB_SERVER_URL)/$repository") {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
@@ -1661,7 +1661,7 @@ function CreateDevEnv {
                         New-Object -Type PSObject -Property $_
                     }
                 })
-            GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url 'https://api.github.com' | ForEach-Object {
+            GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url $ENV:GITHUB_API_URL | ForEach-Object {
                 if ($_.startswith('(')) {
                     $installTestApps += $_
                 }

@@ -25,7 +25,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
 
     Write-Host "Finding PR run annotation for incremental builds in repository $repository"
 
-    $checkRunsURI = "https://api.github.com/repos/$repository/check-suites/$checkSuiteId/check-runs"
+    $checkRunsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/check-suites/$checkSuiteId/check-runs"
     Write-Host "- $checkRunsURI"
 
     $checkRuns = (InvokeWebRequest -Headers $headers -Uri $checkRunsURI).Content | ConvertFrom-Json
@@ -47,7 +47,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
         if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
-                if($annotation.message -match "Last known good build: https://github.com/$repository/actions/runs/([0-9]{1,11})") {
+                if($annotation.message -match "Last known good build: $($ENV:GITHUB_SERVER_URL)/$repository/actions/runs/([0-9]{1,11})") {
                     Write-Host "Found PR run annotation message: $($annotation.message)"
                     $lastKnownGoodBuildId = $matches[1]
                     break

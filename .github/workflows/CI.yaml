@@ -36,6 +36,14 @@ jobs:
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      - name: Verify AL-Go runs on github.com
+        run: |
+          $serverHost = ([Uri]$env:GITHUB_SERVER_URL).Host
+          if ($serverHost -ne 'github.com') {
+            Write-Host "::error::AL-Go for GitHub itself must run on github.com (detected host '$serverHost'). Developing/running the AL-Go repository on GitHub Enterprise (GHE) is not supported. Note that repositories using AL-Go for GitHub are supported on GHE - this restriction only applies to the AL-Go for GitHub repository itself."
+            exit 1
+          }
+
       - name: Run AL-Go Actions Tests (${{ matrix.psVersion }})
         run: |
           . (Join-Path "." "Tests/runtests.ps1") -Path "Tests"
