@@ -16,13 +16,19 @@ $CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectS
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
-        [PSCustomObject] $src
+        [PSCustomObject] $src,
+        [string[]] $srcImportantSettings = @(),
+        [string[]] $dstImportantSettings = @()
     )
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
     if ($src.PSObject.Properties.Name -contains "overwriteSettings") {
         $src.overwriteSettings | ForEach-Object {
             $prop = $_
+            if ($dstImportantSettings -contains $prop -and $srcImportantSettings -notcontains $prop) {
+                OutputDebug "Ignoring overwriteSettings for '$prop' because it is important in higher priority settings and not marked important in source"
+                return
+            }
             if ($dst.Contains($prop) -and $src.PSObject.Properties.Name -contains $prop) {
                 # Remove the property from the destination object only if it also exists in the source object. The property will be re-added with the new value later on.
                 OutputDebug "Overwriting setting $prop"
@@ -37,7 +43,7 @@ function MergeCustomObjectIntoOrderedDictionary {
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
 
-        # Skip overwriteSettings property as it's only used to remove settings from the destination object and is specific to the source object
+        # Skip overwriteSettings property as it's only used for configuration, not actual settings
         if ($prop -eq "overwriteSettings") {
             return
         }
@@ -62,15 +68,23 @@ function MergeCustomObjectIntoOrderedDictionary {
     # If the property exists in the source object, but is of a different type, throw an error
     # If the property exists in the source object:
     # If the property is an Object, call this function recursively to merge values
-    # If the property is an Object[], merge the arrays
+    # If the property is an Object[], merge the arrays (even if important - arrays always merge)
     # If the property is a simple type, replace the value in the destination object with the value from the source object
     @($dst.Keys) | ForEach-Object {
         $prop = $_
+
         if ($src.PSObject.Properties.Name -eq $prop) {
             $dstProp = $dst."$prop"
             $srcProp = $src."$prop"
             $dstPropType = $dstProp.GetType().Name
             $srcPropType = $srcProp.GetType().Name
+
+            # For non-array properties: skip if this setting is marked as important from higher priority source,
+            # unless the lower-priority source also marks this property as important.
+            if ($dstImportantSettings -contains $prop -and $srcPropType -ne "Object[]" -and $srcImportantSettings -notcontains $prop) {
+                OutputDebug "Skipping important setting '$prop' marked from higher priority source (non-array type)"
+                return
+            }
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
                 MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
             }
@@ -109,8 +123,7 @@ function MergeCustomObjectIntoOrderedDictionary {
 function GetDefaultSettings
 (
     [string] $repoName
-)
-{
+) {
     return [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
@@ -180,10 +193,10 @@ function GetDefaultSettings
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
         "deliverToAppSource"                            = [ordered]@{
-            "mainAppFolder"                             = ""
-            "productId"                                 = ""
-            "includeDependencies"                       = @()
-            "continuousDelivery"                        = $false
+            "mainAppFolder"       = ""
+            "productId"           = ""
+            "includeDependencies" = @()
+            "continuousDelivery"  = $false
         }
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
@@ -201,11 +214,11 @@ function GetDefaultSettings
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
         "incrementalBuilds"                             = [ordered]@{
-            "onPush"                                    = $false
-            "onPull_Request"                            = $true
-            "onSchedule"                                = $false
-            "retentionDays"                             = 30
-            "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps
+            "onPush"         = $false
+            "onPull_Request" = $true
+            "onSchedule"     = $false
+            "retentionDays"  = 30
+            "mode"           = "modifiedApps" # modifiedProjects, modifiedApps
         }
         "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
@@ -214,54 +227,55 @@ function GetDefaultSettings
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "workspaceCompilation"                          = [ordered]@{
-            "enabled"                                   = $false
-            "parallelism"                               = 1
+            "enabled"     = $false
+            "parallelism" = 1
         }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{
-            "DurationWarning"                           = 10
-            "DurationError"                             = 25
-            "NumberOfSqlStmtsWarning"                   = 5
-            "NumberOfSqlStmtsError"                     = 10
+            "DurationWarning"         = 10
+            "DurationError"           = 25
+            "NumberOfSqlStmtsWarning" = 5
+            "NumberOfSqlStmtsError"   = 10
         }
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
         "alDoc"                                         = [ordered]@{
-            "continuousDeployment"                      = $false
-            "deployToGitHubPages"                       = $true
-            "maxReleases"                               = 3
-            "groupByProject"                            = $true
-            "includeProjects"                           = @()
-            "excludeProjects"                           = @()
-            "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
-            "footer"                                    = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
-            "defaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
-            "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "continuousDeployment" = $false
+            "deployToGitHubPages"  = $true
+            "maxReleases"          = 3
+            "groupByProject"       = $true
+            "includeProjects"      = @()
+            "excludeProjects"      = @()
+            "header"               = "Documentation for {REPOSITORY} {VERSION}"
+            "footer"               = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
+            "defaultIndexMD"       = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "defaultReleaseMD"     = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
         "trustMicrosoftNuGetFeeds"                      = $true
         "nuGetFeedSelectMode"                           = "LatestMatching"
         "commitOptions"                                 = [ordered]@{
-            "messageSuffix"                             = ""
-            "pullRequestAutoMerge"                      = $false
-            "pullRequestMergeMethod"                    = "squash"
-            "pullRequestLabels"                         = @()
-            "createPullRequest"                         = $true
+            "messageSuffix"          = ""
+            "pullRequestAutoMerge"   = $false
+            "pullRequestMergeMethod" = "squash"
+            "pullRequestLabels"      = @()
+            "createPullRequest"      = $true
         }
         "trustedSigning"                                = [ordered]@{
-            "Endpoint"                                  = ""
-            "Account"                                   = ""
-            "CertificateProfile"                        = ""
+            "Endpoint"           = ""
+            "Account"            = ""
+            "CertificateProfile" = ""
         }
         "useGitSubmodules"                              = "false"
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
-        "customALGoFiles" = [ordered]@{
-            "filesToInclude"                            = @()
-            "filesToExclude"                            = @()
+        "customALGoFiles"                               = [ordered]@{
+            "filesToInclude" = @()
+            "filesToExclude" = @()
         }
-        "postponeProjectInBuildOrder"                  = $false
+        "postponeProjectInBuildOrder"                   = $false
+        "importantSettings"                             = @()
     }
 }
 
@@ -311,7 +325,7 @@ function GetDefaultSettings
         JSON formatted string that will be applied last to override any other settings. These settings have the highest precedence.
 #>
 function ReadSettings {
-    Param(
+    param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
         [string] $repoName = "$ENV:GITHUB_REPOSITORY",
         [string] $project = '.',
@@ -333,7 +347,7 @@ function ReadSettings {
     }
 
     function GetSettingsObject {
-        Param(
+        param(
             [string] $path
         )
 
@@ -366,8 +380,8 @@ function ReadSettings {
     if ($orgSettingsVariableValue) {
         $orgSettingsVariableObject = $orgSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @{
-            "Source" = "ALGoOrgSettings"
-            "Type" = "Variable"
+            "Source"   = "ALGoOrgSettings"
+            "Type"     = "Variable"
             "Settings" = $orgSettingsVariableObject
         }
     }
@@ -375,16 +389,16 @@ function ReadSettings {
     # Read settings from the custom template repository settings file
     $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
     $settingsObjects += @{
-        "Source" = "$CustomTemplateRepoSettingsFile"
-        "Type" = "File"
+        "Source"   = "$CustomTemplateRepoSettingsFile"
+        "Type"     = "File"
         "Settings" = $customTemplateRepoSettingsObject
     }
 
     # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
     $settingsObjects += @{
-        "Source" = "$RepoSettingsFile"
-        "Type" = "File"
+        "Source"   = "$RepoSettingsFile"
+        "Type"     = "File"
         "Settings" = $repoSettingsObject
     }
 
@@ -392,8 +406,8 @@ function ReadSettings {
     if ($repoSettingsVariableValue) {
         $repoSettingsVariableObject = $repoSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @{
-            "Source" = "ALGoRepoSettings"
-            "Type" = "Variable"
+            "Source"   = "ALGoRepoSettings"
+            "Type"     = "Variable"
             "Settings" = $repoSettingsVariableObject
         }
     }
@@ -401,8 +415,8 @@ function ReadSettings {
     if ($project) {
         $customTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateProjectSettingsFile)
         $settingsObjects += @{
-            "Source" = "$CustomTemplateProjectSettingsFile"
-            "Type" = "File"
+            "Source"   = "$CustomTemplateProjectSettingsFile"
+            "Type"     = "File"
             "Settings" = $customTemplateProjectSettingsObject
         }
 
@@ -410,8 +424,8 @@ function ReadSettings {
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
         $settingsObjects += @{
-            "Source" = "$(Join-Path $project $ALGoSettingsFile)"
-            "Type" = "File"
+            "Source"   = "$(Join-Path $project $ALGoSettingsFile)"
+            "Type"     = "File"
             "Settings" = $projectSettingsObject
         }
     }
@@ -420,8 +434,8 @@ function ReadSettings {
         # Read settings from workflow settings file
         $workflowSettingsObject = GetSettingsObject -Path (Join-Path $githubFolder "$workflowName.settings.json")
         $settingsObjects += @{
-            "Source" = "$(Join-Path ".github" "$workflowName.settings.json")"
-            "Type" = "File"
+            "Source"   = "$(Join-Path ".github" "$workflowName.settings.json")"
+            "Type"     = "File"
             "Settings" = $workflowSettingsObject
         }
 
@@ -429,16 +443,16 @@ function ReadSettings {
             # Read settings from project workflow settings file
             $projectWorkflowSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json")
             $settingsObjects += @{
-                "Source" = "$(Join-Path $project "$ALGoFolderName/$workflowName.settings.json")"
-                "Type" = "File"
+                "Source"   = "$(Join-Path $project "$ALGoFolderName/$workflowName.settings.json")"
+                "Type"     = "File"
                 "Settings" = $projectWorkflowSettingsObject
             }
 
             # Read settings from user settings file
-           $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
+            $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @{
-                "Source" = "$(Join-Path $project "$ALGoFolderName/$userName.settings.json")"
-                "Type" = "File"
+                "Source"   = "$(Join-Path $project "$ALGoFolderName/$userName.settings.json")"
+                "Type"     = "File"
                 "Settings" = $userSettingsObject
             }
         }
@@ -461,8 +475,8 @@ function ReadSettings {
             }
         }
         $settingsObjects += @{
-            "Source" = "ALGoEnvSettings for $environmentName"
-            "Type" = "Variable"
+            "Source"   = "ALGoEnvSettings for $environmentName"
+            "Type"     = "Variable"
             "Settings" = $environmentVariableObject
         }
     }
@@ -476,19 +490,27 @@ function ReadSettings {
             throw "Failed to parse customSettings JSON: $($_.Exception.Message)"
         }
         $settingsObjects += @{
-            "Source" = "CustomSettings"
-            "Type" = "Parameter"
+            "Source"   = "CustomSettings"
+            "Type"     = "Parameter"
             "Settings" = $customSettingsObject
         }
     }
 
-    foreach($settingsObject in $settingsObjects) {
+    $currentImportantSettings = @()
+    foreach ($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
             OutputDebug "Applying settings from $($settingsObject.Source) ($($settingsObject.Type))"
-            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+            $srcImportantSettings = @()
+            if ($settingsJson.PSObject.Properties.Name -contains "importantSettings") {
+                $srcImportantSettings = @($settingsJson.importantSettings)
+            }
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -srcImportantSettings $srcImportantSettings -dstImportantSettings $currentImportantSettings
+            if ($settingsJson.PSObject.Properties.Name -contains "importantSettings") {
+                $currentImportantSettings = @($currentImportantSettings + $srcImportantSettings | Select-Object -Unique)
+            }
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
-                foreach($conditionalSetting in $settingsJson.ConditionalSettings) {
+                foreach ($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
                         $conditionMet = $true
                         $conditions = @()
@@ -498,7 +520,7 @@ function ReadSettings {
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
 
                                 # If the property name is workflows then we should sanitize the workflow name in the same way we sanitize the $workflowName variable
-                                if($propName -eq "workflows") {
+                                if ($propName -eq "workflows") {
                                     $conditionalSetting."$propName" = $conditionalSetting."$propName" | ForEach-Object { SanitizeWorkflowName -workflowName $_ }
                                 }
 
@@ -508,7 +530,14 @@ function ReadSettings {
                         }
                         if ($conditionMet) {
                             OutputDebug "Applying conditional settings for $($conditions -join ", ")"
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                            $srcImportantSettings = @()
+                            if ($conditionalSetting.settings.PSObject.Properties.Name -contains "importantSettings") {
+                                $srcImportantSettings = @($conditionalSetting.settings.importantSettings)
+                            }
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -srcImportantSettings $srcImportantSettings -dstImportantSettings $currentImportantSettings
+                            if ($conditionalSetting.settings.PSObject.Properties.Name -contains "importantSettings") {
+                                $currentImportantSettings = @($currentImportantSettings + $srcImportantSettings | Select-Object -Unique)
+                            }
                         }
                     }
                 }

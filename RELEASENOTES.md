@@ -1,4 +1,40 @@
+### Important settings protection
+
+A new `importantSettings` setting allows you to protect specific settings from being overridden by lower-priority sources in the settings hierarchy. When a setting is marked as important at a higher priority level, it cannot be overridden by non-important settings from lower priority sources.
+
+```json
+{
+  "importantSettings": ["country", "keyVaultName"],
+  "country": "de",
+  "keyVaultName": "orgVault"
+}
+```
+
+**Behavior:**
+- Settings marked as important in organization or repository settings cannot be overridden by non-important values from project, workflow, user, or environment settings
+- If a lower-priority source also marks the same setting as important, the lower-priority value is allowed to override
+- Important arrays are still merged by default
+- The `overwriteSettings` mechanism can replace an important setting only when the source also marks that same setting as important
+- `ConditionalSettings` respect importantSettings markings, allowing you to enforce conditional important settings based on buildMode, branch, trigger, or user
+
+**Example with ConditionalSettings:**
+```json
+{
+  "ConditionalSettings": [
+    {
+      "buildModes": ["Validate"],
+      "settings": {
+        "importantSettings": ["country"],
+        "country": "us"
+      }
+    }
+  ]
+}
+```
+
+
 ## v9.1
+
 
 ### Resilient Pull Request Status Check for large builds
 
