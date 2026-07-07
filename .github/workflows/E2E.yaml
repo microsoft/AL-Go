@@ -230,7 +230,7 @@ jobs:
 
           $scenariosFilter = "$($env:_scenariosFilter)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
           $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
-          $filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } }
+          $filteredScenarios = @($allScenarios | Where-Object { $scenario = $_; $scenariosFilter | ForEach-Object { $scenario -like $_ } })
 
           # Load disabled scenarios from config file (optional)
           $disabledScenariosConfigPath = Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json"
@@ -253,7 +253,7 @@ jobs:
           # Filter out disabled scenarios
           $scenariosBeforeDisabledFilter = $filteredScenarios
           $beforeFilter = $filteredScenarios.Count
-          $filteredScenarios = $filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ }
+          $filteredScenarios = @($filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ })
           $afterFilter = $filteredScenarios.Count
           if ($beforeFilter -ne $afterFilter) {
             Write-Host "Filtered out $($beforeFilter - $afterFilter) disabled scenario(s)"
