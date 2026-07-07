@@ -278,10 +278,10 @@ try {
             if ($previousApps.Count -gt 0) {
                 Write-Host "Using $($previousApps.Count) previous release app(s) from $previousAppsPath"
             } else {
-                OutputWarning -message "No .app files found in '$previousAppsPath' for upgrade testing. This also disables the AppSourceCop breaking change check."
+                OutputWarning -message "No .app files found in '$previousAppsPath' for upgrade testing."
             }
         } else {
-            OutputWarning -message "Could not locate previous release apps for upgrade testing. This also disables the AppSourceCop breaking change check."
+            OutputWarning -message "Could not locate previous release apps for upgrade testing."
         }
     }
 
@@ -441,7 +441,6 @@ try {
     "doNotRunTests",
     "doNotRunBcptTests",
     "doNotRunPageScriptingTests",
-    "doNotPerformUpgrade",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",

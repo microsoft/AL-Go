@@ -20,9 +20,8 @@ Enable it by adding:
 ```
 
 Requires BC 15+ (the test page must expose the `TestCodeunitRangeFilter` control used by BcContainerHelper for codeunit-range filtering). See the full settings reference and compatibility notes in [Test Isolation](Scenarios/TestIsolation.md). The feature is opt-in - existing projects are unaffected unless they set `testIsolation.enabled = true`.
-### New `doNotPerformUpgrade` setting
 
-AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
+## v9.1
 
 ### Resilient Pull Request Status Check for large builds
 
