@@ -1,3 +1,5 @@
+## v9.1
+
 ### Resilient Pull Request Status Check for large builds
 
 The Pull Request Status Check action no longer fails on builds with more than one page of jobs (more than 100 jobs). The jobs API call now uses `--slurp` so multi-page responses are parsed as a single JSON array (previously `gh api --paginate | ConvertFrom-Json` failed with "Invalid JSON primitive" when more than one page was returned). The call is also retried, and requests a smaller page size, to tolerate the intermittent HTTP 502 responses that the GitHub jobs endpoint returns for large builds.
