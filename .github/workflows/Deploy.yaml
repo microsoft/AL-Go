@@ -236,3 +236,24 @@ jobs:
               data: { id: releaseId, html_url: htmlUrl, upload_url: uploadUrl }
             } = createReleaseResponse;
             core.setOutput('releaseId', releaseId);
+
+      - name: Update Release Notes
+        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.OrgPAT }}
+          version: ${{ needs.Inputs.outputs.branch }}
+          sourceBranch: ${{ github.ref_name }}
+          directCommit: ${{ needs.Inputs.outputs.directCommit }}
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          try {
+            if ($env:GH_TOKEN -eq "") {
+              throw "In order to update the release notes, you need a Secret called OrgPAT containing a valid Personal Access Token or a GitHub app set up."
+            }
+            $ENV:GITHUB_TOKEN = $env:GH_TOKEN
+            & (Join-Path $env:GITHUB_WORKSPACE "Internal/Scripts/UpdateReleaseNotesForNewVersion.ps1")
+          }
+          catch {
+            Write-Host "::Error::Error updating release notes. The error was $($_.Exception.Message)"
+            exit 1
+          }
