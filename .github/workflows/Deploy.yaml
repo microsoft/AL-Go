@@ -247,9 +247,6 @@ jobs:
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           try {
-            if ($env:GH_TOKEN -eq "") {
-              throw "In order to update the release notes, you need a Secret called OrgPAT containing a valid Personal Access Token or a GitHub app set up."
-            }
             $ENV:GITHUB_TOKEN = $env:GH_TOKEN
             & (Join-Path $env:GITHUB_WORKSPACE "Internal/Scripts/UpdateReleaseNotesForNewVersion.ps1")
           }
