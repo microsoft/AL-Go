@@ -1302,6 +1302,69 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 $script:capturedArguments | Should -Contain '--logdirectory'
             }
         }
+
+        It 'Includes --errorlogdirectory when ErrorLogDirectory is set and the compiler supports it' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-errorlog1'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                $errorLogDir = Join-Path $TestDrive 'ErrorLogs'
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+                # Simulate a compiler that advertises the --errorlogdirectory option in its help
+                Mock Test-ALToolWorkspaceCompileSupportsOption { return $true }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -ErrorLogDirectory $errorLogDir
+
+                $script:capturedArguments | Should -Contain '--errorlogdirectory'
+                $script:capturedArguments | Should -Contain $errorLogDir
+            }
+        }
+
+        It 'Omits --errorlogdirectory and warns when the compiler does not support it' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-errorlog2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                $errorLogDir = Join-Path $TestDrive 'ErrorLogs'
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+                Mock OutputWarning {}
+                # Simulate a compiler whose help does not mention the option
+                Mock Test-ALToolWorkspaceCompileSupportsOption { return $false }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -ErrorLogDirectory $errorLogDir
+
+                $script:capturedArguments | Should -Not -Contain '--errorlogdirectory'
+                Should -Invoke OutputWarning -Times 1
+            }
+        }
+
+        It 'Omits --errorlogdirectory when ErrorLogDirectory is not set' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-errorlog3'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir
+
+                $script:capturedArguments | Should -Not -Contain '--errorlogdirectory'
+            }
+        }
     }
 
     Describe 'New-AppSourceCopJson' {
