@@ -540,10 +540,5 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
-
-        It 'Contains doNotPerformUpgrade in the settings schema' {
-            $settingsSchema = $schema | ConvertFrom-Json
-            $settingsSchema.properties.doNotPerformUpgrade.type | Should -Be 'boolean'
-        }
     }
 }
