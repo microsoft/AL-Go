@@ -69,8 +69,6 @@ function Add-VersionToReleaseNotes {
 
 # Main execution - skipped when the script is dot-sourced (for example from tests)
 if ($MyInvocation.InvocationName -ne '.') {
-    Import-Module (Join-Path $PSScriptRoot "..\..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
-
     $version = "$ENV:version"
     $sourceBranch = "$ENV:sourceBranch"
     $directCommit = "$ENV:directCommit" -eq 'true'
@@ -94,27 +92,31 @@ if ($MyInvocation.InvocationName -ne '.') {
     [System.IO.File]::WriteAllText($releaseNotesFile, $updatedReleaseNotes)
 
     # Authenticate to GIT and GH
-    invoke-git config --global user.email "$($ENV:GITHUB_REPOSITORY_OWNER)@users.noreply.github.com"
-    invoke-git config --global user.name "$($ENV:GITHUB_REPOSITORY_OWNER)"
-    invoke-git config --global hub.protocol https
-    invoke-git config --global core.autocrlf false
-    invoke-gh auth setup-git
+    git config --global user.email "$($ENV:GITHUB_REPOSITORY_OWNER)@users.noreply.github.com"
+    git config --global user.name "$($ENV:GITHUB_REPOSITORY_OWNER)"
+    git config --global hub.protocol https
+    git config --global core.autocrlf false
+    gh auth setup-git
+    if ($LASTEXITCODE -ne 0) { throw "Failed to set up git authentication (gh auth setup-git)." }
 
     $commitMessage = "Add release notes section for $version"
 
     if ($directCommit) {
-        invoke-git add RELEASENOTES.md
-        invoke-git commit -m $commitMessage
-        invoke-git push origin "HEAD:$sourceBranch"
+        git add RELEASENOTES.md
+        git commit -m $commitMessage
+        git push origin "HEAD:$sourceBranch"
+        if ($LASTEXITCODE -ne 0) { throw "Failed to push release notes to branch $sourceBranch." }
         Write-Host "::notice::Added '## $version' section to RELEASENOTES.md on branch $sourceBranch"
     }
     else {
         $branchName = "releasenotes/$version/$((Get-Date).ToUniversalTime().ToString('yyMMddHHmmss'))"
-        invoke-git checkout -b $branchName
-        invoke-git add RELEASENOTES.md
-        invoke-git commit -m $commitMessage
-        invoke-git push origin $branchName
-        $prUrl = invoke-gh -returnValue pr create --base $sourceBranch --head $branchName --title $commitMessage --body $commitMessage
+        git checkout -b $branchName
+        git add RELEASENOTES.md
+        git commit -m $commitMessage
+        git push origin $branchName
+        if ($LASTEXITCODE -ne 0) { throw "Failed to push release notes branch $branchName." }
+        $prUrl = gh pr create --base $sourceBranch --head $branchName --title $commitMessage --body $commitMessage
+        if ($LASTEXITCODE -ne 0) { throw "Failed to create pull request for branch $branchName." }
         Write-Host "::notice::Created pull request to add '## $version' section to RELEASENOTES.md. PR URL: $prUrl"
     }
 }
