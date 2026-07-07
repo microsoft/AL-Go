@@ -21,15 +21,27 @@ The recommended approach is to create two indirect template repositories inside 
 Run the following commands, replacing `<enterprise>` and `<org>` with your enterprise host and organization:
 
 ```pwsh
+dotnet tool install --global algoctl --prerelease
 algoctl --createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-PTE --templaterepo Freddy-DK/AL-Go-PTE
 algoctl --createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-AppSource --templaterepo Freddy-DK/AL-Go-AppSource
 ```
+<img width="1285" height="799" alt="image" src="https://github.com/user-attachments/assets/0c83b7e7-be79-4834-a010-38683f61d8af" />
 
 This creates two new repositories inside your enterprise organization, seeded from the public AL-Go PTE and AppSource templates.
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/1913679b-53fb-40bb-8731-ff978a5696c6" />
 
 ## Verify the Template Repository setting
 
-Now open the settings for both new repositories and check the **Template Repository** setting (the `templateUrl` setting), so that **Update AL-Go System Files** pulls updates from the correct location.
+Now open the settings for both new repositories and put a checkmark in the **Template Repository** setting, which enables you to use these repositories as your enterprise templates:
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/f6ff984e-7cc2-4922-b88d-e99611950ae2" />
 
-> [!TIP]
-> Please refer to [this description](settings.md) to learn about the settings file and how you can modify default behaviors.
+## Create your repositories
+
+Use the *Use This Template* button to create a new repository in your enterprise organization:
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/8d52b807-2c53-4987-994a-1bb514d45d62" />
+
+## Update AL-Go System Files
+
+Use Update AL-Go System Files in the template repositories to grab the latest changes from Microsoft.
+
+Use Update AL-Go System Files in your repositories to grab the latest changes from your template repositories.
