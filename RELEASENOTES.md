@@ -2,6 +2,8 @@
 
 Several actions no longer assume the public `github.com`/`api.github.com` hosts, so they work on GitHub Enterprise (including `ghe.com`) organizations. REST calls now use `$ENV:GITHUB_API_URL` instead of a hardcoded `https://api.github.com` (Deploy, GetArtifactsForDeployment, VerifyPRChanges and app dependency probing), app dependency repositories default to `$ENV:GITHUB_SERVER_URL` instead of `https://github.com`, and the WorkflowPostProcess `gh api` call now sets `GH_HOST` so relative API calls target the correct host. Note that repositories using AL-Go for GitHub are supported on GHE, but the AL-Go for GitHub repository itself is not (it must run on github.com).
 
+## v9.1
+
 ### Resilient Pull Request Status Check for large builds
 
 The Pull Request Status Check action no longer fails on builds with more than one page of jobs (more than 100 jobs). The jobs API call now uses `--slurp` so multi-page responses are parsed as a single JSON array (previously `gh api --paginate | ConvertFrom-Json` failed with "Invalid JSON primitive" when more than one page was returned). The call is also retried, and requests a smaller page size, to tolerate the intermittent HTTP 502 responses that the GitHub jobs endpoint returns for large builds.
