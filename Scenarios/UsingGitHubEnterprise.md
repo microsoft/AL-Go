@@ -21,8 +21,9 @@ The recommended approach is to create two indirect template repositories inside 
 Run the following commands, replacing `<enterprise>` and `<org>` with your enterprise host and organization:
 
 ```pwsh
-algoctl --createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-PTE --templaterepo Freddy-DK/AL-Go-PTE
-algoctl --createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-AppSource --templaterepo Freddy-DK/AL-Go-AppSource
+dotnet tool install --global algoctl --prerelease
+algoctl createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-PTE --templaterepo Freddy-DK/AL-Go-PTE
+algoctl createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-AppSource --templaterepo Freddy-DK/AL-Go-AppSource
 ```
 
 This creates two new repositories inside your enterprise organization, seeded from the public AL-Go PTE and AppSource templates.
