@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2285 - CheckForUpdates now handles settings file `$schema` reordering in a PowerShell 5-safe way to avoid writing invalid entries like `"*": null` to settings JSON files.
+
 ## v9.1
 
 ### Resilient Pull Request Status Check for large builds
