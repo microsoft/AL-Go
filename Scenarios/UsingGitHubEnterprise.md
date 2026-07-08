@@ -18,6 +18,14 @@ Because the AL-Go actions and workflows now derive all GitHub hosts from these v
 
 The recommended approach is to create two indirect template repositories inside your enterprise organization - one for Per Tenant Extensions and one for AppSource Apps - based on the public AL-Go templates, using the [algoctl](https://github.com/Freddy-DK/AL-Go/tree/main/algoctl) CLI.
 
+Before running the commands below, make sure that **git** and **GitHub CLI** are installed and that gh is authenticated to your GitHub enterprise org:
+
+```pwsh
+gh auth login --hostname <enterprise>.ghe.com
+```
+
+The algoctl tool uses GitHub CLI for authentication.
+
 Run the following commands, replacing `<enterprise>` and `<org>` with your enterprise host and organization:
 
 ```pwsh
