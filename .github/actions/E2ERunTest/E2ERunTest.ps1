@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "Test type (test or upgrade)", Mandatory = $false)]
     [ValidateSet('test', 'upgrade')]
@@ -11,13 +12,13 @@ Param(
     [Parameter(HelpMessage = "E2E App ID", Mandatory = $true)]
     [string] $e2eAppId,
     [Parameter(HelpMessage = "E2E App Key", Mandatory = $true)]
-    [string] $e2eAppKey, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
+    [string] $e2eAppKey,
     [Parameter(HelpMessage = "ALGO Auth App", Mandatory = $true)]
-    [string] $algoAuthApp, # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
+    [string] $algoAuthApp,
     [Parameter(HelpMessage = "Template", Mandatory = $true)]
     [string] $template,
     [Parameter(HelpMessage = "Admin center API credentials", Mandatory = $false)]
-    [string] $adminCenterApiCredentials = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
+    [string] $adminCenterApiCredentials = '',
     [Parameter(HelpMessage = "Multi-project", Mandatory = $false)]
     [bool] $multiProject = $false,
     [Parameter(HelpMessage = "AppSource app", Mandatory = $false)]

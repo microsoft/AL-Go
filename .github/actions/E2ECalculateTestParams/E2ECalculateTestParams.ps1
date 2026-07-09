@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "GitHub owner for test repositories", Mandatory = $true)]
     [string] $githubOwner,
@@ -8,7 +9,7 @@ Param(
     [Parameter(HelpMessage = "Matrix OS (windows or linux)", Mandatory = $false)]
     [string] $matrixOs = '',
     [Parameter(HelpMessage = "Admin center API credentials secret", Mandatory = $false)]
-    [string] $adminCenterApiCredentialsSecret = '', # [SuppressMessage('PSAvoidUsingPlainTextForPassword', '', Justification='GitHub Actions secrets are already masked in logs')]
+    [string] $adminCenterApiCredentialsSecret = '',
     [Parameter(HelpMessage = "AppSource app repository template", Mandatory = $true)]
     [string] $appSourceAppRepo,
     [Parameter(HelpMessage = "Per-tenant extension repository template", Mandatory = $true)]
