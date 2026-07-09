@@ -92,7 +92,7 @@ function FindLatestPRRun {
 
     while($true) {
         # Get all workflow runs for the given commit sha
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
+        $runsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
@@ -305,7 +305,7 @@ function GetLatestCommitShaFromPRId {
 
     $headers = GetHeaders -token $token
 
-    $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
+    $pullsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/pulls/$prId"
     Write-Host "- $pullsURI"
     $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
 
@@ -334,7 +334,7 @@ function GetHeadRefFromRunId {
 
     $headers = GetHeaders -token $token
 
-    $runsURI = "https://api.github.com/repos/$repository/actions/runs/$runId"
+    $runsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/actions/runs/$runId"
     Write-Host "- $runsURI"
 
     $run = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
