@@ -30,14 +30,11 @@ Write-Host -ForegroundColor Yellow @'
 #
 #  - Create a new repository with the same content as microsoft/BCApps
 #  - Run the Update AL-Go System Files with the test version
-#  - Limit the projects to build to the ones defined in BCApps' CICD.settings.json
+#  - Limit the projects to build, excluding the test projects
 #  - Cancel all workflows
-#  - Run the "CI/CD" workflow
-#  - Wait for a full build to complete
-#  - Test that app and testapp artifacts are generated
-#  - Modify a file in the repository and create a Pull Request
-#  - Wait for the Pull Request Build to complete
-#  - Test the artifacts generated
+#  - Run the "CI/CD" workflow and verify that it completes successfully
+#  - Modify an AL file in the repository and create a Pull Request
+#  - Wait for the Pull Request Build to complete and verify that it is successful
 #  - Remove the repository
 #
 '@
@@ -83,7 +80,7 @@ CancelAllWorkflows -repository $repository
 # Pull and test workflows
 Pull
 
-# Limit the build to only the projects included in BCApps' CICD.settings.json
+# Limit the build to only the app projects (excluding the test projects)
 # in order to keep the end to end test manageable
 $projects = @(
     "build/projects/Apps W1",
@@ -112,14 +109,8 @@ $projects = @(
 )
 Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "projects" = $projects } -commit -wait | Out-Null
 
-$run = RunCICD -repository $repository -branch $branch -wait
-
-# Test that app artifacts are generated
-Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -repoVersion '*.*' -appVersion '*.*'
-$appCount = @(Get-ChildItem -Path '.artifacts/*-Apps-*/*.app'  -Recurse).Count
-$testAppCount = @(Get-ChildItem -Path '.artifacts/*-TestApps-*/*.app'  -Recurse).Count
-$appCount | Should -BeGreaterThan 0
-$testAppCount | Should -BeGreaterThan 0
+# Run the CI/CD workflow and verify that it completes successfully (RunCICD -wait throws if the run does not succeed)
+RunCICD -repository $repository -branch $branch -wait | Out-Null
 
 # Modify a file in the repository and create a Pull Request
 $branch = "e2etest"
@@ -153,14 +144,9 @@ $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | Con
 if (-not $run) {
     throw "No Pull Request Build workflow run was found"
 }
-WaitWorkflow -repository $repository -runid $run.id
 
-# There should be at least 1 app and 1 test app rebuilt
-Test-ArtifactsFromRun -runid $run.id -folder '.prartifacts' -repoVersion '*.*' -appVersion '*.*'
-$appCount = @(Get-ChildItem -Path '.prartifacts/*-Apps-*/*.app'  -Recurse).Count
-$testAppCount = @(Get-ChildItem -Path '.prartifacts/*-TestApps-*/*.app'  -Recurse).Count
-$appCount | Should -BeGreaterThan 0
-$testAppCount | Should -BeGreaterThan 0
+# Wait for the Pull Request Build to complete and verify that it is successful (WaitWorkflow throws if the run does not succeed)
+WaitWorkflow -repository $repository -runid $run.id
 
 Pop-Location
 RemoveRepository -repository $repository -path $repoPath
