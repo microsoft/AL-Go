@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2126 Deliver and Deploy actions now skip execution when no app artifacts are found, preventing errors on initial commits
+
 ## v9.1
 
 ### Resilient Pull Request Status Check for large builds
