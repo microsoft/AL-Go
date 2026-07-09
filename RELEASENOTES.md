@@ -1,3 +1,7 @@
+### Issues
+
+- Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
+
 ## v9.1
 
 ### Resilient Pull Request Status Check for large builds
