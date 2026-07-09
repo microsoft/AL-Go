@@ -102,6 +102,12 @@ Create a secret named `NuGetContext` with the following format:
 > [!NOTE]
 > Replace `<YOUR_NUGET_TOKEN>`, `<your_org>`, `<your_project>`, and `<your_feed>` with your actual values.
 
+> [!TIP]
+> Use the BcContainerHelper function `New-ALGoNuGetContext` to create a correctly formatted JSON structure.
+
+> [!WARNING]
+> The secret must be in compressed JSON format (single line). Multi-line JSON will break AL-Go functionality as curly brackets will be masked in logs.
+
 ```json
 {"token":"<YOUR_NUGET_TOKEN>","serverUrl":"https://pkgs.dev.azure.com/<your_org>/<your_project>/_packaging/<your_feed>/nuget/v3/index.json"}
 ```

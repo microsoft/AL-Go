@@ -221,14 +221,15 @@ try {
                 # replace defaultBcContainerHelperVersion
                 $found = $false
                 for($idx=0; $idx -lt $lines.count; $idx++) {
-                    if ($lines[$idx] -match '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$') {
-                        $lines[$idx] = "$($Matches[1])`$defaultBcContainerHelperVersion$($Matches[2])=$($Matches[3])""$($config.defaultBcContainerHelperVersion)"" # $($Matches[5])"
+                    if ($lines[$idx] -match '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"([^"]*)"(\s*#.*)?$') {
+                        $comment = if ($Matches[5]) { $Matches[5] } else { "" }
+                        $lines[$idx] = "$($Matches[1])`$defaultBcContainerHelperVersion$($Matches[2])=$($Matches[3])""$($config.defaultBcContainerHelperVersion)""$comment"
                         $found = $true
                         break
                     }
                 }
                 if (-not $found) {
-                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helpers.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$"'
+                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helper.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""([^""]*)""(\s*#.*)?$"'
                 }
             }
 
