@@ -610,7 +610,7 @@ function PatchBcContainerHelper {
             Write-Host "Patched BcContainerHelper Compile-AppInNavContainer.ps1 to handle apps with special characters in description"
         }
         catch {
-            Write-Host "::Warning::Could not patch BcContainerHelper Compile-AppInNavContainer.ps1"
+            Write-Host "::Warning::Could not patch BcContainerHelper Compile-AppInNavContainer.ps1: $($_.Exception.Message)"
         }
     }
 }
