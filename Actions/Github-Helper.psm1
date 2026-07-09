@@ -749,7 +749,7 @@ function WaitForRateLimit {
         [switch] $displayStatus
     )
 
-    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate
+    $rate = ((InvokeWebRequest -Headers $headers -Uri "$ENV:GITHUB_API_URL/rate_limit").Content | ConvertFrom-Json).rate
     $percentRemaining = [int]($rate.remaining*100/$rate.limit)
     if ($displayStatus) {
         Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percentRemaining%)"
@@ -958,7 +958,7 @@ function CheckBuildJobsInWorkflowRun {
     $anySuccessful = $false
 
     while($true) {
-        $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
+        $jobsURI = "$ENV:GITHUB_API_URL/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
         $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
 
@@ -1014,7 +1014,7 @@ function FindLatestSuccessfulCICDRun {
 
     # Get the latest CICD workflow run
     while($true) {
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch&created=>$expired"
+        $runsURI = "$ENV:GITHUB_API_URL/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch&created=>$expired"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
