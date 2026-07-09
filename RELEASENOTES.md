@@ -1,6 +1,7 @@
 ### Issues
 
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
+- Fix dependency apps not being resolved when the branch name contains a `]` character (the dependency folder was matched as a wildcard pattern instead of enumerated literally, resulting in 0 apps being published)
 
 ## v9.1
 
