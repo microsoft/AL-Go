@@ -567,10 +567,15 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
     . $bcContainerHelperPath @params
 }
 
-#
-# Apply targeted patches to a downloaded BcContainerHelper installation to work around known issues.
-# Patches are idempotent: if the target pattern is not found (already patched or changed upstream), the patch is silently skipped.
-#
+<#
+    .SYNOPSIS
+    Apply targeted patches to a downloaded BcContainerHelper installation to work around known issues.
+    Patches are idempotent: if the target pattern is not found (already patched or changed upstream),
+    the patch is silently skipped.
+    .PARAMETER bcContainerHelperPath
+    The full path to the BcContainerHelper.ps1 entry-point file that was returned by GetBcContainerHelperPath.
+    All patches are applied relative to the directory that contains this file.
+#>
 function PatchBcContainerHelper {
     Param(
         [string] $bcContainerHelperPath
@@ -605,7 +610,7 @@ function PatchBcContainerHelper {
             Write-Host "Patched BcContainerHelper Compile-AppInNavContainer.ps1 to handle apps with special characters in description"
         }
         catch {
-            Write-Host "::Warning::Could not patch BcContainerHelper: $($_.Exception.Message)"
+            Write-Host "::Warning::Could not patch BcContainerHelper Compile-AppInNavContainer.ps1"
         }
     }
 }

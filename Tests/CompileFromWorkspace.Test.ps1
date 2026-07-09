@@ -1333,8 +1333,10 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Warns and continues when manifest JSON contains unescaped double quotes in description' {
-            # Simulate altool.exe returning JSON with unescaped double quotes in description
-            # (e.g. apps like "Circula Expenses Connector" that have "hands-free" in their description)
+            # Simulate altool.exe returning JSON with unescaped double quotes in the description value.
+            # The description field contains literal " characters around "hands-free", making the JSON invalid:
+            #   "description": "The "hands-free" approach"   <-- invalid: inner " are not escaped
+            # This matches the real-world behaviour of apps like "Circula Expenses Connector" by Finclair GmbH.
             Mock RunAndCheck { return '{"id":"11111111-1111-1111-1111-111111111111","description":"The "hands-free" approach","version":"1.0.0.0"}' } -ModuleName CompileFromWorkspace
             Mock OutputWarning {} -ModuleName CompileFromWorkspace
 
