@@ -1331,6 +1331,23 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result.mandatoryAffixes | Should -Be @("Test")
             Should -Invoke OutputWarning -ModuleName CompileFromWorkspace -Times 1
         }
+
+        It 'Warns and continues when manifest JSON contains unescaped double quotes in description' {
+            # Simulate altool.exe returning JSON with unescaped double quotes in description
+            # (e.g. apps like "Circula Expenses Connector" that have "hands-free" in their description)
+            Mock RunAndCheck { return '{"id":"11111111-1111-1111-1111-111111111111","description":"The "hands-free" approach","version":"1.0.0.0"}' } -ModuleName CompileFromWorkspace
+            Mock OutputWarning {} -ModuleName CompileFromWorkspace
+
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("circula.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+                appSourceCopMandatoryAffixes = @("Test")
+                obsoleteTagMinAllowedMajorMinor = ""
+            }
+
+            # Should still create the file with just the affixes (gracefully continues despite invalid JSON)
+            $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
+            $result.mandatoryAffixes | Should -Be @("Test")
+            Should -Invoke OutputWarning -ModuleName CompileFromWorkspace -Times 1
+        }
     }
 
     Describe 'Test-BaselineAppDownloaded' {

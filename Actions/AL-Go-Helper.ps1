@@ -560,8 +560,54 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
 
     $bcContainerHelperPath = GetBcContainerHelperPath -bcContainerHelperVersion $bcContainerHelperVersion
 
+    # Apply patches to BcContainerHelper to handle edge cases not yet fixed upstream
+    PatchBcContainerHelper -bcContainerHelperPath $bcContainerHelperPath
+
     Write-Host "Import from $bcContainerHelperPath"
     . $bcContainerHelperPath @params
+}
+
+#
+# Apply targeted patches to a downloaded BcContainerHelper installation to work around known issues.
+# Patches are idempotent: if the target pattern is not found (already patched or changed upstream), the patch is silently skipped.
+#
+function PatchBcContainerHelper {
+    Param(
+        [string] $bcContainerHelperPath
+    )
+    $bcContainerHelperDir = Split-Path $bcContainerHelperPath -Parent
+    $compileScriptPath = Join-Path $bcContainerHelperDir 'AppHandling' 'Compile-AppInNavContainer.ps1'
+    if (-not (Test-Path -Path $compileScriptPath -PathType Leaf)) {
+        return
+    }
+    $content = [System.IO.File]::ReadAllText($compileScriptPath, [System.Text.Encoding]::UTF8)
+
+    # Patch: wrap the altool GetPackageManifest call for existing symbol apps in a try/catch.
+    # Some AppSource apps (e.g. apps with unescaped double quotes in their description) produce
+    # invalid JSON from altool.exe, causing ConvertFrom-Json to fail and breaking the CI/CD pipeline.
+    # The fallback uses Get-NavAppInfo which is robust to malformed description fields.
+    # NOTE: the replacement uses a single-line try { ... } catch { } so that the $manifest = ... text
+    # does not appear at the expected 20-space indentation level, keeping the patch idempotent.
+    $oldCode = '                    $manifest = & "$alToolExe" GetPackageManifest "$($_.FullName)" | ConvertFrom-Json'
+    if ($content.Contains($oldCode)) {
+        # Detect the line ending used in the file so the replacement uses the same style
+        $lineEnding = if ($content.IndexOf("`r`n") -ge 0) { "`r`n" } else { "`n" }
+        $ind20 = '                    '
+        $ind24 = '                        '
+        $newCode = $ind20 + 'try { $manifest = & "$alToolExe" GetPackageManifest "$($_.FullName)" | ConvertFrom-Json }' + $lineEnding +
+                   $ind20 + 'catch {' + $lineEnding +
+                   $ind24 + '$appInfo = Get-NavAppInfo -Path $_.FullName' + $lineEnding +
+                   $ind24 + 'return @{ "AppId" = $appInfo.AppId; "Publisher" = $appInfo.publisher; "Name" = $appInfo.name; "Version" = $appInfo.version; "PropagateDependencies" = $false; "Dependencies" = @() }' + $lineEnding +
+                   $ind20 + '}'
+        $content = $content.Replace($oldCode, $newCode)
+        try {
+            [System.IO.File]::WriteAllText($compileScriptPath, $content, [System.Text.Encoding]::UTF8)
+            Write-Host "Patched BcContainerHelper Compile-AppInNavContainer.ps1 to handle apps with special characters in description"
+        }
+        catch {
+            Write-Host "::Warning::Could not patch BcContainerHelper: $($_.Exception.Message)"
+        }
+    }
 }
 
 function ExcludeUnneededApps {
