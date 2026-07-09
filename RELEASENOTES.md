@@ -1,5 +1,3 @@
-## main
-
 ### Issues
 
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
