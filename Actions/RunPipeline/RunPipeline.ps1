@@ -467,6 +467,25 @@ try {
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
 
+    if ($settings.testIsolation.enabled -and -not $settings.doNotRunTests) {
+        Import-Module (Join-Path $PSScriptRoot '../.Modules/TestIsolation.psm1' -Resolve)
+        Write-Host "Test isolation enabled - $($settings.testIsolation.partitions.Count) explicit partition(s) + default runner ($($settings.testIsolation.defaultRunnerCodeunitId))"
+
+        $testIsolationParams = @{ Settings = $settings.testIsolation }
+        if ($runAlPipelineParams.Keys -contains 'RunTestsInBcContainer') {
+            Write-Host "Existing RunTestsInBcContainer override detected - test isolation partitioning will wrap it"
+            $testIsolationParams.InnerScriptBlock = $runAlPipelineParams.RunTestsInBcContainer
+        }
+
+        $testIsolationTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
+        Add-TelemetryProperty -Hashtable $testIsolationTelemetry -Key 'PartitionCount' -Value "$($settings.testIsolation.partitions.Count)"
+        Add-TelemetryProperty -Hashtable $testIsolationTelemetry -Key 'DefaultRunnerCodeunitId' -Value "$($settings.testIsolation.defaultRunnerCodeunitId)"
+        Add-TelemetryProperty -Hashtable $testIsolationTelemetry -Key 'WrapsCustomOverride' -Value "$($testIsolationParams.ContainsKey('InnerScriptBlock'))"
+        Trace-Information -Message "Test Isolation enabled" -AdditionalData $testIsolationTelemetry
+
+        $runAlPipelineParams["RunTestsInBcContainer"] = New-PartitionedTestRunnerScriptBlock @testIsolationParams
+    }
+
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -accept_insiderEula `

@@ -39,6 +39,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 1. [DeliveryTargets and NuGet/GitHub Packages](Scenarios/DeliveryTargets.md)
 1. [Enabling Telemetry for AL-Go workflows and actions](Scenarios/EnablingTelemetry.md)
 1. [Add a performance test app to an existing project](Scenarios/AddAPerformanceTestApp.md)
+1. [Partition test runs by required isolation](Scenarios/TestIsolation.md)
 1. [Publish your app to AppSource](Scenarios/PublishToAppSource.md)
 1. [Connect your GitHub repository to Power Platform](Scenarios/SetupPowerPlatform.md)
 1. [How to set up Service Principal for Power Platform](Scenarios/SetupServicePrincipalForPowerPlatform.md)
