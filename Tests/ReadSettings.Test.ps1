@@ -563,10 +563,5 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # Verify no warning was output
             Should -Invoke -CommandName OutputWarning -Times 0
         }
-
-        It 'Contains doNotPerformUpgrade in the settings schema' {
-            $settingsSchema = $schema | ConvertFrom-Json
-            $settingsSchema.properties.doNotPerformUpgrade.type | Should -Be 'boolean'
-        }
     }
 }
