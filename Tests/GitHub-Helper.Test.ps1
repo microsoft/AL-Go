@@ -233,3 +233,108 @@ Describe "GitHub-Helper Tests" {
         $result.tag_name | Should -Be '26.3.0'
     }
 }
+
+Describe 'DownloadRelease Asset Pattern Matching Tests' {
+    BeforeAll {
+        Mock GetHeaders -ModuleName Github-Helper { return @{ 'Authorization' = 'token dummy' } }
+        Mock InvokeWebRequest -ModuleName Github-Helper {
+            param($Headers, $Uri, $OutFile)
+            if ($OutFile) {
+                # Create a minimal valid empty zip file so Expand-Archive doesn't fail if called
+                $emptyZip = [byte[]](0x50, 0x4B, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+                [System.IO.File]::WriteAllBytes($OutFile, $emptyZip)
+            }
+        }
+    }
+
+    It 'Downloads only exact project assets and excludes assets from projects with the same name prefix' {
+        # Regression test for: https://github.com/microsoft/AL-Go/issues/2234
+        # Project 'logis-interface' should NOT match release assets of 'logis-interface-2-core-library'
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'logis-interface-main-Apps-1.0.64.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'logis-interface-2-core-library-main-Apps-1.0.64.0.zip' }
+                [PSCustomObject]@{ id = 3; name = 'other-project-main-Apps-1.0.64.0.zip' }
+            )
+        }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $result = DownloadRelease -token 'dummy' -projects 'logis-interface' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            $result | Should -HaveCount 1
+            $result | Should -Match ([regex]::Escape('logis-interface-main-Apps-1.0.64.0.zip'))
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Downloads assets for a project even when another project shares the same root name' {
+        # Downloads assets for 'logis-interface-2-core-library' without also downloading 'logis-interface' assets
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'logis-interface-main-Apps-1.0.64.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'logis-interface-2-core-library-main-Apps-1.0.64.0.zip' }
+            )
+        }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $result = DownloadRelease -token 'dummy' -projects 'logis-interface-2-core-library' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            $result | Should -HaveCount 1
+            $result | Should -Match ([regex]::Escape('logis-interface-2-core-library-main-Apps-1.0.64.0.zip'))
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Downloads assets for wildcard project (*) matching all projects' {
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'logis-interface-main-Apps-1.0.64.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'logis-interface-2-core-library-main-Apps-1.0.64.0.zip' }
+            )
+        }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $result = DownloadRelease -token 'dummy' -projects '*' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            $result | Should -HaveCount 2
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Downloads assets with no-branch pattern (Pattern 2) for legacy releases' {
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'myproject-Apps-1.0.0.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'other-project-Apps-1.0.0.0.zip' }
+            )
+        }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $result = DownloadRelease -token 'dummy' -projects 'myproject' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            $result | Should -HaveCount 1
+            $result | Should -Match ([regex]::Escape('myproject-Apps-1.0.0.0.zip'))
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
