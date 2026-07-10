@@ -1,3 +1,7 @@
+### Workspace compilation supports framework-dependent AL Language extensions
+
+Workspace compilation now finds altool both in the platform-specific subfolder (`compiler/extension/bin/win32` or `.../linux`) and directly under `compiler/extension/bin`, so a `vsixFile` using the flat (framework-dependent / marketplace) layout no longer fails with "Could not find AL tool in the compiler folder". URL-based `customCodeCops` are likewise downloaded to the flat `bin` folder when no `Analyzers` subfolder is present. The aldoc tool used for reference documentation is resolved the same way, falling back to the flat `bin` folder when no platform subfolder is present.
+
 ### Issues
 
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
