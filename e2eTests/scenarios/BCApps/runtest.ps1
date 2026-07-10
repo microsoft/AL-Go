@@ -33,8 +33,10 @@ Write-Host -ForegroundColor Yellow @'
 #  - Cancel all workflows
 #  - Limit the projects to build, excluding the test projects, and push the change to trigger CI/CD
 #  - Wait for the push-triggered "CI/CD" workflow and verify that it completes successfully
+#  - Test that app and testapp artifacts are generated
 #  - Modify an AL file in the repository and create a Pull Request
 #  - Wait for the Pull Request Build to complete and verify that it is successful
+#  - Test the artifacts generated
 #  - Remove the repository
 #
 '@
@@ -112,14 +114,24 @@ $projects = @(
 # it, so use it as the CI verification instead of dispatching a second, redundant CI/CD run.
 $run = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "projects" = $projects } -commit -wait
 
-# WaitWorkflow (called inside CommitAndPush) tolerates a 'cancelled' conclusion, so re-fetch the
-# run and assert an explicit 'success' conclusion.
+# WaitWorkflow (called inside CommitAndPush) can run for a long time and refreshes the token as it
+# goes, so refresh the token again and rebuild the headers before re-fetching the run. WaitWorkflow
+# also tolerates a 'cancelled' conclusion, so assert an explicit 'success' conclusion.
+RefreshToken -repository $repository
 $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
 $url = "https://api.github.com/repos/$repository/actions/runs/$($run.id)"
 $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
 if ($run.conclusion -ne 'success') {
     throw "CI/CD workflow run $($run.id) concluded with '$($run.conclusion)' (expected 'success')"
 }
+
+# The selected 'Apps *' projects define testFolders, so a full build produces both app and test app
+# artifacts. Verify that the CI/CD run actually generated them.
+Test-ArtifactsFromRun -runid $run.id -folder '.artifacts' -repoVersion '*.*' -appVersion '*.*'
+$appCount = @(Get-ChildItem -Path '.artifacts/*-Apps-*/*.app' -Recurse).Count
+$testAppCount = @(Get-ChildItem -Path '.artifacts/*-TestApps-*/*.app' -Recurse).Count
+$appCount | Should -BeGreaterThan 0
+$testAppCount | Should -BeGreaterThan 0
 
 # Modify a file in the repository and create a Pull Request
 $branch = "e2etest"
@@ -157,13 +169,23 @@ if (-not $run) {
 # Wait for the Pull Request Build to complete
 WaitWorkflow -repository $repository -runid $run.id
 
-# WaitWorkflow tolerates a 'cancelled' conclusion, so re-fetch the run and assert an explicit
-# 'success' conclusion.
+# WaitWorkflow can run for a long time and refreshes the token as it goes, so refresh the token
+# again and rebuild the headers before re-fetching the run. WaitWorkflow also tolerates a
+# 'cancelled' conclusion, so assert an explicit 'success' conclusion.
+RefreshToken -repository $repository
+$headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
 $url = "https://api.github.com/repos/$repository/actions/runs/$($run.id)"
 $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
 if ($run.conclusion -ne 'success') {
     throw "Pull Request Build workflow run $($run.id) concluded with '$($run.conclusion)' (expected 'success')"
 }
+
+# There should be at least 1 app and 1 test app rebuilt
+Test-ArtifactsFromRun -runid $run.id -folder '.prartifacts' -repoVersion '*.*' -appVersion '*.*'
+$appCount = @(Get-ChildItem -Path '.prartifacts/*-Apps-*/*.app' -Recurse).Count
+$testAppCount = @(Get-ChildItem -Path '.prartifacts/*-TestApps-*/*.app' -Recurse).Count
+$appCount | Should -BeGreaterThan 0
+$testAppCount | Should -BeGreaterThan 0
 
 Pop-Location
 RemoveRepository -repository $repository -path $repoPath
