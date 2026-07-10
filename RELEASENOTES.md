@@ -1,6 +1,7 @@
 ### Issues
 
 - Issue 2285 - CheckForUpdates now handles settings file `$schema` reordering in a PowerShell 5-safe way to avoid writing invalid entries like `"*": null` to settings JSON files.
+- Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
 
 ## v9.1
 
