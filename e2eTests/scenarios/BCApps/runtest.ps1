@@ -30,9 +30,9 @@ Write-Host -ForegroundColor Yellow @'
 #
 #  - Create a new repository with the same content as microsoft/BCApps
 #  - Run the Update AL-Go System Files with the test version
-#  - Limit the projects to build, excluding the test projects
 #  - Cancel all workflows
-#  - Run the "CI/CD" workflow and verify that it completes successfully
+#  - Limit the projects to build, excluding the test projects, and push the change to trigger CI/CD
+#  - Wait for the push-triggered "CI/CD" workflow and verify that it completes successfully
 #  - Modify an AL file in the repository and create a Pull Request
 #  - Wait for the Pull Request Build to complete and verify that it is successful
 #  - Remove the repository
@@ -107,10 +107,19 @@ $projects = @(
     "build/projects/Apps SE",
     "build/projects/Apps US"
 )
-Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "projects" = $projects } -commit -wait | Out-Null
+# Pushing the settings change to main triggers a full CI/CD build (BCApps runs CI/CD on pushes
+# to main). Add-PropertiesToJsonFile -commit -wait waits for that push-triggered run and returns
+# it, so use it as the CI verification instead of dispatching a second, redundant CI/CD run.
+$run = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "projects" = $projects } -commit -wait
 
-# Run the CI/CD workflow and verify that it completes successfully (RunCICD -wait throws if the run does not succeed)
-RunCICD -repository $repository -branch $branch -wait | Out-Null
+# WaitWorkflow (called inside CommitAndPush) tolerates a 'cancelled' conclusion, so re-fetch the
+# run and assert an explicit 'success' conclusion.
+$headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
+$url = "https://api.github.com/repos/$repository/actions/runs/$($run.id)"
+$run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
+if ($run.conclusion -ne 'success') {
+    throw "CI/CD workflow run $($run.id) concluded with '$($run.conclusion)' (expected 'success')"
+}
 
 # Modify a file in the repository and create a Pull Request
 $branch = "e2etest"
@@ -145,8 +154,16 @@ if (-not $run) {
     throw "No Pull Request Build workflow run was found"
 }
 
-# Wait for the Pull Request Build to complete and verify that it is successful (WaitWorkflow throws if the run does not succeed)
+# Wait for the Pull Request Build to complete
 WaitWorkflow -repository $repository -runid $run.id
+
+# WaitWorkflow tolerates a 'cancelled' conclusion, so re-fetch the run and assert an explicit
+# 'success' conclusion.
+$url = "https://api.github.com/repos/$repository/actions/runs/$($run.id)"
+$run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
+if ($run.conclusion -ne 'success') {
+    throw "Pull Request Build workflow run $($run.id) concluded with '$($run.conclusion)' (expected 'success')"
+}
 
 Pop-Location
 RemoveRepository -repository $repository -path $repoPath
