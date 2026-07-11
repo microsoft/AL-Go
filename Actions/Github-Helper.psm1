@@ -197,9 +197,14 @@ function GetDependencies {
             }
             $projects = $dependency.projects
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/").TrimEnd("/")
+            # Derive the API URL from the dependency repo host, so dependencies can be downloaded from a
+            # GitHub host that differs from the one running the workflow. For both github.com and ghe.com the
+            # API host is api.<host> (e.g. api.github.com or api.<tenant>.ghe.com).
+            $dependencyUri = [uri]$dependency.repo
+            $dependencyApiUrl = "$($dependencyUri.Scheme)://api.$($dependencyUri.Host)"
             if ($dependency.release_status -eq "latestBuild") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
-                $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $currentMask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
+                $token = GetAccessToken -token $dependency.authTokenSecret -api_url $dependencyApiUrl -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
+                $artifacts = GetArtifacts -token $token -api_url $dependencyApiUrl -repository $repository -mask $currentMask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
                 if ($artifacts) {
                     $artifacts | ForEach-Object {
                         $download = DownloadArtifact -path $saveToPath -token $token -artifact $_
@@ -221,8 +226,8 @@ function GetDependencies {
                 }
             }
             elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -ne "include") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
-                $releases = GetReleases -api_url $api_url -token $token -repository $repository
+                $token = GetAccessToken -token $dependency.authTokenSecret -api_url $dependencyApiUrl -repository $repository -permissions @{"contents"="read";"metadata"="read"}
+                $releases = GetReleases -api_url $dependencyApiUrl -token $token -repository $repository
                 if ($dependency.version -ne "latest") {
                     $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
                 }
@@ -238,7 +243,7 @@ function GetDependencies {
                     throw "Could not find a release that matches the criteria."
                 }
 
-                $download = DownloadRelease -token $token -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $currentMask
+                $download = DownloadRelease -token $token -projects $projects -api_url $dependencyApiUrl -repository $repository -path $saveToPath -release $release -mask $currentMask
                 if ($download) {
                     if ($currentMask -like '*TestApps') {
                         $downloadedList += @("($download)")
