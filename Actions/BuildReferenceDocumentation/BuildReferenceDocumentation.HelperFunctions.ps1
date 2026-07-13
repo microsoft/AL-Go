@@ -26,18 +26,29 @@
         Expand-Archive -Path "$($tempFolder).zip" -DestinationPath $tempFolder -Force
         Remove-Item -Path "$($tempFolder).zip" -Force
         if ($IsLinux) {
+            # Prefer the platform-specific linux/ subfolder, then fall back to the flat bin
+            # folder used by framework-dependent / marketplace-packaged extensions.
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc'
+            if (-not (Test-Path $ENV:aldocPath)) {
+                $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/aldoc'
+            }
             if (Test-Path $ENV:aldocPath) {
                 & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
             }
             else {
                 # If the executable isn't found, use dotnet to run the dll
                 $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc.dll'
+                if (-not (Test-Path $ENV:aldocPath)) {
+                    $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/aldoc.dll'
+                }
                 $ENV:aldocCommand = 'dotnet'
             }
         }
         else {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
+            if (-not (Test-Path $ENV:aldocPath)) {
+                $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/aldoc.exe'
+            }
         }
         if (-not (Test-Path $ENV:aldocPath)) {
             throw "aldoc tool not found at $ENV:aldocPath"

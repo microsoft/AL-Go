@@ -145,6 +145,32 @@ Which basically launches a script located in the script folder in the repository
 > [!CAUTION]
 > Script overrides will almost certainly be broken in the future. The current script overrides is very much tied to the current implementation of the `Run-AlPipeline` function in BcContainerHelper. In the future, we will move this functionality to GitHub actions and no longer depend on BcContainerHelper and Run-AlPipeline. At that time, these script overrides will have to be changed to follow the new implementation.
 
+#### AL-Go hooks
+
+In addition to the BcContainerHelper-based `Run-AlPipeline` script overrides described above, AL-Go for GitHub provides a set of AL-Go hooks that let you plug custom logic into well-known extension points in AL-Go workflows. Hooks are independent of BcContainerHelper and are invoked by the [`RunHook`](https://github.com/microsoft/AL-Go-Actions/tree/main/RunHook) action; they will continue to work after BcContainerHelper is deprecated.
+
+To use one, add a script named `<HookName>.ps1` in your project's `.AL-Go` folder. The script receives a single `[Hashtable] $parameters` argument. The hashtable always contains at least `project` (the project folder, relative to the repository root); additional keys may be added over time or supplied by callers.
+
+```powershell
+Param([Hashtable] $parameters)
+
+Write-Host "Running custom logic for project '$($parameters.project)'"
+```
+
+The currently supported AL-Go hooks are:
+
+| Hook | Where it runs | Notes |
+| :-- | :-- | :-- |
+| `BuildInitialize` | Build workflow, immediately after `Read settings` | AL-Go settings are available as environment variables; secrets are not yet read at this point. |
+
+If the script does not exist in `.AL-Go`, the corresponding workflow step is a silent no-op.
+
+> [!WARNING]
+> AL-Go hooks are an **experimental** feature. The set of supported hook names, the parameters passed to hook scripts, the location and timing of hook invocations, and the names of the underlying action and helpers may all change in future versions of AL-Go for GitHub. Anything you build on top of this first iteration may break in a later update.
+
+> [!NOTE]
+> AL-Go hooks are still a new feature and will be expanded as functionality gets moved out of BcContainerHelper.
+
 ### Adding custom jobs
 
 You can also add custom jobs to any of the existing AL-Go for GitHub workflows. Custom jobs can depend on other jobs and other jobs can be made to depend on custom jobs. Custom jobs need to be named `CustomJob<something>`, but can specify another name to be shown in the UI. Example:
