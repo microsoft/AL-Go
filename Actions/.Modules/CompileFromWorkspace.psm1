@@ -78,11 +78,16 @@ function Get-CustomAnalyzers {
         return $analyzers
     }
 
-    # Analyzers/ directory exists in the compiler folder by default
+    # Analyzers live in the Analyzers/ subfolder for platform-layout extensions, or
+    # directly in bin/ for framework-dependent / marketplace-packaged extensions.
     $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
+    $analyzersPath = Join-Path $binPath 'Analyzers'
+    if (-not (Test-Path $analyzersPath)) {
+        $analyzersPath = $binPath
+    }
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
-            $analyzerFileName = Join-Path $binPath "Analyzers/$(Split-Path $customCodeCop -Leaf)"
+            $analyzerFileName = Join-Path $analyzersPath "$(Split-Path $customCodeCop -Leaf)"
             try {
                 Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName -ErrorAction Stop
             } catch {
@@ -125,9 +130,12 @@ function Get-BuildMetadata {
 
 <#
     .SYNOPSIS
-    Gets the path to the AL compiler tool (al.exe or al).
+    Gets the path to the AL compiler tool (altool).
     .DESCRIPTION
     Returns the full path to the AL compiler tool located in the specified compiler folder.
+    Newer AL Language extensions place altool in a platform-specific subfolder (win32/linux),
+    while framework-dependent / marketplace-packaged extensions place it directly under
+    compiler/extension/bin. Both layouts are supported.
     .PARAMETER CompilerFolder
     The folder where the AL compiler tool is located.
     .OUTPUTS
@@ -143,20 +151,17 @@ function Get-ALTool {
         return $script:alTool
     }
 
-    # Select the platform-specific AL tool binary
+    $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
     if ($IsLinux) {
-        $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/linux"
-        $alExe = Join-Path $platformFolder "altool"
-        if (-not (Test-Path $alExe)) {
-            $alExe = Join-Path $platformFolder "al"
-        }
+        $alExe = Join-Path $binFolder "linux/altool"
     }
     else {
-        $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/win32"
-        $alExe = Join-Path $platformFolder "altool.exe"
-        if (-not (Test-Path $alExe)) {
-            $alExe = Join-Path $platformFolder "al.exe"
-        }
+        $alExe = Join-Path $binFolder "win32/altool.exe"
+    }
+
+    # Fall back to the flat bin folder used by framework-dependent / marketplace VSIX layouts
+    if (-not (Test-Path $alExe)) {
+        $alExe = Join-Path $binFolder (Split-Path $alExe -Leaf)
     }
 
     if (-not (Test-Path $alExe)) {

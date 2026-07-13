@@ -4,9 +4,16 @@ Previously, the `failOn: newWarning` setting (which fails a pull request when it
 
 As part of this, the warning comparison now also parses the raw AL compiler output format emitted by workspace compilation (in addition to the GitHub Actions annotation format), and it ignores embedded build version numbers in warning messages so that version differences between the baseline build and the pull request build no longer produce false "new warning" failures.
 
-### New `doNotPerformUpgrade` setting
+### Workspace compilation supports framework-dependent AL Language extensions
 
-AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
+Workspace compilation now finds altool both in the platform-specific subfolder (`compiler/extension/bin/win32` or `.../linux`) and directly under `compiler/extension/bin`, so a `vsixFile` using the flat (framework-dependent / marketplace) layout no longer fails with "Could not find AL tool in the compiler folder". URL-based `customCodeCops` are likewise downloaded to the flat `bin` folder when no `Analyzers` subfolder is present. The aldoc tool used for reference documentation is resolved the same way, falling back to the flat `bin` folder when no platform subfolder is present.
+
+### Issues
+
+- Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
+- Retry downloading dependency artifacts from the current build up to 3 times (30 seconds between attempts) to tolerate transient network errors such as "Failed to GetSignedArtifactURL: Unable to make request: ETIMEDOUT"
+
+## v9.1
 
 ### Resilient Pull Request Status Check for large builds
 
