@@ -784,6 +784,69 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result.Count | Should -Be 1
             $result[0] | Should -BeLike '*MyAnalyzer.dll'
         }
+
+        It 'Downloads URL-based analyzers to the flat bin folder when no Analyzers subfolder exists' {
+            # Framework-dependent / marketplace-packaged extensions have no Analyzers/ subfolder,
+            # so downloads must target the flat bin/ folder instead.
+            $compilerFolder = Join-Path $TestDrive 'compiler-flat-layout'
+            $binFolder = Join-Path $compilerFolder 'compiler/extension/bin'
+            New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
+
+            Mock Invoke-WebRequest {
+                param($Uri, $OutFile)
+                Set-Content -Path $OutFile -Value 'mock-dll'
+            } -ModuleName CompileFromWorkspace
+
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeLike '*MyAnalyzer.dll'
+            $result[0] | Should -Not -BeLike '*Analyzers*'
+            (Split-Path $result[0] -Parent).Replace('/', '\') | Should -Be $binFolder.Replace('/', '\')
+        }
+    }
+
+    Describe 'Get-ALTool' {
+        It 'Finds altool in the platform-specific subfolder (win32/linux)' {
+            $cf = Join-Path $TestDrive 'altool-platform'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
+                $toolRelative = if ($IsLinux) { "linux/altool" } else { "win32/altool.exe" }
+                $expected = Join-Path $binFolder $toolRelative
+                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
+                Set-Content -Path $expected -Value 'tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Falls back to the flat bin folder for framework-dependent / marketplace VSIX layouts' {
+            $cf = Join-Path $TestDrive 'altool-flat'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
+                $toolRelative = if ($IsLinux) { "altool" } else { "altool.exe" }
+                $expected = Join-Path $binFolder $toolRelative
+                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
+                Set-Content -Path $expected -Value 'tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Throws when no AL tool is found in the compiler folder' {
+            $cf = Join-Path $TestDrive 'altool-missing'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                New-Item -Path (Join-Path $CompilerFolder "compiler/extension/bin") -ItemType Directory -Force | Out-Null
+
+                { Get-ALTool -CompilerFolder $CompilerFolder } | Should -Throw "*Could not find AL tool in the compiler folder*"
+            }
+        }
     }
 
     Describe 'Get-AssemblyProbingPaths' {
