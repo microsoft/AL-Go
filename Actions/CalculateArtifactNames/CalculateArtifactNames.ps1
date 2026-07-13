@@ -7,6 +7,8 @@
     [string] $suffix
 )
 
+. (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
+
 function Set-OutputVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "$name=$value"
@@ -18,13 +20,7 @@ if ($project -eq ".") {
     $project = $settings.repoName
 }
 
-$branchName = $ENV:GITHUB_HEAD_REF
-# $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
-if (!$branchName) {
-    $branchName = $ENV:GITHUB_REF_NAME
-}
-
-$branchName = $branchName.Replace('\', '_').Replace('/', '_')
+$branchName = Get-CurrentBranchName
 $projectName = $project.Replace('\', '_').Replace('/', '_')
 
 # If the buildmode is default, then we don't want to add it to the artifact name
