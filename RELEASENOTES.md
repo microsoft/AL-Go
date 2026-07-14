@@ -6,6 +6,7 @@ Workspace compilation now finds altool both in the platform-specific subfolder (
 
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
 - Retry downloading dependency artifacts from the current build up to 3 times (30 seconds between attempts) to tolerate transient network errors such as "Failed to GetSignedArtifactURL: Unable to make request: ETIMEDOUT"
+- Issue 2302 - AlDoc does not use --packagecache when building reference documentation
 
 ## v9.1
 
@@ -75,7 +76,6 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
 - Issue 2265 - Creating a Performance Test App fails on Linux due to case-sensitive path lookup for the Performance Toolkit sample app
 - Issue 2284 - GitHub App authentication fails with `401 (Unauthorized)` on runners with minor clock drift. The JWT `iat` claim is now backdated by 60 seconds instead of 10, as recommended by GitHub, to tolerate runners whose clock runs slightly ahead of GitHub.
-- Issue 2302 - AlDoc does not use --packagecache when building reference documentation
 
 ## v9.0
 
