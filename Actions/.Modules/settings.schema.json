@@ -756,6 +756,10 @@
                                 "type": "string",
                                 "description": "The destination folder where the files should be updated, relative to the repository root. If not specified, defaults to the same as the source file folder."
                             },
+                            "destinationName": {
+                                "type": "string",
+                                "description": "The filename to use at the destination. If specified, overrides the source filename, allowing the file to be renamed when copied. Should be used together with a filter that matches a single file."
+                            },
                             "perProject": {
                                 "type": "boolean",
                                 "description": "Indicates whether the file update should be applied per project. In that case, the destinationFolder is considered relative to each project folder."
@@ -797,6 +801,10 @@
                             "destinationFolder": {
                                 "type": "string",
                                 "description": "The destination folder where the files should be removed, relative to the repository root."
+                            },
+                            "destinationName": {
+                                "type": "string",
+                                "description": "The filename of the file at the destination. If specified, overrides the filter when looking up the file to remove. Should be used together with a filter that matches a single file."
                             },
                             "perProject": {
                                 "type": "boolean",

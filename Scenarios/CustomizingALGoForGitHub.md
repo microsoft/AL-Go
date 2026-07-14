@@ -239,6 +239,7 @@ In order to instruct AL-Go which files to look for at the template repository, y
 - `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `*.ps1` or `fileToUpdate.ps1`.
 - `destinationFolder`: A path to a folder, relative to repository that is being updated, where the files should be placed. If not specified, defaults to the same as the source file folder. _Example_: `src/templateScripts`.
 - `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
+- `destinationName`: The filename to use at the destination. If specified, overrides the source filename, allowing the file to be renamed when copied. Should be used together with a `filter` that matches a single file. _Example_: `customScript.ps1`.
 
 > [!NOTE]
 > `filesToInclude` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToInclude`, AL-Go for GitHub will ignore them and you might have to remove them manually.
@@ -280,6 +281,7 @@ The following table summarizes how AL-Go for GitHub manages file updates and exc
 - `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `deprecated-*.yaml` or `oldScript.ps1`.
 - `destinationFolder`: A path to a folder, relative to the end repository, where the files are located. If not specified, defaults to the same as the source file folder. _Example_: `.github/workflows`.
 - `perProject`: A boolean that indicates whether the matched files should be removed for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
+- `destinationName`: The filename of the file at the destination. If specified, overrides the `filter` when looking up the file to remove. Should be used together with a `filter` that matches a single file. _Example_: `renamedScript.ps1`.
 
 > [!NOTE]
 > `filesToRemove` takes precedence over both `filesToInclude` and `filesToExclude`. If a file is matched by `filesToRemove`, it will be removed from the end repository even if it is also matched by `filesToInclude`. The file will also be excluded from the `filesToInclude` and `filesToExclude` lists, so it will not be created or updated.
