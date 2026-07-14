@@ -54,7 +54,7 @@ run-name: "Comment on Release Notes PRs"
 
 jobs:
   activation:
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
