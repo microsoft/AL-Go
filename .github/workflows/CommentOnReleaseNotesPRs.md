@@ -10,6 +10,7 @@ permissions:
 safe-outputs:
   add-comment:
     allowed-repos: [microsoft/AL-Go]
+    max: 50
 
 tools:
   github:
