@@ -55,7 +55,7 @@ $template = "https://github.com/$pteTemplate"
 # Login
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
-# Create tempolate repository
+# Create template repository
 CreateAlGoRepository `
     -github:$github `
     -linux:$linux `
@@ -143,6 +143,40 @@ $customJobs = @(
 $cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepository) # In the context of the template repository, these custom jobs are treated as final customizations
 $cicdYaml.Save($cicdWorkflow)
 
+# Add a custom workflow file in the template repository (to be copied to the final repository, as workflow files are always propagated)
+$customWorkflowfileRelativePath = '.github/workflows/CustomWorkflow.yaml'
+$customWorkflowFile = Join-Path $templateRepoPath $customWorkflowfileRelativePath
+$customWorkflowContent = @"
+name: Custom Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  CustomJob:
+    runs-on: [ windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Run Custom Script
+        run: |
+          Write-Host 'Custom Workflow was triggered!'
+"@
+Set-Content -Path $customWorkflowFile -Value $customWorkflowContent
+
+if($linux) {
+    # Modify workflow to run on ubuntu-latest if the test is running on linux. AL-Go will not modify workflow files based on platform, so we need to do it here to ensure the test works correctly.
+    $customWorkflowContent = $customWorkflowContent -replace 'windows-latest', 'ubuntu-latest'
+}
+
+# Add another custom file in the template repository (to be ignored unless specifically added via the settings)
+$customFileName = 'CustomTemplateFile.txt'
+$customFile = Join-Path $templateRepoPath $customFileName
+$customFileContent = "This is a custom file in the template repository."
+Set-Content -Path $customFile -Value $customFileContent
+
 # Push
 CommitAndPush -commitMessage 'Add template customizations'
 
@@ -226,6 +260,29 @@ Pull
 
 (Join-Path (Get-Location) $CustomTemplateRepoSettingsFile) | Should -Exist
 (Join-Path (Get-Location) $CustomTemplateProjectSettingsFile) | Should -Exist
+
+# Check that custom workflow file is present
+(Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $customWorkflowContent.Replace("`r", "").TrimEnd("`n")
+
+# Check that custom file is NOT present
+(Join-Path (Get-Location) $customFileName) | Should -Not -Exist # Custom file should not be copied by default
+
+# Add custom file to be copied via settings
+$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{ "customALGoFiles" = @{ "filesToInclude" = @( @{ "filter" = $customFileName } ) } }
+
+# Push
+CommitAndPush -commitMessage 'Add custom file to be updated when updating AL-Go system files [skip ci]'
+
+# Update AL-Go System Files to uptake custom file
+RunUpdateAlGoSystemFiles -directCommit -wait -templateUrl $templateRepository -ghTokenWorkflow $algoauthapp -repository $repository -branch $branch | Out-Null
+
+# Pull changes
+Pull
+
+# Check that custom file is now present
+(Join-Path (Get-Location) $customFileName) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $customFileName)| Should -Be $customFileContent.Replace("`r", "").TrimEnd("`n")
 
 # Run CICD
 $run = RunCICD -repository $repository -branch $branch -wait

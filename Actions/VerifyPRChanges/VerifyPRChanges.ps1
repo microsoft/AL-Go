@@ -20,8 +20,8 @@ function ValidateFiles
         Write-Host "- $filename $status"
         $extension = [System.IO.Path]::GetExtension($filename)
         $name = [System.IO.Path]::GetFileName($filename)
-        if (($extension -in $disallowedExtensions) -or ($name -in $disallowedFiles) -or $filename.StartsWith(".github/")) {
-            throw "Pull Request containing changes to scripts, workflows or CODEOWNERS are not allowed from forks."
+        if (($extension -in $disallowedExtensions) -or ($name -in $disallowedFiles) -or $filename.StartsWith(".github/") -or $filename.Contains("/.AL-Go/") -or $filename.StartsWith(".AL-Go/")) {
+            throw "Pull Request containing changes to scripts, workflows, CODEOWNERS or AL-Go configuration are not allowed from forks."
         }
     }
 }

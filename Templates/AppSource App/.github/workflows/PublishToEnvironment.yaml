@@ -10,6 +10,10 @@ on:
       environmentName:
         description: Environment mask to receive the new version (* for all, PROD* for all environments starting with PROD)
         required: true
+      createEnvIfNotExists:
+        description: Create environment if it does not exist (use with care, yourEnvName_AuthContext yourEnvName_EnvironmentName yourEnvName_Scope must be defined as environment secrets/variables or repo secrets/variables)
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -43,7 +47,7 @@ jobs:
           shell: powershell
 
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Initialize the workflow
         id: init
@@ -66,6 +70,7 @@ jobs:
           shell: powershell
           getEnvironments: ${{ github.event.inputs.environmentName }}
           type: 'Publish'
+          createEnvIfNotExists: ${{ github.event.inputs.createEnvIfNotExists }}
 
       - name: EnvName
         id: envName
@@ -135,7 +140,7 @@ jobs:
       ALGoEnvName: ${{ matrix.environment }}
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: EnvName
         id: envName
@@ -164,6 +169,7 @@ jobs:
           shell: ${{ matrix.shell }}
           artifactsVersion: ${{ github.event.inputs.appVersion }}
           artifactsFolder: '.artifacts'
+          buildMode: ${{ matrix.buildMode }}
 
       - name: Deploy to Business Central
         id: Deploy
@@ -195,7 +201,7 @@ jobs:
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Finalize the workflow
         id: PostProcess

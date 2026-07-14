@@ -9,6 +9,8 @@
     [string] $token
 )
 
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DownloadProjectDependencies.psm1" -Resolve) -DisableNameChecking
+
 function DownloadDependenciesFromProbingPaths {
     param(
         $baseFolder,
@@ -21,7 +23,11 @@ function DownloadDependenciesFromProbingPaths {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
     if ($settings.ContainsKey('appDependencyProbingPaths') -and $settings.appDependencyProbingPaths) {
-        return GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+        $dependencies = GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $destinationPath | Where-Object { $_ }
+
+        # GetDependencies may return .zip files (from DownloadArtifact/DownloadRelease).
+        # Extract .app files from any zips so downstream consumers receive clean .app paths.
+        return Resolve-DependencyFiles -Dependencies $dependencies -DestinationPath $destinationPath
     }
 }
 
@@ -46,7 +52,7 @@ function DownloadDependenciesFromCurrentBuild {
     Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
 
     # For each dependency project, calculate the corresponding probing path
-    $dependeciesProbingPaths = @()
+    $dependenciesProbingPaths = @()
     foreach($dependencyProject in $dependencyProjects) {
         Write-Host "Reading settings for project '$dependencyProject'"
         $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
@@ -70,7 +76,7 @@ function DownloadDependenciesFromCurrentBuild {
             $baseBranch = $ENV:GITHUB_REF_NAME
         }
 
-        $dependeciesProbingPaths += @(@{
+        $dependenciesProbingPaths += @(@{
             "release_status"  = "thisBuild"
             "version"         = "latest"
             "buildMode"       = $dependencyBuildMode
@@ -85,7 +91,7 @@ function DownloadDependenciesFromCurrentBuild {
 
     # For each probing path, download the dependencies
     $downloadedDependencies = @()
-    foreach($probingPath in $dependeciesProbingPaths) {
+    foreach($probingPath in $dependenciesProbingPaths) {
         $buildMode = $probingPath.buildMode
         $project = $probingPath.projects
         $branch = $probingPath.branch
@@ -105,7 +111,7 @@ function DownloadDependenciesFromCurrentBuild {
         }
     }
 
-    return $downloadedDependencies
+    return Resolve-DependencyFiles -Dependencies $downloadedDependencies -DestinationPath $destinationPath
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -123,6 +129,15 @@ Write-Host "::group::Downloading project dependencies from probing paths"
 $downloadedDependencies += DownloadDependenciesFromProbingPaths -baseFolder $baseFolder -project $project -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
+Write-Host "::group::Downloading dependencies from settings (installApps and installTestApps)"
+Push-Location -Path (Join-Path $baseFolder $project)  #Change to the project folder because installApps paths are relative to the project folder
+try {
+    $settingsDependencies = Get-DependenciesFromInstallApps -DestinationPath $destinationPath
+} finally {
+    Pop-Location
+    Write-Host "::endgroup::"
+}
+
 $downloadedApps = @()
 $downloadedTestApps = @()
 
@@ -130,18 +145,26 @@ $downloadedTestApps = @()
 $downloadedDependencies | ForEach-Object {
     # naming convention: app, (testapp)
     if ($_.startswith('(')) {
-        $DownloadedTestApps += $_
+        $downloadedTestApps += $_
     }
     else {
-        $DownloadedApps += $_
+        $downloadedApps += $_
     }
 }
+
+# Add dependencies from settings (these are already resolved to .app files)
+$downloadedApps += $settingsDependencies.Apps
+$downloadedTestApps += $settingsDependencies.TestApps
 
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
 
-$DownloadedAppsJson = ConvertTo-Json $DownloadedApps -Depth 99 -Compress
-$DownloadedTestAppsJson = ConvertTo-Json $DownloadedTestApps -Depth 99 -Compress
+# Write the downloaded apps and test apps to temporary JSON files and set them as GitHub Action outputs
+$tempPath = NewTemporaryFolder
+$downloadedAppsJson = Join-Path $tempPath "DownloadedApps.json"
+$downloadedTestAppsJson = Join-Path $tempPath "DownloadedTestApps.json"
+ConvertTo-Json $downloadedApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedAppsJson
+ConvertTo-Json $downloadedTestApps -Depth 99 -Compress | Out-File -Encoding UTF8 -FilePath $downloadedTestAppsJson
 
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$DownloadedAppsJson"
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$DownloadedTestAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedApps=$downloadedAppsJson"
+Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "DownloadedTestApps=$downloadedTestAppsJson"

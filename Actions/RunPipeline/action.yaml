@@ -22,19 +22,23 @@ inputs:
     required: false
     default: 'Default'
   installAppsJson:
-    description: A JSON-formatted list of apps to install
+    description: A path to a JSON-formatted list of apps to install
     required: false
-    default: '[]'
+    default: ''
   installTestAppsJson:
-    description: A JSON-formatted list of test apps to install
+    description: A path to a JSON-formatted list of test apps to install
     required: false
-    default: '[]'
+    default: ''
   baselineWorkflowRunId:
     description: RunId of the baseline workflow run
     required: false
     default: ''
   baselineWorkflowSHA:
     description: SHA of the baseline workflow run
+    required: false
+    default: ''
+  previousAppsPath:
+    description: Path to folder containing previous release apps for upgrade testing
     required: false
     default: ''
 runs:
@@ -51,9 +55,10 @@ runs:
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
         _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+        _previousAppsPath: ${{ inputs.previousAppsPath }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunPipeline" -Action {
-          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
+          ${{ github.action_path }}/RunPipeline.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -installAppsJson $ENV:_installAppsJson -installTestAppsJson $ENV:_installTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA -previousAppsPath $ENV:_previousAppsPath
         }
 branding:
   icon: terminal

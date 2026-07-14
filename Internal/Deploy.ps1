@@ -26,6 +26,7 @@ function PushChanges
         # Direct commit to base branch
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $BaseBranch
+        return ""
     } else {
         # Create PR to base branch
         if (-not (git ls-remote --heads origin $BaseBranch)) {
@@ -38,7 +39,9 @@ function PushChanges
         invoke-git checkout -b $branchName origin/$BaseBranch
         invoke-git commit --allow-empty -m $CommitMessage
         invoke-git push origin $branchName
-        invoke-gh pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
+        $prUrl = invoke-gh -returnValue pr create --base $BaseBranch --title $CommitMessage --body $CommitMessage
+
+        return $prUrl
     }
 }
 
@@ -218,14 +221,15 @@ try {
                 # replace defaultBcContainerHelperVersion
                 $found = $false
                 for($idx=0; $idx -lt $lines.count; $idx++) {
-                    if ($lines[$idx] -match '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$') {
-                        $lines[$idx] = "$($Matches[1])`$defaultBcContainerHelperVersion$($Matches[2])=$($Matches[3])""$($config.defaultBcContainerHelperVersion)"" # $($Matches[5])"
+                    if ($lines[$idx] -match '^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"([^"]*)"(\s*#.*)?$') {
+                        $comment = if ($Matches[5]) { $Matches[5] } else { "" }
+                        $lines[$idx] = "$($Matches[1])`$defaultBcContainerHelperVersion$($Matches[2])=$($Matches[3])""$($config.defaultBcContainerHelperVersion)""$comment"
                         $found = $true
                         break
                     }
                 }
                 if (-not $found) {
-                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helpers.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)"(.*)" # (.*)$"'
+                    throw 'Could not find defaultBcContainerHelperVersion line in AL-Go-Helper.ps1 matching "^(\s*)\$defaultBcContainerHelperVersion(\s*)=(\s*)""([^""]*)""(\s*#.*)?$"'
                 }
             }
 
@@ -242,8 +246,12 @@ try {
             }
             Set-Content -Path (Join-Path "./.github" "RELEASENOTES.copy.md") -Value $releaseNotes -Encoding utf8
         }
-        PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
-
+        $prUrl = PushChanges -BaseBranch $branch -CommitMessage "Deploying AL-Go from $algoBranch ($srcSHA) to $branch" -DirectCommit $directCommit
+        if ($prUrl) {
+            Write-Host "::notice::Deployed to $repo branch $branch. PR URL: $prUrl"
+        } else {
+            Write-Host "::notice::Deployed to $repo branch $branch"
+        }
     }
 }
 finally {

@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
 
 InModuleScope ReadSettings { # Allows testing of private functions
     Describe "ReadSettings" {
@@ -154,6 +154,10 @@ InModuleScope ReadSettings { # Allows testing of private functions
                         "settings" = @{ "property3" = "userxy"; "property4" = "userxy" }
                     }
                     @{
+                        "triggers" = @( 'schedule', 'workflow_dispatch' )
+                        "settings" = @{ "property3" = "triggerxy"; "property4" = "triggerxy" }
+                    }
+                    @{
                         "branches" = @( 'branchx', 'branchy' )
                         "projects" = @( 'projectx', 'projecty' )
                         "settings" = @{ "property3" = "bpxy"; "property4" = "bpxy" }
@@ -163,6 +167,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
 
             # Test that conditional settings are applied correctly
+            $previousGitHubEventName = $ENV:GITHUB_EVENT_NAME
+            $ENV:GITHUB_EVENT_NAME = 'push'
+
             $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchy' -userName 'user'
             $conditionalSettings.property3 | Should -Be 'branchxy'
             $conditionalSettings.property4 | Should -Be 'branchxy'
@@ -183,9 +190,23 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $conditionalSettings.property3 | Should -Be 'userxy'
             $conditionalSettings.property4 | Should -Be 'userxy'
 
+            $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user' -trigger 'schedule'
+            $conditionalSettings.property3 | Should -Be 'triggerxy'
+            $conditionalSettings.property4 | Should -Be 'triggerxy'
+
+            $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user' -trigger 'workflow_dispatch'
+            $conditionalSettings.property3 | Should -Be 'triggerxy'
+            $conditionalSettings.property4 | Should -Be 'triggerxy'
+
+            $conditionalSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'branch' -userName 'user' -trigger 'push'
+            $conditionalSettings.property3 | Should -Be 'repo3'
+            $conditionalSettings.property4 | Should -BeNullOrEmpty
+
             $conditionalSettings = ReadSettings -baseFolder $tempName -project 'projecty' -repoName 'repo' -workflowName 'Workflow' -branchName 'branchx' -userName 'user'
             $conditionalSettings.property3 | Should -Be 'bpxy'
             $conditionalSettings.property4 | Should -Be 'bpxy'
+
+            $ENV:GITHUB_EVENT_NAME = $previousGitHubEventName
 
             # Invalid Org(var) setting should throw
             $ENV:ALGoOrgSettings = 'this is not json'
@@ -194,12 +215,57 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
+            # Test customSettings parameter - should have highest precedence
+            # customSettings overrides all other settings (including user settings)
+            $customSettingsJson = @{ "property1" = "custom1"; "property2" = "custom2"; "property9" = "custom9" } | ConvertTo-Json -Depth 99
+            $customSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings $customSettingsJson
+            $customSettings.property1 | Should -Be 'custom1'    # Overrides user setting
+            $customSettings.property2 | Should -Be 'custom2'    # Overrides workflow setting
+            $customSettings.property3 | Should -Be 'repo3'      # Unchanged (not in custom settings)
+            $customSettings.property4 | Should -Be 'branch4'    # Unchanged (not in custom settings)
+            $customSettings.property5 | Should -Be 'multi5'     # Unchanged (not in custom settings)
+            $customSettings.property6 | Should -Be 'user6'      # Unchanged (not in custom settings)
+            $customSettings.property9 | Should -Be 'custom9'    # New property from custom settings
+
+            # Test customSettings with empty string (should not affect existing behavior)
+            $emptyCustomSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings ''
+            $emptyCustomSettings.property1 | Should -Be 'user1'      # Same as without custom settings
+            $emptyCustomSettings.property2 | Should -Be 'workflow2'  # Same as without custom settings
+            $emptyCustomSettings.property3 | Should -Be 'repo3'      # Same as without custom settings
+
+            # Test customSettings with array merging
+            $customArraySettingsJson = @{ "arr1" = @("custom1", "custom2") } | ConvertTo-Json -Depth 99
+            $customArraySettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -orgSettingsVariableValue (@{ "arr1" = @("org3") } | ConvertTo-Json -Depth 99) -customSettings $customArraySettingsJson
+            $customArraySettings.arr1 | Should -Be @("org3", "repo1", "repo2", "custom1", "custom2")  # Custom values are merged at the end
+
+            # Test customSettings with overwriteSettings to replace arrays
+            $customOverwriteSettingsJson = @{ "overwriteSettings" = @("arr1"); "arr1" = @("customonly1", "customonly2") } | ConvertTo-Json -Depth 99
+            $customOverwriteSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -orgSettingsVariableValue (@{ "arr1" = @("org3") } | ConvertTo-Json -Depth 99) -customSettings $customOverwriteSettingsJson
+            $customOverwriteSettings.arr1 | Should -Be @("customonly1", "customonly2")  # Array completely replaced by custom settings
+
+            # Test invalid customSettings JSON should throw
+            { ReadSettings -baseFolder $tempName -project 'Project' -customSettings 'invalid json' } | Should -Throw
+
+            # Test customSettings with complex object
+            $customComplexSettingsJson = @{
+                "deliverToAppSource" = @{
+                    "mainAppFolder" = "CustomApp"
+                    "productId" = "CustomProductId"
+                    "customProperty" = "CustomValue"
+                }
+            } | ConvertTo-Json -Depth 99
+            $customComplexSettings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName 'Workflow' -branchName 'dev' -userName 'user' -customSettings $customComplexSettingsJson
+            $customComplexSettings.deliverToAppSource.mainAppFolder | Should -Be 'CustomApp'          # Overrides default empty string
+            $customComplexSettings.deliverToAppSource.productId | Should -Be 'CustomProductId'        # Overrides default empty string
+            $customComplexSettings.deliverToAppSource.customProperty | Should -Be 'CustomValue'       # New property added
+            $customComplexSettings.deliverToAppSource.continuousDelivery | Should -Be $false          # Default value preserved (not overridden)
+
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Settings schema is valid' {
+        It 'Settings schema is valid' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             Test-Json -json $schema | Should -Be $true
         }
 
@@ -214,16 +280,16 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
-        It 'Default settings match schema' {
+        It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
         }
 
-        It 'Shell setting can only be pwsh or powershell' {
+        It 'Shell setting can only be pwsh or powershell' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.shell = 42
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/shell'"
@@ -231,19 +297,19 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $defaultSettings.shell = "random"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: The string value is not a match for the indicated regular expression at '/shell'"
             }
         }
 
-        It 'Projects setting is an array of strings' {
+        It 'Projects setting is an array of strings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             # If the projects setting is not an array, it should throw an error
             $defaultSettings = GetDefaultSettings
             $defaultSettings.projects = "not an array"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"string`" but should be `"array`" at '/projects'"
@@ -252,7 +318,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # If the projects setting is an array, but contains non-string values, it should throw an error
             $defaultSettings.projects = @("project1", 42)
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema
+                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/projects/1'"
@@ -260,9 +326,242 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # If the projects setting is an array of strings, it should pass the schema validation
             $defaultSettings.projects = @("project1")
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
             $defaultSettings.projects = @("project1", "project2")
-            Test-Json -json (ConvertTo-Json $defaultSettings) -schema $schema | Should -Be $true
+            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
+        }
+
+        It 'overwriteSettings property resets settings from destination object (simple types)' {
+            $dst = [ordered]@{
+                setting1 = "value1"
+                setting2 = "value2"
+                setting3 = "value3"
+            }
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("setting1","setting2","setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
+                setting1     = "newvalue1"
+                setting5     = "value5"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.setting1 | Should -Be 'newvalue1'   # Updated value
+            $dst.setting2 | Should -Be 'value2'      # Unchanged
+            $dst.setting3 | Should -Be 'value3'      # Unchanged
+            $dst.setting4 | Should -BeNullOrEmpty    # Did not exist, still does not exist
+            $dst.setting5 | Should -Be 'value5'      # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'overwriteSettings property resets settings from destination object (complex types: arrays)' {
+            # overwriteSettings should work for complex types (arrays)
+            $dst = [ordered]@{
+                complexSetting = @( "value1", "value2", "value3" )
+                setting3 = "value3"
+            }
+
+            $src = [PSCustomObject]@{
+                complexSetting = @( "newvalue1", "newvalue2" )
+                setting5 = "value5"
+            }
+
+            # Without using overwriteSettings, the complex settings are merged, not overwritten
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting | Should -Be @("value1", "value2", "value3", "newvalue1", "newvalue2") # Merged
+            $dst.setting3 | Should -Be 'value3'             # Unchanged
+            $dst.setting5 | Should -Be 'value5'             # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+
+            # Now use overwriteSettings to overwrite the complex setting
+            $dst = [ordered]@{
+                complexSetting = @( "value1", "value2", "value3" )
+                setting3 = "value3"
+            }
+
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("complexSetting")
+                complexSetting = @( "newvalue1", "newvalue2" )
+                setting5 = "value5"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting | Should -Be @("newvalue1", "newvalue2") # Overwritten
+            $dst.setting3 | Should -Be 'value3'             # Unchanged
+            $dst.setting5 | Should -Be 'value5'             # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'overwriteSettings property resets settings from destination object (complex types: objects)' {
+            # overwriteSettings should work for complex types (objects)
+            $dst = [ordered]@{
+                complexSetting = [ordered]@{
+                    setting1 = "value1"
+                    setting2 = "value2"
+                    setting3 = "value3"
+                }
+                setting4 = "value4"
+            }
+
+            $src = [PSCustomObject]@{
+                complexSetting = [PSCustomObject]@{
+                    setting1 = "newvalue1"
+                    setting2 = "newvalue2"
+                    setting5 = "value5"
+                }
+                setting6 = "value6"
+            }
+
+            # Without using overwriteSettings, the complex settings are merged, not replaced
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting.setting1 | Should -Be 'newvalue1'   # Updated value
+            $dst.complexSetting.setting2 | Should -Be 'newvalue2'   # Updated value
+            $dst.complexSetting.setting3 | Should -Be 'value3'      # Unchanged
+            $dst.complexSetting.setting5 | Should -Be 'value5'      # New setting added
+            $dst.setting4 | Should -Be 'value4'                     # Unchanged
+            $dst.setting6 | Should -Be 'value6'                     # New setting added
+
+            # Now use overwriteSettings to replace the complex setting
+            $dst = [ordered]@{
+                complexSetting = [PSCustomObject]@{
+                    setting1 = "value1"
+                    setting2 = "value2"
+                    setting3 = "value3"
+                }
+                setting4 = "value4"
+            }
+
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("complexSetting")
+                complexSetting = [PSCustomObject]@{
+                    setting1 = "newvalue1"
+                    setting2 = "newvalue2"
+                    setting5 = "value5"
+                }
+                setting6 = "value6"
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.complexSetting.setting1 | Should -Be 'newvalue1'   # Updated value
+            $dst.complexSetting.setting2 | Should -Be 'newvalue2'   #
+            $dst.complexSetting.setting3 | Should -BeNullOrEmpty    # Removed
+            $dst.complexSetting.setting5 | Should -Be 'value5'      # New setting added
+            $dst.setting4 | Should -Be 'value4'                     # Unchanged
+            $dst.setting6 | Should -Be 'value6'                     # New setting added
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'overwriteSettings property does not reset a setting if it does not exist in the source object' {
+            $dst = [ordered]@{
+                setting1 = @("value1.0", "value1.1")
+                setting2 = @("value2.0", "value2.1")
+            }
+            $src = [PSCustomObject]@{
+                overwriteSettings = @("setting2") # setting2 does not exist in src, should be ignored
+                setting1     = @("newvalue1.2", "newvalue1.3")
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.setting1 | Should -Be @('value1.0', 'value1.1', 'newvalue1.2', 'newvalue1.3') # Merged
+            $dst.setting2 | Should -Be @('value2.0', 'value2.1')                           # Unchanged
+
+            # overwriteSettings should never be added to the destination object
+            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+        }
+
+        It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            New-Item $githubFolder -ItemType Directory | Out-Null
+
+            # Create conditional settings with two blocks that both match and both have workflowDefaultInputs
+            $conditionalSettings = [ordered]@{
+                "conditionalSettings" = @(
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value1" }
+                            )
+                        }
+                    }
+                    @{
+                        "branches" = @( 'main' )
+                        "settings" = @{
+                            "workflowDefaultInputs" = @(
+                                @{ "name" = "input1"; "value" = "value2" },
+                                @{ "name" = "input2"; "value" = "value3" }
+                            )
+                        }
+                    }
+                )
+            }
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = $conditionalSettings | ConvertTo-Json -Depth 99
+
+            # Both conditional blocks match branch 'main', so both should be applied
+            $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName 'Workflow' -branchName 'main' -userName 'user'
+
+            # Verify array was merged - should have 3 entries total
+            $settings.workflowDefaultInputs | Should -Not -BeNullOrEmpty
+            $settings.workflowDefaultInputs.Count | Should -Be 3
+
+            # First entry from first conditional block
+            $settings.workflowDefaultInputs[0].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[0].value | Should -Be 'value1'
+
+            # Second entry from second conditional block
+            $settings.workflowDefaultInputs[1].name | Should -Be 'input1'
+            $settings.workflowDefaultInputs[1].value | Should -Be 'value2'
+
+            # Third entry from second conditional block
+            $settings.workflowDefaultInputs[2].name | Should -Be 'input2'
+            $settings.workflowDefaultInputs[2].value | Should -Be 'value3'
+
+            $ENV:ALGoRepoSettings = ''
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
+            Mock OutputWarning { }
+            Mock ConvertTo-Json { '{}' }
+
+            $settings = @{ "someProp" = "someValue" }
+
+            if ($PSVersionTable.PSVersion.Major -ge 7) {
+                Mock Test-Json { }
+                $settings | ValidateSettings
+                # On PS7+, Test-Json is called directly for validation
+                Should -Invoke -CommandName Test-Json -Times 1
+                Should -Invoke -CommandName ConvertTo-Json -Times 1
+            }
+            else {
+                # On PS < 7, validation is skipped entirely
+                $settings | ValidateSettings
+                Should -Invoke -CommandName ConvertTo-Json -Times 0
+            }
+
+            # Verify no warning was output
+            Should -Invoke -CommandName OutputWarning -Times 0
         }
     }
 }

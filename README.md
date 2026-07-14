@@ -21,7 +21,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 
 ## Usage scenarios
 
-1. [Create a new per-tenant extension (like AL Go) and start developing in VS Code](Scenarios/GetStarted.md)
+1. [Create a new per-tenant extension (like AL-Go) and start developing in VS Code](Scenarios/GetStarted.md)
 1. [Add a test app to an existing project](Scenarios/AddATestApp.md)
 1. [Register a customer sandbox environment for Continuous Deployment using S2S](Scenarios/RegisterSandboxEnvironment.md)
 1. [Create a release of your application](Scenarios/CreateRelease.md)
@@ -55,9 +55,9 @@ B. [Migrate a repository from Azure DevOps to AL-Go for GitHub with history](Sce
 
 # This project
 
-This project in the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
+This project is the main source repository for AL-Go for GitHub. This project is deployed on every release to a branch in the following repositories:
 
-- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) is the GitHub repository template for Per Tenant Extenstions. For creating a Per Tenant Extensions, this is your starting point.
+- [https://github.com/microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) is the GitHub repository template for Per Tenant Extensions. For creating a Per Tenant Extensions, this is your starting point.
 - [https://github.com/microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) is the GitHub repository template for AppSource apps. For creating an AppSource App, this is your starting point.
 - [https://github.com/microsoft/AL-Go-Actions](https://github.com/microsoft/AL-Go-Actions) is the GitHub repository containing the GitHub Actions used by the templates above.
 

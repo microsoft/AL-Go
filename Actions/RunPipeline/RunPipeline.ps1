@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "ArtifactUrl to use for the build", Mandatory = $false)]
@@ -7,14 +7,16 @@
     [string] $project = "",
     [Parameter(HelpMessage = "Specifies a mode to use for the build steps", Mandatory = $false)]
     [string] $buildMode = 'Default',
-    [Parameter(HelpMessage = "A JSON-formatted list of apps to install", Mandatory = $false)]
-    [string] $installAppsJson = '[]',
-    [Parameter(HelpMessage = "A JSON-formatted list of test apps to install", Mandatory = $false)]
-    [string] $installTestAppsJson = '[]',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of apps to install", Mandatory = $false)]
+    [string] $installAppsJson = '',
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to install", Mandatory = $false)]
+    [string] $installTestAppsJson = '',
     [Parameter(HelpMessage = "RunId of the baseline workflow run", Mandatory = $false)]
     [string] $baselineWorkflowRunId = '0',
     [Parameter(HelpMessage = "SHA of the baseline workflow run", Mandatory = $false)]
-    [string] $baselineWorkflowSHA = ''
+    [string] $baselineWorkflowSHA = '',
+    [Parameter(HelpMessage = "Path to folder containing previous release apps for upgrade testing", Mandatory = $false)]
+    [string] $previousAppsPath = ''
 )
 
 $containerBaseFolder = $null
@@ -27,6 +29,7 @@ try {
     Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 
     if ($isWindows) {
+        Assert-DockerIsRunning
         # Pull docker image in the background
         $genericImageName = Get-BestGenericImageName
         Start-Job -ScriptBlock {
@@ -84,9 +87,12 @@ try {
         $secrets = @{}
     }
 
-    $appBuild = $settings.appBuild
-    $appRevision = $settings.appRevision
-    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','*keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
+    if ($settings.workspaceCompilation.enabled -and $settings.doNotPublishApps) {
+        OutputColor -Message "Workspace compilation complete; doNotPublishApps is set. Exiting." -Color Yellow
+        return
+    }
+
+    'licenseFileUrl','codeSignCertificateUrl','codeSignCertificatePassword','keyVaultCertificateUrl','keyVaultCertificatePassword','keyVaultClientId','gitHubPackagesContext','applicationInsightsConnectionString' | ForEach-Object {
         # Secrets might not be read during Pull Request runs
         if ($secrets.Keys -contains $_) {
             $value = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$_"))
@@ -94,9 +100,8 @@ try {
         else {
             $value = ""
         }
-        # Secrets preceded by an asterisk are returned encrypted.
-        # Variable name should not include the asterisk
-        Set-Variable -Name $_.TrimStart('*') -Value $value
+
+        Set-Variable -Name $_ -Value $value
     }
 
     $analyzeRepoParams = @{}
@@ -119,15 +124,30 @@ try {
     $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @analyzeRepoParams
     $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
+    $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
     if ((-not $settings.appFolders) -and (-not $settings.testFolders) -and (-not $settings.bcptTestFolders)) {
-        Write-Host "Repository is empty, exiting"
-        exit
+        if (-not $isTestProject) {
+            Write-Host "Repository is empty, exiting"
+            exit
+        }
+        Write-Host "Test project: no local app/test folders, will install and test apps from upstream projects"
     }
 
     $buildArtifactFolder = Join-Path $projectPath ".buildartifacts"
-    New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    if (-not (Test-Path $buildArtifactFolder)) {
+        New-Item $buildArtifactFolder -ItemType Directory | Out-Null
+    } elseif(-not ($settings.workspaceCompilation.enabled)) {
+        OutputDebug -message "Build artifacts folder $buildArtifactFolder already exists. Previous build artifacts might interfere with the current build."
+    }
 
-    if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
+    # When using workspace compilation, apps are already compiled in .buildartifacts.
+    # Pass appFolders/testFolders to Run-AlPipeline so its prebuilt detection picks them up
+    # and publishes them through the proper upgrade testing path.
+    $appFolders = $settings.appFolders
+    $testFolders = $settings.testFolders
+    $bcptTestFolders = $settings.bcptTestFolders
+
+    if ((-not $settings.workspaceCompilation.enabled) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
             $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
@@ -163,7 +183,13 @@ try {
                 }
             }
             else {
-                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value ''
+                $tokenValue = ''
+                if ($trustedNuGetFeed.url -like 'https://nuget.pkg.github.com/*') {
+                    # GitHub Packages might be public, but they still require a token with read:packages permissions (not necessarily to the specific feed)
+                    # instead of using a blank token, we use the GitHub token (which has read packages permissions) provided to the action
+                    $tokenValue = $token
+                }
+                $trustedNuGetFeed | Add-Member -MemberType NoteProperty -Name 'Token' -Value $tokenValue
             }
             if ($trustedNuGetFeed.PSObject.Properties.Name -eq 'AuthTokenSecret' -and $trustedNuGetFeed.AuthTokenSecret) {
                 $authTokenSecret = $trustedNuGetFeed.AuthTokenSecret
@@ -188,37 +214,37 @@ try {
     }
 
     $install = @{
-        "Apps" = $settings.installApps + @($installAppsJson | ConvertFrom-Json)
-        "TestApps" = $settings.installTestApps + @($installTestAppsJson | ConvertFrom-Json)
+        "Apps" = @()
+        "TestApps" = @()
     }
 
-    # Replace secret names in install.apps and install.testApps
-    foreach($list in @('Apps','TestApps')) {
-        $install."$list" = @($install."$list" | ForEach-Object {
-            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-            $url = $_
-            if ($url -match $pattern) {
-                $finalUrl = $url.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($matches[2])")))
-            }
-            else {
-                $finalUrl = $url
-            }
-            # Check validity of URL
-            if ($finalUrl -like 'http*://*') {
-                try {
-                    Invoke-WebRequest -Method Head -UseBasicParsing -Uri $finalUrl | Out-Null
-                }
-                catch {
-                    throw "Setting: install$($list) contains an inaccessible URL: $($url). Error was: $($_.Exception.Message)"
-                }
-            }
-            return $finalUrl
-        })
+    if ($installAppsJson -and (Test-Path $installAppsJson)) {
+        try {
+            $install.Apps = Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
+        }
+    }
+
+    if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+        try {
+            $install.TestApps = Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json
+        }
+        catch {
+            throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
+        }
+    }
+
+    if ($settings.runTestsInAllInstalledTestApps) {
+        # Trim parentheses from test apps. Run-ALPipeline will skip running tests in test apps wrapped in ()
+        $install.TestApps = $install.TestApps | ForEach-Object { $_.TrimStart("(").TrimEnd(")") }
     }
 
     # Analyze app.json version dependencies before launching pipeline
 
     # Analyze InstallApps and InstallTestApps before launching pipeline
+
 
     # Check if codeSignCertificateUrl+Password is used (and defined)
     if (!$settings.doNotSignApps -and $codeSignCertificateUrl -and $codeSignCertificatePassword -and !$settings.keyVaultCodesignCertificateName) {
@@ -235,6 +261,8 @@ try {
     }
 
     if ($keyVaultCertificateUrl -and $keyVaultCertificatePassword -and $keyVaultClientId) {
+        Trace-Information -Message "Enabling key vault access for apps"
+
         $runAlPipelineParams += @{
             "KeyVaultCertPfxFile" = $keyVaultCertificateUrl
             "keyVaultCertPfxPassword" = ConvertTo-SecureString -string $keyVaultCertificatePassword
@@ -244,27 +272,17 @@ try {
 
     $previousApps = @()
     if (!$settings.skipUpgrade) {
-        Write-Host "::group::Locating previous release"
-        try {
-            $latestRelease = GetLatestRelease -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -ref $ENV:GITHUB_REF_NAME
-            if ($latestRelease) {
-                Write-Host "Using $($latestRelease.name) (tag $($latestRelease.tag_name)) as previous release"
-                $artifactsFolder = Join-Path $baseFolder "artifacts"
-                if(-not (Test-Path $artifactsFolder)) {
-                    New-Item $artifactsFolder -ItemType Directory | Out-Null
-                }
-                DownloadRelease -token $token -projects $project -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -release $latestRelease -path $artifactsFolder -mask "Apps"
-                $previousApps += @(Get-ChildItem -Path $artifactsFolder | ForEach-Object { $_.FullName })
+        if ($previousAppsPath -and (Test-Path $previousAppsPath)) {
+            # Use previously downloaded release apps
+            $previousApps = @(Get-ChildItem -Path $previousAppsPath -Recurse -Filter "*.app" | ForEach-Object { $_.FullName })
+            if ($previousApps.Count -gt 0) {
+                Write-Host "Using $($previousApps.Count) previous release app(s) from $previousAppsPath"
+            } else {
+                OutputWarning -message "No .app files found in '$previousAppsPath' for upgrade testing."
             }
-            else {
-                OutputWarning -message "No previous release found"
-            }
+        } else {
+            OutputWarning -message "Could not locate previous release apps for upgrade testing."
         }
-        catch {
-            OutputError -message "Error trying to locate previous release. Error was $($_.Exception.Message)"
-            exit
-        }
-        Write-Host "::endgroup::"
     }
 
     $additionalCountries = $settings.additionalCountries
@@ -273,28 +291,16 @@ try {
     if (-not $gitHubHostedRunner) {
         $imageName = $settings.cacheImageName
         if ($imageName) {
-            Write-Host "::group::Flush ContainerHelper Cache"
+            OutputGroupStart -Message "Flush ContainerHelper Cache"
             Flush-ContainerHelperCache -cache 'all,exitedcontainers' -keepdays $settings.cacheKeepDays
-            Write-Host "::endgroup::"
+            OutputGroupEnd
         }
     }
     $authContext = $null
     $environmentName = ""
     $CreateRuntimePackages = $false
 
-    if ($settings.versioningStrategy -eq -1) {
-        $artifactVersion = [Version]$settings.artifact.Split('/')[4]
-        $runAlPipelineParams += @{
-            "appVersion" = "$($artifactVersion.Major).$($artifactVersion.Minor)"
-        }
-        $appBuild = $artifactVersion.Build
-        $appRevision = $artifactVersion.Revision
-    }
-    elseif (($settings.versioningStrategy -band 16) -eq 16) {
-        $runAlPipelineParams += @{
-            "appVersion" = $settings.repoVersion
-        }
-    }
+    $versionNumber = Get-VersionNumber -Settings $settings
 
     $allTestResults = "testresults*.xml"
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
@@ -309,18 +315,9 @@ try {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
     Set-Location $projectPath
-    $runAlPipelineOverrides | ForEach-Object {
-        $scriptName = $_
-        $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-        if (Test-Path -Path $scriptPath -Type Leaf) {
-            Write-Host "Add override for $scriptName"
-            Trace-Information -Message "Using override for $scriptName"
-
-            $runAlPipelineParams += @{
-                "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-            }
-        }
-    }
+    $scriptOverrides = Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides
+    $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
+    $runAlPipelineParams += $scriptOverrides
 
     if ($runAlPipelineParams.Keys -notcontains 'RemoveBcContainer') {
         $runAlPipelineParams += @{
@@ -412,7 +409,11 @@ try {
                         }
                     }
                     if ($parameters.ContainsKey('containerName')) {
-                        Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams -ErrorAction SilentlyContinue
+                        try {
+                            Publish-BcNuGetPackageToContainer -containerName $parameters.containerName -tenant $parameters.tenant -skipVerification -appSymbolsFolder $parameters.appSymbolsFolder @publishParams
+                        } catch {
+                            OutputWarning -message "Failed to publish app $appid version $version to container $($parameters.containerName). Error was: $($_.Exception.Message)."
+                        }
                     }
                     else {
                         if ($parameters.ContainsKey('installedApps') -and $parameters.ContainsKey('installedCountry')) {
@@ -450,26 +451,21 @@ try {
     "enablePerTenantExtensionCop",
     "enableUICop",
     "enableCodeAnalyzersOnTestApps",
-    "useCompilerFolder" | ForEach-Object {
+    "useCompilerFolder",
+    "reportSuppressedDiagnostics" | ForEach-Object {
         if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
     }
 
     if ($buildMode -eq 'Translated') {
-        if ($runAlPipelineParams.Keys -notcontains 'features') {
-            $runAlPipelineParams["features"] = @()
-        }
         Write-Host "Adding translationfile feature"
-        $runAlPipelineParams["features"] += "translationfile"
+        $settings.features += "translationfile"
     }
 
-    if ($runAlPipelineParams.Keys -notcontains 'preprocessorsymbols') {
-        $runAlPipelineParams["preprocessorsymbols"] = @()
-    }
-
-    if ($settings.ContainsKey('preprocessorSymbols')) {
+    if ($settings.preprocessorSymbols.Count -gt 0) {
         Write-Host "Adding Preprocessor symbols : $($settings.preprocessorSymbols -join ',')"
-        $runAlPipelineParams["preprocessorsymbols"] += $settings.preprocessorSymbols
     }
+    $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
+    $runAlPipelineParams["features"] = $settings.features
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
@@ -492,9 +488,9 @@ try {
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
         -previousApps $previousApps `
-        -appFolders $settings.appFolders `
-        -testFolders $settings.testFolders `
-        -bcptTestFolders $settings.bcptTestFolders `
+        -appFolders $appFolders `
+        -testFolders $testFolders `
+        -bcptTestFolders $bcptTestFolders `
         -pageScriptingTests $settings.pageScriptingTests `
         -restoreDatabases $settings.restoreDatabases `
         -buildOutputFile $buildOutputFile `
@@ -515,7 +511,7 @@ try {
         -pageScriptingTestResultsFile (Join-Path $buildArtifactFolder 'PageScriptingTestResults.xml') `
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
-        -appBuild $appBuild -appRevision $appRevision `
+        -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
         -uninstallRemovedApps
 
     if ($containerBaseFolder) {

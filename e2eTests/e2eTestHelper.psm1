@@ -1,8 +1,8 @@
 ﻿$githubOwner = "githubOwner"
 $token = "DefaultToken"
 $defaultRepository = "repo"
-$defaultApplication = "22.0.0.0"
-$defaultRuntime = "10.0"
+$defaultApplication = "27.0.0.0"
+$defaultRuntime = "16.0"
 $defaultPublisher = "MS Test"
 $lastTokenRefresh = 0
 
@@ -272,7 +272,8 @@ function WaitWorkflow {
         [string] $repository,
         [string] $runid,
         [switch] $noDelay,
-        [switch] $noError
+        [switch] $noError,
+        [switch] $noRerun
     )
 
     $delay = !$noDelay.IsPresent
@@ -291,17 +292,24 @@ function WaitWorkflow {
         $url = "https://api.github.com/repos/$repository/actions/runs/$runid"
         $run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json)
         if ($run.status -ne $status) {
-            if ($status) { Write-Host }
             $status = $run.status
-            Write-Host -NoNewline "$status"
         }
-        Write-Host -NoNewline "."
+        Write-Host "Workflow run is in status $status"
+
         $delay = $true
     } while ($run.status -eq "queued" -or $run.status -eq "in_progress")
-    Write-Host
-    Write-Host $run.conclusion
+
+    Write-Host "Workflow conclusion: $($run.conclusion)"
+
     if ($run.conclusion -ne "Success" -and $run.conclusion -ne "cancelled") {
-        if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
+        if (-not $noRerun.IsPresent) {
+            Write-Host "::warning::Rerunning workflow: $($run.name) run $($run.id), conclusion $($run.conclusion), url = $($run.html_url)"
+            invoke-gh api --method POST /repos/$repository/actions/runs/$runid/rerun | Out-Null
+            WaitWorkflow -repository $repository -runid $runid -noDelay:$noDelay -noError:$noError -noRerun
+        }
+        else {
+            if (-not $noError.IsPresent) { throw "Workflow $($run.name), conclusion $($run.conclusion), url = $($run.html_url)" }
+        }
     }
 }
 
@@ -346,9 +354,9 @@ function CreateNewAppInFolder {
         "name" = $name
         "version" = $version
         "publisher" = $publisher
+        "runtime" = $runtime
         "dependencies" = $dependencies
         "application" = $application
-        "runtime" = $runtime
         "idRanges" = @( @{ "from" = $objID; "to" = $objID } )
         "resourceExposurePolicy" = @{ "allowDebugging" = $true; "allowDownloadingSource" = $true; "includeSourceInSymbolFile" = $true }
     }
@@ -508,6 +516,7 @@ function CreateAlGoRepository {
             [System.IO.File]::WriteAllText($_.FullName, $content)
         }
     }
+
     # Disable telemetry AL-Go and BcContainerHelper telemetry when running end-2-end tests
     $repoSettings | Add-Member -MemberType NoteProperty -Name "MicrosoftTelemetryConnectionString" -Value ""
     $repoSettings | Set-JsonContentLF -path $repoSettingsFile
@@ -517,8 +526,8 @@ function CreateAlGoRepository {
 
     RefreshToken -repository $repository
 
-    invoke-git add *
-    invoke-git commit --allow-empty -m 'init'
+    invoke-git -silent add *
+    invoke-git -silent commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner) {
         if ($github) {

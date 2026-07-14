@@ -145,6 +145,32 @@ Which basically launches a script located in the script folder in the repository
 > [!CAUTION]
 > Script overrides will almost certainly be broken in the future. The current script overrides is very much tied to the current implementation of the `Run-AlPipeline` function in BcContainerHelper. In the future, we will move this functionality to GitHub actions and no longer depend on BcContainerHelper and Run-AlPipeline. At that time, these script overrides will have to be changed to follow the new implementation.
 
+#### AL-Go hooks
+
+In addition to the BcContainerHelper-based `Run-AlPipeline` script overrides described above, AL-Go for GitHub provides a set of AL-Go hooks that let you plug custom logic into well-known extension points in AL-Go workflows. Hooks are independent of BcContainerHelper and are invoked by the [`RunHook`](https://github.com/microsoft/AL-Go-Actions/tree/main/RunHook) action; they will continue to work after BcContainerHelper is deprecated.
+
+To use one, add a script named `<HookName>.ps1` in your project's `.AL-Go` folder. The script receives a single `[Hashtable] $parameters` argument. The hashtable always contains at least `project` (the project folder, relative to the repository root); additional keys may be added over time or supplied by callers.
+
+```powershell
+Param([Hashtable] $parameters)
+
+Write-Host "Running custom logic for project '$($parameters.project)'"
+```
+
+The currently supported AL-Go hooks are:
+
+| Hook | Where it runs | Notes |
+| :-- | :-- | :-- |
+| `BuildInitialize` | Build workflow, immediately after `Read settings` | AL-Go settings are available as environment variables; secrets are not yet read at this point. |
+
+If the script does not exist in `.AL-Go`, the corresponding workflow step is a silent no-op.
+
+> [!WARNING]
+> AL-Go hooks are an **experimental** feature. The set of supported hook names, the parameters passed to hook scripts, the location and timing of hook invocations, and the names of the underlying action and helpers may all change in future versions of AL-Go for GitHub. Anything you build on top of this first iteration may break in a later update.
+
+> [!NOTE]
+> AL-Go hooks are still a new feature and will be expanded as functionality gets moved out of BcContainerHelper.
+
 ### Adding custom jobs
 
 You can also add custom jobs to any of the existing AL-Go for GitHub workflows. Custom jobs can depend on other jobs and other jobs can be made to depend on custom jobs. Custom jobs need to be named `CustomJob<something>`, but can specify another name to be shown in the UI. Example:
@@ -200,6 +226,129 @@ Repositories based on your custom template will notify you that changes are avai
 
 > [!TIP]
 > You can setup the Update AL-Go System Files workflow to run on a schedule to uptake new releases of AL-Go for GitHub regularly.
+
+## Using custom template files
+
+When updating AL-Go for GitHub, only specific system files from the template repository are synced to your end repository by default. Files such as `README.md`, `.gitignore`, and other documentation or non-system files are not updated by AL-Go for GitHub. By default, AL-Go syncs workflow files in `.github/workflows`, PowerShell scripts in `.github` and `.AL-Go`, and configuration files required for AL-Go operations. When using custom template repositories, you may need to add additional files related to AL-Go for GitHub, such as script overrides, complementary workflows, or centrally managed files not part of the official AL-Go templates.
+
+In order to instruct AL-Go which files to look for at the template repository, you need to define the `customALGoFiles` setting. The setting is an object that can contain two properties: `filesToInclude` and `filesToExclude`.
+
+`filesToInclude`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to include (create/update). Every item in the array may contain the following properties:
+
+- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. `*` characters are not supported. _Example_: `src/scripts`.
+- `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `*.ps1` or `fileToUpdate.ps1`.
+- `destinationFolder`: A path to a folder, relative to repository that is being updated, where the files should be placed. If not specified, defaults to the same as the source file folder. _Example_: `src/templateScripts`.
+- `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
+
+> [!NOTE]
+> `filesToInclude` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToInclude`, AL-Go for GitHub will ignore them and you might have to remove them manually.
+
+`filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) from `filesToInclude`. Every item in the array may contain the following properties:
+
+- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. _Example_: `src/scripts`.
+- `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `notRelevantScript.ps1` or `*-internal.ps1`
+
+> [!NOTE] `filesToExclude` is an array of file configurations already included in `filesToInclude`. These files are specifically marked to be excluded from the update process.
+> This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
+
+The following table summarizes how AL-Go for GitHub manages file updates and exclusions when using custom template files. Say, there is a file (e.g. `file.ps1`) in the template repository.
+
+| File is present in end repo | File is matched by `filesToInclude` | File is matched by `filesToExclude` | Result |
+|---|---|---|---|
+| Yes/No | Yes | No | The file is **updated/created** in the end repo |
+| Yes | Yes | Yes | The file is **removed** from the end repo, as it's matched for exclusion |
+| Yes | No | Yes | The files is **_not_** removed as it was not matched as update |
+| No | Yes/No | Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
+
+### Examples of using custom template files
+
+Below are examples of how to use the `filesToInclude` and `filesToExclude` settings in your AL-Go configuration.
+
+#### Example 1: Updating specific scripts for all projects
+
+```json
+"customALGoFiles": {
+  "filesToInclude": [
+    {
+      "sourceFolder": ".github/customScripts",
+      "filter": "*.ps1",
+      "destinationFolder": ".AL-Go/scripts",
+      "perProject": true
+    }
+  ]
+}
+```
+
+This configuration will copy all PowerShell scripts from `.github/customScripts` in your template repository to the `.AL-Go/scripts` folder in each project of your target repository.
+
+#### Example 2: Excluding a specific script from updates
+
+```json
+"customALGoFiles": {
+  "filesToInclude": [
+    {
+      "sourceFolder": ".github/customScripts",
+      "filter": "*.ps1",
+      "destinationFolder": ".AL-Go/scripts",
+      "perProject": true
+    }
+  ],
+  "filesToExclude": [
+    {
+      "sourceFolder": ".github/customScripts",
+      "filter": "DoNotPropagate.ps1"
+    }
+  ]
+}
+```
+
+This will update all `.ps1` scripts except `DoNotPropagate.ps1`, which will be excluded from the update process.
+
+#### Example 3: Updating workflow files and excluding one
+
+```json
+"customALGoFiles": {
+  "filesToInclude": [],
+  "filesToExclude": [
+    {
+      "sourceFolder": ".github/workflows",
+      "filter": "experimental-workflow.yaml"
+    }
+  ]
+}
+```
+
+All workflow YAML files will be updated except `experimental-workflow.yaml`, which will be removed from the target repository if present.
+Note that AL-Go for GitHub already syncs all workflow files under `.github/workflows` by default, so you don't need to specify `filesToInclude`; however, any files matched by `filesToExclude` will be excluded from this default sync.
+
+#### Example 4: Multiple update and exclude rules
+
+```json
+"customALGoFiles": {
+  "filesToInclude": [
+    {
+      "sourceFolder": "shared/config",
+      "filter": "*.json",
+      "destinationFolder": "config"
+    },
+    {
+      "sourceFolder": ".github/scripts",
+      "filter": "*.ps1",
+      "destinationFolder": ".github/scripts"
+    }
+  ],
+  "filesToExclude": [
+    {
+      "sourceFolder": "shared/config",
+      "filter": "legacy-config.json"
+    }
+  ]
+}
+```
+
+This configuration updates all JSON files from `shared/config` and all PowerShell scripts from `.github/scripts`, but excludes `legacy-config.json` from being updated or created.
+
+These examples demonstrate how you can fine-tune which files are propagated from your template repository and which are excluded, giving you granular control over your AL-Go customization process.
 
 ## Forking AL-Go for GitHub and making your "own" **public** version
 

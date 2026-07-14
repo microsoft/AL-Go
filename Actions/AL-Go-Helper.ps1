@@ -27,12 +27,13 @@ $RepoSettingsFile = Join-Path '.github' 'AL-Go-Settings.json'
 $defaultCICDPushBranches = @( 'main', 'release/*', 'feature/*' )
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'defaultCICDPullRequestBranches', Justification = 'False positive.')]
 $defaultCICDPullRequestBranches = @( 'main' )
-$defaultBcContainerHelperVersion = "https://github.com/microsoft/navcontainerhelper/archive/refs/heads/generate-app-dependencies.zip" # Must be double quotes. Will be replaced by BcContainerHelperVersion if necessary in the deploy step - ex. "https://github.com/organization/navcontainerhelper/archive/refs/heads/branch.zip"
+$defaultBcContainerHelperVersion = "preview"
 $notSecretProperties = @("Scopes","TenantId","BlobName","ContainerName","StorageAccountName","ServerUrl","ppUserName","GitHubAppClientId","EnvironmentName")
 
 $runAlPipelineOverrides = @(
     "DockerPull"
     "NewBcContainer"
+    "NewBcCompilerFolder"
     "ImportTestToolkitToBcContainer"
     "CompileAppInBcContainer"
     "GetBcContainerAppInfo"
@@ -43,13 +44,154 @@ $runAlPipelineOverrides = @(
     "ImportTestDataInBcContainer"
     "RunTestsInBcContainer"
     "GetBcContainerAppRuntimePackage"
+    "GetBcContainerEventLog"
     "RemoveBcContainer"
+    "RemoveBcCompilerFolder"
     "InstallMissingDependencies"
     "PreCompileApp"
     "PostCompileApp"
     "PipelineInitialize"
     "PipelineFinalize"
 )
+
+# AL-Go hooks (independent of BcContainerHelper / Run-AlPipeline).
+# Each entry must correspond to a script named <Name>.ps1 in the project's
+# .AL-Go folder. Hook scripts are invoked with a single [Hashtable]
+# $parameters argument.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alGoHooks', Justification = 'Used by RunHook action and Invoke-ALGoHook helper.')]
+$alGoHooks = @(
+    "BuildInitialize"
+)
+
+<#
+    .SYNOPSIS
+        Gets script overrides from the AL-Go folder.
+    .DESCRIPTION
+        Checks the specified AL-Go folder for .ps1 scripts matching the provided override names.
+        Returns a hashtable mapping each found override name to its script block.
+    .PARAMETER ALGoFolderName
+        The folder where the AL-Go scripts are located.
+    .PARAMETER OverrideScriptNames
+        An array of script names to look for (without .ps1 extension).
+    .OUTPUTS
+        Hashtable with override script names as keys and their script blocks as values.
+#>
+function Get-ScriptOverrides() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALGoFolderName,
+        [Parameter(Mandatory = $true)]
+        [string[]] $OverrideScriptNames
+    )
+    $overrides = @{}
+    foreach ($scriptName in $OverrideScriptNames) {
+        $scriptPath = Join-Path $ALGoFolderName "$scriptName.ps1"
+        if (Test-Path -Path $scriptPath -Type Leaf) {
+            OutputDebug "Add override for $scriptName ($scriptPath)"
+            $scriptBlock = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
+            if (-not $scriptBlock) {
+                OutputError -message "Failed to get scriptblock for $scriptName.ps1, please check the override for validity."
+            }
+            $overrides[$scriptName] = $scriptBlock
+        }
+    }
+    return $overrides
+}
+
+<#
+    .SYNOPSIS
+        Invokes a single AL-Go hook script if it exists.
+    .DESCRIPTION
+        Looks for a script named <HookName>.ps1 in the specified AL-Go folder
+        using Get-ScriptOverrides. If the script exists, it is invoked with a
+        single [Hashtable] $parameters argument. If the script does not
+        exist, the function silently returns without taking any action -
+        callers can therefore invoke this unconditionally from workflows or
+        other actions.
+    .PARAMETER ALGoFolderName
+        The folder where AL-Go hook scripts are located (typically the
+        project's .AL-Go folder).
+    .PARAMETER HookName
+        The name of the hook script to invoke (without the .ps1 extension).
+    .PARAMETER Parameters
+        Optional hashtable of parameters to pass to the hook script.
+    .EXAMPLE
+        Invoke-ScriptHook -ALGoFolderName '.AL-Go' -HookName 'BuildInitialize' -Parameters @{ project = '.' }
+#>
+function Invoke-ScriptHook() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALGoFolderName,
+        [Parameter(Mandatory = $true)]
+        [string] $HookName,
+        [Parameter(Mandatory = $false)]
+        [hashtable] $Parameters = @{}
+    )
+    $hooks = Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames @($HookName)
+    if (-not $hooks.ContainsKey($HookName)) {
+        OutputDebug "No hook script '$HookName.ps1' found in '$ALGoFolderName' - skipping."
+        return
+    }
+    Trace-Information -Message "Using hook for $HookName"
+    Write-Host "Invoking hook '$HookName'"
+    $scriptBlock = $hooks[$HookName]
+    Invoke-Command -ScriptBlock $scriptBlock -ArgumentList $Parameters
+}
+
+<#
+    .SYNOPSIS
+        Invokes an AL-Go hook for a given project.
+    .DESCRIPTION
+        High-level entry point for running an AL-Go hook (independent of
+        BcContainerHelper). Validates the requested hook name against the
+        $alGoHooks allow-list, resolves the project's .AL-Go folder against
+        the repository base path (Get-BasePath), and delegates to
+        Invoke-ScriptHook. If the hook script does not exist, this is a
+        silent no-op.
+    .PARAMETER Project
+        Project folder path, relative to the repository base path. Defaults to '.'.
+    .PARAMETER HookName
+        Name of the hook to run. Must be one of the values in $alGoHooks.
+    .PARAMETER Parameters
+        Optional hashtable of parameters to pass to the hook script.
+    .EXAMPLE
+        Invoke-ALGoHook -Project '.' -HookName 'BuildInitialize' -Parameters @{ project = '.' }
+#>
+function Invoke-ALGoHook() {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string] $Project = ".",
+        [Parameter(Mandatory = $true)]
+        [string] $HookName,
+        [Parameter(Mandatory = $false)]
+        [hashtable] $Parameters = @{}
+    )
+    if ($alGoHooks -notcontains $HookName) {
+        throw "Hook name '$HookName' is not a recognized AL-Go hook. Allowed values: $($alGoHooks -join ', ')."
+    }
+    $baseFolder = Get-BasePath
+    $projectPath = Join-Path $baseFolder $Project
+    $alGoFolder = Join-Path $projectPath $ALGoFolderName
+
+    # Populate default context keys so hook authors can rely on them being
+    # present. Caller-supplied values in $Parameters take precedence.
+    $effectiveParameters = @{
+        project = $Project
+    }
+    foreach ($key in $Parameters.Keys) {
+        $effectiveParameters[$key] = $Parameters[$key]
+    }
+
+    # Run the hook with the project folder as the current working directory
+    # so project-relative paths in user scripts resolve naturally.
+    Push-Location $projectPath
+    try {
+        Invoke-ScriptHook -ALGoFolderName $alGoFolder -HookName $HookName -Parameters $effectiveParameters
+    }
+    finally {
+        Pop-Location
+    }
+}
 
 # Well known AppIds
 $platformAppId = "8874ed3a-0643-4247-9ced-7a7002f7135d"
@@ -187,6 +329,15 @@ function ConvertTo-HashTable() {
     }
 }
 
+function Get-CurrentBranchName {
+    # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+    $branchName = $ENV:GITHUB_HEAD_REF
+    if (!$branchName) {
+        $branchName = $ENV:GITHUB_REF_NAME
+    }
+    return $branchName.Replace('\', '_').Replace('/', '_')
+}
+
 function GetUniqueFolderName {
     Param(
         [string] $baseFolder,
@@ -296,16 +447,21 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
         $webclient = New-Object System.Net.WebClient
         if ($bcContainerHelperVersion -like "https://*") {
             # Use temp space for private versions
-            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $tempName = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
             Write-Host "Downloading BcContainerHelper developer version from $bcContainerHelperVersion"
             try {
-                $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
+                Invoke-CommandWithRetry -ScriptBlock {
+                    $webclient.DownloadFile($bcContainerHelperVersion, "$tempName.zip")
+                } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 30
             }
             catch {
                 $tempName = Join-Path $bcContainerHelperRootFolder ([Guid]::NewGuid().ToString())
                 $bcContainerHelperVersion = "preview"
                 Write-Host "Download failed, downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-                $webclient.DownloadFile("https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+                $bcContainerHelperDownloadUrl = "https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip"
+                Invoke-CommandWithRetry -ScriptBlock {
+                    $webclient.DownloadFile($bcContainerHelperDownloadUrl, "$tempName.zip")
+                } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 30
             }
         }
         else {
@@ -315,7 +471,10 @@ function GetBcContainerHelperPath([string] $bcContainerHelperVersion) {
                 $bcContainerHelperVersion = 'preview'
             }
             Write-Host "Downloading BcContainerHelper $bcContainerHelperVersion version from Blob Storage"
-            $webclient.DownloadFile("https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip", "$tempName.zip")
+            $bcContainerHelperDownloadUrl = "https://bccontainerhelper-addgd5gzaxf9fneh.b02.azurefd.net/public/$($bcContainerHelperVersion).zip"
+            Invoke-CommandWithRetry -ScriptBlock {
+                $webclient.DownloadFile($bcContainerHelperDownloadUrl, "$tempName.zip")
+            } -RetryCount 3 -FirstDelay 5 -MaxWaitBetweenRetries 30
         }
         Expand-7zipArchive -Path "$tempName.zip" -DestinationPath $tempName
         $bcContainerHelperPath = (Get-Item -Path (Join-Path $tempName "*\BcContainerHelper.ps1")).FullName
@@ -368,9 +527,9 @@ function DownloadAndImportBcContainerHelper([string] $baseFolder = $ENV:GITHUB_W
     # Default BcContainerHelper Version is hardcoded in AL-Go-Helper (replaced during AL-Go deploy)
     $bcContainerHelperVersion = $defaultBcContainerHelperVersion
 
-    if ("$env:settings" -ne "") {
-        $repoSettingsPath = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::NewGuid().ToString()).json"
-        $env:settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
+    if ("$env:Settings" -ne "") {
+        $repoSettingsPath = Join-Path (GetTemporaryPath) "$([Guid]::NewGuid().ToString()).json"
+        $env:Settings | Set-Content -Path $repoSettingsPath -Encoding UTF8
     }
     else {
         $repoSettingsPath = Join-Path $baseFolder $repoSettingsFile
@@ -714,12 +873,33 @@ function AnalyzeRepo {
         if (!$settings.doNotBuildTests) { Write-Host "No performance test apps found in bcptTestFolders in $ALGoSettingsFile" }
         $settings.doNotRunBcptTests = $true
     }
+    $isTestProject = $settings.projectsToTest -and $settings.projectsToTest.Count -gt 0
     if (!$settings.doNotRunTests -and -not $settings.testFolders) {
-        if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
-        $settings.doNotRunTests = $true
+        if ($isTestProject) {
+            # Test projects run tests from upstream projects via installTestApps, not from local testFolders
+            Write-Host "Test project: tests will be run from installed test apps"
+            if (-not $settings.installTestRunner) {
+                Write-Host "Test project: installTestRunner will be set to true as it is required to run tests."
+            }
+            $settings.installTestRunner = $true
+            if (-not $settings.installTestFramework) {
+                Write-Host "Test project: installTestFramework is not set. Add it to the project settings if upstream test apps depend on the test framework."
+            }
+            if (-not $settings.installTestLibraries) {
+                Write-Host "Test project: installTestLibraries is not set. Add it to the project settings if upstream test apps depend on test libraries."
+            }
+            if (-not $settings.runTestsInAllInstalledTestApps) {
+                Write-Host "runTestsInAllInstalledTestApps is false, but will be forced to true as no tests would be run otherwise."
+            }
+            $settings.runTestsInAllInstalledTestApps = $true
+        }
+        else {
+            if (-not ($doNotIssueWarnings -or $settings.doNotBuildTests)) { OutputWarning -message "No test apps found in testFolders in $ALGoSettingsFile" }
+            $settings.doNotRunTests = $true
+        }
     }
     if (-not $settings.appFolders) {
-        if (!$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
+        if (!$isTestProject -and !$doNotIssueWarnings) { OutputWarning -message "No apps found in appFolders in $ALGoSettingsFile" }
     }
 
     $settings
@@ -787,6 +967,13 @@ function CheckAppDependencyProbingPaths {
                 }
                 else {
                     Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
+                    try {
+                        $token = invoke-gh -silent -returnValue auth token
+                    }
+                    catch {
+                        Write-Host "Unable to get token from gh, will attempt to access repository without token. Message: $($_.Exception.Message)"
+                        $token = $null
+                    }
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
             }
@@ -910,6 +1097,30 @@ function InstallModule {
     Import-Module -Name $name -MinimumVersion $minimumVersion -DisableNameChecking -WarningAction SilentlyContinue | Out-Null
 }
 
+<#
+    Function to get the temporary path.
+    In the context of GitHub Actions, it uses the RUNNER_TEMP environment variable if available. This directory is emptied at the beginning and end of each job.
+    Otherwise, it falls back to the system's default temporary path.
+#>
+function GetTemporaryPath {
+    if ($env:RUNNER_TEMP) {
+        return $env:RUNNER_TEMP
+    } else {
+        return ([System.IO.Path]::GetTempPath())
+    }
+}
+
+<#
+    Function to create a new temporary folder.
+    It generates a unique folder name using a random file name and creates the directory in the temporary path.
+    Returns the path of the newly created temporary folder.
+#>
+function NewTemporaryFolder {
+    $tempFolder = Join-Path (GetTemporaryPath) ([System.IO.Path]::GetRandomFileName())
+    New-Item -Path $tempFolder -ItemType Directory | Out-Null
+    return $tempFolder
+}
+
 function CloneIntoNewFolder {
     Param(
         [string] $actor,
@@ -919,8 +1130,7 @@ function CloneIntoNewFolder {
         [bool] $directCommit
     )
 
-    $baseFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-    New-Item $baseFolder -ItemType Directory | Out-Null
+    $baseFolder = NewTemporaryFolder
     Set-Location $baseFolder
 
     # Environment variables for hub commands
@@ -1200,6 +1410,36 @@ function GetContainerName([string] $project) {
     "bc$($project -replace "[^a-z0-9\-]")$env:GITHUB_RUN_ID"
 }
 
+<#
+    .SYNOPSIS
+    Ensures that the Docker service is running on Windows.
+    .DESCRIPTION
+    Occasionally, on GitHub-hosted Windows runners, the Docker service may not start automatically, which can cause issues for workflows that depend on Docker.
+#>
+function Assert-DockerIsRunning {
+    try {
+        if (-not $isWindows) {
+            return
+        }
+        $dockerService = Get-Service -Name 'docker' -ErrorAction SilentlyContinue
+        if (-not $dockerService) {
+            Write-Host "Docker service not found"
+            return
+        }
+        if ($dockerService.Status -eq 'Running') {
+            return
+        }
+        Write-Host "Docker service is not running (status: $($dockerService.Status)). Attempting to start..."
+        Start-Service docker -ErrorAction Stop
+        $dockerService = Get-Service -Name 'docker'
+        $dockerService.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
+        Write-Host "Docker service started successfully"
+    }
+    catch {
+        OutputWarning "Failed to ensure Docker is running: $($_.Exception.Message)"
+    }
+}
+
 function CreateDevEnv {
     Param(
         [Parameter(Mandatory = $true)]
@@ -1231,7 +1471,8 @@ function CreateDevEnv {
         [string] $containerName = "",
         [string] $licenseFileUrl = "",
         [switch] $accept_insiderEula,
-        [switch] $clean
+        [switch] $clean,
+        [string] $customSettings = ""
     )
 
     if ($PSCmdlet.ParameterSetName -ne $kind) {
@@ -1273,6 +1514,7 @@ function CreateDevEnv {
             "baseFolder"   = $baseFolder
             "project"      = $project
             "workflowName" = $workflowName
+            "customSettings" = $customSettings
         }
         if ($caller -eq "local") { $params += @{ "userName" = $userName } }
         $settings = ReadSettings @params
@@ -1430,7 +1672,7 @@ function CreateDevEnv {
         }
 
         if ($settings.versioningStrategy -eq -1) {
-            if ($kind -eq "cloud") { throw "Versioningstrategy -1 cannot be used on cloud" }
+            if ($kind -eq "cloud") { throw "versioningStrategy -1 cannot be used on cloud" }
             $artifactVersion = [Version]$settings.artifact.Split('/')[4]
             $runAlPipelineParams += @{
                 "appVersion"  = "$($artifactVersion.Major).$($artifactVersion.Minor)"
@@ -1439,13 +1681,24 @@ function CreateDevEnv {
             }
         }
         else {
-            if (($settings.versioningStrategy -band 16) -eq 16) {
-                $runAlPipelineParams += @{
-                    "appVersion" = $settings.repoVersion
-                }
-            }
             $appBuild = 0
             $appRevision = 0
+            if (($settings.versioningStrategy -band 16) -eq 16) {
+                # For versioningStrategy +16, the version number is taken from repoVersion setting
+                $repoVersion = [System.Version]$settings.repoVersion
+                if (($settings.versioningStrategy -band 15) -eq 3) {
+                    # For versioning strategy 3, we need to get the build number from repoVersion setting
+                    if ($repoVersion.Build -eq -1) {
+                        Write-Host "WARNING: RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                    }
+                    else {
+                        $appBuild = $repoVersion.Build
+                    }
+                }
+                $runAlPipelineParams += @{
+                    "appVersion" = "$($repoVersion.Major).$($repoVersion.Minor)"
+                }
+            }
             switch ($settings.versioningStrategy -band 15) {
                 2 {
                     # USE DATETIME
@@ -1473,16 +1726,7 @@ function CreateDevEnv {
 
         Push-Location $projectFolder
         try {
-            $runAlPipelineOverrides | ForEach-Object {
-                $scriptName = $_
-                $scriptPath = Join-Path $ALGoFolderName "$ScriptName.ps1"
-                if (Test-Path -Path $scriptPath -Type Leaf) {
-                    Write-Host "Add override for $scriptName"
-                    $runAlPipelineParams += @{
-                        "$scriptName" = (Get-Command $scriptPath | Select-Object -ExpandProperty ScriptBlock)
-                    }
-                }
-            }
+            $runAlPipelineParams += (Get-ScriptOverrides -ALGoFolderName $ALGoFolderName -OverrideScriptNames $runAlPipelineOverrides)
 
             if ($kind -eq "local") {
                 $runAlPipelineParams += @{
@@ -1571,7 +1815,8 @@ function CreateDevEnv {
             "enablePerTenantExtensionCop",
             "enableUICop",
             "enableCodeAnalyzersOnTestApps",
-            "useCompilerFolder" | ForEach-Object {
+            "useCompilerFolder",
+            "reportSuppressedDiagnostics" | ForEach-Object {
                 if ($settings."$_") { $runAlPipelineParams += @{ "$_" = $true } }
             }
 
@@ -1679,6 +1924,44 @@ function CheckAndCreateProjectFolder {
     }
 }
 
+function TestIfProjectHasDependents {
+    Param(
+        [string] $project,
+        [string[]] $projects,
+        [hashtable] $appDependencies,
+        [array] $projectsOrder,
+        [hashtable] $testProjectTargets = @{}
+    )
+
+    $hasRemainingDependents = $false
+    foreach($otherProject in $projects) {
+        if ($otherProject -ne $project) {
+            # Grab dependencies from other project, which haven't been included in the build order yet
+            $otherDependencies = $appDependencies."$otherProject".dependencies | Where-Object {
+                $dependency = $_
+                $alreadyBuilt = ($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $appDependencies."$_".apps -contains $dependency } })
+                return -not $alreadyBuilt
+            }
+            Write-Host "Other project $otherProject has dependencies that are not in the build order yet: $($otherDependencies -join ", ")"
+            foreach($dependency in $otherDependencies) {
+                if ($appDependencies."$project".apps -contains $dependency) {
+                    Write-Host "Project $project is still a dependency for project $otherProject"
+                    $hasRemainingDependents = $true
+                }
+            }
+            # Check whether the other project is a test project that targets the current project
+            if ($testProjectTargets.Keys -contains $otherProject -and $testProjectTargets."$otherProject" -contains $project) {
+                Write-Host "Project $project is a test target for test project $otherProject"
+                $hasRemainingDependents = $true
+            }
+        }
+    }
+    if (!$hasRemainingDependents) {
+        Write-Host "Project $project has no dependents, can be built later"
+    }
+    return $hasRemainingDependents
+}
+
 Function AnalyzeProjectDependencies {
     Param(
         [string] $baseFolder,
@@ -1693,10 +1976,14 @@ Function AnalyzeProjectDependencies {
     # Loop through all projects
     # Get all apps in the project
     # Get all dependencies for the apps
+    $projectsThatCanBePostponed = @()
     foreach($project in $projects) {
-        Write-Host "- Analyzing project: $project"
+        Write-Host -NoNewline "Analyzing project: $project, "
 
         $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.postponeProjectInBuildOrder) {
+            $projectsThatCanBePostponed += $project
+        }
         ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
 
         # App folders are relative to the AL-Go project folder. Convert them to relative to the base folder
@@ -1710,7 +1997,7 @@ Function AnalyzeProjectDependencies {
             Pop-Location
         }
 
-        OutputMessageAndArray -Message "Folders containing apps" -arrayOfStrings $folders
+        OutputMessageAndArray -Message "folders containing apps" -arrayOfStrings $folders
 
         $unknownDependencies = @()
         $apps = @()
@@ -1739,8 +2026,56 @@ Function AnalyzeProjectDependencies {
     #         "dependencies" = @("appid7", "appid8")
     #     }
     # }
+
+    # Handle projectsToTest settings: build a mapping of test projects to their target projects
+    # First pass: collect all test projects so we can validate that no project depends on a test project
+    $testProjectNames = @{}
+    foreach($project in $projects) {
+        $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
+        if ($projectSettings.projectsToTest -and $projectSettings.projectsToTest.Count -gt 0) {
+            # Validate that test projects do not contain buildable code
+            $buildableFolders = @($appDependencies."$project".apps)
+            if ($buildableFolders.Count -gt 0) {
+                throw "Test project '$project' must not contain buildable code. Remove appFolders, testFolders, and bcptTestFolders or remove the projectsToTest setting."
+            }
+            $testProjectNames[$project] = $projectSettings.projectsToTest
+        }
+    }
+    # Second pass: resolve and validate target projects, build the testProjectTargets mapping
+    # testProjectTargets maps each test project to an array of resolved target project names
+    $testProjectTargets = @{}
+    foreach($project in $testProjectNames.Keys) {
+        Write-Host "Project '$project' is a test project targeting: $($testProjectNames[$project] -join ', ')"
+        $resolvedTargets = @()
+        foreach($targetProject in $testProjectNames[$project]) {
+            # Resolve target project name: must be the full project path
+            # Normalize slashes to match how project keys are stored (OS-dependent)
+            $normalizedTarget = $targetProject.Replace('/', [System.IO.Path]::DirectorySeparatorChar).Replace('\', [System.IO.Path]::DirectorySeparatorChar)
+            $resolvedTarget = $null
+            if ($appDependencies.Keys -contains $normalizedTarget) {
+                $resolvedTarget = $normalizedTarget
+            }
+            if (-not $resolvedTarget) {
+                OutputError "Test project '$project' references project '$targetProject' which does not exist in the repository. Use the full project path (e.g. 'projects/MyProject')."
+                throw
+            }
+            # Validate that the target is not itself a test project
+            if ($testProjectNames.Keys -contains $resolvedTarget) {
+                OutputError "Test project '$project' references '$resolvedTarget' which is also a test project. A test project cannot depend on another test project."
+                throw
+            }
+            $resolvedTargets += @($resolvedTarget)
+        }
+        $testProjectTargets[$project] = $resolvedTargets
+    }
+
     $no = 1
     $projectsOrder = @()
+    # Collect projects without dependents, which can be built later
+    # This is done to avoid building projects at an earlier stage than needed and increase the time until next job subsequently
+    # For every time we have determined a set of projects that can be build in parallel, we check whether any of these projects has no dependents
+    # If so, we remove these projects from the build order and add them at the end of the build order (by adding them to projectsWithoutDependents)
+    $projectsWithoutDependents = @()
     Write-Host "Analyzing dependencies"
     while ($projects.Count -gt 0) {
         $thisJob = @()
@@ -1755,6 +2090,11 @@ Function AnalyzeProjectDependencies {
             # Loop through all dependencies and locate the projects, containing the apps for which the current project has a dependency
             $foundDependencies = @()
             foreach($dependency in $dependencies) {
+                # Check whether dependency is already resolved by a previous build project
+                $depProject = @($projectsOrder | ForEach-Object { $_.Projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency } })
+                if ($depProject.Count -gt 0) {
+                    continue
+                }
                 # Find the project that contains the app for which the current project has a dependency
                 $depProjects = @($projects | Where-Object { $_ -ne $project -and $appDependencies."$_".apps -contains $dependency })
                 # Add this project and all projects on which that project has a dependency to the list of dependencies for the current project
@@ -1762,6 +2102,18 @@ Function AnalyzeProjectDependencies {
                     $foundDependencies += $depProject
                     if ($projectDependencies.Keys -contains $depProject) {
                         $foundDependencies += $projectDependencies."$depProject"
+                    }
+                }
+            }
+            # If this project is a test project, add its target projects as direct dependencies
+            # Only add target projects that haven't been built yet (still in $projects), matching the normal dependency resolution pattern
+            if ($testProjectTargets.Keys -contains $project) {
+                foreach($targetProject in $testProjectTargets."$project") {
+                    if ($projects -contains $targetProject) {
+                        $foundDependencies += $targetProject
+                        if ($projectDependencies.Keys -contains $targetProject) {
+                            $foundDependencies += $projectDependencies."$targetProject"
+                        }
                     }
                 }
             }
@@ -1807,11 +2159,28 @@ Function AnalyzeProjectDependencies {
         if ($thisJob.Count -eq 0) {
             throw "Circular project reference encountered, cannot determine build order"
         }
+
+        # Check whether any of the projects in $thisJob can be built later (has postponeProjectInBuildOrder set to true and no remaining dependents)
+        $projectsWithoutDependents += @($thisJob | Where-Object { $projectsThatCanBePostponed -contains $_ } | Where-Object {
+            return -not (TestIfProjectHasDependents -project $_ -projects $projects -appDependencies $appDependencies -projectsOrder $projectsOrder -testProjectTargets $testProjectTargets)
+        })
+
+        # Remove projects in this job from the list of projects to be built (including the projects without dependents)
+        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
+
+        # Do not build jobs without dependents until the last job, remove them from this job
+        $thisJob = @($thisJob | Where-Object { $projectsWithoutDependents -notcontains $_ })
+
+        if ($projects.Count -eq 0) {
+            # Last job, add jobs without dependents
+            Write-Host "Adding projects without dependents to last build job"
+            $thisJob += $projectsWithoutDependents
+        }
+
         Write-Host "#$no - build projects: $($thisJob -join ", ")"
 
         $projectsOrder += @{'projects' = $thisJob; 'projectsCount' = $thisJob.Count }
 
-        $projects = @($projects | Where-Object { $thisJob -notcontains $_ })
         $no++
     }
 
@@ -1973,7 +2342,6 @@ function RetryCommand {
         try {
             Invoke-Command $Command -ArgumentList $argumentList
             if ($LASTEXITCODE -ne 0) {
-                $host.SetShouldExit(0);
                 throw "Command failed with exit code $LASTEXITCODE"
             }
             break
@@ -2040,7 +2408,7 @@ function GetFoldersFromAllProjects {
         $projects = GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects
         $folders = @()
         foreach($project in $projects) {
-            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder -silent
+            $projectSettings = ReadSettings -project $project -baseFolder $baseFolder
             ResolveProjectFolders -baseFolder $baseFolder -project $project -projectSettings ([ref] $projectSettings)
             $folders += @( @($projectSettings.appFolders) + @($projectSettings.testFolders) + @($projectSettings.bcptTestFolders) | ForEach-Object {
                 $fullPath = Join-Path $baseFolder "$project/$_" -Resolve
@@ -2151,6 +2519,12 @@ function ConnectAz {
     }
 }
 
+<#
+    .SYNOPSIS
+    Output a message and an array of strings in a formatted way.
+
+    Deprecated: Use OutputArray function from DebugLogHelper module.
+#>
 function OutputMessageAndArray {
     Param(
         [string] $message,
@@ -2179,7 +2553,52 @@ function RunAndCheck {
     & $args[0] $rest
     $ErrorActionPreference = 'STOP'
     if ($LASTEXITCODE -ne 0) {
-        $host.SetShouldExit(0)
         throw "$($args[0]) $($rest | ForEach-Object { $_ }) failed with exit code $LASTEXITCODE"
+    }
+}
+
+<#
+.SYNOPSIS
+Get the version number components based on the versioning strategy
+.DESCRIPTION
+Get the version number components based on the versioning strategy defined in the settings.
+.PARAMETER Settings
+The settings object containing versioning information.
+.RETURNS
+A PSCustomObject with MajorMinorVersion, BuildNumber, and RevisionNumber properties.
+#>
+function Get-VersionNumber() {
+    param(
+        [Parameter(Mandatory=$true)]
+        $Settings
+    )
+    $majorMinorVersion = ""
+    $appBuild = $Settings.appBuild
+    $appRevision = $Settings.appRevision
+
+    if ($Settings.versioningStrategy -eq -1) {
+        $artifactVersion = [Version]$Settings.artifact.Split('/')[4]
+        $majorMinorVersion = "$($artifactVersion.Major).$($artifactVersion.Minor)"
+        $appBuild = $artifactVersion.Build
+        $appRevision = $artifactVersion.Revision
+    } elseif (($Settings.versioningStrategy -band 16) -eq 16) {
+        # For versioningStrategy +16, the version number is taken from repoVersion setting
+        $repoVersion = [System.Version]$Settings.repoVersion
+        $majorMinorVersion = "$($repoVersion.Major).$($repoVersion.Minor)"
+        if (($Settings.versioningStrategy -band 15) -eq 3) {
+            # For versioning strategy 3, we need to get the build number from repoVersion setting
+            $appBuild = $repoVersion.Build
+            if ($appBuild -eq -1) {
+                OutputWarning -message "RepoVersion setting only contains Major.Minor version. When using versioningStrategy 3, it should contain 3 digits"
+                $appBuild = 0
+            }
+        }
+    }
+
+    # Construct object to return
+    return [PSCustomObject]@{
+        MajorMinorVersion = $majorMinorVersion
+        BuildNumber = $appBuild
+        RevisionNumber = $appRevision
     }
 }

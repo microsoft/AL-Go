@@ -241,6 +241,10 @@
             "type": "boolean",
             "description": "Install only referenced apps. See https://aka.ms/ALGoSettings#installonlyreferencedapps"
         },
+        "runTestsInAllInstalledTestApps": {
+            "type": "boolean",
+            "description": "PREVIEW: Run tests in all installed test apps. See https://aka.ms/ALGoSettings#runTestsInAllInstalledTestApps"
+        },
         "generateDependencyArtifact": {
             "type": "boolean",
             "description": "See https://aka.ms/ALGoSettings#generatedependencyartifact"
@@ -291,7 +295,21 @@
                 "required": [],
                 "properties": {}
             },
-            "description": "See https://aka.ms/ALGoSettings#customcodecops"
+            "description": "Array of paths or URLs to custom Code Cop DLLs to enable when building. Relative paths are resolved against the project folder (the folder containing .AL-Go/settings.json). See https://aka.ms/ALGoSettings#customcodecops"
+        },
+        "preprocessorSymbols": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Preprocessor symbols to use when compiling the app. See https://aka.ms/ALGoSettings#preprocessorsymbols"
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Features to enable when compiling the app. See https://aka.ms/ALGoSettings#features"
         },
         "trackALAlertsInGitHub": {
             "type": "boolean",
@@ -370,6 +388,14 @@
                 },
                 "continuousDelivery": {
                     "type": "boolean"
+                },
+                "overwriteSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["includeDependencies"]
+                    },
+                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -408,6 +434,13 @@
         "useProjectDependencies": {
             "type": "boolean",
             "description": "See https://aka.ms/ALGoSettings#useprojectdependencies"
+        },
+        "projectsToTest": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "See https://aka.ms/ALGoSettings#projectstotest"
         },
         "runs-on": {
             "type": "string",
@@ -498,6 +531,21 @@
         "useCompilerFolder": {
             "type": "boolean",
             "description": "Use the compiler folder instead of a BC container. See https://aka.ms/ALGoSettings#usecompilerfolder"
+        },
+        "workspaceCompilation": {
+            "type": "object",
+            "description": "PREVIEW: Configuration for workspace compilation. See https://aka.ms/ALGoSettings#workspacecompilation",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable workspace compilation for building apps"
+                },
+                "parallelism": {
+                    "type": "integer",
+                    "description": "The number of parallel processes to use for workspace compilation. Set to 0 or -1 to use all available processors."
+                }
+            },
+            "additionalProperties": false
         },
         "pullRequestTrigger": {
             "type": "string",
@@ -595,7 +643,15 @@
                 "footer",
                 "defaultIndexMD",
                 "defaultReleaseMD"
-            ]
+            ],
+            "overwriteSettings": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["includeProjects", "excludeProjects"]
+                },
+                "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+            }
         },
         "commitOptions": {
             "type": "object",
@@ -617,6 +673,14 @@
                 },
                 "createPullRequest": {
                     "type": "boolean"
+                },
+                "overwriteSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["pullRequestLabels"]
+                    },
+                    "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
                 }
             },
             "required": [
@@ -657,95 +721,85 @@
         },
         "shortLivedArtifactsRetentionDays": {
             "type": "integer"
+        },
+        "overwriteSettings": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
+            },
+            "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
+        },
+        "reportSuppressedDiagnostics": {
+            "type": "boolean",
+            "description": "Report suppressed diagnostics. See https://aka.ms/ALGoSettings#reportsuppresseddiagnostics"
+        },
+        "customALGoFiles": {
+            "description": "An object containing the custom AL-Go files configuration. See https://aka.ms/ALGoSettings#customALGoFiles",
+            "type": "object",
+            "properties": {
+                "filesToInclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sourceFolder": {
+                                "type": "string",
+                                "description": "The source folder from which to update files, relative to the template repository root."
+                            },
+                            "filter": {
+                                "type": "string",
+                                "description": "A filter string to select which files to update. It can contain '*' and '?' wildcards."
+                            },
+                            "destinationFolder": {
+                                "type": "string",
+                                "description": "The destination folder where the files should be updated, relative to the repository root. If not specified, defaults to the same as the source file folder."
+                            },
+                            "perProject": {
+                                "type": "boolean",
+                                "description": "Indicates whether the file update should be applied per project. In that case, the destinationFolder is considered relative to each project folder."
+                            }
+                        }
+                    }
+                },
+                "filesToExclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sourceFolder": {
+                                "type": "string",
+                                "description": "The source folder from which to exclude files, relative to the template repository root."
+                            },
+                            "filter": {
+                                "type": "string",
+                                "description": "A filter string to select which files to exclude. It can contain '*' and '?' wildcards."
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "postponeProjectInBuildOrder": {
+            "type": "boolean",
+            "description": "Indicates whether the project can be postponed in the build order to optimize build times. See https://aka.ms/ALGoSettings#postponeProjectInBuildOrder"
+        },
+        "workflowDefaultInputs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the workflow input"
+                    },
+                    "value": {
+                        "description": "The default value for the workflow input (can be string, boolean, or number)"
+                    }
+                },
+                "required": ["name", "value"]
+            },
+            "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
-    },
-    "required": [
-        "type",
-        "unusedALGoSystemFiles",
-        "projects",
-        "powerPlatformSolutionFolder",
-        "country",
-        "artifact",
-        "companyName",
-        "repoVersion",
-        "repoName",
-        "versioningStrategy",
-        "runNumberOffset",
-        "appBuild",
-        "appRevision",
-        "keyVaultName",
-        "licenseFileUrlSecretName",
-        "ghTokenWorkflowSecretName",
-        "adminCenterApiCredentialsSecretName",
-        "applicationInsightsConnectionStringSecretName",
-        "keyVaultCertificateUrlSecretName",
-        "keyVaultCertificatePasswordSecretName",
-        "keyVaultClientIdSecretName",
-        "keyVaultCodesignCertificateName",
-        "codeSignCertificateUrlSecretName",
-        "codeSignCertificatePasswordSecretName",
-        "additionalCountries",
-        "appDependencies",
-        "projectName",
-        "appFolders",
-        "testDependencies",
-        "testFolders",
-        "bcptTestFolders",
-        "installApps",
-        "installTestApps",
-        "installOnlyReferencedApps",
-        "generateDependencyArtifact",
-        "skipUpgrade",
-        "applicationDependency",
-        "updateDependencies",
-        "installTestRunner",
-        "installTestFramework",
-        "installTestLibraries",
-        "installPerformanceToolkit",
-        "enableCodeCop",
-        "enableUICop",
-        "enableCodeAnalyzersOnTestApps",
-        "customCodeCops",
-        "failOn",
-        "treatTestFailuresAsWarnings",
-        "rulesetFile",
-        "enableExternalRulesets",
-        "vsixFile",
-        "assignPremiumPlan",
-        "enableTaskScheduler",
-        "doNotBuildTests",
-        "doNotRunTests",
-        "doNotRunBcptTests",
-        "doNotPublishApps",
-        "doNotSignApps",
-        "configPackages",
-        "appSourceCopMandatoryAffixes",
-        "deliverToAppSource",
-        "obsoleteTagMinAllowedMajorMinor",
-        "memoryLimit",
-        "templateUrl",
-        "templateSha",
-        "templateBranch",
-        "appDependencyProbingPaths",
-        "useProjectDependencies",
-        "runs-on",
-        "shell",
-        "githubRunner",
-        "githubRunnerShell",
-        "cacheImageName",
-        "cacheKeepDays",
-        "alwaysBuildAllProjects",
-        "microsoftTelemetryConnectionString",
-        "partnerTelemetryConnectionString",
-        "sendExtendedTelemetryToMicrosoft",
-        "environments",
-        "buildModes",
-        "useCompilerFolder",
-        "pullRequestTrigger",
-        "bcptThresholds",
-        "fullBuildPatterns",
-        "excludeEnvironments",
-        "alDoc",
-        "trustMicrosoftNuGetFeeds"
-    ]
+    }
 }

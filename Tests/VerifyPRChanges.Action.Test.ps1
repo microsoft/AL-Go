@@ -122,6 +122,18 @@ Describe 'VerifyPRChanges Action Tests' {
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "Verification completed successfully." }
     }
 
+    It 'should fail if the PR is from a fork and changes anything in the .AL-Go folder' {
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 1 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
+        Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '[{"filename":"app/.AL-Go/settings.json","status":"modified"}]' } } -ParameterFilter { $Uri -and $Uri -match "/files"}
+
+       {
+        & $scriptPath `
+                -prBaseRepository "microsoft/AL-Go" `
+                -pullRequestId "123456" `
+                -token "ABC"
+        } | Should -Throw
+    }
+
     It 'should fail if the PR is from a fork and changes more than 3000 files' {
         Mock -CommandName Invoke-WebRequest -MockWith {  @{"Content" = '{ "changed_files": 5001 }' } } -ParameterFilter { $Uri -and $Uri -notmatch "/files"}
 

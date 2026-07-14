@@ -17,6 +17,7 @@ Build documentation using [ALDoc](https://go.microsoft.com/fwlink/?linkid=224772
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | token | | The GitHub token running the action | github.token |
 | artifacts | Yes | The artifacts to build documentation for or a folder in which the artifacts have been downloaded | |
+| artifactUrl | | The URL of the BC artifact to download which includes AlDoc | |
 
 ## OUTPUT
 

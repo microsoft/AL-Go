@@ -15,6 +15,7 @@ InModuleScope Deploy { # Allows testing of private functions
             $script:notInstalledAppId = "00000000-0000-0000-0000-000000000005"
             $script:project2AppId = "00000000-0000-0000-0000-000000000006"
             $script:prAppId = "00000000-0000-0000-0000-000000000007"
+            $script:specialAppId = "00000000-0000-0000-0000-000000000008"
         }
 
         BeforeEach {
@@ -96,6 +97,13 @@ InModuleScope Deploy { # Allows testing of private functions
                         return @{
                             id = $script:notInstalledAppId
                             name = "Not Installed App"
+                            Version = "1.0.0.0"
+                        }
+                    }
+                    { $appFile -like "*SpecialApp.app" } {
+                        return @{
+                            id = $script:specialAppId
+                            name = "Special App"
                             Version = "1.0.0.0"
                         }
                     }
@@ -192,11 +200,13 @@ InModuleScope Deploy { # Allows testing of private functions
                 $projectTestAppsFolder = Join-Path $artifactsFolder "project1-main-TestApps-1.0.0.0"
                 $projectDepsFolder = Join-Path $artifactsFolder "project1-main-Dependencies-1.0.0.0"
                 $project2AppsFolder = Join-Path $env:GITHUB_WORKSPACE "artifacts/project2-main-Apps-1.0.0.0"
+                $specialBuildModeFolder = Join-Path $env:GITHUB_WORKSPACE "artifacts/project1-main-SpecialApps-1.0.0.0" # For build mode test
 
                 New-Item -Path $projectAppsFolder -ItemType Directory -Force | Out-Null
                 New-Item -Path $projectTestAppsFolder -ItemType Directory -Force | Out-Null
                 New-Item -Path $projectDepsFolder -ItemType Directory -Force | Out-Null
                 New-Item -Path $project2AppsFolder -ItemType Directory -Force | Out-Null
+                New-Item -Path $specialBuildModeFolder -ItemType Directory -Force | Out-Null
 
                 # Create test .app files
                 New-Item -Path (Join-Path $projectAppsFolder "AppSourceApp.app") -ItemType File -Force | Out-Null
@@ -204,6 +214,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 New-Item -Path (Join-Path $projectTestAppsFolder "AppSourceApp.Test.app") -ItemType File -Force | Out-Null
                 New-Item -Path (Join-Path $projectDepsFolder "Dependency.app") -ItemType File -Force | Out-Null
                 New-Item -Path (Join-Path $project2AppsFolder "Project2App.app") -ItemType File -Force | Out-Null
+                New-Item -Path (Join-Path $specialBuildModeFolder "SpecialApp.app") -ItemType File -Force | Out-Null
             }
 
             It 'Returns apps and dependencies from artifacts folder' {
@@ -330,6 +341,21 @@ InModuleScope Deploy { # Allows testing of private functions
                 $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
 
                 Assert-MockCalled OutputWarning -Exactly 1
+            }
+
+            It 'Filters artifacts based on the provided build mode in the deployment settings' {
+                $deploymentSettings = @{
+                    projects = "project1"
+                    includeTestAppsInSandboxEnvironment = $false
+                    excludeAppIds = @()
+                    DependencyInstallMode = "install"
+                    buildMode = "special"
+                }
+
+                $apps, $dependencies = GetAppsAndDependenciesFromArtifacts -artifactsFolder "artifacts" -deploymentSettings $deploymentSettings
+
+                $apps.Count | Should -Be 1
+                $apps | Should -Contain (Join-Path $specialBuildModeFolder "SpecialApp.app")
             }
         }
 

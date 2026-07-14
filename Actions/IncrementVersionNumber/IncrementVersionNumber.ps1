@@ -26,7 +26,7 @@ $settings = $env:Settings | ConvertFrom-Json
 if ($versionNumber.StartsWith('+')) {
     # Handle incremental version number
     $allowedIncrementalVersionNumbers = @('+1', '+0.1')
-    if ($settings.versioningStrategy -eq 3) {
+    if (($settings.versioningStrategy -band 15) -eq 3) {
         # Allow increment build
         $allowedIncrementalVersionNumbers += '+0.0.1'
     }
@@ -38,7 +38,7 @@ else {
     # Handle absolute version number
     $versionNumberFormat = '^\d+\.\d+$' # Major.Minor
     $correctFormatMsg = 'Major.Minor (e.g. 1.0 or 1.2)'
-    if ($settings.versioningStrategy -eq 3) {
+    if (($settings.versioningStrategy -band 15) -eq 3) {
         $versionNumberFormat = '^\d+\.\d+\.\d+$' # Major.Minor.Build
         $correctFormatMsg = 'Major.Minor.Build (e.g. 1.0, 1.2 or 1.2.3)'
     }

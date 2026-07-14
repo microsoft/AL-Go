@@ -58,6 +58,7 @@ function ConnectAzStorageAccount {
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "Deliver.psm1") -DisableNameChecking
 DownloadAndImportBcContainerHelper
 
 $refname = "$ENV:GITHUB_REF_NAME".Replace('/', '_')
@@ -66,16 +67,20 @@ $artifacts = $artifacts.Replace('/', ([System.IO.Path]::DirectorySeparatorChar))
 
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $settings = ReadSettings -baseFolder $baseFolder
-$projectList = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects -selectProjects $projects)
+
+# Get the sorted list of projects
+$sortedProjectList = @(Get-ProjectsInDeliveryOrder -BaseFolder $baseFolder -ProjectsFromSettings $settings.projects -SelectProjects $projects)
+
 if ($deliveryTarget -eq "AppSource") {
     $atypes = "Apps,Dependencies"
 }
 Write-Host "Artifacts $artifacts"
 Write-Host "Projects:"
-$projectList | Out-Host
+$sortedProjectList | Out-Host
+$alreadyDeliveredPackages = @()
 
 $secrets = $env:Secrets | ConvertFrom-Json
-foreach ($thisProject in $projectList) {
+foreach ($thisProject in $sortedProjectList) {
     # $project should be the project part of the artifact name generated from the build
     if ($thisProject -and ($thisProject -ne '.')) {
         $project = $thisProject.Replace('\', '_').Replace('/', '_')
@@ -252,15 +257,25 @@ foreach ($thisProject in $projectList) {
                 Get-Item -Path (Join-Path $folder[0] "*.app") | ForEach-Object {
                     $appJson = Get-AppJsonFromAppFile -appFile $_.FullName
                     $packageName = Get-BcNuGetPackageId -publisher $appJson.publisher -name $appJson.name -id $appJson.id -version $appJson.version
-                    $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $appJson.version -select Exact -allowPrerelease
-                    if (-not $feed) {
-                        $parameters = @{
-                            "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
-                            "preReleaseTag"    = $preReleaseTag
-                            "appFile"          = $_.FullName
+                    if ($alreadyDeliveredPackages -contains $packageName) {
+                        Write-Host "Package $packageName has already been delivered in this run, skipping"
+                    }
+                    else {
+                        $searchVersion = $appJson.version
+                        if ($preReleaseTag) {
+                            $searchVersion += "-$preReleaseTag"
                         }
-                        $package = New-BcNuGetPackage @parameters
-                        Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
+                        $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $searchVersion -select Exact -allowPrerelease
+                        if (-not $feed) {
+                            $parameters = @{
+                                "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+                                "preReleaseTag"    = $preReleaseTag
+                                "appFile"          = $_.FullName
+                            }
+                            $package = New-BcNuGetPackage @parameters
+                            Push-BcNuGetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -bcNuGetPackage $package
+                            $alreadyDeliveredPackages += $packageName
+                        }
                     }
                 }
             }
@@ -319,7 +334,7 @@ foreach ($thisProject in $projectList) {
                 if ($type -eq "Release") {
                     $versions += @($version, "latest")
                 }
-                $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([Guid]::newguid().ToString()).zip"
+                $tempFile = Join-Path (GetTemporaryPath) "$([Guid]::newguid().ToString()).zip"
                 try {
                     Write-Host "Compressing"
                     Compress-Archive -Path (Join-Path $artfolder '*') -DestinationPath $tempFile -Force
@@ -346,6 +361,12 @@ foreach ($thisProject in $projectList) {
                 $projectSettings.deliverToAppSource."$_" = $projectSettings."AppSource$_"
             }
         }
+        # Check whether project has a ProductId defined (needs to be submitted) or it is a library project
+        if (!$projectSettings.deliverToAppSource.ProductId) {
+            Write-Host "deliverToAppSource.ProductId is not specified, project is a library project"
+            continue
+        }
+        Write-Host "deliverToAppSource.ProductId is $($projectSettings.deliverToAppSource.ProductId)"
         # if type is Release, we only get here with the projects that needs to be delivered to AppSource
         # if type is CD, we get here for all projects, but should only deliver to AppSource if AppSourceContinuousDelivery is set to true
         if ($type -eq 'Release' -or $projectSettings.deliverToAppSource.continuousDelivery) {
@@ -367,9 +388,6 @@ foreach ($thisProject in $projectList) {
                 catch {
                     throw "Unable to determine main App folder"
                 }
-            }
-            if (!$projectSettings.deliverToAppSource.ProductId) {
-                throw "deliverToAppSource.ProductId needs to be specified in $thisProject/.AL-Go/settings.json in order to deliver to AppSource"
             }
             Write-Host "AppSource MainAppFolder $AppSourceMainAppFolder"
 
