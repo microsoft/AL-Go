@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2256 - Test Result Analyzer fails if no stack trace is available
+
 ## v9.1
 
 ### Resilient Pull Request Status Check for large builds
@@ -64,7 +68,6 @@ The `DownloadProjectDependencies` action now downloads only artifacts from depen
 - Issue 2211 - Cannot create a release if a project contains only test apps
 - Issue 2214 - Workspace compilation not working with external dependencies
 - Issue 2235 - Workspace compilation: only the first `customCodeCops` entry resolved when multiple relative paths were configured. Relative `customCodeCops` paths are now resolved against the project folder before being passed to the compiler.
-- Issue 2256 - Test Result Analyzer fails if no stack trace is available
 - Issue 2265 - Creating a Performance Test App fails on Linux due to case-sensitive path lookup for the Performance Toolkit sample app
 - Issue 2284 - GitHub App authentication fails with `401 (Unauthorized)` on runners with minor clock drift. The JWT `iat` claim is now backdated by 60 seconds instead of 10, as recommended by GitHub, to tolerate runners whose clock runs slightly ahead of GitHub.
 
