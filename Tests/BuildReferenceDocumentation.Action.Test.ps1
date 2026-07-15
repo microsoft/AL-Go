@@ -104,4 +104,44 @@ Describe "BuildReferenceDocumentation Action Tests" {
         Assert-MockCalled -CommandName Get-BCArtifactUrl -Exactly 0 -Scope It
         Assert-MockCalled -CommandName Download-Artifacts -ParameterFilter { $artifactUrl -eq "https://example.com/sandbox/core" }
     }
+
+    It 'Locates aldoc in the flat bin folder when no platform subfolder exists' {
+        # Framework-dependent / marketplace-packaged extensions have no bin/win32 or bin/linux
+        # subfolder - aldoc sits directly under extension/bin.
+        . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+        Mock Get-BCArtifactUrl { return 'https://example.com/artifact.zip' }
+        Mock Copy-Item { }
+        Mock New-Item { }
+        Mock Expand-Archive { }
+        Mock Remove-Item { }
+        Mock CmdDo { }
+        Mock Download-Artifacts { return 'c:/a/b/c' }
+        # Resolve the *.vsix lookup to a dummy path; leave all other Join-Path calls real
+        Mock Join-Path { return 'c:/a/b/c/al.vsix' } -ParameterFilter { $ChildPath -eq '*.vsix' }
+        # The platform-specific subfolder (win32/linux) and the flat native aldoc are absent,
+        # so on Linux resolution should land on the flat aldoc.dll (dotnet), and on Windows the
+        # flat aldoc.exe.
+        Mock Test-Path { return $true }
+        Mock Test-Path { return $false } -ParameterFilter {
+            $p = "$Path" -replace '\\', '/'
+            $p -like '*/bin/win32/*' -or $p -like '*/bin/linux/*' -or $p -like '*/bin/aldoc'
+        }
+
+        $ENV:aldocPath = ""
+        $ENV:aldocCommand = ""
+        DownloadAlDoc -artifactUrl "https://example.com/sandbox/core"
+
+        $resolved = "$ENV:aldocPath" -replace '\\', '/'
+        if ($IsLinux) {
+            $resolved | Should -BeLike '*/extension/bin/aldoc.dll'
+            $ENV:aldocCommand | Should -Be 'dotnet'
+        }
+        else {
+            $resolved | Should -BeLike '*/extension/bin/aldoc.exe'
+        }
+        $resolved | Should -Not -BeLike '*/bin/win32/*'
+        $resolved | Should -Not -BeLike '*/bin/linux/*'
+    }
 }
