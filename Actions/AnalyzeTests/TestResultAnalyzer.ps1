@@ -192,10 +192,10 @@ function GetTestResultSummaryMD {
                                     foreach($failure in $testcase.ChildNodes) {
                                         Write-Host "      - Error: $($failure.message)"
                                         Write-Host "        Stacktrace:"
-                                        Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
+                                        Write-Host "        $($failure.InnerText.Trim().Replace("`n","`n        "))"
                                         $testFailureNode = [FailureNode]::new($true)
                                         $testFailureNode.errorMessage = $failure.message
-                                        $testFailureNode.errorStackTrace = $($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))
+                                        $testFailureNode.errorStackTrace = $($failure.InnerText.Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))
                                         $testCaseFailureNode.childSummaries.Add($testFailureNode) | Out-Null
                                     }
                                     $suiteFailureNode.childSummaries.Add($testCaseFailureNode) | Out-Null
