@@ -538,8 +538,8 @@ function CreateAlGoRepository {
 
     RefreshToken -repository $repository
 
-    invoke-git add *
-    invoke-git commit --allow-empty -m 'init'
+    invoke-git -silent add *
+    invoke-git -silent commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner) {
         if ($github) {
