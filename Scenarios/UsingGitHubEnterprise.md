@@ -7,14 +7,66 @@ Repositories using AL-Go for GitHub are supported on **GitHub Enterprise Cloud w
 
 ## How it works
 
-On GHE, the host names differ from the public GitHub, and AL-Go uses the standard GitHub Actions environment variables to target the correct host:
+The AL-Go for GitHub templates are published on the public GitHub (`github.com`):
 
-- `GITHUB_SERVER_URL` - e.g. `https://<enterprise>.ghe.com` (instead of `https://github.com`)
-- `GITHUB_API_URL` - e.g. `https://<enterprise>.ghe.com/api/v3` (instead of `https://api.github.com`)
+- [microsoft/AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) for Per Tenant Extensions
+- [microsoft/AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) for AppSource Apps
 
-Because the AL-Go actions and workflows now derive all GitHub hosts from these variables, no manual configuration of host names is required inside your repositories.
+On `github.com`, you would normally use the **Use this template** button on one of these repositories to create your own repository. On GHE this is not possible, because:
 
-## Recommended approach
+- The source template repositories reside on `github.com`, while your destination repository lives in a **different** enterprise on a dedicated host (e.g. `https://<enterprise>.ghe.com`). The **Use this template** button can only create a repository on the same host as the template.
+- Your enterprise credentials cannot be used to authenticate against or read public repositories on `github.com`, so your enterprise host has no way to pull directly from the public AL-Go templates.
+
+This means we have to find a different way to copy a template repository from `github.com` into your enterprise. The sections below describe two methods of doing this - **manually** or **using a tool**.
+
+## Manual approach
+
+You can copy one of the public AL-Go templates into your enterprise using **git** and **GitHub CLI**. This mirror-clones the template repository from `github.com` and pushes it into a new repository on your enterprise host.
+
+Replace `OWNER/REPO` with the public template (for example `microsoft/AL-Go-PTE` or `microsoft/AL-Go-AppSource`), and `ORG/REPO` and `github.mycompany.com` with your enterprise organization, repository name and host:
+
+```pwsh
+# 1. Authenticate to your enterprise host (if not already)
+gh auth login --hostname github.mycompany.com
+
+# 2. Mirror-clone the source repo (includes all branches, tags, refs)
+git clone --mirror https://github.com/OWNER/REPO.git
+
+# 3. Create the destination repo on your enterprise instance
+$env:GH_HOST = "github.mycompany.com"
+gh repo create ORG/REPO --private
+Remove-Item Env:GH_HOST
+
+# 4. Push everything into it
+Set-Location REPO.git
+git push --mirror https://github.mycompany.com/ORG/REPO.git
+```
+
+> [!NOTE]
+> The mirror-clone in step 2 reads from the **public** `github.com` template, which does not require authentication. Step 3 and step 4 target your enterprise host, using the credentials you authenticated with in step 1.
+
+## Automated approach
+
+Instead of copying the repository manually, you can use the [algoctl](https://github.com/Freddy-DK/AL-Go/tree/main/algoctl) CLI, which performs the copy for you in a single command.
+
+Before running the commands below, make sure that **git** and **GitHub CLI** are installed and that gh is authenticated to your GitHub enterprise host:
+
+```pwsh
+gh auth login --hostname <enterprise>.ghe.com
+```
+
+The algoctl tool uses GitHub CLI for authentication.
+
+Install algoctl and run `createrepo`, replacing `<enterprise>` and `<org>` with your enterprise host and organization, and pointing `--templaterepo` at the public AL-Go template you want to copy:
+
+```pwsh
+dotnet tool install --global algoctl --prerelease
+algoctl createrepo --repo https://<enterprise>.ghe.com/<org>/<repo> --templaterepo microsoft/AL-Go-PTE
+```
+
+This creates a new repository inside your enterprise organization, seeded from the public AL-Go template. Use `microsoft/AL-Go-AppSource` as the `--templaterepo` for AppSource Apps.
+
+## Indirect templates
 
 The recommended approach is to create two indirect template repositories inside your enterprise organization - one for Per Tenant Extensions and one for AppSource Apps - based on the public AL-Go templates, using the [algoctl](https://github.com/Freddy-DK/AL-Go/tree/main/algoctl) CLI.
 
