@@ -247,6 +247,7 @@ jobs:
           MATRIX_ATYPE: ${{ matrix.atype }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
           $deliverToNuGet = $env:hasNuGetContext -eq 'true' -and $env:MATRIX_ATYPE -in @("Apps", "TestApps")
           Write-Host "Deliver $($env:MATRIX_ATYPE) to NuGet: $deliverToNuGet"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliverToNuGet=$($deliverToNuGet.ToString().ToLower())"
