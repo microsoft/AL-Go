@@ -7,6 +7,7 @@ Workspace compilation now finds altool both in the platform-specific subfolder (
 - Issue 2285 - CheckForUpdates now handles settings file `$schema` reordering in a PowerShell 5-safe way to avoid writing invalid entries like `"*": null` to settings JSON files.
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
 - Retry downloading dependency artifacts from the current build up to 3 times (30 seconds between attempts) to tolerate transient network errors such as "Failed to GetSignedArtifactURL: Unable to make request: ETIMEDOUT"
+- Issue 2302 - AlDoc does not use --packagecache when building reference documentation
 
 ## v9.1
 
