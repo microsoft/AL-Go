@@ -1136,6 +1136,43 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
         }
 
+        It 'Includes --customanalyzers when custom analyzers are specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-custom1'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -CustomAnalyzers @('C:\Analyzers\MyCop.dll', 'C:\Analyzers\OtherCop.dll')
+
+                $script:capturedArguments | Should -Contain '--customanalyzers'
+                $script:capturedArguments | Should -Contain 'C:\Analyzers\MyCop.dll,C:\Analyzers\OtherCop.dll'
+            }
+        }
+
+        It 'Omits --customanalyzers when custom analyzers are empty (e.g. enableCodeAnalyzersOnTestApps is false)' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-custom2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -CustomAnalyzers @()
+
+                $script:capturedArguments | Should -Not -Contain '--customanalyzers'
+            }
+        }
+
         It 'Includes --features when features are specified' {
             InModuleScope CompileFromWorkspace {
                 $script:capturedArguments = @()

@@ -260,6 +260,7 @@ try {
         if ($testFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
+                $buildParams.CustomAnalyzers = @()
             }
 
             # Compile Test Apps
@@ -272,6 +273,7 @@ try {
         if ($bcptTestFoldersToBuild.Count -gt 0) {
             if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
                 $buildParams.Analyzers = @()
+                $buildParams.CustomAnalyzers = @()
             }
 
             # Compile BCPT Test Apps
