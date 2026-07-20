@@ -806,6 +806,43 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
     }
 
+    Describe 'Get-AnalyzersForAppType' {
+        BeforeAll {
+            $script:allAnalyzers = @('CodeCop', 'UICop')
+            $script:allCustomAnalyzers = @('C:\Analyzers\MyCop.dll')
+        }
+
+        It 'Returns full analyzers for regular apps regardless of enableCodeAnalyzersOnTestApps' {
+            foreach ($enabled in @($true, $false)) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $enabled } -AppType 'app' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers) | Should -Be $allAnalyzers
+                @($result.CustomAnalyzers) | Should -Be $allCustomAnalyzers
+            }
+        }
+
+        It 'Returns full analyzers for test apps when enableCodeAnalyzersOnTestApps is true' {
+            foreach ($appType in @('testApp', 'bcptApp')) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $true } -AppType $appType -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers) | Should -Be $allAnalyzers
+                @($result.CustomAnalyzers) | Should -Be $allCustomAnalyzers
+            }
+        }
+
+        It 'Disables built-in AND custom analyzers for test and BCPT apps when enableCodeAnalyzersOnTestApps is false' {
+            foreach ($appType in @('testApp', 'bcptApp')) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $false } -AppType $appType -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers).Count | Should -Be 0
+                @($result.CustomAnalyzers).Count | Should -Be 0
+            }
+        }
+
+        It 'Treats a missing enableCodeAnalyzersOnTestApps setting as disabled for test apps' {
+            $result = Get-AnalyzersForAppType -Settings @{} -AppType 'testApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+            @($result.Analyzers).Count | Should -Be 0
+            @($result.CustomAnalyzers).Count | Should -Be 0
+        }
+    }
+
     Describe 'Get-ALTool' {
         It 'Finds altool in the platform-specific subfolder (win32/linux)' {
             $cf = Join-Path $TestDrive 'altool-platform'
