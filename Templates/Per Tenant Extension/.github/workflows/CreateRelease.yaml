@@ -239,26 +239,9 @@ jobs:
               data: fs.readFileSync(assetPath)
             });
 
-      - name: Determine delivery targets
-        id: determineDeliveryTargets
-        env:
-          hasNuGetContext: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).nuGetContext != '' }}
-          hasStorageContext: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).storageContext != '' }}
-          MATRIX_ATYPE: ${{ matrix.atype }}
-        run: |
-          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-
-          $deliverToNuGet = $env:hasNuGetContext -eq 'true' -and $env:MATRIX_ATYPE -in @("Apps", "TestApps")
-          Write-Host "Deliver $($env:MATRIX_ATYPE) to NuGet: $deliverToNuGet"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliverToNuGet=$($deliverToNuGet.ToString().ToLower())"
-
-          $deliverToStorage = $env:hasStorageContext -eq 'true' -and $env:MATRIX_ATYPE -in @("Apps", "TestApps", "Dependencies")
-          Write-Host "Deliver $($env:MATRIX_ATYPE) to Storage: $deliverToStorage"
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "deliverToStorage=$($deliverToStorage.ToString().ToLower())"
-
       - name: Deliver to NuGet
         uses: microsoft/AL-Go-Actions/Deliver@main
-        if: ${{ steps.determineDeliveryTargets.outputs.deliverToNuGet == 'true' }}
+        if: ${{ matrix.atype == 'Apps' && fromJson(steps.ReadSecrets.outputs.Secrets).nuGetContext != '' }}
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
@@ -267,11 +250,11 @@ jobs:
           projects: ${{ matrix.project }}
           deliveryTarget: 'NuGet'
           artifacts: ${{ github.event.inputs.buildVersion }}
-          atypes: ${{ matrix.atype }}
+          atypes: 'Apps,TestApps'
 
       - name: Deliver to Storage
         uses: microsoft/AL-Go-Actions/Deliver@main
-        if: ${{ steps.determineDeliveryTargets.outputs.deliverToStorage == 'true' }}
+        if: ${{ matrix.atype == 'Apps' && fromJson(steps.ReadSecrets.outputs.Secrets).storageContext != '' }}
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
@@ -280,7 +263,7 @@ jobs:
           projects: ${{ matrix.project }}
           deliveryTarget: 'Storage'
           artifacts: ${{ github.event.inputs.buildVersion }}
-          atypes: ${{ matrix.atype }}
+          atypes: 'Apps,TestApps,Dependencies'
 
   CreateReleaseBranch:
     needs: [ CreateRelease, UploadArtifacts ]
