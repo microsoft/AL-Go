@@ -576,7 +576,7 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Tests" {
         InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'App'; ProjectDependencies = $projectDependencies } {
             param($Project, $ProjectDependencies)
             $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
-            $result | Should -Be '{Base-main-*Apps-*,Base-main-*Dependencies-*}'
+            $result | Should -Be '{Base-main-*Apps-*,Base-main-*Dependencies-*,Base-main-*BuildOutput-*}'
         }
     }
 
@@ -588,7 +588,7 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Tests" {
         InModuleScope DownloadProjectDependencies -Parameters @{ Project = 'App'; ProjectDependencies = $projectDependencies } {
             param($Project, $ProjectDependencies)
             $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
-            $result | Should -Be '{Base-feature_auth-*Apps-*,Base-feature_auth-*Dependencies-*}'
+            $result | Should -Be '{Base-feature_auth-*Apps-*,Base-feature_auth-*Dependencies-*,Base-feature_auth-*BuildOutput-*}'
         }
     }
 }
@@ -609,16 +609,16 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
         $ENV:GITHUB_REF_NAME = $originalRefName
     }
 
-    It 'Returns pattern with 4 brace entries for two dependencies' {
+    It 'Returns pattern with 6 brace entries for two dependencies' {
         $projectDependencies = @{ "App" = @("Base", "Common") }
         InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
             param($Project, $ProjectDependencies)
             $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
-            $result | Should -Be "{Base-main-*Apps-*,Base-main-*Dependencies-*,Common-main-*Apps-*,Common-main-*Dependencies-*}"
+            $result | Should -Be "{Base-main-*Apps-*,Base-main-*Dependencies-*,Base-main-*BuildOutput-*,Common-main-*Apps-*,Common-main-*Dependencies-*,Common-main-*BuildOutput-*}"
         }
     }
 
-    It 'Returns pattern with 6 brace entries for three flattened transitive dependencies' {
+    It 'Returns pattern with 9 brace entries for three flattened transitive dependencies' {
         $projectDependencies = @{ "App" = @("Base", "Common", "Core") }
         InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
             param($Project, $ProjectDependencies)
@@ -627,8 +627,8 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
             $result | Should -BeLike "*Base-main-*"
             $result | Should -BeLike "*Common-main-*"
             $result | Should -BeLike "*Core-main-*"
-            # 3 deps x 2 entries each = 6 entries = 5 commas
-            ($result.ToCharArray() | Where-Object { $_ -eq ',' }).Count | Should -Be 5
+            # 3 deps x 3 entries each = 9 entries = 8 commas
+            ($result.ToCharArray() | Where-Object { $_ -eq ',' }).Count | Should -Be 8
         }
     }
 

@@ -45,13 +45,21 @@ function Get-CodeAnalyzers {
     Gets the list of custom code analyzers to use for compilation.
 .DESCRIPTION
     Returns an array of custom code analyzer paths based on the settings provided.
-    If the custom code cop is a URL, it will be downloaded to the compiler folder and the local path will be returned.
+    URL-based entries are downloaded to the compiler folder. Relative file paths
+    are resolved against the project folder so that workspace compilation passes
+    rooted paths to altool/alc.exe (altool only resolves the first comma-separated
+    --customanalyzers entry against the project root, so relative paths beyond the
+    first one fail to load).
 .PARAMETER Settings
     Hashtable containing the build settings with custom code cop paths or URLs.
 .PARAMETER CompilerFolder
-    The folder where the AL compiler tool is located, used for downloading custom analyzers if URLs are provided.
+    The folder where the AL compiler tool is located, used for downloading custom
+    analyzers if URLs are provided.
+.PARAMETER ProjectFolder
+    Folder used as the base for resolving relative customCodeCops entries.
+    Defaults to the current location, which Compile.ps1 sets to the project folder.
 .OUTPUTS
-    Array of custom analyzer paths to use for compilation.
+    Array of absolute custom analyzer paths to use for compilation.
 #>
 function Get-CustomAnalyzers {
     param(
@@ -59,7 +67,10 @@ function Get-CustomAnalyzers {
         [hashtable] $Settings,
 
         [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder
+        [string] $CompilerFolder,
+
+        [Parameter(Mandatory = $false)]
+        [string] $ProjectFolder = (Get-Location).Path
     )
 
     $analyzers = @()
@@ -67,11 +78,16 @@ function Get-CustomAnalyzers {
         return $analyzers
     }
 
-    # Analyzers/ directory exists in the compiler folder by default
+    # Analyzers live in the Analyzers/ subfolder for platform-layout extensions, or
+    # directly in bin/ for framework-dependent / marketplace-packaged extensions.
     $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
+    $analyzersPath = Join-Path $binPath 'Analyzers'
+    if (-not (Test-Path $analyzersPath)) {
+        $analyzersPath = $binPath
+    }
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
-            $analyzerFileName = Join-Path $binPath "Analyzers/$(Split-Path $customCodeCop -Leaf)"
+            $analyzerFileName = Join-Path $analyzersPath "$(Split-Path $customCodeCop -Leaf)"
             try {
                 Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName -ErrorAction Stop
             } catch {
@@ -79,12 +95,70 @@ function Get-CustomAnalyzers {
             }
             $analyzers += $analyzerFileName
         }
-        else {
+        elseif ([System.IO.Path]::IsPathRooted($customCodeCop)) {
             $analyzers += $customCodeCop
+        }
+        else {
+            # Resolve relative paths against the project folder. Use GetFullPath so
+            # this works whether or not the file exists yet (e.g. a PreCompileApp
+            # override may download it later). Combine first so we are PS5-compatible.
+            $analyzers += [System.IO.Path]::GetFullPath((Join-Path $ProjectFolder $customCodeCop))
         }
     }
 
     return $analyzers
+}
+
+<#
+.SYNOPSIS
+    Determines which analyzers apply to a given app type based on settings.
+.DESCRIPTION
+    Returns the built-in and custom analyzers to use when compiling a folder of the
+    given app type. When enableCodeAnalyzersOnTestApps is false, both built-in code
+    analyzers and custom analyzers (customCodeCops) are disabled for test apps and
+    BCPT test apps, so no analyzers run against them. Regular apps always use the
+    full set of configured analyzers.
+.PARAMETER Settings
+    Hashtable containing the build settings, including enableCodeAnalyzersOnTestApps.
+.PARAMETER AppType
+    The type of app being compiled: 'app', 'testApp', or 'bcptApp'.
+.PARAMETER Analyzers
+    The full set of built-in code analyzers configured for the build.
+.PARAMETER CustomAnalyzers
+    The full set of custom analyzers (customCodeCops) configured for the build.
+.OUTPUTS
+    Hashtable with Analyzers and CustomAnalyzers keys holding the analyzers to use
+    for the given app type.
+#>
+function Get-AnalyzersForAppType {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('app', 'testApp', 'bcptApp')]
+        [string] $AppType,
+
+        [Parameter(Mandatory = $false)]
+        [string[]] $Analyzers = @(),
+
+        [Parameter(Mandatory = $false)]
+        [string[]] $CustomAnalyzers = @()
+    )
+
+    $isTestApp = $AppType -in @('testApp', 'bcptApp')
+    $enableOnTestApps = $Settings.ContainsKey('enableCodeAnalyzersOnTestApps') -and $Settings.enableCodeAnalyzersOnTestApps
+    if ($isTestApp -and (-not $enableOnTestApps)) {
+        return @{
+            Analyzers       = @()
+            CustomAnalyzers = @()
+        }
+    }
+
+    return @{
+        Analyzers       = $Analyzers
+        CustomAnalyzers = $CustomAnalyzers
+    }
 }
 
 <#
@@ -108,9 +182,12 @@ function Get-BuildMetadata {
 
 <#
     .SYNOPSIS
-    Gets the path to the AL compiler tool (al.exe or al).
+    Gets the path to the AL compiler tool (altool).
     .DESCRIPTION
     Returns the full path to the AL compiler tool located in the specified compiler folder.
+    Newer AL Language extensions place altool in a platform-specific subfolder (win32/linux),
+    while framework-dependent / marketplace-packaged extensions place it directly under
+    compiler/extension/bin. Both layouts are supported.
     .PARAMETER CompilerFolder
     The folder where the AL compiler tool is located.
     .OUTPUTS
@@ -126,20 +203,17 @@ function Get-ALTool {
         return $script:alTool
     }
 
-    # Select the platform-specific AL tool binary
+    $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
     if ($IsLinux) {
-        $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/linux"
-        $alExe = Join-Path $platformFolder "altool"
-        if (-not (Test-Path $alExe)) {
-            $alExe = Join-Path $platformFolder "al"
-        }
+        $alExe = Join-Path $binFolder "linux/altool"
     }
     else {
-        $platformFolder = Join-Path $CompilerFolder "compiler/extension/bin/win32"
-        $alExe = Join-Path $platformFolder "altool.exe"
-        if (-not (Test-Path $alExe)) {
-            $alExe = Join-Path $platformFolder "al.exe"
-        }
+        $alExe = Join-Path $binFolder "win32/altool.exe"
+    }
+
+    # Fall back to the flat bin folder used by framework-dependent / marketplace VSIX layouts
+    if (-not (Test-Path $alExe)) {
+        $alExe = Join-Path $binFolder (Split-Path $alExe -Leaf)
     }
 
     if (-not (Test-Path $alExe)) {
@@ -194,7 +268,7 @@ function Get-ALTool {
 .PARAMETER EnableExternalRulesets
     Switch to enable external rulesets for code analysis.
 .PARAMETER AppType
-    Type of apps being compiled: 'app' or 'testApp'.
+    Type of apps being compiled: 'app', 'testApp', or 'bcptApp'.
 .PARAMETER PreCompileApp
     Scriptblock to execute before compiling each app.
 .PARAMETER PostCompileApp
@@ -240,7 +314,7 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $false)]
         [switch]$EnableExternalRulesets,
         [Parameter(Mandatory = $false)]
-        [ValidateSet('app', 'testApp')]
+        [ValidateSet('app', 'testApp', 'bcptApp')]
         [string]$AppType,
         [Parameter(Mandatory = $false)]
         [scriptblock]$PreCompileApp,
@@ -554,28 +628,38 @@ function CompileAppsInWorkspace {
 
 <#
 .SYNOPSIS
-    Gets the highest compatible .NET runtime version installed on the system.
+    Returns the raw output of 'dotnet --list-runtimes'.
+.DESCRIPTION
+    Thin wrapper around the native dotnet CLI so the runtime detection logic in
+    Get-DotnetRuntimeVersionInstalled can be unit tested by mocking this function.
+.OUTPUTS
+    The lines emitted by 'dotnet --list-runtimes', or $null if the command produced no output.
+#>
+function Get-DotnetListRuntimes {
+    return dotnet --list-runtimes
+}
+
+<#
+.SYNOPSIS
+    Gets the highest installed .NET runtime version matching the requested major.
 .DESCRIPTION
     Uses 'dotnet --list-runtimes' to detect installed .NET runtimes. Returns the highest
-    version that is within the supported major version range. Requires both Microsoft.NETCore.App
-    and Microsoft.AspNetCore.App runtimes to be installed for a version to be considered.
-.PARAMETER MinimumSupportedMajorVersion
-    The minimum major version of .NET runtime to consider.
-.PARAMETER MaximumSupportedMajorVersion
-    The maximum major version of .NET runtime to consider.
+    installed version whose major equals RequiredMajorVersion and where both
+    Microsoft.NETCore.App and Microsoft.AspNetCore.App runtimes are installed.
+.PARAMETER RequiredMajorVersion
+    The exact major version of .NET runtime to look for (typically read from the BC artifact's
+    manifest.json dotNetVersion field).
 .OUTPUTS
-    System.Version of the highest compatible .NET runtime installed, or $null if none found.
+    System.Version of the highest matching .NET runtime installed, or $null if none found.
 #>
 function Get-DotnetRuntimeVersionInstalled {
     param(
-        [Parameter(Mandatory = $false)]
-        [int] $MinimumSupportedMajorVersion = 6, # TODO: Find a better way to determine minimum supported version and maximum supported version
-        [Parameter(Mandatory = $false)]
-        [int] $MaximumSupportedMajorVersion = 8
+        [Parameter(Mandatory = $true)]
+        [int] $RequiredMajorVersion
     )
 
     try {
-        $runtimeOutput = dotnet --list-runtimes
+        $runtimeOutput = Get-DotnetListRuntimes
 
         if (-not $runtimeOutput) {
             OutputDebug -message "Could not detect .NET runtimes. 'dotnet --list-runtimes' returned no output."
@@ -606,10 +690,9 @@ function Get-DotnetRuntimeVersionInstalled {
             return $null
         }
 
-        # Find the highest version present in both, within the supported major version range
+        # Pick the highest installed version with the requested major where both runtimes are present.
         $compatibleVersions = $netCoreVersions | Where-Object {
-            $_.Major -ge $MinimumSupportedMajorVersion -and
-            $_.Major -le $MaximumSupportedMajorVersion -and
+            $_.Major -eq $RequiredMajorVersion -and
             $aspNetVersions -contains $_
         } | Sort-Object -Descending
 
@@ -623,6 +706,54 @@ function Get-DotnetRuntimeVersionInstalled {
         OutputDebug -message "Failed to detect .NET runtime version: $_"
         return $null
     }
+}
+
+<#
+.SYNOPSIS
+    Reads the required .NET major version from the BC artifact manifest.
+.DESCRIPTION
+    BcContainerHelper copies the artifact's manifest.json into the compiler folder. If the
+    manifest contains a dotNetVersion, this function returns its major version so the assembly
+    probing paths can target the exact .NET runtime the artifact was built against. Returns 0
+    when no manifest is present or the manifest does not declare a dotNetVersion.
+.PARAMETER CompilerFolder
+    The folder where the AL compiler tool is located (and where BcContainerHelper places
+    manifest.json).
+.OUTPUTS
+    The required .NET major version as an integer, or 0 when not declared.
+#>
+function Get-RequiredDotnetMajorVersionFromManifest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder
+    )
+
+    $manifestFile = Join-Path $CompilerFolder "manifest.json"
+    if (-not (Test-Path $manifestFile)) {
+        return 0
+    }
+
+    try {
+        $manifest = Get-Content -Path $manifestFile -Encoding UTF8 -Raw | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        if ($manifest.ContainsKey('dotNetVersion') -and $manifest.dotNetVersion) {
+            try {
+                return ([System.Version]$manifest.dotNetVersion).Major
+            }
+            catch {
+                # [System.Version] requires at least major.minor; fall back to extracting
+                # the leading integer so single-segment values like "8" still resolve to a major.
+                if ($manifest.dotNetVersion -match '^(\d+)') {
+                    return [int]$Matches[1]
+                }
+                throw
+            }
+        }
+    }
+    catch {
+        OutputWarning -message "Could not read manifest.json from compiler folder: $($_.Exception.Message)"
+    }
+
+    return 0
 }
 
 <#
@@ -659,14 +790,27 @@ function Get-AssemblyProbingPaths {
     } elseif ($isLinux -or $isMacOS) {
         $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
     } else {
-        $dotNetRuntimeVersion = (Get-DotnetRuntimeVersionInstalled)
-        if ($dotNetRuntimeVersion) {
-            $dotnetRoot = Split-Path (Get-Command dotnet).Source
-            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML"), (Join-Path $dotnetRoot "shared\Microsoft.NETCore.App\$dotNetRuntimeVersion"), (Join-Path $dotnetRoot "shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion")) + $probingPaths
+        # The BC artifact's manifest.json (copied into the compiler folder by BcContainerHelper)
+        # declares which .NET version the platform was built against. Pick the matching installed
+        # runtime so the compiler resolves the same assemblies BC will load at runtime.
+        $dotNetSharedPaths = @()
+        $requiredMajor = Get-RequiredDotnetMajorVersionFromManifest -CompilerFolder $CompilerFolder
+        if ($requiredMajor -gt 0) {
+            OutputDebug -message "Artifact manifest requires .NET major version $requiredMajor"
+            $dotNetRuntimeVersion = Get-DotnetRuntimeVersionInstalled -RequiredMajorVersion $requiredMajor
+            if ($dotNetRuntimeVersion) {
+                OutputDebug -message "Using .NET runtime version $dotNetRuntimeVersion for assembly probing paths"
+                $dotnetRoot = Split-Path (Get-Command dotnet).Source
+                $dotNetSharedPaths = @((Join-Path $dotnetRoot "shared\Microsoft.NETCore.App\$dotNetRuntimeVersion"), (Join-Path $dotnetRoot "shared\Microsoft.AspNetCore.App\$dotNetRuntimeVersion"))
+            }
+            else {
+                OutputWarning -message "No installed .NET runtime matches the major version ($requiredMajor) required by the artifact manifest. .NET assembly probing paths will not be added."
+            }
         }
         else {
-            $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $probingPaths
+            OutputDebug -message "Artifact manifest does not declare a dotNetVersion; skipping versioned .NET assembly probing paths."
         }
+        $probingPaths = @((Join-Path $compilerFolderDllsPath "OpenXML")) + $dotNetSharedPaths + $probingPaths
     }
 
     OutputArray -Message "Probing Paths:" -Array $probingPaths
@@ -834,10 +978,142 @@ function New-BuildOutputFile {
     return $buildOutputPath
 }
 
+<#
+.SYNOPSIS
+    Generates AppSourceCop.json files for app folders with baseline version information.
+.DESCRIPTION
+    For each app folder, creates or updates an AppSourceCop.json file with baseline information
+    for breaking change detection. If the file already exists, it is merged with AL-Go-managed
+    fields rather than overwritten.
+
+    AL-Go-managed keys (set/overwritten by this function):
+    - version
+    - baselinePackageCachePath
+    - mandatoryAffixes
+    - obsoleteTagMinAllowedMajorMinor
+
+    Any other keys in an existing AppSourceCop.json are preserved.
+.PARAMETER AppFolders
+    Array of app folder paths to generate AppSourceCop.json for.
+.PARAMETER BaselineApps
+    Array of file paths to baseline release .app files.
+.PARAMETER BaselinePackageCachePath
+    Path to the folder containing the baseline .app files and their dependencies (used for baselinePackageCachePath in AppSourceCop.json).
+.PARAMETER CompilerFolder
+    Path to the compiler folder containing the AL tool.
+.PARAMETER Settings
+    Hashtable containing the build settings with AppSourceCop configuration.
+#>
+function New-AppSourceCopJson {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $AppFolders,
+        [Parameter(Mandatory = $false)]
+        [string[]] $BaselineApps = @(),
+        [Parameter(Mandatory = $false)]
+        [string] $BaselinePackageCachePath = '',
+        [Parameter(Mandatory = $true)]
+        [string] $CompilerFolder,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings
+    )
+
+    # Extract version info from baseline apps using the AL tool, keyed by app ID
+    $baselineAppVersions = @{}
+    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    foreach ($appFile in $BaselineApps) {
+        try {
+            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $baselineAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
+        }
+        catch {
+            OutputWarning -message "Failed to read manifest from '$appFile': $($_.Exception.Message)"
+        }
+    }
+
+    # Create/update AppSourceCop.json for each app folder with the previous version as baseline and settings from the project configuration
+    foreach ($folder in $AppFolders) {
+        $appSourceCopJsonFile = Join-Path $folder "AppSourceCop.json"
+
+        # Start from existing content if present, preserving any user-managed settings
+        $appSourceCopJson = @{}
+        if (Test-Path $appSourceCopJsonFile) {
+            try {
+                $appSourceCopJson = Get-Content -Path $appSourceCopJsonFile -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            }
+            catch {
+                OutputWarning -message "Failed to parse existing AppSourceCop.json in '$folder': $($_.Exception.Message). Creating new file."
+                $appSourceCopJson = @{}
+            }
+        }
+
+        # Set/override AL-Go managed fields
+        if ($Settings.appSourceCopMandatoryAffixes -and $Settings.appSourceCopMandatoryAffixes.Count -gt 0) {
+            $appSourceCopJson["mandatoryAffixes"] = @() + $Settings.appSourceCopMandatoryAffixes
+        }
+
+        if ($Settings.obsoleteTagMinAllowedMajorMinor) {
+            $appSourceCopJson["obsoleteTagMinAllowedMajorMinor"] = $Settings.obsoleteTagMinAllowedMajorMinor
+        }
+
+        # Match baseline app version by app ID
+        $appJsonPath = Join-Path $folder "app.json"
+        if (Test-Path $appJsonPath) {
+            $appJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            if ($baselineAppVersions.ContainsKey($appJson.id)) {
+                $appSourceCopJson["version"] = $baselineAppVersions[$appJson.id]
+                $appSourceCopJson["baselinePackageCachePath"] = $BaselinePackageCachePath
+            }
+        }
+
+        if ($appSourceCopJson.Count -gt 0) {
+            Write-Host "Creating AppSourceCop.json for $folder"
+            $appSourceCopJson | ConvertTo-Json -Depth 99 | Set-Content -Encoding UTF8 $appSourceCopJsonFile
+        }
+    }
+}
+
+<#
+.SYNOPSIS
+    Checks whether an app folder's compiled .app file exists in a list of downloaded app file names.
+.DESCRIPTION
+    Reads app.json from the specified folder and checks if a matching .app file (by Publisher_Name prefix)
+    exists in the provided list of downloaded file names. Used by incremental builds to determine which
+    folders can be skipped because their app was already downloaded from a baseline workflow run.
+.PARAMETER folder
+    The app folder path containing app.json.
+.PARAMETER downloadedAppNames
+    Array of .app file names that were downloaded from the baseline.
+.OUTPUTS
+    Boolean indicating whether the app was found in the downloaded list.
+#>
+function Test-BaselineAppDownloaded {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $folder,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]] $downloadedAppNames
+    )
+
+    $appJsonPath = Join-Path $folder "app.json"
+    if (-not (Test-Path $appJsonPath)) {
+        return $false
+    }
+
+    $appJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $appPrefix = ("$($appJson.Publisher)_$($appJson.Name)".Split([System.IO.Path]::GetInvalidFileNameChars()) -join '') + "_"
+
+    return @($downloadedAppNames | Where-Object { $_.StartsWith($appPrefix) }).Count -gt 0
+}
+
 Export-ModuleMember -Function Build-AppsInWorkspace
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
+Export-ModuleMember -Function Get-AnalyzersForAppType
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
+Export-ModuleMember -Function New-AppSourceCopJson
+Export-ModuleMember -Function Test-BaselineAppDownloaded

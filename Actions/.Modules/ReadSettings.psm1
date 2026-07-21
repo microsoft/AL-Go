@@ -297,6 +297,8 @@ function GetDefaultSettings
         The name of the user. Default is $ENV:GITHUB_ACTOR when running in GitHub Actions.
     .PARAMETER branchName
         The name of the branch to use for conditional settings. Default is $ENV:GITHUB_REF_NAME when running in GitHub Actions.
+    .PARAMETER trigger
+        The GitHub event name used for conditional settings (for example: push, pull_request, schedule, workflow_dispatch). Default is $ENV:GITHUB_EVENT_NAME.
     .PARAMETER orgSettingsVariableValue
         The value of the organization settings variable. Default is $ENV:ALGoOrgSettings.
     .PARAMETER repoSettingsVariableValue
@@ -317,6 +319,7 @@ function ReadSettings {
         [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
         [string] $userName = "$ENV:GITHUB_ACTOR",
         [string] $branchName = "$ENV:GITHUB_REF_NAME",
+        [string] $trigger = "$ENV:GITHUB_EVENT_NAME",
         [string] $orgSettingsVariableValue = "$ENV:ALGoOrgSettings",
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
@@ -489,7 +492,7 @@ function ReadSettings {
                     if ("$conditionalSetting" -ne "") {
                         $conditionMet = $true
                         $conditions = @()
-                        @{"buildModes" = $buildMode; "branches" = $branchName; "repositories" = $repoName; "projects" = $project; "workflows" = $workflowName; "users" = $userName}.GetEnumerator() | ForEach-Object {
+                        @{"buildModes" = $buildMode; "branches" = $branchName; "repositories" = $repoName; "projects" = $project; "workflows" = $workflowName; "users" = $userName; "triggers" = $trigger }.GetEnumerator() | ForEach-Object {
                             $propName = $_.Key
                             $propValue = $_.Value
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
@@ -592,23 +595,16 @@ function ValidateSettings {
         $settings
     )
     Process {
+        if ($PSVersionTable.PSVersion.Major -lt 7) {
+            return
+        }
+
         $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
         $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
 
         $result = ""
         try{
-            $command  = [scriptblock] {
-                $result = ''
-                Test-Json -Json $args[0] -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
-                return $result
-            }
-
-            if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
-            }
-            else {
-                $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
-            }
+            Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
         }
         catch {
             OutputWarning "Error validating settings. Error: $($_.Exception.Message)"

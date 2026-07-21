@@ -7,6 +7,8 @@
     [string] $suffix
 )
 
+. (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
+
 function Set-OutputVariable([string] $name, [string] $value) {
     Write-Host "Assigning $value to $name"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "$name=$value"
