@@ -216,7 +216,11 @@ try {
 
         # Generate AppSourceCop.json with mandatory affixes / obsoleteTag settings (always when AppSourceCop is enabled)
         # When baseline apps are available, also include the baseline version + package cache path for breaking change detection
-        New-AppSourceCopJson -AppFolders $settings.appFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
+        $appSourceCopFolders = @($settings.appFolders)
+        if ($settings.enableCodeAnalyzersOnTestApps) {
+            $appSourceCopFolders += @($settings.testFolders) + @($settings.bcptTestFolders)
+        }
+        New-AppSourceCopJson -AppFolders $appSourceCopFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
