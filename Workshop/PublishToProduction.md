@@ -7,8 +7,8 @@ If you follow the same process and setup an environment called PROD and add the 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/1008fcf4-ed2a-4cc1-a786-3b5cf6692266) |
 |-|
 
-> [!NOTE]
-> You can add protection rules to environments in GitHub, like which branches can deploy to this environment and which users should review every deployment to this environment as well.
+> [!IMPORTANT]
+> Before you point an environment at a real production tenant, restrict which branches are allowed to deploy to it and require reviewers for each deployment. See the official GitHub documentation on [Managing environments for deployment](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and the [Deployment protection rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-protection-rules) reference (including [Deployment branches and tags](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-branches-and-tags) and [Required reviewers](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#required-reviewers)).
 
 By default, all environments will be picked up for **continuous deployment**, but production environments will be skipped unless you add the ContinuousDeployment setting from the previous chapter. The Deployment job will succeed, but looking into the step, you will see that the PROD environment is ignored:
 

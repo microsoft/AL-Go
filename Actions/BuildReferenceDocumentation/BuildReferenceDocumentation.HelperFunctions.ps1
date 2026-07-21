@@ -26,18 +26,29 @@
         Expand-Archive -Path "$($tempFolder).zip" -DestinationPath $tempFolder -Force
         Remove-Item -Path "$($tempFolder).zip" -Force
         if ($IsLinux) {
+            # Prefer the platform-specific linux/ subfolder, then fall back to the flat bin
+            # folder used by framework-dependent / marketplace-packaged extensions.
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc'
+            if (-not (Test-Path $ENV:aldocPath)) {
+                $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/aldoc'
+            }
             if (Test-Path $ENV:aldocPath) {
                 & /usr/bin/env sudo pwsh -command "& chmod +x $ENV:aldocPath"
             }
             else {
                 # If the executable isn't found, use dotnet to run the dll
                 $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/linux/aldoc.dll'
+                if (-not (Test-Path $ENV:aldocPath)) {
+                    $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/aldoc.dll'
+                }
                 $ENV:aldocCommand = 'dotnet'
             }
         }
         else {
             $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/win32/aldoc.exe'
+            if (-not (Test-Path $ENV:aldocPath)) {
+                $ENV:aldocPath = Join-Path $tempFolder 'extension/bin/aldoc.exe'
+            }
         }
         if (-not (Test-Path $ENV:aldocPath)) {
             throw "aldoc tool not found at $ENV:aldocPath"
@@ -144,6 +155,7 @@ function GenerateDocsSite {
         [string] $version,
         [string[]] $allVersions,
         [hashtable] $allApps,
+        [hashtable] $allDependencies = @{},
         [string] $repoName,
         [string] $releaseNotes,
         [string] $header,
@@ -200,6 +212,9 @@ function GenerateDocsSite {
 
     $docfxPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
     New-Item -Path $docfxPath -ItemType Directory | Out-Null
+    # Package cache used by aldoc to resolve references from the app being documented to other modules
+    $packageCachePath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
+    New-Item -Path $packageCachePath -ItemType Directory | Out-Null
     try {
         # Generate new toc.yml with releases and apps
         $newTocYml = GenerateTocYml -version $version -allVersions $allVersions -allApps $allApps -repoName $repoName -groupByProject $groupByProject
@@ -210,6 +225,19 @@ function GenerateDocsSite {
             $apps += @($value)
         }
         $apps = @($apps | Select-Object -Unique)
+
+        # Populate the package cache with all apps and their dependencies. Without this, aldoc cannot
+        # resolve references to other modules (reported as "Referenced module not loaded") and the
+        # corresponding links in the generated documentation are left unresolved.
+        $dependencyApps = @()
+        foreach($value in $allDependencies.Values) {
+            $dependencyApps += @($value)
+        }
+        @($apps + $dependencyApps | Select-Object -Unique) | ForEach-Object {
+            if (Test-Path -Path $_) {
+                Copy-Item -Path $_ -Destination $packageCachePath -Force
+            }
+        }
 
         try {
             $arguments = $aldocArguments + @(
@@ -261,6 +289,7 @@ function GenerateDocsSite {
                 "build"
                 "--output ""$docfxpath"""
                 "--loglevel $loglevel"
+                "--packagecache ""$packageCachePath"""
                 "--source ""$_"""
                 )
             Write-Host "invoke $aldocCommand $arguments"
@@ -290,6 +319,7 @@ function GenerateDocsSite {
     }
     finally {
         Remove-Item -Path $docfxPath -Recurse -Force
+        Remove-Item -Path $packageCachePath -Recurse -Force
     }
 }
 
