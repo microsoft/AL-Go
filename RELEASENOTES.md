@@ -9,7 +9,7 @@ Workspace compilation now finds altool both in the platform-specific subfolder (
 - Retry downloading dependency artifacts from the current build up to 3 times (30 seconds between attempts) to tolerate transient network errors such as "Failed to GetSignedArtifactURL: Unable to make request: ETIMEDOUT"
 - Issue 2302 - AlDoc does not use --packagecache when building reference documentation
 - Issue 2319 - Under workspace compilation, `enableCodeAnalyzersOnTestApps: false` now also disables custom analyzers (`customCodeCops`) for test apps and BCPT test apps, not just the built-in code analyzers.
-- Issue 2267 - appsourcecop.json is not created for testapps even if enableCodeAnalyzersOnTestApps=true
+- Issue 2267 - `AppSourceCop.json` is now created for test apps when `enableCodeAnalyzersOnTestApps` is true.
 
 ## v9.1
 
