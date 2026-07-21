@@ -244,9 +244,13 @@ try {
         EnableExternalRulesets      = $settings.enableExternalRulesets
         PreCompileApp               = $scriptOverrides['PreCompileApp']
         PostCompileApp              = $scriptOverrides['PostCompileApp']
-        Analyzers                   = (Get-CodeAnalyzers -Settings $settings)
-        CustomAnalyzers             = (Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
     }
+
+    # Full set of analyzers configured for the build. Get-AnalyzersForAppType decides
+    # per app type which of these actually apply (test/BCPT apps get none when
+    # enableCodeAnalyzersOnTestApps is false - both built-in and custom analyzers).
+    $allAnalyzers = @(Get-CodeAnalyzers -Settings $settings)
+    $allCustomAnalyzers = @(Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
 
     # Start compilation - only compile folders that need building (all in full build, modified-only in incremental)
     $appFiles = @()
@@ -254,32 +258,36 @@ try {
     $bcptTestAppFiles = @()
     try {
         if ($appFoldersToBuild.Count -gt 0) {
+            $analyzers = Get-AnalyzersForAppType -Settings $settings -AppType 'app' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+
             # Compile Apps
             $appFiles = Build-AppsInWorkspace @buildParams `
+                -Analyzers $analyzers.Analyzers `
+                -CustomAnalyzers $analyzers.CustomAnalyzers `
                 -Folders $appFoldersToBuild `
                 -OutFolder $appOutputFolder `
                 -AppType 'app'
         }
 
         if ($testFoldersToBuild.Count -gt 0) {
-            if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
-                $buildParams.Analyzers = @()
-            }
+            $analyzers = Get-AnalyzersForAppType -Settings $settings -AppType 'testApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
 
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
+                -Analyzers $analyzers.Analyzers `
+                -CustomAnalyzers $analyzers.CustomAnalyzers `
                 -Folders $testFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
         }
 
         if ($bcptTestFoldersToBuild.Count -gt 0) {
-            if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
-                $buildParams.Analyzers = @()
-            }
+            $analyzers = Get-AnalyzersForAppType -Settings $settings -AppType 'bcptApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
 
             # Compile BCPT Test Apps
             $bcptTestAppFiles = Build-AppsInWorkspace @buildParams `
+                -Analyzers $analyzers.Analyzers `
+                -CustomAnalyzers $analyzers.CustomAnalyzers `
                 -Folders $bcptTestFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'bcptApp'
