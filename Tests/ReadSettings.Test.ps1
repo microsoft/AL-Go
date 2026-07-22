@@ -541,30 +541,31 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
+        It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
+            Mock OutputWarning { }
+            Mock ConvertTo-Json { '{}' }
+
+            $settings = @{ "someProp" = "someValue" }
+
+            if ($PSVersionTable.PSVersion.Major -ge 7) {
+                Mock Test-Json { }
+                $settings | ValidateSettings
+                # On PS7+, Test-Json is called directly for validation
+                Should -Invoke -CommandName Test-Json -Times 1
+                Should -Invoke -CommandName ConvertTo-Json -Times 1
+            }
+            else {
+                # On PS < 7, validation is skipped entirely
+                $settings | ValidateSettings
+                Should -Invoke -CommandName ConvertTo-Json -Times 0
+            }
+
+            # Verify no warning was output
+            Should -Invoke -CommandName OutputWarning -Times 0
+        }
         It 'Contains doNotPerformUpgrade in the settings schema' {
             $settingsSchema = $schema | ConvertFrom-Json
             $settingsSchema.properties.doNotPerformUpgrade.type | Should -Be 'boolean'
-            It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
-                Mock OutputWarning { }
-                Mock ConvertTo-Json { '{}' }
-
-                $settings = @{ "someProp" = "someValue" }
-
-                if ($PSVersionTable.PSVersion.Major -ge 7) {
-                    Mock Test-Json { }
-                    $settings | ValidateSettings
-                    # On PS7+, Test-Json is called directly for validation
-                    Should -Invoke -CommandName Test-Json -Times 1
-                    Should -Invoke -CommandName ConvertTo-Json -Times 1
-                }
-                else {
-                    # On PS < 7, validation is skipped entirely
-                    $settings | ValidateSettings
-                    Should -Invoke -CommandName ConvertTo-Json -Times 0
-                }
-
-                # Verify no warning was output
-                Should -Invoke -CommandName OutputWarning -Times 0
-            }
         }
     }
+}
