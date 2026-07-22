@@ -596,23 +596,16 @@ function ValidateSettings {
         $settings
     )
     Process {
+        if ($PSVersionTable.PSVersion.Major -lt 7) {
+            return
+        }
+
         $settingsJson = ConvertTo-Json -InputObject $settings -Depth 99 -Compress
         $settingsSchemaFile = Join-Path $PSScriptRoot "settings.schema.json" -Resolve
 
         $result = ""
         try{
-            $command  = [scriptblock] {
-                $result = ''
-                Test-Json -Json $args[0] -SchemaFile $args[1] -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
-                return $result
-            }
-
-            if($PSVersionTable.PSVersion.Major -lt 6) { # Test-Json is not available in PS5.1
-                $result = pwsh -noprofile -Command $command -args $settingsJson, $settingsSchemaFile
-            }
-            else {
-                $result = Invoke-Command -ScriptBlock $command -ArgumentList $settingsJson, $settingsSchemaFile
-            }
+            Test-Json -Json $settingsJson -SchemaFile $settingsSchemaFile -ErrorVariable result -ErrorAction SilentlyContinue | Out-Null
         }
         catch {
             OutputWarning "Error validating settings. Error: $($_.Exception.Message)"

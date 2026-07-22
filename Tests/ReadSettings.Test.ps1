@@ -35,15 +35,15 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # property5                                            multi5
             # property6                                                                                                        user6
             @{ "property1" = "repo1"; "property2" = "repo2"; "property3" = "repo3"; "arr1" = @("repo1", "repo2") } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
             @{ "property1" = "single1"; "property4" = "single4" } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $ALGoFolder "settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $ALGoFolder "settings.json") -Encoding utf8 -Force
             @{ "property1" = "multi1"; "property5" = "multi5" } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
             @{ "property2" = "workflow2"; "conditionalSettings" = @( @{ "branches" = @( 'dev' ); "settings" = @{ "property1" = "branch1"; "property4" = "branch4" } } ) } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $githubFolder "Workflow.settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $githubFolder "Workflow.settings.json") -Encoding utf8 -Force
             @{ "property1" = "user1"; "property6" = "user6" } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $projectALGoFolder "user.settings.json") -encoding utf8 -Force
+            Set-Content -Path (Join-Path $projectALGoFolder "user.settings.json") -Encoding utf8 -Force
 
             # No settings variables
             $ENV:ALGoOrgSettings = ''
@@ -249,8 +249,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # Test customSettings with complex object
             $customComplexSettingsJson = @{
                 "deliverToAppSource" = @{
-                    "mainAppFolder" = "CustomApp"
-                    "productId" = "CustomProductId"
+                    "mainAppFolder"  = "CustomApp"
+                    "productId"      = "CustomProductId"
                     "customProperty" = "CustomValue"
                 }
             } | ConvertTo-Json -Depth 99
@@ -266,7 +266,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
 
         It 'Settings schema is valid' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
-            Test-Json -json $schema | Should -Be $true
+            Test-Json -Json $schema | Should -Be $true
         }
 
         It 'All default settings are in the schema' {
@@ -282,14 +282,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
-            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
+            Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema | Should -Be $true
         }
 
         It 'Shell setting can only be pwsh or powershell' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             $defaultSettings.shell = 42
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
+                Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/shell'"
@@ -297,7 +297,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $defaultSettings.shell = "random"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
+                Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: The string value is not a match for the indicated regular expression at '/shell'"
@@ -309,7 +309,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings = GetDefaultSettings
             $defaultSettings.projects = "not an array"
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
+                Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"string`" but should be `"array`" at '/projects'"
@@ -318,7 +318,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # If the projects setting is an array, but contains non-string values, it should throw an error
             $defaultSettings.projects = @("project1", 42)
             try {
-                Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema
+                Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema
             }
             catch {
                 $_.Exception.Message | Should -Be "The JSON is not valid with the schema: Value is `"integer`" but should be `"string`" at '/projects/1'"
@@ -326,9 +326,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # If the projects setting is an array of strings, it should pass the schema validation
             $defaultSettings.projects = @("project1")
-            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
+            Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema | Should -Be $true
             $defaultSettings.projects = @("project1", "project2")
-            Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
+            Test-Json -Json (ConvertTo-Json $defaultSettings -Depth 99) -Schema $schema | Should -Be $true
         }
 
         It 'overwriteSettings property resets settings from destination object (simple types)' {
@@ -338,9 +338,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 setting3 = "value3"
             }
             $src = [PSCustomObject]@{
-                overwriteSettings = @("setting1","setting2","setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
-                setting1     = "newvalue1"
-                setting5     = "value5"
+                overwriteSettings = @("setting1", "setting2", "setting4") # setting2 exist in the dst, but there no value in src, should be ignored; setting4 does not exist in dst, should be ignored;
+                setting1          = "newvalue1"
+                setting5          = "value5"
             }
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
@@ -359,12 +359,12 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # overwriteSettings should work for complex types (arrays)
             $dst = [ordered]@{
                 complexSetting = @( "value1", "value2", "value3" )
-                setting3 = "value3"
+                setting3       = "value3"
             }
 
             $src = [PSCustomObject]@{
                 complexSetting = @( "newvalue1", "newvalue2" )
-                setting5 = "value5"
+                setting5       = "value5"
             }
 
             # Without using overwriteSettings, the complex settings are merged, not overwritten
@@ -380,13 +380,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # Now use overwriteSettings to overwrite the complex setting
             $dst = [ordered]@{
                 complexSetting = @( "value1", "value2", "value3" )
-                setting3 = "value3"
+                setting3       = "value3"
             }
 
             $src = [PSCustomObject]@{
                 overwriteSettings = @("complexSetting")
-                complexSetting = @( "newvalue1", "newvalue2" )
-                setting5 = "value5"
+                complexSetting    = @( "newvalue1", "newvalue2" )
+                setting5          = "value5"
             }
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
@@ -407,7 +407,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
                     setting2 = "value2"
                     setting3 = "value3"
                 }
-                setting4 = "value4"
+                setting4       = "value4"
             }
 
             $src = [PSCustomObject]@{
@@ -416,7 +416,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
                     setting2 = "newvalue2"
                     setting5 = "value5"
                 }
-                setting6 = "value6"
+                setting6       = "value6"
             }
 
             # Without using overwriteSettings, the complex settings are merged, not replaced
@@ -436,17 +436,17 @@ InModuleScope ReadSettings { # Allows testing of private functions
                     setting2 = "value2"
                     setting3 = "value3"
                 }
-                setting4 = "value4"
+                setting4       = "value4"
             }
 
             $src = [PSCustomObject]@{
                 overwriteSettings = @("complexSetting")
-                complexSetting = [PSCustomObject]@{
+                complexSetting    = [PSCustomObject]@{
                     setting1 = "newvalue1"
                     setting2 = "newvalue2"
                     setting5 = "value5"
                 }
-                setting6 = "value6"
+                setting6          = "value6"
             }
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
@@ -469,7 +469,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
             $src = [PSCustomObject]@{
                 overwriteSettings = @("setting2") # setting2 does not exist in src, should be ignored
-                setting1     = @("newvalue1.2", "newvalue1.3")
+                setting1          = @("newvalue1.2", "newvalue1.3")
             }
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
@@ -544,6 +544,27 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'Contains doNotPerformUpgrade in the settings schema' {
             $settingsSchema = $schema | ConvertFrom-Json
             $settingsSchema.properties.doNotPerformUpgrade.type | Should -Be 'boolean'
+            It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
+                Mock OutputWarning { }
+                Mock ConvertTo-Json { '{}' }
+
+                $settings = @{ "someProp" = "someValue" }
+
+                if ($PSVersionTable.PSVersion.Major -ge 7) {
+                    Mock Test-Json { }
+                    $settings | ValidateSettings
+                    # On PS7+, Test-Json is called directly for validation
+                    Should -Invoke -CommandName Test-Json -Times 1
+                    Should -Invoke -CommandName ConvertTo-Json -Times 1
+                }
+                else {
+                    # On PS < 7, validation is skipped entirely
+                    $settings | ValidateSettings
+                    Should -Invoke -CommandName ConvertTo-Json -Times 0
+                }
+
+                # Verify no warning was output
+                Should -Invoke -CommandName OutputWarning -Times 0
+            }
         }
     }
-}
