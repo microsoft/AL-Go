@@ -166,7 +166,7 @@ You can also run the end to end tests directly from VS Code, by providing the fo
 |$global:SecureadminCenterApiCredentials| SecureString | Admin Center API Credentials |
 |$global:SecureLicenseFileUrl| SecureString | Direct download URL to a license file |
 |$global:pteTemplate| String | URL for your PTE template (like `myuser/AL-Go-PTE@main` or `myuser/AL-Go@main\|Templates/Per Tenant Extension` for using your AL-Go fork directly) |
-|$global:appSourceTemplate| String | URL for your PTE template (like `myuser/AL-Go-AppSource@main` or `myuser/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
+|$global:appSourceTemplate| String | URL for your AppSource template (like `myuser/AL-Go-AppSource@main` or `myuser/AL-Go@main\|Templates/AppSource App` for using your AL-Go fork directly) |
 |$global:SecureAzureCredentials| SecureString | A JSON string containing the Azure_Credentials set up with [federated credentials](https://github.com/microsoft/AL-Go/blob/main/Scenarios/secrets.md#federated-credential) |
 |$global:SecureGitHubPackagesToken| SecureString | A classic PAT with read/write access to GitHub packages in the organization the E2E tests are running in. |
 
