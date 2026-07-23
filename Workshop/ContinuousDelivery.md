@@ -100,9 +100,7 @@ Custom delivery will be handled in an advanced part of this workshop later.
 
 ## Important Note: Automatic Skip Behavior
 
-The Deliver step/action is skipped when no app artifacts are available.
-
-This skip behavior prevents delivery errors and ensures that delivery targets are only invoked when there are actual artifacts to deliver. You'll see the Deliver step/action appear as skipped in the workflow summary when this occurs.
+The Deliver step is automatically skipped when no app artifacts are available, so delivery targets are only invoked when there is something to deliver.
 
 OK, so **CD** stands for **Continuous Delivery**, I thought it was **Continuous Deployment**? Well, it is actually both, so let's talk about **Continuous Deployment**...
 

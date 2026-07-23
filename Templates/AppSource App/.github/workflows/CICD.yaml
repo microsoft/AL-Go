@@ -357,8 +357,10 @@ jobs:
 
       - name: Deployment skipped
         if: hashFiles('.artifacts/**/*.app') == ''
+        env:
+          _environment: ${{ matrix.environment }}
         run: |
-          Write-Host "::Notice::Deployment to environment ${{ matrix.environment }} was skipped because no app artifacts were found"
+          Write-Host "::Notice::Deployment to environment $($env:_environment) was skipped because no app artifacts were found"
 
       - name: Deploy to Power Platform
         if: env.type == 'PTE' && env.powerPlatformSolutionFolder != ''
@@ -418,8 +420,10 @@ jobs:
 
       - name: Delivery skipped
         if: hashFiles('.artifacts/**/*.app') == ''
+        env:
+          _deliveryTarget: ${{ matrix.deliveryTarget }}
         run: |
-          Write-Host "::Notice::Delivery to ${{ matrix.deliveryTarget }} was skipped because no app artifacts were found"
+          Write-Host "::Notice::Delivery to $($env:_deliveryTarget) was skipped because no app artifacts were found"
 
   PostProcess:
     needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]

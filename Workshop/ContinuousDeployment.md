@@ -94,9 +94,7 @@ AL-Go can also be setup for custom deployment when you want to deploy to non-Saa
 
 ## Important Note: Automatic Skip Behavior
 
-Deployment jobs automatically skip execution when no app artifacts are available.
-
-This skip behavior prevents deployment errors and ensures that environments are only targeted when there are actual artifacts to deploy. You'll see the deployment step appear as skipped in the workflow summary when this occurs.
+The Deploy step is automatically skipped when no app artifacts are available, so environments are only targeted when there is something to deploy.
 
 This section was about Continuous Deployment, but you might not want to deploy to production environments continuously - how can we publish to production on demand?
 
