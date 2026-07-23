@@ -3281,7 +3281,7 @@ Describe "GetFilesToUpdate (real template)" {
              $filesToExclude.sourceFullPath | Should -Contain (Join-Path $originalTemplateFolder $_)
         }
 
-        # No files to exclude
+        # No files to remove
         $filesToRemove  | Should -BeNullOrEmpty
     }
 
