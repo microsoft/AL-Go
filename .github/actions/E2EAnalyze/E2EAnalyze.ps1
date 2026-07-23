@@ -8,97 +8,144 @@ Param(
 )
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
-$modulePath = Join-Path "." "e2eTests/e2eTestHelper.psm1" -resolve
-Import-Module $modulePath -DisableNameChecking
 
-$publicTestruns = @{
-    "max-parallel" = $maxParallel
-    "fail-fast" = $false
-    "matrix" = @{
-        "include" = @()
+<#
+.SYNOPSIS
+Filters the available E2E scenarios based on a comma-separated wildcard filter and a list of disabled scenarios.
+.DESCRIPTION
+Returns the scenarios that match at least one of the (comma separated, wildcard enabled) filter patterns and
+that are not listed as disabled. The function is pure (no side effects other than host logging) so it can be
+unit tested in isolation.
+.PARAMETER allScenarios
+The full list of available scenario names.
+.PARAMETER scenariosFilter
+Comma separated list of wildcard patterns. A scenario is included if it matches at least one pattern. Default is '*' (all).
+.PARAMETER disabledScenariosConfig
+Array of objects (as read from disabled-scenarios.json) each having a 'scenario' and an optional 'reason' property.
+.EXAMPLE
+Get-E2EScenariosToRun -allScenarios @('a','b','c') -scenariosFilter 'a*,b*'
+#>
+function Get-E2EScenariosToRun {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]] $allScenarios,
+        [Parameter(Mandatory = $false)]
+        [string] $scenariosFilter = '*',
+        [Parameter(Mandatory = $false)]
+        [AllowEmptyCollection()]
+        [array] $disabledScenariosConfig = @()
+    )
+
+    $scenariosFilterArr = @($scenariosFilter -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+    if ($scenariosFilterArr.Count -eq 0) {
+        $scenariosFilterArr = @('*')
     }
-}
-$privateTestruns = @{
-    "max-parallel" = $maxParallel
-    "fail-fast" = $false
-    "matrix" = @{
-        "include" = @()
+    # A scenario matches if it is -like at least one of the filter patterns
+    $filteredScenarios = @($allScenarios | Where-Object { $scenario = $_; @($scenariosFilterArr | Where-Object { $scenario -like $_ }).Count -gt 0 })
+
+    # Determine disabled scenarios from config (optional)
+    $disabledScenarios = @()
+    if ($disabledScenariosConfig -and @($disabledScenariosConfig).Count -gt 0) {
+        $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
     }
+    Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"
+
+    # Filter out disabled scenarios
+    $scenariosBeforeDisabledFilter = $filteredScenarios
+    $beforeFilter = $filteredScenarios.Count
+    $filteredScenarios = @($filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ })
+    $afterFilter = $filteredScenarios.Count
+    if ($beforeFilter -ne $afterFilter) {
+        Write-Host "Filtered out $($beforeFilter - $afterFilter) disabled scenario(s)"
+        $disabledScenariosConfig | Where-Object { ($scenariosBeforeDisabledFilter -contains $_.scenario) -and ($filteredScenarios -notcontains $_.scenario) } | ForEach-Object {
+            Write-Host "  - $($_.scenario): $($_.reason)"
+        }
+    }
+
+    return $filteredScenarios
 }
-@('appSourceApp','PTE') | ForEach-Object {
-    $type = $_
-    @('linux','windows') | ForEach-Object {
-        $os = $_
-        @('multiProject','singleProject') | ForEach-Object {
-            $style = $_
-            $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-            $privateTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
-            if ($type -eq "PTE") {
-                # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
-                $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
+
+if ($MyInvocation.InvocationName -ne '.') {
+    $modulePath = Join-Path "." "e2eTests/e2eTestHelper.psm1" -resolve
+    Import-Module $modulePath -DisableNameChecking
+
+    $publicTestruns = @{
+        "max-parallel" = $maxParallel
+        "fail-fast" = $false
+        "matrix" = @{
+            "include" = @()
+        }
+    }
+    $privateTestruns = @{
+        "max-parallel" = $maxParallel
+        "fail-fast" = $false
+        "matrix" = @{
+            "include" = @()
+        }
+    }
+    @('appSourceApp','PTE') | ForEach-Object {
+        $type = $_
+        @('linux','windows') | ForEach-Object {
+            $os = $_
+            @('multiProject','singleProject') | ForEach-Object {
+                $style = $_
+                $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                $privateTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "Container" }
+                if ($type -eq "PTE") {
+                    # Run end 2 end tests using CompilerFolder with Windows+Linux and single/multiproject
+                    $publicTestruns.matrix.include += @{ "type" = $type; "os" = $os; "style" = $style; "Compiler" = "CompilerFolder" }
+                }
             }
         }
     }
-}
-$publicTestrunsJson = $publicTestruns | ConvertTo-Json -depth 99 -compress
-$privateTestrunsJson = $privateTestruns | ConvertTo-Json -depth 99 -compress
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "publictestruns=$publicTestrunsJson"
-Write-Host "publictestruns=$publicTestrunsJson"
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "privatetestruns=$privateTestrunsJson"
-Write-Host "privatetestruns=$privateTestrunsJson"
+    $publicTestrunsJson = $publicTestruns | ConvertTo-Json -depth 99 -compress
+    $privateTestrunsJson = $privateTestruns | ConvertTo-Json -depth 99 -compress
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "publictestruns=$publicTestrunsJson"
+    Write-Host "publictestruns=$publicTestrunsJson"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "privatetestruns=$privateTestrunsJson"
+    Write-Host "privatetestruns=$privateTestrunsJson"
 
-$releases = @(gh release list --repo microsoft/AL-Go | ForEach-Object { $_.split("`t")[0] }) | Where-Object { [Version]($_.trimStart('v')) -ge [Version]($testUpgradesFromVersion.TrimStart('v')) }
-$releasesJson = @{
-    "matrix" = @{
-        "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
-    };
-    "max-parallel" = $maxParallel
-    "fail-fast" = $false
-} | ConvertTo-Json -depth 99 -compress
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
-Write-Host "releases=$releasesJson"
-
-$scenariosFilterArr = $scenariosFilter -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-$allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
-$filteredScenarios = $allScenarios | Where-Object { $scenario = $_; $scenariosFilterArr | ForEach-Object { $scenario -like $_ } }
-
-# Load disabled scenarios from config file (optional)
-$disabledScenariosConfigPath = Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json"
-$disabledScenariosConfig = @()
-if (Test-Path -Path $disabledScenariosConfigPath) {
-    $disabledScenariosContent = Get-Content -Path $disabledScenariosConfigPath -Encoding UTF8 -Raw
-    if (-not [string]::IsNullOrWhiteSpace($disabledScenariosContent)) {
-        $disabledScenariosConfig = $disabledScenariosContent | ConvertFrom-Json
+    $releaseList = @(gh release list --repo microsoft/AL-Go)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to retrieve releases from microsoft/AL-Go. 'gh release list' exited with code $LASTEXITCODE."
     }
-}
-else {
-    Write-Host "No disabled-scenarios.json found; proceeding with all scenarios enabled."
-}
-$disabledScenarios = @()
-if ($disabledScenariosConfig -and $disabledScenariosConfig.Count -gt 0) {
-    $disabledScenarios = @($disabledScenariosConfig | ForEach-Object { $_.scenario })
-}
-Write-Host "Disabled scenarios from config: $($disabledScenarios -join ', ')"
+    $releases = @($releaseList | ForEach-Object { $_.split("`t")[0] }) | Where-Object { [Version]($_.trimStart('v')) -ge [Version]($testUpgradesFromVersion.TrimStart('v')) }
+    $releasesJson = @{
+        "matrix" = @{
+            "include" = @($releases | ForEach-Object { @{ "Release" = $_; "type" = 'appSourceApp' }; @{ "Release" = $_; "type" = 'PTE' } } )
+        };
+        "max-parallel" = $maxParallel
+        "fail-fast" = $false
+    } | ConvertTo-Json -depth 99 -compress
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "releases=$releasesJson"
+    Write-Host "releases=$releasesJson"
 
-# Filter out disabled scenarios
-$scenariosBeforeDisabledFilter = $filteredScenarios
-$beforeFilter = $filteredScenarios.Count
-$filteredScenarios = $filteredScenarios | Where-Object { $disabledScenarios -notcontains $_ }
-$afterFilter = $filteredScenarios.Count
-if ($beforeFilter -ne $afterFilter) {
-    Write-Host "Filtered out $($beforeFilter - $afterFilter) disabled scenario(s)"
-    $disabledScenariosConfig | Where-Object { ($scenariosBeforeDisabledFilter -contains $_.scenario) -and ($filteredScenarios -notcontains $_.scenario) } | ForEach-Object {
-        Write-Host "  - $($_.scenario): $($_.reason)"
+    $allScenarios = @(Get-ChildItem -Path (Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/scenarios/*/runtest.ps1") | ForEach-Object { $_.Directory.Name })
+
+    # Load disabled scenarios from config file (optional)
+    $disabledScenariosConfigPath = Join-Path $ENV:GITHUB_WORKSPACE "e2eTests/disabled-scenarios.json"
+    $disabledScenariosConfig = @()
+    if (Test-Path -Path $disabledScenariosConfigPath) {
+        $disabledScenariosContent = Get-Content -Path $disabledScenariosConfigPath -Encoding UTF8 -Raw
+        if (-not [string]::IsNullOrWhiteSpace($disabledScenariosContent)) {
+            $disabledScenariosConfig = @($disabledScenariosContent | ConvertFrom-Json)
+        }
     }
-}
-Write-Host "Scenarios to run: $($filteredScenarios -join ', ')"
+    else {
+        Write-Host "No disabled-scenarios.json found; proceeding with all scenarios enabled."
+    }
 
-$scenariosJson = @{
-    "matrix" = @{
-        "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
-    };
-    "max-parallel" = $maxParallel
-    "fail-fast" = $false
-} | ConvertTo-Json -depth 99 -compress
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
-Write-Host "scenarios=$scenariosJson"
+    $filteredScenarios = @(Get-E2EScenariosToRun -allScenarios $allScenarios -scenariosFilter $scenariosFilter -disabledScenariosConfig $disabledScenariosConfig)
+    Write-Host "Scenarios to run: $($filteredScenarios -join ', ')"
+
+    $scenariosJson = @{
+        "matrix" = @{
+            "include" = @($filteredScenarios | ForEach-Object { @{ "Scenario" = $_ } })
+        };
+        "max-parallel" = $maxParallel
+        "fail-fast" = $false
+    } | ConvertTo-Json -depth 99 -compress
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "scenarios=$scenariosJson"
+    Write-Host "scenarios=$scenariosJson"
+}

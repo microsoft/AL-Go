@@ -45,7 +45,7 @@ try {
             'e2eAppKey' = $e2eAppKey
             'algoauthapp' = $algoAuthApp
             'template' = $template
-            'appSource' = $appSource
+            'appSourceApp' = $appSource
             'release' = $release
             'contentPath' = $contentPath
         }
@@ -63,7 +63,7 @@ try {
             'template' = $template
             'adminCenterApiCredentials' = $adminCenterApiCredentials
             'multiProject' = $multiProject
-            'appSource' = $appSource
+            'appSourceApp' = $appSource
             'linux' = $linux
             'useCompilerFolder' = $useCompilerFolder
         }
