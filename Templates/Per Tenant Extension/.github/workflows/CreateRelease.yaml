@@ -73,6 +73,7 @@ jobs:
     outputs:
       artifacts: ${{ steps.determineArtifactsForRelease.outputs.artifacts }}
       releaseId: ${{ steps.createrelease.outputs.releaseId }}
+      uploadUrl: ${{ steps.createrelease.outputs.uploadUrl }}
       commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
       releaseVersion: ${{ steps.createreleasenotes.outputs.releaseVersion }}
       telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
@@ -177,6 +178,7 @@ jobs:
               data: { id: releaseId, html_url: htmlUrl, upload_url: uploadUrl }
             } = createReleaseResponse;
             core.setOutput('releaseId', releaseId);
+            core.setOutput('uploadUrl', uploadUrl);
 
   UploadArtifacts:
     needs: [ CreateRelease ]
@@ -221,20 +223,22 @@ jobs:
       - name: Upload release artifacts
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          releaseId: ${{ needs.createrelease.outputs.releaseId }}
+          uploadUrl: ${{ needs.CreateRelease.outputs.uploadUrl }}
           MATRIX_NAME: ${{ matrix.name }}
         with:
           github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           script: |
-            const releaseId = process.env.releaseId
+            const uploadUrl = process.env.uploadUrl
             const matrixName = process.env.MATRIX_NAME
             const assetPath = `${matrixName}.zip`
             const assetName = encodeURIComponent(`${matrixName}.zip`.replaceAll(' ','.')).replaceAll('%','')
             const fs = require('fs');
-            const uploadAssetResponse = await github.rest.repos.uploadReleaseAsset({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: releaseId,
+            const uploadAssetResponse = await github.request({
+              method: 'POST',
+              url: uploadUrl,
+              headers: {
+                'content-type': 'application/zip'
+              },
               name: assetName,
               data: fs.readFileSync(assetPath)
             });
@@ -283,8 +287,9 @@ jobs:
           $releaseBranch = "$($env:releaseBranchPrefix)" + "${{ needs.CreateRelease.outputs.releaseVersion }}"
           Write-Host "Creating release branch $releaseBranch"
           git checkout -b $releaseBranch
+          $serverHost = ([Uri]$env:GITHUB_SERVER_URL).Host
           git config user.name ${{ github.actor}}
-          git config user.email ${{ github.actor}}@users.noreply.github.com
+          git config user.email "${{ github.actor}}@users.noreply.$serverHost"
           git commit --allow-empty -m "Release branch $releaseBranch"
           git push origin $releaseBranch
 

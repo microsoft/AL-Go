@@ -25,7 +25,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
 
     Write-Host "Finding PR run annotation for incremental builds in repository $repository"
 
-    $checkRunsURI = "https://api.github.com/repos/$repository/check-suites/$checkSuiteId/check-runs"
+    $checkRunsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/check-suites/$checkSuiteId/check-runs"
     Write-Host "- $checkRunsURI"
 
     $checkRuns = (InvokeWebRequest -Headers $headers -Uri $checkRunsURI).Content | ConvertFrom-Json
@@ -47,7 +47,7 @@ function FindPRRunAnnotationForIncrementalBuilds {
         $annotations = (InvokeWebRequest -Headers $headers -Uri $annotationsURI).Content | ConvertFrom-Json
         if($annotations -and $annotations.count -gt 0) {
             foreach($annotation in $annotations) {
-                if($annotation.message -match "Last known good build: https://github.com/$repository/actions/runs/([0-9]{1,11})") {
+                if($annotation.message -match "Last known good build: $($ENV:GITHUB_SERVER_URL)/$repository/actions/runs/([0-9]{1,11})") {
                     Write-Host "Found PR run annotation message: $($annotation.message)"
                     $lastKnownGoodBuildId = $matches[1]
                     break
@@ -92,7 +92,7 @@ function FindLatestPRRun {
 
     while($true) {
         # Get all workflow runs for the given commit sha
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
+        $runsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/actions/runs?per_page=$per_page&page=$page&head_sha=$commitSha"
         Write-Host "- $runsURI"
         $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
 
@@ -305,7 +305,7 @@ function GetLatestCommitShaFromPRId {
 
     $headers = GetHeaders -token $token
 
-    $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
+    $pullsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/pulls/$prId"
     Write-Host "- $pullsURI"
     $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
 
@@ -334,7 +334,7 @@ function GetHeadRefFromRunId {
 
     $headers = GetHeaders -token $token
 
-    $runsURI = "https://api.github.com/repos/$repository/actions/runs/$runId"
+    $runsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/actions/runs/$runId"
     Write-Host "- $runsURI"
 
     $run = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
