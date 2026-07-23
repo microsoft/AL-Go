@@ -111,14 +111,6 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
 
-      - name: Run Build Initialize hook
-        if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
-        uses: microsoft/AL-Go-Actions/RunHook@main
-        with:
-          shell: ${{ inputs.shell }}
-          project: ${{ inputs.project }}
-          hookName: BuildInitialize
-
       - name: Determine whether to build project
         id: DetermineBuildProject
         uses: microsoft/AL-Go-Actions/DetermineBuildProject@main
@@ -127,6 +119,19 @@ jobs:
           skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
           project: ${{ inputs.project }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+
+      - name: Run Build Initialize hook
+        if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
+        uses: microsoft/AL-Go-Actions/RunHook@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          hookName: BuildInitialize
+          parametersJson: | 
+            {
+              "buildMode": "${{ inputs.buildMode }}",
+              "buildIt": ${{ steps.DetermineBuildProject.outputs.BuildIt == 'True' }}
+            }
 
       - name: Read secrets
         id: ReadSecrets
@@ -384,3 +389,16 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+
+      - name: Run Build Cleanup hook
+        if: always() && hashFiles(format('{0}/.AL-Go/BuildCleanup.ps1', inputs.project)) != '' && steps.DetermineBuildProject.outcome != 'skipped'
+        uses: microsoft/AL-Go-Actions/RunHook@main
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          hookName: BuildCleanup
+          parametersJson: |
+            {
+              "buildMode": "${{ inputs.buildMode }}",
+              "buildIt": ${{ steps.DetermineBuildProject.outputs.BuildIt == 'True' }}
+            }
