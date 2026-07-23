@@ -361,7 +361,7 @@ Remove-Item -Path (Join-Path (Get-Location) $missingWorkflowFileRelativePath) -F
 (Join-Path (Get-Location) $defaultCustomFileName) | Should -Not -Exist
 # Check that optional custom file is NOT present in final repository
 (Join-Path (Get-Location) $optionalCustomFileName) | Should -Not -Exist
-# Check that legacy workflow file is present in final repository
+# Check that legacy custom file is present in final repository
 (Join-Path (Get-Location) $legacyCustomFileName) | Should -Exist
 
 # Check that excluded workflow file is present in final repository
@@ -433,7 +433,7 @@ Pull
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
 Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $finalRepoCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
 
-# Check that default custom file is NOT present (in repos's filesToExclude and template's filesToInclude)
+ # Check that default custom file is NOT present (in repo's filesToExclude and template's filesToInclude)
 (Join-Path (Get-Location) $defaultCustomFileName) | Should -Not -Exist
 # Check that optional custom file is present (in repos's filesToInclude)
 (Join-Path (Get-Location) $optionalCustomFileName) | Should -Exist

@@ -244,7 +244,10 @@ In order to instruct AL-Go which files to look for at the template repository, y
 > [!NOTE]
 > `filesToInclude` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToInclude`, AL-Go for GitHub will ignore them and you might have to remove them manually.
 
-When using a custom template repository, `filesToInclude` also resolves files from the **original** AL-Go template (i.e. the official [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) template). This means files present in the official AL-Go template that are not overridden by your custom template are still propagated to consumer repositories. When a file exists in both the original template and your custom template, the custom template version takes precedence.
+When using a custom template repository, `filesToInclude` also resolves files from the **original** AL-Go template (i.e. the official [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) template). This means files present in the official AL-Go template that are not overridden by your custom template are still propagated to consumer repositories. When a file exists in both the original template and your custom template, how the file's **content** is resolved depends on the file's type:
+
+- **Workflow files** (`.github/workflows/*.yaml`/`*.yml`): the content is based on the original template's file, with customizations from your custom template's copy (see [Adding custom jobs](#adding-custom-jobs)) re-applied on top.
+- **Settings files** and **all other files** (e.g. PowerShell scripts, `.copy.md`, `.agent.md`): the original template's file content is used as-is; changes made to that same file in your custom template are not applied in this case.
 
 The following table summarizes how `filesToInclude` resolves files when a custom template is in use:
 
@@ -252,7 +255,7 @@ The following table summarizes how `filesToInclude` resolves files when a custom
 |---|---|---|---|
 | Yes | No | Yes | File from **original template** is propagated |
 | No | Yes | Yes | File from **custom template** is propagated |
-| Yes | Yes | Yes | File from **custom template** is used (takes precedence) |
+| Yes | Yes | Yes | File from **original template** is propagated; for Workflow files, customizations from the **custom template** are also applied |
 | Yes/No | Yes/No | No | File is **ignored** |
 
 `filesToExclude` is an array of file configurations that will instruct AL-Go which files to exclude (remove) from `filesToInclude`. Every item in the array may contain the following properties:
