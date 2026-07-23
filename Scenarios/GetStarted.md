@@ -24,7 +24,7 @@
 
    ![app1](https://github.com/user-attachments/assets/b119b33a-7ab2-4605-91d6-669ce4b71fc7)
 
-1. Choose the **Code** button and copy the **https Clone Url** (for example: *https://github.com/myuser/app1.git*)
+1. Choose the **Code** button and copy the **https Clone Url**
 
    ![Copy Url](https://github.com/user-attachments/assets/469c4f1b-9991-40e9-88a3-f306819845d6)
 
