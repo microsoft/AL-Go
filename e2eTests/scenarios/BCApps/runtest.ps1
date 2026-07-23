@@ -161,7 +161,11 @@ elseif ($prs.Count -gt 1) {
 
 $headers = GetHeaders -token $ENV:GH_TOKEN -repository $repository
 $url = "https://api.github.com/repos/$repository/actions/runs"
-$run = ((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'pull_request' } | Where-Object { $_.name -eq 'Pull Request Build' }
+# Scope the lookup to the Pull Request Build run for the e2etest branch. Other pull_request runs
+# (for example a Dependabot PR) can also be named 'Pull Request Build', so filtering only by name
+# can return multiple runs, and passing an array of ids to WaitWorkflow builds an invalid URL.
+# The runs are returned newest-first, so take the most recent matching run.
+$run = @(((InvokeWebRequest -Method Get -Headers $headers -Uri $url).Content | ConvertFrom-Json).workflow_runs | Where-Object { $_.event -eq 'pull_request' -and $_.name -eq 'Pull Request Build' -and $_.head_branch -eq $branch }) | Select-Object -First 1
 if (-not $run) {
     throw "No Pull Request Build workflow run was found"
 }
