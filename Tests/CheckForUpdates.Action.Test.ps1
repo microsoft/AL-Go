@@ -2620,7 +2620,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'folder2/test.txt')
     }
 
-    It 'GetFilesToUpdate filesToRemove resolves files from base folder' {
+    It 'GetFilesToUpdate filesToRemove resolves from template folder when file exists in both template and base folder' {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
@@ -2633,10 +2633,10 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
         $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
-        # filesToRemove should have one entry resolved from the base folder
+        # filesToRemove should have one entry resolved from the template folder
         $filesToRemove | Should -Not -BeNullOrEmpty
         $filesToRemove.Count | Should -Be 1
-        $filesToRemove[0].sourceFullPath      | Should -Be (Join-Path $baseFolder "test.txt")
+        $filesToRemove[0].sourceFullPath      | Should -Be $testTxtFile
         $filesToRemove[0].destinationFullPath | Should -Be (Join-Path $baseFolder "test.txt")
         $filesToRemove[0].originalSourceFullPath | Should -Be $null
 
@@ -2772,9 +2772,10 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
         $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
+        # filesToRemove should have one entry resolved from the template folder with the specified destinationFolder and destinationName
         $filesToRemove | Should -Not -BeNullOrEmpty
         $filesToRemove.Count | Should -Be 1
-        $filesToRemove[0].sourceFullPath      | Should -Be (Join-Path $baseFolder "subfolder/testsub.txt")
+        $filesToRemove[0].sourceFullPath      | Should -Be $testTxtFile
         $filesToRemove[0].destinationFullPath | Should -Be (Join-Path $baseFolder "subfolder/testsub.txt")
         $filesToRemove[0].originalSourceFullPath | Should -Be $null
     }
@@ -2832,239 +2833,46 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $filesToRemove | Should -BeNullOrEmpty
     }
 
-    It 'GetFilesToUpdate template settings filesToInclude added to filesToInclude' {
+    It 'GetFilesToUpdate filesToInclude keeps the first entry when two entries collide on the same destination' {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
-                filesToInclude = @(@{ filter = "test.txt" })
+                filesToInclude = @(@{ filter = "test.ps1"; destinationName = "conflict.txt" }, @{ filter = "test.txt"; destinationName = "conflict.txt" })
                 filesToExclude = @()
                 filesToRemove  = @()
             }
         }
 
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @(@{ filter = "test.ps1" })
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
-
-        # Both test.txt and test.ps1 should be in filesToInclude
-        $filesToInclude.sourceFullPath | Should -Contain $testTxtFile
-        $filesToInclude.sourceFullPath | Should -Contain $testPSFile
-    }
-
-    It 'GetFilesToUpdate template settings filesToExclude added to filesToExclude' {
-        $settings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles       = @{
-                filesToInclude = @(@{ filter = "test.txt" }, @{ filter = "test.ps1" })
-                filesToExclude = @(@{ filter = "test.txt" })
-                filesToRemove  = @()
-            }
-        }
-
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @()
-                filesToExclude = @(@{ filter = "test.ps1" })
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
-
-        # Both test.txt and test.ps1 should be in filesToExclude
-        $filesToExclude.sourceFullPath | Should -Contain $testTxtFile
-        $filesToExclude.sourceFullPath | Should -Contain $testPSFile
-    }
-
-    It 'GetFilesToUpdate template settings filesToRemove added to filesToRemove' {
-        $settings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles       = @{
-                filesToInclude = @()
-                filesToExclude = @()
-                filesToRemove  = @(@{ filter = "test.base.txt" })
-            }
-        }
-
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @()
-                filesToExclude = @()
-                filesToRemove  = @(@{ filter = "test.base.ps1" })
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
-
-        # Both test.base.txt and test.base.ps1 should be in filesToRemove
-        $filesToRemove.destinationFullPath | Should -Contain $testBaseTxtFile
-        $filesToRemove.destinationFullPath | Should -Contain $testBasePSFile
-    }
-
-    It 'GetFilesToUpdate template settings filesToInclude takes precedence over repository settings for the same destination' {
-        $settings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles       = @{
-                filesToInclude = @(@{ filter = "test.txt"; destinationName = "conflict.txt" })
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @(@{ filter = "test.ps1"; destinationName = "conflict.txt" })
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
+        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # Only one entry should be resolved for the colliding destination
         $conflict = @($filesToInclude | Where-Object { $_.destinationFullPath -eq (Join-Path $baseFolder "conflict.txt") })
         $conflict.Count | Should -Be 1
 
-        # Template settings should win over repository settings for the same destination
+        # The first-listed entry should win over the later entry for the same destination
         $conflict[0].sourceFullPath | Should -Be $testPSFile
     }
 
-    It 'GetFilesToUpdate template settings filesToExclude added to filesToExclude' {
-        $settings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles       = @{
-                filesToInclude = @(@{ filter = "test.txt" }, @{ filter = "test.ps1" })
-                filesToExclude = @(@{ filter = "test.txt" })
-                filesToRemove  = @()
-            }
-        }
-
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @()
-                filesToExclude = @(@{ filter = "test.ps1" })
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
-
-        # Both settings' and templateSettings' exclude entries take effect since they don't collide
-        $filesToExclude.sourceFullPath | Should -Contain $testTxtFile
-        $filesToExclude.sourceFullPath | Should -Contain $testPSFile
-        $filesToInclude | Should -BeNullOrEmpty
-    }
-
-    It 'GetFilesToUpdate template settings filesToExclude and repository settings filesToExclude for the same source file are both applied without duplicates' {
-        # Both templateSettings and settings exclude the exact same source file (test.txt). This should not error out
-        # or produce a duplicate entry: the file should end up excluded exactly once, and it should not remain in
-        # filesToInclude.
-        $settings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles       = @{
-                filesToInclude = @(@{ filter = "test.txt" }, @{ filter = "test.ps1" })
-                filesToExclude = @(@{ filter = "test.txt" })
-                filesToRemove  = @()
-            }
-        }
-
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @()
-                filesToExclude = @(@{ filter = "test.txt" })
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
-
-        # test.txt is excluded exactly once, even though both templateSettings and settings exclude it
-        @($filesToExclude | Where-Object { $_.sourceFullPath -eq $testTxtFile }).Count | Should -Be 1
-        $filesToInclude.sourceFullPath | Should -Not -Contain $testTxtFile
-        $filesToInclude.sourceFullPath | Should -Contain $testPSFile
-    }
-
-    It 'GetFilesToUpdate template settings filesToRemove takes precedence over repository settings for the same destination' {
+    It 'GetFilesToUpdate filesToRemove keeps the first entry when two entries collide on the same destination' {
         $settings = @{
             type                  = "NotPTE"
             unusedALGoSystemFiles = @()
             customALGoFiles       = @{
                 filesToInclude = @()
                 filesToExclude = @()
-                filesToRemove  = @(@{ filter = "test.txt"; destinationName = "conflict.remove.txt" })
+                filesToRemove  = @(@{ filter = "test.ps1"; destinationName = "conflict.remove.txt" }, @{ filter = "test.txt"; destinationName = "conflict.remove.txt" })
             }
         }
 
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @()
-            customALGoFiles = @{
-                filesToInclude = @()
-                filesToExclude = @()
-                filesToRemove  = @(@{ filter = "test.ps1"; destinationName = "conflict.remove.txt" })
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
+        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # Only one entry should be resolved for the colliding destination
         $conflict = @($filesToRemove | Where-Object { $_.destinationFullPath -eq (Join-Path $baseFolder "conflict.remove.txt") })
         $conflict.Count | Should -Be 1
 
-        # Template settings should win over repository settings for the same destination
+        # The first-listed entry should win over the later entry for the same destination
         $conflict[0].sourceFullPath | Should -Be $testPSFile
-    }
-
-    It 'GetFilesToUpdate template settings unusedALGoSystemFiles added to unusedALGoSystemFiles' {
-        $settings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @("test.txt")
-            customALGoFiles       = @{
-                filesToInclude = @(@{ filter = "test.txt" })
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $templateSettings = @{
-            type                  = "NotPTE"
-            unusedALGoSystemFiles = @("test.ps1")
-            customALGoFiles = @{
-                filesToInclude = @(@{ filter = "test.ps1" })
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettings
-
-        # Both test.txt and test.ps1 should be in filesToExclude
-        $filesToExclude.sourceFullPath | Should -Contain $testTxtFile
-        $filesToExclude.sourceFullPath | Should -Contain $testPSFile
     }
 
     It 'GetFilesToUpdate filesToInclude includes original template files missing in template' {
@@ -3162,6 +2970,45 @@ Describe "GetFilesToUpdate (general files to update logic)" {
     }
 }
 
+Describe "UpdateCustomTemplateRepoSettingsSnapshot" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+    }
+
+    It 'Overwrites the destination snapshot file with the current content of the template settings file' {
+        $templateFolder = Join-Path "TestDrive:" "template"
+        $baseFolder = Join-Path "TestDrive:" "base"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $srcFile = Join-Path $templateFolder (Join-Path ".github" $RepoSettingsFileName)
+        Set-Content -Path $srcFile -Value '{"type":"PTE","customALGoFiles":{"filesToInclude":[]}}' -Encoding UTF8
+
+        $dstFile = Join-Path $baseFolder (Join-Path ".github" $CustomTemplateRepoSettingsFileName)
+        Set-Content -Path $dstFile -Value '{"type":"PTE","customALGoFiles":{"filesToInclude":[{"filter":"old.txt"}]}}' -Encoding UTF8
+
+        UpdateCustomTemplateRepoSettingsSnapshot -baseFolder $baseFolder -templateFolder $templateFolder
+
+        Test-Path -Path $dstFile -PathType Leaf | Should -Be $true
+        (Get-ContentLF -path $dstFile) | Should -Be (Get-ContentLF -path $srcFile)
+    }
+
+    It 'Does not throw and does not create a destination file when the template has no settings file' {
+        $templateFolder = Join-Path "TestDrive:" "templateWithoutSettings"
+        $baseFolder = Join-Path "TestDrive:" "baseWithoutSettings"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $dstFile = Join-Path $baseFolder (Join-Path ".github" $CustomTemplateRepoSettingsFileName)
+
+        { UpdateCustomTemplateRepoSettingsSnapshot -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Not -Throw
+
+        Test-Path -Path $dstFile -PathType Leaf | Should -Be $false
+    }
+}
+
 Describe "GetFilesToUpdate (real template)" {
     BeforeAll {
         $actionName = "CheckForUpdates"
@@ -3227,40 +3074,6 @@ Describe "GetFilesToUpdate (real template)" {
         $conflict.Count | Should -Be 1
 
         # The default entry should win over the repository settings entry for the same destination
-        $conflict[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder (Join-Path '.github' $RepoSettingsFileName))
-    }
-
-    It 'GetFilesToUpdate defaults filesToInclude takes precedence over template settings for the same destination' {
-        $settings = @{
-            type                        = "PTE"
-            powerPlatformSolutionFolder = "PowerPlatformSolution"
-            unusedALGoSystemFiles       = @()
-            customALGoFiles             = @{
-                filesToInclude = @()
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $templateSettings = @{
-            type                        = "PTE"
-            powerPlatformSolutionFolder = "PowerPlatformSolution"
-            unusedALGoSystemFiles       = @()
-            customALGoFiles             = @{
-                # Redirect a different template file onto the destination of the default AL-Go-Settings.json entry
-                filesToInclude = @(@{ filter = "Test Next Major.settings.json"; sourceFolder = ".github"; destinationFolder = ".github"; destinationName = "$RepoSettingsFileName" })
-                filesToExclude = @()
-                filesToRemove  = @()
-            }
-        }
-
-        $filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -templateSettings $templateSettings
-
-        $repoSettingsDestination = Join-Path 'baseFolder' (Join-Path '.github' $RepoSettingsFileName)
-        $conflict = @($filesToInclude | Where-Object { $_.destinationFullPath -eq $repoSettingsDestination })
-        $conflict.Count | Should -Be 1
-
-        # The default entry should win over the template settings entry for the same destination
         $conflict[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder (Join-Path '.github' $RepoSettingsFileName))
     }
 

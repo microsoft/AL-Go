@@ -1083,16 +1083,50 @@ function GetDefaultFilesToExclude {
 
 <#
 .SYNOPSIS
+    Refreshes the on-disk snapshot of a custom template's own repository settings.
+.DESCRIPTION
+    Overwrites <baseFolder>/.github/AL-Go-TemplateRepoSettings.doNotEdit.json with the current content of
+    <templateFolder>/.github/AL-Go-Settings.json, so that a subsequent ReadSettings call picks up the
+    custom template's up-to-date settings (customALGoFiles, unusedALGoSystemFiles, etc.) instead of the
+    last-committed (potentially stale) snapshot. No-op if the template does not have its own settings file.
+.PARAMETER baseFolder
+    The base folder of the repository (the target folder where the snapshot file is (over)written).
+.PARAMETER templateFolder
+    The folder where the (custom) template files are located (the source of the fresh settings).
+#>
+function UpdateCustomTemplateRepoSettingsSnapshot {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $baseFolder,
+        [Parameter(Mandatory=$true)]
+        [string] $templateFolder
+    )
+
+    $srcFile = Join-Path $templateFolder (Join-Path '.github' $RepoSettingsFileName)
+    if (Test-Path -Path $srcFile -PathType Leaf) {
+        $dstFile = Join-Path $baseFolder (Join-Path '.github' $CustomTemplateRepoSettingsFileName)
+        Write-Host "Refreshing $CustomTemplateRepoSettingsFileName from the custom template's up-to-date $RepoSettingsFileName"
+        Get-ContentLF -path $srcFile | Set-ContentLF -path $dstFile
+    }
+}
+
+<#
+.SYNOPSIS
     Compute the lists of files to include, exclude, and remove when synchronizing a repository from its AL-Go template.
 .DESCRIPTION
-    Builds three lists by merging defaults, repository settings, template settings, and the original AL-Go template (if given):
+    Builds three lists by merging defaults, repository settings, and the original AL-Go template (if given):
 
     1. filesToInclude: Files to copy from the template or original template to the destination.
-       Built from default files to include and customALGoFiles.filesToInclude in settings and templateSettings, resolved against the template folder and original template folder (if any).
+       Built from default files to include and customALGoFiles.filesToInclude in settings, resolved against the template folder and original template folder (if any).
     2. filesToExclude: Files to skip from copying; if they already exist in the destination they should be deleted.
-       Built from default files to exclude and customALGoFiles.filesToExclude in settings and templateSettings, resolved against the template folder and original template folder (if any).
+       Built from default files to exclude and customALGoFiles.filesToExclude in settings, resolved against the template folder and original template folder (if any).
     3. filesToRemove: Files to unconditionally delete from the destination.
-       Built from customALGoFiles.filesToRemove in settings and templateSettings and resolved against template folder, the original template folder (if any), and the destination folder.
+       Built from customALGoFiles.filesToRemove in settings and resolved against template folder, the original template folder (if any), and the destination folder.
+
+    Note: when a custom template is in use, the caller is expected to have already refreshed
+    .github/AL-Go-TemplateRepoSettings.doNotEdit.json (see UpdateCustomTemplateRepoSettingsSnapshot) and
+    re-read settings before calling this function, so that the template's customALGoFiles/unusedALGoSystemFiles
+    are already merged into settings.
 
     The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
     filesToExclude with a deprecation warning.
@@ -1103,9 +1137,6 @@ function GetDefaultFilesToExclude {
     The base folder of the repository. This is the target folder where the files will be updated.
 .PARAMETER templateFolder
     The folder where the template files are located.
-.PARAMETER templateSettings
-    The settings object from the template repository (if any). Both customALGoFiles and unusedALGoSystemFiles
-    are merged from this object when it is provided.
 .PARAMETER originalTemplateFolder
     The folder where the original AL-Go template files are located (if any).
     When provided, it signals that a custom template is in use. Both filesToInclude and filesToExclude specs are
@@ -1132,7 +1163,6 @@ function GetFilesToUpdate {
         $baseFolder,
         [Parameter(Mandatory=$true)]
         $templateFolder,
-        $templateSettings = $null,
         $originalTemplateFolder = $null,
         $projects = @()
     )
@@ -1151,36 +1181,18 @@ function GetFilesToUpdate {
         Trace-Information -Message "Usage: Custom AL-Go Files (Remove) of repository"
     }
 
-    if ($null -ne $templateSettings) {
-        if ($templateSettings.customALGoFiles.filesToInclude.Count -gt 0) {
-            Trace-Information -Message "Usage: Custom AL-Go Files (Include) of template"
-        }
-        if ($templateSettings.customALGoFiles.filesToExclude.Count -gt 0) {
-            Trace-Information -Message "Usage: Custom AL-Go Files (Exclude) of template"
-        }
-        if ($templateSettings.customALGoFiles.filesToRemove.Count -gt 0) {
-            Trace-Information -Message "Usage: Custom AL-Go Files (Remove) of template"
-        }
-    }
-
     # Determine files to include
     $filesToIncludeUnresolved = GetDefaultFilesToInclude -includeCustomTemplateFiles:$hasOriginalTemplate
-    if ($null -ne $templateSettings) {
-        $filesToIncludeUnresolved += $templateSettings.customALGoFiles.filesToInclude
-    }
     $filesToIncludeUnresolved += $settings.customALGoFiles.filesToInclude
     $filesToInclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
     if ($hasOriginalTemplate) {
         $filesToInclude += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
     }
-    # Remove duplicates based on destinationFullPath, keeping the first one (default > template settings > settings; template folder > original template folder)
+    # Remove duplicates based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder)
     $filesToInclude = @($filesToInclude | Group-Object { $_.destinationFullPath } | Sort-Object -Property Name | ForEach-Object { $_.Group[0] })
 
     # Determine files to exclude
     $filesToExcludeUnresolved = GetDefaultFilesToExclude -settings $settings
-    if ($null -ne $templateSettings) {
-        $filesToExcludeUnresolved += $templateSettings.customALGoFiles.filesToExclude
-    }
     $filesToExcludeUnresolved += $settings.customALGoFiles.filesToExclude
     $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExcludeUnresolved -projects $projects)
     if ($hasOriginalTemplate) {
@@ -1190,17 +1202,13 @@ function GetFilesToUpdate {
     # Its destinationFullPath is never part of the actual output; only sourceFullPath is used below to match against filesToInclude.
 
     # Determine files to remove
-    $filesToRemoveUnresolved = @()
-    if ($null -ne $templateSettings) {
-        $filesToRemoveUnresolved += $templateSettings.customALGoFiles.filesToRemove
-    }
-    $filesToRemoveUnresolved += $settings.customALGoFiles.filesToRemove
+    $filesToRemoveUnresolved = @($settings.customALGoFiles.filesToRemove)
     $filesToRemove =  @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToRemoveUnresolved -projects $projects)
     if ($hasOriginalTemplate) {
         $filesToRemove += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToRemoveUnresolved -projects $projects)
     }
     $filesToRemove += @(ResolveFilePathsInDestinationFolder -destinationFolder $baseFolder -files $filesToRemoveUnresolved -projects $projects)
-    # Remove duplicates based on destinationFullPath, keeping the first one (default > template settings > settings; template folder > original template folder > base folder)
+    # Remove duplicates based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder > base folder)
     $filesToRemove = @($filesToRemove | Group-Object { $_.destinationFullPath } | Sort-Object -Property Name | ForEach-Object { $_.Group[0] })
 
     # Exclude files from filesToInclude that are in filesToRemove (based on destination)
@@ -1227,11 +1235,7 @@ function GetFilesToUpdate {
     })
 
     # Apply unusedALGoSystemFiles logic
-    # Include unusedALGoSystemFiles from the template settings (if any) to also propagate template's deprecated file removals
     $unusedALGoSystemFiles = @($settings.unusedALGoSystemFiles)
-    if ($null -ne $templateSettings) {
-        $unusedALGoSystemFiles += @($templateSettings.unusedALGoSystemFiles)
-    }
 
     # Exclude unusedALGoSystemFiles from $filesToInclude and add them to $filesToExclude
     $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }

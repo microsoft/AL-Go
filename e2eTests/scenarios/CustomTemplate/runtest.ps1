@@ -221,7 +221,8 @@ $missingWorkflowFile = Join-Path $templateRepoPath $missingWorkflowFileRelativeP
 Remove-Item -Path $missingWorkflowFile -Force | Out-Null
 
 # Add customALGoFiles settings to the template repository
-$null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{
+$templateRepoSettingsFile = Join-Path $templateRepoPath $RepoSettingsFile
+$null = Add-PropertiesToJsonFile -path $templateRepoSettingsFile -properties @{
     "customALGoFiles" = @{
         "filesToInclude" = @( @{ "filter" = $defaultCustomFileName } )
         "filesToExclude" = @( @{ "sourceFolder" = ".github/workflows"; "filter" = $excludedWorkflowFileName } )
@@ -369,6 +370,15 @@ Remove-Item -Path (Join-Path (Get-Location) $missingWorkflowFileRelativePath) -F
 # Check that missing workflow file is NOT present in final repository
 (Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Not -Exist
 
+# Create a stale snapshot of the template repository settings file in the final repository,
+# to simulate a scenario where the final repository has an outdated snapshot of the template repository's settings
+Copy-Item -Path $templateRepoSettingsFile -Destination $CustomTemplateRepoSettingsFile -Force
+$null = Add-PropertiesToJsonFile -path $CustomTemplateRepoSettingsFile -properties @{
+    "customALGoFiles" = @{
+        "filesToExclude" = @( @{ "sourceFolder" = ".github/workflows"; "filter" = $missingWorkflowFileName } )
+    }
+}
+
 # Push
 CommitAndPush -commitMessage 'Add final repo customizations [skip ci]'
 
@@ -387,6 +397,7 @@ Pull
 
 (Join-Path (Get-Location) $CustomTemplateRepoSettingsFile) | Should -Exist
 (Join-Path (Get-Location) $CustomTemplateProjectSettingsFile) | Should -Exist
+Get-ContentLF -Path (Join-Path (Get-Location) $CustomTemplateRepoSettingsFile) | Should -Be (Get-ContentLF -Path $templateRepoSettingsFile)
 
 # Check that custom workflow file is present
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
@@ -402,8 +413,13 @@ Get-ContentLF -Path (Join-Path (Get-Location) $defaultCustomFileName) | Should -
 
 # Check that excluded workflow file is NOT present (in default filesToInclude and template's filesToExclude)
 (Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
-# Check that missing workflow file is present (in default filesToInclude, propagated from PTE template)
+# Check that missing workflow file is present (in default filesToInclude, propagated from PTE template).
+# This proves the stale snapshot exclusion seeded during final repository setup was replaced.
 (Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
+
+#endregion
+
+#region setup final repository customizations for next update run
 
 # Add customALGoFiles settings to the final repository
 $null = Add-PropertiesToJsonFile -path '.github/AL-Go-Settings.json' -properties @{
