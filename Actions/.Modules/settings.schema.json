@@ -739,6 +739,7 @@
             "type": "object",
             "properties": {
                 "filesToInclude": {
+                    "description": "An array of file specifications to include in the update. Files that match these specifications are copied from the template to the repository. When used in a custom template's settings, inclusions are also propagated from the original template to consumer repos even if the files no longer exist in the custom template.",
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -755,6 +756,10 @@
                                 "type": "string",
                                 "description": "The destination folder where the files should be updated, relative to the repository root. If not specified, defaults to the same as the source file folder."
                             },
+                            "destinationName": {
+                                "type": "string",
+                                "description": "The filename to use at the destination. If specified, overrides the source filename, allowing the file to be renamed when copied. Should be used together with a filter that matches a single file."
+                            },
                             "perProject": {
                                 "type": "boolean",
                                 "description": "Indicates whether the file update should be applied per project. In that case, the destinationFolder is considered relative to each project folder."
@@ -763,6 +768,7 @@
                     }
                 },
                 "filesToExclude": {
+                    "description": "An array of file specifications to exclude from the update. Files that match these specifications are not copied from the template to the repository. When used in a custom template's settings, exclusions are also propagated from the original template to consumer repos even if the files no longer exist in the custom template.",
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -774,6 +780,35 @@
                             "filter": {
                                 "type": "string",
                                 "description": "A filter string to select which files to exclude. It can contain '*' and '?' wildcards."
+                            }
+                        }
+                    }
+                },
+                "filesToRemove": {
+                    "description": "An array of file specifications to unconditionally remove from the repository during 'Update AL-Go System Files', regardless of whether the files exist in the template. Useful for cleaning up files that have been removed from the template but may still exist in repositories.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sourceFolder": {
+                                "type": "string",
+                                "description": "The source folder from which to remove files, relative to the template repository root."
+                            },
+                            "filter": {
+                                "type": "string",
+                                "description": "A filter string to select which files to remove. It can contain '*' and '?' wildcards."
+                            },
+                            "destinationFolder": {
+                                "type": "string",
+                                "description": "The destination folder where the files should be removed, relative to the repository root."
+                            },
+                            "destinationName": {
+                                "type": "string",
+                                "description": "The filename of the file at the destination. If specified, overrides the filter when looking up the file to remove. Should be used together with a filter that matches a single file."
+                            },
+                            "perProject": {
+                                "type": "boolean",
+                                "description": "Indicates whether the removal should be applied per project. In that case, destinationFolder is relative to each project folder."
                             }
                         }
                     }

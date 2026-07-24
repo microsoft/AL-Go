@@ -1,3 +1,14 @@
+### Enhanced `customALGoFiles` setting
+
+The `customALGoFiles` setting of a custom template was only applied on the next Update (from `AL-Go-TemplateRepoSettings.doNotEdit.json`). Now the up-to-date settings of the custom template are used directly during "Update AL-Go System Files". The template's `filesToInclude`, `filesToExclude`, and `filesToRemove` settings are merged with the consumer repo's settings before resolution.
+
+- **`filesToInclude`** now also resolves files from the original AL-Go template. Files present in the official template are propagated even when they are absent from your custom template. When a file exists in both, the official template supplies the base content; for workflow files, customizations from the custom template are reapplied.
+- **`filesToExclude`** now also resolves files from the original AL-Go template (same dual-resolution as `filesToInclude`). Files resolved by `filesToInclude` whose source matches a `filesToExclude` entry are not copied to consumer repos, and existing copies are removed.
+- **`filesToRemove`** (new property): Unconditionally removes matching files from consumer repos. Files are searched in both the template and end repository. Takes precedence over `filesToInclude`. Entries use `sourceFolder` (relative to the template), `filter`, and optionally `destinationFolder`, `perProject`, and `destinationName`.
+- **`destinationName`** (new property on `filesToInclude` and `filesToRemove`): Allows renaming a file at the destination. When set, the file is written to (or removed from) `<destinationFolder>/<destinationName>` instead of keeping the source filename. For `filesToRemove`, `destinationName` also overrides the `filter` when looking up the file to delete in the end repository.
+
+Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
+
 ### Workspace compilation supports framework-dependent AL Language extensions
 
 Workspace compilation now finds altool both in the platform-specific subfolder (`compiler/extension/bin/win32` or `.../linux`) and directly under `compiler/extension/bin`, so a `vsixFile` using the flat (framework-dependent / marketplace) layout no longer fails with "Could not find AL tool in the compiler folder". URL-based `customCodeCops` are likewise downloaded to the flat `bin` folder when no `Analyzers` subfolder is present. The aldoc tool used for reference documentation is resolved the same way, falling back to the flat `bin` folder when no platform subfolder is present.
