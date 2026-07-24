@@ -98,7 +98,7 @@ function GenerateSARIFJson {
             message = @{ text = $message }
             locations = @(@{
                 physicalLocation = @{
-                    artifactLocation = @{ uri = $relativePath }
+                    artifactLocation = @{ uri = (ConvertTo-SarifArtifactUri -RelativePath $relativePath) }
                     region = $issue.locations[0].analysisTarget[0].region
                 }
             })
