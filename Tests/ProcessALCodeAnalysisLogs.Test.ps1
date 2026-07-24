@@ -267,6 +267,24 @@ Describe 'ProcessALCodeAnalysisLogs Action Tests' {
         $uri | Should -Not -Match '%2F'
     }
 
+    It 'Duplicate issues with a spaced path are only included once' {
+        # Regression: the emitted uri is encoded, so de-duplication must compare against the
+        # encoded uri. Two identical issues on a spaced path must collapse to a single result.
+        Mock Get-FileFromAbsolutePath { return "App/src/1.Setup Data/Foo.al" }
+        $errorLogFile = Join-Path $errorLogsFolder "spaced-dup.errorLog.json"
+        $baseIssueContent = $alErrorLogSchema
+        $baseIssueContent.issues += $sampleIssue1
+        $baseIssueContent.issues += $sampleIssue1
+        $baseIssueContent | ConvertTo-Json -Depth 10 | Set-Content -Path $errorLogFile
+
+        & $scriptPath
+
+        $sarifFile = Join-Path $errorLogsFolder "output.sarif.json"
+        $sarifContent = Get-Content -Path $sarifFile -Raw | ConvertFrom-Json
+        $sarifContent.runs[0].results.Count | Should -Be 1
+        $sarifContent.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri | Should -Be "App/src/1.Setup%20Data/Foo.al"
+    }
+
     It 'Test action.yaml matches script' {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript
     }
