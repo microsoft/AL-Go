@@ -1,3 +1,9 @@
+### `failOn: newWarning` now works with workspace compilation
+
+Previously, the `failOn: newWarning` setting (which fails a pull request when it introduces new AL compiler warnings) only took effect when compiling in a container or compiler folder. It had no effect when `workspaceCompilation` was enabled, because the new-warning comparison only ran in the `RunPipeline` action, whereas workspace compilation produces the compiler output in the `CompileApps` action. The check now also runs in `CompileApps`, so `failOn: newWarning` is honored with workspace compilation.
+
+As part of this, the warning comparison now also parses the raw AL compiler output format emitted by workspace compilation (in addition to the GitHub Actions annotation format), and it ignores embedded build version numbers in warning messages so that version differences between the baseline build and the pull request build no longer produce false "new warning" failures.
+
 ### Workspace compilation supports framework-dependent AL Language extensions
 
 Workspace compilation now finds altool both in the platform-specific subfolder (`compiler/extension/bin/win32` or `.../linux`) and directly under `compiler/extension/bin`, so a `vsixFile` using the flat (framework-dependent / marketplace) layout no longer fails with "Could not find AL tool in the compiler folder". URL-based `customCodeCops` are likewise downloaded to the flat `bin` folder when no `Analyzers` subfolder is present. The aldoc tool used for reference documentation is resolved the same way, falling back to the flat `bin` folder when no platform subfolder is present.

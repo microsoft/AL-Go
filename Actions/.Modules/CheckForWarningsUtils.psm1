@@ -17,6 +17,27 @@ function Initialize-Directory {
 
 <#
     .SYNOPSIS
+    Normalizes a warning description so that volatile substrings do not cause false "new warning" hits.
+    .DESCRIPTION
+    Some AL diagnostics embed a build version in their message text (e.g. AL0523 references another
+    app as 'Base Application by Microsoft (29.0.2147483647.75450)'). Because AL-Go stamps the build
+    and revision numbers from the workflow run number, that version differs between the baseline build
+    and the pull request build, which would make an otherwise unchanged warning look new. This function
+    replaces any four-part version number (major.minor.build.revision) with a stable placeholder so the
+    comparison is not affected by build-to-build version differences.
+#>
+function Get-NormalizedWarningDescription {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [string] $Description
+    )
+
+    return [regex]::Replace($Description, '\d+\.\d+\.\d+\.\d+', '{version}')
+}
+
+<#
+    .SYNOPSIS
     This function parses a build log file and returns the AL warnings found in it.
     .DESCRIPTION
     This function parses a build log file and returns the AL warnings found in it.
@@ -30,16 +51,31 @@ function Get-Warnings {
 
     $warnings = @()
 
+    # Warnings appear in one of two formats depending on the compilation method. Both patterns capture
+    # the same groups in the same order: 1=File, 2=Line, 3=Col, 4=Id, 5=Description.
+    #   Container/compiler-folder: ::warning file=<file>,line=<line>,col=<col>::<Id> <description>
+    #   Workspace compilation:     <file>(<line>,<col>): warning <Id>: <description>
+    $warningPatterns = @(
+        "::warning file=(.+),line=([0-9]{1,5}),col=([0-9]{1,5})::([A-Z]{2}[0-9]{4}) (.+)",
+        "^(.+)\(([0-9]{1,7}),([0-9]{1,7})\): warning ([A-Z]{2}[0-9]{4}): (.+)$"
+    )
+
     if (Test-Path $BuildFile) {
         Get-Content $BuildFile | ForEach-Object {
-            if ($_  -match "::warning file=(.+),line=([0-9]{1,5}),col=([0-9]{1,5})::([A-Z]{2}[0-9]{4}) (.+)")
-            {
-                $warnings += New-Object -Type PSObject -Property @{
-                    Id = $Matches[4]
-                    File= $Matches[1]
-                    Description = $Matches[5]
-                    Line = $Matches[2]
-                    Col = $Matches[3]
+            $line = $_
+            foreach ($pattern in $warningPatterns) {
+                if ($line -match $pattern) {
+                    $warnings += New-Object -Type PSObject -Property @{
+                        Id = $Matches[4]
+                        # Normalize path separators so the same warning matches regardless of whether it was
+                        # produced by container compilation (forward slashes) or workspace compilation (backslashes).
+                        File = ($Matches[1] -replace '\\', '/')
+                        Description = $Matches[5]
+                        NormalizedDescription = (Get-NormalizedWarningDescription -Description $Matches[5])
+                        Line = $Matches[2]
+                        Col = $Matches[3]
+                    }
+                    break
                 }
             }
         }
@@ -68,7 +104,7 @@ function Compare-Files {
     Write-Host "Found $($refWarnings.Count) warnings in reference build."
     Write-Host "Found $($prWarnings.Count) warnings in PR build."
 
-    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,Description,Col -PassThru |
+    $delta = Compare-Object -ReferenceObject $refWarnings -DifferenceObject $prWarnings -Property Id,File,NormalizedDescription,Col -PassThru |
         Where-Object { $_.SideIndicator -eq "=>" } |
         Select-Object -Property Id,File,Description,Line,Col -Unique
 
