@@ -4,6 +4,7 @@ Workspace compilation now finds altool both in the platform-specific subfolder (
 
 ### Issues
 
+- Issue 2126 Deliver and Deploy actions now skip execution when no app artifacts are found, preventing errors on initial commits
 - Issue 2285 - CheckForUpdates now handles settings file `$schema` reordering in a PowerShell 5-safe way to avoid writing invalid entries like `"*": null` to settings JSON files.
 - Fix "filename or extension is too long" error when validating settings on PS5.1 with large settings JSON
 - Fix dependency apps not being resolved when the branch name contains a `]` character (the dependency folder was matched as a wildcard pattern instead of enumerated literally, resulting in 0 apps being published)

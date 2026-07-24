@@ -92,6 +92,10 @@ Paste the value from the clipboard into the "Value" field of the **AuthContext**
 
 AL-Go can also be setup for custom deployment when you want to deploy to non-SaaS environments. More about this in the advanced section.
 
+## Important Note: Automatic Skip Behavior
+
+The Deploy step is automatically skipped when no app artifacts are available, so environments are only targeted when there is something to deploy.
+
 This section was about Continuous Deployment, but you might not want to deploy to production environments continuously - how can we publish to production on demand?
 
 ______________________________________________________________________
