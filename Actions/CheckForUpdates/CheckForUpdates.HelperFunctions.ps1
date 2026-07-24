@@ -1172,13 +1172,13 @@ function GetFilesToUpdate {
 
     # Send telemetery about customALGoFiles usage
     if ($settings.customALGoFiles.filesToInclude.Count -gt 0) {
-        Trace-Information -Message "Usage: Custom AL-Go Files (Include) of repository"
+        Trace-Information -Message "Usage: Custom AL-Go Files (Include)"
     }
     if ($settings.customALGoFiles.filesToExclude.Count -gt 0) {
-        Trace-Information -Message "Usage: Custom AL-Go Files (Exclude) of repository"
+        Trace-Information -Message "Usage: Custom AL-Go Files (Exclude)"
     }
     if ($settings.customALGoFiles.filesToRemove.Count -gt 0) {
-        Trace-Information -Message "Usage: Custom AL-Go Files (Remove) of repository"
+        Trace-Information -Message "Usage: Custom AL-Go Files (Remove)"
     }
 
     # Determine files to include
@@ -1235,7 +1235,7 @@ function GetFilesToUpdate {
     })
 
     # Apply unusedALGoSystemFiles logic
-    $unusedALGoSystemFiles = @($settings.unusedALGoSystemFiles)
+    $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
 
     # Exclude unusedALGoSystemFiles from $filesToInclude and add them to $filesToExclude
     $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
