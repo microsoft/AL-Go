@@ -9,8 +9,10 @@ Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/CheckForWarningsUtil
 Describe 'CheckForWarningsUtils.psm1 Tests' {
     BeforeAll {
         # The module functions call Trace-Information (telemetry). Provide a global no-op stub so the
-        # tests don't depend on telemetry configuration or make network calls.
-        function global:Trace-Information { param([string] $Message) }
+        # tests don't depend on telemetry configuration or make network calls. It must be global to be
+        # visible to the module's own calls, and its parameters mirror the real Trace-Information
+        # (TelemetryHelper.psm1) so it doesn't break other test files that share the same Pester session.
+        function global:Trace-Information { param([string] $Message, [string] $ActionName, $AdditionalData) }
 
         $script:warningLine1 = '::warning file=App/MyCodeunit.al,line=10,col=5::AA0001 The variable is never used.'
         $script:warningLine2 = '::warning file=App/MyPage.al,line=42,col=9::AL0603 The property has been deprecated.'
