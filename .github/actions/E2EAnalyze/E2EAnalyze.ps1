@@ -129,7 +129,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     if (Test-Path -Path $disabledScenariosConfigPath) {
         $disabledScenariosContent = Get-Content -Path $disabledScenariosConfigPath -Encoding UTF8 -Raw
         if (-not [string]::IsNullOrWhiteSpace($disabledScenariosContent)) {
-            $disabledScenariosConfig = @($disabledScenariosContent | ConvertFrom-Json)
+            $disabledScenariosConfig = @($disabledScenariosContent | ConvertFrom-Json | ConvertTo-HashTable -recurse)
         }
     }
     else {

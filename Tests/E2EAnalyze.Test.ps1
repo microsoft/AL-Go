@@ -4,7 +4,7 @@ Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Describe "E2EAnalyze Action Tests" {
     BeforeAll {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
-        $scriptPath = Join-Path $PSScriptRoot "..\.github\actions\E2EAnalyze\E2EAnalyze.ps1" -Resolve
+        $scriptPath = Join-Path $PSScriptRoot "../.github/actions/E2EAnalyze/E2EAnalyze.ps1" -Resolve
         # Dot-source the script to load Get-E2EScenariosToRun without executing the main block.
         # -maxParallel satisfies the mandatory parameter; the main block is guarded to only run when the
         # script is invoked directly (InvocationName -ne '.').

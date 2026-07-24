@@ -50,6 +50,10 @@ try {
             'contentPath' = $contentPath
         }
 
+        if ($private) {
+            $params['private'] = $true
+        }
+
         . (Join-Path "." "e2eTests/Test-AL-Go-Upgrade.ps1") @params
     }
     else {

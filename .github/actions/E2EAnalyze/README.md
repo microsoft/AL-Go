@@ -6,7 +6,7 @@ Analyzes and generates test matrices for E2E testing including public/private te
 
 - `maxParallel`: Maximum parallel jobs
 - `testUpgradesFromVersion`: Test upgrades from version (default: 'v5.0')
-- `scenariosFilter`: Filter to run specific scenarios, separated by comma, supports wildcards (default: '*')
+- `scenariosFilter`: Filter to run specific scenarios, separated by comma, supports wildcards (default: '\*')
 - `token`: GitHub token with permissions to read releases
 
 ## Outputs

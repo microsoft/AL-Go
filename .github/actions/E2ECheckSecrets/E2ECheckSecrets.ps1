@@ -18,6 +18,8 @@ Param(
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+. (Join-Path $PSScriptRoot "../../../Actions/AL-Go-Helper.ps1" -Resolve)
+
 $err = $false
 if (($e2eAppId -eq '') -or ($e2ePrivateKey -eq '')){
     Write-Host "::Error::In order to run end to end tests, you need a Secret called E2E_PRIVATE_KEY and a variable called E2E_APP_ID."
@@ -46,9 +48,9 @@ $maxParallel = 99
 if (!($githubOwner)) {
     $githubOwner = $ENV:GITHUB_REPOSITORY_OWNER
 }
-$orgmap = Get-Content -path (Join-Path "." "e2eTests/orgmap.json") -encoding UTF8 -raw | ConvertFrom-Json
-if ($orgmap.PSObject.Properties.Name -eq $githubOwner) {
-    $githubOwner = $orgmap."$githubOwner"
+$orgmap = Get-Content -path (Join-Path "." "e2eTests/orgmap.json") -encoding UTF8 -raw | ConvertFrom-Json | ConvertTo-HashTable -recurse
+if ($orgmap.Keys -contains $githubOwner) {
+    $githubOwner = $orgmap[$githubOwner]
 }
 if ($githubOwner -eq $ENV:GITHUB_REPOSITORY_OWNER) {
     $maxParallel = 8
