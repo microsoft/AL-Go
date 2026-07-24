@@ -20,49 +20,111 @@ Param(
 
 $ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-# Calculate adminCenterApiCredentials
-$adminCenterApiCredentials = ''
-if ($matrixType -eq 'PTE' -and $matrixStyle -eq 'singleProject' -and $matrixOs -eq 'windows') {
-    $adminCenterApiCredentials = $adminCenterApiCredentialsSecret
-}
+<#
+.SYNOPSIS
+Calculates the template, contentPath and adminCenterApiCredentials for an E2E test run based on the matrix cell.
+.DESCRIPTION
+Given the matrix coordinates (type/style/os) and the repository templates, this function returns the parameters
+used to run a single E2E test. It is pure (no side effects) so it can be unit tested in isolation:
+- adminCenterApiCredentials is only forwarded for the PTE / singleProject / windows cell.
+- template is derived from the matrix type and the corresponding repository template.
+- contentPath defaults to 'appsourceapp' or 'pte' when not explicitly provided (used by upgrade tests).
+.PARAMETER githubOwner
+The GitHub owner that hosts the temporary test repositories.
+.PARAMETER matrixType
+The matrix type, either 'appSourceApp' or 'PTE'.
+.PARAMETER matrixStyle
+The matrix style, either 'singleProject' or 'multiProject'.
+.PARAMETER matrixOs
+The matrix operating system, either 'windows' or 'linux'.
+.PARAMETER adminCenterApiCredentialsSecret
+The admin center API credentials secret, only forwarded for the PTE / singleProject / windows cell.
+.PARAMETER appSourceAppRepo
+The AppSource app repository template name.
+.PARAMETER perTenantExtensionRepo
+The per-tenant extension (PTE) repository template name.
+.PARAMETER contentPath
+Optional explicit content path (for upgrade tests). Defaulted based on matrixType when empty.
+.EXAMPLE
+Get-E2ECalculatedTestParams -githubOwner 'contoso' -matrixType 'PTE' -matrixStyle 'singleProject' -matrixOs 'windows' -appSourceAppRepo 'appsource' -perTenantExtensionRepo 'pte'
+#>
+function Get-E2ECalculatedTestParams {
+    Param(
+        [Parameter(Mandatory = $false)]
+        [string] $githubOwner = '',
+        [Parameter(Mandatory = $false)]
+        [string] $matrixType = '',
+        [Parameter(Mandatory = $false)]
+        [string] $matrixStyle = '',
+        [Parameter(Mandatory = $false)]
+        [string] $matrixOs = '',
+        [Parameter(Mandatory = $false)]
+        [string] $adminCenterApiCredentialsSecret = '',
+        [Parameter(Mandatory = $false)]
+        [string] $appSourceAppRepo = '',
+        [Parameter(Mandatory = $false)]
+        [string] $perTenantExtensionRepo = '',
+        [Parameter(Mandatory = $false)]
+        [string] $contentPath = ''
+    )
 
-# Calculate template
-$template = ''
-if ($matrixType -eq 'appSourceApp') {
-    $template = "$githubOwner/$appSourceAppRepo"
-}
-elseif ($matrixType -eq 'PTE') {
-    $template = "$githubOwner/$perTenantExtensionRepo"
-}
+    # Calculate adminCenterApiCredentials (only used for the PTE / singleProject / windows cell)
+    $adminCenterApiCredentials = ''
+    if ($matrixType -eq 'PTE' -and $matrixStyle -eq 'singleProject' -and $matrixOs -eq 'windows') {
+        $adminCenterApiCredentials = $adminCenterApiCredentialsSecret
+    }
 
-# Calculate contentPath if not provided
-if (-not $contentPath -and $matrixType) {
+    # Calculate template
+    $template = ''
     if ($matrixType -eq 'appSourceApp') {
-        $contentPath = 'appsourceapp'
+        $template = "$githubOwner/$appSourceAppRepo"
     }
-    else {
-        $contentPath = 'pte'
+    elseif ($matrixType -eq 'PTE') {
+        $template = "$githubOwner/$perTenantExtensionRepo"
+    }
+
+    # Calculate contentPath if not provided
+    if (-not $contentPath -and $matrixType) {
+        if ($matrixType -eq 'appSourceApp') {
+            $contentPath = 'appsourceapp'
+        }
+        else {
+            $contentPath = 'pte'
+        }
+    }
+
+    return @{
+        adminCenterApiCredentials = $adminCenterApiCredentials
+        template = $template
+        contentPath = $contentPath
     }
 }
 
-# Add outputs
-if ($adminCenterApiCredentials) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials=$adminCenterApiCredentials"
-}
-else {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials="
-}
+if ($MyInvocation.InvocationName -ne '.') {
+    $testParams = Get-E2ECalculatedTestParams `
+        -githubOwner $githubOwner `
+        -matrixType $matrixType `
+        -matrixStyle $matrixStyle `
+        -matrixOs $matrixOs `
+        -adminCenterApiCredentialsSecret $adminCenterApiCredentialsSecret `
+        -appSourceAppRepo $appSourceAppRepo `
+        -perTenantExtensionRepo $perTenantExtensionRepo `
+        -contentPath $contentPath
 
-if ($template) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template=$template"
-}
+    # Add outputs
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "adminCenterApiCredentials=$($testParams.adminCenterApiCredentials)"
 
-if ($contentPath) {
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentPath=$contentPath"
-}
+    if ($testParams.template) {
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "template=$($testParams.template)"
+    }
 
-# Generate repo name
-$reponame = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
-Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
-Write-Host "repoName=$repoName"
-Write-Host "Repo URL: https://github.com/$githubOwner/$repoName"
+    if ($testParams.contentPath) {
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentPath=$($testParams.contentPath)"
+    }
+
+    # Generate repo name
+    $repoName = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetTempFileName())
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "repoName=$repoName"
+    Write-Host "repoName=$repoName"
+    Write-Host "Repo URL: https://github.com/$githubOwner/$repoName"
+}
