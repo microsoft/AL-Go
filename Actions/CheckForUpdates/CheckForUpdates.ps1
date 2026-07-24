@@ -61,7 +61,6 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $originalTemplateFolder = $null
-$templateRepoSettings = $null
 $templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
 $templateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder
 Write-Host "Template Folder: $templateFolder"
