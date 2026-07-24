@@ -115,13 +115,8 @@ if (-not $isDirectALGo) {
 $baseFolder = $ENV:GITHUB_WORKSPACE
 
 if ($originalTemplateFolder) {
-    # A custom template is in use. Refresh the on-disk snapshot of the custom template's repo settings
-    # (.github/AL-Go-TemplateRepoSettings.doNotEdit.json) with the up-to-date content from the template
-    # we just downloaded, and re-read repo settings, so this run resolves customALGoFiles /
-    # unusedALGoSystemFiles using the current template settings instead of the last-committed
-    # (potentially stale) snapshot.
-    UpdateCustomTemplateRepoSettingsSnapshot -baseFolder $baseFolder -templateFolder $templateFolder
-    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+    # Use current custom template settings for this run without changing the workspace before comparison.
+    $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
 }
 
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)

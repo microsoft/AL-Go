@@ -1083,18 +1083,17 @@ function GetDefaultFilesToExclude {
 
 <#
 .SYNOPSIS
-    Refreshes the on-disk snapshot of a custom template's own repository settings.
+    Reads settings using the current custom template repository settings without changing the workspace.
 .DESCRIPTION
-    Overwrites <baseFolder>/.github/AL-Go-TemplateRepoSettings.doNotEdit.json with the current content of
-    <templateFolder>/.github/AL-Go-Settings.json, so that a subsequent ReadSettings call picks up the
-    custom template's up-to-date settings (customALGoFiles, unusedALGoSystemFiles, etc.) instead of the
-    last-committed (potentially stale) snapshot. No-op if the template does not have its own settings file.
+    Temporarily refreshes the custom template repository settings snapshot, reads the merged settings, and restores
+    the snapshot to its original state. This allows the current template settings to affect the current run while
+    preserving the workspace state for the normal update comparison.
 .PARAMETER baseFolder
-    The base folder of the repository (the target folder where the snapshot file is (over)written).
+    The base folder of the repository whose settings are read.
 .PARAMETER templateFolder
-    The folder where the (custom) template files are located (the source of the fresh settings).
+    The folder where the custom template files are located.
 #>
-function UpdateCustomTemplateRepoSettingsSnapshot {
+function ReadSettingsWithCurrentCustomTemplateRepoSettings {
     Param(
         [Parameter(Mandatory=$true)]
         [string] $baseFolder,
@@ -1102,11 +1101,30 @@ function UpdateCustomTemplateRepoSettingsSnapshot {
         [string] $templateFolder
     )
 
-    $srcFile = Join-Path $templateFolder (Join-Path '.github' $RepoSettingsFileName)
-    if (Test-Path -Path $srcFile -PathType Leaf) {
-        $dstFile = Join-Path $baseFolder (Join-Path '.github' $CustomTemplateRepoSettingsFileName)
-        Write-Host "Refreshing $CustomTemplateRepoSettingsFileName from the custom template's up-to-date $RepoSettingsFileName"
-        Get-ContentLF -path $srcFile | Set-ContentLF -path $dstFile
+    $templateFolderRepoSettingsPath = Join-Path $templateFolder $RepoSettingsFile
+
+    $baseFolderTemplateSettingsPath = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+    $baseFolderTemplateSettingsBackupPath = $null
+
+    if (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
+        $baseFolderTemplateSettingsBackupPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
+        Copy-Item -LiteralPath $baseFolderTemplateSettingsPath -Destination $baseFolderTemplateSettingsBackupPath -Force
+    }
+
+    try {
+        if (Test-Path -LiteralPath $templateFolderRepoSettingsPath -PathType Leaf) {
+            Copy-Item -LiteralPath $templateFolderRepoSettingsPath -Destination $baseFolderTemplateSettingsPath -Force
+        }
+        return ReadSettings -baseFolder $baseFolder -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+    }
+    finally {
+        if ($baseFolderTemplateSettingsBackupPath) {
+            Copy-Item -LiteralPath $baseFolderTemplateSettingsBackupPath -Destination $baseFolderTemplateSettingsPath -Force
+            Remove-Item -LiteralPath $baseFolderTemplateSettingsBackupPath -Force
+        }
+        elseif (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
+            Remove-Item -LiteralPath $baseFolderTemplateSettingsPath -Force
+        }
     }
 }
 
@@ -1123,10 +1141,9 @@ function UpdateCustomTemplateRepoSettingsSnapshot {
     3. filesToRemove: Files to unconditionally delete from the destination.
        Built from customALGoFiles.filesToRemove in settings and resolved against template folder, the original template folder (if any), and the destination folder.
 
-    Note: when a custom template is in use, the caller is expected to have already refreshed
-    .github/AL-Go-TemplateRepoSettings.doNotEdit.json (see UpdateCustomTemplateRepoSettingsSnapshot) and
-    re-read settings before calling this function, so that the template's customALGoFiles/unusedALGoSystemFiles
-    are already merged into settings.
+    Note: when a custom template is in use, the caller is expected to call
+    ReadSettingsWithCurrentCustomTemplateRepoSettings before this function, so that the template's
+    customALGoFiles/unusedALGoSystemFiles are already merged into settings.
 
     The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
     filesToExclude with a deprecation warning.

@@ -289,6 +289,7 @@ Describe "CheckForUpdates Action: ApplyWorkflowDefaultInputs Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
     }
 
@@ -2970,42 +2971,88 @@ Describe "GetFilesToUpdate (general files to update logic)" {
     }
 }
 
-Describe "UpdateCustomTemplateRepoSettingsSnapshot" {
+Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
     }
 
-    It 'Overwrites the destination snapshot file with the current content of the template settings file' {
-        $templateFolder = Join-Path "TestDrive:" "template"
-        $baseFolder = Join-Path "TestDrive:" "base"
+    It 'Uses current template settings and restores an existing snapshot' {
+        $templateFolder = Join-Path $TestDrive "templateWithCurrentSettings"
+        $baseFolder = Join-Path $TestDrive "baseWithExistingSnapshot"
         New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
 
-        $srcFile = Join-Path $templateFolder (Join-Path ".github" $RepoSettingsFileName)
-        Set-Content -Path $srcFile -Value '{"type":"PTE","customALGoFiles":{"filesToInclude":[]}}' -Encoding UTF8
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        $templateSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}'
+        Set-Content -LiteralPath $templateSettingsFile -Value $templateSettingsContent -Encoding UTF8
 
-        $dstFile = Join-Path $baseFolder (Join-Path ".github" $CustomTemplateRepoSettingsFileName)
-        Set-Content -Path $dstFile -Value '{"type":"PTE","customALGoFiles":{"filesToInclude":[{"filter":"old.txt"}]}}' -Encoding UTF8
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+        $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
 
-        UpdateCustomTemplateRepoSettingsSnapshot -baseFolder $baseFolder -templateFolder $templateFolder
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
 
-        Test-Path -Path $dstFile -PathType Leaf | Should -Be $true
-        (Get-ContentLF -path $dstFile) | Should -Be (Get-ContentLF -path $srcFile)
+        $settings.customALGoFiles.filesToInclude.Count | Should -Be 1
+        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
+        (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
 
-    It 'Does not throw and does not create a destination file when the template has no settings file' {
-        $templateFolder = Join-Path "TestDrive:" "templateWithoutSettings"
-        $baseFolder = Join-Path "TestDrive:" "baseWithoutSettings"
+    It 'Removes a temporary snapshot when none existed before reading settings' {
+        $templateFolder = Join-Path $TestDrive "templateWithoutSnapshot"
+        $baseFolder = Join-Path $TestDrive "baseWithoutSnapshot"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        Test-Path -LiteralPath $snapshotFile | Should -Be $false
+
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
+        Test-Path -LiteralPath $snapshotFile | Should -Be $false
+    }
+
+    It 'Does not change an existing snapshot when the template has no settings file' {
+        $templateFolder = Join-Path $TestDrive "templateWithoutSettings"
+        $baseFolder = Join-Path $TestDrive "baseWithUnchangedSnapshot"
         New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
 
-        $dstFile = Join-Path $baseFolder (Join-Path ".github" $CustomTemplateRepoSettingsFileName)
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"existing.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+        $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
 
-        { UpdateCustomTemplateRepoSettingsSnapshot -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Not -Throw
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
 
-        Test-Path -Path $dstFile -PathType Leaf | Should -Be $false
+        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "existing.txt"
+        (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
+    }
+
+    It 'Restores an existing snapshot when reading refreshed settings fails' {
+        $templateFolder = Join-Path $TestDrive "templateWithInvalidSettings"
+        $baseFolder = Join-Path $TestDrive "baseWithSnapshotAfterFailure"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{ invalid json' -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
 }
 
