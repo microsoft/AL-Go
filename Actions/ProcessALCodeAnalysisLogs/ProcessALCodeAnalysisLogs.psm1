@@ -22,6 +22,31 @@ function NormalizePath {
 
 <#
     .SYNOPSIS
+    Converts a workspace-relative path into a valid SARIF artifact URI.
+    .DESCRIPTION
+    SARIF artifactLocation URIs must be valid URI references. Relative paths from BC projects can contain
+    characters that are not valid in a URI (most commonly spaces, e.g. '1.Setup Data/Foo.al'), which makes
+    github/codeql-action/upload-sarif log "'...' is not a valid URI" warnings and can prevent alerts from
+    mapping to files. This URI-encodes each path segment individually with [Uri]::EscapeDataString while
+    preserving the '/' separators, producing a valid relative URI (e.g. '1.Setup%20Data/Foo.al').
+    .PARAMETER RelativePath
+    The forward-slash-separated workspace-relative path to encode.
+    .OUTPUTS
+    The URI-encoded relative path, or the original value when it is null or empty.
+#>
+function ConvertTo-SarifArtifactUri {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string] $RelativePath
+    )
+    if ([string]::IsNullOrEmpty($RelativePath)) {
+        return $RelativePath
+    }
+    return (($RelativePath -split '/' | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
+}
+
+<#
+    .SYNOPSIS
     Gets the relative path from a base path to a target path using PowerShell 5/7 compatible approach.
     .DESCRIPTION
     This function calculates the relative path from a base path to a target path by temporarily
@@ -160,4 +185,4 @@ function Get-IssueSeverity {
     }
 }
 
-Export-ModuleMember -Function Get-FileFromAbsolutePath, Get-IssueMessage, Get-IssueSeverity
+Export-ModuleMember -Function Get-FileFromAbsolutePath, Get-IssueMessage, Get-IssueSeverity, ConvertTo-SarifArtifactUri
