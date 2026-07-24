@@ -144,4 +144,41 @@ Describe "BuildReferenceDocumentation Action Tests" {
         $resolved | Should -Not -BeLike '*/bin/win32/*'
         $resolved | Should -Not -BeLike '*/bin/linux/*'
     }
+
+    It 'GenerateDocsSite provides a package cache to aldoc' {
+        . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
+        $ENV:GITHUB_REPOSITORY = 'owner/repo'
+        $ENV:GITHUB_WORKSPACE = [System.IO.Path]::GetTempPath()
+
+        Mock DownloadAlDoc { return @('aldoc', '') }
+        Mock GenerateTocYml { return @('items:') }
+        Mock New-Item { }
+        Mock Remove-Item { }
+        Mock Set-Content { }
+        Mock Copy-Item { }
+        Mock Test-Path { return $true }
+        Mock Get-Content {
+            if ("$Path" -like '*docfx.json') {
+                return '{"build":{"globalMetadata":{"_appName":"","_appFooter":""}}}'
+            }
+            return ''
+        }
+        Mock CmdDo { }
+
+        $allApps = @{ 'dummy' = @('c:\artifacts\proj\App1.app') }
+        $allDependencies = @{ 'dummy' = @('c:\artifacts\proj\Dep1.app') }
+
+        GenerateDocsSite -version '' -allVersions @() -allApps $allApps -allDependencies $allDependencies -repoName 'repo' -releaseNotes '' -header 'h' -footer 'f' -defaultIndexMD 'i' -defaultReleaseMD 'r' -docsPath 'c:\docs' -logLevel 'Info' -artifactUrl ''
+
+        # Both the documented app and its dependency are copied into the package cache
+        Assert-MockCalled Copy-Item -Scope It -ParameterFilter { $Path -eq 'c:\artifacts\proj\App1.app' }
+        Assert-MockCalled Copy-Item -Scope It -ParameterFilter { $Path -eq 'c:\artifacts\proj\Dep1.app' }
+
+        # aldoc 'build' is invoked with a --packagecache argument so references between modules resolve
+        Assert-MockCalled CmdDo -Scope It -ParameterFilter {
+            $arguments -like '*build*' -and $arguments -like '*--packagecache*'
+        }
+    }
 }
