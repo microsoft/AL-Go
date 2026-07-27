@@ -12,6 +12,10 @@ Workspace compilation now finds altool both in the platform-specific subfolder (
 - Issue 2319 - Under workspace compilation, `enableCodeAnalyzersOnTestApps: false` now also disables custom analyzers (`customCodeCops`) for test apps and BCPT test apps, not just the built-in code analyzers.
 - Issue 2267 - `AppSourceCop.json` is now created for test apps when `enableCodeAnalyzersOnTestApps` is true.
 
+### Valid SARIF URIs for file paths containing spaces
+
+`ProcessALCodeAnalysisLogs` now URI-encodes each segment of the artifact location path when writing SARIF (for example `1.Setup Data/Foo.al` becomes `1.Setup%20Data/Foo.al`). Paths that contain spaces or other characters that are not valid in a URI previously caused `github/codeql-action/upload-sarif` to log "is not a valid URI" warnings and could prevent AL code scanning alerts from mapping to the correct files. The `/` path separators are preserved so the path structure is unchanged.
+
 ## v9.1
 
 ### Resilient Pull Request Status Check for large builds
