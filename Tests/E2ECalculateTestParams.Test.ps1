@@ -70,4 +70,54 @@ Describe "E2ECalculateTestParams Action Tests" {
             $result.contentPath | Should -Be ''
         }
     }
+
+    Context 'Action entry point GITHUB_OUTPUT serialization' {
+        # These tests invoke the script directly (via the call operator) so the guarded main block runs
+        # and writes to $env:GITHUB_OUTPUT. The action's bug fix removed literal wrapper quotes from those
+        # records, so we assert the exact key=value lines are emitted with no surrounding quotes. Dot-sourced
+        # unit tests above never exercise this serialization and would not catch a quoting regression.
+        BeforeEach {
+            $script:outputFile = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+            New-Item -ItemType File -Path $script:outputFile -Force | Out-Null
+            $env:GITHUB_OUTPUT = $script:outputFile
+        }
+
+        AfterEach {
+            Remove-Item -Path $script:outputFile -Force -ErrorAction SilentlyContinue
+            Remove-Item Env:\GITHUB_OUTPUT -ErrorAction SilentlyContinue
+        }
+
+        It 'Writes unquoted key=value records for the PTE/singleProject/windows cell' {
+            & $scriptPath -githubOwner 'contoso' -matrixType 'PTE' -matrixStyle 'singleProject' -matrixOs 'windows' -adminCenterApiCredentialsSecret 'the-secret' -appSourceAppRepo 'appSourceRepo' -perTenantExtensionRepo 'pteRepo' | Out-Null
+            $lines = @(Get-Content -Path $script:outputFile)
+
+            $lines | Should -Contain 'adminCenterApiCredentials=the-secret'
+            $lines | Should -Contain 'template=contoso/pteRepo'
+            $lines | Should -Contain 'contentPath=pte'
+
+            $repoNameLine = $lines | Where-Object { $_ -like 'repoName=*' }
+            $repoNameLine | Should -Not -BeNullOrEmpty
+            # The repoName value must not be wrapped in quotes.
+            ($repoNameLine -replace '^repoName=', '') | Should -Not -Match '"'
+
+            # No output record may wrap its value in quotes.
+            foreach ($line in $lines) {
+                $line | Should -Not -Match '^[^=]+="'
+            }
+        }
+
+        It 'Writes unquoted template/contentPath for the appSourceApp cell and no forwarded credentials' {
+            & $scriptPath -githubOwner 'contoso' -matrixType 'appSourceApp' -matrixStyle 'multiProject' -matrixOs 'linux' -adminCenterApiCredentialsSecret 'the-secret' -appSourceAppRepo 'appSourceRepo' -perTenantExtensionRepo 'pteRepo' | Out-Null
+            $lines = @(Get-Content -Path $script:outputFile)
+
+            $lines | Should -Contain 'template=contoso/appSourceRepo'
+            $lines | Should -Contain 'contentPath=appsourceapp'
+            # Credentials are not forwarded for this cell, so an empty (unquoted) value is written.
+            $lines | Should -Contain 'adminCenterApiCredentials='
+
+            foreach ($line in $lines) {
+                $line | Should -Not -Match '^[^=]+="'
+            }
+        }
+    }
 }
