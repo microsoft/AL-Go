@@ -14,7 +14,7 @@ Describe 'PipelinePhases.psm1 Tests' {
         # then intercepts them. They don't exist on the test host (no Docker / BcContainerHelper).
         function global:New-BcContainer { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Set-BcContainerKeyVaultAadAppAndCertificate { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
-        function global:Publish-BcContainerApp { param([switch] $upgrade, [Parameter(ValueFromRemainingArguments = $true)] $rest) }
+        function global:Publish-BcContainerApp { param([switch] $upgrade, $appFile, [Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Import-TestToolkitToBcContainer { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Backup-BcContainerDatabases { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Run-TestsInBcContainer { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
@@ -171,7 +171,7 @@ Describe 'PipelinePhases.psm1 Tests' {
                 }
                 $result = Publish-AlGoApps -context $ctx
                 @($result.publishedApps).Count | Should -Be 2
-                Should -Invoke Publish-BcContainerApp -Times 2
+                Should -Invoke Publish-BcContainerApp -Times 1 -ParameterFilter { @($appFile).Count -eq 2 }
             }
         }
         It 'Skips publishing when doNotPublishApps is set' {

@@ -295,13 +295,15 @@ function New-AlGoDevEnvironment {
     }
 
     # Install dependency apps (already compiled elsewhere) so local apps can be published on top.
-    $dependencyApps = @(Read-AppListFromJson -jsonPath $installAppsJson) + @(Get-CompiledApps -buildArtifactFolder $context.buildArtifactFolder -subFolder 'Dependencies')
-    foreach ($app in ($dependencyApps | Select-Object -Unique)) {
-        $appPath = "$app".Trim('()')
-        if ($appPath -and (Test-Path $appPath)) {
-            Write-Host "Publishing dependency app $(Split-Path $appPath -Leaf)"
-            Publish-BcContainerApp -containerName $containerName -appFile $appPath -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
-        }
+    # Publish them together in a single dependency-sorted call so inter-dependent apps resolve
+    # (mirrors Run-AlPipeline, which passes the whole array to Publish-BcContainerApp).
+    $dependencyApps = @(@(Read-AppListFromJson -jsonPath $installAppsJson) + @(Get-CompiledApps -buildArtifactFolder $context.buildArtifactFolder -subFolder 'Dependencies') |
+        ForEach-Object { "$_".Trim('()') } |
+        Where-Object { $_ -and (Test-Path $_) } |
+        Select-Object -Unique)
+    if ($dependencyApps.Count -gt 0) {
+        Write-Host "Publishing $($dependencyApps.Count) dependency app(s)"
+        Publish-BcContainerApp -containerName $containerName -appFile $dependencyApps -credential $credential -skipVerification -sync -install -upgrade -ignoreIfAppExists -useDevEndpoint:$false
     }
 
     # Import the test toolkit when there are tests to build/run.
@@ -320,14 +322,14 @@ function New-AlGoDevEnvironment {
         $context.testToolkitInstalled = $true
     }
 
-    # Install dependency test apps.
-    $dependencyTestApps = @(Read-AppListFromJson -jsonPath $installTestAppsJson)
-    foreach ($app in ($dependencyTestApps | Select-Object -Unique)) {
-        $appPath = "$app".Trim('()')
-        if ($appPath -and (Test-Path $appPath)) {
-            Write-Host "Publishing dependency test app $(Split-Path $appPath -Leaf)"
-            Publish-BcContainerApp -containerName $containerName -appFile $appPath -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
-        }
+    # Install dependency test apps together so inter-dependencies resolve.
+    $dependencyTestApps = @(@(Read-AppListFromJson -jsonPath $installTestAppsJson) |
+        ForEach-Object { "$_".Trim('()') } |
+        Where-Object { $_ -and (Test-Path $_) } |
+        Select-Object -Unique)
+    if ($dependencyTestApps.Count -gt 0) {
+        Write-Host "Publishing $($dependencyTestApps.Count) dependency test app(s)"
+        Publish-BcContainerApp -containerName $containerName -appFile $dependencyTestApps -credential $credential -skipVerification -sync -install -upgrade -ignoreIfAppExists -useDevEndpoint:$false
     }
 
     $context.environmentCreated = $true
@@ -373,20 +375,20 @@ function Publish-AlGoApps {
         }
     }
 
-    # Publish the compiled apps and test apps from .buildartifacts.
+    # Publish the compiled apps and test apps from .buildartifacts as dependency-sorted arrays.
     $publishedApps = @()
     $apps = @(Get-CompiledApps -buildArtifactFolder $context.buildArtifactFolder -subFolder 'Apps')
-    foreach ($app in $apps) {
-        Write-Host "Publishing app $(Split-Path $app -Leaf)"
-        Publish-BcContainerApp -containerName $containerName -appFile $app -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
-        $publishedApps += $app
+    if ($apps.Count -gt 0) {
+        Write-Host "Publishing $($apps.Count) app(s)"
+        Publish-BcContainerApp -containerName $containerName -appFile $apps -credential $credential -skipVerification -sync -install -upgrade -ignoreIfAppExists -useDevEndpoint:$false
+        $publishedApps += $apps
     }
 
     $testApps = @(Get-CompiledApps -buildArtifactFolder $context.buildArtifactFolder -subFolder 'TestApps')
-    foreach ($app in $testApps) {
-        Write-Host "Publishing test app $(Split-Path $app -Leaf)"
-        Publish-BcContainerApp -containerName $containerName -appFile $app -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
-        $publishedApps += $app
+    if ($testApps.Count -gt 0) {
+        Write-Host "Publishing $($testApps.Count) test app(s)"
+        Publish-BcContainerApp -containerName $containerName -appFile $testApps -credential $credential -skipVerification -sync -install -upgrade -ignoreIfAppExists -useDevEndpoint:$false
+        $publishedApps += $testApps
     }
 
     $context.publishedApps = $publishedApps
