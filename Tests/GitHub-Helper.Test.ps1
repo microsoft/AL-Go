@@ -337,4 +337,51 @@ Describe 'DownloadRelease Asset Pattern Matching Tests' {
             Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
+
+    It 'Emits a warning when similarly-named project assets are present and excluded' {
+        # When release contains assets from 'logis-interface-2-core-library' alongside 'logis-interface',
+        # downloading for project 'logis-interface' should emit a warning about the excluded assets.
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'logis-interface-main-Apps-1.0.64.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'logis-interface-2-core-library-main-Apps-1.0.64.0.zip' }
+            )
+        }
+        Mock Write-Host -ModuleName Github-Helper { } -ParameterFilter { "$Object" -like '::Warning::*' }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $null = DownloadRelease -token 'dummy' -projects 'logis-interface' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            Assert-MockCalled Write-Host -ModuleName Github-Helper -ParameterFilter { "$Object" -like '::Warning::*logis-interface-2-core-library*' } -Scope It
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Does not emit a warning when no similarly-named project assets are present' {
+        # When release only contains assets for the exact project, no warning should be emitted.
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'logis-interface-main-Apps-1.0.64.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'other-project-main-Apps-1.0.64.0.zip' }
+            )
+        }
+        Mock Write-Host -ModuleName Github-Helper { } -ParameterFilter { "$Object" -like '::Warning::*' }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $null = DownloadRelease -token 'dummy' -projects 'logis-interface' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            Assert-MockCalled Write-Host -ModuleName Github-Helper -ParameterFilter { "$Object" -like '::Warning::*' } -Scope It -Times 0
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 }

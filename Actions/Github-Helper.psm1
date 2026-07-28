@@ -825,6 +825,17 @@ function DownloadRelease {
         $assetPattern2 = "^$escapedProject-$escapedMask-.+\.zip$"
         Write-Host "AssetPatterns: '$assetPattern1' | '$assetPattern2'"
         $assets = @($release.assets | Where-Object { $_.name -match $assetPattern1 -or $_.name -match $assetPattern2 })
+        # Warn when other release assets share the same project name prefix but were excluded by strict matching.
+        # A loose pattern (using .+ instead of [^-]+) also matches assets whose names look like a longer project name
+        # sharing the same prefix (e.g. 'logis-interface-2-core-library' when project is 'logis-interface').
+        if ($project -ne '*') {
+            $loosePattern = "^$escapedProject-.+-$escapedMask-.+\.zip$"
+            $assetIds = @($assets | ForEach-Object { $_.id })
+            $excludedPrefixAssets = @($release.assets | Where-Object { $_.name -match $loosePattern -and $_.id -notin $assetIds })
+            if ($excludedPrefixAssets) {
+                Write-Host "::Warning::Found $($excludedPrefixAssets.Count) release asset(s) sharing the '$project' name prefix that were excluded because they appear to belong to a different project: $($excludedPrefixAssets.name -join ', '). Only assets matching project '$project' exactly have been included. If this is unexpected, check for projects with similar names in your repository."
+            }
+        }
         foreach($asset in $assets) {
             $uri = "$api_url/repos/$repository/releases/assets/$($asset.id)"
             Write-Host $uri
