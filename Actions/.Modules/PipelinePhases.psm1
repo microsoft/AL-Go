@@ -480,6 +480,13 @@ function Remove-AlGoDevEnvironment {
         [hashtable] $context,
         [switch] $keepEnvironment
     )
+    # When the dev environment was explicitly skipped (e.g. doNotPublishApps), no container was
+    # ever created. Return before touching Test-BcContainer so we never probe the Docker API on
+    # runners without a running Docker daemon (which would leak $LASTEXITCODE and fail the step).
+    if ($context.ContainsKey('environmentCreated') -and (-not $context.environmentCreated)) {
+        Write-Host "No development environment was created - skipping removal."
+        return
+    }
     $containerName = $context.containerName
     if (-not $containerName) {
         return

@@ -215,5 +215,16 @@ Describe 'PipelinePhases.psm1 Tests' {
                 Should -Invoke Remove-BcContainer -Times 0
             }
         }
+        It 'Skips removal (and never probes Docker) when no environment was created' {
+            InModuleScope PipelinePhases {
+                Mock Test-BcContainer { return $true }
+                Mock Get-BcContainerEventLog {}
+                Mock Remove-BcContainer {}
+                $ctx = @{ containerName = 'bc1'; projectPath = $TestDrive; environmentCreated = $false }
+                Remove-AlGoDevEnvironment -context $ctx
+                Should -Invoke Test-BcContainer -Times 0
+                Should -Invoke Remove-BcContainer -Times 0
+            }
+        }
     }
 }
