@@ -25,5 +25,10 @@ if ($saved -and $saved.containerName) {
         "containerName" = $saved.containerName
         "projectPath"   = (Join-Path $ENV:GITHUB_WORKSPACE $projectFolder)
     }
+    # Forward whether a development environment was actually created so Remove-AlGoDevEnvironment
+    # can skip the Docker probe entirely when nothing was created (e.g. doNotPublishApps).
+    if ($saved.ContainsKey('environmentCreated')) {
+        $context.environmentCreated = $saved.environmentCreated
+    }
     Remove-AlGoDevEnvironment -context $context -keepEnvironment:$keepEnvironment
 }
