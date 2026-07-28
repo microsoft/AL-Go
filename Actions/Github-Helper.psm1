@@ -167,7 +167,8 @@ function GetDependencies {
 
                     if (Test-Path $downloadName -PathType Container) {
                         $folder = Get-Item $downloadName
-                        Get-ChildItem -Path $folder | ForEach-Object {
+                        # -LiteralPath: $folder is already resolved and may contain wildcard chars (e.g. ']' from a branch name)
+                        Get-ChildItem -LiteralPath $folder | ForEach-Object {
                             if ($currentMask -like '*TestApps') {
                                 $downloadedList += @("($($_.FullName))")
                             }

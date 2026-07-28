@@ -784,6 +784,106 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result.Count | Should -Be 1
             $result[0] | Should -BeLike '*MyAnalyzer.dll'
         }
+
+        It 'Downloads URL-based analyzers to the flat bin folder when no Analyzers subfolder exists' {
+            # Framework-dependent / marketplace-packaged extensions have no Analyzers/ subfolder,
+            # so downloads must target the flat bin/ folder instead.
+            $compilerFolder = Join-Path $TestDrive 'compiler-flat-layout'
+            $binFolder = Join-Path $compilerFolder 'compiler/extension/bin'
+            New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
+
+            Mock Invoke-WebRequest {
+                param($Uri, $OutFile)
+                Set-Content -Path $OutFile -Value 'mock-dll'
+            } -ModuleName CompileFromWorkspace
+
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeLike '*MyAnalyzer.dll'
+            $result[0] | Should -Not -BeLike '*Analyzers*'
+            (Split-Path $result[0] -Parent).Replace('/', '\') | Should -Be $binFolder.Replace('/', '\')
+        }
+    }
+
+    Describe 'Get-AnalyzersForAppType' {
+        BeforeAll {
+            $script:allAnalyzers = @('CodeCop', 'UICop')
+            $script:allCustomAnalyzers = @('C:\Analyzers\MyCop.dll')
+        }
+
+        It 'Returns full analyzers for regular apps regardless of enableCodeAnalyzersOnTestApps' {
+            foreach ($enabled in @($true, $false)) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $enabled } -AppType 'app' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers) | Should -Be $allAnalyzers
+                @($result.CustomAnalyzers) | Should -Be $allCustomAnalyzers
+            }
+        }
+
+        It 'Returns full analyzers for test apps when enableCodeAnalyzersOnTestApps is true' {
+            foreach ($appType in @('testApp', 'bcptApp')) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $true } -AppType $appType -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers) | Should -Be $allAnalyzers
+                @($result.CustomAnalyzers) | Should -Be $allCustomAnalyzers
+            }
+        }
+
+        It 'Disables built-in AND custom analyzers for test and BCPT apps when enableCodeAnalyzersOnTestApps is false' {
+            foreach ($appType in @('testApp', 'bcptApp')) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $false } -AppType $appType -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers).Count | Should -Be 0
+                @($result.CustomAnalyzers).Count | Should -Be 0
+            }
+        }
+
+        It 'Treats a missing enableCodeAnalyzersOnTestApps setting as disabled for test apps' {
+            $result = Get-AnalyzersForAppType -Settings @{} -AppType 'testApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+            @($result.Analyzers).Count | Should -Be 0
+            @($result.CustomAnalyzers).Count | Should -Be 0
+        }
+    }
+
+    Describe 'Get-ALTool' {
+        It 'Finds altool in the platform-specific subfolder (win32/linux)' {
+            $cf = Join-Path $TestDrive 'altool-platform'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
+                $toolRelative = if ($IsLinux) { "linux/altool" } else { "win32/altool.exe" }
+                $expected = Join-Path $binFolder $toolRelative
+                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
+                Set-Content -Path $expected -Value 'tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Falls back to the flat bin folder for framework-dependent / marketplace VSIX layouts' {
+            $cf = Join-Path $TestDrive 'altool-flat'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
+                $toolRelative = if ($IsLinux) { "altool" } else { "altool.exe" }
+                $expected = Join-Path $binFolder $toolRelative
+                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
+                Set-Content -Path $expected -Value 'tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Throws when no AL tool is found in the compiler folder' {
+            $cf = Join-Path $TestDrive 'altool-missing'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                New-Item -Path (Join-Path $CompilerFolder "compiler/extension/bin") -ItemType Directory -Force | Out-Null
+
+                { Get-ALTool -CompilerFolder $CompilerFolder } | Should -Throw "*Could not find AL tool in the compiler folder*"
+            }
+        }
     }
 
     Describe 'Get-AssemblyProbingPaths' {
@@ -1070,6 +1170,43 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
                 $script:capturedArguments | Should -Contain '--analyzers'
                 $script:capturedArguments | Should -Contain 'CodeCop,UICop'
+            }
+        }
+
+        It 'Includes --customanalyzers when custom analyzers are specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-custom1'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -CustomAnalyzers @('C:\Analyzers\MyCop.dll', 'C:\Analyzers\OtherCop.dll')
+
+                $script:capturedArguments | Should -Contain '--customanalyzers'
+                $script:capturedArguments | Should -Contain 'C:\Analyzers\MyCop.dll,C:\Analyzers\OtherCop.dll'
+            }
+        }
+
+        It 'Omits --customanalyzers when custom analyzers are empty (e.g. enableCodeAnalyzersOnTestApps is false)' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-custom2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -CustomAnalyzers @()
+
+                $script:capturedArguments | Should -Not -Contain '--customanalyzers'
             }
         }
 
