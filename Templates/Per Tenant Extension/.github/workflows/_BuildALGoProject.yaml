@@ -109,7 +109,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade,useModularBuild,keepEnvironment
 
       - name: Run Build Initialize hook
         if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
@@ -185,7 +185,7 @@ jobs:
       - name: Compile Apps
         id: compile
         uses: microsoft/AL-Go-Actions/CompileApps@main
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && fromJson(env.workspaceCompilation).enabled == true
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useModularBuild != 'True' && fromJson(env.workspaceCompilation).enabled == true
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
@@ -210,9 +210,31 @@ jobs:
           [System.IO.File]::WriteAllText($needsContextPath, $nc.Trim())
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "NeedsContext=$needsContextPath"
 
+      - name: Build and test (modular)
+        uses: microsoft/AL-Go-Actions/BuildAndTest@main
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useModularBuild == 'True'
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+          BuildMode: ${{ inputs.buildMode }}
+          NeedsContext: ${{ env.NeedsContext }}
+        with:
+          shell: ${{ inputs.shell }}
+          secretsJson: '${{ steps.ReadSecrets.outputs.Secrets }}'
+          artifact: ${{ env.artifact }}
+          project: ${{ inputs.project }}
+          buildMode: ${{ inputs.buildMode }}
+          installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+          installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+          baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+          baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+          previousAppsPath: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
+          signArtifacts: ${{ inputs.signArtifacts && env.doNotSignApps == 'False' }}
+          azureCredentialsJson: '${{ fromJson(steps.ReadSecrets.outputs.Secrets).AZURE_CREDENTIALS }}'
+          keepEnvironment: ${{ env.keepEnvironment }}
+
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useModularBuild != 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}
@@ -230,7 +252,7 @@ jobs:
 
       - name: Sign
         id: sign
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != '')) && (hashFiles(format('{0}/.buildartifacts/Apps/*.app',inputs.project)) != '')
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useModularBuild != 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != '')) && (hashFiles(format('{0}/.buildartifacts/Apps/*.app',inputs.project)) != '')
         uses: microsoft/AL-Go-Actions/Sign@main
         with:
           shell: ${{ inputs.shell }}

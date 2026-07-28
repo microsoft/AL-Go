@@ -1,0 +1,156 @@
+name: Build and Test AL-Go project
+author: Microsoft Corporation
+description: |
+  PREVIEW: Compiles the apps and test apps, creates a development environment (BC container),
+  signs the apps (optionally), publishes them and runs the tests - then removes the environment.
+  This is the modular-build alternative to the classic RunPipeline action and requires
+  useCompilerFolder = true (enforced by the useModularBuild setting).
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  secretsJson:
+    description: The secrets (as returned by the ReadSecrets action) to pass to the build phases
+    required: false
+    default: ''
+  artifact:
+    description: ArtifactUrl to use for the build
+    required: false
+    default: ''
+  project:
+    description: Project folder
+    required: false
+    default: '.'
+  buildMode:
+    description: Specifies a mode to use for the build steps
+    required: false
+    default: 'Default'
+  installAppsJson:
+    description: A path to a JSON-formatted list of apps to install
+    required: false
+    default: ''
+  installTestAppsJson:
+    description: A path to a JSON-formatted list of test apps to install
+    required: false
+    default: ''
+  baselineWorkflowRunId:
+    description: RunId of the baseline workflow run
+    required: false
+    default: ''
+  baselineWorkflowSHA:
+    description: SHA of the baseline workflow run
+    required: false
+    default: ''
+  previousAppsPath:
+    description: Path to folder containing previous release apps for upgrade testing
+    required: false
+    default: ''
+  signArtifacts:
+    description: Whether to sign the compiled apps
+    required: false
+    default: 'false'
+  azureCredentialsJson:
+    description: Azure Credentials secret (Base 64 encoded) used for signing
+    required: false
+    default: ''
+  keepEnvironment:
+    description: Keep the development environment (container) after the build/test for debugging
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Set Actions Repo and Ref
+      shell: ${{ inputs.shell }}
+      env:
+        actionsRepo: ${{ github.action_repository }}
+        actionsRef: ${{ github.action_ref }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetActionsRepoAndRef" -SkipTelemetry -Action {
+          ${{ github.action_path }}/../SetActionsRepoAndRef.ps1 -actionsRepo $ENV:actionsRepo -actionsRef $ENV:actionsRef
+        }
+
+    - name: Check out AL-Go Actions
+      uses: actions/checkout@v7
+      with:
+        repository: ${{ env.actionsRepo }}
+        ref: ${{ env.actionsRef }}
+        path: ${{ env.actionsPath }}
+
+    - name: Create Dev Environment
+      uses: ./_AL-Go/Actions/CreateDevEnvironment
+      env:
+        Secrets: '${{ inputs.secretsJson }}'
+      with:
+        shell: ${{ inputs.shell }}
+        token: ${{ inputs.token }}
+        artifact: ${{ inputs.artifact }}
+        project: ${{ inputs.project }}
+        buildMode: ${{ inputs.buildMode }}
+        installAppsJson: ${{ inputs.installAppsJson }}
+        installTestAppsJson: ${{ inputs.installTestAppsJson }}
+
+    - name: Compile Apps
+      uses: ./_AL-Go/Actions/CompileApps
+      env:
+        Secrets: '${{ inputs.secretsJson }}'
+        BuildMode: ${{ inputs.buildMode }}
+      with:
+        shell: ${{ inputs.shell }}
+        artifact: ${{ inputs.artifact }}
+        project: ${{ inputs.project }}
+        buildMode: ${{ inputs.buildMode }}
+        dependencyAppsJson: ${{ inputs.installAppsJson }}
+        dependencyTestAppsJson: ${{ inputs.installTestAppsJson }}
+        baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+        baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+        previousAppsPath: ${{ inputs.previousAppsPath }}
+
+    - name: Sign
+      if: inputs.signArtifacts == 'true' && inputs.azureCredentialsJson != '' && hashFiles(format('{0}/.buildartifacts/Apps/*.app', inputs.project)) != ''
+      uses: ./_AL-Go/Actions/Sign
+      with:
+        shell: ${{ inputs.shell }}
+        azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
+        pathToFiles: '${{ inputs.project }}/.buildartifacts/Apps/*.app'
+
+    - name: Publish Apps
+      uses: ./_AL-Go/Actions/PublishApps
+      env:
+        Secrets: '${{ inputs.secretsJson }}'
+      with:
+        shell: ${{ inputs.shell }}
+        token: ${{ inputs.token }}
+        project: ${{ inputs.project }}
+        buildMode: ${{ inputs.buildMode }}
+        previousAppsPath: ${{ inputs.previousAppsPath }}
+
+    - name: Run Tests
+      uses: ./_AL-Go/Actions/RunTests
+      env:
+        Secrets: '${{ inputs.secretsJson }}'
+      with:
+        shell: ${{ inputs.shell }}
+        token: ${{ inputs.token }}
+        project: ${{ inputs.project }}
+        buildMode: ${{ inputs.buildMode }}
+
+    - name: Remove Dev Environment
+      if: always()
+      shell: ${{ inputs.shell }}
+      env:
+        Secrets: '${{ inputs.secretsJson }}'
+        _project: ${{ inputs.project }}
+        _keepEnvironment: ${{ inputs.keepEnvironment }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RemoveDevEnvironment" -Action {
+          ${{ github.action_path }}/RemoveDevEnvironment.ps1 -project $ENV:_project -keepEnvironment ($ENV:_keepEnvironment -eq 'true')
+        }
+branding:
+  icon: terminal
+  color: blue

@@ -213,6 +213,8 @@ function GetDefaultSettings
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
+        "useModularBuild"                               = $false
+        "keepEnvironment"                               = $false
         "workspaceCompilation"                          = [ordered]@{
             "enabled"                                   = $false
             "parallelism"                               = 1
@@ -576,6 +578,13 @@ function ReadSettings {
     # Interpret zero or negative parallelism as the max number of processors
     if ($settings.workspaceCompilation.parallelism -le 0) {
         $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
+    }
+
+    # useModularBuild runs the split CreateDevEnvironment/PublishApps/RunTests actions, which
+    # only support the compiler folder flow. Enforce useCompilerFolder so the setting is self-contained.
+    if ($settings.useModularBuild -and -not $settings.useCompilerFolder) {
+        OutputDebug "useModularBuild is enabled - enforcing useCompilerFolder = true"
+        $settings.useCompilerFolder = $true
     }
 
     $settings | ValidateSettings

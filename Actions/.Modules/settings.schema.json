@@ -532,6 +532,14 @@
             "type": "boolean",
             "description": "Use the compiler folder instead of a BC container. See https://aka.ms/ALGoSettings#usecompilerfolder"
         },
+        "useModularBuild": {
+            "type": "boolean",
+            "description": "PREVIEW: Build and test the project using the modular build actions (CreateDevEnvironment, PublishApps, RunTests) instead of the classic RunPipeline action. Enabling this enforces useCompilerFolder = true. See https://aka.ms/ALGoSettings#usemodularbuild"
+        },
+        "keepEnvironment": {
+            "type": "boolean",
+            "description": "When using the modular build (useModularBuild), keep the development container running after the build/test instead of removing it (for debugging). See https://aka.ms/ALGoSettings#keepenvironment"
+        },
         "workspaceCompilation": {
             "type": "object",
             "description": "PREVIEW: Configuration for workspace compilation. See https://aka.ms/ALGoSettings#workspacecompilation",
