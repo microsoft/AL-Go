@@ -300,7 +300,7 @@ function New-AlGoDevEnvironment {
         $appPath = "$app".Trim('()')
         if ($appPath -and (Test-Path $appPath)) {
             Write-Host "Publishing dependency app $(Split-Path $appPath -Leaf)"
-            Publish-BcContainerApp -containerName $containerName -appFile $appPath -credential $credential -skipVerification -sync -install -useDevEndpoint:$false
+            Publish-BcContainerApp -containerName $containerName -appFile $appPath -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
         }
     }
 
@@ -326,7 +326,7 @@ function New-AlGoDevEnvironment {
         $appPath = "$app".Trim('()')
         if ($appPath -and (Test-Path $appPath)) {
             Write-Host "Publishing dependency test app $(Split-Path $appPath -Leaf)"
-            Publish-BcContainerApp -containerName $containerName -appFile $appPath -credential $credential -skipVerification -sync -install -useDevEndpoint:$false
+            Publish-BcContainerApp -containerName $containerName -appFile $appPath -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
         }
     }
 
@@ -385,7 +385,7 @@ function Publish-AlGoApps {
     $testApps = @(Get-CompiledApps -buildArtifactFolder $context.buildArtifactFolder -subFolder 'TestApps')
     foreach ($app in $testApps) {
         Write-Host "Publishing test app $(Split-Path $app -Leaf)"
-        Publish-BcContainerApp -containerName $containerName -appFile $app -credential $credential -skipVerification -sync -install -useDevEndpoint:$false
+        Publish-BcContainerApp -containerName $containerName -appFile $app -credential $credential -skipVerification -sync -install -upgrade -useDevEndpoint:$false
         $publishedApps += $app
     }
 

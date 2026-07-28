@@ -14,7 +14,7 @@ Describe 'PipelinePhases.psm1 Tests' {
         # then intercepts them. They don't exist on the test host (no Docker / BcContainerHelper).
         function global:New-BcContainer { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Set-BcContainerKeyVaultAadAppAndCertificate { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
-        function global:Publish-BcContainerApp { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
+        function global:Publish-BcContainerApp { param([switch] $upgrade, [Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Import-TestToolkitToBcContainer { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Backup-BcContainerDatabases { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
         function global:Run-TestsInBcContainer { param([Parameter(ValueFromRemainingArguments = $true)] $rest) }
@@ -128,6 +128,30 @@ Describe 'PipelinePhases.psm1 Tests' {
                 $result.testToolkitInstalled | Should -Be $true
                 Should -Invoke New-BcContainer -Times 1
                 Should -Invoke Import-TestToolkitToBcContainer -Times 1
+            }
+        }
+        It 'Publishes dependency apps with -upgrade so pre-existing framework apps are replaced' {
+            InModuleScope PipelinePhases {
+                Mock New-BcContainer {}
+                Mock Assert-DockerIsRunning {}
+                Mock Import-TestToolkitToBcContainer {}
+                Mock Publish-BcContainerApp {}
+                $depApp = Join-Path $TestDrive 'dep.app'
+                'x' | Set-Content $depApp
+                $installAppsJson = Join-Path $TestDrive 'installApps.json'
+                (ConvertTo-Json -InputObject @($depApp)) | Set-Content $installAppsJson
+                $ctx = @{
+                    containerName = 'bc1'; artifactUrl = 'https://bcartifacts/x'; auth = 'UserPassword'
+                    secrets = @{ keyVaultCertificateUrl = ''; keyVaultCertificatePassword = ''; keyVaultClientId = '' }
+                    buildArtifactFolder = (Join-Path $TestDrive 'ba-dep')
+                    settings = @{
+                        doNotPublishApps = $false; doNotRunTests = $true; doNotRunBcptTests = $true
+                        testFolders = @(); bcptTestFolders = @(); installTestLibraries = $false
+                        installPerformanceToolkit = $false; enableTaskScheduler = $false; assignPremiumPlan = $false; memoryLimit = ''
+                    }
+                }
+                New-AlGoDevEnvironment -context $ctx -installAppsJson $installAppsJson | Out-Null
+                Should -Invoke Publish-BcContainerApp -Times 1 -ParameterFilter { $upgrade -eq $true }
             }
         }
     }
