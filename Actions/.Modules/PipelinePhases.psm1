@@ -420,6 +420,16 @@ function Invoke-AlGoTests {
     $settings = $context.settings
     $containerName = $context.containerName
     $projectPath = $context.projectPath
+
+    # Mirror the monolithic RunPipeline behavior: when doNotPublishApps is set (e.g. workspace
+    # compilation already produced the apps and this project is not published to a container),
+    # RunPipeline exits before creating a container or running tests. No environment exists,
+    # so there is nothing to test against here.
+    if ($settings.doNotPublishApps) {
+        Write-Host "doNotPublishApps is set - skipping tests (no development environment was created)."
+        return $context
+    }
+
     $credential = Get-PipelineCredential -context $context
 
     $testResultsFile = Join-Path $projectPath "TestResults.xml"

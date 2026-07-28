@@ -168,10 +168,25 @@ Describe 'PipelinePhases.psm1 Tests' {
                 $ctx = @{
                     containerName = 'bc1'; containerPassword = 'Aa1!secret'; projectPath = $TestDrive
                     companyName = 'CRONUS'; tenant = 'default'
-                    settings = @{ doNotRunTests = $false; doNotRunBcptTests = $true; testFolders = @('Test'); bcptTestFolders = @() }
+                    settings = @{ doNotPublishApps = $false; doNotRunTests = $false; doNotRunBcptTests = $true; testFolders = @('Test'); bcptTestFolders = @() }
                 }
                 Invoke-AlGoTests -context $ctx | Out-Null
                 Should -Invoke Run-TestsInBcContainer -Times 1
+                Should -Invoke Run-BCPTTestsInBcContainer -Times 0
+            }
+        }
+
+        It 'Skips tests (and does not require a container credential) when doNotPublishApps is set' {
+            InModuleScope PipelinePhases {
+                Mock Run-TestsInBcContainer {}
+                Mock Run-BCPTTestsInBcContainer {}
+                # No containerPassword in context - Get-PipelineCredential would throw if called.
+                $ctx = @{
+                    containerName = 'bc1'; projectPath = $TestDrive
+                    settings = @{ doNotPublishApps = $true; doNotRunTests = $false; doNotRunBcptTests = $false; testFolders = @('Test'); bcptTestFolders = @() }
+                }
+                { Invoke-AlGoTests -context $ctx } | Should -Not -Throw
+                Should -Invoke Run-TestsInBcContainer -Times 0
                 Should -Invoke Run-BCPTTestsInBcContainer -Times 0
             }
         }
