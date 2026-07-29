@@ -258,7 +258,7 @@ Get-ContentLF -Path (Join-Path (Get-Location) $optionalCustomFileName) | Should 
 
 # Check that excluded workflow file is NOT present (in template's filesToExclude)
 (Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
-# Check that missing workflow file is present (in default filesToExclude)
+# Check that missing workflow file is present (in default filesToInclude)
 (Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
 
 # Remove missing workflow files from template repository again
