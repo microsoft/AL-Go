@@ -37,9 +37,10 @@ $env:GH_HOST = "github.mycompany.com"
 gh repo create ORG/REPO --private
 Remove-Item Env:GH_HOST
 
-# 4. Push everything into it
+# 4. Remove GitHub-managed pull-request refs, then push the mirror
 Set-Location REPO.git
-git push --mirror https://github.mycompany.com/ORG/REPO.git
+git for-each-ref --format 'delete %(refname)' refs/pull | git update-ref --stdin
+git push --mirror https://<enterprise>.ghe.com/ORG/REPO.git
 ```
 
 > [!NOTE]
