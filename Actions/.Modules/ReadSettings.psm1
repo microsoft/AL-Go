@@ -260,7 +260,6 @@ function GetDefaultSettings
         "customALGoFiles" = [ordered]@{
             "filesToInclude"                            = @()
             "filesToExclude"                            = @()
-            "filesToRemove"                             = @()
         }
         "postponeProjectInBuildOrder"                  = $false
     }

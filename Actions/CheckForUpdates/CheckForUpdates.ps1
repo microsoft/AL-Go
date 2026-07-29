@@ -121,7 +121,7 @@ if ($originalTemplateFolder) {
 
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
-$filesToInclude, $filesToExclude, $filesToRemove = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+$filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
 
 # $updateFiles will hold an array of files, which needs to be updated
 $updateFiles = @()
@@ -209,8 +209,8 @@ foreach($fileToInclude in $filesToInclude) {
 }
 
 Push-Location -Path $baseFolder
-# Remove files that are in $filesToExclude or $filesToRemove and exist in the repository
-$removeFiles = @($filesToExclude) + @($filesToRemove) | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
+# Remove files that are in $filesToExclude and exist in the repository
+$removeFiles = @($filesToExclude) | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
     $relativePath = Resolve-Path -Path $_.destinationFullPath -Relative
     Write-Host "File marked for removal: $relativePath"
     $relativePath

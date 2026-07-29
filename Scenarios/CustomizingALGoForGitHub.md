@@ -231,7 +231,7 @@ Repositories based on your custom template will notify you that changes are avai
 
 When updating AL-Go for GitHub, only specific system files from the template repository are synced to your end repository by default. Files such as `README.md`, `.gitignore`, and other documentation or non-system files are not updated by AL-Go for GitHub. By default, AL-Go syncs workflow files in `.github/workflows`, PowerShell scripts in `.github` and `.AL-Go`, and configuration files required for AL-Go operations. When using custom template repositories, you may need to add additional files related to AL-Go for GitHub, such as script overrides, complementary workflows, or centrally managed files not part of the official AL-Go templates.
 
-In order to instruct AL-Go which files to look for at the template repository, you need to define the `customALGoFiles` setting. The setting is an object that can contain three properties: `filesToInclude`, `filesToExclude`, and `filesToRemove`.
+In order to instruct AL-Go which files to look for at the template repository, you need to define the `customALGoFiles` setting. The setting is an object that can contain two properties: `filesToInclude` and `filesToExclude`.
 
 `filesToInclude`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to include (create/update). Every item in the array may contain the following properties:
 
@@ -278,28 +278,9 @@ The following table summarizes how AL-Go for GitHub manages file updates and exc
 | Yes | No | Yes | The file is **_not_** removed as it was not matched as update |
 | No | Yes/No | Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
 
-`filesToRemove` is an array of file configurations that will instruct AL-Go which files to unconditionally remove from the end repository. Unlike `filesToExclude`, files matched by `filesToRemove` do not need to be part of `filesToInclude` first — they are removed regardless of whether they are included in the update process. Files are searched in both the template repository and the end repository. Every item in the array may contain the following properties:
-
-- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. `*` characters are not supported. _Example_: `.github/workflows`.
-- `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `deprecated-*.yaml` or `oldScript.ps1`.
-- `destinationFolder`: A path to a folder, relative to the end repository, where the files are located. If not specified, defaults to the same as the source file folder. _Example_: `.github/workflows`.
-- `perProject`: A boolean that indicates whether the matched files should be removed for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
-- `destinationName`: The filename of the file at the destination. If specified, overrides the `filter` when looking up the file to remove. Should be used together with a `filter` that matches a single file. _Example_: `renamedScript.ps1`.
-
-> [!NOTE]
-> `filesToRemove` takes precedence over both `filesToInclude` and `filesToExclude`. If a file is matched by `filesToRemove`, it will be removed from the end repository even if it is also matched by `filesToInclude`. The file will also be excluded from the `filesToInclude` and `filesToExclude` lists, so it will not be created or updated.
-
-The following table summarizes how AL-Go for GitHub manages file removals when using `filesToRemove`:
-
-| File is present in end repo | File is matched by `filesToInclude` | File is matched by `filesToExclude` | File is matched by `filesToRemove` | Result |
-|---|---|---|---|---|
-| Yes/No | Yes/No | Yes/No | No | See `filesToInclude`/`filesToExclude` behavior above |
-| Yes | Yes/No | Yes/No | Yes | The file is **removed** from the end repo (remove wins over include/exclude) |
-| No | Yes/No | Yes/No | Yes | The file is **not created** in the end repo (excluded from `filesToInclude`/`filesToExclude`) |
-
 ### Examples of using custom template files
 
-Below are examples of how to use the `filesToInclude`, `filesToExclude`, and `filesToRemove` settings in your AL-Go configuration.
+Below are examples of how to use the `filesToInclude` and `filesToExclude` settings in your AL-Go configuration.
 
 #### Example 1: Updating specific scripts for all projects
 
@@ -384,61 +365,6 @@ Note that AL-Go for GitHub already syncs all workflow files under `.github/workf
 ```
 
 This configuration updates all JSON files from `shared/config` and all PowerShell scripts from `.github/scripts`, but excludes `legacy-config.json` from being updated or created.
-
-#### Example 5: Removing a deprecated workflow from all consumer repos
-
-```json
-"customALGoFiles": {
-  "filesToRemove": [
-    {
-      "sourceFolder": ".github/workflows",
-      "filter": "deprecated-workflow.yaml"
-    }
-  ]
-}
-```
-
-This configuration will remove `deprecated-workflow.yaml` from the `.github/workflows` folder in all consumer repositories, regardless of whether it is still present in the template. This is useful when a workflow has been retired and should be cleaned up from all repositories.
-
-#### Example 6: Removing per-project scripts that are no longer needed
-
-```json
-"customALGoFiles": {
-  "filesToRemove": [
-    {
-      "sourceFolder": ".AL-Go/scripts",
-      "filter": "OldBuildScript.ps1",
-      "perProject": true
-    }
-  ]
-}
-```
-
-This will remove `OldBuildScript.ps1` from the `.AL-Go/scripts` folder of every AL-Go project in the target repository.
-
-#### Example 7: Combining `filesToInclude` with `filesToRemove` for migration
-
-```json
-"customALGoFiles": {
-  "filesToInclude": [
-    {
-      "sourceFolder": ".github/scripts",
-      "filter": "NewBuildHelper.ps1",
-      "destinationFolder": ".AL-Go/scripts",
-      "perProject": true
-    }
-  ],
-  "filesToRemove": [
-    {
-      "sourceFolder": ".AL-Go/scripts",
-      "filter": "LegacyBuildHelper.ps1",
-      "perProject": true
-    }
-  ]
-}
-```
-
-This configuration introduces a new script (`NewBuildHelper.ps1`) to all projects while simultaneously removing the old script (`LegacyBuildHelper.ps1`) it replaces. This pattern is useful for migrating from one file to another across all consumer repositories.
 
 These examples demonstrate how you can fine-tune which files are propagated from your template repository and which are excluded, giving you granular control over your AL-Go customization process.
 

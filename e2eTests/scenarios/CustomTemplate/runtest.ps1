@@ -207,8 +207,6 @@ $optionalCustomFile = Join-Path $templateRepoPath $optionalCustomFileName
 $optionalCustomFileContent = "This is an optional custom file in the template repository."
 Set-Content -Path $optionalCustomFile -Value $optionalCustomFileContent
 
-$legacyCustomFileName = 'CustomTemplateFile.Legacy.txt'
-
 # Remove workflow files from template repository
 $excludedWorkflowFileName = 'DeployReferenceDocumentation.yaml'
 $excludedWorkflowFileRelativePath = Join-Path '.github/workflows' $excludedWorkflowFileName
@@ -226,7 +224,6 @@ $null = Add-PropertiesToJsonFile -path $templateRepoSettingsFile -properties @{
     "customALGoFiles" = @{
         "filesToInclude" = @( @{ "filter" = $defaultCustomFileName } )
         "filesToExclude" = @( @{ "sourceFolder" = ".github/workflows"; "filter" = $excludedWorkflowFileName } )
-        "filesToRemove"  = @( @{ "filter" = $legacyCustomFileName } )
     }
 }
 
@@ -348,10 +345,6 @@ $cicdYaml.AddCustomJobsToYaml($customJobs, [CustomizationOrigin]::FinalRepositor
 # save
 $cicdYaml.Save($cicdWorkflow)
 
-# Add custom files in the final repository
-$legacyCustomFileContent = "This is a removed custom file that will be removed in the final repository."
-Set-Content -Path (Join-Path (Get-Location) $legacyCustomFileName) -Value $legacyCustomFileContent
-
 # Remove workflow files from final repository
 Remove-Item -Path (Join-Path (Get-Location) $missingWorkflowFileRelativePath) -Force | Out-Null
 
@@ -408,8 +401,6 @@ Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) |
 Get-ContentLF -Path (Join-Path (Get-Location) $defaultCustomFileName) | Should -Be $defaultCustomFileContent.Replace("`r", "").TrimEnd("`n")
 # Check that optional custom file is NOT present (not in default or template's filesToInclude)
 (Join-Path (Get-Location) $optionalCustomFileName) | Should -Not -Exist
-# Check that legacy custom file is NOT present (in template's filesToRemove)
-(Join-Path (Get-Location) $legacyCustomFileName) | Should -Not -Exist
 
 # Check that excluded workflow file is NOT present (in default filesToInclude and template's filesToExclude)
 (Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
@@ -454,8 +445,6 @@ Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) |
 # Check that optional custom file is present (in repos's filesToInclude)
 (Join-Path (Get-Location) $optionalCustomFileName) | Should -Exist
 Get-ContentLF -Path (Join-Path (Get-Location) $optionalCustomFileName) | Should -Be $optionalCustomFileContent.Replace("`r", "").TrimEnd("`n")
-# Check that legacy custom file is NOT present (in template's filesToRemove)
-(Join-Path (Get-Location) $legacyCustomFileName) | Should -Not -Exist
 
 # Check that excluded workflow file is NOT present (in default filesToInclude and template's filesToExclude)
 (Join-Path (Get-Location) $excludedWorkflowFileRelativePath) | Should -Not -Exist
