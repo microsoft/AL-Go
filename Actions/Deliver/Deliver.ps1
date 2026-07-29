@@ -265,12 +265,7 @@ foreach ($thisProject in $sortedProjectList) {
                         if ($preReleaseTag) {
                             $searchVersion += "-$preReleaseTag"
                         }
-                        try {
-                            $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $searchVersion -select Exact -allowPrerelease
-                        }
-                        catch {
-                            $feed = $null
-                        }
+                        $feed, $packageId, $packageVersion = Find-BcNugetPackage -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $packageName -version $searchVersion -select Exact -allowPrerelease
                         if (-not $feed) {
                             $parameters = @{
                                 "gitHubRepository" = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
