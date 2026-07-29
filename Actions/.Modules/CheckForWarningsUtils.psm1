@@ -90,7 +90,7 @@ function Get-Warnings {
     .DESCRIPTION
     Compare 2 build logs and throw if new warnings were added.
 #>
-function Compare-Files {
+function Compare-BuildWarnings {
     [CmdletBinding()]
     param (
         [string] $referenceBuild,
@@ -202,7 +202,7 @@ function Test-ForNewWarnings {
         $referenceBuildLog = Get-ChildItem $artifactsFolder -File -Recurse | Select-Object -First 1
 
         Write-Host "Comparing build warnings between '$prBuildOutputFile' and '$($referenceBuildLog.FullName)'."
-        Compare-Files -referenceBuild $referenceBuildLog.FullName -prBuild $prBuildOutputFile
+        Compare-BuildWarnings -referenceBuild $referenceBuildLog.FullName -prBuild $prBuildOutputFile
     }
     finally{
         Write-Host "::endgroup::Done analyzing build for new warnings..."

@@ -1,4 +1,4 @@
-﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Mock/callback parameters must match function signatures')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Mock/callback parameters must match function signatures')]
 param()
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -68,7 +68,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
         }
     }
 
-    Context 'Compare-Files' {
+    Context 'Compare-BuildWarnings' {
         It 'Does not throw when the PR introduces no new warnings' {
             InModuleScope CheckForWarningsUtils -Parameters @{ warningLine1 = $warningLine1 } {
                 param($warningLine1)
@@ -76,7 +76,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
                 Set-Content -Path $reference -Value @($warningLine1) -Encoding UTF8
                 Set-Content -Path $pr -Value @($warningLine1) -Encoding UTF8
-                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+                { Compare-BuildWarnings -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
             }
         }
 
@@ -87,7 +87,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
                 Set-Content -Path $reference -Value @($warningLine1) -Encoding UTF8
                 Set-Content -Path $pr -Value @($warningLine1, $warningLine2) -Encoding UTF8
-                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Throw '*New warnings were introduced*'
+                { Compare-BuildWarnings -referenceBuild $reference -prBuild $pr } | Should -Throw '*New warnings were introduced*'
             }
         }
 
@@ -98,7 +98,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
                 Set-Content -Path $reference -Value @($warningLine1, $warningLine2) -Encoding UTF8
                 Set-Content -Path $pr -Value @($warningLine1) -Encoding UTF8
-                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+                { Compare-BuildWarnings -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
             }
         }
 
@@ -109,7 +109,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
                 Set-Content -Path $reference -Value @($alcWarningLine1) -Encoding UTF8
                 Set-Content -Path $pr -Value @($alcWarningLine1, $alcWarningLine2) -Encoding UTF8
-                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Throw '*New warnings were introduced*'
+                { Compare-BuildWarnings -referenceBuild $reference -prBuild $pr } | Should -Throw '*New warnings were introduced*'
             }
         }
 
@@ -123,7 +123,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
                 Set-Content -Path $reference -Value @($refLine) -Encoding UTF8
                 Set-Content -Path $pr -Value @($prLine) -Encoding UTF8
-                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+                { Compare-BuildWarnings -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
             }
         }
 
@@ -138,7 +138,7 @@ Describe 'CheckForWarningsUtils.psm1 Tests' {
                 $pr = Join-Path $TestDrive ([System.IO.Path]::GetRandomFileName())
                 Set-Content -Path $reference -Value @($refLine) -Encoding UTF8
                 Set-Content -Path $pr -Value @($prLine) -Encoding UTF8
-                { Compare-Files -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
+                { Compare-BuildWarnings -referenceBuild $reference -prBuild $pr } | Should -Not -Throw
             }
         }
     }
