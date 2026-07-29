@@ -1,0 +1,5 @@
+# Use the "union" merge driver for RELEASENOTES.md so that concurrent PRs that
+# each append their own entries are merged by keeping both sides' added lines
+# instead of producing a merge conflict. This greatly reduces the merge-conflict
+# churn caused by many PRs editing the same top region of the changelog.
+RELEASENOTES.md merge=union
