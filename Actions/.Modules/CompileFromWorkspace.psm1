@@ -111,6 +111,58 @@ function Get-CustomAnalyzers {
 
 <#
 .SYNOPSIS
+    Determines which analyzers apply to a given app type based on settings.
+.DESCRIPTION
+    Returns the built-in and custom analyzers to use when compiling a folder of the
+    given app type. When enableCodeAnalyzersOnTestApps is false, both built-in code
+    analyzers and custom analyzers (customCodeCops) are disabled for test apps and
+    BCPT test apps, so no analyzers run against them. Regular apps always use the
+    full set of configured analyzers.
+.PARAMETER Settings
+    Hashtable containing the build settings, including enableCodeAnalyzersOnTestApps.
+.PARAMETER AppType
+    The type of app being compiled: 'app', 'testApp', or 'bcptApp'.
+.PARAMETER Analyzers
+    The full set of built-in code analyzers configured for the build.
+.PARAMETER CustomAnalyzers
+    The full set of custom analyzers (customCodeCops) configured for the build.
+.OUTPUTS
+    Hashtable with Analyzers and CustomAnalyzers keys holding the analyzers to use
+    for the given app type.
+#>
+function Get-AnalyzersForAppType {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('app', 'testApp', 'bcptApp')]
+        [string] $AppType,
+
+        [Parameter(Mandatory = $false)]
+        [string[]] $Analyzers = @(),
+
+        [Parameter(Mandatory = $false)]
+        [string[]] $CustomAnalyzers = @()
+    )
+
+    $isTestApp = $AppType -in @('testApp', 'bcptApp')
+    $enableOnTestApps = $Settings.ContainsKey('enableCodeAnalyzersOnTestApps') -and $Settings.enableCodeAnalyzersOnTestApps
+    if ($isTestApp -and (-not $enableOnTestApps)) {
+        return @{
+            Analyzers       = @()
+            CustomAnalyzers = @()
+        }
+    }
+
+    return @{
+        Analyzers       = $Analyzers
+        CustomAnalyzers = $CustomAnalyzers
+    }
+}
+
+<#
+.SYNOPSIS
     Gets build metadata for the current build environment.
 .DESCRIPTION
     Returns a hashtable with build metadata including source repository URL, commit SHA,
@@ -1060,6 +1112,7 @@ Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers
 Export-ModuleMember -Function Get-CustomAnalyzers
+Export-ModuleMember -Function Get-AnalyzersForAppType
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
 Export-ModuleMember -Function New-AppSourceCopJson

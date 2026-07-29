@@ -23,16 +23,18 @@ if (!(Test-Path $artifactsFolder)) {
 }
 if ($artifacts -ne ".artifacts") {
     Write-Host "::group::Downloading artifacts"
-    $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask "Apps" -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
-    if ($allArtifacts) {
-        $allArtifacts | ForEach-Object {
-            $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
-            if (!(Test-Path $filename)) {
-                throw "Unable to download artifact $($_.name)"
+    foreach($mask in 'Apps', 'Dependencies') {
+        $allArtifacts = @(GetArtifacts -token $token -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask $mask -projects '*' -Version $artifacts -branch $ENV:GITHUB_REF_NAME)
+        if ($allArtifacts) {
+            $allArtifacts | ForEach-Object {
+                $filename = DownloadArtifact -token $token -artifact $_ -path $artifactsFolder
+                if (!(Test-Path $filename)) {
+                    throw "Unable to download artifact $($_.name)"
+                }
+                $destFolder = Join-Path $artifactsFolder ([System.IO.Path]::GetFileNameWithoutExtension($filename))
+                Expand-Archive -Path $filename -DestinationPath $destFolder -Force
+                Remove-Item -Path $filename -Force
             }
-            $destFolder = Join-Path $artifactsFolder ([System.IO.Path]::GetFileNameWithoutExtension($filename))
-            Expand-Archive -Path $filename -DestinationPath $destFolder -Force
-            Remove-Item -Path $filename -Force
         }
     }
     Write-Host "::endgroup::"
@@ -68,7 +70,7 @@ foreach($release in $releases) {
         $allApps, $allDependencies = CalculateProjectsAndApps -tempFolder $tempFolder -includeProjects $includeProjects -excludeProjects $excludeProjects -groupByProject:$settings.alDoc.groupByProject
         $version = $release.Name
         $releaseNotes = $release.body
-        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
+        GenerateDocsSite -version $version -allVersions $versions -allApps $allApps -allDependencies $allDependencies -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
         do {
             try {
                 $retry = $false
@@ -109,7 +111,7 @@ else {
     $releaseNotes = ''
 }
 if ($allApps.Count -gt 0) {
-    GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
+    GenerateDocsSite -version '' -allVersions $versions -allApps $allApps -allDependencies $allDependencies -repoName $settings.repoName -releaseNotes $releaseNotes -header $header -footer $footer -defaultIndexMD $defaultIndexMD -defaultReleaseMD $defaultReleaseMD -docsPath $docsPath -logLevel $logLevel -groupByProject:$settings.alDoc.groupByProject -artifactUrl $artifactUrl
 }
 else {
     OutputWarning -message "No apps found to generate documentation for"

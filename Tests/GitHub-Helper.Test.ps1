@@ -232,4 +232,36 @@ Describe "GitHub-Helper Tests" {
         $result = GetLatestRelease -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -ref 'releases/v26x'
         $result.tag_name | Should -Be '26.3.0'
     }
+
+    It 'GetDependencies resolves .app files when the dependency folder path contains a glob metacharacter (])' {
+        # A branch name may contain ']' (git forbids '[' but allows ']'), which ends up in the
+        # downloaded dependency folder name. GetDependencies must enumerate that folder with
+        # -LiteralPath; using -Path would treat ']' as a wildcard and return the folder itself
+        # instead of the .app files inside it.
+        $saveToPath = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+        try {
+            $branch = 'bugs_Bug-638182--master]-Postserviceorder'
+            $depFolder = New-Item -ItemType Directory -Path (Join-Path $saveToPath "MyProj-$branch-Apps-PR1-20260709")
+            [System.IO.File]::WriteAllBytes((Join-Path $depFolder "App1.app"), [byte[]](1, 2, 3))
+            [System.IO.File]::WriteAllBytes((Join-Path $depFolder "App2.app"), [byte[]](4, 5, 6))
+
+            $probingPath = [PSCustomObject]@{
+                release_status = 'thisBuild'
+                buildMode      = 'Default'
+                projects       = 'MyProj'
+                branch         = $branch
+                repo           = 'https://github.com/test/repo'
+            }
+
+            $result = @(GetDependencies -probingPathsJson $probingPath -saveToPath $saveToPath -masks @('Apps'))
+
+            $result | Should -HaveCount 2
+            $result | ForEach-Object { $_ | Should -BeLike '*.app' }
+            $result | Should -Contain (Join-Path $depFolder "App1.app")
+            $result | Should -Contain (Join-Path $depFolder "App2.app")
+        }
+        finally {
+            Remove-Item -Path $saveToPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 }

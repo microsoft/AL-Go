@@ -8,6 +8,9 @@ A vital part of your development processes is reference documentation. AL-Go for
 > [!NOTE]
 > AlDoc is included in bc core artifacts. The tool is automatically downloaded from the bc artifact matching your [artifact](https://aka.ms/algosettings#artifact) AL-Go setting. Please be aware that if this setting is not set, or only set in project settings within a multiproject repo, AlDoc will instead be taken from the latest non-insider BC artifact.
 
+> [!NOTE]
+> When generating the documentation, AL-Go provides the ALDoc tool with a package cache containing the documented apps and their dependency apps, so that references from one app to objects in another app (for example, a table extension and the table it extends) are resolved and linked in the generated site. The dependency apps come from the `Dependencies` artifacts, which are only produced when the [generateDependencyArtifact](https://aka.ms/algosettings#generatedependencyartifact) setting is enabled. If `generateDependencyArtifact` is not enabled, references to apps outside the documented set are not resolved: they appear as plain text instead of links, and are logged as "Referenced module not loaded" warnings.
+
 AL-Go for GitHub supports deploying the reference documentation to GitHub Pages. GitHub Pages is websites for you and your projects, hosted directly from your GitHub repository. It is also possible to deploy the reference documentation to other static HTML hosting providers, but this requires some scripting and is not included here.
 
 ## GitHub Pages

@@ -29,6 +29,12 @@ If your actual Business Central environment has a different name than your GitHu
 
 At this time, these settings cannot be added as environment variables, we might add this in the future.
 
+## Securing your deployment environments
+
+GitHub environments are the security boundary around your deployment credentials (the `AUTHCONTEXT` secret) and the workflow jobs that use them. Before you point an environment at a real tenant - and especially before you point it at production - configure *deployment branch restrictions* and other environment protection rules so that only approved branches can deploy and (for production) a human must approve each deployment.
+
+For the available controls and step-by-step instructions, see the official GitHub documentation: [Managing environments for deployment](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) and the [Deployment protection rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-protection-rules) reference (including [Deployment branches and tags](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-branches-and-tags) and [Required reviewers](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#required-reviewers)).
+
 ## Creating an AUTHCONTEXT that uses impersonation
 
 Easiest way to create an authentication context with impersonation for AL-Go for GitHub is to use the following PowerShell line from a machine with the latest **BcContainerHelper** module installed:
