@@ -210,7 +210,7 @@ foreach($fileToInclude in $filesToInclude) {
 
 Push-Location -Path $baseFolder
 # Remove files that are in $filesToExclude and exist in the repository
-$removeFiles = @($filesToExclude) | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
+$removeFiles = $filesToExclude | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
     $relativePath = Resolve-Path -Path $_.destinationFullPath -Relative
     Write-Host "File marked for removal: $relativePath"
     $relativePath
