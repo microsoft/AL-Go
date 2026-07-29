@@ -827,7 +827,11 @@ function ResolveFilePaths {
         return @()
     }
 
+    $sourceFolder = [System.IO.Path]::GetFullPath($sourceFolder) # Canonicalize the source folder to an absolute path
     $sourceFolder = Join-Path $sourceFolder '' # Ensure source folder has a trailing slash for correct path resolution
+
+    $destinationFolder = [System.IO.Path]::GetFullPath($destinationFolder) # Canonicalize the destination folder to an absolute path
+    $destinationFolder = Join-Path $destinationFolder '' # Ensure destination folder has a trailing slash for correct path resolution
 
     $fullFilePaths = @()
     foreach($file in $files) {
@@ -914,11 +918,20 @@ function ResolveFilePaths {
                         $project = '' # If project is '.', it means the root folder, so we use an empty string
                     }
 
+                    $projectDestinationFolder = Join-Path $destinationFolder $project
+                    $projectDestinationFolder = Join-Path $projectDestinationFolder '' # Ensure project destination folder has a trailing slash for correct path resolution
+
                     $fullProjectFilePath = $fullFilePath.Clone()
 
-                    $fullProjectFilePath.destinationFullPath = Join-Path $destinationFolder $project
-                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationFolder
+                    $fullProjectFilePath.destinationFullPath = Join-Path $projectDestinationFolder $file.destinationFolder
                     $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
+                    $fullProjectFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullProjectFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
+
+                    # Check if the destination file is under the project destination folder
+                    if ($fullProjectFilePath.destinationFullPath -notlike "$projectDestinationFolder*") {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': destination file '$($fullProjectFilePath.destinationFullPath)' is outside the project destination folder '$projectDestinationFolder'."
+                        continue
+                    }
 
                     if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullProjectFilePath.destinationFullPath) {
                         OutputDebug "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
@@ -934,6 +947,13 @@ function ResolveFilePaths {
 
                 $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationFolder
                 $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
+                $fullFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
+
+                # Check if the destination file is under the destination folder
+                if ($fullFilePath.destinationFullPath -notlike "$destinationFolder*") {
+                    OutputWarning "Skipping file '$srcFile': resolved destination '$($fullFilePath.destinationFullPath)' is outside the destination folder '$destinationFolder'."
+                    continue
+                }
 
                 if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullFilePath.destinationFullPath) {
                     OutputDebug "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"

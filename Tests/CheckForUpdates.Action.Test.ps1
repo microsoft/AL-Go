@@ -1,4 +1,4 @@
-Get-Module TestActionsHelper | Remove-Module -Force
+﻿Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1")
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
@@ -1320,6 +1320,54 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[1].type | Should -Be ''
     }
 
+    It 'ResolveFilePaths warns and skips destination names outside the destination folder' {
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationName" = "../../outside.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log" }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File2.log")
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder*" }
+    }
+
+    It 'ResolveFilePaths warns and skips destination folders outside the destination folder' {
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = "../outside" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log" }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File2.log")
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder*" }
+    }
+
+    It 'ResolveFilePaths warns and skips per-project destinations outside the project destination folder' {
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = "../outside"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "perProject" = $true }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectAlpha"))
+
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectAlpha/folder/File2.log")
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the project destination folder*" }
+    }
+
     It 'ResolveFilePaths with type' {
         $destinationFolder = "destinationFolder"
         $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
@@ -2627,6 +2675,9 @@ Describe "GetFilesToUpdate (real template)" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realAppSourceAppTemplateFolder', Justification = 'False positive.')]
         $realAppSourceAppTemplateFolder = Join-Path $PSScriptRoot "../Templates/AppSource App" -Resolve
 
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'baseFolder', Justification = 'False positive.')]
+        $baseFolder = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'baseFolder'))
+
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'powerPlatformFiles', Justification = 'False positive.')]
         $powerPlatformFiles = @(
             ".github/workflows/_BuildPowerPlatformSolution.yaml",
@@ -2646,7 +2697,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 25
@@ -2670,9 +2721,9 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
-        $repoSettingsDestination = Join-Path 'baseFolder' (Join-Path '.github' $RepoSettingsFileName)
+        $repoSettingsDestination = Join-Path $baseFolder (Join-Path '.github' $RepoSettingsFileName)
         $conflict = @($filesToInclude | Where-Object { $_.destinationFullPath -eq $repoSettingsDestination })
         $conflict.Count | Should -Be 1
 
@@ -2691,7 +2742,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         # The default exclude entries (PowerPlatform files) and the repository settings' own exclude entry are both applied
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[0])
@@ -2713,7 +2764,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $ppFileSourcePath = Join-Path $realPTETemplateFolder $powerPlatformFiles[0]
         @($filesToExclude | Where-Object { $_.sourceFullPath -eq $ppFileSourcePath }).Count | Should -Be 1
@@ -2731,7 +2782,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 22
@@ -2749,7 +2800,7 @@ Describe "GetFilesToUpdate (real template)" {
 
         for ($i = 0; $i -lt $powerPlatformFiles.Count; $i++) {
             $filesToExclude[$i].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder $powerPlatformFiles[$i])
-            $filesToExclude[$i].destinationFullPath | Should -Be (Join-Path 'baseFolder' $powerPlatformFiles[$i])
+            $filesToExclude[$i].destinationFullPath | Should -Be (Join-Path $baseFolder $powerPlatformFiles[$i])
         }
     }
 
@@ -2764,7 +2815,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 24
@@ -2773,7 +2824,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude | Should -Not -BeNullOrEmpty
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/Test Next Major.settings.json')
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/Test Next Major.settings.json')
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
@@ -2787,7 +2838,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 21
@@ -2815,7 +2866,7 @@ Describe "GetFilesToUpdate (real template)" {
 
         $customTemplateFolder = $realPTETemplateFolder
         $originalTemplateFolder = $realAppSourceAppTemplateFolder
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
 
         $filesToInclude | Should -Not -BeNullOrEmpty
 
@@ -2826,11 +2877,11 @@ Describe "GetFilesToUpdate (real template)" {
         $repoSettingsFiles.Count | Should -Be 2
 
         $repoSettingsFiles[0].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".github/AL-Go-Settings.json")
-        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-Settings.json')
+        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/AL-Go-Settings.json')
         $repoSettingsFiles[0].type | Should -Be 'settings'
 
         $repoSettingsFiles[1].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
-        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
+        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
         $repoSettingsFiles[1].type | Should -Be ''
 
         # Check project settings files
@@ -2840,11 +2891,11 @@ Describe "GetFilesToUpdate (real template)" {
         $projectSettingsFilesFromCustomTemplate.Count | Should -Be 2
 
         $projectSettingsFilesFromCustomTemplate[0].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".AL-Go/settings.json")
-        $projectSettingsFilesFromCustomTemplate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.AL-Go/settings.json')
+        $projectSettingsFilesFromCustomTemplate[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.AL-Go/settings.json')
         $projectSettingsFilesFromCustomTemplate[0].type | Should -Be 'settings'
 
         $projectSettingsFilesFromCustomTemplate[1].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
-        $projectSettingsFilesFromCustomTemplate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateProjectSettings.doNotEdit.json')
+        $projectSettingsFilesFromCustomTemplate[1].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/AL-Go-TemplateProjectSettings.doNotEdit.json')
         $projectSettingsFilesFromCustomTemplate[1].type | Should -Be ''
 
         # No files to exclude or remove
@@ -2865,7 +2916,7 @@ Describe "GetFilesToUpdate (real template)" {
         # AppSource App is used as custom template because it has no PP workflows, simulating a custom PTE fork that stripped them out
         $customTemplateFolder = $realAppSourceAppTemplateFolder
         $originalTemplateFolder = $realPTETemplateFolder
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $powerPlatformFiles | ForEach-Object {
@@ -2891,7 +2942,7 @@ Describe "GetFilesToUpdate (real template)" {
         # AppSource App is used as custom template because it has no PP workflows, simulating a custom PTE fork that stripped them out
         $customTemplateFolder = $realAppSourceAppTemplateFolder
         $originalTemplateFolder = $realPTETemplateFolder
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $powerPlatformFiles | ForEach-Object {
@@ -2919,7 +2970,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realAppSourceAppTemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realAppSourceAppTemplateFolder
 
         # PowerPlatform files should be excluded for AppSource App too (same as PTE)
         $filesToInclude | Should -Not -BeNullOrEmpty
@@ -2943,7 +2994,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         # No additional files should be excluded due to unusedALGoSystemFiles
         $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*_BuildPowerPlatformSolution.yaml" -or $_.sourceFullPath -like "*PullPowerPlatformChanges.yaml" -or $_.sourceFullPath -like "*PushPowerPlatformChanges.yaml" }
@@ -2961,7 +3012,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects @('Project1')
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder -projects @('Project1')
 
         # Check that settings files have type = 'settings'
         $repoSettingsFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -like "*$RepoSettingsFileName" -and $_.destinationFullPath -like "*.github*$RepoSettingsFileName" })
@@ -2985,7 +3036,7 @@ Describe "GetFilesToUpdate (real template)" {
         }
 
         $projects = @('ProjectA', 'ProjectB', 'ProjectC')
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects $projects
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder -projects $projects
 
         # Each project should have its own settings file
         $projectASettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectA*.AL-Go*" }
@@ -3008,7 +3059,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         # Test Next Major.settings.json should be excluded
         $testNextMajor = $filesToInclude | Where-Object { $_.sourceFullPath -like "*Test Next Major.settings.json" }
