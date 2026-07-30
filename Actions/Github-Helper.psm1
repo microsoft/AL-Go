@@ -1,5 +1,3 @@
-Import-Module (Join-Path $PSScriptRoot '.Modules/DebugLogHelper.psm1' -Resolve) -DisableNameChecking
-
 function GetExtendedErrorMessage {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingEmptyCatchBlock", "", Justification="We want to ignore errors")]
     Param(
