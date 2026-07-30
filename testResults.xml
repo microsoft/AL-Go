@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="2" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2026-07-30" time="11:44:45">
+  <environment os-version="6.17.0-1020-azure" user="runner" platform="Linux" machine-name="runnervmvrwv9" clr-version="10.0.9" nunit-version="2.5.8.0" cwd="/home/runner/work/AL-Go/AL-Go" user-domain="" />
+  <culture-info current-culture="" current-uiculture="" />
+  <test-suite type="TestFixture" name="Pester" executed="True" result="Success" success="True" time="0.5485" asserts="0" description="Pester">
+    <results>
+      <test-suite type="TestFixture" name="/home/runner/work/AL-Go/AL-Go/Tests/ReadSecrets.Action.Test.ps1" executed="True" result="Success" success="True" time="0.5485" asserts="0" description="/home/runner/work/AL-Go/AL-Go/Tests/ReadSecrets.Action.Test.ps1">
+        <results>
+          <test-suite type="TestFixture" name="ReadSecrets Action Tests" executed="True" result="Success" success="True" time="0.2354" asserts="0" description="ReadSecrets Action Tests">
+            <results>
+              <test-case description="Compile Action" name="ReadSecrets Action Tests.Compile Action" time="0.0513" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Test action.yaml matches script" name="ReadSecrets Action Tests.Test action.yaml matches script" time="0.1006" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+    </results>
+  </test-suite>
+</test-results>
