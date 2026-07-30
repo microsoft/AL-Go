@@ -268,6 +268,21 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $modifiedContent."srcSetting" | Should -Be "value1"
         $modifiedContent."`$schema" | Should -Be "someSchema"
     }
+
+    It 'GetModifiedSettingsContent does not create a literal * property when destination only contains $schema' {
+        # Repro for PS5 behavior where Select-Object with wildcard can emit "*": null
+        @{ "`$schema" = "sourceSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
+        @{ "`$schema" = "destinationSchema" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpDstFile -Force
+
+        $modifiedContentJson = GetModifiedSettingsContent -srcSettingsFile $tmpSrcFile -dstSettingsFile $tmpDstFile
+        $modifiedContent = $modifiedContentJson | ConvertFrom-Json
+
+        $modifiedContent | Should -Not -BeNullOrEmpty
+        @($modifiedContent.PSObject.Properties.Name) | Should -Not -Contain '*'
+        $modifiedContentJson | Should -Not -Match '"\*"\s*:'
+        @($modifiedContent.PSObject.Properties.Name).Count | Should -Be 1
+        $modifiedContent."`$schema" | Should -Be "sourceSchema"
+    }
 }
 
 Describe "CheckForUpdates Action: ApplyWorkflowDefaultInputs Tests" {

@@ -172,6 +172,7 @@ function GetDefaultSettings
         "assignPremiumPlan"                             = $false
         "enableTaskScheduler"                           = $false
         "doNotBuildTests"                               = $false
+        "doNotPerformUpgrade"                           = $false
         "doNotRunTests"                                 = $false
         "doNotRunBcptTests"                             = $false
         "doNotRunPageScriptingTests"                    = $false
