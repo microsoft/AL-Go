@@ -1,3 +1,5 @@
+Import-Module (Join-Path $PSScriptRoot '.Modules/DebugLogHelper.psm1' -Resolve) -DisableNameChecking
+
 function GetExtendedErrorMessage {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingEmptyCatchBlock", "", Justification="We want to ignore errors")]
     Param(
@@ -834,7 +836,7 @@ function DownloadRelease {
             $assetIds = @($assets | ForEach-Object { $_.id })
             $excludedPrefixAssets = @($release.assets | Where-Object { $_.name -match $loosePattern -and $_.id -notin $assetIds })
             if ($excludedPrefixAssets) {
-                Write-Host "::Warning::Found $($excludedPrefixAssets.Count) release asset(s) sharing the '$project' name prefix that were excluded because they appear to belong to a different project: $($excludedPrefixAssets.name -join ', '). Only assets matching project '$project' exactly have been included. If this is unexpected, check for projects with similar names in your repository."
+                OutputWarning -message "Found $($excludedPrefixAssets.Count) release asset(s) sharing the '$project' name prefix that were excluded because they appear to belong to a different project: $($excludedPrefixAssets.name -join ', '). Only assets matching project '$project' exactly have been included. If this is unexpected, check for projects with similar names in your repository."
             }
         }
         foreach($asset in $assets) {
