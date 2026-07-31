@@ -278,10 +278,10 @@ try {
             if ($previousApps.Count -gt 0) {
                 Write-Host "Using $($previousApps.Count) previous release app(s) from $previousAppsPath"
             } else {
-                OutputWarning -message "No .app files found in '$previousAppsPath' for upgrade testing."
+                OutputWarning -message "No .app files found in '$previousAppsPath' for upgrade testing. This also disables the AppSourceCop breaking change check."
             }
         } else {
-            OutputWarning -message "Could not locate previous release apps for upgrade testing."
+            OutputWarning -message "Could not locate previous release apps for upgrade testing. This also disables the AppSourceCop breaking change check."
         }
     }
 
@@ -311,6 +311,11 @@ try {
 
     $buildOutputFile = Join-Path $projectPath "BuildOutput.txt"
     $containerEventLogFile = Join-Path $projectPath "ContainerEventLog.evtx"
+
+    # In workspace compilation mode BuildOutput.txt is produced by the CompileApps action and holds the
+    # compiler warnings. Pass '' so Run-AlPipeline doesn't delete it at startup (it purges buildOutputFile
+    # even though it won't recompile the prebuilt apps), preserving it for the build output artifact.
+    $runAlPipelineBuildOutputFile = if ($settings.workspaceCompilation.enabled) { '' } else { $buildOutputFile }
 
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerName=$containerName"
 
@@ -441,6 +446,7 @@ try {
     "doNotRunTests",
     "doNotRunBcptTests",
     "doNotRunPageScriptingTests",
+    "doNotPerformUpgrade",
     "doNotPublishApps",
     "installTestRunner",
     "installTestFramework",
@@ -493,7 +499,7 @@ try {
         -bcptTestFolders $bcptTestFolders `
         -pageScriptingTests $settings.pageScriptingTests `
         -restoreDatabases $settings.restoreDatabases `
-        -buildOutputFile $buildOutputFile `
+        -buildOutputFile $runAlPipelineBuildOutputFile `
         -containerEventLogFile $containerEventLogFile `
         -testResultsFile $testResultsFile `
         -testResultsFormat 'JUnit' `
@@ -526,14 +532,18 @@ try {
     }
 
     # check for new warnings
-    Import-Module (Join-Path $PSScriptRoot ".\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
+    # When workspace compilation is enabled, the apps are compiled by the CompileApps action,
+    # which is where the compiler warnings are produced and where the new-warning check runs.
+    if (-not $settings.workspaceCompilation.enabled) {
+        Import-Module (Join-Path $PSScriptRoot "..\.Modules\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
 
-    Test-ForNewWarnings -token $token `
-        -project $project `
-        -settings $settings `
-        -buildMode $buildMode `
-        -baselineWorkflowRunId $baselineWorkflowRunId `
-        -prBuildOutputFile $buildOutputFile
+        Test-ForNewWarnings -token $token `
+            -project $project `
+            -settings $settings `
+            -buildMode $buildMode `
+            -baselineWorkflowRunId $baselineWorkflowRunId `
+            -prBuildOutputFile $buildOutputFile
+    }
 }
 catch {
     throw

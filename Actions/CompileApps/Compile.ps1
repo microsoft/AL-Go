@@ -298,6 +298,17 @@ try {
     }
 
     Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps, $(@($testAppFiles).Count) test apps and $(@($bcptTestAppFiles).Count) BCPT test apps."
+
+    # Check for new warnings. This action produces the compiler output when workspace compilation is
+    # enabled, so the new-warning check runs here (RunPipeline skips it in that case).
+    # Test-ForNewWarnings only acts on pull requests when failOn is set to 'newWarning'.
+    Import-Module (Join-Path $PSScriptRoot "..\.Modules\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
+    Test-ForNewWarnings -token $token `
+        -project $project `
+        -settings $settings `
+        -buildMode $buildMode `
+        -baselineWorkflowRunId $baselineWorkflowRunId `
+        -prBuildOutputFile (Join-Path $projectFolder "BuildOutput.txt")
 } finally {
     Pop-Location
 }

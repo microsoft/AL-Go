@@ -76,13 +76,13 @@ In the MySolution repository, navigate to Settings -> Secrets and Variables -> A
 ```json
   "appDependencyProbingPaths": [
     {
-      "repo": "freddydkorg/Common",
+      "repo": "myorg/Common",
       "release_status": "latestBuild"
     }
   ]
 ```
 
-replacing **freddydkorg** with your organization name obviously.
+replacing **myorg** with your organization name obviously.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/0ae5d283-0494-4a3d-b6a0-661092b46e09) |
 |-|
@@ -90,7 +90,7 @@ replacing **freddydkorg** with your organization name obviously.
 > [!NOTE]
 > Make sure you create a repository variable and not a repository secret
 
-This setting means that all projects in this repository will download the **latest build** from **freddydkorg/Common** and a subsequent build will succeed. Go to **Actions**, select the **CI/CD** workflow, click **Run workflow** and wait for the workflow to complete.
+This setting means that all projects in this repository will download the **latest build** from **myorg/Common** and a subsequent build will succeed. Go to **Actions**, select the **CI/CD** workflow, click **Run workflow** and wait for the workflow to complete.
 
 | ![image](https://github.com/microsoft/AL-Go/assets/10775043/b10c3050-dd45-47a0-8c2b-fbeb517c94c2) |
 |-|
@@ -107,10 +107,10 @@ This setting means that all projects in this repository will download the **late
 In order to use GitHub Packages for dependency resolution, we need to create an organizational secret called **GitHubPackagesContext**. The format of this secret needs to be **compressed JSON** containing two values: **serverUrl** and **token**. Example:
 
 ```json
-{"token":"ghp_XXX","serverUrl":"https://nuget.pkg.github.com/freddydkorg/index.json"}
+{"token":"ghp_XXX","serverUrl":"https://nuget.pkg.github.com/myorg/index.json"}
 ```
 
-Where **ghp_XXX** should be replaced by a **personal access token** with permissions to **write:packages** and **freddydkorg** should be replaced by your **organization name**.
+Where **ghp_XXX** should be replaced by a **personal access token** with permissions to **write:packages** and **myorg** should be replaced by your **organization name**.
 
 > [!NOTE]
 > Fine-grained personal access tokens doesn't support packages at this time, you need to use classic personal access tokens.

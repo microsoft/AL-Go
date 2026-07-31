@@ -192,10 +192,10 @@ function GetTestResultSummaryMD {
                                     foreach($failure in $testcase.ChildNodes) {
                                         Write-Host "      - Error: $($failure.message)"
                                         Write-Host "        Stacktrace:"
-                                        Write-Host "        $($failure."#text".Trim().Replace("`n","`n        "))"
+                                        Write-Host "        $($failure.InnerText.Trim().Replace("`n","`n        "))"
                                         $testFailureNode = [FailureNode]::new($true)
                                         $testFailureNode.errorMessage = $failure.message
-                                        $testFailureNode.errorStackTrace = $($failure."#text".Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))
+                                        $testFailureNode.errorStackTrace = $($failure.InnerText.Trim().Replace("`n","<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"))
                                         $testCaseFailureNode.childSummaries.Add($testFailureNode) | Out-Null
                                     }
                                     $suiteFailureNode.childSummaries.Add($testCaseFailureNode) | Out-Null
@@ -295,8 +295,13 @@ function GetBcptSummaryMD {
     )
 
     $bcpt = ReadBcptFile -bcptTestResultsFile $bcptTestResultsFile
-    if (-not $bcpt) {
+    if ($null -eq $bcpt) {
         return ''
+    }
+    if ($bcpt.Count -eq 0) {
+        # File exists but contained no log entries - test run produced no output
+        OutputWarning "BCPT tests were run but produced no results. The BCPT test suite may have failed to start or the test codeunits exited without recording any measurements."
+        return "No BCPT results were recorded. The BCPT test suite may have failed to start or the test codeunits exited without recording any measurements.`n`n> Verify that the BCPT suite definition matches the published test codeunit IDs and that the test codeunits are reachable from the test runner."
     }
     $baseLine = ReadBcptFile -bcptTestResultsFile $baseLinePath
     if ($baseLine) {
