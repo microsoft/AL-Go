@@ -833,6 +833,11 @@ function ResolveFilePaths {
     $destinationFolder = [System.IO.Path]::GetFullPath($destinationFolder) # Canonicalize the destination folder to an absolute path
     $destinationFolder = Join-Path $destinationFolder '' # Ensure destination folder has a trailing slash for correct path resolution
 
+    $pathComparison = [System.StringComparison]::OrdinalIgnoreCase
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
+        $pathComparison = [System.StringComparison]::Ordinal
+    }
+
     $fullFilePaths = @()
     foreach($file in $files) {
         if($file.Keys -notcontains 'sourceFolder') {
@@ -886,7 +891,7 @@ function ResolveFilePaths {
             }
 
             # Check if the source file is under the source folder
-            if ($srcFile -notlike "$sourceFolder*") {
+            if (-not $srcFile.StartsWith($sourceFolder, $pathComparison)) {
                 OutputDebug "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
                 continue
             }
@@ -927,7 +932,7 @@ function ResolveFilePaths {
                     $fullProjectFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullProjectFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
 
                     # Check if the destination file is under the file destination folder
-                    if ($fullProjectFilePath.destinationFullPath -notlike "$fileDestinationFolder*") {
+                    if (-not $fullProjectFilePath.destinationFullPath.StartsWith($fileDestinationFolder, $pathComparison)) {
                         OutputWarning "Skipping file '$srcFile' for project '$project': destination file '$($fullProjectFilePath.destinationFullPath)' is outside the destination folder '$fileDestinationFolder'."
                         continue
                     }
@@ -951,7 +956,7 @@ function ResolveFilePaths {
                 $fullFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
 
                 # Check if the destination file is under the file destination folder
-                if ($fullFilePath.destinationFullPath -notlike "$fileDestinationFolder*") {
+                if (-not $fullFilePath.destinationFullPath.StartsWith($fileDestinationFolder, $pathComparison)) {
                     OutputWarning "Skipping file '$srcFile': destination file '$($fullFilePath.destinationFullPath)' is outside the destination folder '$fileDestinationFolder'."
                     continue
                 }

@@ -1555,6 +1555,53 @@ Describe "ResolveFilePaths" {
         if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
     }
 
+    It 'ResolveFilePaths skips files in a source folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+        $externalFolder = Join-Path $rootFolder 'sourcefolder'
+        $externalFile = Join-Path $externalFolder 'outside.txt'
+        New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+        Set-Content -Path $externalFile -Value 'outside'
+
+        try {
+            $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+            $files = @(
+                @{ 'sourceFolder' = '../sourcefolder'; 'filter' = '*.txt' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -BeNullOrEmpty
+        }
+        finally {
+            if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+        }
+    }
+
+    It 'ResolveFilePaths skips destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = '../casefolder/outside.txt' }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1
+    }
+
+    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = ''; 'destinationName' = '../caseproject/outside.txt'; 'perProject' = $true }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('CaseProject'))
+
+        $fullFilePaths | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1
+    }
+
     It 'ResolveFilePaths returns empty when no files match filter' {
         $destinationFolder = "destinationFolder"
         $destinationFolder = Join-Path $rootFolder $destinationFolder
