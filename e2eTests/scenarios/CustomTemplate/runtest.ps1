@@ -438,7 +438,7 @@ Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) |
 
  # Check that default custom file is NOT present (in repo's filesToExclude and template's filesToInclude)
 (Join-Path (Get-Location) $defaultCustomFileName) | Should -Not -Exist
-# Check that optional custom file is present (in repos's filesToInclude)
+# Check that optional custom file is present (in repo's filesToInclude)
 (Join-Path (Get-Location) $optionalCustomFileName) | Should -Exist
 Get-ContentLF -Path (Join-Path (Get-Location) $optionalCustomFileName) | Should -Be $optionalCustomFileContent.Replace("`r", "").TrimEnd("`n")
 

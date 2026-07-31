@@ -1320,52 +1320,45 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[1].type | Should -Be ''
     }
 
-    It 'ResolveFilePaths warns and skips destination names outside the destination folder' {
+    It 'ResolveFilePaths warns and skips destinations outside the destination folder' {
         $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $destinationSubfolder = Join-Path $destinationFolder "subfolder"
         $files = @(
-            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationName" = "../../outside.txt" }
-            @{ "sourceFolder" = "folder"; "filter" = "File2.log" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationName" = "../outside.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "destinationFolder" = "../outside" }
+            @{ "sourceFolder" = "folder"; "filter" = "File3.txt"; "destinationFolder" = "subfolder"; "destinationName" = "../outside.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File4.md" }
         )
         Mock OutputWarning {}
 
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
         $fullFilePaths.Count | Should -Be 1
-        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File2.log")
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder*" }
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        Should -Invoke OutputWarning -Times 3 -ParameterFilter { $message -like "*outside the destination folder '$destinationFolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder '$destinationSubfolder*" }
     }
 
-    It 'ResolveFilePaths warns and skips destination folders outside the destination folder' {
+    It 'ResolveFilePaths warns and skips per-project destinations outside the destination folder' {
         $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $destinationProjectFolder = Join-Path $destinationFolder "project"
+        $destinationProjectSubfolder = Join-Path $destinationProjectFolder "subfolder"
         $files = @(
-            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = "../outside" }
-            @{ "sourceFolder" = "folder"; "filter" = "File2.log" }
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationName" = "../outside.txt"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "destinationFolder" = "../outside"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File3.txt"; "destinationFolder" = "subfolder"; "destinationName" = "../outside.txt"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File4.md"; "perProject" = $true }
         )
         Mock OutputWarning {}
 
-        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("project"))
 
         $fullFilePaths.Count | Should -Be 1
-        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File2.log")
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder*" }
-    }
-
-    It 'ResolveFilePaths warns and skips per-project destinations outside the project destination folder' {
-        $destinationFolder = Join-Path $rootFolder "destinationFolder"
-        $files = @(
-            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationFolder" = "../outside"; "perProject" = $true }
-            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "perProject" = $true }
-        )
-        Mock OutputWarning {}
-
-        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectAlpha"))
-
-        $fullFilePaths.Count | Should -Be 1
-        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectAlpha/folder/File2.log")
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the project destination folder*" }
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "project/folder/File4.md")
+        Should -Invoke OutputWarning -Times 3 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectFolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectSubfolder*" }
     }
 
     It 'ResolveFilePaths with type' {
