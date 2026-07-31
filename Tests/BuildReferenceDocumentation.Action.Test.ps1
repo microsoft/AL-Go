@@ -64,6 +64,34 @@ Describe "BuildReferenceDocumentation Action Tests" {
         $allApps[0]."P4".Count | Should -be 4
     }
 
+    It 'SanitizeFileName matches aldoc GetValidDirectoryName' {
+        . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
+
+        # The reference/<folder> directories are created by aldoc using Symbol.GetValidDirectoryName():
+        #   string.Join("", Name.ToLower().Split(Path.GetInvalidFileNameChars())).Replace(' ', '-')
+        # SanitizeFileName derives the toc.yml hrefs that point at those directories, so it must produce
+        # the exact same string. This guards against regressions like turning '_' into '-' (which broke
+        # BCApps '_Exclude_*' apps with "InvalidTocInclude: Referenced TOC file ... does not exist").
+        function AldocGetValidDirectoryName([string] $name) {
+            ($name.ToLower().Split([System.IO.Path]::GetInvalidFileNameChars()) -join '').Replace(' ', '-')
+        }
+
+        $names = @(
+            '_Exclude_APIV1_'
+            '_Exclude_Bank Deposits'
+            '_Exclude_Business_Events_'
+            '_Exclude_Microsoft Dynamics 365 - SmartList'
+            'Bank Deposits'
+            'Base Application'
+        )
+        foreach ($name in $names) {
+            SanitizeFileName -fileName $name | Should -Be (AldocGetValidDirectoryName $name)
+        }
+
+        # Underscores are preserved (not converted to hyphens)
+        SanitizeFileName -fileName '_Exclude_APIV1_' | Should -Be '_exclude_apiv1_'
+    }
+
     It 'Artifact URL generated if not provided' {
         . (Join-Path $scriptRoot 'BuildReferenceDocumentation.HelperFunctions.ps1')
         . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
