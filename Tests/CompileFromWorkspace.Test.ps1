@@ -1367,6 +1367,53 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
     }
 
+    Describe 'Test-ALToolWorkspaceCompileSupportsOption' {
+        BeforeAll {
+            # The probe invokes '& $ALToolPath workspace compile --help'. We stand in a fake altool as a
+            # .ps1 script (invoked via the call operator on both PS5 and PS7) whose output and exit code we
+            # control per test, so the real help-matching and exit-code handling are exercised - not mocked.
+            $script:fakeAltool = Join-Path $TestDrive "fake-altool.ps1"
+        }
+
+        It 'Returns true when the option appears in the help output and the probe succeeds' {
+            Set-Content -Path $script:fakeAltool -Value @'
+Write-Output "Usage: altool workspace compile [options]"
+Write-Output "  --errorlogdirectory <dir>   Write diagnostics to <dir>"
+exit 0
+'@
+            InModuleScope CompileFromWorkspace -Parameters @{ altool = $script:fakeAltool } {
+                param($altool)
+                Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $altool -Option 'errorlogdirectory' | Should -BeTrue
+            }
+        }
+
+        It 'Returns false when the option is absent from the help output' {
+            Set-Content -Path $script:fakeAltool -Value @'
+Write-Output "Usage: altool workspace compile [options]"
+Write-Output "  --outfolder <dir>   Output folder"
+exit 0
+'@
+            InModuleScope CompileFromWorkspace -Parameters @{ altool = $script:fakeAltool } {
+                param($altool)
+                Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $altool -Option 'errorlogdirectory' | Should -BeFalse
+            }
+        }
+
+        It 'Returns false when the probe fails (non-zero exit) even if the output contains the option' {
+            # An older altool may emit usage text mentioning the option while still failing. A non-zero exit
+            # must win so the caller falls back to warn-and-skip rather than passing an unsupported argument.
+            Set-Content -Path $script:fakeAltool -Value @'
+Write-Output "error: unknown command 'workspace'"
+Write-Output "did you mean --errorlogdirectory?"
+exit 1
+'@
+            InModuleScope CompileFromWorkspace -Parameters @{ altool = $script:fakeAltool } {
+                param($altool)
+                Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $altool -Option 'errorlogdirectory' | Should -BeFalse
+            }
+        }
+    }
+
     Describe 'New-AppSourceCopJson' {
         BeforeEach {
             # Create app folders with app.json

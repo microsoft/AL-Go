@@ -473,6 +473,13 @@ function Test-ALToolWorkspaceCompileSupportsOption {
 
     try {
         $compileHelp = & $ALToolPath workspace compile --help 2>&1 | Out-String
+        # A native executable does not throw merely because it exits non-zero, so the exit code must be
+        # checked explicitly. If the probe failed, treat the option as unsupported so the caller takes the
+        # promised warn-and-skip fallback instead of parsing error/usage output as a positive match.
+        if ($LASTEXITCODE -ne 0) {
+            OutputDebug -message "Probing altool workspace compile --help for option '$Option' returned exit code $LASTEXITCODE; treating the option as unsupported."
+            return $false
+        }
         return ($compileHelp -match [regex]::Escape($Option))
     } catch {
         OutputDebug -message "Failed to probe altool workspace compile --help for option '$Option': $_"
