@@ -244,6 +244,90 @@ function CheckInstalledApps {
 
 <#
     .SYNOPSIS
+        Unpublish old, uninstalled versions of the deployed apps from a Business Central environment.
+    .DESCRIPTION
+        After a new version of a Per Tenant Extension is installed, previous versions remain published (but uninstalled)
+        and clutter Extension Management. This function unpublishes those old versions using the automation API v2.0
+        Microsoft.NAV.unpublish action. Only versions that are not installed AND older than a currently installed version
+        of the same app (matched by app id) are unpublished. This is only supported for PTE deployments (automation API).
+        The function is non-fatal: any failure is reported as a warning and never fails the deployment.
+    .PARAMETER bcAuthContext
+        The Business Central authentication context.
+    .PARAMETER environment
+        The environment to unpublish old app versions from.
+    .PARAMETER appFiles
+        The list of deployed app files. The app id and version are read from these files to determine which published
+        versions are considered "old" and eligible for unpublishing.
+#>
+function UnpublishOldAppVersions {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        $appFiles
+    )
+    OutputDebugFunctionCall
+
+    try {
+        # Deployed app identities (id + version) read from the .app files
+        $deployedApps = @($appFiles | ForEach-Object {
+            $appJson = Get-AppJsonFromAppFile -appFile $_
+            [PSCustomObject]@{ Id = $appJson.id; Version = [version]$appJson.version }
+        })
+        if ($deployedApps.Count -eq 0) {
+            return
+        }
+
+        $authContext = Renew-BcAuthContext -bcAuthContext $bcAuthContext
+        $headers = @{ "Authorization" = "Bearer $($authContext.AccessToken)" }
+        $automationApiUrl = "$($bcContainerHelperConfig.apiBaseUrl.TrimEnd('/'))/v2.0/$environment/api/microsoft/automation/v2.0"
+
+        $companies = (Invoke-RestMethod -Method Get -Uri "$automationApiUrl/companies" -Headers $headers -UseBasicParsing).value
+        if (-not $companies) {
+            OutputWarning -message "Could not find any company in environment $environment - skipping unpublish of old app versions."
+            return
+        }
+        $companyId = $companies[0].id
+        $companyUrl = "$automationApiUrl/companies($companyId)"
+        $extensions = @((Invoke-RestMethod -Method Get -Uri "$companyUrl/extensions" -Headers $headers -UseBasicParsing).value)
+
+        foreach($deployed in $deployedApps) {
+            # All published versions of this app (installed and uninstalled)
+            $matching = @($extensions | Where-Object { $_.id -eq $deployed.Id })
+            if ($matching.Count -le 1) {
+                # Only one (or no) published version - nothing to clean up
+                continue
+            }
+            # Only unpublish old versions if the just-deployed version is actually installed
+            $newInstalled = $matching | Where-Object {
+                ([version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) -eq $deployed.Version) -and $_.isInstalled
+            }
+            if (-not $newInstalled) {
+                continue
+            }
+            foreach($old in $matching) {
+                $oldVersion = [version]::new($old.versionMajor, $old.versionMinor, $old.versionBuild, $old.versionRevision)
+                if ($oldVersion -ge $deployed.Version -or $old.isInstalled) {
+                    # Keep the deployed version, newer versions and anything still installed
+                    continue
+                }
+                Write-Host "Unpublishing $($old.displayName) v$oldVersion"
+                try {
+                    Invoke-RestMethod -Method Post -Headers $headers -Body '{}' -ContentType 'application/json' -UseBasicParsing `
+                        -Uri "$companyUrl/extensions($($old.packageId))/Microsoft.NAV.unpublish" | Out-Null
+                }
+                catch {
+                    OutputWarning -message "Failed to unpublish $($old.displayName) v$($oldVersion): $($_.Exception.Message)"
+                }
+            }
+        }
+    }
+    catch {
+        OutputWarning -message "Unpublishing old app versions in environment $environment failed: $($_.Exception.Message)"
+    }
+}
+
+<#
+    .SYNOPSIS
         Install or upgrade apps in Business Central.
     .PARAMETER bcAuthContext
         The Business Central authentication context.
