@@ -838,7 +838,7 @@ function DownloadRelease {
         # Warn when other release assets share the same project name prefix but were excluded by strict matching.
         # A loose pattern (using .+ instead of [^-]+) also matches assets whose names contain more than one segment
         # between the project name and the mask - either because they belong to a different project sharing the same
-        # prefix (e.g. 'logis-interface-2-core-library' when project is 'logis-interface') or because the release was
+        # prefix (e.g. 'my-project-extra-library' when project is 'my-project') or because the release was
         # created from a branch containing a hyphen.
         if ($project -ne '*') {
             $assetIds = @($assets | ForEach-Object { $_.id })
