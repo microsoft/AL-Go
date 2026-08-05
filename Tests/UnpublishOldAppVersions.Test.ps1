@@ -28,6 +28,10 @@ InModuleScope Deploy { # Allows testing of private functions
                 return @{ AccessToken = "test-access-token"; tenantId = "test-tenant" }
             }
 
+            # The implementation requires an installed 'Application' extension >= 25.4 to proceed.
+            # This shared fixture is injected into every /extensions response so version detection passes.
+            $script:applicationExtension = @{ id = "00000000-0000-0000-0000-0000000000AA"; displayName = "Application"; packageId = "pkg-application"; isInstalled = $true; versionMajor = 26; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+
             # Default published extensions in the environment:
             # - app 1 v1.0.0.0 (uninstalled, old)   -> eligible for unpublish
             # - app 1 v2.0.0.0 (installed, deployed) -> keep
@@ -42,7 +46,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     return @{ value = @( @{ id = "company-1"; name = "CRONUS" } ) }
                 }
                 if ($Method -eq "Get" -and $Uri -like "*/extensions") {
-                    return @{ value = $script:mockExtensions }
+                    return @{ value = @($script:applicationExtension) + $script:mockExtensions }
                 }
                 # Microsoft.NAV.unpublish POST
                 return $null
@@ -122,7 +126,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     return @{ value = @( @{ id = "company-1" } ) }
                 }
                 if ($Method -eq "Get" -and $Uri -like "*/extensions") {
-                    return @{ value = $script:mockExtensions }
+                    return @{ value = @($script:applicationExtension) + $script:mockExtensions }
                 }
                 throw "unpublish failed"
             }
@@ -158,6 +162,15 @@ InModuleScope Deploy { # Allows testing of private functions
 
             Assert-MockCalled Renew-BcAuthContext -Times 0
             Assert-MockCalled Invoke-RestMethod -Times 0
+        }
+
+        It 'Warns and skips when the environment is older than BC 25.4' {
+            $script:applicationExtension = @{ id = "00000000-0000-0000-0000-0000000000AA"; displayName = "Application"; packageId = "pkg-application"; isInstalled = $true; versionMajor = 25; versionMinor = 3; versionBuild = 0; versionRevision = 0 }
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled OutputWarning -ParameterFilter { $message -like "*requires Business Central 25.4*" }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -eq "Post" }
         }
     }
 }
