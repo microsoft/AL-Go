@@ -290,7 +290,11 @@ function UnpublishOldAppVersions {
         $companyUrl = "$automationApiUrl/companies($companyId)"
         $extensions = @((Invoke-RestMethod -Method Get -Uri "$companyUrl/extensions" -Headers $headers -UseBasicParsing).value)
 
-        $application = $extensions | Where-Object { $_.displayName -eq 'Application' } | Select-Object -First 1
+        $application = $extensions | Where-Object { $_.displayName -eq 'Application' -and $_.isInstalled } | Select-Object -First 1
+        if (-not $application) {
+            OutputWarning -message "Could not determine the Business Central version in environment $environment - skipping unpublish of old app versions."
+            return
+        }
         $applicationVersion = [version]::new($application.versionMajor, $application.versionMinor, $application.versionBuild, $application.versionRevision)
         if ($applicationVersion -lt [version]'25.4.0.0') {
             OutputWarning -message "Unpublishing old app versions requires Business Central 25.4 or later; environment $environment is running $applicationVersion."

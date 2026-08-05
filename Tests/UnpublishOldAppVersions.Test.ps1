@@ -172,5 +172,22 @@ InModuleScope Deploy { # Allows testing of private functions
             Assert-MockCalled OutputWarning -ParameterFilter { $message -like "*requires Business Central 25.4*" }
             Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -eq "Post" }
         }
+
+        It 'Uses the installed Application version, ignoring an uninstalled Application record' {
+            # An older, uninstalled Application record appears first; the installed 26.0 must be used
+            $script:applicationExtension = @{ id = "00000000-0000-0000-0000-0000000000AA"; displayName = "Application"; packageId = "pkg-app-old"; isInstalled = $false; versionMajor = 24; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+            $script:mockExtensions = @(
+                @{ id = $script:appId; displayName = "App 1"; packageId = "pkg-app1-v1"; isInstalled = $false; versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:appId; displayName = "App 1"; packageId = "pkg-app1-v2"; isInstalled = $true;  versionMajor = 2; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = "00000000-0000-0000-0000-0000000000AA"; displayName = "Application"; packageId = "pkg-application"; isInstalled = $true; versionMajor = 26; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+            )
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled OutputWarning -Times 0 -ParameterFilter { $message -like "*requires Business Central 25.4*" }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq "Post" -and $Uri -like "*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish"
+            }
+        }
     }
 }
