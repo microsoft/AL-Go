@@ -308,17 +308,18 @@ function UnpublishOldAppVersions {
                 # Only one (or no) published version - nothing to clean up
                 continue
             }
-            # Only unpublish old versions if the just-deployed version is actually installed
-            $newInstalled = $matching | Where-Object {
-                ([version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) -eq $deployed.Version) -and $_.isInstalled
-            }
-            if (-not $newInstalled) {
+            # Use the currently installed version as the cleanup threshold. The environment may have a newer
+            # version installed than the deployed artifact, which Publish-PerTenantExtensionApps treats as success.
+            $installedVersions = @($matching | Where-Object { $_.isInstalled } | ForEach-Object { [version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) })
+            if ($installedVersions.Count -eq 0) {
+                # No installed version - nothing to clean up against
                 continue
             }
+            $installedVersion = @($installedVersions | Sort-Object -Descending)[0]
             foreach($old in $matching) {
                 $oldVersion = [version]::new($old.versionMajor, $old.versionMinor, $old.versionBuild, $old.versionRevision)
-                if ($oldVersion -ge $deployed.Version -or $old.isInstalled) {
-                    # Keep the deployed version, newer versions and anything still installed
+                if ($old.isInstalled -or $oldVersion -ge $installedVersion) {
+                    # Keep anything still installed and any version at or above the installed version
                     continue
                 }
                 Write-Host "Unpublishing $($old.displayName) v$oldVersion"

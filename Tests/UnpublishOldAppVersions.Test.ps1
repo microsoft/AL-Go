@@ -189,5 +189,19 @@ InModuleScope Deploy { # Allows testing of private functions
                 $Method -eq "Post" -and $Uri -like "*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish"
             }
         }
+
+        It 'Cleans up stale versions when a newer version than the deployed artifact is installed' {
+            # Environment has v3 installed (newer than deployed v2), plus a stale uninstalled v1
+            $script:mockExtensions = @(
+                @{ id = $script:appId; displayName = "App 1"; packageId = "pkg-app1-v1"; isInstalled = $false; versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:appId; displayName = "App 1"; packageId = "pkg-app1-v3"; isInstalled = $true;  versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+            )
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq "Post" -and $Uri -like "*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish"
+            }
+        }
     }
 }
