@@ -256,8 +256,9 @@ function CheckInstalledApps {
     .PARAMETER environment
         The environment to unpublish old app versions from.
     .PARAMETER appFiles
-        The list of deployed app files. The app id and version are read from these files to determine which published
-        versions are considered "old" and eligible for unpublishing.
+        The list of deployed app files. Only the app id is read from these files to identify which apps to clean up;
+        for each such app, published versions are compared against the version currently installed in the environment
+        (not the deployed artifact version), and uninstalled versions older than the installed version are unpublished.
 #>
 function UnpublishOldAppVersions {
     Param(
