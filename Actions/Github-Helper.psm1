@@ -826,15 +826,25 @@ function DownloadRelease {
         $assetPattern2 = "^$escapedProject-$escapedMask-.+\.zip$"
         Write-Host "AssetPatterns: '$assetPattern1' | '$assetPattern2'"
         $assets = @($release.assets | Where-Object { $_.name -match $assetPattern1 -or $_.name -match $assetPattern2 })
+        $loosePattern = "^$escapedProject-.+-$escapedMask-.+\.zip$"
+        if ($assets.Count -eq 0 -and $project -ne '*') {
+            # No assets matched the strict patterns - the release might have been created from a branch containing a
+            # hyphen, in which case the branch segment spans multiple hyphen separated parts. Fall back to the loose pattern.
+            $assets = @($release.assets | Where-Object { $_.name -match $loosePattern })
+            if ($assets) {
+                OutputWarning -message "No release assets matched project '$project' exactly, using $($assets.Count) asset(s) matching the '$project' name prefix instead: $($assets.name -join ', '). These assets were likely created from a branch containing a hyphen. If they belong to a different project with a similar name, this is not the expected behavior."
+            }
+        }
         # Warn when other release assets share the same project name prefix but were excluded by strict matching.
-        # A loose pattern (using .+ instead of [^-]+) also matches assets whose names look like a longer project name
-        # sharing the same prefix (e.g. 'logis-interface-2-core-library' when project is 'logis-interface').
+        # A loose pattern (using .+ instead of [^-]+) also matches assets whose names contain more than one segment
+        # between the project name and the mask - either because they belong to a different project sharing the same
+        # prefix (e.g. 'logis-interface-2-core-library' when project is 'logis-interface') or because the release was
+        # created from a branch containing a hyphen.
         if ($project -ne '*') {
-            $loosePattern = "^$escapedProject-.+-$escapedMask-.+\.zip$"
             $assetIds = @($assets | ForEach-Object { $_.id })
             $excludedPrefixAssets = @($release.assets | Where-Object { $_.name -match $loosePattern -and $_.id -notin $assetIds })
             if ($excludedPrefixAssets) {
-                OutputWarning -message "Found $($excludedPrefixAssets.Count) release asset(s) sharing the '$project' name prefix that were excluded because they appear to belong to a different project: $($excludedPrefixAssets.name -join ', '). Only assets matching project '$project' exactly have been included. If this is unexpected, check for projects with similar names in your repository."
+                OutputWarning -message "Found $($excludedPrefixAssets.Count) release asset(s) sharing the '$project' name prefix that were not included for project '$project': $($excludedPrefixAssets.name -join ', '). These assets either belong to a different project with a similar name or were created from a branch containing a hyphen (which isn't supported in release asset names). If this is unexpected, check for projects with similar names or hyphens in the branch name used for creating the release."
             }
         }
         foreach($asset in $assets) {

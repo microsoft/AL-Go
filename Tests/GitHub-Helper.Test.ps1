@@ -371,6 +371,31 @@ Describe 'DownloadRelease Asset Pattern Matching Tests' {
         }
     }
 
+    It 'Falls back to loose matching when the release was created from a branch containing a hyphen' {
+        # 'my-branch' contains a hyphen, so no asset matches the strict pattern - the asset should still be downloaded
+        $mockRelease = @{
+            Name   = 'v1.0'
+            assets = @(
+                [PSCustomObject]@{ id = 1; name = 'myproject-my-branch-Apps-1.0.0.0.zip' }
+                [PSCustomObject]@{ id = 2; name = 'other-project-my-branch-Apps-1.0.0.0.zip' }
+            )
+        }
+        Mock OutputWarning -ModuleName Github-Helper { }
+
+        $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Path $tempPath | Out-Null
+        try {
+            $result = DownloadRelease -token 'dummy' -projects 'myproject' -api_url 'https://api.github.com' -repository 'test/repo' -path $tempPath -mask 'Apps' -release $mockRelease
+
+            $result | Should -HaveCount 1
+            $result | Should -Match ([regex]::Escape('myproject-my-branch-Apps-1.0.0.0.zip'))
+            Assert-MockCalled OutputWarning -ModuleName Github-Helper -ParameterFilter { $message -like '*myproject-my-branch-Apps-1.0.0.0.zip*' } -Scope It
+        }
+        finally {
+            Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'Emits a warning when similarly-named project assets are present and excluded' {
         # When release contains assets from 'logis-interface-2-core-library' alongside 'logis-interface',
         # downloading for project 'logis-interface' should emit a warning about the excluded assets.
