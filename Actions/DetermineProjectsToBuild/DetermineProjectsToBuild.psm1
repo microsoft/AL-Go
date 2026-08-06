@@ -141,7 +141,7 @@ function CreateBuildDimensions {
             # bc-test-from-source.yml only stages symbols from the BC platform artifact tree (Microsoft apps).
             # Third-party dependencies declared via appDependencyProbingPaths (e.g. an AppSource dependency
             # published in another repo) aren't in that artifact, so they're downloaded here (same mechanism
-            # the Windows pipeline uses) and staged under .linuxDependencies for a single Initialization-job
+            # the Windows pipeline uses) and staged under LinuxFastLaneDependencies_staging for a single Initialization-job
             # upload step to pick up as the LinuxFastLaneDependencies artifact.
             try {
                 $probingSettings = CheckAppDependencyProbingPaths -settings $linuxSettings -token $token -baseFolder $baseFolder -project $project
@@ -154,7 +154,7 @@ function CreateBuildDimensions {
                     if ($sanitizedProject -eq '.') {
                         $sanitizedProject = '_root_'
                     }
-                    $depFolder = Join-Path $baseFolder ".linuxDependencies" $sanitizedProject
+                    $depFolder = Join-Path $baseFolder "LinuxFastLaneDependencies_staging" $sanitizedProject
                     New-Item -Path $depFolder -ItemType Directory -Force | Out-Null
                     $downloaded = @(GetDependencies -probingPathsJson $probingSettings.appDependencyProbingPaths -saveToPath $depFolder -api_url 'https://api.github.com' | Where-Object { $_ })
                     Write-Host "GetDependencies returned $($downloaded.Count) item(s) for project $project`: $($downloaded -join ', ')"
