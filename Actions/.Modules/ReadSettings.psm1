@@ -178,6 +178,7 @@ function GetDefaultSettings
         "doNotRunPageScriptingTests"                    = $false
         "doNotPublishApps"                              = $false
         "doNotSignApps"                                 = $false
+        "linuxFastLane"                                 = $false
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
         "deliverToAppSource"                            = [ordered]@{

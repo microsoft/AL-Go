@@ -92,6 +92,9 @@ function ShouldBuildProject {
     Each build dimension is a hashtable with the following keys:
     - project: The name of the AL-Go project
     - buildMode: The build mode to use for the project
+    - linuxFastLane: Whether this project should build via the Linux BC fast lane instead of the Windows pipeline
+    - linuxBcVersion: The concrete BC version to use on the Linux fast lane (best-effort resolved from the artifact/country settings; empty if it couldn't be resolved)
+    - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
 #>
 function CreateBuildDimensions {
     param(
@@ -113,6 +116,24 @@ function CreateBuildDimensions {
             $buildModes = @('Default')
         }
 
+        $linuxFastLane = [bool]$projectSettings.linuxFastLane
+        $linuxBcVersion = ''
+        $linuxAppDirs = ''
+        $linuxTestAppDirs = ''
+        if ($linuxFastLane) {
+            # AnalyzeRepo discovers appFolders/testFolders the same way DetermineArtifactUrl does today for the Windows pipeline
+            $linuxSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+            $linuxAppDirs = @($linuxSettings.appFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+            $linuxTestAppDirs = @($linuxSettings.testFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+            try {
+                $artifactUrl = DetermineArtifactUrl -projectSettings $linuxSettings -doNotIssueWarnings
+                $linuxBcVersion = $artifactUrl.Split('/')[4]
+            }
+            catch {
+                Write-Host "::warning::Could not resolve a concrete BC version from the artifact setting for project $project ($($_.Exception.Message)); the Linux fast lane will use its own default version. Pin the artifact setting to a concrete version to control this."
+            }
+        }
+
         foreach($buildMode in $buildModes) {
             $buildDimensions += @{
                 project = $project
@@ -120,6 +141,11 @@ function CreateBuildDimensions {
                 buildMode = $buildMode
                 gitHubRunner = $gitHubRunner
                 githubRunnerShell = $githubRunnerShell
+                linuxFastLane = $linuxFastLane
+                linuxBcVersion = $linuxBcVersion
+                linuxCountry = $projectSettings.country
+                linuxAppDirs = $linuxAppDirs
+                linuxTestAppDirs = $linuxTestAppDirs
             }
         }
     }
@@ -204,11 +230,13 @@ function Get-ProjectsToBuild {
 
                 if ($projectsOnDepth) {
                     # Create build dimensions for the projects on the current depth
+                    # buildDimensions only contains projects using the standard Windows pipeline; projects with linuxFastLane enabled are split into buildDimensionsLinux instead
                     $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
                     $projectsOrderToBuild += @{
                         projects = $projectsOnDepth
                         projectsCount = $projectsOnDepth.Count
-                        buildDimensions = $buildDimensions
+                        buildDimensions = @($buildDimensions | Where-Object { -not $_.linuxFastLane })
+                        buildDimensionsLinux = @($buildDimensions | Where-Object { $_.linuxFastLane })
                     }
                 }
             }
@@ -220,6 +248,7 @@ function Get-ProjectsToBuild {
                 projects = @()
                 projectsCount = 0
                 buildDimensions = @()
+                buildDimensionsLinux = @()
             }
         }
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"

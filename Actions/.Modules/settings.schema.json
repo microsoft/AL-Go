@@ -713,6 +713,10 @@
                 "CertificateProfile"
             ]
         },
+        "linuxFastLane": {
+            "type": "boolean",
+            "description": "Use the Linux BC fast lane (github.com/StefanMaron/MsDyn365Bc.On.Linux) instead of the standard Windows container pipeline for this build. No signing, no BCPT tests, no page scripting tests. Combine with ConditionalSettings (branches/workflows) to scope it to specific branches or workflows. See https://aka.ms/ALGoSettings#linuxfastlane"
+        },
         "trustMicrosoftNuGetFeeds": {
             "type": "boolean",
             "description": "Trust Microsoft NuGet feeds. See https://aka.ms/ALGoSettings#trustMicrosoftNuGetFeeds"

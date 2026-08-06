@@ -93,7 +93,7 @@ jobs:
 
   Build:
     needs: [ Initialization ]
-    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+    if: (!failure()) && (!cancelled()) && length(fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions) > 0
     strategy:
       matrix:
         include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
@@ -116,6 +116,26 @@ jobs:
       artifactsNameSuffix: 'PR${{ github.event.number }}'
       needsContext:  ${{ toJson(needs) }}
       useArtifactCache: true
+
+  # Linux fast lane - projects with the linuxFastLane setting enabled build here instead of in Build above.
+  # No signing, no BCPT/page scripting tests. See Scenarios/LinuxFastLane.md.
+  BuildLinux:
+    needs: [ Initialization ]
+    if: (!failure()) && (!cancelled()) && length(fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux) > 0
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux }}
+      fail-fast: false
+    name: Build ${{ matrix.projectName }} (${{ matrix.buildMode }}, Linux fast lane)
+    uses: ./.github/workflows/_BuildALGoProjectLinux.yaml
+    with:
+      project: ${{ matrix.project }}
+      projectName: ${{ matrix.projectName }}
+      buildMode: ${{ matrix.buildMode }}
+      bcVersion: ${{ matrix.linuxBcVersion }}
+      bcCountry: ${{ matrix.linuxCountry }}
+      appDirs: ${{ matrix.linuxAppDirs }}
+      testAppDirs: ${{ matrix.linuxTestAppDirs }}
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
@@ -155,7 +175,7 @@ jobs:
           sha: ${{ github.event.pull_request.head.sha }}
 
   StatusCheck:
-    needs: [ Initialization, Build ]
+    needs: [ Initialization, Build, BuildLinux ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     name: Pull Request Status Check

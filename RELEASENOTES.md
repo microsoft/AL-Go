@@ -1,3 +1,7 @@
+### New `linuxFastLane` setting - fast pull request builds on Linux BC
+
+AL-Go can now build a project using the Linux BC fast lane ([StefanMaron/MsDyn365Bc.On.Linux](https://github.com/StefanMaron/MsDyn365Bc.On.Linux)) instead of the standard Windows container pipeline. Set `linuxFastLane: true` (optionally scoped to specific branches or workflows via [ConditionalSettings](Scenarios/settings.md#conditional)) to compile from source, publish to a Linux BC container, and run AL unit tests entirely on an `ubuntu-latest` runner - no Windows container, and much faster than a full container build. There is no signing, no BCPT tests, no page scripting tests, and no Deliver step on this path. BC version and country are taken from the existing `artifact`/`country` settings; no new settings are needed for those. See [Scenarios/LinuxFastLane.md](Scenarios/LinuxFastLane.md) for what's in scope and what isn't.
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
