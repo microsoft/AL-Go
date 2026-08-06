@@ -146,11 +146,20 @@ function CreateBuildDimensions {
             try {
                 $probingSettings = CheckAppDependencyProbingPaths -settings $linuxSettings -token $token -baseFolder $baseFolder -project $project
                 if ($probingSettings.ContainsKey('appDependencyProbingPaths') -and $probingSettings.appDependencyProbingPaths) {
+                    # '.' (the common single-project-repo project name) is a reserved relative path
+                    # segment - joining it onto a folder path is a no-op, not a real subfolder, which
+                    # would silently collapse the per-project layout the LinuxFastLaneDependencies
+                    # artifact depends on. Give it an explicit, unambiguous name instead.
                     $sanitizedProject = ($project -replace '[\\/]', '_')
-                    $depFolder = Join-Path $baseFolder ".linuxDependencies/$sanitizedProject"
+                    if ($sanitizedProject -eq '.') {
+                        $sanitizedProject = '_root_'
+                    }
+                    $depFolder = Join-Path $baseFolder ".linuxDependencies" $sanitizedProject
                     New-Item -Path $depFolder -ItemType Directory -Force | Out-Null
                     $downloaded = @(GetDependencies -probingPathsJson $probingSettings.appDependencyProbingPaths -saveToPath $depFolder -api_url 'https://api.github.com' | Where-Object { $_ })
+                    Write-Host "GetDependencies returned $($downloaded.Count) item(s) for project $project`: $($downloaded -join ', ')"
                     $downloaded = @(Resolve-DependencyFiles -Dependencies $downloaded -DestinationPath $depFolder)
+                    Write-Host "Resolve-DependencyFiles left $($downloaded.Count) app file(s) in $depFolder`: $((Get-ChildItem -Path $depFolder -File -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }) -join ', ')"
                     if ($downloaded.Count -gt 0) {
                         $linuxDependencySubdir = $sanitizedProject
                     }
