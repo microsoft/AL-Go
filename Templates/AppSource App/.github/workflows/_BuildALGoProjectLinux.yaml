@@ -58,4 +58,4 @@ jobs:
       bc_country: ${{ inputs.bcCountry }}
       app_dirs: ${{ inputs.appDirs }}
       test_app_dirs: ${{ inputs.testAppDirs }}
-      codeunit_range: "50000..99999"
+      codeunit_range: "1..2147483647"
