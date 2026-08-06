@@ -102,7 +102,9 @@ function CreateBuildDimensions {
     param(
         [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
         $projects = @(),
-        $baseFolder
+        $baseFolder,
+        [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
+        $token
     )
 
     $buildDimensions = @()
@@ -142,7 +144,7 @@ function CreateBuildDimensions {
             # the Windows pipeline uses) and staged under .linuxDependencies for a single Initialization-job
             # upload step to pick up as the LinuxFastLaneDependencies artifact.
             try {
-                $probingSettings = CheckAppDependencyProbingPaths -settings $linuxSettings -baseFolder $baseFolder -project $project
+                $probingSettings = CheckAppDependencyProbingPaths -settings $linuxSettings -token $token -baseFolder $baseFolder -project $project
                 if ($probingSettings.ContainsKey('appDependencyProbingPaths') -and $probingSettings.appDependencyProbingPaths) {
                     $sanitizedProject = ($project -replace '[\\/]', '_')
                     $depFolder = Join-Path $baseFolder ".linuxDependencies/$sanitizedProject"
@@ -209,7 +211,9 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
-        [int] $maxBuildDepth = 0
+        [int] $maxBuildDepth = 0,
+        [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
+        $token
     )
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -257,7 +261,7 @@ function Get-ProjectsToBuild {
                 if ($projectsOnDepth) {
                     # Create build dimensions for the projects on the current depth
                     # buildDimensions only contains projects using the standard Windows pipeline; projects with linuxFastLane enabled are split into buildDimensionsLinux instead
-                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
+                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth -token $token
                     $windowsBuildDimensions = @($buildDimensions | Where-Object { -not $_.linuxFastLane })
                     $linuxBuildDimensions = @($buildDimensions | Where-Object { $_.linuxFastLane })
                     $projectsOrderToBuild += @{
