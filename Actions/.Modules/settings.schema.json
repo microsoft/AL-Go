@@ -344,6 +344,10 @@
         "doNotRunTests": {
             "type": "boolean"
         },
+        "useSeparateTestAction": {
+            "type": "boolean",
+            "description": "PREVIEW: When set to true, normal tests (testFolders) are no longer executed inside the RunPipeline action. Instead, RunPipeline keeps the build container alive and a separate RunTests action executes the tests afterwards. See https://aka.ms/ALGoSettings#useSeparateTestAction"
+        },
         "doNotRunBcptTests": {
             "type": "boolean"
         },

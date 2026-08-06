@@ -1,3 +1,7 @@
+### Separate test execution from RunPipeline (PREVIEW)
+
+A new `useSeparateTestAction` setting (default `false`) lets you move normal test execution (`testFolders`) out of the `RunPipeline` action and into a new dedicated `RunTests` action. When enabled, `RunPipeline` still compiles, publishes and installs the apps and keeps the build container alive, but does not run the normal tests. A new `RunTests` action then runs the tests against that same container and produces the same `TestResults.xml`. Only normal tests are affected; BCPT and page scripting tests are still executed by `RunPipeline`. When the setting is `false`, behavior is unchanged.
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
