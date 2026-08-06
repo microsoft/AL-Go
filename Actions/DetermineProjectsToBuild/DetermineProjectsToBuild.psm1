@@ -156,7 +156,15 @@ function CreateBuildDimensions {
                     }
                     $depFolder = Join-Path $baseFolder "LinuxFastLaneDependencies_staging" $sanitizedProject
                     New-Item -Path $depFolder -ItemType Directory -Force | Out-Null
-                    $downloaded = @(GetDependencies -probingPathsJson $probingSettings.appDependencyProbingPaths -saveToPath $depFolder -api_url 'https://api.github.com' | Where-Object { $_ })
+                    # Only the 'Apps' mask - the dependency's own production app(s), which the
+                    # consumer's app.json actually declares a dependency on. Skip 'TestApps'/
+                    # 'Dependencies': those exist to let the Windows pipeline install a
+                    # dependency's own test fixtures, but they're not needed to compile/run
+                    # the consumer's project, and can carry transitive dependencies of their
+                    # own (a dependency's *test* app depending on an older/differently-
+                    # published version of itself) that were never part of what this project
+                    # actually needs.
+                    $downloaded = @(GetDependencies -probingPathsJson $probingSettings.appDependencyProbingPaths -saveToPath $depFolder -masks @('Apps') -api_url 'https://api.github.com' | Where-Object { $_ })
                     Write-Host "GetDependencies returned $($downloaded.Count) item(s) for project $project`: $($downloaded -join ', ')"
                     $downloaded = @(Resolve-DependencyFiles -Dependencies $downloaded -DestinationPath $depFolder)
                     Write-Host "Resolve-DependencyFiles left $($downloaded.Count) app file(s) in $depFolder`: $((Get-ChildItem -Path $depFolder -File -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }) -join ', ')"
