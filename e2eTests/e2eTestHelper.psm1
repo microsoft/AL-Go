@@ -408,7 +408,7 @@ function CreateAlGoRepository {
     $templateFolder = ''
     if ($template.Contains('|')) {
         # In order to run tests on the direct AL-Go Development branch, specify the folder in which the template is located after a | character in template
-        # example: "https://github.com/freddydk/AL-Go@branch|Templates/Per Tenant Extension"
+        # example: "https://github.com/myuser/AL-Go@branch|Templates/Per Tenant Extension"
         $templateFolder = $template.Split('|')[1]
         $templateOwner = $template.Split('/')[3]
         $template = $template.Split('|')[0]
@@ -526,8 +526,8 @@ function CreateAlGoRepository {
 
     RefreshToken -repository $repository
 
-    invoke-git add *
-    invoke-git commit --allow-empty -m 'init'
+    invoke-git -silent add *
+    invoke-git -silent commit --allow-empty -m 'init'
     invoke-git branch -M $branch
     if ($githubOwner) {
         if ($github) {

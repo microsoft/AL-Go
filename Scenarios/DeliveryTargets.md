@@ -347,6 +347,17 @@ You can configure multiple trusted NuGet feeds for dependency resolution:
 - **Token expiration**: Regularly rotate your personal access tokens
 - **Compressed JSON**: Always use compressed JSON format for secrets to avoid masking issues
 
+#### Protect the branches that publish to delivery targets
+
+Unlike the deployment jobs in AL-Go (which run inside a GitHub *environment* and can therefore be gated by environment protection rules), the `Deliver` jobs in the AL-Go CI/CD workflows do not declare a GitHub `environment:`. Their context secrets (`GitHubPackagesContext`, `NuGetContext`, `StorageContext`, `AppSourceContext`, or any custom `<DeliveryTarget>Context`) are read as repository or organization secrets, so GitHub *deployment branches and tags* and *required reviewers* do **not** apply to delivery as currently shipped.
+
+In practice, this means the security boundary for delivery is the set of branches that are allowed to run the delivery step. Hardening recommendations:
+
+- **Restrict the delivery branches in AL-Go.** The `DeliverTo<Target>.Branches` property defaults to `main` when omitted, but you should still set it explicitly (for example `["main", "release/*"]`) so the intent is visible and auditable. If you need to deliver from additional branches, list only the ones that should have access to the delivery secret.
+- **Protect the listed branches.** Add a [branch protection rule or ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) on every branch named in `DeliverTo<Target>.Branches` that requires pull requests, reviews, a passing AL-Go build status check, restricts who can push directly, and disallows bypassing the rule. This is what prevents arbitrary code on those branches from running with the delivery secret.
+- **Scope the secret to the smallest audience.** Use a repository secret (rather than an organization secret) when only one repository needs to publish, and use the most restrictive credential available for each target: PATs scoped to `write:packages` only for GitHub Packages, dedicated feed-scoped tokens (or federated credentials) for NuGet, SAS tokens with the minimum required permissions and a short expiry for Azure Storage, and S2S/federated credentials for AppSource. Rotate them on a schedule.
+- **Keep an eye on settings changes.** Because `DeliverTo<Target>.Branches` lives in `.github/AL-Go-Settings.json`, the branch protection rule on your release branches is also what prevents this allowlist from being silently widened.
+
 ### Limitations
 
 - **Fine-grained tokens**: GitHub Packages doesn't support fine-grained personal access tokens yet
