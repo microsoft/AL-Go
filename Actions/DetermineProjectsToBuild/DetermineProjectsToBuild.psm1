@@ -232,11 +232,16 @@ function Get-ProjectsToBuild {
                     # Create build dimensions for the projects on the current depth
                     # buildDimensions only contains projects using the standard Windows pipeline; projects with linuxFastLane enabled are split into buildDimensionsLinux instead
                     $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
+                    $windowsBuildDimensions = @($buildDimensions | Where-Object { -not $_.linuxFastLane })
+                    $linuxBuildDimensions = @($buildDimensions | Where-Object { $_.linuxFastLane })
                     $projectsOrderToBuild += @{
                         projects = $projectsOnDepth
                         projectsCount = $projectsOnDepth.Count
-                        buildDimensions = @($buildDimensions | Where-Object { -not $_.linuxFastLane })
-                        buildDimensionsLinux = @($buildDimensions | Where-Object { $_.linuxFastLane })
+                        buildDimensions = $windowsBuildDimensions
+                        # GitHub Actions expressions have no length()/array-count function, so the count is precomputed here for the if: conditions gating the Build/BuildLinux jobs
+                        buildDimensionsCount = $windowsBuildDimensions.Count
+                        buildDimensionsLinux = $linuxBuildDimensions
+                        buildDimensionsLinuxCount = $linuxBuildDimensions.Count
                     }
                 }
             }
@@ -248,7 +253,9 @@ function Get-ProjectsToBuild {
                 projects = @()
                 projectsCount = 0
                 buildDimensions = @()
+                buildDimensionsCount = 0
                 buildDimensionsLinux = @()
+                buildDimensionsLinuxCount = 0
             }
         }
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
