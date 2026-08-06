@@ -13,15 +13,14 @@ Param(
     Runs the normal tests (testFolders) for an AL-Go project against the build container
     created and kept alive by the RunPipeline action.
 .DESCRIPTION
-    This action is the second half of the "split" between building/publishing apps and running
-    tests. It only does anything when the useSeparateTestAction setting is enabled. In that
-    case, RunPipeline compiles, publishes and installs the apps, skips the normal tests and
-    keeps the build container alive. This action then runs the normal tests against that same
-    container and writes the results to TestResults.xml in the project folder (the location the
-    AnalyzeTests action reads from).
+    Runs the normal tests (testFolders) of an AL-Go project. Tests are only run when the
+    useSeparateTestAction setting is enabled; otherwise this action does nothing and the tests are
+    run by the RunPipeline action. When enabled, RunPipeline compiles, publishes and installs the
+    apps and keeps the build container alive, and this action runs the normal tests against that
+    container and writes the results to TestResults.xml in the project folder.
 
-    Only normal tests (testFolders) are handled here. BCPT and page scripting tests continue
-    to be executed by the RunPipeline action.
+    Only normal tests (testFolders) are run here. BCPT and page scripting tests are run by the
+    RunPipeline action.
 .PARAMETER token
     The GitHub token running the action. It is exposed as the _token environment variable by
     action.yaml so downstream test override scripts (for example, BCApps test tolerance, which
@@ -68,8 +67,7 @@ $projectPath = Join-Path $baseFolder $project
 Write-Host "Use settings"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
-# This action is a no-op unless normal test execution has been delegated from RunPipeline via
-# the useSeparateTestAction setting. In all other cases tests are executed inside RunPipeline.
+# Tests only run here when useSeparateTestAction is enabled; otherwise RunPipeline runs them.
 if (-not $settings.useSeparateTestAction) {
     Write-Host "useSeparateTestAction is not enabled. Tests are executed by the RunPipeline action. Skipping."
     return
@@ -78,8 +76,7 @@ if (-not $settings.useSeparateTestAction) {
 # Analyze the repository to determine the test folders (and other test related settings)
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 
-# Resolve the container kept alive by the RunPipeline action.
-# The container name is deterministic per project and is also exported to the environment by RunPipeline.
+# Resolve the container kept alive by RunPipeline (name is deterministic per project, also exported to the environment).
 $containerName = $ENV:containerName
 if (-not $containerName) {
     $containerName = GetContainerName($project)
@@ -88,9 +85,7 @@ if (-not $containerName) {
 # Credentials used to connect to the build container.
 $credential = Get-TestRunnerCredential
 
-# NOTE: RunTestsInBcContainer is the seam for the "local test runner". By default the
-# BcContainerHelper test runner is used against the container created by RunPipeline; a
-# custom/local test runner that behaves the same way can be provided as an override script.
+# A RunTestsInBcContainer override script, if present, replaces the built-in BcContainerHelper test runner.
 $overrideParams = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectPath ".AL-Go") -OverrideScriptNames @("RunTestsInBcContainer")
 
 Invoke-AlGoTestRun `

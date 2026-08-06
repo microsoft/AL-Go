@@ -489,17 +489,11 @@ try {
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
 
-    # When useSeparateTestAction is enabled, normal test execution is delegated to the
-    # separate RunTests action. Apps and test apps are still compiled, published and installed
-    # here, but the normal tests are not run (equivalent to doNotRunTests). The container is
-    # kept alive so the RunTests action can run the tests against it afterwards.
-    # This only affects normal tests; BCPT and page scripting tests are still run here.
-    #
-    # This only applies when Run-AlPipeline actually creates a build container to run tests against.
-    # A test-capable container is only created when apps are published (doNotPublishApps not set) and
-    # the build does not target an online environment. When apps are not published, Run-AlPipeline
-    # forces doNotRunTests and creates no test-capable container, so there is nothing for the RunTests
-    # action to hand off to - fall back to the normal RunPipeline behavior in that case.
+    # When useSeparateTestAction is enabled, the normal tests (testFolders) are run by the separate
+    # RunTests action instead of here, and the build container is kept alive for it. BCPT and page
+    # scripting tests are unaffected. This needs a build container, which only exists when apps are
+    # published (doNotPublishApps not set) and the build does not target an online environment;
+    # otherwise the tests are run here as usual.
     $createsTestContainer = (-not $settings.doNotPublishApps) -and -not ($authContext -and $environmentName)
     $keepContainerForSeparateTestAction = $false
     if ($settings.useSeparateTestAction -and $createsTestContainer) {
@@ -507,9 +501,8 @@ try {
         $runAlPipelineParams["doNotRunTests"] = $true
         $keepContainerForSeparateTestAction = $true
 
-        # BcContainerHelper requires an explicit credential when the container is kept alive. Generate one
-        # here, pass it to Run-AlPipeline and surface it (masked, as base64-encoded JSON) to the RunTests
-        # action via the containerCredential environment variable so it can connect to the same container.
+        # A kept-alive container needs an explicit credential so the RunTests action can reconnect to it.
+        # Generate one, pass it to Run-AlPipeline, and surface it (masked, base64 JSON) via containerCredential.
         if (-not $runAlPipelineParams.ContainsKey('credential')) {
             $containerCredential = New-KeepAliveContainerCredential
             $runAlPipelineParams["credential"] = $containerCredential

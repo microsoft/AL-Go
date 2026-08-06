@@ -56,11 +56,8 @@ function Invoke-AlGoTestRun {
     .DESCRIPTION
         Runs tests in each test app against the given container and writes the results to
         testResultsFile in JUnit format. Honors the doNotRunTests, doNotPublishApps and
-        treatTestFailuresAsWarnings settings (when doNotPublishApps is set, RunPipeline keeps no
-        container alive, so there is nothing to test against and this is a no-op). When a
-        RunTestsInBcContainer override is provided it is used instead of the built-in
-        BcContainerHelper test runner - this is the seam where a custom/local test runner
-        can be substituted.
+        treatTestFailuresAsWarnings settings. When a RunTestsInBcContainer override script is
+        provided, it is used instead of the built-in BcContainerHelper test runner.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -106,9 +103,7 @@ function Invoke-AlGoTestRun {
         Remove-Item $testResultsFile -Force
     }
 
-    # GitHub Actions output severity for test failures. This mirrors how Run-AlPipeline configures
-    # Run-TestsInBcContainer: failing tests surface as warnings when treatTestFailuresAsWarnings is
-    # set, otherwise as errors. Valid values are 'no', 'error' and 'warning'.
+    # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
     $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
 
     $allTestsPassed = $true
