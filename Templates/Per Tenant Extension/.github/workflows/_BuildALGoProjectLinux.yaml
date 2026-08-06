@@ -46,16 +46,23 @@ on:
         description: Space-separated, repo-root-relative test app folders for this project
         required: true
         type: string
+      dependencyArtifactSubdir:
+        description: Subfolder (under the LinuxFastLaneDependencies artifact uploaded by the Initialization job) holding this project's third-party (appDependencyProbingPaths) dependency .apps. Empty when the project has none.
+        required: false
+        default: ''
+        type: string
 
 jobs:
   BuildALGoProjectLinux:
     name: ${{ inputs.projectName }} (${{ inputs.buildMode }}, Linux fast lane)
     # Pinned to a specific commit (not @master) so an upstream change in
     # bc-linux can't silently break this repo's PR gate.
-    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@d5b8c2c7b8b5e7fd71bd893b1e3418eefe609b43
+    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@ceeb6ca58e2bf61d12c52271d237b3ab01eed040
     with:
       bc_version: ${{ inputs.bcVersion != '' && inputs.bcVersion || '27.5' }}
       bc_country: ${{ inputs.bcCountry }}
       app_dirs: ${{ inputs.appDirs }}
       test_app_dirs: ${{ inputs.testAppDirs }}
       codeunit_range: "1..2147483647"
+      extra_symbols_artifact_name: ${{ inputs.dependencyArtifactSubdir != '' && 'LinuxFastLaneDependencies' || '' }}
+      extra_symbols_artifact_subdir: ${{ inputs.dependencyArtifactSubdir }}
