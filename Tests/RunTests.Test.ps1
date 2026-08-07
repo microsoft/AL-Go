@@ -37,7 +37,7 @@ Describe 'RunTests.psm1 Tests' {
 
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath
 
-            $testApps.Count | Should -Be 2
+            @($testApps).Count | Should -Be 2
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -53,7 +53,7 @@ Describe 'RunTests.psm1 Tests' {
             $settings = @{ runTestsInAllInstalledTestApps = $true }
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
 
-            $testApps.Count | Should -Be 2
+            @($testApps).Count | Should -Be 2
             $testApps | Should -Contain $installedApp1
             $testApps | Should -Contain $installedApp2
             Remove-Item -Path $projectPath -Recurse -Force
@@ -69,36 +69,12 @@ Describe 'RunTests.psm1 Tests' {
             $settings = @{ runTestsInAllInstalledTestApps = $false }
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
 
-            $testApps.Count | Should -Be 1
+            @($testApps).Count | Should -Be 1
             Remove-Item -Path $projectPath -Recurse -Force
         }
     }
 
     Context 'Invoke-AlGoTestRun' {
-        It 'Does not run tests when doNotRunTests is set' {
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $script:runnerCalls = 0
-            $override = { param($parameters) $script:runnerCalls++; return $true }
-            $settings = @{ doNotRunTests = $true; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
-
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
-
-            $script:runnerCalls | Should -Be 0
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Does not run tests when doNotPublishApps is set (no container kept alive)' {
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $script:runnerCalls = 0
-            $override = { param($parameters) $script:runnerCalls++; return $true }
-            $settings = @{ doNotRunTests = $false; doNotPublishApps = $true; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
-
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
-
-            $script:runnerCalls | Should -Be 0
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
         It 'Does not run tests when there are no test apps' {
             $projectPath = New-TestProject
             $script:runnerCalls = 0
@@ -182,7 +158,7 @@ Describe 'RunTests.psm1 Tests' {
                 Set-ItResult -Skipped -Because 'BcContainerHelper (Run-TestsInBcContainer) is not available in this environment'
                 return
             }
-            if ($command.ResolvedCommand) { $command = $command.ResolvedCommand }
+            if (($command -is [System.Management.Automation.AliasInfo]) -and $command.ResolvedCommand) { $command = $command.ResolvedCommand }
 
             Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')

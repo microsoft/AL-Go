@@ -1,5 +1,4 @@
 Param(
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'token', Justification = 'Exposed as $env:_token via action.yaml so downstream test override scripts (e.g. BCApps test tolerance artifact download) can authenticate.')]
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
@@ -13,18 +12,17 @@ Param(
     Runs the normal tests (testFolders) for an AL-Go project against the build container
     created and kept alive by the RunPipeline action.
 .DESCRIPTION
-    Runs the normal tests (testFolders) of an AL-Go project. Tests are only run when the
-    useSeparateTestAction setting is enabled; otherwise this action does nothing and the tests are
-    run by the RunPipeline action. When enabled, RunPipeline compiles, publishes and installs the
-    apps and keeps the build container alive, and this action runs the normal tests against that
-    container and writes the results to TestResults.xml in the project folder.
+    Runs the normal tests (testFolders) of an AL-Go project against the build container that the
+    RunPipeline action created and kept alive. This runs as part of the build when the
+    useSeparateTestAction setting is enabled; when it is not, RunPipeline runs the tests instead.
+    Results are written to TestResults.xml in the project folder.
 
     Only normal tests (testFolders) are run here. BCPT and page scripting tests are run by the
     RunPipeline action.
 .PARAMETER token
-    The GitHub token running the action. It is exposed as the _token environment variable by
-    action.yaml so downstream test override scripts (for example, BCApps test tolerance, which
-    downloads the unstable-tests artifact) can authenticate against GitHub.
+    The GitHub token running the action. It is exposed as the _token environment variable so
+    downstream test override scripts (for example, BCApps test tolerance, which downloads the
+    unstable-tests artifact) can authenticate against GitHub.
 .PARAMETER project
     Project folder.
 .PARAMETER installTestAppsJson
@@ -67,11 +65,8 @@ $projectPath = Join-Path $baseFolder $project
 Write-Host "Use settings"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
-# Tests only run here when useSeparateTestAction is enabled; otherwise RunPipeline runs them.
-if (-not $settings.useSeparateTestAction) {
-    Write-Host "useSeparateTestAction is not enabled. Tests are executed by the RunPipeline action. Skipping."
-    return
-}
+# Surface the token so RunTestsInBcContainer override scripts (e.g. BCApps test tolerance) can authenticate against GitHub.
+$ENV:_token = $token
 
 # Analyze the repository to determine the test folders (and other test related settings)
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
