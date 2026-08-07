@@ -19,6 +19,7 @@ Determine whether to build project
 | skippedProjectsJson | Yes | Compressed JSON string containing the list of projects that should be skipped | |
 | project | Yes | Name of the project to build | |
 | baselineWorkflowRunId | Yes | Id of the baseline workflow run, from which to download artifacts if build is skipped | |
+| buildMode | | Build mode used when building the artifacts | Default |
 
 ## OUTPUT
 
