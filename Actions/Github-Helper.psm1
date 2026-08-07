@@ -202,7 +202,15 @@ function GetDependencies {
             # GitHub host that differs from the one running the workflow. For both github.com and ghe.com the
             # API host is api.<host> (e.g. api.github.com or api.<tenant>.ghe.com).
             $dependencyUri = [uri]$dependency.repo
-            $dependencyApiUrl = "$($dependencyUri.Scheme)://api.$($dependencyUri.Host)"
+            if ($dependencyUri.Host -eq 'github.com') {
+                $dependencyApiUrl = 'https://api.github.com'
+            }
+            elseif ($dependencyUri.Host -like '*.ghe.com') {
+                $dependencyApiUrl = "https://api.$($dependencyUri.Host)"
+            }
+            else {
+                throw "Unsupported GitHub dependency host '$($dependencyUri.Host)'."
+            }
             if ($dependency.release_status -eq "latestBuild") {
                 $token = GetAccessToken -token $dependency.authTokenSecret -api_url $dependencyApiUrl -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
                 $artifacts = GetArtifacts -token $token -api_url $dependencyApiUrl -repository $repository -mask $currentMask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
