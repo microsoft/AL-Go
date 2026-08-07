@@ -7,6 +7,10 @@ repos:
     hooks:
       - id: mdformat
         args: [--end-of-line=keep]
+        # mdformat doesn't understand YAML frontmatter (no mdformat-frontmatter plugin
+        # installed) and mangles the --- delimited name/description block that Claude
+        # Code skills require - exclude skill files rather than reformat them.
+        exclude: ^\.claude/skills/.*\.md$
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
