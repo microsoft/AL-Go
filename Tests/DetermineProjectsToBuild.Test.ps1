@@ -1166,6 +1166,41 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[1].projects | Should -BeExactly @("TestProject")
     }
 
+    It 'splits projects with linuxFastLane enabled into buildDimensionsLinux' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project2"
+        $buildOrder[0].buildDimensions[0].linuxFastLane | Should -BeFalse
+
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensionsLinux[0].project | Should -BeExactly "Project1"
+        $buildOrder[0].buildDimensionsLinux[0].linuxFastLane | Should -BeTrue
+    }
+
+    It 'derives linuxAppDirs and linuxCountry for a linuxFastLane project' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; country = 'dk' } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() } | ConvertTo-Json)
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 1
+        $dimension = $buildOrder[0].buildDimensionsLinux[0]
+        $dimension.linuxCountry | Should -BeExactly 'dk'
+        $dimension.linuxAppDirs | Should -Match 'Project1[\\/]\.?[\\/]?app'
+        $dimension.linuxTestAppDirs | Should -BeExactly ''
+    }
+
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
     }

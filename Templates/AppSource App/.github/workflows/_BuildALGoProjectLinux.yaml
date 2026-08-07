@@ -1,0 +1,68 @@
+name: '_Build AL-Go project (Linux fast lane)'
+
+run-name: 'Build ${{ inputs.project }} (Linux fast lane)'
+
+# Pure passthrough to the MsDyn365Bc.On.Linux reusable workflow. This file
+# intentionally has NO steps of its own (a job that calls a reusable
+# workflow via `uses:` can only consist of that call) so that 100% of the
+# actual compile/publish/test work runs on the ubuntu-latest runner that
+# bc-test-from-source.yml itself declares - no Windows runner is involved
+# in the Linux fast lane build.
+#
+# No signing, no BCPT tests, no page scripting tests on this path - see
+# Scenarios/LinuxFastLane.md and https://github.com/StefanMaron/MsDyn365Bc.On.Linux/blob/master/KNOWN-LIMITATIONS.md
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: Name of the built project
+        required: true
+        type: string
+      projectName:
+        description: Friendly name of the built project
+        required: true
+        type: string
+      buildMode:
+        description: Build mode used when building the artifacts
+        required: true
+        type: string
+      bcVersion:
+        description: Concrete BC version to use, resolved from the project's artifact setting. Falls back to bc-linux's own default when it could not be resolved.
+        required: false
+        default: ''
+        type: string
+      bcCountry:
+        description: BC country code, from the project's country setting
+        required: false
+        default: 'w1'
+        type: string
+      appDirs:
+        description: Space-separated, repo-root-relative production app folders for this project
+        required: false
+        default: ''
+        type: string
+      testAppDirs:
+        description: Space-separated, repo-root-relative test app folders for this project
+        required: true
+        type: string
+      dependencyArtifactSubdir:
+        description: Subfolder (under the LinuxFastLaneDependencies artifact uploaded by the Initialization job) holding this project's third-party (appDependencyProbingPaths) dependency .apps. Empty when the project has none.
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  BuildALGoProjectLinux:
+    name: ${{ inputs.projectName }} (${{ inputs.buildMode }}, Linux fast lane)
+    # Pinned to a specific commit (not @master) so an upstream change in
+    # bc-linux can't silently break this repo's PR gate.
+    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@13c78dee1e66fdfde7466855df2284577d7ad903
+    with:
+      bc_version: ${{ inputs.bcVersion != '' && inputs.bcVersion || '27.5' }}
+      bc_country: ${{ inputs.bcCountry }}
+      app_dirs: ${{ inputs.appDirs }}
+      test_app_dirs: ${{ inputs.testAppDirs }}
+      codeunit_range: "1..2147483647"
+      extra_symbols_artifact_name: ${{ inputs.dependencyArtifactSubdir != '' && 'LinuxFastLaneDependencies' || '' }}
+      extra_symbols_artifact_subdir: ${{ inputs.dependencyArtifactSubdir }}

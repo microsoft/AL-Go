@@ -1,4 +1,5 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DownloadProjectDependencies\DownloadProjectDependencies.psm1" -Resolve) -DisableNameChecking
 
 <#
     .Synopsis
@@ -92,12 +93,18 @@ function ShouldBuildProject {
     Each build dimension is a hashtable with the following keys:
     - project: The name of the AL-Go project
     - buildMode: The build mode to use for the project
+    - linuxFastLane: Whether this project should build via the Linux BC fast lane instead of the Windows pipeline
+    - linuxBcVersion: The concrete BC version to use on the Linux fast lane (best-effort resolved from the artifact/country settings; empty if it couldn't be resolved)
+    - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
+    - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) dependency .apps; empty if the project has none
 #>
 function CreateBuildDimensions {
     param(
         [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
         $projects = @(),
-        $baseFolder
+        $baseFolder,
+        [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
+        $token
     )
 
     $buildDimensions = @()
@@ -113,6 +120,64 @@ function CreateBuildDimensions {
             $buildModes = @('Default')
         }
 
+        $linuxFastLane = [bool]$projectSettings.linuxFastLane
+        $linuxBcVersion = ''
+        $linuxAppDirs = ''
+        $linuxTestAppDirs = ''
+        $linuxDependencySubdir = ''
+        if ($linuxFastLane) {
+            # AnalyzeRepo discovers appFolders/testFolders the same way DetermineArtifactUrl does today for the Windows pipeline
+            $linuxSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+            $linuxAppDirs = @($linuxSettings.appFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+            $linuxTestAppDirs = @($linuxSettings.testFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+            try {
+                $artifactUrl = DetermineArtifactUrl -projectSettings $linuxSettings -doNotIssueWarnings
+                $linuxBcVersion = $artifactUrl.Split('/')[4]
+            }
+            catch {
+                Write-Host "::warning::Could not resolve a concrete BC version from the artifact setting for project $project ($($_.Exception.Message)); the Linux fast lane will use its own default version. Pin the artifact setting to a concrete version to control this."
+            }
+
+            # bc-test-from-source.yml only stages symbols from the BC platform artifact tree (Microsoft apps).
+            # Third-party dependencies declared via appDependencyProbingPaths (e.g. an AppSource dependency
+            # published in another repo) aren't in that artifact, so they're downloaded here (same mechanism
+            # the Windows pipeline uses) and staged under LinuxFastLaneDependencies_staging for a single Initialization-job
+            # upload step to pick up as the LinuxFastLaneDependencies artifact.
+            try {
+                $probingSettings = CheckAppDependencyProbingPaths -settings $linuxSettings -token $token -baseFolder $baseFolder -project $project
+                if ($probingSettings.ContainsKey('appDependencyProbingPaths') -and $probingSettings.appDependencyProbingPaths) {
+                    # '.' (the common single-project-repo project name) is a reserved relative path
+                    # segment - joining it onto a folder path is a no-op, not a real subfolder, which
+                    # would silently collapse the per-project layout the LinuxFastLaneDependencies
+                    # artifact depends on. Give it an explicit, unambiguous name instead.
+                    $sanitizedProject = ($project -replace '[\\/]', '_')
+                    if ($sanitizedProject -eq '.') {
+                        $sanitizedProject = '_root_'
+                    }
+                    $depFolder = Join-Path $baseFolder "LinuxFastLaneDependencies_staging" $sanitizedProject
+                    New-Item -Path $depFolder -ItemType Directory -Force | Out-Null
+                    # Only the 'Apps' mask - the dependency's own production app(s), which the
+                    # consumer's app.json actually declares a dependency on. Skip 'TestApps'/
+                    # 'Dependencies': those exist to let the Windows pipeline install a
+                    # dependency's own test fixtures, but they're not needed to compile/run
+                    # the consumer's project, and can carry transitive dependencies of their
+                    # own (a dependency's *test* app depending on an older/differently-
+                    # published version of itself) that were never part of what this project
+                    # actually needs.
+                    $downloaded = @(GetDependencies -probingPathsJson $probingSettings.appDependencyProbingPaths -saveToPath $depFolder -masks @('Apps') -api_url 'https://api.github.com' | Where-Object { $_ })
+                    Write-Host "GetDependencies returned $($downloaded.Count) item(s) for project $project`: $($downloaded -join ', ')"
+                    $downloaded = @(Resolve-DependencyFiles -Dependencies $downloaded -DestinationPath $depFolder)
+                    Write-Host "Resolve-DependencyFiles left $($downloaded.Count) app file(s) in $depFolder`: $((Get-ChildItem -Path $depFolder -File -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }) -join ', ')"
+                    if ($downloaded.Count -gt 0) {
+                        $linuxDependencySubdir = $sanitizedProject
+                    }
+                }
+            }
+            catch {
+                Write-Host "::warning::Could not download appDependencyProbingPaths dependencies for the Linux fast lane build of project $project ($($_.Exception.Message)); production apps depending on them will fail to compile on the Linux fast lane."
+            }
+        }
+
         foreach($buildMode in $buildModes) {
             $buildDimensions += @{
                 project = $project
@@ -120,6 +185,12 @@ function CreateBuildDimensions {
                 buildMode = $buildMode
                 gitHubRunner = $gitHubRunner
                 githubRunnerShell = $githubRunnerShell
+                linuxFastLane = $linuxFastLane
+                linuxBcVersion = $linuxBcVersion
+                linuxCountry = $projectSettings.country
+                linuxAppDirs = $linuxAppDirs
+                linuxTestAppDirs = $linuxTestAppDirs
+                linuxDependencySubdir = $linuxDependencySubdir
             }
         }
     }
@@ -157,7 +228,9 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
-        [int] $maxBuildDepth = 0
+        [int] $maxBuildDepth = 0,
+        [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
+        $token
     )
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -204,11 +277,18 @@ function Get-ProjectsToBuild {
 
                 if ($projectsOnDepth) {
                     # Create build dimensions for the projects on the current depth
-                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth
+                    # buildDimensions only contains projects using the standard Windows pipeline; projects with linuxFastLane enabled are split into buildDimensionsLinux instead
+                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth -token $token
+                    $windowsBuildDimensions = @($buildDimensions | Where-Object { -not $_.linuxFastLane })
+                    $linuxBuildDimensions = @($buildDimensions | Where-Object { $_.linuxFastLane })
                     $projectsOrderToBuild += @{
                         projects = $projectsOnDepth
                         projectsCount = $projectsOnDepth.Count
-                        buildDimensions = $buildDimensions
+                        buildDimensions = $windowsBuildDimensions
+                        # GitHub Actions expressions have no length()/array-count function, so the count is precomputed here for the if: conditions gating the Build/BuildLinux jobs
+                        buildDimensionsCount = $windowsBuildDimensions.Count
+                        buildDimensionsLinux = $linuxBuildDimensions
+                        buildDimensionsLinuxCount = $linuxBuildDimensions.Count
                     }
                 }
             }
@@ -220,6 +300,9 @@ function Get-ProjectsToBuild {
                 projects = @()
                 projectsCount = 0
                 buildDimensions = @()
+                buildDimensionsCount = 0
+                buildDimensionsLinux = @()
+                buildDimensionsLinuxCount = 0
             }
         }
         Write-Host "Projects to build: $($projectsToBuild -join ', ')"
