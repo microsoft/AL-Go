@@ -59,10 +59,10 @@ Each folder under `Actions/` is a GitHub composite action (`action.yaml` + a `.p
 Settings are resolved (in `ReadSettings.psm1`) from multiple files merged in this precedence order:
 
 1. `.github/AL-Go-Settings.json` — repository settings
-2. `<project>/.AL-Go/settings.json` — project settings
-3. `.github/<workflowName>.settings.json` — workflow settings
-4. `<project>/.AL-Go/<workflowName>.settings.json` — project + workflow settings
-5. `<project>/.AL-Go/<userName>.settings.json` — per-user settings
+1. `<project>/.AL-Go/settings.json` — project settings
+1. `.github/<workflowName>.settings.json` — workflow settings
+1. `<project>/.AL-Go/<workflowName>.settings.json` — project + workflow settings
+1. `<project>/.AL-Go/<userName>.settings.json` — per-user settings
 
 Later entries override earlier ones. The schema for all settings lives in `Actions/.Modules/settings.schema.json`, and every setting is documented in `Scenarios/settings.md`. **These two must be kept in sync** — new/changed settings need matching `description`/`type`/`enum`/`default`/`required` in both places, plus deprecation notes in `DEPRECATIONS.md` when replacing an old setting.
 
@@ -114,8 +114,8 @@ Known deprecated settings (see `DEPRECATIONS.md` for full list/replacements): `u
 This repo (`StefanMaron/AL-Go`) is a fork used to add fleet-wide features — currently the **Linux fast lane** (`Scenarios/LinuxFastLane.md`, a `linuxFastLane` setting that runs PR builds against a Linux BC container instead of the full Windows pipeline) — for a fleet of managed AL repos (ABC customers and others). Any change here, or any change to how a downstream repo consumes this fork, must satisfy all three:
 
 1. **Drop-in, non-invasive for downstream repos.** New fork behavior must be opt-in-settings-only (e.g. `linuxFastLane` + `ConditionalSettings`), never a required restructure. `main` in a downstream repo never opts in — only PRs and non-production/test branches do.
-2. **Stay cleanly mergeable from `microsoft/AL-Go`.** Never rebase/rewrite already-pushed history on this fork's `main` — only append fork commits on top, and keep them additive (new files, or new job/step blocks gated by an `if:`) rather than rewriting existing upstream logic in place. This is what keeps `git merge upstream/main` conflict-free going forward.
-3. **Trivially revertible per downstream repo.** A repo goes back to stock Microsoft AL-Go by repointing `templateUrl` to `microsoft/AL-Go-PTE@main` (or `AppSource@main`) and rerunning "Update AL-Go System Files." Leftover fork-only setting keys are harmless — root `settings.schema.json` has no `additionalProperties: false`, and `ValidateSettings` (`Actions/.Modules/ReadSettings.psm1`) only warns on schema mismatch, never fails a build.
+1. **Stay cleanly mergeable from `microsoft/AL-Go`.** Never rebase/rewrite already-pushed history on this fork's `main` — only append fork commits on top, and keep them additive (new files, or new job/step blocks gated by an `if:`) rather than rewriting existing upstream logic in place. This is what keeps `git merge upstream/main` conflict-free going forward.
+1. **Trivially revertible per downstream repo.** A repo goes back to stock Microsoft AL-Go by repointing `templateUrl` to `microsoft/AL-Go-PTE@main` (or `AppSource@main`) and rerunning "Update AL-Go System Files." Leftover fork-only setting keys are harmless — root `settings.schema.json` has no `additionalProperties: false`, and `ValidateSettings` (`Actions/.Modules/ReadSettings.psm1`) only warns on schema mismatch, never fails a build.
 
 **Deploy mechanics**: `Deploy.yaml` + `Internal/Deploy.ps1` push `Templates/*` to `<owner>/AL-Go-PTE` and `<owner>/AL-Go-AppSource` (auto-created via `gh repo create` if missing). For any non-`microsoft` repo owner, Actions references in the deployed workflows are rewritten to point directly at this fork's own SHA/branch — there is no separate Actions-repo deploy target for a fork.
 
