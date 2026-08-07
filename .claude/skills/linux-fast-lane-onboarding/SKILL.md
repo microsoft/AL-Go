@@ -24,11 +24,18 @@ Canonical copy: `.claude/skills/linux-fast-lane-onboarding/SKILL.md` in `StefanM
 - **First onboarded repo: `Stefan-Maron-Consulting/Pageworks`** (merged 2026-08-07, PR #33) — an AppSource product repo with a third-party `appDependencyProbingPaths` dependency, so it's a good reference example for a non-trivial onboarding. `linuxFastLane` is scoped there via `.github/Pull Request Build.settings.json`, not `ConditionalSettings`. All other real managed repos checked (ABC fleet) are still on stock `templateUrl: https://github.com/microsoft/AL-Go-PTE@main` as of this writing.
 - `StefanMaron/AL-Go-Actions` remains a stale, unrelated fork — confirmed irrelevant to this flow (`Internal/Deploy.ps1` never targets a separate Actions repo for a non-`microsoft` owner).
 
-## To redeploy after future upstream syncs or fork changes (repeatable)
+## Redeploy after future upstream syncs or fork changes — now automatic (as of PR #2, 2026-08-07)
 
-1. Merge changes into `main` on `StefanMaron/AL-Go` via a PR (open PR, wait for CI green, merge — don't push straight to `main` blind).
-2. Run the `Deploy` workflow (`workflow_dispatch`) with `branch: main`, `directCommit: false` (opens a PR per template repo to review before merging) — leave `copyToMain` off (only valid for release branches, not `main`). If a target repo doesn't exist yet, `gh repo create <owner>/<repo> --public` first (see auth note above).
-3. Review and merge the resulting PRs on `AL-Go-PTE`/`AL-Go-AppSource` — check Actions references resolved to `StefanMaron/AL-Go/Actions/<Name>@<sha>` (not `microsoft/...`) and that expected new files are present, e.g.: `gh pr diff <n> -R StefanMaron/AL-Go-PTE | grep -c microsoft/AL-Go-Actions` should show 0 live `uses:` hits (a `$schema` doc example string is a known harmless false positive).
+`Deploy.yaml` has a `push` trigger on `main` scoped to `Templates/**`/`Actions/**` paths, with `directCommit=true` on the auto-triggered path (no review PR on the template repos — merging to `main` on `StefanMaron/AL-Go` **is** the release gate now, review the PR to `main` accordingly). So the normal flow is just:
+
+1. Merge changes into `main` on `StefanMaron/AL-Go` via a PR (open PR, wait for CI green, merge — don't push straight to `main` blind). If the diff touches `Templates/**` or `Actions/**`, `AL-Go-PTE`/`AL-Go-AppSource` update automatically within a minute or two of the merge — no further action needed.
+2. Spot-check the auto-deploy run succeeded: `gh run list -R StefanMaron/AL-Go --workflow=Deploy.yaml --limit 1`, and that the template repos picked it up: `gh api repos/StefanMaron/AL-Go-PTE/commits/main --jq .commit.message` should reference the new source SHA.
+
+Manual `workflow_dispatch` is still needed for: a repo that doesn't exist yet (`gh repo create <owner>/<repo> --public` first, see auth note above — `directCommit` still defaults to `false`/PR-reviewed for manual runs), a release-branch deploy with `copyToMain: true`, or re-running after a failed auto-deploy.
+
+Either way, once deployed: check Actions references resolved to `StefanMaron/AL-Go/Actions/<Name>@<sha>` (not `microsoft/...`) and that expected new files are present, e.g.: `gh pr diff <n> -R StefanMaron/AL-Go-PTE | grep -c microsoft/AL-Go-Actions` should show 0 live `uses:` hits (a `$schema` doc example string is a known harmless false positive) — for a `directCommit=true` auto-deploy there's no PR to diff, so instead diff the pushed commit directly: `gh api repos/StefanMaron/AL-Go-PTE/commits/main | jq -r '.files[].filename'`.
+
+**This never reaches downstream repos automatically.** Pageworks (or any other onboarded repo) only picks up the new template content when *it* runs its own "Update AL-Go System Files" — manually, or on whatever `workflowSchedule`/org-level cron it has configured, and even then via a PR it still has to merge (not silent). Bumping something in `Templates/`/`Actions/` on this fork's `main` does NOT mean it's live for consumers yet.
 
 ## To onboard an existing managed repo to the fast lane
 
