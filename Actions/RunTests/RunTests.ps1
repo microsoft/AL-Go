@@ -80,7 +80,7 @@ if (-not $containerName) {
 # Credentials used to connect to the build container.
 $credential = Get-TestRunnerCredential
 
-# A RunTestsInBcContainer override script, if present, replaces the built-in BcContainerHelper test runner.
+# A RunTestsInBcContainer override script, if present, replaces the built-in AlTool test runner.
 $overrideParams = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectPath ".AL-Go") -OverrideScriptNames @("RunTestsInBcContainer")
 
 Invoke-AlGoTestRun `

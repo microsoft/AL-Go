@@ -6,6 +6,16 @@ This action only does anything when the `useSeparateTestAction` setting is enabl
 
 Only normal tests (testFolders) are handled here. BCPT and page scripting tests continue to be executed by the RunPipeline action.
 
+## Test runner
+
+By default this action runs the tests through Microsoft's headless `al runtests` (AlTool) runner. It resolves the kept-alive container's connection settings (server, instance and developer-services port) from the container name, installs the AL developer tools as a `dotnet` global tool (`dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --prerelease`), enumerates the test codeunits and runs them against the container, then writes the same `TestResults.xml` (JUnit) schema BcContainerHelper produces so downstream test result analysis is unchanged.
+
+To run the tests through BcContainerHelper (or any other runner) instead, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. When present, it fully replaces the built-in AlTool runner and is called once per test app with the same parameters BcContainerHelper's `Run-TestsInBcContainer` expects.
+
+### Known limitations
+
+The built-in AlTool runner does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Repositories that rely on those should run their tests through BcContainerHelper by supplying a `RunTestsInBcContainer` override script (as described above), which fully replaces the AlTool runner.
+
 ## INPUT
 
 ### ENV variables

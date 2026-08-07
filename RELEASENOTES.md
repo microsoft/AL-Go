@@ -2,6 +2,11 @@
 
 A new `useSeparateTestAction` setting (default `false`) lets you move normal test execution (`testFolders`) out of the `RunPipeline` action and into a new dedicated `RunTests` action. When enabled, `RunPipeline` still compiles, publishes and installs the apps and keeps the build container alive, but does not run the normal tests. A new `RunTests` action then runs the tests against that same container and produces the same `TestResults.xml`. Only normal tests are affected; BCPT and page scripting tests are still executed by `RunPipeline`. When the setting is `false`, behavior is unchanged.
 
+By default, the `RunTests` action runs the tests through Microsoft's headless `al runtests` (AlTool) runner instead of BcContainerHelper. It resolves the kept-alive container's connection settings, installs the AL developer tools (`dotnet tool install --prerelease`) and emits the same `TestResults.xml` schema, so downstream test result analysis is unchanged. To run the tests through BcContainerHelper (or any other runner) instead, supply a `RunTestsInBcContainer` override script; it fully replaces the built-in AlTool runner.
+
+> [!NOTE]
+> The built-in AlTool runner does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to run their tests through BcContainerHelper instead.
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.

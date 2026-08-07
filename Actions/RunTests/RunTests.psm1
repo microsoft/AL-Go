@@ -5,7 +5,13 @@
     Contains the logic for running the normal tests (testFolders) of an AL-Go project against a
     build container that was created and kept alive by the RunPipeline action. Kept in a module
     so the logic can be unit tested independently of the action entry script.
+
+    By default the tests are run through the AlTool (`al runtests`) runner in AlToolTestRunner.psm1.
+    A RunTestsInBcContainer override script, when supplied, replaces that default with the
+    BcContainerHelper test runner (this is how, for example, BCApps supplies its own runner).
 #>
+
+Import-Module (Join-Path $PSScriptRoot 'AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
 
 function Get-TestAppsToRun {
     <#
@@ -55,9 +61,9 @@ function Invoke-AlGoTestRun {
         Runs the normal tests for an AL-Go project against a kept-alive build container.
     .DESCRIPTION
         Runs tests in each test app against the given container and writes the results to
-        testResultsFile in JUnit format. Honors the treatTestFailuresAsWarnings setting. When a
-        RunTestsInBcContainer override script is provided, it is used instead of the built-in
-        BcContainerHelper test runner.
+        testResultsFile in JUnit format. Honors the treatTestFailuresAsWarnings setting. By default
+        the tests are run through the AlTool (`al runtests`) runner. When a RunTestsInBcContainer
+        override script is provided, it is used instead of the built-in AlTool runner.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -69,7 +75,7 @@ function Invoke-AlGoTestRun {
     .PARAMETER installTestAppsJson
         Path to a JSON file with the list of installed test apps.
     .PARAMETER runTestsOverride
-        Optional scriptblock overriding the BcContainerHelper test runner (RunTestsInBcContainer).
+        Optional scriptblock overriding the built-in AlTool test runner (RunTestsInBcContainer).
     #>
     Param(
         [hashtable] $settings,
@@ -120,7 +126,7 @@ function Invoke-AlGoTestRun {
                 $passed = & $runTestsOverride -parameters $runTestsParams
             }
             else {
-                $passed = Run-TestsInBcContainer @runTestsParams
+                $passed = Invoke-AlToolTestRun -Parameters $runTestsParams
             }
 
             if (-not $passed) {

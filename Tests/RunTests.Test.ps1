@@ -182,4 +182,54 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
     }
+
+    Context 'Invoke-AlGoTestRun (default AlTool runner)' {
+        It 'Runs the AlTool runner for every test app when no override is supplied' {
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
+            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
+
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Passes the container and credential through to the AlTool runner' {
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = 'CRONUS'; treatTestFailuresAsWarnings = $false }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential
+
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly -ParameterFilter {
+                $Parameters.containerName -eq 'mycontainer' -and $Parameters.companyName -eq 'CRONUS' -and ($Parameters.credential -is [System.Management.Automation.PSCredential])
+            }
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Throws when the AlTool runner reports failure and treatTestFailuresAsWarnings is not set' {
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $false }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Throw
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Does not throw when the AlTool runner reports failure but treatTestFailuresAsWarnings is set' {
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $false }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $true }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+    }
 }
