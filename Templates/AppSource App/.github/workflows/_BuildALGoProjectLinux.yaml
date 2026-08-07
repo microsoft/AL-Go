@@ -37,6 +37,11 @@ on:
         required: false
         default: 'w1'
         type: string
+      alToolVersion:
+        description: AL compiler version policy resolved from the project's vsixFile setting ('' = matching, 'latest', or 'prerelease'). Falls back to bc-linux's own default (matching) when blank.
+        required: false
+        default: ''
+        type: string
       appDirs:
         description: Space-separated, repo-root-relative production app folders for this project
         required: false
@@ -57,10 +62,11 @@ jobs:
     name: ${{ inputs.projectName }} (${{ inputs.buildMode }}, Linux fast lane)
     # Pinned to a specific commit (not @master) so an upstream change in
     # bc-linux can't silently break this repo's PR gate.
-    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@13c78dee1e66fdfde7466855df2284577d7ad903
+    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@57da2c10f78850422016738ff72347cb2fd2430f
     with:
       bc_version: ${{ inputs.bcVersion != '' && inputs.bcVersion || '27.5' }}
       bc_country: ${{ inputs.bcCountry }}
+      al_tool_version: ${{ inputs.alToolVersion }}
       app_dirs: ${{ inputs.appDirs }}
       test_app_dirs: ${{ inputs.testAppDirs }}
       codeunit_range: "1..2147483647"
