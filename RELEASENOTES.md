@@ -24,6 +24,7 @@ As part of this, the warning comparison now also parses the raw AL compiler outp
 - Issue 2319 - Under workspace compilation, `enableCodeAnalyzersOnTestApps: false` now also disables custom analyzers (`customCodeCops`) for test apps and BCPT test apps, not just the built-in code analyzers.
 - Issue 2267 - `AppSourceCop.json` is now created for test apps when `enableCodeAnalyzersOnTestApps` is true.
 - Issue 2320 - Deliver to NuGet of release workflow failing with app and test app
+- Issue 2337 - Incremental builds: skipped projects re-publish Default-mode apps into ALL buildMode-specific artifacts
 
 ### Valid SARIF URIs for file paths containing spaces
 
