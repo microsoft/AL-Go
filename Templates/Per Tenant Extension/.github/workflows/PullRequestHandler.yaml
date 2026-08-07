@@ -146,6 +146,7 @@ jobs:
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
       bcVersion: ${{ matrix.linuxBcVersion }}
+      alToolVersion: ${{ matrix.linuxAlToolVersion }}
       bcCountry: ${{ matrix.linuxCountry }}
       appDirs: ${{ matrix.linuxAppDirs }}
       testAppDirs: ${{ matrix.linuxTestAppDirs }}

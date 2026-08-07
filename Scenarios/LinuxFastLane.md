@@ -40,6 +40,22 @@ can't be resolved to a concrete version (for example when it's left as
 logs a warning; pin `artifact` to a concrete version for predictable
 results.
 
+The AL compiler is chosen the same way as on the Windows pipeline, via the
+project's existing [`vsixFile`](settings.md#vsixFile) setting:
+
+| `vsixFile` | Linux fast lane compiler policy |
+| --- | --- |
+| `default` (or unset) | matching - newest stable AL compiler for the BC major being built (bc-linux's own default) |
+| `latest` | newest stable AL compiler across all majors |
+| `preview` | newest AL compiler across all majors, including prereleases |
+| a direct download URL | can't be mapped to a policy keyword - falls back to `default`/matching, with a warning |
+
+This matters because the AL compiler version and the BC runtime version are
+independent: a newer compiler accepts older runtimes, but the reverse isn't
+guaranteed. A project whose Windows pipeline uses `vsixFile: latest` should
+generally use the same policy here to avoid the fast lane rejecting AL that
+the Windows build accepts (or vice versa).
+
 ## What's in scope
 
 - Compiling AL apps from source (production and test apps)

@@ -95,6 +95,7 @@ function ShouldBuildProject {
     - buildMode: The build mode to use for the project
     - linuxFastLane: Whether this project should build via the Linux BC fast lane instead of the Windows pipeline
     - linuxBcVersion: The concrete BC version to use on the Linux fast lane (best-effort resolved from the artifact/country settings; empty if it couldn't be resolved)
+    - linuxAlToolVersion: The AL compiler version policy for the Linux fast lane, mapped from the project's vsixFile setting ('' (default/matching), 'latest', or 'prerelease'); empty if vsixFile is a direct download URL, which can't be mapped to a policy keyword
     - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
     - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) dependency .apps; empty if the project has none
 #>
@@ -122,10 +123,21 @@ function CreateBuildDimensions {
 
         $linuxFastLane = [bool]$projectSettings.linuxFastLane
         $linuxBcVersion = ''
+        $linuxAlToolVersion = ''
         $linuxAppDirs = ''
         $linuxTestAppDirs = ''
         $linuxDependencySubdir = ''
         if ($linuxFastLane) {
+            # Map AL-Go's vsixFile setting onto bc-test-from-source.yml's al_tool_version policy keyword,
+            # so the same "which compiler" choice governs both the Windows and Linux fast lane builds.
+            switch ($projectSettings.vsixFile) {
+                { [string]::IsNullOrEmpty($_) -or $_ -eq 'default' } { $linuxAlToolVersion = '' } # blank = bc-linux's own default (matching the BC major)
+                'latest' { $linuxAlToolVersion = 'latest' }
+                'preview' { $linuxAlToolVersion = 'prerelease' }
+                default {
+                    Write-Host "::warning::vsixFile is set to a direct download URL for project $project; the Linux fast lane can't resolve a compiler version from a URL and will fall back to its own default. Use 'default', 'latest', or 'preview' for vsixFile to also control the Linux fast lane compiler."
+                }
+            }
             # AnalyzeRepo discovers appFolders/testFolders the same way DetermineArtifactUrl does today for the Windows pipeline
             $linuxSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
             $linuxAppDirs = @($linuxSettings.appFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
@@ -187,6 +199,7 @@ function CreateBuildDimensions {
                 githubRunnerShell = $githubRunnerShell
                 linuxFastLane = $linuxFastLane
                 linuxBcVersion = $linuxBcVersion
+                linuxAlToolVersion = $linuxAlToolVersion
                 linuxCountry = $projectSettings.country
                 linuxAppDirs = $linuxAppDirs
                 linuxTestAppDirs = $linuxTestAppDirs

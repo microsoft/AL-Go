@@ -1201,6 +1201,30 @@ Describe "Get-ProjectsToBuild" {
         $dimension.linuxTestAppDirs | Should -BeExactly ''
     }
 
+    It 'maps vsixFile to linuxAlToolVersion for a linuxFastLane project' {
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() } | ConvertTo-Json)
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        foreach ($case in @(
+            @{ vsixFile = $null; expected = '' }
+            @{ vsixFile = 'default'; expected = '' }
+            @{ vsixFile = 'latest'; expected = 'latest' }
+            @{ vsixFile = 'preview'; expected = 'prerelease' }
+            @{ vsixFile = 'https://example.com/al.vsix'; expected = '' }
+        )) {
+            $projectSettings = @{ linuxFastLane = $true }
+            if ($null -ne $case.vsixFile) { $projectSettings.vsixFile = $case.vsixFile }
+            New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(ConvertTo-Json $projectSettings) -type File -Force
+
+            $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+            $buildOrder[0].buildDimensionsLinux[0].linuxAlToolVersion | Should -BeExactly $case.expected -Because "vsixFile = '$($case.vsixFile)'"
+        }
+    }
+
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
     }
