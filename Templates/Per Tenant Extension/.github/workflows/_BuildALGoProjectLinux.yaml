@@ -62,7 +62,7 @@ jobs:
     name: ${{ inputs.projectName }} (${{ inputs.buildMode }}, Linux fast lane)
     # Pinned to a specific commit (not @master) so an upstream change in
     # bc-linux can't silently break this repo's PR gate.
-    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@57da2c10f78850422016738ff72347cb2fd2430f
+    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@d049599cce0f8421432bb3cf24902a75631d1d15
     with:
       bc_version: ${{ inputs.bcVersion != '' && inputs.bcVersion || '27.5' }}
       bc_country: ${{ inputs.bcCountry }}
