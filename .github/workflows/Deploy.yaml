@@ -1,8 +1,13 @@
 name: Deploy
 
-run-name: "Deploy from [${{ github.ref_name }}] to [${{ inputs.branch }}]"
+run-name: "Deploy from [${{ github.ref_name }}] to [${{ inputs.branch || 'main' }}]"
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Templates/**'
+      - 'Actions/**'
   workflow_dispatch:
     inputs:
       branch:
@@ -60,12 +65,18 @@ jobs:
 
       - name: Create inputs
         id: CreateInputs
+        # github.event.inputs.* is only populated for workflow_dispatch runs (which always
+        # supply a value, even if it's just the input's own default). On a push-triggered
+        # run (auto-deploy when Templates/**or Actions/** change on main) the whole inputs
+        # object is absent, so these fall back to running an unattended deploy straight to
+        # main with a direct commit - no PR, no review gate. See CLAUDE.md fork-strategy
+        # section for why this is intentional on this fork.
         env:
-          _branch: ${{ github.event.inputs.branch }}
-          _copyToMain: ${{ github.event.inputs.copyToMain }}
-          _directCommit: ${{ github.event.inputs.directCommit }}
-          _requireEndToEndTests: ${{ github.event.inputs.requireEndToEndTests }}
-          _createRelease: ${{ github.event.inputs.createRelease }}
+          _branch: ${{ github.event.inputs.branch || 'main' }}
+          _copyToMain: ${{ github.event.inputs.copyToMain || 'false' }}
+          _directCommit: ${{ github.event.inputs.directCommit || 'true' }}
+          _requireEndToEndTests: ${{ github.event.inputs.requireEndToEndTests || 'false' }}
+          _createRelease: ${{ github.event.inputs.createRelease || 'false' }}
           _defaultBcContainerHelperVersion: ${{ github.event.inputs.defaultBcContainerHelperVersion }}
         run: |
           $branch = $ENV:_branch
