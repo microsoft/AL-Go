@@ -784,8 +784,13 @@ function New-BcCompilerFolderFromNuGet {
     }
     # Whatever the apps themselves declare a Microsoft dependency on - test toolkit
     # included - is seeded here and resolved through the same closure walk.
+    # Declared dependencies are required: if one cannot be resolved the compile would
+    # fail later with an AL1022 naming a package cache folder, which tells the user
+    # nothing about why. Fail here instead, naming the dependency and the feed.
+    $required = @{}
     foreach ($package in (Get-MicrosoftDependencyPackages -AppFolders $AppFolders -Country $country)) {
         Write-Host "Declared Microsoft dependency: $package"
+        $required[$package.ToLowerInvariant()] = $true
         $pending += $package
     }
 
@@ -811,6 +816,9 @@ function New-BcCompilerFolderFromNuGet {
                 $version = Select-NuGetVersionInRange -Versions $versions -Range '0.0.0.0'
             }
             if (-not $version) {
+                if ($required.ContainsKey($id)) {
+                    throw "No symbols package '$packageId' matching Business Central $bcVersion was found on the MSSymbols feed. This dependency is declared in an app.json being compiled. Set symbolsSource to 'artifact' if this app cannot be built from NuGet symbols."
+                }
                 Write-Host "::Notice::No symbols package found for $packageId; skipping"
                 continue
             }
