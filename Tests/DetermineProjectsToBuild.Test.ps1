@@ -1464,3 +1464,17 @@ Describe "Get-UnmodifiedAppsFromBaselineWorkflowRun" {
         Remove-Item $baseFolder -Force -Recurse
     }
 }
+
+Describe "DetermineProjectsToBuild.Action.ps1 startup cost" {
+    It 'does not download and import BcContainerHelper' {
+        # This action only enumerates settings/folders and never calls a BcContainerHelper
+        # cmdlet, so importing it costs ~20s of network+extract+import for nothing. This is
+        # a deliberate AL-Go fork patch (StefanMaron/AL-Go) on top of an otherwise-unmodified
+        # Microsoft file — if an upstream merge reintroduces an active call, this test should
+        # fail so it gets caught in review instead of silently regressing build time.
+        $actionScriptPath = Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.Action.ps1" -Resolve
+        $activeLines = Get-Content -Path $actionScriptPath -Encoding UTF8 | Where-Object { $_ -notmatch '^\s*#' }
+
+        $activeLines | Should -Not -Match 'DownloadAndImportBcContainerHelper' -Because 'this action does not use any BcContainerHelper cmdlet'
+    }
+}
