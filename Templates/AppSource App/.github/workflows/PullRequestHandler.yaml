@@ -109,7 +109,7 @@ jobs:
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsCount > 0
     strategy:
       matrix:
-        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions }}
+        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsCount > 0 && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensions || fromJson('[{}]') }}
       fail-fast: false
     name: Build ${{ matrix.projectName }} (${{ matrix.buildMode }})
     uses: ./.github/workflows/_BuildALGoProject.yaml
@@ -137,7 +137,7 @@ jobs:
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0
     strategy:
       matrix:
-        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux }}
+        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0 && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux || fromJson('[{}]') }}
       fail-fast: false
     name: Build ${{ matrix.projectName }} (${{ matrix.buildMode }}, Linux fast lane)
     uses: ./.github/workflows/_BuildALGoProjectLinux.yaml
