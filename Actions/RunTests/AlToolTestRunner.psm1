@@ -13,9 +13,8 @@
          host-side from the container name via BcContainerHelper, and generates a throw-away AL
          project with a launch.json so `al runtests` has connection settings.
       3. Enumerates the app's test codeunits + methods via Get-TestsFromBcContainer.
-      4. Runs `al runtests` batched in one `--testplan` invocation (single auth/connect), with an
-         isolated per-codeunit fallback/rerun pass for any codeunit that produced no result or a
-         failure.
+      4. Runs `al runtests <codeunitId> --testmethods` once per test codeunit (each in its own
+         session), with a rerun pass that retries any method that produced no result or a failure.
       5. Emits a JUnit results file matching the exact schema BcContainerHelper produces, so the
          downstream AnalyzeTests step keeps working unchanged.
 
@@ -411,80 +410,6 @@ function ConvertFrom-AlRunTestsOutput {
 
 <#
 .SYNOPSIS
-    Splits batched `al runtests --testplan --raw` output into per-codeunit result maps.
-.DESCRIPTION
-    The batched runner emits one block per codeunit, each preceded by a "===== Codeunit <id> ====="
-    marker and containing a "Results:" section. This splits on the marker and parses each block with
-    ConvertFrom-AlRunTestsOutput, keyed by codeunit id.
-.PARAMETER OutputLines
-    The lines of batched `al runtests --raw` output.
-.OUTPUTS
-    [hashtable] "<codeunitId>" -> (method-name -> @{ Outcome; Ms; Message; Stacktrace })
-#>
-function ConvertFrom-AlBatchOutput {
-    param(
-        [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]] $OutputLines
-    )
-
-    $byCodeunit = @{}
-    $markerRegex = '^\s*=====\s*Codeunit\s+(\d+)\s*=====\s*$'
-
-    $currentId = $null
-    $currentLines = New-Object System.Collections.Generic.List[string]
-
-    $flush = {
-        if ($null -ne $currentId) {
-            $byCodeunit["$currentId"] = ConvertFrom-AlRunTestsOutput -OutputLines @($currentLines.ToArray())
-        }
-    }
-
-    foreach ($line in $OutputLines) {
-        $m = [regex]::Match($line, $markerRegex)
-        if ($m.Success) {
-            & $flush
-            $currentId = $m.Groups[1].Value
-            $currentLines = New-Object System.Collections.Generic.List[string]
-            continue
-        }
-        if ($null -ne $currentId) { $currentLines.Add($line) }
-    }
-    & $flush
-
-    return $byCodeunit
-}
-
-<#
-.SYNOPSIS
-    Serializes a batch of test groups into the JSON array the al `--testplan` option expects.
-.DESCRIPTION
-    Built by hand (not ConvertTo-Json) because PowerShell's ConvertTo-Json collapses single-element
-    arrays to a scalar/object - a one-codeunit plan would become {..} not [{..}], and a one-method
-    list "M" not ["M"] - which the al tool rejects. This guarantees arrays at both levels for any count.
-.PARAMETER Groups
-    Array of @{ Id; Methods } describing the codeunits (and enabled methods) to run.
-.OUTPUTS
-    [string] JSON array: [{ "codeunitId": N, "testMethods": [ ... ] }, ...]
-#>
-function ConvertTo-AlTestPlanJson {
-    param(
-        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $Groups
-    )
-
-    $sb = New-Object System.Text.StringBuilder
-    [void]$sb.Append('[')
-    $firstGroup = $true
-    foreach ($g in $Groups) {
-        if (-not $firstGroup) { [void]$sb.Append(',') }
-        $firstGroup = $false
-        $methodsJson = @($g.Methods | ForEach-Object { "$_" | ConvertTo-Json -Compress })
-        [void]$sb.Append(('{{"codeunitId":{0},"testMethods":[{1}]}}' -f [int]$g.Id, ($methodsJson -join ',')))
-    }
-    [void]$sb.Append(']')
-    return $sb.ToString()
-}
-
-<#
-.SYNOPSIS
     Runs `al runtests` for one codeunit and returns the parsed per-method results plus raw output.
 .PARAMETER CodeunitId
     The codeunit id to run.
@@ -546,76 +471,6 @@ function Invoke-AlRunTestsForCodeunit {
         ElapsedSec = [Math]::Round($sw.Elapsed.TotalSeconds, 3)
         Raw        = ($lines -join "`n")
         Connected  = $connected
-    }
-}
-
-<#
-.SYNOPSIS
-    Runs a batch of codeunits in ONE `al runtests --testplan` invocation (single connection + auth +
-    session) and returns per-codeunit results. This removes the per-codeunit connect/auth tax.
-.PARAMETER Groups
-    Array of @{ Id; Methods } describing the codeunits (and enabled methods) to run.
-.PARAMETER ProjectPath
-    The throw-away AL project folder.
-.PARAMETER Company
-    The company to run against.
-.PARAMETER Tenant
-    The tenant to connect to.
-.PARAMETER Connection
-    The connection hashtable produced by Get-AlToolConnection.
-.OUTPUTS
-    [hashtable] @{ Results ("<id>"->method map); ElapsedSec; Connected; Raw }
-#>
-function Invoke-AlBatchRunTests {
-    param(
-        [Parameter(Mandatory = $true)][object[]] $Groups,
-        [Parameter(Mandatory = $true)][string] $ProjectPath,
-        [Parameter(Mandatory = $true)][string] $Company,
-        [Parameter(Mandatory = $true)][string] $Tenant,
-        [Parameter(Mandatory = $true)][hashtable] $Connection
-    )
-
-    # Write the test plan as a JSON file (avoids command-line length limits with many codeunits).
-    $planFile = Join-Path ([System.IO.Path]::GetTempPath()) ("altool-plan-" + [System.Guid]::NewGuid().ToString('N') + ".json")
-    Set-Content -Path $planFile -Value (ConvertTo-AlTestPlanJson -Groups $Groups) -Encoding UTF8
-
-    try {
-        $alArgs = @(
-            'runtests',
-            '--testplan', $planFile,
-            '--project', $ProjectPath,
-            '--company', $Company,
-            '--server', $Connection.Server,
-            '--serverinstance', $Connection.ServerInstance,
-            '--port', "$($Connection.Port)",
-            '--environmenttype', 'OnPrem',
-            '--authentication', 'UserPassword',
-            '--tenant', $Tenant,
-            '--raw'
-        )
-
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        $output = & al @alArgs 2>&1
-        $sw.Stop()
-
-        $lines = @($output | ForEach-Object { "$_" })
-        $connected = ($lines | Where-Object { $_ -match 'Test run completed:' }).Count -gt 0
-        $parsed = ConvertFrom-AlBatchOutput -OutputLines $lines
-
-        if ($connected -and $parsed.Count -eq 0) {
-            Write-Host "::warning::batched al runtests connected but produced no parseable per-codeunit results. Raw output follows:"
-            Write-Host ($lines -join "`n")
-        }
-
-        return @{
-            Results    = $parsed
-            ElapsedSec = [Math]::Round($sw.Elapsed.TotalSeconds, 3)
-            Raw        = ($lines -join "`n")
-            Connected  = $connected
-        }
-    }
-    finally {
-        Remove-Item $planFile -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -732,14 +587,14 @@ function Add-JUnitTestSuite {
 .DESCRIPTION
     The built-in default test runner for the RunTests action. Expects $Parameters to contain
     containerName, credential, extensionId and (optionally) tenant, companyName, appName,
-    disabledTests and JUnitResultFileName. Runs the app's codeunits batched in one `--testplan`
-    invocation, then re-runs any codeunit that produced no result or a failure once in isolation,
+    disabledTests and JUnitResultFileName. Runs each of the app's test codeunits in its own
+    `al runtests` invocation, then re-runs any method that produced no result or a failure once,
     and appends a BcContainerHelper-schema JUnit result. Returns whether every executed method
     passed.
 .PARAMETER Parameters
     The BcContainerHelper-shaped test parameters built by Invoke-AlGoTestRun.
 .OUTPUTS
-    [bool] $true if all methods passed and every codeunit connected; $false otherwise.
+    [bool] $true if all executed methods passed; $false otherwise.
 #>
 function Invoke-AlToolTestRun {
     param(
@@ -813,24 +668,26 @@ function Invoke-AlToolTestRun {
         $merged = @{}         # merged[codeunitId] = @{ method -> result }
         $totalElapsed = 0.0
 
-        # BATCHED execution: run every codeunit for this app in a SINGLE `al runtests --testplan`
-        # invocation (one auth + one hub connection + one server Initialize).
-        $groups = @($codeunits | ForEach-Object { @{ Id = "$($_.Id)"; Methods = @($_.Tests | ForEach-Object { "$_" }) } })
-
-        $batch = Invoke-AlBatchRunTests -Groups $groups -ProjectPath $projectPath -Company $company `
-            -Tenant $tenant -Connection $connection
-        if (-not $batch.Connected) {
-            Write-Host "::warning::batched al runtests did not complete for app '$appName'. Raw output:"
-            Write-Host $batch.Raw
-            $allPassed = $false
+        # PRIMARY execution: run each test codeunit in its OWN `al runtests <id> --testmethods`
+        # invocation (a fresh session per codeunit). The official altool has no batch/plan mode,
+        # so per-codeunit is the only supported execution model.
+        foreach ($cu in $codeunits) {
+            $cid = "$($cu.Id)"
+            $methods = @($cu.Tests | ForEach-Object { "$_" })
+            $run = Invoke-AlRunTestsForCodeunit -CodeunitId $cid -Methods $methods `
+                -ProjectPath $projectPath -Company $company -Tenant $tenant -Connection $connection
+            $totalElapsed += [double]$run.ElapsedSec
+            if (-not $run.Connected) {
+                Write-Host "::warning::al runtests did not complete for codeunit $cid ('$($cu.Name)') in app '$appName'. Raw output:"
+                Write-Host $run.Raw
+            }
+            $merged[$cid] = $run.Results
         }
-        foreach ($k in $batch.Results.Keys) { $merged[$k] = $batch.Results[$k] }
-        $totalElapsed = [double]$batch.ElapsedSec
 
-        # Isolated fallback + rerun pass. Each affected codeunit runs in its OWN `al runtests` call
-        # (a fresh session): a no-result codeunit (a state-sensitive codeunit can produce no results
-        # mid-batch) is retried for correctness, and a failed codeunit is retried once to recover
-        # flaky failures (mirroring BCH's rerun of failed tests).
+        # Rerun-on-failure pass. Each affected codeunit runs again in its OWN `al runtests` call
+        # (a fresh session): a method that produced no result (a state-sensitive codeunit can leave
+        # a method unreported) is retried for correctness, and a failed method is retried once to
+        # recover flaky failures (mirroring BCH's rerun of failed tests).
         $isoGroups = @()
         foreach ($cu in $codeunits) {
             $cid = "$($cu.Id)"
@@ -845,7 +702,7 @@ function Invoke-AlToolTestRun {
             }
         }
         if ($isoGroups.Count -gt 0) {
-            Write-Host ("isolated fallback/rerun: {0} codeunit(s) (each in its own session)" -f $isoGroups.Count)
+            Write-Host ("rerun pass: {0} codeunit(s) with unreported or failed method(s) (each in its own session)" -f $isoGroups.Count)
             foreach ($g in $isoGroups) {
                 $iso = Invoke-AlRunTestsForCodeunit -CodeunitId $g.Id -Methods $g.Methods `
                     -ProjectPath $projectPath -Company $company -Tenant $tenant -Connection $connection
@@ -918,6 +775,5 @@ function Invoke-AlToolTestRun {
 }
 
 Export-ModuleMember -Function Install-AlTool, Get-AlToolConnection, New-AlToolProject, Get-AlToolCompany, `
-    Get-DisabledTestKeySet, Get-AlToolTestCodeunits, ConvertFrom-AlRunTestsOutput, ConvertFrom-AlBatchOutput, `
-    ConvertTo-AlTestPlanJson, Invoke-AlRunTestsForCodeunit, Invoke-AlBatchRunTests, `
-    Add-JUnitTestSuite, Invoke-AlToolTestRun
+    Get-DisabledTestKeySet, Get-AlToolTestCodeunits, ConvertFrom-AlRunTestsOutput, `
+    Invoke-AlRunTestsForCodeunit, Add-JUnitTestSuite, Invoke-AlToolTestRun

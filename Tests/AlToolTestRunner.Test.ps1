@@ -53,53 +53,6 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
     }
 
-    Context 'ConvertFrom-AlBatchOutput' {
-        It 'Splits batched output into per-codeunit result maps' {
-            $lines = @(
-                '===== Codeunit 130001 =====',
-                'Results:',
-                'PASS TestA (3ms)',
-                '===== Codeunit 130002 =====',
-                'Results:',
-                'FAIL TestB (7ms)',
-                '  boom',
-                'AL Callstack:',
-                '  stack'
-            )
-
-            $byCodeunit = ConvertFrom-AlBatchOutput -OutputLines $lines
-
-            $byCodeunit.Keys.Count | Should -Be 2
-            $byCodeunit['130001']['TestA'].Outcome | Should -Be 'Pass'
-            $byCodeunit['130002']['TestB'].Outcome | Should -Be 'Fail'
-        }
-    }
-
-    Context 'ConvertTo-AlTestPlanJson' {
-        It 'Emits arrays at both levels for a single codeunit with a single method' {
-            $json = ConvertTo-AlTestPlanJson -Groups @(@{ Id = '130001'; Methods = @('OnlyTest') })
-
-            $json | Should -Match '^\[\{'
-            $json | Should -Match '\}\]$'
-            $parsed = $json | ConvertFrom-Json
-            @($parsed).Count | Should -Be 1
-            $parsed[0].codeunitId | Should -Be 130001
-            @($parsed[0].testMethods).Count | Should -Be 1
-            $parsed[0].testMethods[0] | Should -Be 'OnlyTest'
-        }
-
-        It 'Serializes multiple codeunits and methods' {
-            $groups = @(
-                @{ Id = '1'; Methods = @('A', 'B') },
-                @{ Id = '2'; Methods = @('C') }
-            )
-            $parsed = (ConvertTo-AlTestPlanJson -Groups $groups) | ConvertFrom-Json
-            @($parsed).Count | Should -Be 2
-            @($parsed[0].testMethods).Count | Should -Be 2
-            $parsed[1].codeunitId | Should -Be 2
-        }
-    }
-
     Context 'Get-DisabledTestKeySet' {
         It 'Builds per-method keys and whole-codeunit sets from a wildcard' {
             $disabled = @(
