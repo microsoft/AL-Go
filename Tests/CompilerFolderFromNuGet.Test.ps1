@@ -147,4 +147,64 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             { Test-SymbolsFromNuGetSupported -Settings $settings -ProjectFolder $script:projectFolder } | Should -Not -Throw
         }
     }
+
+    Describe 'Get-BcSymbolsPackageNameForDependency' {
+        It 'removes spaces from the app name and appends the app id' {
+            Get-BcSymbolsPackageNameForDependency -Name 'Library Assert' -Id 'dd0be2ea-f733-4d65-bb34-a28f4624fb14' -Country 'us' |
+                Should -Be 'Microsoft.LibraryAssert.US.symbols.dd0be2ea-f733-4d65-bb34-a28f4624fb14'
+        }
+
+        It 'omits the country segment for w1, like the application package' {
+            Get-BcSymbolsPackageNameForDependency -Name 'Test Runner' -Id '23de40a6-dfe8-4f80-80db-d70f83ce8caf' -Country 'w1' |
+                Should -Be 'Microsoft.TestRunner.symbols.23de40a6-dfe8-4f80-80db-d70f83ce8caf'
+        }
+
+        It 'handles names with punctuation, verified against the feed' {
+            Get-BcSymbolsPackageNameForDependency -Name 'Error Messages with Recommendations' -Id '64c9d5e2-7744-4866-bc0e-5ebc2898e651' -Country 'us' |
+                Should -Be 'Microsoft.ErrorMessageswithRecommendations.US.symbols.64c9d5e2-7744-4866-bc0e-5ebc2898e651'
+        }
+    }
+
+    Describe 'Get-MicrosoftDependencyPackages' {
+        BeforeAll {
+            $script:depFolder = Join-Path ([System.IO.Path]::GetTempPath()) "msdeps_$([GUID]::NewGuid())"
+            New-Item (Join-Path $script:depFolder 'TestApp') -ItemType Directory -Force | Out-Null
+            New-Item (Join-Path $script:depFolder 'PlainApp') -ItemType Directory -Force | Out-Null
+            @'
+{ "name": "TestApp", "dependencies": [
+    { "id": "dd0be2ea-f733-4d65-bb34-a28f4624fb14", "name": "Library Assert", "publisher": "Microsoft", "version": "28.0.0.0" },
+    { "id": "23de40a6-dfe8-4f80-80db-d70f83ce8caf", "name": "Test Runner", "publisher": "Microsoft", "version": "28.0.0.0" },
+    { "id": "99999999-9999-9999-9999-999999999999", "name": "Some Partner App", "publisher": "Contoso", "version": "1.0.0.0" }
+] }
+'@ | Set-Content (Join-Path $script:depFolder 'TestApp/app.json') -Encoding UTF8
+            '{ "name": "PlainApp" }' | Set-Content (Join-Path $script:depFolder 'PlainApp/app.json') -Encoding UTF8
+        }
+
+        AfterAll { Remove-Item $script:depFolder -Recurse -Force -ErrorAction SilentlyContinue }
+
+        It 'returns a package for every Microsoft dependency' {
+            $packages = @(Get-MicrosoftDependencyPackages -AppFolders @((Join-Path $script:depFolder 'TestApp')) -Country 'us')
+            $packages.Count | Should -Be 2
+            $packages | Should -Contain 'Microsoft.LibraryAssert.US.symbols.dd0be2ea-f733-4d65-bb34-a28f4624fb14'
+            $packages | Should -Contain 'Microsoft.TestRunner.US.symbols.23de40a6-dfe8-4f80-80db-d70f83ce8caf'
+        }
+
+        It 'ignores non-Microsoft dependencies, which AL-Go resolves separately' {
+            $packages = @(Get-MicrosoftDependencyPackages -AppFolders @((Join-Path $script:depFolder 'TestApp')) -Country 'us')
+            ($packages -join ' ') | Should -Not -Match 'Contoso|Some'
+        }
+
+        It 'returns nothing for an app with no dependencies' {
+            @(Get-MicrosoftDependencyPackages -AppFolders @((Join-Path $script:depFolder 'PlainApp')) -Country 'us').Count | Should -Be 0
+        }
+
+        It 'deduplicates across app folders' {
+            $folders = @((Join-Path $script:depFolder 'TestApp'), (Join-Path $script:depFolder 'TestApp'))
+            @(Get-MicrosoftDependencyPackages -AppFolders $folders -Country 'us').Count | Should -Be 2
+        }
+
+        It 'tolerates a folder with no app.json' {
+            @(Get-MicrosoftDependencyPackages -AppFolders @((Join-Path $script:depFolder 'Nope')) -Country 'us').Count | Should -Be 0
+        }
+    }
 }

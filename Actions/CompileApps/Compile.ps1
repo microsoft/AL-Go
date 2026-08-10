@@ -127,7 +127,7 @@ try {
             -ArtifactUrl $artifact `
             -CompilerFolder (Join-Path $bcContainerHelperConfig.hostHelperFolder "compiler/$($containerName)compiler") `
             -VsixFile $settings.vsixFile `
-            -IncludeTestToolkit:(($settings.testFolders.Count + $settings.bcptTestFolders.Count) -gt 0)
+            -AppFolders @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | ForEach-Object { Join-Path $projectFolder $_ })
     }
     else {
         $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters

@@ -28,18 +28,8 @@
 $script:MSSymbolsFeedUrl = 'https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/MSSymbols/nuget/v3/index.json'
 $script:NuGetOrgFlatContainerUrl = 'https://api.nuget.org/v3-flatcontainer'
 
-# Test libraries that New-BcCompilerFolder copies out of the artifact when they are
-# present. Mirrored here so test apps compile identically. Keyed by the NuGet package
-# name prefix on the MSSymbols feed.
-$script:TestToolkitPackages = @(
-    'Microsoft.TestRunner'
-    'Microsoft.LibraryAssert'
-    'Microsoft.Any'
-    'Microsoft.PermissionsMock'
-    'Microsoft.SystemApplicationTestLibrary'
-    'Microsoft.BusinessFoundationTestLibraries'
-    'Microsoft.ApplicationTestLibrary'
-)
+# Publisher name Microsoft uses on the MSSymbols feed
+$script:MicrosoftPublisher = 'Microsoft'
 
 <#
 .SYNOPSIS
@@ -545,6 +535,112 @@ function Get-BcApplicationSymbolsPackageName {
 
 <#
 .SYNOPSIS
+    Builds the MSSymbols package name for a Microsoft app dependency.
+.DESCRIPTION
+    Microsoft publishes one symbols package per app per country, named
+
+        Microsoft.<AppNameWithoutSpaces>[.<COUNTRY>].symbols.<appId>
+
+    with the country segment omitted for w1, matching the application package. Verified
+    against the feed for Test Runner, Library Assert, Library Variable Storage,
+    Permissions Mock, Application Test Library, Business Foundation Test Libraries and
+    Error Messages with Recommendations.
+
+    Both halves come straight out of the dependency entry in app.json, so this resolves
+    any Microsoft dependency an app declares - not a curated list of the ones we thought
+    of. That is the part New-BcCompilerFolder gets wrong: it copies test libraries out of
+    the artifact by filename glob, which breaks whenever Microsoft moves or renames one.
+.PARAMETER Name
+    The dependency's name, as declared in app.json.
+.PARAMETER Id
+    The dependency's app id.
+.PARAMETER Country
+    Localization of the build.
+#>
+function Get-BcSymbolsPackageNameForDependency {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Name,
+        [Parameter(Mandatory = $true)]
+        [string] $Id,
+        [Parameter(Mandatory = $true)]
+        [string] $Country
+    )
+
+    $segment = $Name -replace ' ', ''
+    if ($Country -eq 'w1' -or $Country -eq '') {
+        return "Microsoft.$segment.symbols.$Id"
+    }
+    return "Microsoft.$segment.$($Country.ToUpperInvariant()).symbols.$Id"
+}
+
+<#
+.SYNOPSIS
+    Collects the Microsoft app dependencies declared by a set of app folders.
+.DESCRIPTION
+    Only dependencies published by Microsoft are returned - everything else is resolved
+    by AL-Go's existing dependency handling (appDependencyProbingPaths, project
+    dependencies, trusted NuGet feeds) and copied into the symbols folder separately.
+
+    The Application and Platform dependencies are implicit in every app and are already
+    staged from the application symbols package, so they are not returned here.
+.PARAMETER AppFolders
+    Absolute paths of folders containing an app.json.
+.PARAMETER Country
+    Localization of the build.
+.OUTPUTS
+    Array of MSSymbols package ids.
+#>
+function Get-MicrosoftDependencyPackages {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]] $AppFolders,
+        [Parameter(Mandatory = $true)]
+        [string] $Country
+    )
+
+    $packages = @()
+    foreach ($appFolder in $AppFolders) {
+        $appJsonFile = Join-Path $appFolder 'app.json'
+        if (-not (Test-Path $appJsonFile)) {
+            continue
+        }
+        $appJson = Get-Content -Path $appJsonFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($appJson.PSObject.Properties.Name -notcontains 'dependencies') {
+            continue
+        }
+        foreach ($dependency in @($appJson.dependencies)) {
+            if (-not $dependency) {
+                continue
+            }
+            # app.json has used both casings for these properties over the years
+            $publisher = ''
+            foreach ($key in @('publisher', 'Publisher')) {
+                if ($dependency.PSObject.Properties.Name -contains $key) { $publisher = "$($dependency.$key)" }
+            }
+            if ($publisher -ne $script:MicrosoftPublisher) {
+                continue
+            }
+            $name = ''
+            foreach ($key in @('name', 'Name')) {
+                if ($dependency.PSObject.Properties.Name -contains $key) { $name = "$($dependency.$key)" }
+            }
+            $id = ''
+            foreach ($key in @('id', 'appId', 'Id', 'AppId')) {
+                if ($dependency.PSObject.Properties.Name -contains $key) { $id = "$($dependency.$key)" }
+            }
+            if ((-not $name) -or (-not $id)) {
+                continue
+            }
+            $packages += Get-BcSymbolsPackageNameForDependency -Name $name -Id $id -Country $Country
+        }
+    }
+    return @($packages | Select-Object -Unique)
+}
+
+<#
+.SYNOPSIS
     Throws when a project cannot be built with symbols from NuGet.
 .DESCRIPTION
     Microsoft's NuGet feeds carry symbol packages but no service tier assemblies, so the
@@ -601,8 +697,8 @@ function Test-SymbolsFromNuGetSupported {
     Business Central artifact. See the module header for the layout and the rationale.
 
     Only the symbols an app actually needs are staged: the closure declared by the
-    application symbols package, plus - when IncludeTestToolkit is set - the test
-    libraries a test app compiles against.
+    application symbols package, plus whatever Microsoft dependencies the apps being
+    compiled declare in their app.json (the test toolkit, for a test app).
 .PARAMETER ArtifactUrl
     The resolved artifact URL. Used only to derive the Business Central version and
     country; nothing is downloaded from it.
@@ -611,8 +707,10 @@ function Test-SymbolsFromNuGetSupported {
 .PARAMETER VsixFile
     The vsixFile setting: '', 'default', 'latest' or 'preview'. A direct URL is not
     supported here and must fall back to the artifact path.
-.PARAMETER IncludeTestToolkit
-    Stage the Microsoft test libraries as well, for repositories that compile test apps.
+.PARAMETER AppFolders
+    Absolute paths of the app folders being compiled. Their app.json dependencies decide
+    which Microsoft symbol packages are staged, so a test app pulls the test toolkit and
+    nothing else pulls it.
 .OUTPUTS
     The path to the created compiler folder.
 #>
@@ -625,7 +723,8 @@ function New-BcCompilerFolderFromNuGet {
         [Parameter(Mandatory = $false)]
         [string] $VsixFile = '',
         [Parameter(Mandatory = $false)]
-        [switch] $IncludeTestToolkit
+        [AllowEmptyCollection()]
+        [string[]] $AppFolders = @()
     )
 
     $parts = $ArtifactUrl.Split('?')[0].Split('/')
@@ -683,10 +782,11 @@ function New-BcCompilerFolderFromNuGet {
     foreach ($dependency in (Get-NuGetPackageDependencies -PackageFile $applicationFile)) {
         $pending += $dependency
     }
-    if ($IncludeTestToolkit) {
-        foreach ($package in $script:TestToolkitPackages) {
-            $pending += $package
-        }
+    # Whatever the apps themselves declare a Microsoft dependency on - test toolkit
+    # included - is seeded here and resolved through the same closure walk.
+    foreach ($package in (Get-MicrosoftDependencyPackages -AppFolders $AppFolders -Country $country)) {
+        Write-Host "Declared Microsoft dependency: $package"
+        $pending += $package
     }
 
     while ($pending.Count -gt 0) {
@@ -792,5 +892,6 @@ Export-ModuleMember -Function Test-OnWindows, Get-ALCompilerPackageName, Add-ALT
     Select-BcSymbolsVersion, Get-NuGetFlatContainerUrl, Get-NuGetPackageVersions, `
     Get-NuGetPackageVersionsInParallel, Get-FilesInParallel, Get-NuGetPackageDependencies, `
     Expand-AppsFromNuGetPackage, Select-NuGetVersionInRange, Select-ALCompilerVersion, `
-    Get-BcApplicationSymbolsPackageName, Test-SymbolsFromNuGetSupported, `
+    Get-BcApplicationSymbolsPackageName, Get-BcSymbolsPackageNameForDependency, `
+    Get-MicrosoftDependencyPackages, Test-SymbolsFromNuGetSupported, `
     New-BcCompilerFolderFromNuGet
