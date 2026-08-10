@@ -6,7 +6,9 @@
     [Parameter(HelpMessage = "Name of the project to build", Mandatory = $true)]
     [string] $project,
     [Parameter(HelpMessage = "Id of the baseline workflow run, from which to download artifacts if build is skipped", Mandatory = $false)]
-    [string] $baselineWorkflowRunId
+    [string] $baselineWorkflowRunId,
+    [Parameter(HelpMessage = "Build mode used when building the artifacts", Mandatory = $false)]
+    [string] $buildMode = 'Default'
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -22,16 +24,31 @@ if (!$buildIt) {
     # Set buildIt to true if the download isn't successful
     New-Item $buildArtifactFolder -ItemType Directory | Out-Null
     $buildIt = $true
+    # Artifacts are named with a build mode prefix (empty for the 'Default' build mode), matching CalculateArtifactNames.ps1.
+    # Download the artifacts for the same build mode as the current dimension, so that a skipped (project, buildMode)
+    # re-publishes the correct build mode-specific apps instead of always re-publishing the 'Default' build mode apps.
+    $buildModePrefix = ''
+    if ($buildMode -and $buildMode -ne 'Default') {
+        $buildModePrefix = $buildMode
+    }
     foreach($mask in @('Apps','TestApps','Dependencies','PowerPlatformSolution')) {
-        $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $mask -projects $project
+        # PowerPlatformSolution is always built with the 'Default' build mode, so its artifact is never build mode-prefixed.
+        if ($mask -eq 'PowerPlatformSolution') {
+            $artifactMask = $mask
+        }
+        else {
+            $artifactMask = "$buildModePrefix$mask"
+        }
+        $artifact = GetArtifactsFromWorkflowRun -workflowRun $baselineWorkflowRunId -token $token -api_url $env:GITHUB_API_URL -repository $env:GITHUB_REPOSITORY -mask $artifactMask -projects $project
         if ($artifact) {
-            Write-Host "Artifact found for mask $mask"
+            Write-Host "Artifact found for mask $artifactMask"
             if ($artifact -is [Array]) {
-                throw "Multiple artifacts found with mask $mask for project $project"
+                throw "Multiple artifacts found with mask $artifactMask for project $project"
             }
             $file = DownloadArtifact -path $buildArtifactFolder -token $token -artifact $artifact
             if ($file) {
-                Write-Host "Artifact downloaded for mask $mask"
+                Write-Host "Artifact downloaded for mask $artifactMask"
+                # Extract into the build mode-agnostic folder name (e.g. 'Apps'), as expected by the subsequent build steps.
                 $thisArtifactFolder = Join-Path $buildArtifactFolder $mask
                 Expand-Archive -Path $file -DestinationPath $thisArtifactFolder -Force
                 Remove-Item -Path $file -Force
