@@ -116,8 +116,22 @@ try {
         & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
     }
 
-    # Create the compiler folder
-    $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
+    # Create the compiler folder, either from Microsoft's NuGet feeds or from the artifact
+    if ($settings.symbolsSource -eq 'nuGet') {
+        Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompilerFolderFromNuGet.psm1" -Resolve) -DisableNameChecking
+        Test-SymbolsFromNuGetSupported -Settings $settings -ProjectFolder $projectFolder
+        if ($scriptOverrides['PreNewBcCompilerFolder']) {
+            OutputNotice -message "PreNewBcCompilerFolder is not applied when symbolsSource is 'nuGet' - no artifact is downloaded."
+        }
+        $compilerFolder = New-BcCompilerFolderFromNuGet `
+            -ArtifactUrl $artifact `
+            -CompilerFolder (Join-Path $bcContainerHelperConfig.hostHelperFolder "compiler/$($containerName)compiler") `
+            -VsixFile $settings.vsixFile `
+            -IncludeTestToolkit:(($settings.testFolders.Count + $settings.bcptTestFolders.Count) -gt 0)
+    }
+    else {
+        $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
+    }
 
     # Run PostNewBcCompilerFolder hook if available
     if ($scriptOverrides['PostNewBcCompilerFolder']) {
@@ -234,7 +248,10 @@ try {
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
-        AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
+        # NuGet carries no service tier assemblies. Only apps targeting OnPrem can use .NET
+        # interop, and Test-SymbolsFromNuGetSupported has already rejected those, so there is
+        # nothing to probe for here.
+        AssemblyProbingPaths        = $(if ($settings.symbolsSource -eq 'nuGet') { @() } else { Get-AssemblyProbingPaths -CompilerFolder $compilerFolder })
         PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism

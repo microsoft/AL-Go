@@ -532,6 +532,12 @@
             },
             "description": "An array of build modes. See https://aka.ms/ALGoSettings#buildmodes"
         },
+        "symbolsSource": {
+            "type": "string",
+            "enum": [ "artifact", "nuGet" ],
+            "default": "artifact",
+            "description": "PREVIEW: Where to get the Microsoft symbols and the AL compiler from when compiling without a container. 'artifact' downloads the Business Central artifact (default, current behavior). 'nuGet' resolves only the symbols the project depends on from Microsoft's public MSSymbols feed and the AL compiler from nuget.org, which avoids downloading the artifact entirely. Requires workspaceCompilation. Not supported for apps targeting OnPrem or Internal, or with a vsixFile download URL. See https://aka.ms/ALGoSettings#symbolsSource"
+        },
         "useCompilerFolder": {
             "type": "boolean",
             "description": "Use the compiler folder instead of a BC container. See https://aka.ms/ALGoSettings#usecompilerfolder"
