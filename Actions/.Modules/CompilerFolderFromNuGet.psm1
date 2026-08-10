@@ -159,7 +159,24 @@ function Get-NuGetFlatContainerUrl {
         [string] $FeedIndexUrl
     )
 
-    $index = Invoke-RestMethod -Uri $FeedIndexUrl -UseBasicParsing
+    $index = $null
+    $lastError = ''
+    foreach ($delay in @(0, 2, 5, 10)) {
+        if ($delay -gt 0) {
+            Write-Host "::Notice::Could not read NuGet feed index '$FeedIndexUrl' ($lastError); retrying in $delay seconds"
+            Start-Sleep -Seconds $delay
+        }
+        try {
+            $index = Invoke-RestMethod -Uri $FeedIndexUrl -UseBasicParsing
+            break
+        }
+        catch {
+            $lastError = $_.Exception.Message
+        }
+    }
+    if ($null -eq $index) {
+        throw "Failed to read the NuGet feed index '$FeedIndexUrl' after 4 attempts: $lastError"
+    }
     $resource = @($index.resources | Where-Object { $_.'@type' -eq 'PackageBaseAddress/3.0.0' })
     if ($resource.Count -eq 0) {
         throw "NuGet feed '$FeedIndexUrl' does not expose a PackageBaseAddress/3.0.0 resource"
@@ -170,6 +187,11 @@ function Get-NuGetFlatContainerUrl {
 <#
 .SYNOPSIS
     Lists the available versions of a package on a NuGet v3 flat container.
+.DESCRIPTION
+    A 404 means the package is genuinely not on the feed and yields an empty list. Any
+    other failure is treated as transient and retried - the public feeds return 503 often
+    enough that swallowing it would turn a working build into a confusing "no symbols
+    package found" error.
 .OUTPUTS
     Array of version strings. Empty when the package does not exist on the feed.
 #>
@@ -181,17 +203,8 @@ function Get-NuGetPackageVersions {
         [string] $PackageId
     )
 
-    $url = "$FlatContainerUrl/$($PackageId.ToLowerInvariant())/index.json"
-    try {
-        $response = Invoke-RestMethod -Uri $url -UseBasicParsing
-    }
-    catch {
-        return @()
-    }
-    if (-not $response.versions) {
-        return @()
-    }
-    return @($response.versions)
+    $result = Get-NuGetPackageVersionsInParallel -FlatContainerUrl $FlatContainerUrl -PackageIds @($PackageId)
+    return @($result[$PackageId.ToLowerInvariant()])
 }
 
 <#
@@ -226,29 +239,68 @@ function Get-NuGetPackageVersionsInParallel {
     $httpClient.Timeout = [System.TimeSpan]::FromMinutes(2)
     $httpClient.DefaultRequestHeaders.Add('User-Agent', 'AL-Go')
     try {
-        $tasks = @()
+        $pending = @()
         foreach ($packageId in $PackageIds) {
             $id = $packageId.ToLowerInvariant()
             if ($result.ContainsKey($id)) {
                 continue
             }
             $result[$id] = @()
-            $tasks += , @{
-                Id   = $id
-                Task = $httpClient.GetStringAsync("$FlatContainerUrl/$id/index.json")
+            $url = "$FlatContainerUrl/$id/index.json"
+            $pending += , @{
+                Id    = $id
+                Url   = $url
+                Task  = $httpClient.GetAsync($url)
+                Error = ''
             }
         }
-        foreach ($entry in $tasks) {
-            try {
-                $json = $entry.Task.GetAwaiter().GetResult() | ConvertFrom-Json
-                if ($json.versions) {
-                    $result[$entry.Id] = @($json.versions)
+
+        # First pass runs fully in parallel; only the lookups that failed with something
+        # other than 404 are fired again, so a flaky feed costs a retry and not the build.
+        foreach ($delay in @(0, 2, 5, 10)) {
+            if ($pending.Count -eq 0) {
+                break
+            }
+            if ($delay -gt 0) {
+                Write-Host "::Notice::$($pending.Count) NuGet version lookup(s) failed ($($pending[0].Error)); retrying in $delay seconds"
+                Start-Sleep -Seconds $delay
+                foreach ($entry in $pending) {
+                    $entry.Task = $httpClient.GetAsync($entry.Url)
                 }
             }
-            catch {
-                # A package that is not on the feed is not an error here - the caller decides
-                $result[$entry.Id] = @()
+            $failed = @()
+            foreach ($entry in $pending) {
+                try {
+                    $response = $entry.Task.GetAwaiter().GetResult()
+                    try {
+                        if ($response.StatusCode -eq [System.Net.HttpStatusCode]::NotFound) {
+                            # Genuinely not on the feed - the caller decides whether that matters
+                            continue
+                        }
+                        if (-not $response.IsSuccessStatusCode) {
+                            $entry.Error = "HTTP $([int]$response.StatusCode)"
+                            $failed += , $entry
+                            continue
+                        }
+                        $json = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
+                        if ($json.versions) {
+                            $result[$entry.Id] = @($json.versions)
+                        }
+                    }
+                    finally {
+                        $response.Dispose()
+                    }
+                }
+                catch {
+                    $entry.Error = $_.Exception.Message
+                    $failed += , $entry
+                }
             }
+            $pending = $failed
+        }
+
+        if ($pending.Count -gt 0) {
+            throw "Failed to read the NuGet version index for $($pending.Count) package(s) after 4 attempts. First failure: '$($pending[0].Url)' - $($pending[0].Error)"
         }
     }
     finally {
@@ -294,11 +346,28 @@ function Get-FilesInParallel {
             }
         }
         foreach ($entry in $tasks) {
+            $bytes = $null
             try {
                 $bytes = $entry.Task.GetAwaiter().GetResult()
             }
             catch {
-                throw "Failed to download '$($entry.Url)': $($_.Exception.Message)"
+                # The public feeds return 503 often enough to fail a build; retry the ones
+                # that did not make it rather than losing the whole compiler folder.
+                $lastError = $_.Exception.Message
+                foreach ($delay in @(2, 5, 10)) {
+                    Write-Host "::Notice::Download of '$($entry.Url)' failed ($lastError); retrying in $delay seconds"
+                    Start-Sleep -Seconds $delay
+                    try {
+                        $bytes = $httpClient.GetByteArrayAsync($entry.Url).GetAwaiter().GetResult()
+                        break
+                    }
+                    catch {
+                        $lastError = $_.Exception.Message
+                    }
+                }
+                if ($null -eq $bytes) {
+                    throw "Failed to download '$($entry.Url)' after 4 attempts: $lastError"
+                }
             }
             [System.IO.File]::WriteAllBytes($entry.File, $bytes)
         }

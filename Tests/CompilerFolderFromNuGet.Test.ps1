@@ -207,4 +207,99 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             @(Get-MicrosoftDependencyPackages -AppFolders @((Join-Path $script:depFolder 'Nope')) -Country 'us').Count | Should -Be 0
         }
     }
+
+    Describe 'Get-NuGetPackageVersionsInParallel retries' {
+        # The public feeds return 503 often enough to fail a build, and a swallowed 503
+        # is worse than a slow one: the package looks absent and the build dies later
+        # with an unrelated AL1022. These tests serve real responses from a local
+        # listener rather than mocking HttpClient.
+        BeforeAll {
+            function Start-FakeFeed {
+                param([scriptblock] $Responder)
+
+                $listener = New-Object System.Net.HttpListener
+                $port = 0
+                foreach ($candidate in 18800..18899) {
+                    try {
+                        $listener.Prefixes.Clear()
+                        $listener.Prefixes.Add("http://localhost:$candidate/")
+                        $listener.Start()
+                        $port = $candidate
+                        break
+                    }
+                    catch {
+                        # port in use, try the next one
+                    }
+                }
+                if ($port -eq 0) { throw 'No free port for the fake feed' }
+
+                $state = [hashtable]::Synchronized(@{ Calls = 0 })
+                $runspace = [runspacefactory]::CreateRunspace()
+                $runspace.Open()
+                $runspace.SessionStateProxy.SetVariable('listener', $listener)
+                $runspace.SessionStateProxy.SetVariable('state', $state)
+                $runspace.SessionStateProxy.SetVariable('responder', $Responder)
+                $ps = [powershell]::Create()
+                $ps.Runspace = $runspace
+                $ps.AddScript({
+                        while ($listener.IsListening) {
+                            try { $context = $listener.GetContext() } catch { break }
+                            $state.Calls++
+                            $result = & $responder $state.Calls
+                            $context.Response.StatusCode = $result.Status
+                            if ($result.Body) {
+                                $bytes = [System.Text.Encoding]::UTF8.GetBytes($result.Body)
+                                $context.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+                            }
+                            $context.Response.Close()
+                        }
+                    }) | Out-Null
+                $handle = $ps.BeginInvoke()
+
+                return @{
+                    Url      = "http://localhost:$port"
+                    State    = $state
+                    Stop     = {
+                        $listener.Stop(); $listener.Close()
+                        $ps.Stop(); $ps.Dispose(); $runspace.Dispose()
+                    }.GetNewClosure()
+                    Handle   = $handle
+                }
+            }
+        }
+
+        It 'retries a 503 and returns the versions once the feed recovers' {
+            $feed = Start-FakeFeed -Responder {
+                param($call)
+                if ($call -lt 3) { return @{ Status = 503 } }
+                return @{ Status = 200; Body = '{"versions":["1.0.0","2.0.0"]}' }
+            }
+            try {
+                $result = Get-NuGetPackageVersionsInParallel -FlatContainerUrl $feed.Url -PackageIds @('some.package')
+                @($result['some.package']) | Should -Be @('1.0.0', '2.0.0')
+                $feed.State.Calls | Should -Be 3
+            }
+            finally { & $feed.Stop }
+        }
+
+        It 'throws rather than reporting a package as absent when the feed keeps failing' {
+            $feed = Start-FakeFeed -Responder { param($call) return @{ Status = 503 } }
+            try {
+                { Get-NuGetPackageVersionsInParallel -FlatContainerUrl $feed.Url -PackageIds @('some.package') } |
+                    Should -Throw -ExpectedMessage '*after 4 attempts*'
+                $feed.State.Calls | Should -Be 4
+            }
+            finally { & $feed.Stop }
+        }
+
+        It 'treats 404 as absent without retrying' {
+            $feed = Start-FakeFeed -Responder { param($call) return @{ Status = 404 } }
+            try {
+                $result = Get-NuGetPackageVersionsInParallel -FlatContainerUrl $feed.Url -PackageIds @('gone.package')
+                @($result['gone.package']).Count | Should -Be 0
+                $feed.State.Calls | Should -Be 1
+            }
+            finally { & $feed.Stop }
+        }
+    }
 }

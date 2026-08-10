@@ -47,6 +47,10 @@ build never opens.
 Non-Microsoft dependencies are unaffected: `appDependencyProbingPaths`,
 `trustedNuGetFeeds` and project dependencies resolve them as they always have.
 
+The GitHub Actions cache for Business Central artifacts is switched off for these
+builds, since there is no artifact to cache. That frees roughly 1 GB of the
+repository's 10 GB cache budget per version and country you build against.
+
 ## Which compiler version you get
 
 `vsixFile` keeps its meaning:
