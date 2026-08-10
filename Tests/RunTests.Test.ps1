@@ -72,6 +72,39 @@ Describe 'RunTests.psm1 Tests' {
             @($testApps).Count | Should -Be 1
             Remove-Item -Path $projectPath -Recurse -Force
         }
+
+        It 'Does not throw and returns compiled test apps when installTestAppsJson is an empty array' {
+            # Regression: in Windows PowerShell 5.1 ConvertFrom-Json emits a JSON array as a single
+            # object, so an empty '[]' previously surfaced as a one-element System.Object[] and threw
+            # "does not contain a method named 'TrimStart'". A test project with no installed test apps
+            # (the common case) must still return its compiled test apps without throwing.
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $installJson = Join-Path $projectPath 'installTestApps.json'
+            ConvertTo-Json @() | Set-Content -Path $installJson -Encoding UTF8
+
+            $settings = @{ runTestsInAllInstalledTestApps = $true }
+            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
+
+            @($testApps).Count | Should -Be 1
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Includes a single installed test app when runTestsInAllInstalledTestApps is set' {
+            # Regression: a single-element JSON array must enumerate to the string element (not the
+            # whole array) on both Windows PowerShell 5.1 and PowerShell 7.
+            $projectPath = New-TestProject
+            $installedApp = Join-Path $projectPath 'Installed1.app'
+            New-Item -Path $installedApp -ItemType File -Force | Out-Null
+            $installJson = Join-Path $projectPath 'installTestApps.json'
+            ConvertTo-Json @("($installedApp)") | Set-Content -Path $installJson -Encoding UTF8
+
+            $settings = @{ runTestsInAllInstalledTestApps = $true }
+            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
+
+            @($testApps).Count | Should -Be 1
+            $testApps | Should -Contain $installedApp
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
     }
 
     Context 'Invoke-AlGoTestRun' {
