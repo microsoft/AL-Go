@@ -80,6 +80,18 @@ the Windows build accepts (or vice versa).
   like Camera/Barcode Scanner). These will show up red in the fast lane;
   this is expected, not a regression.
 
+## Compile-only projects are never routed to the fast lane
+
+The fast lane always publishes apps to its Linux container and runs tests
+there. A project set up to compile without publishing anything - `useCompilerFolder: true`
+(no container at all) or `doNotPublishApps: true` - has nothing for that to
+do, so `linuxFastLane` is ignored for it and it keeps building on the
+standard Windows pipeline instead, with a warning in the log. This matters
+for org- or repo-wide `linuxFastLane: true` defaults: turning it on globally
+does not break a project that's deliberately compile-only, for example one
+whose apps depend on AppSource apps that can only be compiled against, not
+installed for testing.
+
 ## `main` stays on the standard pipeline
 
 `main` is not expected to use `linuxFastLane` - it should keep running the

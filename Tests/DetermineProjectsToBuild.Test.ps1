@@ -1184,6 +1184,31 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensionsLinux[0].linuxFastLane | Should -BeTrue
     }
 
+    It 'skips linuxFastLane for a compile-only project (useCompilerFolder)' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; useCompilerFolder = $true } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 0
+        ($buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }).linuxFastLane | Should -BeFalse
+    }
+
+    It 'skips linuxFastLane for a compile-only project (doNotPublishApps)' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; doNotPublishApps = $true } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 0
+        $buildOrder[0].buildDimensions[0].linuxFastLane | Should -BeFalse
+    }
+
     It 'derives linuxAppDirs and linuxCountry for a linuxFastLane project' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; country = 'dk' } | ConvertTo-Json) -type File -Force
         New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
