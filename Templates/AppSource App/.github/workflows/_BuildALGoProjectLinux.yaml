@@ -61,13 +61,18 @@ on:
         required: false
         default: ''
         type: string
+      artifactNameSuffix:
+        description: Caller-supplied unique suffix (e.g. sanitized project+buildMode) for the "bc-linux-build-<suffix>" artifact bc-linux uploads with the compiled Apps/TestApps. Empty skips the upload (no downstream Deploy/Deliver support for this project).
+        required: false
+        default: ''
+        type: string
 
 jobs:
   BuildALGoProjectLinux:
     name: ${{ inputs.projectName }} (${{ inputs.buildMode }}, Linux fast lane)
     # Pinned to a specific commit (not @master) so an upstream change in
     # bc-linux can't silently break this repo's PR gate.
-    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@f4ecb3787cd06ca3cbe777118139fd83b5f2668a
+    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@1dcd73e1aea460114bb5b18cdd527f017138338f
     with:
       bc_version: ${{ inputs.bcVersion != '' && inputs.bcVersion || '27.5' }}
       bc_country: ${{ inputs.bcCountry }}
@@ -77,3 +82,4 @@ jobs:
       codeunit_range: ${{ inputs.codeunitRange != '' && inputs.codeunitRange || '1..2147483647' }}
       extra_symbols_artifact_name: ${{ inputs.dependencyArtifactSubdir != '' && 'LinuxFastLaneDependencies' || '' }}
       extra_symbols_artifact_subdir: ${{ inputs.dependencyArtifactSubdir }}
+      artifact_name_suffix: ${{ inputs.artifactNameSuffix }}

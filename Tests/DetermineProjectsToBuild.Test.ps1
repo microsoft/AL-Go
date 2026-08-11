@@ -1239,6 +1239,20 @@ Describe "Get-ProjectsToBuild" {
         $dimension.linuxCountry | Should -BeExactly 'dk'
         $dimension.linuxAppDirs | Should -Match 'Project1[\\/]\.?[\\/]?app'
         $dimension.linuxTestAppDirs | Should -BeExactly ''
+        $dimension.linuxArtifactNameSuffix | Should -BeExactly 'Project1-Default'
+    }
+
+    It 'leaves linuxArtifactNameSuffix empty for a non-linuxFastLane project' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() } | ConvertTo-Json)
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        ($buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }).linuxArtifactNameSuffix | Should -BeExactly ''
     }
 
     It 'derives linuxCodeunitRange from the test apps idRanges for a linuxFastLane project' {

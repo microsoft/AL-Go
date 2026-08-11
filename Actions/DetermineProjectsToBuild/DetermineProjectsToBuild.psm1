@@ -99,6 +99,7 @@ function ShouldBuildProject {
     - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
     - linuxCodeunitRange: pipe-separated "from..to" span(s) built from the idRanges declared in each test app's app.json, used to scope the Linux fast lane's test-codeunit discovery; empty if no idRanges could be read (the fast lane then falls back to its own unbounded default)
     - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) dependency .apps; empty if the project has none
+    - linuxArtifactNameSuffix: "<sanitized project>-<buildMode>", used as bc-linux's compiled-apps upload suffix ("bc-linux-build-<suffix>") and read back by the PublishLinuxArtifacts job to re-shape that artifact into AL-Go's own Apps/TestApps naming; empty when linuxFastLane is false
     - artifact: the resolved BC artifact URL for this project (best-effort resolved centrally here, the same way the project's own "Determine ArtifactUrl" build step would); empty if it couldn't be resolved, in which case the build step resolves it itself as a fallback
     - artifactCacheKey: cache key for the Cache Business Central Artifacts step, mirroring DetermineArtifactUrl.ps1's own logic (set only when useCompilerFolder is true and symbolsSource is not 'nuGet'); empty otherwise, or when artifact couldn't be resolved
 #>
@@ -256,6 +257,17 @@ function CreateBuildDimensions {
         }
 
         foreach($buildMode in $buildModes) {
+            # GitHub Actions expressions have no string-replace function, so this can't be
+            # computed inline in workflow YAML - done here in PowerShell (which has
+            # .Replace()) and carried through the matrix instead, so both the BuildLinux job
+            # (passes it to bc-linux as the upload suffix) and the PublishLinuxArtifacts job
+            # (uses it to find that same upload again) read the identical precomputed value
+            # off the same matrix entry, with no risk of the two independently-written
+            # expressions drifting out of sync.
+            $linuxArtifactNameSuffix = ''
+            if ($linuxFastLane) {
+                $linuxArtifactNameSuffix = "$($project.Replace('\','_').Replace('/','_'))-$buildMode"
+            }
             $buildDimensions += @{
                 project = $project
                 projectName = $projectSettings.projectName
@@ -270,6 +282,7 @@ function CreateBuildDimensions {
                 linuxTestAppDirs = $linuxTestAppDirs
                 linuxCodeunitRange = $linuxCodeunitRange
                 linuxDependencySubdir = $linuxDependencySubdir
+                linuxArtifactNameSuffix = $linuxArtifactNameSuffix
                 artifact = $artifact
                 artifactCacheKey = $artifactCacheKey
             }

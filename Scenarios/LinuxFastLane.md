@@ -66,13 +66,17 @@ the Windows build accepts (or vice versa).
   results uploaded as a workflow artifact
 - Both single-project and multi-project repositories (projects are matrixed
   the same way as the standard `Build` job)
+- Compiled Apps/TestApps published as AL-Go-named artifacts (same naming
+  `CalculateArtifactNames` gives the standard `Build` job), via a
+  `PublishLinuxArtifacts` job that re-shapes the plain artifact bc-linux
+  uploads. This is what lets `Deploy`/`Deliver` find and use a Linux fast
+  lane project's apps exactly like they find `Build`'s.
 
 ## What's out of scope
 
 - **Code signing.** The fast lane never calls the `Sign` action.
-- **BCPT (performance) tests, page scripting (browser) tests, PowerPlatform
-  solution builds, and Deliver** (to AppSource / GitHub Packages / storage).
-  None of these run on this path.
+- **BCPT (performance) tests, page scripting (browser) tests, and
+  PowerPlatform solution builds.** None of these run on this path.
 - **AL Code Analysis / SARIF upload.** `CodeAnalysisUpload` only processes
   output from the standard Windows build.
 - **A small number of AL tests are known to fail on Linux BC.** See
