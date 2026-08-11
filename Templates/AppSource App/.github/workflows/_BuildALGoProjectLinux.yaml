@@ -51,6 +51,11 @@ on:
         description: Space-separated, repo-root-relative test app folders for this project
         required: true
         type: string
+      codeunitRange:
+        description: Pipe-separated "from..to" span(s) built from the test apps' idRanges, used to scope test-codeunit discovery. Empty falls back to bc-test-from-source.yml's own unbounded default.
+        required: false
+        default: ''
+        type: string
       dependencyArtifactSubdir:
         description: Subfolder (under the LinuxFastLaneDependencies artifact uploaded by the Initialization job) holding this project's third-party (appDependencyProbingPaths) dependency .apps. Empty when the project has none.
         required: false
@@ -69,6 +74,6 @@ jobs:
       al_tool_version: ${{ inputs.alToolVersion }}
       app_dirs: ${{ inputs.appDirs }}
       test_app_dirs: ${{ inputs.testAppDirs }}
-      codeunit_range: "1..2147483647"
+      codeunit_range: ${{ inputs.codeunitRange != '' && inputs.codeunitRange || '1..2147483647' }}
       extra_symbols_artifact_name: ${{ inputs.dependencyArtifactSubdir != '' && 'LinuxFastLaneDependencies' || '' }}
       extra_symbols_artifact_subdir: ${{ inputs.dependencyArtifactSubdir }}

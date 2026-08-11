@@ -242,6 +242,7 @@ jobs:
       bcCountry: ${{ matrix.linuxCountry }}
       appDirs: ${{ matrix.linuxAppDirs }}
       testAppDirs: ${{ matrix.linuxTestAppDirs }}
+      codeunitRange: ${{ matrix.linuxCodeunitRange }}
       dependencyArtifactSubdir: ${{ matrix.linuxDependencySubdir }}
 
   CodeAnalysisUpload:

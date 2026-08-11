@@ -1241,6 +1241,47 @@ Describe "Get-ProjectsToBuild" {
         $dimension.linuxTestAppDirs | Should -BeExactly ''
     }
 
+    It 'derives linuxCodeunitRange from the test apps idRanges for a linuxFastLane project' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() } | ConvertTo-Json)
+        New-Item -Path "$baseFolder/Project1/testApp1/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/testApp1/app.json" -Value (@{
+            id = [Guid]::NewGuid().ToString(); name = 'TestApp1'; publisher = 'Test'; version = '1.0.0.0'
+            idRanges = @(@{ from = 50100; to = 50149 })
+            dependencies = @(@{ id = '23de40a6-dfe8-4f80-80db-d70f83ce8caf'; publisher = 'Microsoft'; name = 'Test Runner'; version = '1.0.0.0' })
+        } | ConvertTo-Json -Depth 99)
+        New-Item -Path "$baseFolder/Project1/testApp2/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/testApp2/app.json" -Value (@{
+            id = [Guid]::NewGuid().ToString(); name = 'TestApp2'; publisher = 'Test'; version = '1.0.0.0'
+            idRanges = @(@{ from = 130450; to = 130459 })
+            dependencies = @(@{ id = '23de40a6-dfe8-4f80-80db-d70f83ce8caf'; publisher = 'Microsoft'; name = 'Test Runner'; version = '1.0.0.0' })
+        } | ConvertTo-Json -Depth 99)
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 1
+        $dimension = $buildOrder[0].buildDimensionsLinux[0]
+        $dimension.linuxCodeunitRange | Should -BeExactly '50100..50149|130450..130459'
+    }
+
+    It 'leaves linuxCodeunitRange empty when a linuxFastLane project has no test apps' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() } | ConvertTo-Json)
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensionsLinux[0].linuxCodeunitRange | Should -BeExactly ''
+    }
+
     It 'maps vsixFile to linuxAlToolVersion for a linuxFastLane project' {
         New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
         Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = @() } | ConvertTo-Json)

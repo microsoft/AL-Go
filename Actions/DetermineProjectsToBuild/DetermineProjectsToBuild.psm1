@@ -97,6 +97,7 @@ function ShouldBuildProject {
     - linuxBcVersion: The concrete BC version to use on the Linux fast lane (best-effort resolved from the artifact/country settings; empty if it couldn't be resolved)
     - linuxAlToolVersion: The AL compiler version policy for the Linux fast lane, mapped from the project's vsixFile setting ('' (default/matching), 'latest', or 'prerelease'); empty if vsixFile is a direct download URL, which can't be mapped to a policy keyword
     - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
+    - linuxCodeunitRange: pipe-separated "from..to" span(s) built from the idRanges declared in each test app's app.json, used to scope the Linux fast lane's test-codeunit discovery; empty if no idRanges could be read (the fast lane then falls back to its own unbounded default)
     - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) dependency .apps; empty if the project has none
     - artifact: the resolved BC artifact URL for this project (best-effort resolved centrally here, the same way the project's own "Determine ArtifactUrl" build step would); empty if it couldn't be resolved, in which case the build step resolves it itself as a fallback
     - artifactCacheKey: cache key for the Cache Business Central Artifacts step, mirroring DetermineArtifactUrl.ps1's own logic (set only when useCompilerFolder is true and symbolsSource is not 'nuGet'); empty otherwise, or when artifact couldn't be resolved
@@ -137,6 +138,7 @@ function CreateBuildDimensions {
         $linuxAlToolVersion = ''
         $linuxAppDirs = ''
         $linuxTestAppDirs = ''
+        $linuxCodeunitRange = ''
         $linuxDependencySubdir = ''
         $artifact = ''
         $artifactCacheKey = ''
@@ -161,7 +163,29 @@ function CreateBuildDimensions {
                 }
             }
             $linuxAppDirs = @($resolvedSettings.appFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
-            $linuxTestAppDirs = @($resolvedSettings.testFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+            $testFolderRelPaths = @($resolvedSettings.testFolders | ForEach-Object { $_ -replace '^\.[\\/]', '' })
+            $linuxTestAppDirs = @($testFolderRelPaths | ForEach-Object { (Join-Path $project $_).Replace('\','/') }) -join ' '
+
+            # Scope the Linux fast lane's test-codeunit discovery to the range(s) each test app
+            # actually declares, instead of handing bc-linux an unbounded "run everything"
+            # sentinel. app.json's idRanges is mandatory, so every test app has one; read it
+            # directly rather than guessing at a convention.
+            $idRangeSpans = [System.Collections.Generic.List[string]]::new()
+            foreach ($testFolderRelPath in $testFolderRelPaths) {
+                $testAppJsonFile = Join-Path $baseFolder $project $testFolderRelPath 'app.json'
+                if (Test-Path $testAppJsonFile) {
+                    try {
+                        $testAppJson = Get-Content $testAppJsonFile -Encoding UTF8 | ConvertFrom-Json
+                        foreach ($idRange in $testAppJson.idRanges) {
+                            $idRangeSpans.Add("$($idRange.from)..$($idRange.to)")
+                        }
+                    }
+                    catch {
+                        Write-Host "::warning::Could not read idRanges from $testAppJsonFile for project $project ($($_.Exception.Message)); the Linux fast lane will fall back to its own default codeunit range."
+                    }
+                }
+            }
+            $linuxCodeunitRange = ($idRangeSpans | Select-Object -Unique) -join '|'
         }
 
         try {
@@ -244,6 +268,7 @@ function CreateBuildDimensions {
                 linuxCountry = $projectSettings.country
                 linuxAppDirs = $linuxAppDirs
                 linuxTestAppDirs = $linuxTestAppDirs
+                linuxCodeunitRange = $linuxCodeunitRange
                 linuxDependencySubdir = $linuxDependencySubdir
                 artifact = $artifact
                 artifactCacheKey = $artifactCacheKey
