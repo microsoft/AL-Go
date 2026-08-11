@@ -1326,7 +1326,11 @@ function Install-NonMicrosoftDependenciesFromNuGet {
     # so it serializes correctly across runspaces in this same process exactly as it does across
     # separate processes. Concurrent workers racing to prime that cache is therefore already safe;
     # no separate "resolve the first one serially to warm the cache" staging is needed here.
-    $modulePath = $PSCommandPath
+    # $PSCommandPath is not used here: it is unreliable for resolving a module's own file from
+    # inside one of its functions across PowerShell 5.1/7 and different import styles.
+    # (Get-Command <exported function>).Module.Path is the canonical, version-independent way to
+    # get the file a currently-loaded module was imported from.
+    $modulePath = (Get-Command Install-NonMicrosoftDependenciesFromNuGet).Module.Path
     $bcContainerHelperPath = $env:BcContainerHelperPath
     if (-not $bcContainerHelperPath) {
         throw "BcContainerHelperPath is not set. DownloadAndImportBcContainerHelper must run before Install-NonMicrosoftDependenciesFromNuGet."
@@ -1336,6 +1340,9 @@ function Install-NonMicrosoftDependenciesFromNuGet {
         param($BcContainerHelperPath, $ModulePath, $Dependency, $GitHubPackagesServerUrl, $GitHubPackagesToken, $SelectMode, $PackageCachePath, $InstalledPlatform, $InstalledApps, $TrustedNuGetFeeds)
         . $BcContainerHelperPath -Silent | Out-Null
         Import-Module $ModulePath -Force -DisableNameChecking | Out-Null
+        if (-not (Get-Command Resolve-NonMicrosoftDependencyFromNuGet -ErrorAction SilentlyContinue)) {
+            throw "Resolve-NonMicrosoftDependencyFromNuGet is not available after 'Import-Module $ModulePath -Force -DisableNameChecking' (file exists: $(Test-Path -Path $ModulePath))."
+        }
         Resolve-NonMicrosoftDependencyFromNuGet -Dependency $Dependency -GitHubPackagesServerUrl $GitHubPackagesServerUrl `
             -GitHubPackagesToken $GitHubPackagesToken -SelectMode $SelectMode -PackageCachePath $PackageCachePath `
             -InstalledPlatform $InstalledPlatform -InstalledApps $InstalledApps -TrustedNuGetFeeds $TrustedNuGetFeeds
