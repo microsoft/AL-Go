@@ -303,6 +303,137 @@ Describe "CompilerFolderFromNuGet Module Tests" {
         }
     }
 
+    Describe 'Invoke-ScriptBlocksInParallel' {
+        # Generic mechanism test, independent of BcContainerHelper: proves the RunspacePool actually
+        # runs work concurrently (not just relabeled sequential calls) and that one item throwing
+        # does not stop or lose the results of the others.
+
+        It 'runs scriptblocks concurrently rather than one after another' {
+            $sleepMs = 800
+            $argumentLists = @(@($sleepMs), @($sleepMs), @($sleepMs), @($sleepMs))
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $results = Invoke-ScriptBlocksInParallel -ScriptBlock {
+                param($ms) Start-Sleep -Milliseconds $ms; return $ms
+            } -ArgumentLists $argumentLists
+            $sw.Stop()
+
+            # 4 sequential 800ms sleeps would be >=3200ms; concurrent, it should stay well under that -
+            # generous margin for slow CI hosts while still proving overlap.
+            $sw.ElapsedMilliseconds | Should -BeLessThan ($sleepMs * 3)
+            $results.Count | Should -Be 4
+            foreach ($result in $results) {
+                $result.Error | Should -BeNullOrEmpty
+                @($result.Output) | Should -Be @($sleepMs)
+            }
+        }
+
+        It 'returns results in the same order as ArgumentLists regardless of completion order' {
+            # Item 0 sleeps longest, so it would finish last - the result order must not follow
+            # completion order.
+            $argumentLists = @(@(1, 300), @(2, 10), @(3, 10))
+            $results = Invoke-ScriptBlocksInParallel -ScriptBlock {
+                param($value, $delayMs) Start-Sleep -Milliseconds $delayMs; return $value
+            } -ArgumentLists $argumentLists
+
+            @($results[0].Output) | Should -Be @(1)
+            @($results[1].Output) | Should -Be @(2)
+            @($results[2].Output) | Should -Be @(3)
+        }
+
+        It 'isolates one throwing scriptblock from the others' {
+            $argumentLists = @(@(1), @(2), @(3))
+            $results = Invoke-ScriptBlocksInParallel -ScriptBlock {
+                param($value)
+                if ($value -eq 2) { throw "bang $value" }
+                return $value * 10
+            } -ArgumentLists $argumentLists
+
+            $results.Count | Should -Be 3
+            $results[0].Error | Should -BeNullOrEmpty
+            @($results[0].Output) | Should -Be @(10)
+            $results[1].Error | Should -Not -BeNullOrEmpty
+            $results[1].Error.Exception.Message | Should -BeLike '*bang 2*'
+            $results[2].Error | Should -BeNullOrEmpty
+            @($results[2].Output) | Should -Be @(30)
+        }
+
+        It 'returns an empty array for an empty ArgumentLists' {
+            @(Invoke-ScriptBlocksInParallel -ScriptBlock { param($x) $x } -ArgumentLists @()).Count | Should -Be 0
+        }
+    }
+
+    Describe 'Resolve-NonMicrosoftDependencyFromNuGet' {
+        # Direct tests of the per-dependency logic that Install-NonMicrosoftDependenciesFromNuGet
+        # dispatches (in-process for a single dependency, or via a worker runspace for 2+). Mock still
+        # intercepts Download-BcNuGetPackageToFolder normally here, since this all runs in the test's
+        # own runspace - the concurrent dispatch itself is covered separately, above.
+        BeforeAll {
+            function global:Download-BcNuGetPackageToFolder {
+                param($nuGetServerUrl, $nuGetToken, $packageName, $version, $select, $folder, $downloadDependencies, $installedPlatform, $installedApps)
+            }
+        }
+
+        BeforeEach {
+            $global:bcContainerHelperConfig = @{}
+            $dependency = [PSCustomObject]@{ id = 'ba1776ba-1198-4b4c-a61e-c4612f1880d5'; publisher = 'Insight Works'; name = 'IWorks Common'; version = '2.18.0.0' }
+            $commonArgs = @{
+                Dependency               = $dependency
+                GitHubPackagesServerUrl = ''
+                GitHubPackagesToken     = ''
+                SelectMode              = 'Latest'
+                PackageCachePath        = $TestDrive
+                InstalledPlatform       = [System.Version]'26.5.38752.53540'
+                InstalledApps           = @([PSCustomObject]@{ Publisher = ''; Name = 'Application'; id = ''; Version = [System.Version]'26.5.38752.53540' })
+                TrustedNuGetFeeds       = @()
+            }
+        }
+
+        It 'logs a Resolving message first, then a Downloaded message, on success' {
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { return @(@{ Name = 'IWorks Common'; Version = '2.19.0.0' }) }
+
+            $result = Resolve-NonMicrosoftDependencyFromNuGet @commonArgs
+
+            $result.DependencyId | Should -Be $dependency.id
+            $result.Log.Count | Should -Be 2
+            $result.Log[0].Level | Should -Be 'Host'
+            $result.Log[0].Message | Should -BeLike '*Resolving non-Microsoft dependency*IWorks Common*'
+            $result.Log[1].Level | Should -Be 'Host'
+            $result.Log[1].Message | Should -BeLike '*Downloaded*IWorks Common*'
+        }
+
+        It 'logs a Resolving message first, then a Warning, when nothing is found' {
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { return @() }
+
+            $result = Resolve-NonMicrosoftDependencyFromNuGet @commonArgs
+
+            $result.Log.Count | Should -Be 2
+            $result.Log[0].Level | Should -Be 'Host'
+            $result.Log[1].Level | Should -Be 'Warning'
+            $result.Log[1].Message | Should -BeLike '*Could not find a NuGet package*'
+        }
+
+        It 'logs a Resolving message first, then a Warning, when the download throws' {
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { throw "network error" }
+
+            $result = Resolve-NonMicrosoftDependencyFromNuGet @commonArgs
+
+            $result.Log.Count | Should -Be 2
+            $result.Log[0].Level | Should -Be 'Host'
+            $result.Log[1].Level | Should -Be 'Warning'
+            $result.Log[1].Message | Should -BeLike '*Failed to resolve dependency*network error*'
+        }
+
+        It 'sets bcContainerHelperConfig.TrustedNuGetFeeds before downloading, since a worker runspace has its own copy' {
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+            $commonArgs.TrustedNuGetFeeds = @(@{ url = 'https://example.com/index.json'; token = '' })
+
+            Resolve-NonMicrosoftDependencyFromNuGet @commonArgs | Out-Null
+
+            $bcContainerHelperConfig.TrustedNuGetFeeds.Count | Should -Be 1
+            $bcContainerHelperConfig.TrustedNuGetFeeds[0].url | Should -Be 'https://example.com/index.json'
+        }
+    }
+
     Describe 'Install-NonMicrosoftDependenciesFromNuGet' {
         BeforeAll {
             function global:OutputWarning { param($message) Write-Host "::warning::$message" }
@@ -488,6 +619,87 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl } | Should -Not -Throw
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter { $message -like '*Failed to resolve dependency*' }
+        }
+
+        Context 'with 2 or more independent dependencies' {
+            # A worker runspace re-imports this module and BcContainerHelper fresh, so
+            # Download-BcNuGetPackageToFolder is not visible to Mock from here (a different runspace,
+            # a different module instance) - these tests mock the dispatch call itself instead
+            # (Invoke-ScriptBlocksInParallel, called directly by Install-NonMicrosoftDependenciesFromNuGet
+            # in this same runspace) and assert on what gets dispatched and how results get replayed.
+            # Genuine concurrency and per-item error isolation are covered generically, and without any
+            # BcContainerHelper involvement, by the 'Invoke-ScriptBlocksInParallel' Describe block above.
+
+            BeforeEach {
+                # Only referenced, never dot-sourced for real here, since Invoke-ScriptBlocksInParallel
+                # itself is mocked in every test in this Context.
+                $previousBcContainerHelperPath = $env:BcContainerHelperPath
+                $env:BcContainerHelperPath = Join-Path $testFolder 'fake-BcContainerHelper.ps1'
+            }
+
+            AfterEach {
+                $env:BcContainerHelperPath = $previousBcContainerHelperPath
+            }
+
+            It 'dispatches one argument set per independent dependency to Invoke-ScriptBlocksInParallel' {
+                $dep1 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Insight Works'; name = 'IWorks Common'; version = '2.18.0.0' }
+                $dep2 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Binary Stream'; name = 'MEM'; version = '1.0.0.0' }
+                $appFolder = Join-Path $testFolder 'App'
+                New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @($dep1, $dep2)
+
+                Mock -ModuleName CompilerFolderFromNuGet Invoke-ScriptBlocksInParallel { return @() }
+
+                Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl
+
+                Should -Invoke -ModuleName CompilerFolderFromNuGet Invoke-ScriptBlocksInParallel -Times 1 -Exactly -ParameterFilter {
+                    $dependencyIds = @($ArgumentLists | ForEach-Object { $_[2].id })
+                    $packageCachePaths = @($ArgumentLists | ForEach-Object { $_[6] })
+                    $ArgumentLists.Count -eq 2 -and
+                        $dependencyIds -contains $dep1.id -and
+                        $dependencyIds -contains $dep2.id -and
+                        (@($packageCachePaths | Where-Object { $_ -ne $testFolder })).Count -eq 0
+                }
+            }
+
+            It 'replays each dependency''s Log through Write-Host / OutputWarning once results are back' {
+                $dep1 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Insight Works'; name = 'IWorks Common'; version = '2.18.0.0' }
+                $dep2 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Binary Stream'; name = 'MEM'; version = '1.0.0.0' }
+                $appFolder = Join-Path $testFolder 'App'
+                New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @($dep1, $dep2)
+
+                Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
+                Mock -ModuleName CompilerFolderFromNuGet Invoke-ScriptBlocksInParallel {
+                    return @(
+                        [PSCustomObject]@{ Error = $null; Output = @([PSCustomObject]@{ DependencyId = $dep1.id; Log = @(@{ Level = 'Host'; Message = 'Resolving dep1' }, @{ Level = 'Host'; Message = 'Downloaded dep1' }) }) }
+                        [PSCustomObject]@{ Error = $null; Output = @([PSCustomObject]@{ DependencyId = $dep2.id; Log = @(@{ Level = 'Host'; Message = 'Resolving dep2' }, @{ Level = 'Warning'; Message = 'Could not find dep2' }) }) }
+                    )
+                }
+
+                Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl
+
+                Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter { $message -eq 'Could not find dep2' }
+            }
+
+            It 'warns for a dependency whose worker runspace itself failed, without losing the others'' results' {
+                $dep1 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Insight Works'; name = 'IWorks Common'; version = '2.18.0.0' }
+                $dep2 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Binary Stream'; name = 'MEM'; version = '1.0.0.0' }
+                $appFolder = Join-Path $testFolder 'App'
+                New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @($dep1, $dep2)
+
+                Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
+                Mock -ModuleName CompilerFolderFromNuGet Invoke-ScriptBlocksInParallel {
+                    return @(
+                        [PSCustomObject]@{ Error = (New-Object -TypeName System.Management.Automation.ErrorRecord -ArgumentList ([Exception]::new('runspace exploded')), 'id', 'NotSpecified', $null); Output = @() }
+                        [PSCustomObject]@{ Error = $null; Output = @([PSCustomObject]@{ DependencyId = $dep2.id; Log = @(@{ Level = 'Host'; Message = 'Resolving dep2' }, @{ Level = 'Host'; Message = 'Downloaded dep2' }) }) }
+                    )
+                }
+
+                { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl } | Should -Not -Throw
+
+                Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter {
+                    $message -like "*Failed to resolve dependency*$($dep1.publisher)*" -and $message -like '*runspace exploded*'
+                }
+            }
         }
     }
 }

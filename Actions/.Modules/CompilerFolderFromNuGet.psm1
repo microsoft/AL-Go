@@ -379,6 +379,94 @@ function Get-FilesInParallel {
 
 <#
 .SYNOPSIS
+    Runs a scriptblock once per argument set, across multiple runspaces, and collects every result.
+.DESCRIPTION
+    Get-FilesInParallel and Get-NuGetPackageVersionsInParallel get their concurrency from async
+    HttpClient tasks running on a single thread - that only works because they own the whole call
+    down to the socket. This is for the other case: work that goes through a synchronous, blocking
+    cmdlet from another module (nothing this module controls), where a single runspace can only run
+    one call at a time no matter how it is invoked. A bounded RunspacePool gets real concurrency for
+    that case and, unlike ForEach-Object -Parallel or Start-ThreadJob, is available since PowerShell 2.
+
+    ScriptBlock runs in a freshly created runspace with only the default session state - it does not
+    inherit modules, functions or variables from the caller, so it must import/dot-source anything it
+    needs itself. A ScriptBlock that throws does not stop or skip the others: its error is captured
+    per-item and returned alongside every result that succeeded.
+.PARAMETER ScriptBlock
+    The work to run once per entry in ArgumentLists.
+.PARAMETER ArgumentLists
+    One array of positional arguments per invocation of ScriptBlock.
+.PARAMETER MaxConcurrency
+    Upper bound on runspaces used at once. Clamped to the number of invocations, so a small batch
+    never opens more runspaces than it has work for.
+.OUTPUTS
+    One object per ArgumentLists entry, in the same order, each with an Output property (whatever
+    ScriptBlock returned) and an Error property (the failing record, or $null on success).
+#>
+function Invoke-ScriptBlocksInParallel {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock] $ScriptBlock,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]] $ArgumentLists,
+        [Parameter(Mandatory = $false)]
+        [int] $MaxConcurrency = 8
+    )
+
+    if ($ArgumentLists.Count -eq 0) {
+        return @()
+    }
+
+    $concurrency = [Math]::Max(1, [Math]::Min($MaxConcurrency, $ArgumentLists.Count))
+    $runspacePool = [runspacefactory]::CreateRunspacePool(1, $concurrency)
+    $runspacePool.Open()
+    try {
+        $running = @()
+        for ($i = 0; $i -lt $ArgumentLists.Count; $i++) {
+            $powershell = [powershell]::Create()
+            $powershell.RunspacePool = $runspacePool
+            $powershell.AddScript($ScriptBlock) | Out-Null
+            foreach ($argument in @($ArgumentLists[$i])) {
+                $powershell.AddArgument($argument) | Out-Null
+            }
+            $running += , @{
+                Index      = $i
+                PowerShell = $powershell
+                Handle     = $powershell.BeginInvoke()
+            }
+        }
+
+        $results = New-Object 'object[]' $ArgumentLists.Count
+        foreach ($entry in $running) {
+            try {
+                $output = @($entry.PowerShell.EndInvoke($entry.Handle))
+                $errorRecord = $null
+                if ($entry.PowerShell.Streams.Error.Count -gt 0) {
+                    $errorRecord = $entry.PowerShell.Streams.Error[0]
+                }
+                $results[$entry.Index] = [PSCustomObject]@{ Output = $output; Error = $errorRecord }
+            }
+            catch {
+                # EndInvoke itself only throws for pipeline-level failures (e.g. the runspace died) -
+                # a plain 'throw' inside ScriptBlock surfaces via Streams.Error above, not here. Either
+                # way, one item's failure must not stop the rest of the results from being collected.
+                $results[$entry.Index] = [PSCustomObject]@{ Output = @(); Error = $_ }
+            }
+            finally {
+                $entry.PowerShell.Dispose()
+            }
+        }
+        return $results
+    }
+    finally {
+        $runspacePool.Close()
+        $runspacePool.Dispose()
+    }
+}
+
+<#
+.SYNOPSIS
     Reads the dependency ids declared in a .nupkg's nuspec.
 .OUTPUTS
     Array of package ids. Empty when the package declares no dependencies.
@@ -987,6 +1075,11 @@ function New-BcCompilerFolderFromNuGet {
     dependency, already staged separately) is silently skipped, since it was never expected to
     resolve here. If it actually is missing, compilation fails with AL1022 exactly as it did
     before this function existed.
+
+    Independent dependencies (2 or more) are resolved concurrently via Invoke-ScriptBlocksInParallel,
+    since each Download-BcNuGetPackageToFolder call is a blocking cmdlet and, measured on a real
+    project with 4 AppSource dependencies, resolving them one at a time took ~68s - most of it a
+    one-time ~40s BcContainerHelper AL-Language-extension cache warm-up on the first dependency alone.
 .PARAMETER AppFolders
     Folders (production, test, BCPT) whose app.json dependencies to resolve.
 .PARAMETER PackageCachePath
@@ -1005,6 +1098,112 @@ function New-BcCompilerFolderFromNuGet {
 .PARAMETER Token
     The GitHub Actions token, used to mint a scoped token for the GitHub Packages feed.
 #>
+
+<#
+.SYNOPSIS
+    Resolves one non-Microsoft app.json dependency from NuGet and returns what happened as data.
+.DESCRIPTION
+    The single-dependency logic Install-NonMicrosoftDependenciesFromNuGet used to run inline, pulled
+    out so it can run either in-process (a single dependency - no point paying runspace overhead, and
+    it keeps Download-BcNuGetPackageToFolder directly Pester-mockable) or inside a worker runspace
+    dispatched by Invoke-ScriptBlocksInParallel (2 or more independent dependencies). Nothing is
+    written to the host here - the caller replays the returned Log in order, once the result is back,
+    so a dependency's own messages stay together in the log regardless of which path ran it.
+.PARAMETER Dependency
+    The app.json dependency entry (publisher, name, id, version).
+.PARAMETER GitHubPackagesServerUrl
+    The GitHub Packages feed URL, or '' if not configured.
+.PARAMETER GitHubPackagesToken
+    Token scoped for the GitHub Packages feed, or '' if not configured.
+.PARAMETER SelectMode
+    Settings.nuGetFeedSelectMode - which candidate version Download-BcNuGetPackageToFolder picks.
+.PARAMETER PackageCachePath
+    Folder to download the resolved .app file into.
+.PARAMETER InstalledPlatform
+    The Business Central version being compiled against.
+.PARAMETER InstalledApps
+    Synthetic installedApps entry naming that same version as the installed Application.
+.PARAMETER TrustedNuGetFeeds
+    Feeds to search, applied to $bcContainerHelperConfig before the download - a worker runspace
+    dot-sources BcContainerHelper fresh and gets its own copy of that config, so this has to be set
+    again on every call rather than assumed from the caller's process-wide state.
+.OUTPUTS
+    A PSCustomObject with DependencyId and Log - Log is an ordered list of @{ Level; Message }
+    entries ('Host' or 'Warning') ready to replay through Write-Host / OutputWarning.
+#>
+function Resolve-NonMicrosoftDependencyFromNuGet {
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSObject] $Dependency,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $GitHubPackagesServerUrl,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $GitHubPackagesToken,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $SelectMode,
+        [Parameter(Mandatory = $true)]
+        [string] $PackageCachePath,
+        [Parameter(Mandatory = $true)]
+        [System.Version] $InstalledPlatform,
+        [Parameter(Mandatory = $true)]
+        [PSObject[]] $InstalledApps,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]] $TrustedNuGetFeeds
+    )
+
+    $bcContainerHelperConfig.TrustedNuGetFeeds = $TrustedNuGetFeeds
+
+    $depId = $Dependency.id
+    $log = New-Object 'System.Collections.Generic.List[hashtable]'
+    $log.Add(@{ Level = 'Host'; Message = "Resolving non-Microsoft dependency $($Dependency.publisher)_$($Dependency.name) ($depId) version $($Dependency.version) from NuGet" })
+    try {
+        $downloaded = @(Download-BcNuGetPackageToFolder `
+            -nuGetServerUrl $GitHubPackagesServerUrl `
+            -nuGetToken $GitHubPackagesToken `
+            -packageName $depId `
+            -version $Dependency.version `
+            -select $SelectMode `
+            -folder $PackageCachePath `
+            -installedPlatform $InstalledPlatform `
+            -installedApps $InstalledApps `
+            -downloadDependencies 'allButMicrosoft')
+        if ($downloaded.Count -gt 0) {
+            $log.Add(@{ Level = 'Host'; Message = "Downloaded $(($downloaded | ForEach-Object { "$($_.Name) $($_.Version)" }) -join ', ')" })
+        }
+        else {
+            $log.Add(@{ Level = 'Warning'; Message = "Could not find a NuGet package for dependency $($Dependency.publisher)_$($Dependency.name) ($depId) version $($Dependency.version). If this app isn't published to NuGet, ignore this warning; otherwise compilation will fail with AL1022." })
+        }
+    }
+    catch {
+        $log.Add(@{ Level = 'Warning'; Message = "Failed to resolve dependency $($Dependency.publisher)_$($Dependency.name) ($depId) from NuGet: $($_.Exception.Message)" })
+    }
+    return [PSCustomObject]@{ DependencyId = $depId; Log = $log }
+}
+
+<#
+.SYNOPSIS
+    Replays a Resolve-NonMicrosoftDependencyFromNuGet result through Write-Host / OutputWarning.
+#>
+function Write-DependencyResolutionLog {
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSObject] $Result
+    )
+
+    foreach ($entry in $Result.Log) {
+        if ($entry.Level -eq 'Warning') {
+            OutputWarning -message $entry.Message
+        }
+        else {
+            Write-Host $entry.Message
+        }
+    }
+}
+
 function Install-NonMicrosoftDependenciesFromNuGet {
     param(
         [Parameter(Mandatory = $true)]
@@ -1079,6 +1278,7 @@ function Install-NonMicrosoftDependenciesFromNuGet {
     }
 
     $attemptedDependencyIds = New-Object 'System.Collections.Generic.HashSet[string]'
+    $dependenciesToResolve = @()
     foreach ($folder in $AppFolders) {
         $appJsonPath = Join-Path $folder 'app.json'
         if (-not (Test-Path $appJsonPath)) { continue }
@@ -1092,36 +1292,84 @@ function Install-NonMicrosoftDependenciesFromNuGet {
             if ($localAppIds.Contains($depId)) { continue }
             if (-not $attemptedDependencyIds.Add($depId)) { continue }
 
-            Write-Host "Resolving non-Microsoft dependency $($dependency.publisher)_$($dependency.name) ($depId) version $($dependency.version) from NuGet"
-            try {
-                $downloaded = @(Download-BcNuGetPackageToFolder `
-                    -nuGetServerUrl $gitHubPackagesServerUrl `
-                    -nuGetToken $gitHubPackagesToken `
-                    -packageName $depId `
-                    -version $dependency.version `
-                    -select $Settings.nuGetFeedSelectMode `
-                    -folder $PackageCachePath `
-                    -installedPlatform $installedPlatform `
-                    -installedApps $installedApps `
-                    -downloadDependencies 'allButMicrosoft')
-                if ($downloaded.Count -gt 0) {
-                    Write-Host "Downloaded $(($downloaded | ForEach-Object { "$($_.Name) $($_.Version)" }) -join ', ')"
-                }
-                else {
-                    OutputWarning -message "Could not find a NuGet package for dependency $($dependency.publisher)_$($dependency.name) ($depId) version $($dependency.version). If this app isn't published to NuGet, ignore this warning; otherwise compilation will fail with AL1022."
-                }
-            }
-            catch {
-                OutputWarning -message "Failed to resolve dependency $($dependency.publisher)_$($dependency.name) ($depId) from NuGet: $($_.Exception.Message)"
-            }
+            $dependenciesToResolve += $dependency
+        }
+    }
+
+    if ($dependenciesToResolve.Count -eq 0) {
+        return
+    }
+
+    if ($dependenciesToResolve.Count -eq 1) {
+        # A single dependency: resolve it in this runspace directly. There is nothing to gain from
+        # a runspace pool for one item, and it keeps Download-BcNuGetPackageToFolder callable exactly
+        # as before (relevant for Pester - Mock cannot see calls made from a different runspace).
+        $result = Resolve-NonMicrosoftDependencyFromNuGet -Dependency $dependenciesToResolve[0] `
+            -GitHubPackagesServerUrl $gitHubPackagesServerUrl -GitHubPackagesToken $gitHubPackagesToken `
+            -SelectMode $Settings.nuGetFeedSelectMode -PackageCachePath $PackageCachePath `
+            -InstalledPlatform $installedPlatform -InstalledApps $installedApps -TrustedNuGetFeeds $trustedFeeds
+        Write-DependencyResolutionLog -Result $result
+        return
+    }
+
+    # 2 or more independent dependencies: resolve them concurrently. Download-BcNuGetPackageToFolder
+    # is a synchronous BcContainerHelper cmdlet, not raw HTTP this module controls, so a single
+    # runspace can only run one call at a time - Invoke-ScriptBlocksInParallel gets real concurrency
+    # from a RunspacePool instead. Each worker runspace dot-sources BcContainerHelper fresh (it is
+    # already on local disk, so this is import cost only, no re-download) and re-imports this module
+    # to get Resolve-NonMicrosoftDependencyFromNuGet.
+    #
+    # BcContainerHelper's own AL-Language-extension cache (used deep inside Download-BcNuGetPackageToFolder
+    # to read an app.json out of a downloaded .app) is a shared, version-keyed disk path, but it is
+    # already protected by a named "DownloadAlLanguageExtension" System.Threading.Mutex in
+    # HelperFunctions.ps1 (DownloadLatestAlLanguageExtension) - a named Mutex is an OS kernel object,
+    # so it serializes correctly across runspaces in this same process exactly as it does across
+    # separate processes. Concurrent workers racing to prime that cache is therefore already safe;
+    # no separate "resolve the first one serially to warm the cache" staging is needed here.
+    $modulePath = $PSCommandPath
+    $bcContainerHelperPath = $env:BcContainerHelperPath
+    if (-not $bcContainerHelperPath) {
+        throw "BcContainerHelperPath is not set. DownloadAndImportBcContainerHelper must run before Install-NonMicrosoftDependenciesFromNuGet."
+    }
+
+    $workerScript = {
+        param($BcContainerHelperPath, $ModulePath, $Dependency, $GitHubPackagesServerUrl, $GitHubPackagesToken, $SelectMode, $PackageCachePath, $InstalledPlatform, $InstalledApps, $TrustedNuGetFeeds)
+        . $BcContainerHelperPath -Silent | Out-Null
+        Import-Module $ModulePath -Force -DisableNameChecking | Out-Null
+        Resolve-NonMicrosoftDependencyFromNuGet -Dependency $Dependency -GitHubPackagesServerUrl $GitHubPackagesServerUrl `
+            -GitHubPackagesToken $GitHubPackagesToken -SelectMode $SelectMode -PackageCachePath $PackageCachePath `
+            -InstalledPlatform $InstalledPlatform -InstalledApps $InstalledApps -TrustedNuGetFeeds $TrustedNuGetFeeds
+    }
+
+    $argumentLists = @($dependenciesToResolve | ForEach-Object {
+            , @($bcContainerHelperPath, $modulePath, $_, $gitHubPackagesServerUrl, $gitHubPackagesToken, $Settings.nuGetFeedSelectMode, $PackageCachePath, $installedPlatform, $installedApps, $trustedFeeds)
+        })
+
+    $results = Invoke-ScriptBlocksInParallel -ScriptBlock $workerScript -ArgumentLists $argumentLists
+
+    for ($i = 0; $i -lt $results.Count; $i++) {
+        $entry = $results[$i]
+        if ($entry.Error) {
+            # Only reached for an infrastructure failure (e.g. the worker runspace itself could not
+            # dot-source BcContainerHelper or import this module) - Resolve-NonMicrosoftDependencyFromNuGet
+            # already catches a failing Download-BcNuGetPackageToFolder call itself and returns it as a
+            # Log entry instead of throwing, so this branch does not duplicate that path.
+            $dependency = $dependenciesToResolve[$i]
+            OutputWarning -message "Failed to resolve dependency $($dependency.publisher)_$($dependency.name) ($($dependency.id)) from NuGet: $($entry.Error.Exception.Message)"
+            continue
+        }
+        foreach ($result in $entry.Output) {
+            Write-DependencyResolutionLog -Result $result
         }
     }
 }
 
 Export-ModuleMember -Function Test-OnWindows, Get-ALCompilerPackageName, Add-ALToolLaunchers, `
     Select-BcSymbolsVersion, Get-NuGetFlatContainerUrl, Get-NuGetPackageVersions, `
-    Get-NuGetPackageVersionsInParallel, Get-FilesInParallel, Get-NuGetPackageDependencies, `
+    Get-NuGetPackageVersionsInParallel, Get-FilesInParallel, Invoke-ScriptBlocksInParallel, `
+    Get-NuGetPackageDependencies, `
     Expand-AppsFromNuGetPackage, Select-NuGetVersionInRange, Select-ALCompilerVersion, `
     Get-BcApplicationSymbolsPackageName, Get-BcSymbolsPackageNameForDependency, `
     Get-MicrosoftDependencyPackages, Test-SymbolsFromNuGetSupported, `
-    New-BcCompilerFolderFromNuGet, Install-NonMicrosoftDependenciesFromNuGet
+    New-BcCompilerFolderFromNuGet, Resolve-NonMicrosoftDependencyFromNuGet, `
+    Install-NonMicrosoftDependenciesFromNuGet
