@@ -122,6 +122,15 @@ function CreateBuildDimensions {
         }
 
         $linuxFastLane = [bool]$projectSettings.linuxFastLane
+        if ($linuxFastLane -and ([bool]$projectSettings.useCompilerFolder -or [bool]$projectSettings.doNotPublishApps)) {
+            # The Linux fast lane exists to publish apps to a container and run tests there.
+            # useCompilerFolder means "no container" and doNotPublishApps means "nothing gets
+            # published" - either one makes this a compile-only project, which the fast lane
+            # can't serve (it always tries to publish+test). Fall back to the standard Windows
+            # pipeline, which already knows how to do a compile-only build correctly.
+            Write-Host "::warning::linuxFastLane is enabled for project $project, but useCompilerFolder/doNotPublishApps make it a compile-only project (no container, nothing published). Skipping the Linux fast lane for this project; it will use the standard Windows pipeline instead."
+            $linuxFastLane = $false
+        }
         $linuxBcVersion = ''
         $linuxAlToolVersion = ''
         $linuxAppDirs = ''

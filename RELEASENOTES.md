@@ -2,6 +2,8 @@
 
 AL-Go can now build a project using the Linux BC fast lane ([StefanMaron/MsDyn365Bc.On.Linux](https://github.com/StefanMaron/MsDyn365Bc.On.Linux)) instead of the standard Windows container pipeline. Set `linuxFastLane: true` (optionally scoped to specific branches or workflows via [ConditionalSettings](Scenarios/settings.md#conditional)) to compile from source, publish to a Linux BC container, and run AL unit tests entirely on an `ubuntu-latest` runner - no Windows container, and much faster than a full container build. There is no signing, no BCPT tests, no page scripting tests, and no Deliver step on this path. BC version and country are taken from the existing `artifact`/`country` settings, and the AL compiler version is taken from the existing `vsixFile` setting (`default`/`latest`/`preview`, same policy as the Windows pipeline) - no new settings are needed for any of those. See [Scenarios/LinuxFastLane.md](Scenarios/LinuxFastLane.md) for what's in scope and what isn't.
 
+A project set up to compile without publishing anything (`useCompilerFolder: true` or `doNotPublishApps: true`) has nothing for the fast lane to publish or test, so `linuxFastLane` is now ignored for it - it keeps building on the standard Windows pipeline instead, with a warning in the log. This means an org- or repo-wide `linuxFastLane: true` default is safe to turn on even when some projects are deliberately compile-only (for example, apps that depend on AppSource apps that can only be compiled against, not installed for testing).
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
