@@ -166,6 +166,7 @@ try {
         -AppFolders @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | ForEach-Object { Join-Path $projectFolder $_ }) `
         -PackageCachePath $packageCachePath `
         -Settings $settings `
+        -ArtifactUrl $artifact `
         -GitHubPackagesContext "$($secrets.gitHubPackagesContext)" `
         -Token $token
 

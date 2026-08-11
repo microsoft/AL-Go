@@ -308,7 +308,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             function global:OutputWarning { param($message) Write-Host "::warning::$message" }
             function global:GetAccessToken { param($token, $permissions, $repositories) return "scoped:$token" }
             function global:Download-BcNuGetPackageToFolder {
-                param($nuGetServerUrl, $nuGetToken, $packageName, $version, $select, $folder, $downloadDependencies)
+                param($nuGetServerUrl, $nuGetToken, $packageName, $version, $select, $folder, $downloadDependencies, $installedPlatform, $installedApps)
             }
             function script:New-TestAppJson {
                 param($Folder, $Id, $Dependencies = @())
@@ -322,6 +322,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             $global:bcContainerHelperConfig = @{}
             $testFolder = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
             New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
+            $artifactUrl = 'https://bcartifacts.azureedge.net/sandbox/26.5.38752.53540/w1'
         }
 
         It 'skips Microsoft dependencies' {
@@ -331,7 +332,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             )
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
 
-            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{}
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 0
         }
@@ -347,7 +348,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             )
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
 
-            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder, $depFolder) -PackageCachePath $testFolder -Settings @{}
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder, $depFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 0
         }
@@ -363,11 +364,38 @@ Describe "CompilerFolderFromNuGet Module Tests" {
 
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { return @('Insight Works_IWorks Common_2.19.0.0.app') }
 
-            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder1, $appFolder2) -PackageCachePath $testFolder -Settings @{ nuGetFeedSelectMode = 'LatestMatching' }
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder1, $appFolder2) -PackageCachePath $testFolder -Settings @{ nuGetFeedSelectMode = 'LatestMatching' } -ArtifactUrl $artifactUrl
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 1 -Exactly -ParameterFilter {
                 $packageName -eq $depId -and $version -eq '2.18.0.0' -and $select -eq 'LatestMatching' -and $folder -eq $testFolder
             }
+        }
+
+        It 'passes the artifact BC version as installedPlatform and as the installed Application version, so LatestMatching rejects incompatible candidates' {
+            $depId = [Guid]::NewGuid().ToString()
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = $depId; publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl 'https://bcartifacts.azureedge.net/sandbox/26.5.38752.53540/w1'
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 1 -Exactly -ParameterFilter {
+                "$installedPlatform" -eq '26.5.38752.53540' -and
+                    @($installedApps).Count -eq 1 -and
+                    $installedApps[0].Name -eq 'Application' -and
+                    "$($installedApps[0].Version)" -eq '26.5.38752.53540'
+            }
+        }
+
+        It 'throws a clear error for a malformed artifact URL instead of resolving dependencies blind' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+
+            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl 'not-a-url' } | Should -Throw -ExpectedMessage "*Invalid artifact URL*"
         }
 
         It 'sets TrustedNuGetFeeds from settings.trustedNuGetFeeds and the AppSourceSymbols feed when trustMicrosoftNuGetFeeds is set' {
@@ -379,7 +407,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
                 trustedNuGetFeeds       = @(@{ url = 'https://example.com/index.json'; token = '' })
                 trustMicrosoftNuGetFeeds = $true
             }
-            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings $settings
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings $settings -ArtifactUrl $artifactUrl
 
             $bcContainerHelperConfig.TrustedNuGetFeeds.Count | Should -Be 2
             $bcContainerHelperConfig.TrustedNuGetFeeds[0].url | Should -Be 'https://example.com/index.json'
@@ -391,7 +419,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString())
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
 
-            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{ trustMicrosoftNuGetFeeds = $false }
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{ trustMicrosoftNuGetFeeds = $false } -ArtifactUrl $artifactUrl
 
             $bcContainerHelperConfig.TrustedNuGetFeeds.Count | Should -Be 0
         }
@@ -405,7 +433,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
 
             $gitHubPackagesContext = @{ serverUrl = 'https://nuget.pkg.github.com/contoso/index.json'; token = 'raw-token' } | ConvertTo-Json -Compress
-            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -GitHubPackagesContext $gitHubPackagesContext
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -GitHubPackagesContext $gitHubPackagesContext -ArtifactUrl $artifactUrl
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 1 -Exactly -ParameterFilter {
                 $nuGetServerUrl -eq 'https://nuget.pkg.github.com/contoso/index.json' -and $nuGetToken -eq 'scoped:raw-token'
@@ -420,7 +448,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { return @() }
             Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
 
-            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} } | Should -Not -Throw
+            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl } | Should -Not -Throw
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter { $message -like '*Could not find a NuGet package*' }
         }
@@ -433,7 +461,7 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { throw "network error" }
             Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
 
-            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} } | Should -Not -Throw
+            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl } | Should -Not -Throw
 
             Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter { $message -like '*Failed to resolve dependency*' }
         }

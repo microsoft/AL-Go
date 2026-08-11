@@ -995,6 +995,11 @@ function New-BcCompilerFolderFromNuGet {
 .PARAMETER Settings
     Project settings hashtable. Reads trustedNuGetFeeds, trustMicrosoftNuGetFeeds and
     nuGetFeedSelectMode.
+.PARAMETER ArtifactUrl
+    The artifact URL the build's compiler folder was resolved against. Its BC version segment
+    is used to reject candidate dependency versions that require a newer platform/application
+    than what is being compiled against, so LatestMatching resolves to the newest version this
+    build can actually compile against rather than the newest version published at all.
 .PARAMETER GitHubPackagesContext
     Raw gitHubPackagesContext secret (JSON: {serverUrl, token}), or '' if not configured.
 .PARAMETER Token
@@ -1008,11 +1013,30 @@ function Install-NonMicrosoftDependenciesFromNuGet {
         [string] $PackageCachePath,
         [Parameter(Mandatory = $true)]
         [hashtable] $Settings,
+        [Parameter(Mandatory = $true)]
+        [string] $ArtifactUrl,
         [Parameter(Mandatory = $false)]
         [string] $GitHubPackagesContext = '',
         [Parameter(Mandatory = $false)]
         [string] $Token = ''
     )
+
+    # Download-BcNuGetPackageToFolder only rejects a candidate version whose own nuspec
+    # declares a platform/application requirement higher than what is being compiled against
+    # when told what that is - without installedPlatform/installedApps it silently accepts
+    # the newest published version of a dependency regardless of whether it actually targets
+    # this Business Central version, which then fails later with confusing AL0xxx errors
+    # instead of a clear dependency-resolution message. The BC version segment of the
+    # artifact URL is what a real environment reports as both its platform and application
+    # build number, so it doubles as both here - matching how Run-AlPipeline's
+    # InstallMissingDependencies (RunPipeline.ps1) derives the same values from the
+    # installed container.
+    $parts = $ArtifactUrl.Split('?')[0].Split('/')
+    if ($parts.Count -lt 5) {
+        throw "Invalid artifact URL: $ArtifactUrl"
+    }
+    $installedPlatform = [System.Version]$parts[4]
+    $installedApps = @([PSCustomObject]@{ Name = 'Application'; Version = $installedPlatform })
 
     # Same feed list Run-AlPipeline gets by default on the classic pipeline (see
     # RunPipeline.ps1's own TrustedNuGetFeeds construction) - so a project doesn't need any
@@ -1073,9 +1097,11 @@ function Install-NonMicrosoftDependenciesFromNuGet {
                     -version $dependency.version `
                     -select $Settings.nuGetFeedSelectMode `
                     -folder $PackageCachePath `
+                    -installedPlatform $installedPlatform `
+                    -installedApps $installedApps `
                     -downloadDependencies 'allButMicrosoft')
                 if ($downloaded.Count -gt 0) {
-                    Write-Host "Downloaded $($downloaded -join ', ')"
+                    Write-Host "Downloaded $(($downloaded | ForEach-Object { "$($_.Name) $($_.Version)" }) -join ', ')"
                 }
                 else {
                     OutputWarning -message "Could not find a NuGet package for dependency $($dependency.publisher)_$($dependency.name) ($depId) version $($dependency.version). If this app isn't published to NuGet, ignore this warning; otherwise compilation will fail with AL1022."
