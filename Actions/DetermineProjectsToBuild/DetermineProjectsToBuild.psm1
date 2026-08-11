@@ -231,6 +231,13 @@ function CreateBuildDimensions {
         - buildDimensions: An array of build dimensions, to be used in a build matrix. Properties of the build dimension are:
             - project: The project to build
             - buildMode: The build mode to use
+
+.PARAMETER supportsLinuxFastLane
+    Whether the calling workflow has a job that consumes buildDimensionsLinux. Defaults to $true
+    for direct/test callers of this function; the DetermineProjectsToBuild action itself always
+    passes this explicitly, defaulting to $false for every workflow except PullRequestHandler, so
+    a linuxFastLane-enabled project ends up in buildDimensions instead of being dropped from the
+    build entirely.
 #>
 function Get-ProjectsToBuild {
     param (
@@ -243,7 +250,9 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
         [int] $maxBuildDepth = 0,
         [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
-        $token
+        $token,
+        [Parameter(HelpMessage = "Whether the calling workflow has a job that consumes buildDimensionsLinux. When false, projects with linuxFastLane enabled are folded back into the regular buildDimensions instead of being dropped silently.", Mandatory = $false)]
+        [bool] $supportsLinuxFastLane = $true
     )
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -292,6 +301,14 @@ function Get-ProjectsToBuild {
                     # Create build dimensions for the projects on the current depth
                     # buildDimensions only contains projects using the standard Windows pipeline; projects with linuxFastLane enabled are split into buildDimensionsLinux instead
                     $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth -token $token
+                    if (-not $supportsLinuxFastLane) {
+                        # The calling workflow has no job that consumes buildDimensionsLinux (e.g. CICD, CreateRelease -
+                        # only PullRequestHandler does). Routing a project there anyway would mean it silently never
+                        # builds: no job spawns, no error, no warning, PostProcess still reports success. Fold it back
+                        # into the regular Windows dimension instead - "linuxFastLane is for PRs, not main" should mean
+                        # the standard pipeline runs, not that the project vanishes.
+                        $buildDimensions | Where-Object { $_.linuxFastLane } | ForEach-Object { $_.linuxFastLane = $false }
+                    }
                     $windowsBuildDimensions = @($buildDimensions | Where-Object { -not $_.linuxFastLane })
                     $linuxBuildDimensions = @($buildDimensions | Where-Object { $_.linuxFastLane })
                     $projectsOrderToBuild += @{

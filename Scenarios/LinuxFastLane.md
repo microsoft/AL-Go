@@ -84,4 +84,8 @@ the Windows build accepts (or vice versa).
 
 `main` is not expected to use `linuxFastLane` - it should keep running the
 full, Microsoft-supported Windows pipeline (signing, BCPT, page scripting,
-Deliver) as the final gate before a release.
+Deliver) as the final gate before a release. Only `PullRequestHandler`
+actually has a job that runs the fast lane; `CICD`, `CreateRelease`, and
+every other workflow ignore `linuxFastLane` and always use the standard
+pipeline, even if it's set (directly, or via a broad repo/org default).
+A project doesn't disappear from those builds because of it.

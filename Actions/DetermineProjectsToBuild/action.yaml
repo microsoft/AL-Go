@@ -10,6 +10,10 @@ inputs:
     description: Specifies the maximum build depth suppored by the workflow running the action
     required: false
     default: '0'
+  supportsLinuxFastLane:
+    description: Whether the calling workflow has a job that consumes buildDimensionsLinux (only PullRequestHandler does). A linuxFastLane-enabled project is otherwise folded back into the regular buildDimensions instead of being dropped from the build.
+    required: false
+    default: 'false'
 outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
@@ -40,9 +44,10 @@ runs:
       id: determineProjectsToBuild
       env:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
+        _supportsLinuxFastLane: ${{ inputs.supportsLinuxFastLane }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth -supportsLinuxFastLane ([bool]::Parse($env:_supportsLinuxFastLane))
         }
 branding:
   icon: terminal

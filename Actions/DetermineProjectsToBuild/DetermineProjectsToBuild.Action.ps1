@@ -4,7 +4,9 @@
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
     [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
-    [string] $token
+    [string] $token,
+    [Parameter(HelpMessage = "Whether the calling workflow has a job that consumes buildDimensionsLinux (only PullRequestHandler does)", Mandatory = $false)]
+    [bool] $supportsLinuxFastLane = $false
 )
 
 #region Action: Setup
@@ -61,7 +63,7 @@ if (-not $buildAllProjects) {
 # buildAllProjects is set to true if we are to build all projects
 # publishSkippedProjects is set to true if we are to publish artifacts for skipped projects (meaning we are still going through the build process for all projects, just not building)
 Write-Host "::group::Get Projects To Build"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth -token $token
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth -token $token -supportsLinuxFastLane $supportsLinuxFastLane
 if ($buildAllProjects) {
     $skippedProjects = @()
 }
