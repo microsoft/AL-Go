@@ -77,4 +77,16 @@ The template repos are live — this is directly actionable now. Concrete runboo
 - New fork-only behavior should be additive and gated (new files, or new job/step blocks guarded by an `if:` on a project-level setting) rather than rewriting existing upstream logic in place — this is what keeps `git merge upstream/main` conflict-free. The actual `feat/linux-fast-lane` diff follows this pattern already (see `Templates/Per Tenant Extension/.github/workflows/PullRequestHandler.yaml`: new `BuildLinux` job gated on `buildDimensionsLinuxCount > 0`, existing `Build` job's `if:` condition only picked up a renamed count variable).
 - Periodically (Stefan hasn't committed to automating this yet — ask before building a cron for it): `git fetch upstream (microsoft/AL-Go) main`, check `git merge-base --is-ancestor main upstream/main` isn't already true, and if the merge is conflict-free, fast-forward/merge and redeploy via step 2 of "make the fast lane deployable" above so `StefanMaron/AL-Go-PTE`/`AppSource` pick up Microsoft's upstream changes too.
 
+### Fork patches to Microsoft-owned files (perf/bug fixes, not new features)
+
+Sometimes the right fix isn't a new additive file/job — it's a small change inside a file Microsoft still owns (e.g. deleting an unnecessary line in an `Actions/*.ps1`). That doesn't need the opt-in-setting treatment from constraint 1 above (it's not new user-facing behavior), but it does carry merge risk constraint 2 is about, so treat these differently from `linuxFastLane`-style features:
+
+- Keep the diff to the smallest possible surgical change (ideally one line), with a comment marking it as an AL-Go fork patch and explaining why, so a future 3-way merge conflict on that line is trivial to re-resolve instead of confusing.
+- Back it with a Pester test in `Tests/` that asserts the patch is still in place (e.g. greps the action script for the removed call) — this runs in this repo's existing CI on every PR, including the PR that merges `upstream/main` in, so a merge that silently reintroduces the old behavior fails CI instead of shipping unnoticed. This is the "pipeline" that keeps the patch applied: normal `git merge` already carries a committed patch forward automatically (that's what merge does), the test's only job is to catch the case where upstream touches the same lines and the merge needs a human to reconcile it.
+- Log each one here so a fork-sync pass knows what to specifically re-verify after `git merge upstream/main`:
+
+| Patch | File | Why | Guard test |
+|---|---|---|---|
+| Skip `DownloadAndImportBcContainerHelper` in DetermineProjectsToBuild | `Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.Action.ps1` | That action only enumerates settings/folders, never calls a `Bc*` cmdlet — the download+extract+import was costing ~20s per run for nothing (2026-08-10) | `Tests/DetermineProjectsToBuild.Test.ps1` → "DetermineProjectsToBuild.Action.ps1 startup cost" |
+
 See also: `[[al-go-fork-strategy]]` (project memory, AL-Go repo) for the fuller verification trail behind this skill.

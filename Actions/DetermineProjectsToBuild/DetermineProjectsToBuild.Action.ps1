@@ -12,7 +12,12 @@
 #region Action: Setup
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-DownloadAndImportBcContainerHelper -baseFolder $baseFolder
+# AL-Go fork patch (StefanMaron/AL-Go): this action only enumerates settings/folders and
+# never calls a BcContainerHelper cmdlet, so downloading+importing the module here just
+# pays ~20s of network+extract+import cost for nothing. Guarded by Tests/DetermineProjectsToBuild.Test.ps1
+# ("does not download BcContainerHelper") so a future upstream merge that reintroduces this
+# line gets caught by CI instead of silently regressing.
+# DownloadAndImportBcContainerHelper -baseFolder $baseFolder
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 #endregion
 
