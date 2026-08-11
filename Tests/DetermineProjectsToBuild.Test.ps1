@@ -1265,6 +1265,96 @@ Describe "Get-ProjectsToBuild" {
         }
     }
 
+    It 'resolves the BC artifact URL centrally for every project, not just linuxFastLane ones, calling AnalyzeRepo/DetermineArtifactUrl once per project' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock AnalyzeRepo { param($settings, $baseFolder, $project, [switch]$doNotCheckArtifactSetting, [switch]$doNotIssueWarnings) $settings } -ModuleName DetermineProjectsToBuild
+        Mock DetermineArtifactUrl { param($projectSettings, [switch]$doNotIssueWarnings) 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1' } -ModuleName DetermineProjectsToBuild
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        # Project1 (standard Windows pipeline)
+        $windowsDimension = $buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }
+        $windowsDimension.artifact | Should -BeExactly 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1'
+
+        # Project2 (linuxFastLane) - gets the same artifact field, plus linuxBcVersion derived from it
+        $linuxDimension = $buildOrder[0].buildDimensionsLinux | Where-Object { $_.project -eq 'Project2' }
+        $linuxDimension.artifact | Should -BeExactly 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1'
+        $linuxDimension.linuxBcVersion | Should -BeExactly '24.0.12345.0'
+
+        # One resolution per project - the linuxFastLane project's AnalyzeRepo/DetermineArtifactUrl call is
+        # reused for both linuxBcVersion and artifact, not duplicated.
+        Should -Invoke AnalyzeRepo -ModuleName DetermineProjectsToBuild -Times 2 -Exactly
+        Should -Invoke DetermineArtifactUrl -ModuleName DetermineProjectsToBuild -Times 2 -Exactly
+    }
+
+    It 'sets artifactCacheKey only when useCompilerFolder is true and symbolsSource is not nuGet' {
+        foreach ($case in @(
+            @{ useCompilerFolder = $true; symbolsSource = ''; expectKey = $true }
+            @{ useCompilerFolder = $true; symbolsSource = 'nuGet'; expectKey = $false }
+            @{ useCompilerFolder = $false; symbolsSource = ''; expectKey = $false }
+        )) {
+            $projectSettings = @{ useCompilerFolder = $case.useCompilerFolder }
+            if ($case.symbolsSource) {
+                $projectSettings.symbolsSource = $case.symbolsSource
+                if ($case.symbolsSource -eq 'nuGet') {
+                    # ReadSettings falls symbolsSource back to 'artifact' unless workspaceCompilation is enabled
+                    $projectSettings.workspaceCompilation = @{ enabled = $true }
+                }
+            }
+            New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(ConvertTo-Json $projectSettings -Depth 10) -type File -Force
+
+            $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+            $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+            Mock AnalyzeRepo { param($settings, $baseFolder, $project, [switch]$doNotCheckArtifactSetting, [switch]$doNotIssueWarnings) $settings } -ModuleName DetermineProjectsToBuild
+            Mock DetermineArtifactUrl { param($projectSettings, [switch]$doNotIssueWarnings) 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1?sv=some-sas-token' } -ModuleName DetermineProjectsToBuild
+
+            $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+            $dimension = $buildOrder[0].buildDimensions[0]
+            $dimension.artifact | Should -BeExactly 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1?sv=some-sas-token'
+            if ($case.expectKey) {
+                $dimension.artifactCacheKey | Should -BeExactly 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1' -Because "useCompilerFolder=$($case.useCompilerFolder) symbolsSource='$($case.symbolsSource)'"
+            }
+            else {
+                $dimension.artifactCacheKey | Should -BeExactly '' -Because "useCompilerFolder=$($case.useCompilerFolder) symbolsSource='$($case.symbolsSource)'"
+            }
+        }
+    }
+
+    It 'does not throw and leaves artifact empty for a project whose central resolution fails, without affecting other projects' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ country = 'fail' } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ country = 'ok' } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock AnalyzeRepo { param($settings, $baseFolder, $project, [switch]$doNotCheckArtifactSetting, [switch]$doNotIssueWarnings) $settings } -ModuleName DetermineProjectsToBuild
+        Mock DetermineArtifactUrl {
+            param($projectSettings, [switch]$doNotIssueWarnings)
+            if ($projectSettings.country -eq 'fail') {
+                throw "Simulated artifact resolution failure"
+            }
+            return 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/ok'
+        } -ModuleName DetermineProjectsToBuild
+
+        { $script:allProjects, $script:modifiedProjects, $script:projectsToBuild, $script:projectDependencies, $script:buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder } | Should -Not -Throw
+
+        $dim1 = $script:buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }
+        $dim2 = $script:buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project2' }
+
+        $dim1 | Should -Not -BeNullOrEmpty
+        $dim2 | Should -Not -BeNullOrEmpty
+        $dim1.artifact | Should -BeExactly ''
+        $dim1.artifactCacheKey | Should -BeExactly ''
+        $dim2.artifact | Should -BeExactly 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/ok'
+    }
+
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
     }

@@ -77,6 +77,16 @@ on:
         description: JSON formatted needs context
         type: string
         default: '{}'
+      artifact:
+        description: BC artifact URL for this project, centrally resolved by the Initialization job's DetermineProjectsToBuild step. Empty if it couldn't be resolved there, in which case this workflow resolves it itself as a fallback.
+        required: false
+        default: ''
+        type: string
+      artifactCacheKey:
+        description: Cache key for the Cache Business Central Artifacts step, matching the centrally-resolved artifact input. Empty if artifact is empty.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   actions: read
@@ -146,9 +156,17 @@ jobs:
           submodules: ${{ env.useGitSubmodules }}
           token: '${{ fromJson(steps.ReadSecrets.outputs.Secrets).gitSubmodulesToken }}'
 
+      - name: Use centrally-resolved ArtifactUrl
+        id: useCentrallyResolvedArtifactUrl
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.artifact != ''
+        shell: ${{ inputs.shell }}
+        run: |
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=${{ inputs.artifact }}"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifactCacheKey=${{ inputs.artifactCacheKey }}"
+
       - name: Determine ArtifactUrl
         id: determineArtifactUrl
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.artifact == ''
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         with:
           shell: ${{ inputs.shell }}

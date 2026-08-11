@@ -98,6 +98,8 @@ function ShouldBuildProject {
     - linuxAlToolVersion: The AL compiler version policy for the Linux fast lane, mapped from the project's vsixFile setting ('' (default/matching), 'latest', or 'prerelease'); empty if vsixFile is a direct download URL, which can't be mapped to a policy keyword
     - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
     - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) dependency .apps; empty if the project has none
+    - artifact: the resolved BC artifact URL for this project (best-effort resolved centrally here, the same way the project's own "Determine ArtifactUrl" build step would); empty if it couldn't be resolved, in which case the build step resolves it itself as a fallback
+    - artifactCacheKey: cache key for the Cache Business Central Artifacts step, mirroring DetermineArtifactUrl.ps1's own logic (set only when useCompilerFolder is true and symbolsSource is not 'nuGet'); empty otherwise, or when artifact couldn't be resolved
 #>
 function CreateBuildDimensions {
     param(
@@ -136,6 +138,17 @@ function CreateBuildDimensions {
         $linuxAppDirs = ''
         $linuxTestAppDirs = ''
         $linuxDependencySubdir = ''
+        $artifact = ''
+        $artifactCacheKey = ''
+
+        # AnalyzeRepo discovers appFolders/testFolders and resolves the artifact/updateDependencies settings the
+        # same way DetermineArtifactUrl does today for the Windows pipeline's own per-project "Determine
+        # ArtifactUrl" build step. Resolved once here for every project (not just linuxFastLane ones) so that
+        # DetermineArtifactUrl below - and the BcContainerHelper download/import it needs - runs once per
+        # Initialization job instead of once per project's own separate build job (measured ~19s per job, almost
+        # entirely BcContainerHelper download/import, not the actual ~2.3s artifact lookup).
+        $resolvedSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
+
         if ($linuxFastLane) {
             # Map AL-Go's vsixFile setting onto bc-test-from-source.yml's al_tool_version policy keyword,
             # so the same "which compiler" choice governs both the Windows and Linux fast lane builds.
@@ -147,25 +160,44 @@ function CreateBuildDimensions {
                     Write-Host "::warning::vsixFile is set to a direct download URL for project $project; the Linux fast lane can't resolve a compiler version from a URL and will fall back to its own default. Use 'default', 'latest', or 'preview' for vsixFile to also control the Linux fast lane compiler."
                 }
             }
-            # AnalyzeRepo discovers appFolders/testFolders the same way DetermineArtifactUrl does today for the Windows pipeline
-            $linuxSettings = AnalyzeRepo -settings $projectSettings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
-            $linuxAppDirs = @($linuxSettings.appFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
-            $linuxTestAppDirs = @($linuxSettings.testFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
-            try {
-                $artifactUrl = DetermineArtifactUrl -projectSettings $linuxSettings -doNotIssueWarnings
+            $linuxAppDirs = @($resolvedSettings.appFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+            $linuxTestAppDirs = @($resolvedSettings.testFolders | ForEach-Object { (Join-Path $project ($_ -replace '^\.[\\/]', '')).Replace('\','/') }) -join ' '
+        }
+
+        try {
+            $artifactUrl = DetermineArtifactUrl -projectSettings $resolvedSettings -doNotIssueWarnings
+            $artifact = $artifactUrl
+            if ($resolvedSettings.useCompilerFolder -and $resolvedSettings.symbolsSource -ne 'nuGet') {
+                # Mirrors DetermineArtifactUrl.ps1's own cache-key logic: an empty cache key switches off the
+                # Cache Business Central Artifacts steps in the workflow. When symbols come from NuGet the
+                # artifact is never downloaded, so caching it would only cost a restore and a cache entry
+                # nothing reads.
+                $artifactCacheKey = $artifactUrl.Split('?')[0]
+            }
+            if ($linuxFastLane) {
                 $linuxBcVersion = $artifactUrl.Split('/')[4]
             }
-            catch {
+        }
+        catch {
+            # A resolution failure here must not fail the whole Initialization job - that would take every
+            # project's build down with it over one project's artifact-resolution problem, a real regression in
+            # blast radius compared to today (where each project's own build job fails in isolation). Leave
+            # artifact/artifactCacheKey empty; the project's own "Determine ArtifactUrl" build step then runs
+            # exactly as it does today as a fallback, so behavior for that project is unchanged end to end.
+            Write-Host "::warning::Could not resolve the BC artifact URL centrally for project $project ($($_.Exception.Message)); its own build job will resolve it as a fallback."
+            if ($linuxFastLane) {
                 Write-Host "::warning::Could not resolve a concrete BC version from the artifact setting for project $project ($($_.Exception.Message)); the Linux fast lane will use its own default version. Pin the artifact setting to a concrete version to control this."
             }
+        }
 
+        if ($linuxFastLane) {
             # bc-test-from-source.yml only stages symbols from the BC platform artifact tree (Microsoft apps).
             # Third-party dependencies declared via appDependencyProbingPaths (e.g. an AppSource dependency
             # published in another repo) aren't in that artifact, so they're downloaded here (same mechanism
             # the Windows pipeline uses) and staged under LinuxFastLaneDependencies_staging for a single Initialization-job
             # upload step to pick up as the LinuxFastLaneDependencies artifact.
             try {
-                $probingSettings = CheckAppDependencyProbingPaths -settings $linuxSettings -token $token -baseFolder $baseFolder -project $project
+                $probingSettings = CheckAppDependencyProbingPaths -settings $resolvedSettings -token $token -baseFolder $baseFolder -project $project
                 if ($probingSettings.ContainsKey('appDependencyProbingPaths') -and $probingSettings.appDependencyProbingPaths) {
                     # '.' (the common single-project-repo project name) is a reserved relative path
                     # segment - joining it onto a folder path is a no-op, not a real subfolder, which
@@ -213,6 +245,8 @@ function CreateBuildDimensions {
                 linuxAppDirs = $linuxAppDirs
                 linuxTestAppDirs = $linuxTestAppDirs
                 linuxDependencySubdir = $linuxDependencySubdir
+                artifact = $artifact
+                artifactCacheKey = $artifactCacheKey
             }
         }
     }
