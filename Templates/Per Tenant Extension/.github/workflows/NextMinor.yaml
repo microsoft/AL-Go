@@ -99,6 +99,8 @@ jobs:
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
+      artifact: ${{ matrix.artifact }}
+      artifactCacheKey: ${{ matrix.artifactCacheKey }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'
       artifactsRetentionDays: ${{ fromJson(needs.Initialization.outputs.artifactsRetentionDays) }}

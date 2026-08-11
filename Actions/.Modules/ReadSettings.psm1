@@ -215,6 +215,7 @@ function GetDefaultSettings
         "environments"                                  = @()
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
+        "symbolsSource"                                 = "artifact"
         "workspaceCompilation"                          = [ordered]@{
             "enabled"                                   = $false
             "parallelism"                               = 1
@@ -578,6 +579,13 @@ function ReadSettings {
     # Interpret zero or negative parallelism as the max number of processors
     if ($settings.workspaceCompilation.parallelism -le 0) {
         $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
+    }
+
+    # symbolsSource is honored by the CompileApps action, which only runs when workspace
+    # compilation is enabled. Warn rather than silently downloading the artifact anyway.
+    if ($settings.symbolsSource -eq 'nuGet' -and (-not $settings.workspaceCompilation.enabled)) {
+        OutputWarning -message "symbolsSource is set to 'nuGet', which requires workspaceCompilation to be enabled. Falling back to 'artifact'."
+        $settings.symbolsSource = 'artifact'
     }
 
     $settings | ValidateSettings

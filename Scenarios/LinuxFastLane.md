@@ -1,17 +1,20 @@
-# Linux fast lane for pull request builds
+# Linux fast lane for pull request and CI/CD builds
 
-Pull request builds on the standard AL-Go pipeline spin up a full Windows BC
-container and go through the complete compile/sign/test/analyze chain. That
-is correct and necessary as the final gate on `main`, but it's slow and
-costly to run on every push to every pull request.
+Pull request and CI/CD builds on the standard AL-Go pipeline spin up a full
+Windows BC container and go through the complete compile/sign/test/analyze
+chain. That is correct and necessary as the final gate on `main`, but it's
+slow and costly to run on every push to every pull request or test branch.
 
 The `linuxFastLane` setting builds a project using
 [StefanMaron/MsDyn365Bc.On.Linux](https://github.com/StefanMaron/MsDyn365Bc.On.Linux)
 (bc-linux) instead: it compiles AL source, publishes to a BC service tier
 running on Linux via Docker Compose, and runs AL unit tests - entirely on an
-`ubuntu-latest` runner, no Windows container involved. It's meant as a fast,
-cheap gate for pull requests (and optionally a dedicated test branch), not a
-replacement for the full pipeline on `main`.
+`ubuntu-latest` runner, no Windows container involved. It's wired into both
+`PullRequestHandler` (pull request builds) and `CICD` (regular push and
+manual-dispatch builds), so it works the same way whether the build was
+triggered by a PR or a push. It's meant as a fast, cheap gate for pull
+requests and non-production branches (a dedicated test branch, for example),
+not a replacement for the full pipeline on `main`.
 
 ## Enabling it
 
@@ -80,8 +83,26 @@ the Windows build accepts (or vice versa).
   like Camera/Barcode Scanner). These will show up red in the fast lane;
   this is expected, not a regression.
 
+## Compile-only projects are never routed to the fast lane
+
+The fast lane always publishes apps to its Linux container and runs tests
+there. A project set up to compile without publishing anything - `useCompilerFolder: true`
+(no container at all) or `doNotPublishApps: true` - has nothing for that to
+do, so `linuxFastLane` is ignored for it and it keeps building on the
+standard Windows pipeline instead, with a warning in the log. This matters
+for org- or repo-wide `linuxFastLane: true` defaults: turning it on globally
+does not break a project that's deliberately compile-only, for example one
+whose apps depend on AppSource apps that can only be compiled against, not
+installed for testing.
+
 ## `main` stays on the standard pipeline
 
 `main` is not expected to use `linuxFastLane` - it should keep running the
 full, Microsoft-supported Windows pipeline (signing, BCPT, page scripting,
-Deliver) as the final gate before a release.
+Deliver) as the final gate before a release. `PullRequestHandler` and `CICD`
+both have a job that runs the fast lane; scope it away from `main` with
+[ConditionalSettings](settings.md#conditional) (for example, gate it on
+`branches` other than `main`, as in the example above). `CreateRelease` and
+every other workflow ignore `linuxFastLane` and always use the standard
+pipeline, even if it's set (directly, or via a broad repo/org default).
+A project doesn't disappear from those builds because of it.

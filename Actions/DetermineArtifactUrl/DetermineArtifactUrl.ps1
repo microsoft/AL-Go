@@ -13,7 +13,10 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $settings = AnalyzeRepo -settings $settings -project $project -doNotCheckArtifactSetting -doNotIssueWarnings
 $artifactUrl = DetermineArtifactUrl -projectSettings $settings
 $artifactCacheKey = ''
-if ($settings.useCompilerFolder) {
+if ($settings.useCompilerFolder -and $settings.symbolsSource -ne 'nuGet') {
+    # An empty cache key switches off the Cache Business Central Artifacts steps in the
+    # workflow. When symbols come from NuGet the artifact is never downloaded, so caching
+    # it would only cost a ~1 GB restore and a cache entry nothing reads.
     $artifactCacheKey = $artifactUrl.Split('?')[0]
 }
 #endregion

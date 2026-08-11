@@ -77,6 +77,16 @@ on:
         description: JSON formatted needs context
         type: string
         default: '{}'
+      artifact:
+        description: BC artifact URL for this project, centrally resolved by the Initialization job's DetermineProjectsToBuild step. Empty if it couldn't be resolved there, in which case this workflow resolves it itself as a fallback.
+        required: false
+        default: ''
+        type: string
+      artifactCacheKey:
+        description: Cache key for the Cache Business Central Artifacts step, matching the centrally-resolved artifact input. Empty if artifact is empty.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   actions: read
@@ -109,7 +119,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,doNotPublishApps,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
 
       - name: Run Build Initialize hook
         if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
@@ -146,9 +156,16 @@ jobs:
           submodules: ${{ env.useGitSubmodules }}
           token: '${{ fromJson(steps.ReadSecrets.outputs.Secrets).gitSubmodulesToken }}'
 
+      - name: Use centrally-resolved ArtifactUrl
+        id: useCentrallyResolvedArtifactUrl
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.artifact != ''
+        run: |
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=${{ inputs.artifact }}"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifactCacheKey=${{ inputs.artifactCacheKey }}"
+
       - name: Determine ArtifactUrl
         id: determineArtifactUrl
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.artifact == ''
         uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@main
         with:
           shell: ${{ inputs.shell }}
@@ -210,9 +227,14 @@ jobs:
           [System.IO.File]::WriteAllText($needsContextPath, $nc.Trim())
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "NeedsContext=$needsContextPath"
 
+      # Skipped for workspace-compiled, compile-only projects: RunPipeline.ps1 itself no-ops
+      # in that case (workspaceCompilation.enabled && doNotPublishApps - nothing to publish or
+      # test, Compile Apps above already produced the .app files), but only after
+      # DownloadAndImportBcContainerHelper has run - which is most of this step's cost. Skipping
+      # the step itself avoids importing BcContainerHelper at all when it would do nothing.
       - name: Build
         uses: microsoft/AL-Go-Actions/RunPipeline@main
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && !(fromJson(env.workspaceCompilation).enabled == true && env.doNotPublishApps == 'True')
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}

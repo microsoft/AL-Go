@@ -266,7 +266,10 @@ function Get-ALTool {
 .PARAMETER ReportSuppressedDiagnostics
     Switch to include suppressed diagnostics in the build output.
 .PARAMETER EnableExternalRulesets
-    Switch to enable external rulesets for code analysis.
+    Switch to allow http(s) includedRuleSets references in Ruleset. altool workspace
+    compile has no native support for these (unlike alc.exe's /enableexternalrulesets),
+    so they're downloaded and rewritten to local copies before compiling - see
+    Resolve-ExternalRulesetReferences.
 .PARAMETER AppType
     Type of apps being compiled: 'app', 'testApp', or 'bcptApp'.
 .PARAMETER PreCompileApp
@@ -445,6 +448,92 @@ function Copy-CompiledAppsToOutput {
     return $generatedAppFiles
 }
 
+<#
+.SYNOPSIS
+    Recursively resolves http(s) includedRuleSets references in a ruleset file into local copies.
+.DESCRIPTION
+    alc.exe accepts a /enableexternalrulesets flag and fetches http(s) includedRuleSets
+    paths itself, but altool workspace compile has no such flag or capability - it only
+    accepts a local --ruleset file, and rejects one with a remaining http(s) path (AL1033).
+    This downloads each external includedRuleSets entry, recursively resolves its own
+    external references the same way, and rewrites the path to point at the local copy,
+    so the ruleset tree altool is handed is fully local.
+.PARAMETER RulesetFile
+    Path to the local ruleset file to resolve.
+.PARAMETER WorkFolder
+    Folder to write downloaded/rewritten ruleset copies to.
+.PARAMETER AncestorUrls
+    URLs already being resolved in the current include chain, used to detect a cycle
+    (A includes B includes A). Not shared across sibling branches, so the same URL can
+    still be included from two different places without tripping this.
+.OUTPUTS
+    Path to the resolved ruleset file - a rewritten copy if any external references were
+    found, or the original RulesetFile unchanged if it had none.
+#>
+function Resolve-ExternalRulesetReferences {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RulesetFile,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkFolder,
+        [Parameter(Mandatory = $false)]
+        [string[]]$AncestorUrls = @()
+    )
+
+    if ($AncestorUrls.Count -gt 10) {
+        throw "Ruleset '$RulesetFile' nests more than 10 levels of external includedRuleSets references - aborting, this is most likely a cycle."
+    }
+
+    $ruleset = Get-Content -Path $RulesetFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (-not ($ruleset.PSObject.Properties.Name -contains 'includedRuleSets') -or -not $ruleset.includedRuleSets) {
+        return $RulesetFile
+    }
+
+    $changed = $false
+    foreach ($included in $ruleset.includedRuleSets) {
+        if ($included.path -notmatch '^https?://') {
+            continue
+        }
+
+        $url = $included.path
+        if ($AncestorUrls -contains $url) {
+            throw "Circular external ruleset reference detected: '$url'"
+        }
+
+        $localPath = Join-Path $WorkFolder "$([Guid]::NewGuid().ToString('N')).ruleset.json"
+        $downloaded = $false
+        $lastError = ''
+        foreach ($delay in @(0, 2, 5, 10)) {
+            if ($delay -gt 0) {
+                Write-Host "::Notice::Could not download external ruleset '$url' ($lastError); retrying in $delay seconds"
+                Start-Sleep -Seconds $delay
+            }
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $localPath -UseBasicParsing
+                $downloaded = $true
+                break
+            }
+            catch {
+                $lastError = $_.Exception.Message
+            }
+        }
+        if (-not $downloaded) {
+            throw "Failed to download external ruleset '$url' after 4 attempts: $lastError"
+        }
+
+        $included.path = Resolve-ExternalRulesetReferences -RulesetFile $localPath -WorkFolder $WorkFolder -AncestorUrls ($AncestorUrls + $url)
+        $changed = $true
+    }
+
+    if (-not $changed) {
+        return $RulesetFile
+    }
+
+    $resolvedFile = Join-Path $WorkFolder "$([System.IO.Path]::GetFileNameWithoutExtension($RulesetFile))-$([Guid]::NewGuid().ToString('N')).ruleset.json"
+    $ruleset | ConvertTo-Json -Depth 20 | Set-Content -Path $resolvedFile -Encoding UTF8
+    return $resolvedFile
+}
+
 function CompileAppsInWorkspace {
     param(
         [Parameter(Mandatory = $true)]
@@ -566,6 +655,11 @@ function CompileAppsInWorkspace {
     }
 
     if ($Ruleset) {
+        if ($EnableExternalRulesets.IsPresent) {
+            $externalRulesetsWorkFolder = Join-Path ([System.IO.Path]::GetTempPath()) "ExternalRulesets_$([Guid]::NewGuid().ToString('N'))"
+            New-Item -Path $externalRulesetsWorkFolder -ItemType Directory -Force | Out-Null
+            $Ruleset = Resolve-ExternalRulesetReferences -RulesetFile $Ruleset -WorkFolder $externalRulesetsWorkFolder
+        }
         $arguments += "--ruleset"
         $arguments += $Ruleset
     }
@@ -582,10 +676,6 @@ function CompileAppsInWorkspace {
 
     if ($ReportSuppressedDiagnostics.IsPresent) {
         OutputWarning "--reportsuppresseddiagnostics is not yet supported and will be ignored."
-    }
-
-    if ($EnableExternalRulesets.IsPresent) {
-        OutputWarning "--enableexternalrulesets is not yet supported and will be ignored."
     }
 
     if ($LogLevel) {

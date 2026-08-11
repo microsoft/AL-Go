@@ -23,7 +23,16 @@ Param(
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+$compilerFolderFromNuGetModulePath = Join-Path -Path $PSScriptRoot "..\.Modules\CompilerFolderFromNuGet.psm1" -Resolve
+Import-Module $compilerFolderFromNuGetModulePath -DisableNameChecking
 DownloadAndImportBcContainerHelper
+
+if ($env:Secrets) {
+    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+}
+else {
+    $secrets = @{}
+}
 
 # ANALYZE - Analyze the repository and determine settings
 $baseFolder = (Get-BasePath)
@@ -116,8 +125,21 @@ try {
         & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
     }
 
-    # Create the compiler folder
-    $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
+    # Create the compiler folder, either from Microsoft's NuGet feeds or from the artifact
+    if ($settings.symbolsSource -eq 'nuGet') {
+        Test-SymbolsFromNuGetSupported -Settings $settings -ProjectFolder $projectFolder
+        if ($scriptOverrides['PreNewBcCompilerFolder']) {
+            OutputNotice -message "PreNewBcCompilerFolder is not applied when symbolsSource is 'nuGet' - no artifact is downloaded."
+        }
+        $compilerFolder = New-BcCompilerFolderFromNuGet `
+            -ArtifactUrl $artifact `
+            -CompilerFolder (Join-Path $bcContainerHelperConfig.hostHelperFolder "compiler/$($containerName)compiler") `
+            -VsixFile $settings.vsixFile `
+            -AppFolders @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | ForEach-Object { Join-Path $projectFolder $_ })
+    }
+    else {
+        $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
+    }
 
     # Run PostNewBcCompilerFolder hook if available
     if ($scriptOverrides['PostNewBcCompilerFolder']) {
@@ -137,6 +159,18 @@ try {
             OutputWarning -message "Dependency app file not found: $appFile"
         }
     }
+
+    # altool workspace compile has no equivalent of Run-AlPipeline's automatic dependency
+    # resolution, so non-Microsoft app.json dependencies (e.g. AppSource apps) that the classic
+    # pipeline resolves for free from NuGet need resolving here too.
+    Install-NonMicrosoftDependenciesFromNuGet `
+        -AppFolders @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | ForEach-Object { Join-Path $projectFolder $_ }) `
+        -PackageCachePath $packageCachePath `
+        -Settings $settings `
+        -ArtifactUrl $artifact `
+        -GitHubPackagesContext "$($secrets.gitHubPackagesContext)" `
+        -Token $token `
+        -ModulePath $compilerFolderFromNuGetModulePath
 
     # Incremental Builds - Determine which folders need to be built vs downloaded from baseline
     $appFoldersToBuild = $settings.appFolders
@@ -234,7 +268,10 @@ try {
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
-        AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
+        # NuGet carries no service tier assemblies. Only apps targeting OnPrem can use .NET
+        # interop, and Test-SymbolsFromNuGetSupported has already rejected those, so there is
+        # nothing to probe for here.
+        AssemblyProbingPaths        = $(if ($settings.symbolsSource -eq 'nuGet') { @() } else { Get-AssemblyProbingPaths -CompilerFolder $compilerFolder })
         PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism

@@ -111,7 +111,7 @@ Known deprecated settings (see `DEPRECATIONS.md` for full list/replacements): `u
 
 ## This is Stefan's fork of `microsoft/AL-Go` — three rules govern everything here
 
-This repo (`StefanMaron/AL-Go`) is a fork used to add fleet-wide features — currently the **Linux fast lane** (`Scenarios/LinuxFastLane.md`, a `linuxFastLane` setting that runs PR builds against a Linux BC container instead of the full Windows pipeline) — for a fleet of managed AL repos (ABC customers and others). Any change here, or any change to how a downstream repo consumes this fork, must satisfy all three:
+This repo (`StefanMaron/AL-Go`) is a fork used to add fleet-wide features — currently the **Linux fast lane** (`Scenarios/LinuxFastLane.md`, a `linuxFastLane` setting that runs builds against a Linux BC container instead of the full Windows pipeline, wired into both `PullRequestHandler.yaml` and `CICD.yaml` so it applies to PR builds and to regular push/manual CI/CD builds) — for a fleet of managed AL repos (ABC customers and others). Any change here, or any change to how a downstream repo consumes this fork, must satisfy all three:
 
 1. **Drop-in, non-invasive for downstream repos.** New fork behavior must be opt-in-settings-only (e.g. `linuxFastLane` + `ConditionalSettings`), never a required restructure. `main` in a downstream repo never opts in — only PRs and non-production/test branches do.
 1. **Stay cleanly mergeable from `microsoft/AL-Go`.** Never rebase/rewrite already-pushed history on this fork's `main` — only append fork commits on top, and keep them additive (new files, or new job/step blocks gated by an `if:`) rather than rewriting existing upstream logic in place. This is what keeps `git merge upstream/main` conflict-free going forward.

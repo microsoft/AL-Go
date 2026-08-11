@@ -1,6 +1,26 @@
+### New `symbolsSource` setting - build against symbols from NuGet instead of an artifact
+
+When compiling without a container, AL-Go builds a compiler folder from a Business Central artifact: ~2.2 GB of zips extracting to ~3.1 GB, of which a compile uses a few megabytes. Setting `symbolsSource: nuGet` (alongside `workspaceCompilation`) populates that folder from Microsoft's public NuGet feeds instead - the symbols your apps actually depend on from the MSSymbols feed, and the AL compiler and analyzers from nuget.org. That is ~23 MB downloaded rather than ~2.2 GB, and no artifact is fetched at all.
+
+The version and country still come from the resolved `artifact` setting, so pinning `artifact` keeps pinning what you compile against, and `vsixFile` still selects the compiler (`default` matches your Business Central version, `latest` and `preview` behave as before). Microsoft dependencies declared in your app.json files - the test toolkit for a test app, for instance - are resolved from the same feed, so only what a project needs is staged.
+
+`nuGet` is not supported for apps targeting `OnPrem` or `Internal`, which may use .NET interop: the NuGet feeds carry no service tier assemblies. Those builds fail up front with a message pointing back to `artifact`. Default is `artifact`, so nothing changes unless you opt in. See [Scenarios/SymbolsFromNuGet.md](Scenarios/SymbolsFromNuGet.md).
+
+### `enableExternalRulesets` now works with workspace compilation
+
+Previously, `enableExternalRulesets: true` had no effect when `workspaceCompilation` was enabled: `altool workspace compile` has no equivalent to `alc.exe`'s `/enableexternalrulesets` flag, so the setting was silently ignored and a ruleset with an `http(s)` entry in `includedRuleSets` failed to compile with `AL1033`. `CompileApps` now downloads each external `includedRuleSets` reference (recursively, if the downloaded ruleset itself references further external rulesets) and rewrites the ruleset file to point at the local copies before compiling, so external rulesets now work the same way under workspace compilation as they do in a container.
+
+### Workspace compilation now resolves non-Microsoft dependencies from NuGet
+
+`altool workspace compile` had no equivalent of the classic pipeline's automatic dependency resolution, so a project with a real AppSource dependency (Insight Works, Binary Stream, and similar) failed with `AL1022` the moment it enabled `workspaceCompilation` - the same feature `symbolsSource: nuGet` requires. `CompileApps` now resolves those dependencies itself, by app ID, against `trustedNuGetFeeds` and (unless `trustMicrosoftNuGetFeeds` is `false`) Microsoft's public `AppSourceSymbols` feed - the same feeds and default a Windows-container build already uses, so nothing extra needs configuring.
+
 ### New `linuxFastLane` setting - fast pull request builds on Linux BC
 
 AL-Go can now build a project using the Linux BC fast lane ([StefanMaron/MsDyn365Bc.On.Linux](https://github.com/StefanMaron/MsDyn365Bc.On.Linux)) instead of the standard Windows container pipeline. Set `linuxFastLane: true` (optionally scoped to specific branches or workflows via [ConditionalSettings](Scenarios/settings.md#conditional)) to compile from source, publish to a Linux BC container, and run AL unit tests entirely on an `ubuntu-latest` runner - no Windows container, and much faster than a full container build. There is no signing, no BCPT tests, no page scripting tests, and no Deliver step on this path. BC version and country are taken from the existing `artifact`/`country` settings, and the AL compiler version is taken from the existing `vsixFile` setting (`default`/`latest`/`preview`, same policy as the Windows pipeline) - no new settings are needed for any of those. See [Scenarios/LinuxFastLane.md](Scenarios/LinuxFastLane.md) for what's in scope and what isn't.
+
+A project set up to compile without publishing anything (`useCompilerFolder: true` or `doNotPublishApps: true`) has nothing for the fast lane to publish or test, so `linuxFastLane` is now ignored for it - it keeps building on the standard Windows pipeline instead, with a warning in the log. This means an org- or repo-wide `linuxFastLane: true` default is safe to turn on even when some projects are deliberately compile-only (for example, apps that depend on AppSource apps that can only be compiled against, not installed for testing).
+
+Both `PullRequestHandler` and `CICD` now run a Linux fast lane job, so `linuxFastLane: true` applies to pull request builds and to regular push/manual-dispatch CI/CD builds alike. `CreateRelease` and every other workflow still ignore `linuxFastLane` - including through a repo- or org-wide default with no per-workflow scoping - `DetermineProjectsToBuild` folds those projects back into the standard Windows build dimension for every workflow except `PullRequestHandler` and `CICD`, so a broad `linuxFastLane` default can no longer make a project vanish from a build.
 
 ### New `doNotPerformUpgrade` setting
 
