@@ -302,4 +302,140 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             finally { & $feed.Stop }
         }
     }
+
+    Describe 'Install-NonMicrosoftDependenciesFromNuGet' {
+        BeforeAll {
+            function global:OutputWarning { param($message) Write-Host "::warning::$message" }
+            function global:GetAccessToken { param($token, $permissions, $repositories) return "scoped:$token" }
+            function global:Download-BcNuGetPackageToFolder {
+                param($nuGetServerUrl, $nuGetToken, $packageName, $version, $select, $folder, $downloadDependencies)
+            }
+            function script:New-TestAppJson {
+                param($Folder, $Id, $Dependencies = @())
+                New-Item -Path $Folder -ItemType Directory -Force | Out-Null
+                @{ id = $Id; name = 'App'; publisher = 'Test'; version = '1.0.0.0'; dependencies = $Dependencies } |
+                    ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $Folder 'app.json') -Encoding UTF8
+            }
+        }
+
+        BeforeEach {
+            $global:bcContainerHelperConfig = @{}
+            $testFolder = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
+            New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
+        }
+
+        It 'skips Microsoft dependencies' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = '437dbf0e-84ff-417a-965d-ed2bb9650972'; publisher = 'Microsoft'; name = 'System Application'; version = '26.0.0.0' }
+            )
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{}
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 0
+        }
+
+        It 'skips dependencies that match an app being compiled in this workspace' {
+            $appId = [Guid]::NewGuid().ToString()
+            $depFolder = Join-Path $testFolder 'Dep'
+            New-TestAppJson -Folder $depFolder -Id $appId
+
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = $appId; publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder, $depFolder) -PackageCachePath $testFolder -Settings @{}
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 0
+        }
+
+        It 'resolves a genuine third-party dependency once, even if declared in multiple app.json files' {
+            $depId = 'ba1776ba-1198-4b4c-a61e-c4612f1880d5'
+            $dependency = @{ id = $depId; publisher = 'Insight Works'; name = 'IWorks Common'; version = '2.18.0.0' }
+
+            $appFolder1 = Join-Path $testFolder 'App1'
+            New-TestAppJson -Folder $appFolder1 -Id ([Guid]::NewGuid().ToString()) -Dependencies @($dependency)
+            $appFolder2 = Join-Path $testFolder 'App2'
+            New-TestAppJson -Folder $appFolder2 -Id ([Guid]::NewGuid().ToString()) -Dependencies @($dependency)
+
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { return @('Insight Works_IWorks Common_2.19.0.0.app') }
+
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder1, $appFolder2) -PackageCachePath $testFolder -Settings @{ nuGetFeedSelectMode = 'LatestMatching' }
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 1 -Exactly -ParameterFilter {
+                $packageName -eq $depId -and $version -eq '2.18.0.0' -and $select -eq 'LatestMatching' -and $folder -eq $testFolder
+            }
+        }
+
+        It 'sets TrustedNuGetFeeds from settings.trustedNuGetFeeds and the AppSourceSymbols feed when trustMicrosoftNuGetFeeds is set' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString())
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            $settings = @{
+                trustedNuGetFeeds       = @(@{ url = 'https://example.com/index.json'; token = '' })
+                trustMicrosoftNuGetFeeds = $true
+            }
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings $settings
+
+            $bcContainerHelperConfig.TrustedNuGetFeeds.Count | Should -Be 2
+            $bcContainerHelperConfig.TrustedNuGetFeeds[0].url | Should -Be 'https://example.com/index.json'
+            $bcContainerHelperConfig.TrustedNuGetFeeds[1].url | Should -Be 'https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/AppSourceSymbols/nuget/v3/index.json'
+        }
+
+        It 'omits the AppSourceSymbols feed when trustMicrosoftNuGetFeeds is false' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString())
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{ trustMicrosoftNuGetFeeds = $false }
+
+            $bcContainerHelperConfig.TrustedNuGetFeeds.Count | Should -Be 0
+        }
+
+        It 'derives the GitHub Packages server URL and a scoped token from gitHubPackagesContext' {
+            $depId = [Guid]::NewGuid().ToString()
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = $depId; publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            $gitHubPackagesContext = @{ serverUrl = 'https://nuget.pkg.github.com/contoso/index.json'; token = 'raw-token' } | ConvertTo-Json -Compress
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -GitHubPackagesContext $gitHubPackagesContext
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder -Times 1 -Exactly -ParameterFilter {
+                $nuGetServerUrl -eq 'https://nuget.pkg.github.com/contoso/index.json' -and $nuGetToken -eq 'scoped:raw-token'
+            }
+        }
+
+        It 'warns but does not throw when a dependency cannot be found on any feed' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { return @() }
+            Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
+
+            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} } | Should -Not -Throw
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter { $message -like '*Could not find a NuGet package*' }
+        }
+
+        It 'warns but does not throw when the feed lookup itself throws' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { throw "network error" }
+            Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
+
+            { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} } | Should -Not -Throw
+
+            Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -Times 1 -Exactly -ParameterFilter { $message -like '*Failed to resolve dependency*' }
+        }
+    }
 }

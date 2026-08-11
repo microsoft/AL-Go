@@ -965,10 +965,133 @@ function New-BcCompilerFolderFromNuGet {
     return $CompilerFolder
 }
 
+<#
+.SYNOPSIS
+    Downloads non-Microsoft app.json dependencies from NuGet into the package cache.
+.DESCRIPTION
+    altool workspace compile has no equivalent of Run-AlPipeline's automatic dependency
+    resolution: on the classic (container/compiler-folder-without-workspace-compilation)
+    pipeline, a missing dependency is looked up by app ID against the repo's GitHub Packages
+    feed and, if trustMicrosoftNuGetFeeds is set, Microsoft's public AppSourceSymbols feed -
+    which is how a project depending on a real AppSource app (Insight Works, Binary Stream,
+    etc.) compiles today without any extra configuration. This replicates that lookup for
+    workspace compilation using the same BcContainerHelper NuGet plumbing
+    (Download-BcNuGetPackageToFolder), so enabling workspaceCompilation doesn't newly require
+    those dependencies to be vendored or probed for some other way.
+
+    Microsoft dependencies are skipped - those are staged by the compiler folder itself,
+    whether from the artifact or from Get-MicrosoftDependencyPackages. Dependencies matching
+    an app.json id among AppFolders are also skipped - those are compiled together in this
+    same workspace, not fetched from anywhere. Everything else is attempted; a dependency that
+    isn't published to any of the configured feeds (for example a same-repo cross-project
+    dependency, already staged separately) is silently skipped, since it was never expected to
+    resolve here. If it actually is missing, compilation fails with AL1022 exactly as it did
+    before this function existed.
+.PARAMETER AppFolders
+    Folders (production, test, BCPT) whose app.json dependencies to resolve.
+.PARAMETER PackageCachePath
+    Folder to download resolved .app files into - the same folder used as the compiler's
+    package cache.
+.PARAMETER Settings
+    Project settings hashtable. Reads trustedNuGetFeeds, trustMicrosoftNuGetFeeds and
+    nuGetFeedSelectMode.
+.PARAMETER GitHubPackagesContext
+    Raw gitHubPackagesContext secret (JSON: {serverUrl, token}), or '' if not configured.
+.PARAMETER Token
+    The GitHub Actions token, used to mint a scoped token for the GitHub Packages feed.
+#>
+function Install-NonMicrosoftDependenciesFromNuGet {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $AppFolders,
+        [Parameter(Mandatory = $true)]
+        [string] $PackageCachePath,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings,
+        [Parameter(Mandatory = $false)]
+        [string] $GitHubPackagesContext = '',
+        [Parameter(Mandatory = $false)]
+        [string] $Token = ''
+    )
+
+    # Same feed list Run-AlPipeline gets by default on the classic pipeline (see
+    # RunPipeline.ps1's own TrustedNuGetFeeds construction) - so a project doesn't need any
+    # additional configuration here beyond what its Windows-container build already relies on.
+    $trustedFeeds = @()
+    if ($Settings.trustedNuGetFeeds) {
+        $trustedFeeds += @($Settings.trustedNuGetFeeds)
+    }
+    if ($Settings.trustMicrosoftNuGetFeeds) {
+        $trustedFeeds += @([PSCustomObject]@{
+            url   = 'https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/AppSourceSymbols/nuget/v3/index.json'
+            token = ''
+        })
+    }
+    $bcContainerHelperConfig.TrustedNuGetFeeds = $trustedFeeds
+
+    $gitHubPackagesServerUrl = ''
+    $gitHubPackagesToken = ''
+    if ($GitHubPackagesContext) {
+        try {
+            $gitHubPackagesCredential = $GitHubPackagesContext | ConvertFrom-Json
+            $gitHubPackagesServerUrl = $gitHubPackagesCredential.serverUrl
+            $gitHubPackagesToken = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{ "packages" = "read"; "contents" = "read"; "metadata" = "read" } -repositories @()
+        }
+        catch {
+            OutputWarning -message "Could not parse the gitHubPackagesContext secret; skipping the GitHub Packages feed for non-Microsoft dependency resolution ($($_.Exception.Message))"
+        }
+    }
+
+    $localAppIds = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($folder in $AppFolders) {
+        $appJsonPath = Join-Path $folder 'app.json'
+        if (-not (Test-Path $appJsonPath)) { continue }
+        $localAppId = (Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json).id
+        if ($localAppId) { $localAppIds.Add($localAppId) | Out-Null }
+    }
+
+    $attemptedDependencyIds = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($folder in $AppFolders) {
+        $appJsonPath = Join-Path $folder 'app.json'
+        if (-not (Test-Path $appJsonPath)) { continue }
+        $appJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $appJson.dependencies) { continue }
+
+        foreach ($dependency in $appJson.dependencies) {
+            if ($dependency.publisher -eq 'Microsoft') { continue }
+            $depId = $dependency.id
+            if (-not $depId) { continue }
+            if ($localAppIds.Contains($depId)) { continue }
+            if (-not $attemptedDependencyIds.Add($depId)) { continue }
+
+            Write-Host "Resolving non-Microsoft dependency $($dependency.publisher)_$($dependency.name) ($depId) version $($dependency.version) from NuGet"
+            try {
+                $downloaded = @(Download-BcNuGetPackageToFolder `
+                    -nuGetServerUrl $gitHubPackagesServerUrl `
+                    -nuGetToken $gitHubPackagesToken `
+                    -packageName $depId `
+                    -version $dependency.version `
+                    -select $Settings.nuGetFeedSelectMode `
+                    -folder $PackageCachePath `
+                    -downloadDependencies 'allButMicrosoft')
+                if ($downloaded.Count -gt 0) {
+                    Write-Host "Downloaded $($downloaded -join ', ')"
+                }
+                else {
+                    OutputWarning -message "Could not find a NuGet package for dependency $($dependency.publisher)_$($dependency.name) ($depId) version $($dependency.version). If this app isn't published to NuGet, ignore this warning; otherwise compilation will fail with AL1022."
+                }
+            }
+            catch {
+                OutputWarning -message "Failed to resolve dependency $($dependency.publisher)_$($dependency.name) ($depId) from NuGet: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 Export-ModuleMember -Function Test-OnWindows, Get-ALCompilerPackageName, Add-ALToolLaunchers, `
     Select-BcSymbolsVersion, Get-NuGetFlatContainerUrl, Get-NuGetPackageVersions, `
     Get-NuGetPackageVersionsInParallel, Get-FilesInParallel, Get-NuGetPackageDependencies, `
     Expand-AppsFromNuGetPackage, Select-NuGetVersionInRange, Select-ALCompilerVersion, `
     Get-BcApplicationSymbolsPackageName, Get-BcSymbolsPackageNameForDependency, `
     Get-MicrosoftDependencyPackages, Test-SymbolsFromNuGetSupported, `
-    New-BcCompilerFolderFromNuGet
+    New-BcCompilerFolderFromNuGet, Install-NonMicrosoftDependenciesFromNuGet

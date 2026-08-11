@@ -23,7 +23,15 @@ Param(
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompilerFolderFromNuGet.psm1" -Resolve) -DisableNameChecking
 DownloadAndImportBcContainerHelper
+
+if ($env:Secrets) {
+    $secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable
+}
+else {
+    $secrets = @{}
+}
 
 # ANALYZE - Analyze the repository and determine settings
 $baseFolder = (Get-BasePath)
@@ -118,7 +126,6 @@ try {
 
     # Create the compiler folder, either from Microsoft's NuGet feeds or from the artifact
     if ($settings.symbolsSource -eq 'nuGet') {
-        Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompilerFolderFromNuGet.psm1" -Resolve) -DisableNameChecking
         Test-SymbolsFromNuGetSupported -Settings $settings -ProjectFolder $projectFolder
         if ($scriptOverrides['PreNewBcCompilerFolder']) {
             OutputNotice -message "PreNewBcCompilerFolder is not applied when symbolsSource is 'nuGet' - no artifact is downloaded."
@@ -151,6 +158,16 @@ try {
             OutputWarning -message "Dependency app file not found: $appFile"
         }
     }
+
+    # altool workspace compile has no equivalent of Run-AlPipeline's automatic dependency
+    # resolution, so non-Microsoft app.json dependencies (e.g. AppSource apps) that the classic
+    # pipeline resolves for free from NuGet need resolving here too.
+    Install-NonMicrosoftDependenciesFromNuGet `
+        -AppFolders @(($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) | ForEach-Object { Join-Path $projectFolder $_ }) `
+        -PackageCachePath $packageCachePath `
+        -Settings $settings `
+        -GitHubPackagesContext "$($secrets.gitHubPackagesContext)" `
+        -Token $token
 
     # Incremental Builds - Determine which folders need to be built vs downloaded from baseline
     $appFoldersToBuild = $settings.appFolders
