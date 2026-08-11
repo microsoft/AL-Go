@@ -44,8 +44,13 @@ build never opens.
   on nuget.org, which carries `alc`, `altool` and CodeCop, AppSourceCop,
   PerTenantExtensionCop and UICop.
 
-Non-Microsoft dependencies are unaffected: `appDependencyProbingPaths`,
-`trustedNuGetFeeds` and project dependencies resolve them as they always have.
+- **Non-Microsoft dependencies** (AppSource apps, for instance) - `app.json` dependencies
+  with any other publisher are resolved by app ID against `trustedNuGetFeeds` and, unless
+  `trustMicrosoftNuGetFeeds` is set to `false`, Microsoft's public `AppSourceSymbols` feed -
+  the same feeds and the same default that a Windows-container build resolves them from, so
+  nothing extra needs configuring here. Project dependencies within the same repo still come
+  from `appDependencyProbingPaths` and the project's own build output, unaffected by any of
+  this.
 
 The GitHub Actions cache for Business Central artifacts is switched off for these
 builds, since there is no artifact to cache. That frees roughly 1 GB of the

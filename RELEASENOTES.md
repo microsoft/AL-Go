@@ -6,6 +6,10 @@ The version and country still come from the resolved `artifact` setting, so pinn
 
 `nuGet` is not supported for apps targeting `OnPrem` or `Internal`, which may use .NET interop: the NuGet feeds carry no service tier assemblies. Those builds fail up front with a message pointing back to `artifact`. Default is `artifact`, so nothing changes unless you opt in. See [Scenarios/SymbolsFromNuGet.md](Scenarios/SymbolsFromNuGet.md).
 
+### Workspace compilation now resolves non-Microsoft dependencies from NuGet
+
+`altool workspace compile` had no equivalent of the classic pipeline's automatic dependency resolution, so a project with a real AppSource dependency (Insight Works, Binary Stream, and similar) failed with `AL1022` the moment it enabled `workspaceCompilation` - the same feature `symbolsSource: nuGet` requires. `CompileApps` now resolves those dependencies itself, by app ID, against `trustedNuGetFeeds` and (unless `trustMicrosoftNuGetFeeds` is `false`) Microsoft's public `AppSourceSymbols` feed - the same feeds and default a Windows-container build already uses, so nothing extra needs configuring.
+
 ### New `linuxFastLane` setting - fast pull request builds on Linux BC
 
 AL-Go can now build a project using the Linux BC fast lane ([StefanMaron/MsDyn365Bc.On.Linux](https://github.com/StefanMaron/MsDyn365Bc.On.Linux)) instead of the standard Windows container pipeline. Set `linuxFastLane: true` (optionally scoped to specific branches or workflows via [ConditionalSettings](Scenarios/settings.md#conditional)) to compile from source, publish to a Linux BC container, and run AL unit tests entirely on an `ubuntu-latest` runner - no Windows container, and much faster than a full container build. There is no signing, no BCPT tests, no page scripting tests, and no Deliver step on this path. BC version and country are taken from the existing `artifact`/`country` settings, and the AL compiler version is taken from the existing `vsixFile` setting (`default`/`latest`/`preview`, same policy as the Windows pipeline) - no new settings are needed for any of those. See [Scenarios/LinuxFastLane.md](Scenarios/LinuxFastLane.md) for what's in scope and what isn't.
