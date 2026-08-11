@@ -90,6 +90,7 @@ jobs:
         with:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
+          supportsLinuxFastLane: true
 
       # Third-party (appDependencyProbingPaths) dependency .apps for Linux fast lane projects, downloaded by
       # DetermineProjectsToBuild above into LinuxFastLaneDependencies_staging/<project>/. bc-test-from-source.yml can't see the
