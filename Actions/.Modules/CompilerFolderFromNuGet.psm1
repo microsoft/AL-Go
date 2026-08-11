@@ -28,6 +28,14 @@
 $script:MSSymbolsFeedUrl = 'https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/MSSymbols/nuget/v3/index.json'
 $script:NuGetOrgFlatContainerUrl = 'https://api.nuget.org/v3-flatcontainer'
 
+# Captured once, here at module load time, where $PSCommandPath unambiguously refers to this
+# .psm1 file. A real CI run showed that resolving this later, from inside a function via
+# Get-Command <exported function>.Module.Path or $PSCommandPath, can return a completely
+# different module's path (observed: BcContainerHelper's own .psd1) once BcContainerHelper has
+# been dot-sourced into the caller's scope after this module was imported - a session-state
+# quirk this sidesteps entirely by never resolving the path anywhere but here.
+$script:ThisModulePath = $PSCommandPath
+
 # Publisher name Microsoft uses on the MSSymbols feed
 $script:MicrosoftPublisher = 'Microsoft'
 
@@ -1326,11 +1334,15 @@ function Install-NonMicrosoftDependenciesFromNuGet {
     # so it serializes correctly across runspaces in this same process exactly as it does across
     # separate processes. Concurrent workers racing to prime that cache is therefore already safe;
     # no separate "resolve the first one serially to warm the cache" staging is needed here.
-    # $PSCommandPath is not used here: it is unreliable for resolving a module's own file from
-    # inside one of its functions across PowerShell 5.1/7 and different import styles.
-    # (Get-Command <exported function>).Module.Path is the canonical, version-independent way to
-    # get the file a currently-loaded module was imported from.
-    $modulePath = (Get-Command Install-NonMicrosoftDependenciesFromNuGet).Module.Path
+    # Neither $PSCommandPath nor (Get-Command <exported function>).Module.Path is reliable here:
+    # a real CI run showed both can resolve to a completely different module (observed:
+    # BcContainerHelper's own .psd1) once BcContainerHelper has been dot-sourced into the
+    # caller's scope after this module was imported. $script:ThisModulePath is captured once, at
+    # this module's own load time, before that ambiguity can arise.
+    $modulePath = $script:ThisModulePath
+    if (-not $modulePath -or -not (Test-Path -Path $modulePath -PathType Leaf)) {
+        throw "Could not resolve this module's own file path (got '$modulePath'). This is required to re-import it into the parallel dependency-resolution worker runspaces."
+    }
     $bcContainerHelperPath = $env:BcContainerHelperPath
     if (-not $bcContainerHelperPath) {
         throw "BcContainerHelperPath is not set. DownloadAndImportBcContainerHelper must run before Install-NonMicrosoftDependenciesFromNuGet."
