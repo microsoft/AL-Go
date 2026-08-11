@@ -83,10 +83,11 @@ Sometimes the right fix isn't a new additive file/job — it's a small change in
 
 - Keep the diff to the smallest possible surgical change (ideally one line), with a comment marking it as an AL-Go fork patch and explaining why, so a future 3-way merge conflict on that line is trivial to re-resolve instead of confusing.
 - Back it with a Pester test in `Tests/` that asserts the patch is still in place (e.g. greps the action script for the removed call) — this runs in this repo's existing CI on every PR, including the PR that merges `upstream/main` in, so a merge that silently reintroduces the old behavior fails CI instead of shipping unnoticed. This is the "pipeline" that keeps the patch applied: normal `git merge` already carries a committed patch forward automatically (that's what merge does), the test's only job is to catch the case where upstream touches the same lines and the merge needs a human to reconcile it.
+- A guard test must actually exercise the code path the patch touches, not just grep the source for the removed line — a textual assertion proves the patch is still applied, not that applying it is safe. That distinction is what the reverted entry below got wrong.
 - Log each one here so a fork-sync pass knows what to specifically re-verify after `git merge upstream/main`:
 
 | Patch | File | Why | Guard test |
 |---|---|---|---|
-| Skip `DownloadAndImportBcContainerHelper` in DetermineProjectsToBuild | `Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.Action.ps1` | That action only enumerates settings/folders, never calls a `Bc*` cmdlet — the download+extract+import was costing ~20s per run for nothing (2026-08-10) | `Tests/DetermineProjectsToBuild.Test.ps1` → "DetermineProjectsToBuild.Action.ps1 startup cost" |
+| ~~Skip `DownloadAndImportBcContainerHelper` in DetermineProjectsToBuild~~ **REVERTED 2026-08-11** | `Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.Action.ps1` | Premise was wrong: `AnalyzeProjectDependencies` (`AL-Go-Helper.ps1`) calls `Sort-AppFoldersByDependencies`, a BcContainerHelper cmdlet, so the import IS needed. The guard test only grepped the source for the removed call — it never ran `Get-ProjectsToBuild` in a session without BcContainerHelper already loaded, so it never caught that this action actually needs it. Broke every Linux fast lane build on `main` until reverted. | (removed — see note above) |
 
 See also: `[[al-go-fork-strategy]]` (project memory, AL-Go repo) for the fuller verification trail behind this skill.
