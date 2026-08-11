@@ -1,17 +1,20 @@
-# Linux fast lane for pull request builds
+# Linux fast lane for pull request and CI/CD builds
 
-Pull request builds on the standard AL-Go pipeline spin up a full Windows BC
-container and go through the complete compile/sign/test/analyze chain. That
-is correct and necessary as the final gate on `main`, but it's slow and
-costly to run on every push to every pull request.
+Pull request and CI/CD builds on the standard AL-Go pipeline spin up a full
+Windows BC container and go through the complete compile/sign/test/analyze
+chain. That is correct and necessary as the final gate on `main`, but it's
+slow and costly to run on every push to every pull request or test branch.
 
 The `linuxFastLane` setting builds a project using
 [StefanMaron/MsDyn365Bc.On.Linux](https://github.com/StefanMaron/MsDyn365Bc.On.Linux)
 (bc-linux) instead: it compiles AL source, publishes to a BC service tier
 running on Linux via Docker Compose, and runs AL unit tests - entirely on an
-`ubuntu-latest` runner, no Windows container involved. It's meant as a fast,
-cheap gate for pull requests (and optionally a dedicated test branch), not a
-replacement for the full pipeline on `main`.
+`ubuntu-latest` runner, no Windows container involved. It's wired into both
+`PullRequestHandler` (pull request builds) and `CICD` (regular push and
+manual-dispatch builds), so it works the same way whether the build was
+triggered by a PR or a push. It's meant as a fast, cheap gate for pull
+requests and non-production branches (a dedicated test branch, for example),
+not a replacement for the full pipeline on `main`.
 
 ## Enabling it
 
@@ -96,8 +99,10 @@ installed for testing.
 
 `main` is not expected to use `linuxFastLane` - it should keep running the
 full, Microsoft-supported Windows pipeline (signing, BCPT, page scripting,
-Deliver) as the final gate before a release. Only `PullRequestHandler`
-actually has a job that runs the fast lane; `CICD`, `CreateRelease`, and
+Deliver) as the final gate before a release. `PullRequestHandler` and `CICD`
+both have a job that runs the fast lane; scope it away from `main` with
+[ConditionalSettings](settings.md#conditional) (for example, gate it on
+`branches` other than `main`, as in the example above). `CreateRelease` and
 every other workflow ignore `linuxFastLane` and always use the standard
 pipeline, even if it's set (directly, or via a broad repo/org default).
 A project doesn't disappear from those builds because of it.

@@ -107,6 +107,20 @@ jobs:
         with:
           shell: powershell
           maxBuildDepth: ${{ env.workflowDepth }}
+          supportsLinuxFastLane: true
+
+      # Third-party (appDependencyProbingPaths) dependency .apps for Linux fast lane projects, downloaded by
+      # DetermineProjectsToBuild above into LinuxFastLaneDependencies_staging/<project>/. bc-test-from-source.yml can't see the
+      # BC platform artifact's Microsoft-only symbol staging, so these are handed over as a single artifact and
+      # merged in on the Linux runner. if-no-files-found: ignore - most repos have no Linux fast lane projects
+      # with third-party dependencies, and that's not an error.
+      - name: Upload Linux fast lane dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: LinuxFastLaneDependencies
+          path: LinuxFastLaneDependencies_staging
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Determine PowerPlatform Solution Folder
         id: DeterminePowerPlatformSolutionFolder
@@ -205,6 +219,28 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
       needsContext:  ${{ toJson(needs) }}
+
+  # Linux fast lane - projects with the linuxFastLane setting enabled build here instead of in Build above.
+  # No signing, no BCPT/page scripting tests. See Scenarios/LinuxFastLane.md.
+  BuildLinux:
+    needs: [ Initialization ]
+    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0 && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux || fromJson('[{}]') }}
+      fail-fast: false
+    name: Build ${{ matrix.projectName }} (${{ matrix.buildMode }}, Linux fast lane)
+    uses: ./.github/workflows/_BuildALGoProjectLinux.yaml
+    with:
+      project: ${{ matrix.project }}
+      projectName: ${{ matrix.projectName }}
+      buildMode: ${{ matrix.buildMode }}
+      bcVersion: ${{ matrix.linuxBcVersion }}
+      alToolVersion: ${{ matrix.linuxAlToolVersion }}
+      bcCountry: ${{ matrix.linuxCountry }}
+      appDirs: ${{ matrix.linuxAppDirs }}
+      testAppDirs: ${{ matrix.linuxTestAppDirs }}
+      dependencyArtifactSubdir: ${{ matrix.linuxDependencySubdir }}
 
   BuildPP:
     needs: [ Initialization ]
@@ -424,7 +460,7 @@ jobs:
           artifacts: '.artifacts'
 
   PostProcess:
-    needs: [ Initialization, Build, BuildPP, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]
+    needs: [ Initialization, Build, BuildLinux, BuildPP, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:
