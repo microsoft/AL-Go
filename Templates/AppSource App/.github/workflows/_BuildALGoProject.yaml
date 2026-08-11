@@ -159,7 +159,6 @@ jobs:
       - name: Use centrally-resolved ArtifactUrl
         id: useCentrallyResolvedArtifactUrl
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.artifact != ''
-        shell: ${{ inputs.shell }}
         run: |
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifact=${{ inputs.artifact }}"
           Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "artifactCacheKey=${{ inputs.artifactCacheKey }}"
