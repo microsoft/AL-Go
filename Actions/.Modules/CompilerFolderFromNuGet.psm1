@@ -1363,14 +1363,33 @@ function Install-NonMicrosoftDependenciesFromNuGet {
 
     $workerScript = {
         param($BcContainerHelperPath, $ModulePath, $Dependency, $GitHubPackagesServerUrl, $GitHubPackagesToken, $SelectMode, $PackageCachePath, $InstalledPlatform, $InstalledApps, $TrustedNuGetFeeds)
+        # Snapshot every parameter into distinctly-prefixed local variables before dot-sourcing
+        # BcContainerHelperPath below. Dot-sourcing (.) merges the sourced script's own top-level
+        # variable assignments into *this* scope, not a child scope - production repeatedly showed
+        # $ModulePath ending up overwritten with BcContainerHelper's own internal path to its .psd1
+        # after ". $BcContainerHelperPath" ran, because BcContainerHelper.ps1 itself assigns a
+        # same-named local variable as part of its own bootstrap. Three earlier fixes each focused
+        # on how $ModulePath got its value going INTO this worker - all three were consistent and
+        # correct, and all three still failed identically in production, because the corruption
+        # happens AFTER that, from the dot-source overwriting it in place.
+        $wp_ModulePath = $ModulePath
+        $wp_Dependency = $Dependency
+        $wp_GitHubPackagesServerUrl = $GitHubPackagesServerUrl
+        $wp_GitHubPackagesToken = $GitHubPackagesToken
+        $wp_SelectMode = $SelectMode
+        $wp_PackageCachePath = $PackageCachePath
+        $wp_InstalledPlatform = $InstalledPlatform
+        $wp_InstalledApps = $InstalledApps
+        $wp_TrustedNuGetFeeds = $TrustedNuGetFeeds
+
         . $BcContainerHelperPath -Silent | Out-Null
-        Import-Module $ModulePath -Force -DisableNameChecking | Out-Null
+        Import-Module $wp_ModulePath -Force -DisableNameChecking | Out-Null
         if (-not (Get-Command Resolve-NonMicrosoftDependencyFromNuGet -ErrorAction SilentlyContinue)) {
-            throw "Resolve-NonMicrosoftDependencyFromNuGet is not available after 'Import-Module $ModulePath -Force -DisableNameChecking' (file exists: $(Test-Path -Path $ModulePath))."
+            throw "Resolve-NonMicrosoftDependencyFromNuGet is not available after 'Import-Module $wp_ModulePath -Force -DisableNameChecking' (file exists: $(Test-Path -Path $wp_ModulePath))."
         }
-        Resolve-NonMicrosoftDependencyFromNuGet -Dependency $Dependency -GitHubPackagesServerUrl $GitHubPackagesServerUrl `
-            -GitHubPackagesToken $GitHubPackagesToken -SelectMode $SelectMode -PackageCachePath $PackageCachePath `
-            -InstalledPlatform $InstalledPlatform -InstalledApps $InstalledApps -TrustedNuGetFeeds $TrustedNuGetFeeds
+        Resolve-NonMicrosoftDependencyFromNuGet -Dependency $wp_Dependency -GitHubPackagesServerUrl $wp_GitHubPackagesServerUrl `
+            -GitHubPackagesToken $wp_GitHubPackagesToken -SelectMode $wp_SelectMode -PackageCachePath $wp_PackageCachePath `
+            -InstalledPlatform $wp_InstalledPlatform -InstalledApps $wp_InstalledApps -TrustedNuGetFeeds $wp_TrustedNuGetFeeds
     }
 
     $argumentLists = @($dependenciesToResolve | ForEach-Object {

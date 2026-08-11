@@ -704,17 +704,19 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             It 'a real worker runspace can actually find Resolve-NonMicrosoftDependencyFromNuGet after importing this module by its real path' {
                 # None of the other tests in this Context exercise the real worker runspace at all
                 # (Invoke-ScriptBlocksInParallel is mocked in every one of them) - this is the one
-                # test that does not mock it, so it is the only test that would have caught three
-                # separate real-world failures of the module-path-resolution mechanism itself
-                # (observed in production: $PSCommandPath and Get-Command ...Module.Path, evaluated
-                # from inside a function, both resolved to BcContainerHelper's own .psd1 instead of
-                # this module once BcContainerHelper had been dot-sourced into the caller's scope).
-                # It does not need real BcContainerHelper or real network access: a no-op stub
-                # standing in for the dot-sourced BcContainerHelperPath is enough to prove the
-                # worker runspace reaches Resolve-NonMicrosoftDependencyFromNuGet at all - which is
-                # exactly the point that broke.
+                # test that does not mock it, so it is the only test that would have caught four
+                # separate real-world failures of the module-path-resolution mechanism (three
+                # different ways $ModulePath could end up wrong going into the worker, and the
+                # actual root cause: the worker's own ". $BcContainerHelperPath" dot-source merges
+                # BcContainerHelper.ps1's own top-level variable assignments into the worker's
+                # scope - not a child scope - and BcContainerHelper.ps1 apparently assigns a
+                # same-named local variable, silently overwriting the worker's own $ModulePath
+                # parameter after it already had the right value). The stub below reproduces that
+                # exact collision - a real BcContainerHelper.ps1 is not needed to catch this, only
+                # something that assigns $ModulePath the way it does.
                 $fakeBcContainerHelperPath = Join-Path $testFolder 'fake-BcContainerHelper.ps1'
-                'param([switch] $Silent)' | Set-Content -Path $fakeBcContainerHelperPath -Encoding UTF8
+                'param([switch] $Silent)
+$ModulePath = "C:\this-would-be-BcContainerHelpers-own-internal-path.psd1"' | Set-Content -Path $fakeBcContainerHelperPath -Encoding UTF8
                 $env:BcContainerHelperPath = $fakeBcContainerHelperPath
 
                 $dep1 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep1'; version = '1.0.0.0' }
