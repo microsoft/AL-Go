@@ -398,6 +398,30 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl 'not-a-url' } | Should -Throw -ExpectedMessage "*Invalid artifact URL*"
         }
 
+        It 'builds installedApps entries with every property Download-BcNuGetPackageToFolder dot-references, since it runs under this module''s inherited Set-StrictMode -Version 2.0' {
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @(
+                @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep'; version = '1.0.0.0' }
+            )
+            $capturedInstalledApps = $null
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder {
+                Set-Variable -Name capturedInstalledApps -Value $installedApps -Scope 2
+            }
+
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl
+
+            Set-StrictMode -Version 2.0
+            try {
+                { $capturedInstalledApps[0].id } | Should -Not -Throw
+                { $capturedInstalledApps[0].Publisher } | Should -Not -Throw
+                { $capturedInstalledApps[0].Name } | Should -Not -Throw
+                { $capturedInstalledApps[0].Version } | Should -Not -Throw
+            }
+            finally {
+                Set-StrictMode -Off
+            }
+        }
+
         It 'sets TrustedNuGetFeeds from settings.trustedNuGetFeeds and the AppSourceSymbols feed when trustMicrosoftNuGetFeeds is set' {
             $appFolder = Join-Path $testFolder 'App'
             New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString())

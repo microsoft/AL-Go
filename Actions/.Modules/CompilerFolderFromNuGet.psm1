@@ -1036,7 +1036,11 @@ function Install-NonMicrosoftDependenciesFromNuGet {
         throw "Invalid artifact URL: $ArtifactUrl"
     }
     $installedPlatform = [System.Version]$parts[4]
-    $installedApps = @([PSCustomObject]@{ Name = 'Application'; Version = $installedPlatform })
+    # Download-BcNuGetPackageToFolder runs under this script's inherited Set-StrictMode -Version
+    # 2.0, so every property it might dot-reference on an installedApps entry (id, Publisher) has
+    # to exist even when unused, or a generic dependency check throws PropertyNotFoundException
+    # instead of the harmless $null a non-strict caller would see.
+    $installedApps = @([PSCustomObject]@{ Publisher = ''; Name = 'Application'; id = ''; Version = $installedPlatform })
 
     # Same feed list Run-AlPipeline gets by default on the classic pipeline (see
     # RunPipeline.ps1's own TrustedNuGetFeeds construction) - so a project doesn't need any
