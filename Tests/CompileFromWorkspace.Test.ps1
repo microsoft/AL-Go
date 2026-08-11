@@ -1267,6 +1267,58 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
         }
 
+        It 'Resolves external ruleset references and passes the local copy to --ruleset' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-ext-ruleset'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                $rulesetFile = Join-Path $TestDrive 'custom.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Custom","includedRuleSets":[{"action":"Default","path":"https://example.com/base.ruleset.json"}]}' -Encoding UTF8
+
+                Mock Invoke-WebRequest {
+                    Set-Content -Path $OutFile -Value '{"name":"Base","rules":[]}' -Encoding UTF8
+                }
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -Ruleset $rulesetFile -EnableExternalRulesets
+
+                Should -Invoke Invoke-WebRequest -Times 1 -Exactly
+                $rulesetIndex = $script:capturedArguments.IndexOf('--ruleset')
+                $rulesetIndex | Should -BeGreaterThan -1
+                $resolvedRuleset = $script:capturedArguments[$rulesetIndex + 1]
+                $resolvedRuleset | Should -Not -Be $rulesetFile
+                Test-Path $resolvedRuleset | Should -BeTrue
+                (Get-Content -Path $resolvedRuleset -Raw | ConvertFrom-Json).includedRuleSets[0].path | Should -Not -Match '^https?://'
+            }
+        }
+
+        It 'Does not attempt to resolve external references when EnableExternalRulesets is not set' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-ext-ruleset2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                $rulesetFile = Join-Path $TestDrive 'custom2.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Custom","includedRuleSets":[{"action":"Default","path":"https://example.com/base.ruleset.json"}]}' -Encoding UTF8
+
+                Mock Invoke-WebRequest { throw "Should not be called" }
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -Ruleset $rulesetFile
+
+                $script:capturedArguments | Should -Contain $rulesetFile
+            }
+        }
+
         It 'Omits --maxcpucount when equal to processor count' {
             InModuleScope CompileFromWorkspace {
                 $script:capturedArguments = @()
@@ -1300,6 +1352,104 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir
 
                 $script:capturedArguments | Should -Contain '--logdirectory'
+            }
+        }
+    }
+
+    Describe 'Resolve-ExternalRulesetReferences' {
+        It 'Returns the original file unchanged when there are no included rulesets' {
+            InModuleScope CompileFromWorkspace {
+                $rulesetFile = Join-Path $TestDrive 'plain.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Plain","rules":[]}' -Encoding UTF8
+                $workFolder = Join-Path $TestDrive 'work1'
+                New-Item -Path $workFolder -ItemType Directory -Force | Out-Null
+
+                Resolve-ExternalRulesetReferences -RulesetFile $rulesetFile -WorkFolder $workFolder | Should -Be $rulesetFile
+            }
+        }
+
+        It 'Returns the original file unchanged when included rulesets are already local' {
+            InModuleScope CompileFromWorkspace {
+                $rulesetFile = Join-Path $TestDrive 'local-include.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Local","includedRuleSets":[{"action":"Default","path":"C:\\rulesets\\base.ruleset.json"}]}' -Encoding UTF8
+                $workFolder = Join-Path $TestDrive 'work2'
+                New-Item -Path $workFolder -ItemType Directory -Force | Out-Null
+
+                Resolve-ExternalRulesetReferences -RulesetFile $rulesetFile -WorkFolder $workFolder | Should -Be $rulesetFile
+            }
+        }
+
+        It 'Downloads and rewrites a single http(s) included ruleset to a local copy' {
+            InModuleScope CompileFromWorkspace {
+                $rulesetFile = Join-Path $TestDrive 'top.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Top","includedRuleSets":[{"action":"Default","path":"https://example.com/base.ruleset.json"}]}' -Encoding UTF8
+                $workFolder = Join-Path $TestDrive 'work3'
+                New-Item -Path $workFolder -ItemType Directory -Force | Out-Null
+
+                Mock Invoke-WebRequest {
+                    Set-Content -Path $OutFile -Value '{"name":"Base","rules":[]}' -Encoding UTF8
+                }
+
+                $resolved = Resolve-ExternalRulesetReferences -RulesetFile $rulesetFile -WorkFolder $workFolder
+
+                $resolved | Should -Not -Be $rulesetFile
+                Test-Path $resolved | Should -BeTrue
+                $resolvedContent = Get-Content -Path $resolved -Raw | ConvertFrom-Json
+                $resolvedContent.includedRuleSets[0].path | Should -Not -Match '^https?://'
+                Test-Path $resolvedContent.includedRuleSets[0].path | Should -BeTrue
+            }
+        }
+
+        It 'Recursively resolves nested external references' {
+            InModuleScope CompileFromWorkspace {
+                $rulesetFile = Join-Path $TestDrive 'top-nested.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Top","includedRuleSets":[{"action":"Default","path":"https://example.com/mid.ruleset.json"}]}' -Encoding UTF8
+                $workFolder = Join-Path $TestDrive 'work4'
+                New-Item -Path $workFolder -ItemType Directory -Force | Out-Null
+
+                Mock Invoke-WebRequest {
+                    if ($Uri -eq 'https://example.com/mid.ruleset.json') {
+                        Set-Content -Path $OutFile -Value '{"name":"Mid","includedRuleSets":[{"action":"Default","path":"https://example.com/base.ruleset.json"}]}' -Encoding UTF8
+                    } else {
+                        Set-Content -Path $OutFile -Value '{"name":"Base","rules":[]}' -Encoding UTF8
+                    }
+                }
+
+                $resolved = Resolve-ExternalRulesetReferences -RulesetFile $rulesetFile -WorkFolder $workFolder
+
+                Should -Invoke Invoke-WebRequest -Times 2 -Exactly
+                $midContent = Get-Content -Path (Get-Content -Path $resolved -Raw | ConvertFrom-Json).includedRuleSets[0].path -Raw | ConvertFrom-Json
+                $midContent.includedRuleSets[0].path | Should -Not -Match '^https?://'
+            }
+        }
+
+        It 'Throws on a circular external reference' {
+            InModuleScope CompileFromWorkspace {
+                $rulesetFile = Join-Path $TestDrive 'cycle.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Cycle","includedRuleSets":[{"action":"Default","path":"https://example.com/cycle.ruleset.json"}]}' -Encoding UTF8
+                $workFolder = Join-Path $TestDrive 'work5'
+                New-Item -Path $workFolder -ItemType Directory -Force | Out-Null
+
+                Mock Invoke-WebRequest {
+                    Set-Content -Path $OutFile -Value '{"name":"Cycle","includedRuleSets":[{"action":"Default","path":"https://example.com/cycle.ruleset.json"}]}' -Encoding UTF8
+                }
+
+                { Resolve-ExternalRulesetReferences -RulesetFile $rulesetFile -WorkFolder $workFolder } | Should -Throw '*Circular*'
+            }
+        }
+
+        It 'Throws after retrying a failed download' {
+            InModuleScope CompileFromWorkspace {
+                $rulesetFile = Join-Path $TestDrive 'unreachable.ruleset.json'
+                Set-Content -Path $rulesetFile -Value '{"name":"Top","includedRuleSets":[{"action":"Default","path":"https://example.com/unreachable.ruleset.json"}]}' -Encoding UTF8
+                $workFolder = Join-Path $TestDrive 'work6'
+                New-Item -Path $workFolder -ItemType Directory -Force | Out-Null
+
+                Mock Invoke-WebRequest { throw "network error" }
+                Mock Start-Sleep { }
+
+                { Resolve-ExternalRulesetReferences -RulesetFile $rulesetFile -WorkFolder $workFolder } | Should -Throw '*Failed to download*'
+                Should -Invoke Invoke-WebRequest -Times 4 -Exactly
             }
         }
     }

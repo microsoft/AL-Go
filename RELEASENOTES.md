@@ -5,6 +5,9 @@ When compiling without a container, AL-Go builds a compiler folder from a Busine
 The version and country still come from the resolved `artifact` setting, so pinning `artifact` keeps pinning what you compile against, and `vsixFile` still selects the compiler (`default` matches your Business Central version, `latest` and `preview` behave as before). Microsoft dependencies declared in your app.json files - the test toolkit for a test app, for instance - are resolved from the same feed, so only what a project needs is staged.
 
 `nuGet` is not supported for apps targeting `OnPrem` or `Internal`, which may use .NET interop: the NuGet feeds carry no service tier assemblies. Those builds fail up front with a message pointing back to `artifact`. Default is `artifact`, so nothing changes unless you opt in. See [Scenarios/SymbolsFromNuGet.md](Scenarios/SymbolsFromNuGet.md).
+### `enableExternalRulesets` now works with workspace compilation
+
+Previously, `enableExternalRulesets: true` had no effect when `workspaceCompilation` was enabled: `altool workspace compile` has no equivalent to `alc.exe`'s `/enableexternalrulesets` flag, so the setting was silently ignored and a ruleset with an `http(s)` entry in `includedRuleSets` failed to compile with `AL1033`. `CompileApps` now downloads each external `includedRuleSets` reference (recursively, if the downloaded ruleset itself references further external rulesets) and rewrites the ruleset file to point at the local copies before compiling, so external rulesets now work the same way under workspace compilation as they do in a container.
 
 ### New `linuxFastLane` setting - fast pull request builds on Linux BC
 
