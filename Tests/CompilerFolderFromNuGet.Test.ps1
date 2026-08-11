@@ -700,6 +700,37 @@ Describe "CompilerFolderFromNuGet Module Tests" {
                     $message -like "*Failed to resolve dependency*$($dep1.publisher)*" -and $message -like '*runspace exploded*'
                 }
             }
+
+            It 'a real worker runspace can actually find Resolve-NonMicrosoftDependencyFromNuGet after importing this module by its real path' {
+                # None of the other tests in this Context exercise the real worker runspace at all
+                # (Invoke-ScriptBlocksInParallel is mocked in every one of them) - this is the one
+                # test that does not mock it, so it is the only test that would have caught three
+                # separate real-world failures of the module-path-resolution mechanism itself
+                # (observed in production: $PSCommandPath and Get-Command ...Module.Path, evaluated
+                # from inside a function, both resolved to BcContainerHelper's own .psd1 instead of
+                # this module once BcContainerHelper had been dot-sourced into the caller's scope).
+                # It does not need real BcContainerHelper or real network access: a no-op stub
+                # standing in for the dot-sourced BcContainerHelperPath is enough to prove the
+                # worker runspace reaches Resolve-NonMicrosoftDependencyFromNuGet at all - which is
+                # exactly the point that broke.
+                $fakeBcContainerHelperPath = Join-Path $testFolder 'fake-BcContainerHelper.ps1'
+                'param([switch] $Silent)' | Set-Content -Path $fakeBcContainerHelperPath -Encoding UTF8
+                $env:BcContainerHelperPath = $fakeBcContainerHelperPath
+
+                $dep1 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep1'; version = '1.0.0.0' }
+                $dep2 = @{ id = [Guid]::NewGuid().ToString(); publisher = 'Contoso'; name = 'Dep2'; version = '1.0.0.0' }
+                $appFolder = Join-Path $testFolder 'App'
+                New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString()) -Dependencies @($dep1, $dep2)
+
+                $realModulePath = (Get-Module CompilerFolderFromNuGet).Path
+                Mock -ModuleName CompilerFolderFromNuGet OutputWarning { }
+
+                { Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings @{} -ArtifactUrl $artifactUrl -ModulePath $realModulePath } | Should -Not -Throw
+
+                Should -Invoke -ModuleName CompilerFolderFromNuGet OutputWarning -ParameterFilter {
+                    $message -like '*is not available after*' -or $message -like '*is not recognized*'
+                } -Times 0
+            }
         }
     }
 }

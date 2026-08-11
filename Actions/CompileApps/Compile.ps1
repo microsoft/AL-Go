@@ -23,7 +23,8 @@ Param(
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompilerFolderFromNuGet.psm1" -Resolve) -DisableNameChecking
+$compilerFolderFromNuGetModulePath = Join-Path -Path $PSScriptRoot "..\.Modules\CompilerFolderFromNuGet.psm1" -Resolve
+Import-Module $compilerFolderFromNuGetModulePath -DisableNameChecking
 DownloadAndImportBcContainerHelper
 
 if ($env:Secrets) {
@@ -168,7 +169,8 @@ try {
         -Settings $settings `
         -ArtifactUrl $artifact `
         -GitHubPackagesContext "$($secrets.gitHubPackagesContext)" `
-        -Token $token
+        -Token $token `
+        -ModulePath $compilerFolderFromNuGetModulePath
 
     # Incremental Builds - Determine which folders need to be built vs downloaded from baseline
     $appFoldersToBuild = $settings.appFolders

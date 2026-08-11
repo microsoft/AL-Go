@@ -1225,8 +1225,23 @@ function Install-NonMicrosoftDependenciesFromNuGet {
         [Parameter(Mandatory = $false)]
         [string] $GitHubPackagesContext = '',
         [Parameter(Mandatory = $false)]
-        [string] $Token = ''
+        [string] $Token = '',
+        [Parameter(Mandatory = $false)]
+        [string] $ModulePath = ''
     )
+
+    # The caller already knows the exact path it used to Import-Module this file - prefer that
+    # over any form of self-introspection. A real CI run showed both $PSCommandPath and
+    # (Get-Command <exported function>).Module.Path, evaluated from inside a function, can
+    # resolve to a completely different module (observed: BcContainerHelper's own .psd1) once
+    # BcContainerHelper has been dot-sourced into the caller's scope after this module was
+    # imported - a session-state quirk on the real Windows PowerShell 5.1 runner that a Linux/PS7
+    # dev environment does not reproduce. $script:ThisModulePath (captured at this module's own
+    # load time, before that ambiguity can arise) is the fallback for callers that cannot supply
+    # ModulePath themselves.
+    if (-not $ModulePath) {
+        $ModulePath = $script:ThisModulePath
+    }
 
     # Download-BcNuGetPackageToFolder only rejects a candidate version whose own nuspec
     # declares a platform/application requirement higher than what is being compiled against
@@ -1334,12 +1349,10 @@ function Install-NonMicrosoftDependenciesFromNuGet {
     # so it serializes correctly across runspaces in this same process exactly as it does across
     # separate processes. Concurrent workers racing to prime that cache is therefore already safe;
     # no separate "resolve the first one serially to warm the cache" staging is needed here.
-    # Neither $PSCommandPath nor (Get-Command <exported function>).Module.Path is reliable here:
-    # a real CI run showed both can resolve to a completely different module (observed:
-    # BcContainerHelper's own .psd1) once BcContainerHelper has been dot-sourced into the
-    # caller's scope after this module was imported. $script:ThisModulePath is captured once, at
-    # this module's own load time, before that ambiguity can arise.
-    $modulePath = $script:ThisModulePath
+    # ModulePath was resolved (from the caller's own explicit -ModulePath, or the $script:ThisModulePath
+    # fallback) at the top of this function - see the comment there for why self-introspection
+    # ($PSCommandPath / Get-Command ...Module.Path) is not used here.
+    $modulePath = $ModulePath
     if (-not $modulePath -or -not (Test-Path -Path $modulePath -PathType Leaf)) {
         throw "Could not resolve this module's own file path (got '$modulePath'). This is required to re-import it into the parallel dependency-resolution worker runspaces."
     }
