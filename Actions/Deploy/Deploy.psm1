@@ -264,15 +264,15 @@ function UnpublishOldAppVersions {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
-        $appFiles
+        [string[]] $appFiles
     )
     OutputDebugFunctionCall
 
     try {
-        # Deployed app identities (id + version) read from the .app files
+        # Deployed app ids read from the .app files
         $deployedApps = @($appFiles | ForEach-Object {
             $appJson = Get-AppJsonFromAppFile -appFile $_
-            [PSCustomObject]@{ Id = $appJson.id; Version = [version]$appJson.version }
+            [PSCustomObject]@{ Id = $appJson.id }
         })
         if ($deployedApps.Count -eq 0) {
             return
