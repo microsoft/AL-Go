@@ -66,6 +66,12 @@ the Windows build accepts (or vice versa).
   results uploaded as a workflow artifact
 - Both single-project and multi-project repositories (projects are matrixed
   the same way as the standard `Build` job)
+- Same-repo project dependencies (one project in the repo depending on
+  another). The dependency project's production app is resolved the same way
+  the standard `Build` job resolves it - from this workflow run if that
+  project was also built here, otherwise from the last successful baseline
+  build - and staged alongside any third-party (`appDependencyProbingPaths`)
+  dependency apps.
 - Compiled Apps/TestApps published as AL-Go-named artifacts (same naming
   `CalculateArtifactNames` gives the standard `Build` job), via a
   `PublishLinuxArtifacts` job that re-shapes the plain artifact bc-linux

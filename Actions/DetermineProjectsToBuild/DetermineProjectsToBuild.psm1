@@ -98,7 +98,7 @@ function ShouldBuildProject {
     - linuxAlToolVersion: The AL compiler version policy for the Linux fast lane, mapped from the project's vsixFile setting ('' (default/matching), 'latest', or 'prerelease'); empty if vsixFile is a direct download URL, which can't be mapped to a policy keyword
     - linuxAppDirs / linuxTestAppDirs: space-separated, repo-root-relative app/test folders for the Linux fast lane
     - linuxCodeunitRange: pipe-separated "from..to" span(s) built from the idRanges declared in each test app's app.json, used to scope the Linux fast lane's test-codeunit discovery; empty if no idRanges could be read (the fast lane then falls back to its own unbounded default)
-    - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) dependency .apps; empty if the project has none
+    - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) and same-repo project dependency .apps; empty if the project has none
     - linuxArtifactNameSuffix: "<sanitized project>-<buildMode>", used as bc-linux's compiled-apps upload suffix ("bc-linux-build-<suffix>") and read back by the PublishLinuxArtifacts job to re-shape that artifact into AL-Go's own Apps/TestApps naming; empty when linuxFastLane is false
     - artifact: the resolved BC artifact URL for this project (best-effort resolved centrally here, the same way the project's own "Determine ArtifactUrl" build step would); empty if it couldn't be resolved, in which case the build step resolves it itself as a fallback
     - artifactCacheKey: cache key for the Cache Business Central Artifacts step, mirroring DetermineArtifactUrl.ps1's own logic (set only when useCompilerFolder is true and symbolsSource is not 'nuGet'); empty otherwise, or when artifact couldn't be resolved
@@ -109,7 +109,11 @@ function CreateBuildDimensions {
         $projects = @(),
         $baseFolder,
         [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
-        $token
+        $token,
+        [Parameter(HelpMessage = "A hashtable mapping project name to an array of the names of the (same-repo) projects it depends on, used to stage dependency apps for the Linux fast lane", Mandatory = $false)]
+        $projectDependencies = @{},
+        [Parameter(HelpMessage = "ID of the baseline workflow run, used as a fallback to resolve a same-repo project dependency for the Linux fast lane when the dependency project isn't built in the current run", Mandatory = $false)]
+        $baselineWorkflowRunId = '0'
     )
 
     $buildDimensions = @()
@@ -217,22 +221,25 @@ function CreateBuildDimensions {
 
         if ($linuxFastLane) {
             # bc-test-from-source.yml only stages symbols from the BC platform artifact tree (Microsoft apps).
-            # Third-party dependencies declared via appDependencyProbingPaths (e.g. an AppSource dependency
-            # published in another repo) aren't in that artifact, so they're downloaded here (same mechanism
-            # the Windows pipeline uses) and staged under LinuxFastLaneDependencies_staging for a single Initialization-job
-            # upload step to pick up as the LinuxFastLaneDependencies artifact.
+            # Neither third-party dependencies (appDependencyProbingPaths) nor same-repo project dependencies
+            # are in that artifact, so both are downloaded here (the same mechanisms the Windows pipeline uses)
+            # and staged under LinuxFastLaneDependencies_staging for a single Initialization-job upload step to
+            # pick up as the LinuxFastLaneDependencies artifact.
+
+            # '.' (the common single-project-repo project name) is a reserved relative path
+            # segment - joining it onto a folder path is a no-op, not a real subfolder, which
+            # would silently collapse the per-project layout the LinuxFastLaneDependencies
+            # artifact depends on. Give it an explicit, unambiguous name instead.
+            $sanitizedProject = ($project -replace '[\\/]', '_')
+            if ($sanitizedProject -eq '.') {
+                $sanitizedProject = '_root_'
+            }
+            $depFolder = Join-Path $baseFolder "LinuxFastLaneDependencies_staging" $sanitizedProject
+            $downloadedCount = 0
+
             try {
                 $probingSettings = CheckAppDependencyProbingPaths -settings $resolvedSettings -token $token -baseFolder $baseFolder -project $project
                 if ($probingSettings.ContainsKey('appDependencyProbingPaths') -and $probingSettings.appDependencyProbingPaths) {
-                    # '.' (the common single-project-repo project name) is a reserved relative path
-                    # segment - joining it onto a folder path is a no-op, not a real subfolder, which
-                    # would silently collapse the per-project layout the LinuxFastLaneDependencies
-                    # artifact depends on. Give it an explicit, unambiguous name instead.
-                    $sanitizedProject = ($project -replace '[\\/]', '_')
-                    if ($sanitizedProject -eq '.') {
-                        $sanitizedProject = '_root_'
-                    }
-                    $depFolder = Join-Path $baseFolder "LinuxFastLaneDependencies_staging" $sanitizedProject
                     New-Item -Path $depFolder -ItemType Directory -Force | Out-Null
                     # Only the 'Apps' mask - the dependency's own production app(s), which the
                     # consumer's app.json actually declares a dependency on. Skip 'TestApps'/
@@ -246,13 +253,30 @@ function CreateBuildDimensions {
                     Write-Host "GetDependencies returned $($downloaded.Count) item(s) for project $project`: $($downloaded -join ', ')"
                     $downloaded = @(Resolve-DependencyFiles -Dependencies $downloaded -DestinationPath $depFolder)
                     Write-Host "Resolve-DependencyFiles left $($downloaded.Count) app file(s) in $depFolder`: $((Get-ChildItem -Path $depFolder -File -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }) -join ', ')"
-                    if ($downloaded.Count -gt 0) {
-                        $linuxDependencySubdir = $sanitizedProject
-                    }
+                    $downloadedCount += $downloaded.Count
                 }
             }
             catch {
                 Write-Host "::warning::Could not download appDependencyProbingPaths dependencies for the Linux fast lane build of project $project ($($_.Exception.Message)); production apps depending on them will fail to compile on the Linux fast lane."
+            }
+
+            if ($projectDependencies.Keys -contains $project -and $projectDependencies."$project") {
+                try {
+                    New-Item -Path $depFolder -ItemType Directory -Force | Out-Null
+                    # Same reasoning as above for the 'Apps'-only mask: the fast lane only needs
+                    # a same-repo dependency project's production app(s) to compile/publish
+                    # against, not its test fixtures.
+                    $downloaded = @(Get-DependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectDependencies $projectDependencies -buildMode 'Default' -baselineWorkflowRunID $baselineWorkflowRunId -destinationPath $depFolder -token $token -masks @('Apps') | Where-Object { $_ })
+                    Write-Host "Get-DependenciesFromCurrentBuild left $($downloaded.Count) app file(s) in $depFolder for project $project`: $($downloaded -join ', ')"
+                    $downloadedCount += $downloaded.Count
+                }
+                catch {
+                    Write-Host "::warning::Could not download same-repo project dependencies for the Linux fast lane build of project $project ($($_.Exception.Message)); apps depending on them will fail to compile on the Linux fast lane."
+                }
+            }
+
+            if ($downloadedCount -gt 0) {
+                $linuxDependencySubdir = $sanitizedProject
             }
         }
 
@@ -333,7 +357,9 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "Token used to access dependency repositories (e.g. appDependencyProbingPaths for the Linux fast lane)", Mandatory = $false)]
         $token,
         [Parameter(HelpMessage = "Whether the calling workflow has a job that consumes buildDimensionsLinux. When false, projects with linuxFastLane enabled are folded back into the regular buildDimensions instead of being dropped silently.", Mandatory = $false)]
-        [bool] $supportsLinuxFastLane = $true
+        [bool] $supportsLinuxFastLane = $true,
+        [Parameter(HelpMessage = "ID of the baseline workflow run, used as a fallback to resolve a same-repo project dependency for the Linux fast lane when the dependency project isn't built in the current run", Mandatory = $false)]
+        $baselineWorkflowRunId = '0'
     )
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -381,7 +407,7 @@ function Get-ProjectsToBuild {
                 if ($projectsOnDepth) {
                     # Create build dimensions for the projects on the current depth
                     # buildDimensions only contains projects using the standard Windows pipeline; projects with linuxFastLane enabled are split into buildDimensionsLinux instead
-                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth -token $token
+                    $buildDimensions = CreateBuildDimensions -baseFolder $baseFolder -projects $projectsOnDepth -token $token -projectDependencies $projectBuildInfo.projectDependencies -baselineWorkflowRunId $baselineWorkflowRunId
                     if (-not $supportsLinuxFastLane) {
                         # The calling workflow has no job that consumes buildDimensionsLinux (e.g. CICD, CreateRelease -
                         # only PullRequestHandler does). Routing a project there anyway would mean it silently never

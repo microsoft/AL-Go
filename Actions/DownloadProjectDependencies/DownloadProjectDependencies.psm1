@@ -424,4 +424,112 @@ function Resolve-DependencyFiles {
     })
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles
+<#
+    .SYNOPSIS
+    Downloads a project's same-repo project dependencies (as opposed to appDependencyProbingPaths
+    or installApps/installTestApps dependencies) as built in the current workflow run, falling back
+    to the baseline workflow run for any dependency project not built in this run.
+    .PARAMETER baseFolder
+    The base folder of the repository.
+    .PARAMETER project
+    The project for which to download dependencies.
+    .PARAMETER projectDependencies
+    A hashtable mapping project name to an array of the names of the projects it depends on.
+    .PARAMETER buildMode
+    The build mode used for the current build.
+    .PARAMETER baselineWorkflowRunID
+    The ID of the baseline workflow run, used as a fallback for dependency projects not built in the current run.
+    .PARAMETER destinationPath
+    The path to which dependency .app files are downloaded.
+    .PARAMETER token
+    Token used to access the dependency repository (same repository, so normally the workflow's own token).
+    .PARAMETER masks
+    Which artifact kinds to download for each dependency project. Defaults to Apps, Dependencies and TestApps.
+    .OUTPUTS
+    An array of paths to the downloaded .app files, test apps wrapped in parentheses, e.g. "(path)".
+#>
+function Get-DependenciesFromCurrentBuild {
+    param(
+        $baseFolder,
+        $project,
+        $projectDependencies,
+        $buildMode,
+        $baselineWorkflowRunID,
+        $destinationPath,
+        $token,
+        [string[]] $masks = @('Apps','Dependencies','TestApps')
+    )
+
+    Write-Host "Downloading dependencies for project '$project'"
+
+    $dependencyProjects = @()
+    if ($projectDependencies.Keys -contains $project) {
+        $dependencyProjects = @($projectDependencies."$project")
+    }
+
+    Write-Host "Dependency projects: $($dependencyProjects -join ', ')"
+
+    # For each dependency project, calculate the corresponding probing path
+    $dependenciesProbingPaths = @()
+    foreach($dependencyProject in $dependencyProjects) {
+        Write-Host "Reading settings for project '$dependencyProject'"
+        $dependencyProjectSettings = ReadSettings -baseFolder $baseFolder -project $dependencyProject
+
+        $dependencyBuildMode = $buildMode
+        if ($dependencyBuildMode -ne 'Default' -and !($dependencyProjectSettings.buildModes -contains $dependencyBuildMode)) {
+            # Download the default build mode if the specified build mode is not supported for the dependency project
+            Write-Host "Build mode '$dependencyBuildMode' is not supported for project '$dependencyProject'. Using the default build mode."
+            $dependencyBuildMode = 'Default';
+        }
+
+        $headBranch = $ENV:GITHUB_HEAD_REF
+        # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+        if (!$headBranch) {
+            $headBranch = $ENV:GITHUB_REF_NAME
+        }
+
+        $baseBranch = $ENV:GITHUB_BASE_REF
+        # $ENV:GITHUB_BASE_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
+        if (!$baseBranch) {
+            $baseBranch = $ENV:GITHUB_REF_NAME
+        }
+
+        $dependenciesProbingPaths += @(@{
+            "release_status"  = "thisBuild"
+            "version"         = "latest"
+            "buildMode"       = $dependencyBuildMode
+            "projects"        = $dependencyProject
+            "repo"            = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+            "branch"          = $headBranch
+            "baseBranch"      = $baseBranch
+            "baselineWorkflowID" = $baselineWorkflowRunID
+            "authTokenSecret" = $token
+        })
+    }
+
+    # For each probing path, download the dependencies
+    $downloadedDependencies = @()
+    foreach($probingPath in $dependenciesProbingPaths) {
+        $buildMode = $probingPath.buildMode
+        $project = $probingPath.projects
+        $branch = $probingPath.branch
+        $baseBranch = $probingPath.baseBranch
+        $baselineWorkflowRunID = $probingPath.baselineWorkflowID
+
+        Write-Host "Downloading dependencies for project '$project'. BuildMode: $buildMode, Branch: $branch, Base Branch: $baseBranch, Baseline Workflow ID: $baselineWorkflowRunID"
+        GetDependencies -probingPathsJson $probingPath -saveToPath $destinationPath -masks $masks | Where-Object { $_ } | ForEach-Object {
+            $dependencyFileName = [System.IO.Path]::GetFileName($_.Trim('()'))
+            if ($downloadedDependencies | Where-Object { [System.IO.Path]::GetFileName($_.Trim('()')) -eq $dependencyFileName }) {
+                Write-Host "Dependency app '$dependencyFileName' already downloaded"
+            }
+            else {
+                Write-Host "Dependency app '$dependencyFileName' downloaded"
+                $downloadedDependencies += $_
+            }
+        }
+    }
+
+    return Resolve-DependencyFiles -Dependencies $downloadedDependencies -DestinationPath $destinationPath
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles, Get-DependenciesFromCurrentBuild

@@ -1209,6 +1209,58 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].linuxFastLane | Should -BeFalse
     }
 
+    It 'stages same-repo project dependencies for a linuxFastLane project' {
+        $project2AppFile = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd2'; name = 'Second App'; publisher = 'Contoso'; version = '1.0.0.0'; dependencies = @() }
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project2/app/app.json" -Value (ConvertTo-Json $project2AppFile -Depth 10) -type File -Force
+
+        $project1AppFile = @{
+            id           = '83fb8305-4079-415d-a25d-8132f0436fd1'
+            name         = 'First App'
+            publisher    = 'Contoso'
+            version      = '1.0.0.0'
+            dependencies = @(@{ id = $project2AppFile.id; name = $project2AppFile.name; publisher = $project2AppFile.publisher; version = '1.0.0.0' })
+        }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; useProjectDependencies = $true } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $project1AppFile -Depth 10) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock Get-DependenciesFromCurrentBuild {
+            param($baseFolder, $project, $projectDependencies, $buildMode, $baselineWorkflowRunID, $destinationPath, $token, $masks)
+            New-Item -Path (Join-Path $destinationPath 'Project2.app') -type File -Force | Out-Null
+            return @((Join-Path $destinationPath 'Project2.app'))
+        } -ModuleName DetermineProjectsToBuild
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineWorkflowRunId '12345'
+
+        $projectDependencies['Project1'] | Should -Contain 'Project2'
+
+        $linuxDimension = $buildOrder.buildDimensionsLinux | Where-Object { $_.project -eq 'Project1' }
+        $linuxDimension.linuxDependencySubdir | Should -BeExactly 'Project1'
+
+        Should -Invoke Get-DependenciesFromCurrentBuild -ModuleName DetermineProjectsToBuild -Times 1 -Exactly -ParameterFilter {
+            $project -eq 'Project1' -and $baselineWorkflowRunID -eq '12345' -and ($masks -join ',') -eq 'Apps'
+        }
+    }
+
+    It 'leaves linuxDependencySubdir empty for a linuxFastLane project with no dependencies' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock Get-DependenciesFromCurrentBuild {} -ModuleName DetermineProjectsToBuild
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $linuxDimension = $buildOrder[0].buildDimensionsLinux | Where-Object { $_.project -eq 'Project1' }
+        $linuxDimension.linuxDependencySubdir | Should -BeExactly ''
+
+        Should -Invoke Get-DependenciesFromCurrentBuild -ModuleName DetermineProjectsToBuild -Times 0 -Exactly
+    }
+
     It 'folds linuxFastLane projects back into buildDimensions when supportsLinuxFastLane is false' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
