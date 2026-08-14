@@ -229,7 +229,7 @@ jobs:
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0
     strategy:
       matrix:
-        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0 && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux || fromJson('[{}]') }}
+        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux }}
       fail-fast: false
     name: Build ${{ matrix.projectName }} (${{ matrix.buildMode }}, Linux fast lane)
     uses: ./.github/workflows/_BuildALGoProjectLinux.yaml
@@ -257,7 +257,7 @@ jobs:
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0
     strategy:
       matrix:
-        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinuxCount > 0 && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux || fromJson('[{}]') }}
+        include: ${{ fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsLinux }}
       fail-fast: false
     name: Publish artifacts for ${{ matrix.projectName }} (${{ matrix.buildMode }}, Linux fast lane)
     runs-on: [ ubuntu-latest ]

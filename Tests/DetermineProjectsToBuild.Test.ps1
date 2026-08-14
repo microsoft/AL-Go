@@ -1184,6 +1184,36 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensionsLinux[0].linuxFastLane | Should -BeTrue
     }
 
+    It 'never returns an empty buildDimensions or buildDimensionsLinux array, even when the real count is 0' {
+        # GitHub Actions evaluates strategy.matrix for every job before applying that job's if:, so an
+        # empty (or all-empty-object) include array throws "Error when evaluating 'strategy'" and the
+        # job never runs, regardless of the if: guard. buildDimensions/buildDimensionsLinux must always
+        # be non-empty arrays with a real (non-empty-object) placeholder entry when the actual count is 0.
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        # A project entirely on the standard Windows pipeline (no linuxFastLane): buildDimensionsLinux
+        # must still come back non-empty even though buildDimensionsLinuxCount is 0.
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsLinuxCount | Should -BeExactly 0
+        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensionsLinux[0].PSObject.Properties.Name.Count | Should -BeGreaterThan 0
+
+        # A project entirely on the Linux fast lane: buildDimensions (the Windows side) must still come
+        # back non-empty even though buildDimensionsCount is 0. This is Blumenthal's real-world case -
+        # a single-project repo with linuxFastLane: true and no Windows-side projects at all.
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $buildOrder[0].buildDimensionsCount | Should -BeExactly 0
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        $buildOrder[0].buildDimensions[0].PSObject.Properties.Name.Count | Should -BeGreaterThan 0
+    }
+
     It 'skips linuxFastLane for a compile-only project (useCompilerFolder)' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; useCompilerFolder = $true } | ConvertTo-Json) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
@@ -1193,7 +1223,7 @@ Describe "Get-ProjectsToBuild" {
 
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
-        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 0
+        $buildOrder[0].buildDimensionsLinuxCount | Should -BeExactly 0
         ($buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }).linuxFastLane | Should -BeFalse
     }
 
@@ -1205,7 +1235,7 @@ Describe "Get-ProjectsToBuild" {
 
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
 
-        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 0
+        $buildOrder[0].buildDimensionsLinuxCount | Should -BeExactly 0
         $buildOrder[0].buildDimensions[0].linuxFastLane | Should -BeFalse
     }
 
@@ -1270,7 +1300,7 @@ Describe "Get-ProjectsToBuild" {
 
         $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -supportsLinuxFastLane $false
 
-        $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 0
+        $buildOrder[0].buildDimensionsLinuxCount | Should -BeExactly 0
         $buildOrder[0].buildDimensions.Count | Should -BeExactly 2
         ($buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }).linuxFastLane | Should -BeFalse
         ($buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project2' }).linuxFastLane | Should -BeFalse

@@ -103,6 +103,42 @@ function ShouldBuildProject {
     - artifact: the resolved BC artifact URL for this project (best-effort resolved centrally here, the same way the project's own "Determine ArtifactUrl" build step would); empty if it couldn't be resolved, in which case the build step resolves it itself as a fallback
     - artifactCacheKey: cache key for the Cache Business Central Artifacts step, mirroring DetermineArtifactUrl.ps1's own logic (set only when useCompilerFolder is true and symbolsSource is not 'nuGet'); empty otherwise, or when artifact couldn't be resolved
 #>
+<#
+.Synopsis
+    Guarantees a build dimensions array is never returned empty, so it's always safe to hand to a
+    GitHub Actions strategy.matrix.include expression.
+
+.Description
+    GitHub Actions evaluates strategy.matrix for every job unconditionally, before applying that job's
+    if: condition - an empty (or all-empty-object) include array throws "Error when evaluating
+    'strategy' for job '<name>'" and the job never runs, even though its if: (gated on the *Count
+    output alongside this array) would otherwise have skipped it cleanly. The workflow YAML has no way
+    to protect against this itself, since the failure happens before if: is ever considered. Substitute
+    a single placeholder vector with a real property instead; its values are never read because the
+    if: guard (checked against the real Count, not this array) skips the job whenever this substitution
+    kicks in.
+
+.PARAMETER dimensions
+    The build dimensions array (buildDimensions or buildDimensionsLinux) to protect.
+#>
+function ProtectEmptyBuildDimensions {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        $dimensions
+    )
+    $dimensions = @($dimensions)
+    if ($dimensions.Count -eq 0) {
+        $dimensions = @(, @{ project = ''; buildMode = ''; linuxFastLane = $false })
+    }
+    # -NoEnumerate is required: a plain `return $dimensions` (or wrapping it again in @() at the
+    # call site) unrolls a single-element array back down to its bare element when PowerShell
+    # captures the function's output - a Hashtable element then reports .Count as its key count,
+    # not 1, and a real (already multi/single-element) array gets nested inside an extra array
+    # instead. -NoEnumerate is what preserves the array itself as the one output object.
+    Write-Output -NoEnumerate $dimensions
+}
+
 function CreateBuildDimensions {
     param(
         [Parameter(HelpMessage = "A list of AL-Go projects for which to generate build dimensions")]
@@ -421,10 +457,10 @@ function Get-ProjectsToBuild {
                     $projectsOrderToBuild += @{
                         projects = $projectsOnDepth
                         projectsCount = $projectsOnDepth.Count
-                        buildDimensions = $windowsBuildDimensions
+                        buildDimensions = ProtectEmptyBuildDimensions -dimensions $windowsBuildDimensions
                         # GitHub Actions expressions have no length()/array-count function, so the count is precomputed here for the if: conditions gating the Build/BuildLinux jobs
                         buildDimensionsCount = $windowsBuildDimensions.Count
-                        buildDimensionsLinux = $linuxBuildDimensions
+                        buildDimensionsLinux = ProtectEmptyBuildDimensions -dimensions $linuxBuildDimensions
                         buildDimensionsLinuxCount = $linuxBuildDimensions.Count
                     }
                 }
@@ -436,9 +472,9 @@ function Get-ProjectsToBuild {
             $projectsOrderToBuild += @{
                 projects = @()
                 projectsCount = 0
-                buildDimensions = @()
+                buildDimensions = ProtectEmptyBuildDimensions -dimensions @()
                 buildDimensionsCount = 0
-                buildDimensionsLinux = @()
+                buildDimensionsLinux = ProtectEmptyBuildDimensions -dimensions @()
                 buildDimensionsLinuxCount = 0
             }
         }
