@@ -31,6 +31,7 @@ Describe "Deploy Action Tests" {
             DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
             function InvokeDeploy {
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'sandbox', Justification = 'Used inside the Invoke-RestMethod mock scriptblock')]
                 Param([bool] $sandbox = $true, [hashtable] $deploymentSettings)
                 $json = @{ "test" = $deploymentSettings } | ConvertTo-Json -Depth 10 -Compress
                 $authContext = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"refreshToken":"dummy"}'))
