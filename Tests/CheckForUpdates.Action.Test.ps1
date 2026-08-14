@@ -211,6 +211,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
+        . (Join-Path -Path $scriptRoot -ChildPath "yamlclass.ps1")
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'tmpSrcFile', Justification = 'False positive.')]
         $tmpSrcFile = Join-Path $PSScriptRoot "tempSrcFile.json"
@@ -282,6 +283,46 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $modifiedContentJson | Should -Not -Match '"\*"\s*:'
         @($modifiedContent.PSObject.Properties.Name).Count | Should -Be 1
         $modifiedContent."`$schema" | Should -Be "sourceSchema"
+    }
+
+    It 'ModifyBuildWorkflows gates the Build job on buildDimensionsCount, not projectsCount' {
+        # projectsCount counts every project on this depth; buildDimensionsCount counts only the ones
+        # NOT routed to the Linux fast lane (see DetermineProjectsToBuild.psm1's CreateBuildDimensions).
+        # A repo where every project on a depth is linuxFastLane has projectsCount > 0 but
+        # buildDimensionsCount == 0 - gating Build on projectsCount would dispatch it with nothing to
+        # build, and its steps (which assume a real, non-empty project) fail outright.
+        $templateFile = Join-Path $PSScriptRoot "..\Templates\Per Tenant Extension\.github\workflows\PullRequestHandler.yaml" -Resolve
+        $yaml = [Yaml]::Load($templateFile)
+
+        ModifyBuildWorkflows -yaml $yaml -depth 1 -includeBuildPP $false
+
+        $buildJobContent = $yaml.Get('jobs:/Build:/').content -join "`n"
+        $buildJobContent | Should -Match ([regex]::Escape('buildDimensionsCount > 0'))
+        $buildJobContent | Should -Not -Match ([regex]::Escape('projectsCount > 0'))
+    }
+
+    It 'ModifyBuildWorkflows keeps BuildLinux and PublishLinuxArtifacts in Deploy/Deliver/PostProcess needs' {
+        # BuildLinux/PublishLinuxArtifacts aren't part of the per-depth build loop (the Linux fast lane
+        # doesn't split across dependency depths), so they're easy to drop when this function
+        # regenerates Deploy/Deliver/PostProcess's needs: from scratch. If dropped, Deploy/Deliver could
+        # run before a Linux fast lane project's apps exist, and PostProcess would report success
+        # without having looked at whether BuildLinux/PublishLinuxArtifacts succeeded.
+        $templateFile = Join-Path $PSScriptRoot "..\Templates\Per Tenant Extension\.github\workflows\CICD.yaml" -Resolve
+        $yaml = [Yaml]::Load($templateFile)
+
+        ModifyBuildWorkflows -yaml $yaml -depth 1 -includeBuildPP $false
+
+        foreach ($job in @('Deploy', 'Deliver', 'PostProcess')) {
+            $needsLine = ($yaml.Get("jobs:/$($job):/needs:").content -join "`n")
+            $needsLine | Should -Match ([regex]::Escape('BuildLinux')) -Because "$job needs: should still include BuildLinux"
+            $needsLine | Should -Match ([regex]::Escape('PublishLinuxArtifacts')) -Because "$job needs: should still include PublishLinuxArtifacts"
+        }
+
+        foreach ($job in @('Deploy', 'Deliver')) {
+            $ifLine = ($yaml.Get("jobs:/$($job):/if:").content -join "`n")
+            $ifLine | Should -Match ([regex]::Escape("needs.BuildLinux.result == 'success'")) -Because "$job if: should wait on BuildLinux"
+            $ifLine | Should -Match ([regex]::Escape("needs.PublishLinuxArtifacts.result == 'success'")) -Because "$job if: should wait on PublishLinuxArtifacts"
+        }
     }
 }
 

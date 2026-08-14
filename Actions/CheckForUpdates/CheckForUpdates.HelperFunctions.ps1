@@ -169,6 +169,8 @@ function ModifyBuildWorkflows {
 
     $yaml.Replace('env:/workflowDepth:',"workflowDepth: $depth")
     $build = $yaml.Get('jobs:/Build:/')
+    $buildLinux = $yaml.Get('jobs:/BuildLinux:/')
+    $publishLinuxArtifacts = $yaml.Get('jobs:/PublishLinuxArtifacts:/')
     $buildPP = $yaml.Get('jobs:/BuildPP:/')
     $deliver = $yaml.Get('jobs:/Deliver:/')
     $deploy = $yaml.Get('jobs:/Deploy:/')
@@ -180,6 +182,11 @@ function ModifyBuildWorkflows {
     }
 
     # Duplicate the build job for each dependency depth
+    # buildDimensionsCount, not projectsCount: the Build job here only handles the standard Windows
+    # pipeline - projects with linuxFastLane enabled are routed to buildDimensionsLinux/BuildLinux
+    # instead (see DetermineProjectsToBuild.psm1's CreateBuildDimensions), so projectsCount can be > 0
+    # while buildDimensionsCount is 0 (every project on this depth went to the fast lane). Gating on
+    # projectsCount would dispatch this job anyway with nothing real to build.
     $newBuild = @()
     for($index = 0; $index -lt $depth; $index++) {
         # All build job needs to have a dependency on the Initialization job
@@ -188,24 +195,24 @@ function ModifyBuildWorkflows {
             # First build job needs to have a dependency on the Initialization job only
             # Example (depth 1):
             #    needs: [ Initialization ]
-            #    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
-            $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
+            #    if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsCount > 0
+            $if = "if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].buildDimensionsCount > 0"
         }
         else {
             # Subsequent build jobs needs to have a dependency on all previous build jobs
             # Example (depth 2):
             #    needs: [ Initialization, Build1 ]
-            #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+            #    if: (!failure()) && (!cancelled()) && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsCount > 0
             # Another example (depth 3):
             #    needs: [ Initialization, Build2, Build1 ]
-            #    if: (!failure()) && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
+            #    if: (!failure()) && (!cancelled()) && (needs.Build2.result == 'success' || needs.Build2.result == 'skipped') && (needs.Build1.result == 'success' || needs.Build1.result == 'skipped') && fromJson(needs.Initialization.outputs.buildOrderJson)[0].buildDimensionsCount > 0
             $newBuild += @('')
             $ifpart = ""
             $index..1 | ForEach-Object {
                 $needs += @("Build$_")
                 $ifpart += " && (needs.Build$_.result == 'success' || needs.Build$_.result == 'skipped')"
             }
-            $if = "if: (!failure()) && (!cancelled())$ifpart && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].projectsCount > 0"
+            $if = "if: (!failure()) && (!cancelled())$ifpart && fromJson(needs.Initialization.outputs.buildOrderJson)[$index].buildDimensionsCount > 0"
         }
 
         # Replace the if:, the needs: and the strategy/matrix/project: in the build job with the correct values
@@ -239,6 +246,19 @@ function ModifyBuildWorkflows {
 
     $needs += @("Build")
     $ifpart += " && (needs.Build.result == 'success' || needs.Build.result == 'skipped')"
+    # BuildLinux/PublishLinuxArtifacts aren't part of the per-depth build loop above (the Linux fast
+    # lane doesn't get split across dependency depths the way the Windows pipeline does), but Deploy/
+    # Deliver/PostProcess still need to wait on them - otherwise a Linux fast lane project's apps
+    # might not exist yet when Deploy/Deliver run, and PostProcess would report success without ever
+    # having looked at whether BuildLinux/PublishLinuxArtifacts succeeded.
+    if ($buildLinux) {
+        $needs += @("BuildLinux")
+        $ifpart += " && (needs.BuildLinux.result == 'success' || needs.BuildLinux.result == 'skipped')"
+    }
+    if ($publishLinuxArtifacts) {
+        $needs += @("PublishLinuxArtifacts")
+        $ifpart += " && (needs.PublishLinuxArtifacts.result == 'success' || needs.PublishLinuxArtifacts.result == 'skipped')"
+    }
     if ($includeBuildPP -and $buildPP) {
         $needs += @("BuildPP")
         $ifpart += " && (needs.BuildPP.result == 'success' || needs.BuildPP.result == 'skipped')"
