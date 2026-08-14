@@ -52,7 +52,7 @@ if ($token) {
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
 # Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
-$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
+$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 
 # If templateUrl has changed, download latest version of the template repository (ignore templateSha)
@@ -113,6 +113,12 @@ if (-not $isDirectALGo) {
 
 # Get the list of projects in the current repository
 $baseFolder = $ENV:GITHUB_WORKSPACE
+
+if ($originalTemplateFolder) {
+    # Use current custom template settings for this run without changing the workspace before comparison.
+    $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+}
+
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
 $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
