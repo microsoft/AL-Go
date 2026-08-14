@@ -88,7 +88,7 @@ Trace-Information -Message "Incremental builds (projects)" -AdditionalData $addi
 
 # Add annotation for last known good build
 if ($baselineWorkflowRunId) {
-    Write-Host "::notice::Last known good build: https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$baselineWorkflowRunId"
+    Write-Host "::notice::Last known good build: $($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/actions/runs/$baselineWorkflowRunId"
 }
 
 # Set output variables

@@ -22,7 +22,7 @@ function GetHeadRefFromPRId {
 
     $headers = GetHeaders -token $token
 
-    $pullsURI = "https://api.github.com/repos/$repository/pulls/$prId"
+    $pullsURI = "$($ENV:GITHUB_API_URL)/repos/$repository/pulls/$prId"
     Write-Host "- $pullsURI"
     $pr = (InvokeWebRequest -Headers $headers -Uri $pullsURI).Content | ConvertFrom-Json
 
