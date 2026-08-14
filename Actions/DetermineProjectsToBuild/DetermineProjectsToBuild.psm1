@@ -114,9 +114,17 @@ function ShouldBuildProject {
     'strategy' for job '<name>'" and the job never runs, even though its if: (gated on the *Count
     output alongside this array) would otherwise have skipped it cleanly. The workflow YAML has no way
     to protect against this itself, since the failure happens before if: is ever considered. Substitute
-    a single placeholder vector with a real property instead; its values are never read because the
-    if: guard (checked against the real Count, not this array) skips the job whenever this substitution
-    kicks in.
+    a single placeholder vector with a real property instead; its values are never read for real builds
+    because the if: guard (checked against the real Count, not this array) skips the job's steps
+    whenever this substitution kicks in.
+
+    That if: guard only skips steps, though - it does not stop GitHub from dispatching the reusable
+    workflow the job calls (_BuildALGoProject.yaml), and that reusable workflow's own job evaluates its
+    job-level `runs-on: ${{ fromJson(inputs.runsOn) }}` before any of ITS if: conditions apply either.
+    An empty gitHubRunner value throws "Error when evaluating 'runs-on' for job 'BuildALGoProject'" the
+    same way an empty array throws for strategy. The placeholder's gitHubRunner must therefore be a
+    valid fromJson()-able runner label - windows-latest always exists on GitHub-hosted runners - even
+    though the job it's handed to never actually builds anything.
 
 .PARAMETER dimensions
     The build dimensions array (buildDimensions or buildDimensionsLinux) to protect.
@@ -129,7 +137,13 @@ function ProtectEmptyBuildDimensions {
     )
     $dimensions = @($dimensions)
     if ($dimensions.Count -eq 0) {
-        $dimensions = @(, @{ project = ''; buildMode = ''; linuxFastLane = $false })
+        $dimensions = @(, @{
+            project           = ''
+            buildMode         = ''
+            linuxFastLane     = $false
+            gitHubRunner      = '"windows-latest"'
+            githubRunnerShell = 'powershell'
+        })
     }
     # -NoEnumerate is required: a plain `return $dimensions` (or wrapping it again in @() at the
     # call site) unrolls a single-element array back down to its bare element when PowerShell

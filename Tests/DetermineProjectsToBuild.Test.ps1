@@ -1200,7 +1200,11 @@ Describe "Get-ProjectsToBuild" {
 
         $buildOrder[0].buildDimensionsLinuxCount | Should -BeExactly 0
         $buildOrder[0].buildDimensionsLinux.Count | Should -BeExactly 1
-        $buildOrder[0].buildDimensionsLinux[0].PSObject.Properties.Name.Count | Should -BeGreaterThan 0
+        # gitHubRunner must be a value _BuildALGoProject.yaml's `runs-on: fromJson(inputs.runsOn)` can
+        # actually parse - GitHub evaluates that job-level field for the dispatched reusable workflow
+        # regardless of the if: guard that skips its steps, so an empty/invalid value throws "Error
+        # when evaluating 'runs-on'" even though this placeholder combination never builds anything.
+        { $buildOrder[0].buildDimensionsLinux[0].gitHubRunner | ConvertFrom-Json } | Should -Not -Throw
 
         # A project entirely on the Linux fast lane: buildDimensions (the Windows side) must still come
         # back non-empty even though buildDimensionsCount is 0. This is Blumenthal's real-world case -
@@ -1211,6 +1215,7 @@ Describe "Get-ProjectsToBuild" {
 
         $buildOrder[0].buildDimensionsCount | Should -BeExactly 0
         $buildOrder[0].buildDimensions.Count | Should -BeExactly 1
+        { $buildOrder[0].buildDimensions[0].gitHubRunner | ConvertFrom-Json } | Should -Not -Throw
         $buildOrder[0].buildDimensions[0].PSObject.Properties.Name.Count | Should -BeGreaterThan 0
     }
 
