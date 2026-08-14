@@ -55,6 +55,17 @@ try {
         New-Item $testAppOutputFolder -ItemType Directory -Force | Out-Null
     }
 
+    $workspaceCompilationAcquisition = $settings.workspaceCompilation.acquisition
+    if ([string]::IsNullOrWhiteSpace($workspaceCompilationAcquisition)) {
+        $workspaceCompilationAcquisition = "bcCompilerFolder"
+    }
+    if ($workspaceCompilationAcquisition -notin @("bcCompilerFolder", "nuget")) {
+        throw "Invalid workspaceCompilation.acquisition '$workspaceCompilationAcquisition'. Valid values are 'bcCompilerFolder' and 'nuget'."
+    }
+    if ($workspaceCompilationAcquisition -eq "nuget" -and [string]::IsNullOrWhiteSpace($settings.workspaceCompilation.toolPackageVersion)) {
+        throw "workspaceCompilation.toolPackageVersion must be specified when workspaceCompilation.acquisition is 'nuget'."
+    }
+
     # Check for precompile and postcompile overrides
     $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp", "PreNewBcCompilerFolder", "PostNewBcCompilerFolder")
     $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
@@ -96,7 +107,9 @@ try {
         }
     }
 
-    # Set up a compiler folder
+    # Set up compiler/tool acquisition
+    $compilerFolder = ""
+    $alToolPath = ""
     $containerName = GetContainerName($project)
     $cacheFolder = ""
     if ($settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*") {
@@ -104,27 +117,40 @@ try {
         $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
     }
 
-    $newCompilerFolderParameters = @{
-        artifactUrl          = $artifact
-        vsixFile             = $settings.vsixFile
-        containerName        = "$($containerName)compiler"
-        cacheFolder          = $cacheFolder
+    if ($workspaceCompilationAcquisition -eq "nuget") {
+        $toolRoot = Join-Path $buildArtifactFolder "ALTool"
+        if (Test-Path $toolRoot) {
+            Remove-Item -Path $toolRoot -Recurse -Force
+        }
+        $alToolPath = Install-ALToolFromNuGet -ToolPath $toolRoot -PackageVersion $settings.workspaceCompilation.toolPackageVersion -PackageUrl $settings.workspaceCompilation.toolPackageUrl
+        $packageCachePath = Join-Path $buildArtifactFolder "PackageCache"
+        if (-not (Test-Path $packageCachePath)) {
+            New-Item -Path $packageCachePath -ItemType Directory -Force | Out-Null
+        }
     }
+    else {
+        $newCompilerFolderParameters = @{
+            artifactUrl          = $artifact
+            vsixFile             = $settings.vsixFile
+            containerName        = "$($containerName)compiler"
+            cacheFolder          = $cacheFolder
+        }
 
-    # Run PreNewBcCompilerFolder hook if available (can modify parameters)
-    if ($scriptOverrides['PreNewBcCompilerFolder']) {
-        & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
+        # Run PreNewBcCompilerFolder hook if available (can modify parameters)
+        if ($scriptOverrides['PreNewBcCompilerFolder']) {
+            & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
+        }
+
+        # Create the compiler folder
+        $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
+
+        # Run PostNewBcCompilerFolder hook if available
+        if ($scriptOverrides['PostNewBcCompilerFolder']) {
+            & $scriptOverrides['PostNewBcCompilerFolder'] -parameters $newCompilerFolderParameters -compilerFolder $compilerFolder
+        }
+
+        $packageCachePath = Join-Path $compilerFolder "symbols"
     }
-
-    # Create the compiler folder
-    $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
-
-    # Run PostNewBcCompilerFolder hook if available
-    if ($scriptOverrides['PostNewBcCompilerFolder']) {
-        & $scriptOverrides['PostNewBcCompilerFolder'] -parameters $newCompilerFolderParameters -compilerFolder $compilerFolder
-    }
-
-    $packageCachePath = Join-Path $compilerFolder "symbols"
 
     # Copy dependency apps and test apps to the package cache so the compiler can resolve them
     foreach ($appFile in ($dependencyApps + $dependencyTestApps)) {
@@ -201,6 +227,15 @@ try {
         }
     }
 
+    if ($workspaceCompilationAcquisition -eq "nuget") {
+        $restoreFolders = @(@($appFoldersToBuild) + @($testFoldersToBuild) + @($bcptTestFoldersToBuild) | Where-Object { $_ })
+        if ($restoreFolders.Count -gt 0) {
+            $restoreWorkspaceFile = Join-Path $buildArtifactFolder "restore.code-workspace"
+            New-WorkspaceFromFolders -Folders $restoreFolders -WorkspaceFile $restoreWorkspaceFile -AltoolPath $alToolPath
+            Restore-ALWorkspace -ALToolPath $alToolPath -WorkspaceFile $restoreWorkspaceFile -PackageCachePath $packageCachePath
+        }
+    }
+
     if ($settings.enableAppSourceCop) {
         # Collect baseline apps for upgrade testing (only when skipUpgrade is false)
         $baselineApps = @()
@@ -220,7 +255,7 @@ try {
         if ($settings.enableCodeAnalyzersOnTestApps) {
             $appSourceCopFolders += @($settings.testFolders) + @($settings.bcptTestFolders)
         }
-        New-AppSourceCopJson -AppFolders $appSourceCopFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
+        New-AppSourceCopJson -AppFolders $appSourceCopFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -ALToolPath $alToolPath -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
@@ -230,11 +265,9 @@ try {
 
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
-        CompilerFolder              = $compilerFolder
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
-        AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
         PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism
@@ -244,6 +277,15 @@ try {
         EnableExternalRulesets      = $settings.enableExternalRulesets
         PreCompileApp               = $scriptOverrides['PreCompileApp']
         PostCompileApp              = $scriptOverrides['PostCompileApp']
+    }
+    if ($workspaceCompilationAcquisition -eq "nuget") {
+        $buildParams.ALToolPath = $alToolPath
+        # TODO: Decide whether NuGet acquisition needs replacement assembly probing paths.
+        $buildParams.AssemblyProbingPaths = @()
+    }
+    else {
+        $buildParams.CompilerFolder = $compilerFolder
+        $buildParams.AssemblyProbingPaths = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
     }
 
     # Full set of analyzers configured for the build. Get-AnalyzersForAppType decides

@@ -216,7 +216,10 @@ function GetDefaultSettings
         "useCompilerFolder"                             = $false
         "workspaceCompilation"                          = [ordered]@{
             "enabled"                                   = $false
+            "acquisition"                               = "bcCompilerFolder"
             "parallelism"                               = 1
+            "toolPackageVersion"                        = ""
+            "toolPackageUrl"                            = ""
         }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{

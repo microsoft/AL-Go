@@ -541,6 +541,61 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
+        It 'Defaults workspaceCompilation acquisition to bcCompilerFolder with no floating tool version' {
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            @{ "country" = "us" } | ConvertTo-Json -Depth 99 | Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -encoding utf8 -Force
+
+            $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+
+            $settings.workspaceCompilation.acquisition | Should -Be "bcCompilerFolder"
+            $settings.workspaceCompilation.toolPackageVersion | Should -Be ""
+            $settings.workspaceCompilation.toolPackageUrl | Should -Be ""
+
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Settings schema accepts nuget workspaceCompilation acquisition' {
+            if ($PSVersionTable.PSVersion.Major -lt 7) {
+                Set-ItResult -Skipped -Because "Test-Json -SchemaFile requires PowerShell 7"
+                return
+            }
+
+            $settings = @{
+                workspaceCompilation = @{
+                    enabled = $true
+                    acquisition = "nuget"
+                    parallelism = 1
+                    toolPackageVersion = "17.0.34.45391"
+                    toolPackageUrl = "https://example.invalid/package.nupkg"
+                }
+            } | ConvertTo-Json -Depth 99
+
+            Test-Json -Json $settings -Schema $schema | Should -BeTrue
+        }
+
+        It 'Settings schema rejects invalid workspaceCompilation acquisition' {
+            if ($PSVersionTable.PSVersion.Major -lt 7) {
+                Set-ItResult -Skipped -Because "Test-Json -SchemaFile requires PowerShell 7"
+                return
+            }
+
+            $settings = @{
+                workspaceCompilation = @{
+                    enabled = $true
+                    acquisition = "latest"
+                    parallelism = 1
+                    toolPackageVersion = "17.0.34.45391"
+                    toolPackageUrl = ""
+                }
+            } | ConvertTo-Json -Depth 99
+
+            Test-Json -Json $settings -Schema $schema | Should -BeFalse
+        }
+
         It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
             Mock OutputWarning { }
             Mock ConvertTo-Json { '{}' }

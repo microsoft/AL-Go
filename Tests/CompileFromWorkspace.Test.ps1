@@ -559,6 +559,88 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -CompilerFolder $script:mockCompilerFolder -AppType 'bcptApp' } | Should -Not -Throw
         }
+
+        It 'Uses supplied ALToolPath without resolving a compiler folder' {
+            $directAlToolPath = Join-Path $TestDrive 'direct-al.exe'
+            Set-Content -Path $directAlToolPath -Value 'mock'
+
+            Mock Get-ALTool { throw "Get-ALTool should not be called" } -ModuleName CompileFromWorkspace
+            Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace -ParameterFilter { $AltoolPath -eq $directAlToolPath }
+            Mock CompileAppsInWorkspace {
+                param($ALToolPath, $WorkspaceFile, $PackageCachePath)
+                $ALToolPath | Should -Be $directAlToolPath
+                $PackageCachePath | Should -Be (Join-Path $TestDrive 'nuget-cache')
+                return @()
+            } -ModuleName CompileFromWorkspace
+
+            $projectPath = New-ALGoTestProject -BaseFolder (Join-Path $TestDrive 'proj-direct-al') -AppFolders @(
+                @{ Name = "DirectAlApp"; Id = "99999999-9999-9999-9999-999999999999" }
+            )
+
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "DirectAlApp")) -ALToolPath $directAlToolPath -PackageCachePath (Join-Path $TestDrive 'nuget-cache')
+        }
+
+        It 'Requires PackageCachePath when using ALToolPath without CompilerFolder' {
+            { Build-AppsInWorkspace -Folders @("App") -ALToolPath "al.exe" } | Should -Throw "*PackageCachePath*"
+        }
+    }
+
+    Describe 'NuGet AL tool acquisition and restore' {
+        It 'Resolves the installed AL tool from a Windows tool path' -Skip:((Get-Variable -Name IsLinux -ValueOnly -ErrorAction SilentlyContinue) -or (Get-Variable -Name IsMacOS -ValueOnly -ErrorAction SilentlyContinue)) {
+            $toolPath = Join-Path $TestDrive 'tool-win'
+            New-Item -Path $toolPath -ItemType Directory -Force | Out-Null
+            $expected = Join-Path $toolPath 'al.exe'
+            Set-Content -Path $expected -Value 'mock'
+
+            InModuleScope CompileFromWorkspace -Parameters @{ ToolPath = $toolPath; Expected = $expected } {
+                param($ToolPath, $Expected)
+                Get-ALToolFromNuGetToolPath -ToolPath $ToolPath | Should -Be $Expected
+            }
+        }
+
+        It 'Installs the pinned AL tool package with dotnet tool install' {
+            $toolPath = Join-Path $TestDrive 'tool-install'
+            New-Item -Path $toolPath -ItemType Directory -Force | Out-Null
+            $alShim = Join-Path $toolPath 'al.exe'
+            Set-Content -Path $alShim -Value 'mock'
+
+            Mock RunAndCheck {
+                $command = $args[0]
+                $arguments = @($args | Select-Object -Skip 1)
+                $command | Should -Be 'dotnet'
+                $arguments | Should -Contain 'tool'
+                $arguments | Should -Contain 'install'
+                $arguments | Should -Contain '--version'
+                $arguments | Should -Contain '17.0.34.45391'
+                return ''
+            } -ModuleName CompileFromWorkspace
+
+            Mock Get-ALToolFromNuGetToolPath { return $alShim } -ModuleName CompileFromWorkspace -ParameterFilter { $ToolPath -eq $toolPath }
+
+            Install-ALToolFromNuGet -ToolPath $toolPath -PackageVersion '17.0.34.45391' | Should -Be $alShim
+        }
+
+        It 'Requires a pinned tool package version' {
+            { Install-ALToolFromNuGet -ToolPath (Join-Path $TestDrive 'tool-no-version') -PackageVersion '' } | Should -Throw "*toolPackageVersion*"
+        }
+
+        It 'Runs workspace restore with an explicit package cache path' {
+            $workspaceFile = Join-Path $TestDrive 'restore.code-workspace'
+            Set-Content -Path $workspaceFile -Value '{ "folders": [] }'
+            $cachePath = Join-Path $TestDrive 'restore-cache'
+
+            Mock RunAndCheck {
+                $command = $args[0]
+                $arguments = @($args | Select-Object -Skip 1)
+                $command | Should -Be 'al.exe'
+                ($arguments -join '|') | Should -Be (@('workspace', 'restore', $workspaceFile, '--packagecachepath', $cachePath) -join '|')
+                return ''
+            } -ModuleName CompileFromWorkspace
+
+            Restore-ALWorkspace -ALToolPath 'al.exe' -WorkspaceFile $workspaceFile -PackageCachePath $cachePath
+
+            Test-Path $cachePath | Should -BeTrue
+        }
     }
 
     Describe 'Copy-CompiledAppsToOutput' {

@@ -66,7 +66,7 @@ function Get-CustomAnalyzers {
         [Parameter(Mandatory = $true)]
         [hashtable] $Settings,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string] $CompilerFolder,
 
         [Parameter(Mandatory = $false)]
@@ -78,15 +78,18 @@ function Get-CustomAnalyzers {
         return $analyzers
     }
 
-    # Analyzers live in the Analyzers/ subfolder for platform-layout extensions, or
-    # directly in bin/ for framework-dependent / marketplace-packaged extensions.
-    $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
-    $analyzersPath = Join-Path $binPath 'Analyzers'
-    if (-not (Test-Path $analyzersPath)) {
-        $analyzersPath = $binPath
-    }
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
+            if ([string]::IsNullOrWhiteSpace($CompilerFolder)) {
+                throw "URL-based customCodeCops are not supported when workspaceCompilation.acquisition is 'nuget'."
+            }
+            # Analyzers live in the Analyzers/ subfolder for platform-layout extensions, or
+            # directly in bin/ for framework-dependent / marketplace-packaged extensions.
+            $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
+            $analyzersPath = Join-Path $binPath 'Analyzers'
+            if (-not (Test-Path $analyzersPath)) {
+                $analyzersPath = $binPath
+            }
             $analyzerFileName = Join-Path $analyzersPath "$(Split-Path $customCodeCop -Leaf)"
             try {
                 Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName -ErrorAction Stop
@@ -225,6 +228,137 @@ function Get-ALTool {
 
 <#
 .SYNOPSIS
+    Installs the AL Development Tools .NET tool from NuGet.
+.DESCRIPTION
+    Installs Microsoft.Dynamics.BusinessCentral.Development.Tools into a caller-provided
+    tool path using a pinned package version. If PackageUrl is supplied, the package is
+    downloaded into a temporary local NuGet source and installed from that source.
+.PARAMETER ToolPath
+    Folder where the .NET tool shim should be installed.
+.PARAMETER PackageVersion
+    Exact Microsoft.Dynamics.BusinessCentral.Development.Tools version to install.
+.PARAMETER PackageUrl
+    Optional direct .nupkg URL to use as a local package source.
+.OUTPUTS
+    Full path to the installed al command shim.
+#>
+function Install-ALToolFromNuGet {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ToolPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $PackageVersion,
+
+        [Parameter(Mandatory = $false)]
+        [string] $PackageUrl = ''
+    )
+
+    if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
+        throw "workspaceCompilation.toolPackageVersion must be specified when workspaceCompilation.acquisition is 'nuget'."
+    }
+
+    if (-not (Test-Path $ToolPath)) {
+        New-Item -Path $ToolPath -ItemType Directory -Force | Out-Null
+    }
+
+    $arguments = @(
+        "tool",
+        "install",
+        "Microsoft.Dynamics.BusinessCentral.Development.Tools",
+        "--tool-path",
+        $ToolPath,
+        "--version",
+        $PackageVersion
+    )
+
+    $localPackageSource = ''
+    if (-not [string]::IsNullOrWhiteSpace($PackageUrl)) {
+        Write-Host "::add-mask::$PackageUrl"
+        $localPackageSource = Join-Path $ToolPath "packageSource"
+        New-Item -Path $localPackageSource -ItemType Directory -Force | Out-Null
+        $packageFileName = Split-Path ([System.Uri]$PackageUrl).AbsolutePath -Leaf
+        if (-not $packageFileName.EndsWith(".nupkg", [System.StringComparison]::OrdinalIgnoreCase)) {
+            $packageFileName = "Microsoft.Dynamics.BusinessCentral.Development.Tools.$PackageVersion.nupkg"
+        }
+        $packageFile = Join-Path $localPackageSource $packageFileName
+        OutputColor -Message "Downloading Microsoft.Dynamics.BusinessCentral.Development.Tools package from configured package URL" -Color Green
+        Invoke-WebRequest -Uri $PackageUrl -OutFile $packageFile -ErrorAction Stop
+        $arguments += @("--add-source", $localPackageSource)
+    }
+
+    OutputColor -Message "Installing Microsoft.Dynamics.BusinessCentral.Development.Tools $PackageVersion" -Color Green
+    RunAndCheck "dotnet" @arguments | Out-Host
+
+    return Get-ALToolFromNuGetToolPath -ToolPath $ToolPath
+}
+
+<#
+.SYNOPSIS
+    Gets the AL tool shim installed by dotnet tool install.
+.PARAMETER ToolPath
+    Folder passed to dotnet tool install --tool-path.
+.OUTPUTS
+    Full path to al.exe on Windows or al on Linux/macOS.
+#>
+function Get-ALToolFromNuGetToolPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ToolPath
+    )
+
+    $isUnixLike = (Get-Variable -Name IsLinux -ValueOnly -ErrorAction SilentlyContinue) -or (Get-Variable -Name IsMacOS -ValueOnly -ErrorAction SilentlyContinue)
+    if ($isUnixLike) {
+        $alToolPath = Join-Path $ToolPath "al"
+    }
+    else {
+        $alToolPath = Join-Path $ToolPath "al.exe"
+    }
+
+    if (-not (Test-Path $alToolPath)) {
+        throw "Could not find AL tool installed from NuGet at: $alToolPath"
+    }
+
+    return $alToolPath
+}
+
+<#
+.SYNOPSIS
+    Restores workspace package dependencies with the AL tool.
+.PARAMETER ALToolPath
+    Full path to the AL tool command.
+.PARAMETER WorkspaceFile
+    VS Code workspace file to restore.
+.PARAMETER PackageCachePath
+    Explicit package cache folder to populate.
+#>
+function Restore-ALWorkspace {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALToolPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $WorkspaceFile,
+
+        [Parameter(Mandatory = $true)]
+        [string] $PackageCachePath
+    )
+
+    if (-not (Test-Path $WorkspaceFile)) {
+        throw "The specified workspace file '$WorkspaceFile' does not exist."
+    }
+
+    if (-not (Test-Path $PackageCachePath)) {
+        New-Item -Path $PackageCachePath -ItemType Directory -Force | Out-Null
+    }
+
+    $arguments = @("workspace", "restore", $WorkspaceFile, "--packagecachepath", $PackageCachePath)
+    OutputColor "Executing: $ALToolPath $($arguments -join ' ')" -Color Green
+    RunAndCheck $ALToolPath @arguments | Out-Host
+}
+
+<#
+.SYNOPSIS
     Compiles AL apps in a workspace using the ALTool.
 .DESCRIPTION
     Compiles one or more AL app folders using workspace compilation from the ALTool.
@@ -237,6 +371,9 @@ function Get-ALTool {
     Array of app folder paths to compile.
 .PARAMETER CompilerFolder
     Path to the compiler folder containing the ALTool and symbols.
+.PARAMETER ALToolPath
+    Optional direct path to the AL tool command. When supplied, CompilerFolder is only
+    needed for legacy compiler-folder fallback behavior.
 .PARAMETER PackageCachePath
     Path to the package cache folder. Defaults to the compiler folder's symbols subfolder.
 .PARAMETER OutFolder
@@ -281,8 +418,10 @@ function Build-AppsInWorkspace {
         # Mandatory parameters
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$CompilerFolder,
+        [Parameter(Mandatory = $false)]
+        [string]$ALToolPath,
         [Parameter(Mandatory = $false)]
         [string]$PackageCachePath,
         [Parameter(Mandatory = $false)]
@@ -328,6 +467,9 @@ function Build-AppsInWorkspace {
 
     # Get the package cache path. Use the compiler folder symbols subfolder if not specified
     if (-not $PackageCachePath) {
+        if (-not $CompilerFolder) {
+            throw "PackageCachePath must be specified when CompilerFolder is not specified."
+        }
         $PackageCachePath = Join-Path $CompilerFolder "symbols"
     }
 
@@ -350,15 +492,20 @@ function Build-AppsInWorkspace {
     }
 
     # Get AL tool path
-    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    if (-not $ALToolPath) {
+        if (-not $CompilerFolder) {
+            throw "Either ALToolPath or CompilerFolder must be specified."
+        }
+        $ALToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    }
 
     # Create workspace file in temp directory
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
     $workspaceFile = Join-Path (Get-Location) "tempWorkspace$datetimeStamp.code-workspace"
-    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $alToolPath
+    New-WorkspaceFromFolders -Folders $Folders -WorkspaceFile $workspaceFile -AltoolPath $ALToolPath
 
     $compilationParameters = @{
-        ALToolPath = $alToolPath
+        ALToolPath = $ALToolPath
         WorkspaceFile = $workspaceFile
         PackageCachePath = $PackageCachePath
         OutFolder = $OutputFolder
@@ -1057,6 +1204,8 @@ function New-BuildOutputFile {
     Path to the folder containing the baseline .app files and their dependencies (used for baselinePackageCachePath in AppSourceCop.json).
 .PARAMETER CompilerFolder
     Path to the compiler folder containing the AL tool.
+.PARAMETER ALToolPath
+    Optional direct path to the AL tool command.
 .PARAMETER Settings
     Hashtable containing the build settings with AppSourceCop configuration.
 #>
@@ -1068,18 +1217,26 @@ function New-AppSourceCopJson {
         [string[]] $BaselineApps = @(),
         [Parameter(Mandatory = $false)]
         [string] $BaselinePackageCachePath = '',
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
+        [AllowEmptyString()]
         [string] $CompilerFolder,
+        [Parameter(Mandatory = $false)]
+        [string] $ALToolPath,
         [Parameter(Mandatory = $true)]
         [hashtable] $Settings
     )
 
     # Extract version info from baseline apps using the AL tool, keyed by app ID
     $baselineAppVersions = @{}
-    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    if (-not $ALToolPath) {
+        if (-not $CompilerFolder) {
+            throw "Either ALToolPath or CompilerFolder must be specified."
+        }
+        $ALToolPath = Get-ALTool -CompilerFolder $CompilerFolder
+    }
     foreach ($appFile in $BaselineApps) {
         try {
-            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $appInfo = RunAndCheck $ALToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse
             $baselineAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
         }
         catch {
@@ -1164,6 +1321,9 @@ function Test-BaselineAppDownloaded {
 }
 
 Export-ModuleMember -Function Build-AppsInWorkspace
+Export-ModuleMember -Function Install-ALToolFromNuGet
+Export-ModuleMember -Function Restore-ALWorkspace
+Export-ModuleMember -Function New-WorkspaceFromFolders
 Export-ModuleMember -Function New-BuildOutputFile
 Export-ModuleMember -Function Get-BuildMetadata
 Export-ModuleMember -Function Get-CodeAnalyzers

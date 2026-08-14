@@ -1,3 +1,7 @@
+### Preview NuGet acquisition for workspace compilation
+
+Workspace compilation can now opt in to `workspaceCompilation.acquisition: "nuget"` to install a pinned `Microsoft.Dynamics.BusinessCentral.Development.Tools` package with `dotnet tool install`, run `al workspace restore` into an AL-Go-controlled package cache, and compile with the restored symbols. The default remains `bcCompilerFolder`, which preserves the existing `New-BcCompilerFolder` behavior.
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
