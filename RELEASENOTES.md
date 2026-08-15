@@ -1,3 +1,37 @@
+### Important settings protection
+
+A new `importantSettings` setting allows you to protect specific settings from being overridden by lower-priority sources in the settings hierarchy. When a setting is marked as important at a higher priority level, it cannot be overridden by non-important settings from lower priority sources.
+
+```json
+{
+  "importantSettings": ["country", "keyVaultName"],
+  "country": "de",
+  "keyVaultName": "orgVault"
+}
+```
+
+**Behavior:**
+- Settings marked as important in organization or repository settings cannot be overridden by non-important values from project, workflow, user, or environment settings
+- If a lower-priority source also marks the same setting as important, the lower-priority value is allowed to override
+- Important arrays are still merged by default
+- The `overwriteSettings` mechanism can replace an important setting only when the source also marks that same setting as important
+- `ConditionalSettings` respect importantSettings markings, allowing you to enforce conditional important settings based on buildMode, branch, trigger, or user
+
+**Example with ConditionalSettings:**
+```json
+{
+  "ConditionalSettings": [
+    {
+      "buildModes": ["Validate"],
+      "settings": {
+        "importantSettings": ["country"],
+        "country": "us"
+      }
+    }
+  ]
+}
+```
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
@@ -35,6 +69,7 @@ As part of this, the warning comparison now also parses the raw AL compiler outp
 The `trackALAlertsInGitHub` setting now also works when `workspaceCompilation` (preview) is enabled. When both are turned on, AL-Go passes `--errorlogdirectory` to `altool workspace compile` so each project emits an `*.errorLog.json` diagnostics file into `.buildartifacts/ErrorLogs/`, which is processed into SARIF and surfaced as code scanning alerts — matching the classic Run-AlPipeline behavior. If the consumed compiler version does not yet support `--errorlogdirectory`, the option is skipped and a warning is logged (the rest of the build is unaffected).
 
 ## v9.1
+
 
 ### Resilient Pull Request Status Check for large builds
 
