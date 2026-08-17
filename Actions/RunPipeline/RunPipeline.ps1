@@ -489,17 +489,15 @@ try {
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
 
-    # When useSeparateTestAction is enabled, the normal tests (testFolders) are run by the separate
-    # RunTests action instead of here, and the build container is kept alive for it. BCPT and page
-    # scripting tests are unaffected. This needs a build container, which only exists when apps are
-    # published (doNotPublishApps not set) and the build does not target an online environment;
-    # otherwise the tests are run here as usual.
+    # The separate action needs one local container that remains alive after RunPipeline. Multi-country
+    # builds keep normal tests here because Run-AlPipeline creates and tests a container per country.
     $createsTestContainer = (-not $settings.doNotPublishApps) -and -not ($authContext -and $environmentName)
-    $keepContainerForSeparateTestAction = $false
-    if ($settings.useSeparateTestAction -and $createsTestContainer) {
+    $runTestsInSeparateAction = $settings.useSeparateTestAction -and -not $settings.doNotRunTests -and $createsTestContainer -and @($additionalCountries).Count -eq 0
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "runTestsInSeparateAction=$runTestsInSeparateAction"
+
+    if ($runTestsInSeparateAction) {
         Write-Host "useSeparateTestAction is enabled: skipping normal test execution in RunPipeline and keeping the container alive for the RunTests action"
         $runAlPipelineParams["doNotRunTests"] = $true
-        $keepContainerForSeparateTestAction = $true
 
         # A kept-alive container needs an explicit credential so the RunTests action can reconnect to it.
         # Generate one, pass it to Run-AlPipeline, and surface it (masked, base64 JSON) via containerCredential.
@@ -515,8 +513,8 @@ try {
             Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerCredential=$containerCredentialBase64"
         }
     }
-    elseif ($settings.useSeparateTestAction) {
-        Write-Host "::Notice::useSeparateTestAction is enabled, but no build container is created for this project (doNotPublishApps is set or the build targets an online environment), so the RunTests action has no container to run tests against and will be skipped."
+    elseif ($settings.useSeparateTestAction -and -not $settings.doNotRunTests) {
+        Write-Host "::Notice::useSeparateTestAction is enabled, but either additionalCountries is configured or no local build container is created. The separate RunTests action will be skipped."
     }
 
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
@@ -564,7 +562,7 @@ try {
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
-        -keepContainer:$keepContainerForSeparateTestAction `
+        -keepContainer:$runTestsInSeparateAction `
         -uninstallRemovedApps
 
     if ($containerBaseFolder) {

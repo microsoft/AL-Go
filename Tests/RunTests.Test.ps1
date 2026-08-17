@@ -133,6 +133,78 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
+        It 'Passes nested and project-wide disabled tests to an override as recursive hashtables' {
+            $appId = [Guid]::NewGuid().ToString()
+            $otherAppId = [Guid]::NewGuid().ToString()
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = $appId; name = 'TestApp' } }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+
+            $testFolder = Join-Path $projectPath 'TestApp'
+            $nestedFolder = Join-Path $testFolder 'Nested'
+            New-Item -Path $nestedFolder -ItemType Directory -Force | Out-Null
+            @{ id = $appId } | ConvertTo-Json | Set-Content -Path (Join-Path $testFolder 'app.json') -Encoding UTF8
+            @(
+                @{
+                    codeunitName = 'Nested Tests'
+                    method       = @('TestOne')
+                    metadata     = @{ issue = @{ id = 123 } }
+                }
+            ) | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $nestedFolder 'disabledTests.json') -Encoding UTF8
+
+            $otherTestFolder = Join-Path $projectPath 'OtherTestApp'
+            New-Item -Path $otherTestFolder -ItemType Directory -Force | Out-Null
+            @{ id = $otherAppId } | ConvertTo-Json | Set-Content -Path (Join-Path $otherTestFolder 'app.json') -Encoding UTF8
+            @(@{ codeunitName = 'Other Tests'; method = 'Ignored' }) | ConvertTo-Json | Set-Content -Path (Join-Path $otherTestFolder 'disabledTests.json') -Encoding UTF8
+
+            $projectSettingsFolder = Join-Path $projectPath '.AL-Go'
+            New-Item -Path $projectSettingsFolder -ItemType Directory -Force | Out-Null
+            @(@{ codeunitName = 'Project Tests'; method = 'TestTwo' }) | ConvertTo-Json | Set-Content -Path (Join-Path $projectSettingsFolder "$appId.disabledTests.json") -Encoding UTF8
+
+            $script:capturedDisabledTests = @()
+            $override = { param($parameters) $script:capturedDisabledTests = @($parameters.disabledTests); return $true }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @('TestApp', 'OtherTestApp')
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
+
+            $script:capturedDisabledTests.Count | Should -Be 2
+            $nestedDisabledTest = $script:capturedDisabledTests | Where-Object { $_.codeunitName -eq 'Nested Tests' }
+            $nestedDisabledTest | Should -BeOfType System.Collections.Hashtable
+            $nestedDisabledTest.metadata | Should -BeOfType System.Collections.Hashtable
+            $nestedDisabledTest.metadata.issue | Should -BeOfType System.Collections.Hashtable
+            $nestedDisabledTest.metadata.issue.id | Should -Be 123
+            $script:capturedDisabledTests.codeunitName | Should -Contain 'Project Tests'
+            $script:capturedDisabledTests.codeunitName | Should -Not -Contain 'Other Tests'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Fails with the disabled tests file path when its JSON is invalid' {
+            $appId = [Guid]::NewGuid().ToString()
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = $appId; name = 'TestApp' } }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $testFolder = Join-Path $projectPath 'TestApp'
+            New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
+            @{ id = $appId } | ConvertTo-Json | Set-Content -Path (Join-Path $testFolder 'app.json') -Encoding UTF8
+            Set-Content -Path (Join-Path $testFolder 'disabledTests.json') -Value '{invalid' -Encoding UTF8
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @('TestApp')
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride { return $true } } |
+                Should -Throw '*disabledTests.json*'
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Throws when a test fails and treatTestFailuresAsWarnings is not set' {
             Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
@@ -240,6 +312,30 @@ Describe 'RunTests.psm1 Tests' {
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly -ParameterFilter {
                 $Parameters.containerName -eq 'mycontainer' -and $Parameters.companyName -eq 'CRONUS' -and ($Parameters.credential -is [System.Management.Automation.PSCredential])
             }
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Passes project-wide disabled tests to the AlTool runner' {
+            $appId = [Guid]::NewGuid().ToString()
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = $appId; name = 'TestApp' } }
+            $script:capturedAlToolParams = $null
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { param($Parameters) $script:capturedAlToolParams = $Parameters; return $true }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            @(@{ codeunitName = 'Project Tests'; method = 'TestOne' }) | ConvertTo-Json |
+                Set-Content -Path (Join-Path $projectPath "$appId.disabledTests.json") -Encoding UTF8
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @()
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential
+
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly
+            @($script:capturedAlToolParams.disabledTests).Count | Should -Be 1
+            $script:capturedAlToolParams.disabledTests[0].codeunitName | Should -Be 'Project Tests'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

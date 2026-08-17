@@ -2,9 +2,11 @@
 
 Run the normal tests (testFolders) for an AL-Go project against the build container created and kept alive by the RunPipeline action.
 
-This action only does anything when the `useSeparateTestAction` setting is enabled. In that case, the RunPipeline action compiles, publishes and installs the apps, skips the normal tests and keeps the build container alive. This action then runs the normal tests against that same container and writes the results to `TestResults.xml` in the project folder.
+This action runs when the `useSeparateTestAction` setting is enabled and RunPipeline can keep a single local build container alive. RunPipeline compiles, publishes and installs the apps, skips the normal tests and keeps the container alive. This action then runs the normal tests against that same container and writes the results to `TestResults.xml` in the project folder. Builds with `additionalCountries` continue to run normal tests inside RunPipeline so every country is tested.
 
 Only normal tests (testFolders) are handled here. BCPT and page scripting tests continue to be executed by the RunPipeline action.
+
+For each normal test app, the action honors `disabledTests.json` files found recursively under its source test folder and `<appId>.disabledTests.json` files found recursively under the AL-Go project folder. These exclusions are passed to both the built-in AlTool runner and `RunTestsInBcContainer` overrides.
 
 ## Test runner
 
@@ -24,12 +26,14 @@ The built-in AlTool runner does not run `Legacy` test-type codeunits or tests th
 | :-- | :-- |
 | Settings | env.Settings must be set by a prior call to the ReadSettings Action |
 | containerName | env.containerName is set by the RunPipeline action and identifies the container to run tests against (the container name is otherwise derived from the project) |
+| containerCredential | env.containerCredential is set by the RunPipeline action and contains the masked, base64-encoded JSON credential used to reconnect to the kept-alive container |
 
 ### Parameters
 
 | Name | Required | Description | Default value |
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script should run | powershell |
+| token | | The GitHub token running the action and exposed to test override scripts | github.token |
 | project | | Project folder | '.' |
 | installTestAppsJson | | Path to a JSON file containing a list of test apps to run tests in | '' |
 

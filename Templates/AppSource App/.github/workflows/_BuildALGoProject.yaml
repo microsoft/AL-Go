@@ -231,7 +231,7 @@ jobs:
 
       - name: Run Tests
         uses: microsoft/AL-Go-Actions/RunTests@main
-        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.useSeparateTestAction == 'True' && env.doNotPublishApps == 'False' && env.doNotRunTests == 'False'
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.runTestsInSeparateAction == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
           BuildMode: ${{ inputs.buildMode }}

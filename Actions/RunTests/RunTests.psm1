@@ -55,6 +55,62 @@ function Get-TestAppsToRun {
     return @($testApps | Select-Object -Unique)
 }
 
+function Get-DisabledTestsForApp {
+    <#
+    .SYNOPSIS
+        Gets the disabled tests configured for a test app.
+    .DESCRIPTION
+        Finds disabledTests.json files recursively under the matching source test folder and
+        <appId>.disabledTests.json files recursively under the project folder. Each JSON entry is
+        converted to a recursive hashtable before it is passed to the test runner.
+    .PARAMETER settings
+        The analyzed AL-Go settings hashtable.
+    .PARAMETER projectPath
+        The full path to the project folder.
+    .PARAMETER appId
+        The ID of the test app.
+    #>
+    Param(
+        [hashtable] $settings,
+        [string] $projectPath,
+        [string] $appId
+    )
+
+    $disabledTestFiles = @()
+    if ($settings.ContainsKey("testFolders")) {
+        foreach ($testFolder in @($settings.testFolders)) {
+            $testFolderPath = Join-Path $projectPath $testFolder
+            $appJsonPath = Join-Path $testFolderPath "app.json"
+            if (-not (Test-Path $appJsonPath -PathType Leaf)) {
+                continue
+            }
+
+            $testAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            if ("$($testAppJson.id)" -eq $appId) {
+                $disabledTestFiles += @(Get-ChildItem -Path $testFolderPath -Filter "disabledTests.json" -File -Recurse | ForEach-Object { $_.FullName })
+            }
+        }
+    }
+
+    $disabledTestFiles += @(Get-ChildItem -Path $projectPath -Filter "$appId.disabledTests.json" -File -Recurse | ForEach-Object { $_.FullName })
+
+    $disabledTests = @()
+    foreach ($disabledTestFile in @($disabledTestFiles | Sort-Object -Unique)) {
+        try {
+            $disabledTestsJson = Get-Content -Path $disabledTestFile -Raw -Encoding UTF8
+            $parsedDisabledTests = $disabledTestsJson | ConvertFrom-Json
+            foreach ($disabledTest in $parsedDisabledTests) {
+                $disabledTests += @(ConvertTo-HashTable -object $disabledTest -recurse)
+            }
+        }
+        catch {
+            throw "Failed to parse disabled tests JSON file '$disabledTestFile'. Error: $($_.Exception.Message)"
+        }
+    }
+
+    return @($disabledTests)
+}
+
 function Invoke-AlGoTestRun {
     <#
     .SYNOPSIS
@@ -108,6 +164,7 @@ function Invoke-AlGoTestRun {
         foreach ($testApp in $testApps) {
             $appJson = Get-AppJsonFromAppFile -appFile $testApp
             Write-Host "Running tests in $($appJson.name) ($($appJson.id))"
+            $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($appJson.id)")
 
             $runTestsParams = @{
                 "containerName"           = $containerName
@@ -115,6 +172,7 @@ function Invoke-AlGoTestRun {
                 "companyName"             = $settings.companyName
                 "extensionId"             = $appJson.id
                 "appName"                 = $appJson.name
+                "disabledTests"           = $disabledTests
                 "JUnitResultFileName"     = $testResultsFile
                 "AppendToJUnitResultFile" = $true
                 "detailed"                = $true
