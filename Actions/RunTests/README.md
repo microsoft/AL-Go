@@ -10,13 +10,13 @@ For each normal test app, the action honors `disabledTests.json` files found rec
 
 ## Test runner
 
-By default this action runs the tests through Microsoft's headless `al runtests` (AlTool) runner. It resolves the kept-alive container's connection settings (server, instance and developer-services port) from the container name, installs the AL developer tools as a `dotnet` global tool (`dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --prerelease`), enumerates the test codeunits and runs each one in its own `al runtests <codeunitId>` invocation, then writes the same `TestResults.xml` (JUnit) schema BcContainerHelper produces so downstream test result analysis is unchanged.
+By default this action executes tests through Microsoft's headless `al runtests` (AlTool) runner. BcContainerHelper remains in use for app metadata, container configuration, company discovery, and test enumeration. The action installs the AL developer tools as a `dotnet` global tool (`dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --prerelease`), then AlTool executes each enumerated test codeunit in its own `al runtests <codeunitId>` invocation. The action writes the same `TestResults.xml` (JUnit) schema BcContainerHelper produces so downstream test result analysis is unchanged.
 
-To run the tests through BcContainerHelper (or any other runner) instead, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. When present, it fully replaces the built-in AlTool runner and is called once per test app with the same parameters BcContainerHelper's `Run-TestsInBcContainer` expects.
+To replace AlTool test execution with BcContainerHelper (or another runner), add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. When present, it replaces the built-in AlTool execution path and is called once per test app with the same parameters BcContainerHelper's `Run-TestsInBcContainer` expects.
 
 ### Known limitations
 
-The built-in AlTool runner does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Repositories that rely on those should run their tests through BcContainerHelper by supplying a `RunTestsInBcContainer` override script (as described above), which fully replaces the AlTool runner.
+The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Repositories that rely on those should execute their tests through BcContainerHelper by supplying a `RunTestsInBcContainer` override script as described above.
 
 ## INPUT
 

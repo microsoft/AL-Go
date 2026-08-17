@@ -1,13 +1,14 @@
 <#
 .SYNOPSIS
-    Built-in test runner that drives Microsoft's headless `al runtests` (altool) CLI instead of
-    BcContainerHelper's client-session runner, while producing the same JUnit XML the AL-Go
-    pipeline already consumes downstream.
+    Built-in test executor that drives Microsoft's headless `al runtests` (AlTool) CLI while
+    producing the same JUnit XML the AL-Go pipeline already consumes downstream.
 
 .DESCRIPTION
-    This module is the default test runner used by the RunTests action (Invoke-AlGoTestRun) when no
-    RunTestsInBcContainer override script is supplied. For a single test app (identified by
-    extensionId) it:
+    This module is the default test executor used by the RunTests action (Invoke-AlGoTestRun) when no
+    RunTestsInBcContainer override script is supplied. BcContainerHelper remains responsible for
+    reading app metadata, resolving container configuration, discovering the company, and enumerating
+    tests. AlTool replaces only the execution of each test codeunit. For a single test app (identified
+    by extensionId), this module:
       1. Ensures the `al` CLI is installed (dotnet global tool, prerelease).
       2. Resolves the kept-alive container's on-prem connection settings (server/instance/port)
          host-side from the container name via BcContainerHelper, and generates a throw-away AL
@@ -32,6 +33,59 @@
 $ErrorActionPreference = "Stop"
 
 $script:AlToolPackageId = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
+
+<#
+.SYNOPSIS
+    Invokes a native executable and returns normalized output with its exit code.
+.DESCRIPTION
+    Temporarily makes native stderr nonterminating while the executable runs so Windows PowerShell 5
+    can merge stderr into the captured output instead of raising NativeCommandError under a caller's
+    ErrorActionPreference of Stop. The original preference is restored immediately after the native
+    invocation. Command resolution and other invocation failures remain terminating errors.
+.PARAMETER FilePath
+    The native executable name or path.
+.PARAMETER ArgumentList
+    Arguments passed to the native executable.
+.OUTPUTS
+    [pscustomobject] with string-array Output and integer ExitCode properties.
+#>
+function Invoke-AlNativeCommand {
+    param(
+        [Parameter(Mandatory = $true)][string] $FilePath,
+        [string[]] $ArgumentList = @()
+    )
+
+    $nativeCommand = Get-Command -Name $FilePath -CommandType Application -ErrorAction Stop
+    $errorBeforeInvocation = if ($Error.Count -gt 0) { $Error[0] } else { $null }
+    $originalErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = & $nativeCommand.Source @ArgumentList 2>&1
+        [int] $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $originalErrorActionPreference
+    }
+
+    $invocationErrors = @()
+    foreach ($errorRecord in $Error) {
+        if ($null -ne $errorBeforeInvocation -and [object]::ReferenceEquals($errorRecord, $errorBeforeInvocation)) {
+            break
+        }
+        if ($errorRecord.FullyQualifiedErrorId -notin @("NativeCommandError", "NativeCommandErrorMessage")) {
+            $invocationErrors += $errorRecord
+        }
+    }
+    if ($invocationErrors.Count -gt 0) {
+        throw $invocationErrors[0]
+    }
+
+    [string[]] $outputLines = @($output | ForEach-Object { "$_" })
+    return [PSCustomObject]@{
+        Output   = $outputLines
+        ExitCode = $exitCode
+    }
+}
 
 <#
 .SYNOPSIS
@@ -67,19 +121,34 @@ function Install-AlTool {
 
         if (-not $alAvailable) {
             Write-Host "Installing '$script:AlToolPackageId' (prerelease) as a dotnet global tool..."
-            & dotnet tool install $script:AlToolPackageId --global --prerelease *>&1 | ForEach-Object { Write-Host $_ }
-            if ($LASTEXITCODE -ne 0) {
+            $installResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
+                "tool", "install", $script:AlToolPackageId, "--global", "--prerelease"
+            )
+            $installResult.Output | ForEach-Object { Write-Host $_ }
+            if ($installResult.ExitCode -ne 0) {
                 # A concurrent job may have installed it first; treat as success if `al` now resolves,
                 # otherwise fall back to an update.
                 if ($null -eq (Get-Command al -ErrorAction SilentlyContinue)) {
-                    & dotnet tool update $script:AlToolPackageId --global --prerelease *>&1 | ForEach-Object { Write-Host $_ }
+                    $updateResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
+                        "tool", "update", $script:AlToolPackageId, "--global", "--prerelease"
+                    )
+                    $updateResult.Output | ForEach-Object { Write-Host $_ }
+                    if ($updateResult.ExitCode -ne 0) {
+                        throw "Failed to install or update '$script:AlToolPackageId'. The fallback dotnet tool update exited with code $($updateResult.ExitCode). Output: $($updateResult.Output -join [Environment]::NewLine)"
+                    }
                 }
             }
         }
         elseif ($Force) {
             # Explicit opt-in moves to the newest prerelease once, under the mutex.
             try {
-                & dotnet tool update $script:AlToolPackageId --global --prerelease *>&1 | ForEach-Object { Write-Host $_ }
+                $updateResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
+                    "tool", "update", $script:AlToolPackageId, "--global", "--prerelease"
+                )
+                $updateResult.Output | ForEach-Object { Write-Host $_ }
+                if ($updateResult.ExitCode -ne 0) {
+                    Write-Host "WARNING: 'al' update check exited with code $($updateResult.ExitCode). Using existing version."
+                }
             }
             catch {
                 Write-Host "WARNING: 'al' update check failed ($($_.Exception.Message)). Using existing version."
@@ -95,7 +164,14 @@ function Install-AlTool {
         throw "The 'al' CLI is not available after installation. Ensure '$toolsPath' is on PATH and that the runner can reach nuget.org."
     }
 
-    $version = (& al --version 2>&1 | Select-Object -First 1)
+    $versionResult = Invoke-AlNativeCommand -FilePath "al" -ArgumentList @("--version")
+    if ($versionResult.ExitCode -ne 0) {
+        throw "Failed to run 'al --version'. The command exited with code $($versionResult.ExitCode). Output: $($versionResult.Output -join [Environment]::NewLine)"
+    }
+    if ($versionResult.Output.Count -eq 0) {
+        throw "Failed to run 'al --version'. The command returned no output."
+    }
+    $version = $versionResult.Output[0]
     Write-Host "Using al CLI version: $version"
     return "$version"
 }
@@ -424,7 +500,7 @@ function ConvertFrom-AlRunTestsOutput {
 .PARAMETER Connection
     The connection hashtable produced by Get-AlToolConnection.
 .OUTPUTS
-    [hashtable] @{ Results (method->outcome map); ElapsedSec; Raw; Connected (bool) }
+    [hashtable] @{ Results (method->outcome map); ElapsedSec; Raw; Connected (bool); ExitCode (int) }
 #>
 function Invoke-AlRunTestsForCodeunit {
     param(
@@ -454,10 +530,14 @@ function Invoke-AlRunTestsForCodeunit {
     ) + $Methods
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $output = & al @alArgs 2>&1
-    $sw.Stop()
+    try {
+        $nativeResult = Invoke-AlNativeCommand -FilePath "al" -ArgumentList $alArgs
+    }
+    finally {
+        $sw.Stop()
+    }
 
-    $lines = @($output | ForEach-Object { "$_" })
+    $lines = @($nativeResult.Output)
     $connected = ($lines | Where-Object { $_ -match 'Test run completed:' }).Count -gt 0
     $parsed = ConvertFrom-AlRunTestsOutput -OutputLines $lines
 
@@ -471,6 +551,7 @@ function Invoke-AlRunTestsForCodeunit {
         ElapsedSec = [Math]::Round($sw.Elapsed.TotalSeconds, 3)
         Raw        = ($lines -join "`n")
         Connected  = $connected
+        ExitCode   = [int] $nativeResult.ExitCode
     }
 }
 
@@ -587,10 +668,11 @@ function Add-JUnitTestSuite {
 .DESCRIPTION
     The built-in default test runner for the RunTests action. Expects $Parameters to contain
     containerName, credential, extensionId and (optionally) tenant, companyName, appName,
-    disabledTests and JUnitResultFileName. Runs each of the app's test codeunits in its own
-    `al runtests` invocation, then re-runs any method that produced no result or a failure once,
-    and appends a BcContainerHelper-schema JUnit result. Returns whether every executed method
-    passed.
+    disabledTests and JUnitResultFileName. BcContainerHelper supplies app metadata, container
+    configuration, company discovery, and test enumeration; AlTool replaces only test execution.
+    Runs each of the app's test codeunits in its own `al runtests` invocation, then re-runs any method
+    that produced no result or a failure once, and appends a BcContainerHelper-schema JUnit result.
+    Returns whether every executed method passed.
 .PARAMETER Parameters
     The BcContainerHelper-shaped test parameters built by Invoke-AlGoTestRun.
 .OUTPUTS

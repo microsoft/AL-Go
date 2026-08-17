@@ -2,10 +2,10 @@
 
 A new `useSeparateTestAction` setting (default `false`) moves normal test execution (`testFolders`) out of the `RunPipeline` action and into a dedicated `RunTests` action when one local build container can be kept alive. `RunPipeline` still compiles, publishes and installs the apps, then `RunTests` runs the normal tests against the same container. BCPT and page scripting tests remain in `RunPipeline`. Builds with `additionalCountries` continue to run normal tests inside `RunPipeline` so every country is tested.
 
-By default, the `RunTests` action runs the tests through Microsoft's headless `al runtests` (AlTool) runner instead of BcContainerHelper. It resolves the kept-alive container's connection settings, installs the AL developer tools (`dotnet tool install --prerelease`), runs each test codeunit in its own `al runtests` invocation and emits the same `TestResults.xml` schema, so downstream test result analysis is unchanged. To run the tests through BcContainerHelper (or any other runner) instead, supply a `RunTestsInBcContainer` override script; it fully replaces the built-in AlTool runner.
+By default, the `RunTests` action executes test codeunits through Microsoft's headless `al runtests` (AlTool) runner. BcContainerHelper remains responsible for app metadata, container configuration, company discovery and test enumeration; AlTool replaces only test execution. The action installs the AL developer tools (`dotnet tool install --prerelease`), runs each test codeunit in its own `al runtests` invocation and emits the same `TestResults.xml` schema, so downstream test result analysis is unchanged. Supply a `RunTestsInBcContainer` override script to replace the built-in AlTool execution path with BcContainerHelper or another runner.
 
 > [!NOTE]
-> The built-in AlTool runner does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to run their tests through BcContainerHelper instead.
+> The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to execute their tests through BcContainerHelper instead.
 
 ### New `doNotPerformUpgrade` setting
 

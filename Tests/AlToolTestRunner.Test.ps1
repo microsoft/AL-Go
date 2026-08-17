@@ -16,6 +16,131 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
     }
 
+    Context 'Invoke-AlNativeCommand' {
+        It 'Captures native stdout, stderr and exit code in Windows PowerShell 5 without terminating' {
+            if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+                Set-ItResult -Skipped -Because 'Windows PowerShell 5 is only available on Windows'
+                return
+            }
+
+            $modulePath = (Resolve-Path (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1')).Path
+            $windowsPowerShell = (Get-Command (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -ErrorAction Stop).Source
+            $childScript = '[Console]::Out.WriteLine("native-stdout"); [Console]::Error.WriteLine("native-stderr"); exit 23'
+            $encodedChildScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
+            $escapedModulePath = $modulePath.Replace("'", "''")
+            $escapedWindowsPowerShell = $windowsPowerShell.Replace("'", "''")
+
+            $parentScript = @"
+`$ErrorActionPreference = 'Stop'
+`$module = Import-Module '$escapedModulePath' -Force -PassThru
+`$result = & `$module {
+    Invoke-AlNativeCommand -FilePath '$escapedWindowsPowerShell' -ArgumentList @(
+        '-NoLogo', '-NoProfile', '-EncodedCommand', '$encodedChildScript'
+    )
+}
+@{
+    Output = @(`$result.Output)
+    ExitCode = `$result.ExitCode
+    ErrorActionPreference = "`$ErrorActionPreference"
+} | ConvertTo-Json -Compress
+"@
+            $encodedParentScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($parentScript))
+
+            $parentOutput = & $windowsPowerShell -NoLogo -NoProfile -EncodedCommand $encodedParentScript 2>&1
+            $parentExitCode = $LASTEXITCODE
+
+            $parentExitCode | Should -Be 0
+            $payload = ($parentOutput -join "`n") | ConvertFrom-Json
+            $payload.ExitCode | Should -Be 23
+            $payload.ErrorActionPreference | Should -Be 'Stop'
+            ($payload.Output -join "`n") | Should -Match 'native-stdout'
+            ($payload.Output -join "`n") | Should -Match 'native-stderr'
+        }
+
+        It 'Does not swallow command-not-found errors' {
+            InModuleScope AlToolTestRunner {
+                { Invoke-AlNativeCommand -FilePath 'al-go-command-that-does-not-exist' } |
+                    Should -Throw
+            }
+        }
+
+        It 'Does not swallow native invocation failures' {
+            if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+                Set-ItResult -Skipped -Because 'The invalid Windows executable fixture is Windows-specific'
+                return
+            }
+
+            $invalidExecutable = Join-Path $TestDrive 'invalid.exe'
+            Set-Content -Path $invalidExecutable -Value 'not an executable' -Encoding ASCII
+
+            InModuleScope AlToolTestRunner -Parameters @{ InvalidExecutable = $invalidExecutable } {
+                { Invoke-AlNativeCommand -FilePath $InvalidExecutable } |
+                    Should -Throw '*failed to run*'
+            }
+        }
+    }
+
+    Context 'Install-AlTool native command handling' {
+        It 'Falls back to update after install failure only when al is still unavailable' {
+            $script:availabilityChecks = 0
+            Mock -ModuleName AlToolTestRunner Get-Command {
+                $script:availabilityChecks++
+                if ($script:availabilityChecks -eq 1) { return $null }
+                return [PSCustomObject]@{ Source = 'al' }
+            } -ParameterFilter { $Name -eq 'al' }
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                if ($FilePath -eq 'dotnet') {
+                    return [PSCustomObject]@{ Output = [string[]]@('install failed'); ExitCode = [int] 1 }
+                }
+                return [PSCustomObject]@{ Output = [string[]]@('1.2.3'); ExitCode = [int] 0 }
+            }
+
+            Install-AlTool | Should -Be '1.2.3'
+
+            Should -Invoke -ModuleName AlToolTestRunner Invoke-AlNativeCommand -Times 0 -Exactly -ParameterFilter {
+                $FilePath -eq 'dotnet' -and $ArgumentList[1] -eq 'update'
+            }
+        }
+
+        It 'Reports a failed fallback update clearly' {
+            Mock -ModuleName AlToolTestRunner Get-Command { return $null } -ParameterFilter { $Name -eq 'al' }
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                if ($ArgumentList[1] -eq 'install') {
+                    return [PSCustomObject]@{ Output = [string[]]@('install failed'); ExitCode = [int] 1 }
+                }
+                return [PSCustomObject]@{ Output = [string[]]@('update stderr'); ExitCode = [int] 17 }
+            }
+
+            { Install-AlTool } | Should -Throw '*fallback dotnet tool update exited with code 17*update stderr*'
+        }
+
+        It 'Warns on forced update failure and uses the existing version' {
+            Mock -ModuleName AlToolTestRunner Get-Command { return [PSCustomObject]@{ Source = 'al' } } -ParameterFilter { $Name -eq 'al' }
+            Mock -ModuleName AlToolTestRunner Write-Host {}
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                if ($FilePath -eq 'dotnet') {
+                    return [PSCustomObject]@{ Output = [string[]]@('update stderr'); ExitCode = [int] 9 }
+                }
+                return [PSCustomObject]@{ Output = [string[]]@('1.2.3'); ExitCode = [int] 0 }
+            }
+
+            Install-AlTool -Force | Should -Be '1.2.3'
+
+            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 1 -Exactly -ParameterFilter {
+                "$Object" -like "WARNING: 'al' update check exited with code 9*"
+            }
+        }
+
+        It 'Reports al version failure explicitly' {
+            Mock -ModuleName AlToolTestRunner Get-Command { return [PSCustomObject]@{ Source = 'al' } } -ParameterFilter { $Name -eq 'al' }
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                return [PSCustomObject]@{ Output = [string[]]@('version stderr'); ExitCode = [int] 11 }
+            }
+
+            { Install-AlTool } | Should -Throw "*'al --version'*exited with code 11*version stderr*"
+        }
+    }
+
     Context 'ConvertFrom-AlRunTestsOutput' {
         It 'Parses pass and fail results, dropping phantom OnRun and aggregate entries' {
             $lines = @(
@@ -155,6 +280,23 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             }
             $company = Get-AlToolCompany -ContainerName 'test' -Tenant 'default'
             $company | Should -Be 'CRONUS Eval'
+        }
+    }
+
+    Context 'Invoke-AlRunTestsForCodeunit' {
+        It 'Returns nonzero exit code and raw stderr without throwing' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                return [PSCustomObject]@{ Output = [string[]]@('raw native stderr'); ExitCode = [int] 19 }
+            }
+
+            $result = Invoke-AlRunTestsForCodeunit -CodeunitId '130001' -Methods @('TestOne') `
+                -ProjectPath $TestDrive -Company 'CRONUS' -Tenant 'default' `
+                -Connection @{ Server = 'http://test'; ServerInstance = 'BC'; Port = 7049 }
+
+            $result.ExitCode | Should -Be 19
+            $result.Raw | Should -Match 'raw native stderr'
+            $result.Connected | Should -BeFalse
+            $result.Results.Count | Should -Be 0
         }
     }
 
