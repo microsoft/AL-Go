@@ -552,6 +552,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $settings.workspaceCompilation.acquisition | Should -Be "bcCompilerFolder"
             $settings.workspaceCompilation.toolPackageVersion | Should -Be ""
+            $settings.workspaceCompilation.toolPackageSource | Should -Be ""
             $settings.workspaceCompilation.toolPackageUrl | Should -Be ""
 
             Pop-Location
@@ -570,6 +571,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
                     acquisition = "nuget"
                     parallelism = 1
                     toolPackageVersion = "17.0.34.45391"
+                    toolPackageSource = "c:\local-source"
                     toolPackageUrl = "https://example.invalid/package.nupkg"
                 }
             } | ConvertTo-Json -Depth 99
@@ -589,6 +591,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
                     acquisition = "latest"
                     parallelism = 1
                     toolPackageVersion = "17.0.34.45391"
+                    toolPackageSource = ""
                     toolPackageUrl = ""
                 }
             } | ConvertTo-Json -Depth 99

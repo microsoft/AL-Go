@@ -239,6 +239,8 @@ function Get-ALTool {
     Exact Microsoft.Dynamics.BusinessCentral.Development.Tools version to install.
 .PARAMETER PackageUrl
     Optional direct .nupkg URL to use as a local package source.
+.PARAMETER PackageSource
+    Optional NuGet package source to pass to dotnet tool install.
 .OUTPUTS
     Full path to the installed al command shim.
 #>
@@ -251,7 +253,10 @@ function Install-ALToolFromNuGet {
         [string] $PackageVersion,
 
         [Parameter(Mandatory = $false)]
-        [string] $PackageUrl = ''
+        [string] $PackageUrl = '',
+
+        [Parameter(Mandatory = $false)]
+        [string] $PackageSource = ''
     )
 
     if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
@@ -285,6 +290,10 @@ function Install-ALToolFromNuGet {
         OutputColor -Message "Downloading Microsoft.Dynamics.BusinessCentral.Development.Tools package from configured package URL" -Color Green
         Invoke-WebRequest -Uri $PackageUrl -OutFile $packageFile -ErrorAction Stop
         $arguments += @("--add-source", $localPackageSource)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($PackageSource)) {
+        $arguments += @("--add-source", $PackageSource)
     }
 
     OutputColor -Message "Installing Microsoft.Dynamics.BusinessCentral.Development.Tools $PackageVersion" -Color Green

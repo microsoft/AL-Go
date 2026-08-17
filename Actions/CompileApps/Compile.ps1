@@ -122,7 +122,7 @@ try {
         if (Test-Path $toolRoot) {
             Remove-Item -Path $toolRoot -Recurse -Force
         }
-        $alToolPath = Install-ALToolFromNuGet -ToolPath $toolRoot -PackageVersion $settings.workspaceCompilation.toolPackageVersion -PackageUrl $settings.workspaceCompilation.toolPackageUrl
+        $alToolPath = Install-ALToolFromNuGet -ToolPath $toolRoot -PackageVersion $settings.workspaceCompilation.toolPackageVersion -PackageUrl $settings.workspaceCompilation.toolPackageUrl -PackageSource $settings.workspaceCompilation.toolPackageSource
         $packageCachePath = Join-Path $buildArtifactFolder "PackageCache"
         if (-not (Test-Path $packageCachePath)) {
             New-Item -Path $packageCachePath -ItemType Directory -Force | Out-Null

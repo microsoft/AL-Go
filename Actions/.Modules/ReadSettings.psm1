@@ -219,6 +219,7 @@ function GetDefaultSettings
             "acquisition"                               = "bcCompilerFolder"
             "parallelism"                               = 1
             "toolPackageVersion"                        = ""
+            "toolPackageSource"                         = ""
             "toolPackageUrl"                            = ""
         }
         "pullRequestTrigger"                            = "pull_request"

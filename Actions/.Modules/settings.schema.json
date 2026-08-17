@@ -560,6 +560,10 @@
                     "type": "string",
                     "description": "Pinned Microsoft.Dynamics.BusinessCentral.Development.Tools package version. Required when workspaceCompilation.acquisition is 'nuget'."
                 },
+                "toolPackageSource": {
+                    "type": "string",
+                    "description": "Optional NuGet package source for Microsoft.Dynamics.BusinessCentral.Development.Tools. Used only when workspaceCompilation.acquisition is 'nuget'."
+                },
                 "toolPackageUrl": {
                     "type": "string",
                     "description": "Optional direct .nupkg URL for Microsoft.Dynamics.BusinessCentral.Development.Tools. Used only when workspaceCompilation.acquisition is 'nuget'."

@@ -612,12 +612,14 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 $arguments | Should -Contain 'install'
                 $arguments | Should -Contain '--version'
                 $arguments | Should -Contain '17.0.34.45391'
+                $arguments | Should -Contain '--add-source'
+                $arguments | Should -Contain 'c:\local-source'
                 return ''
             } -ModuleName CompileFromWorkspace
 
             Mock Get-ALToolFromNuGetToolPath { return $alShim } -ModuleName CompileFromWorkspace -ParameterFilter { $ToolPath -eq $toolPath }
 
-            Install-ALToolFromNuGet -ToolPath $toolPath -PackageVersion '17.0.34.45391' | Should -Be $alShim
+            Install-ALToolFromNuGet -ToolPath $toolPath -PackageVersion '17.0.34.45391' -PackageSource 'c:\local-source' | Should -Be $alShim
         }
 
         It 'Requires a pinned tool package version' {
