@@ -15,7 +15,7 @@
          project with a launch.json so `al runtests` has connection settings.
       3. Enumerates the app's test codeunits + methods via Get-TestsFromBcContainer.
       4. Runs `al runtests <codeunitId> --testmethods` once per test codeunit (each in its own
-         session), with a rerun pass that retries any method that produced no result or a failure.
+         session), with a rerun pass that retries only methods that produced no result.
       5. Emits a JUnit results file matching the exact schema BcContainerHelper produces, so the
          downstream AnalyzeTests step keeps working unchanged.
 
@@ -662,6 +662,20 @@ function Add-JUnitTestSuite {
     return $failed
 }
 
+function Merge-MissingAlTestResults {
+    param(
+        [Parameter(Mandatory = $true)][hashtable] $PrimaryResults,
+        [Parameter(Mandatory = $true)][hashtable] $RetryResults
+    )
+
+    foreach ($methodName in $RetryResults.Keys) {
+        if (-not $PrimaryResults.ContainsKey($methodName)) {
+            $PrimaryResults[$methodName] = $RetryResults[$methodName]
+        }
+    }
+    return $PrimaryResults
+}
+
 <#
 .SYNOPSIS
     Runs all of a single app's test codeunits through `al runtests` and writes a JUnit results file.
@@ -671,8 +685,8 @@ function Add-JUnitTestSuite {
     disabledTests and JUnitResultFileName. BcContainerHelper supplies app metadata, container
     configuration, company discovery, and test enumeration; AlTool replaces only test execution.
     Runs each of the app's test codeunits in its own `al runtests` invocation, then re-runs any method
-    that produced no result or a failure once, and appends a BcContainerHelper-schema JUnit result.
-    Returns whether every executed method passed.
+    that produced no result once, and appends a BcContainerHelper-schema JUnit result. Returns whether
+    every executed method passed.
 .PARAMETER Parameters
     The BcContainerHelper-shaped test parameters built by Invoke-AlGoTestRun.
 .OUTPUTS
@@ -766,31 +780,28 @@ function Invoke-AlToolTestRun {
             $merged[$cid] = $run.Results
         }
 
-        # Rerun-on-failure pass. Each affected codeunit runs again in its OWN `al runtests` call
-        # (a fresh session): a method that produced no result (a state-sensitive codeunit can leave
-        # a method unreported) is retried for correctness, and a failed method is retried once to
-        # recover flaky failures (mirroring BCH's rerun of failed tests).
+        # Rerun unreported methods. Each affected codeunit runs again in its OWN `al runtests` call
+        # (a fresh session). Existing Pass, Fail, and Skip outcomes are final and are never retried.
         $isoGroups = @()
         foreach ($cu in $codeunits) {
             $cid = "$($cu.Id)"
             $requested = @($cu.Tests | ForEach-Object { "$_" })
             $cuResults = $merged[$cid]
             $retryMethods = @($requested | Where-Object {
-                    $r = if ($cuResults) { $cuResults[$_] } else { $null }
-                    ($null -eq $r) -or ($r.Outcome -eq 'Fail')
+                    (-not $cuResults) -or (-not $cuResults.ContainsKey($_))
                 })
             if ($retryMethods.Count -gt 0) {
                 $isoGroups += @{ Id = $cid; Methods = $retryMethods; Name = $cu.Name }
             }
         }
         if ($isoGroups.Count -gt 0) {
-            Write-Host ("rerun pass: {0} codeunit(s) with unreported or failed method(s) (each in its own session)" -f $isoGroups.Count)
+            Write-Host ("rerun pass: {0} codeunit(s) with unreported method(s) (each in its own session)" -f $isoGroups.Count)
             foreach ($g in $isoGroups) {
                 $iso = Invoke-AlRunTestsForCodeunit -CodeunitId $g.Id -Methods $g.Methods `
                     -ProjectPath $projectPath -Company $company -Tenant $tenant -Connection $connection
                 $totalElapsed += [double]$iso.ElapsedSec
                 if (-not $merged.ContainsKey($g.Id)) { $merged[$g.Id] = @{} }
-                foreach ($mName in $iso.Results.Keys) { $merged[$g.Id][$mName] = $iso.Results[$mName] }
+                Merge-MissingAlTestResults -PrimaryResults $merged[$g.Id] -RetryResults $iso.Results | Out-Null
             }
         }
 

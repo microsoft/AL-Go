@@ -300,6 +300,118 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
     }
 
+    Context 'Merge-MissingAlTestResults' {
+        It 'Adds retry results only for methods missing from the primary run' {
+            InModuleScope AlToolTestRunner {
+                $primaryFailure = @{ Outcome = 'Fail'; Ms = 5; Message = 'primary failure'; Stacktrace = '' }
+                $primaryResults = @{ ExistingFailure = $primaryFailure }
+                $retryResults = @{
+                    ExistingFailure = @{ Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' }
+                    MissingMethod   = @{ Outcome = 'Pass'; Ms = 2; Message = ''; Stacktrace = '' }
+                }
+
+                $mergedResults = Merge-MissingAlTestResults -PrimaryResults $primaryResults -RetryResults $retryResults
+
+                $mergedResults.ExistingFailure.Outcome | Should -Be 'Fail'
+                $mergedResults.ExistingFailure.Message | Should -Be 'primary failure'
+                $mergedResults.MissingMethod.Outcome | Should -Be 'Pass'
+            }
+        }
+    }
+
+    Context 'Invoke-AlToolTestRun rerun behavior' {
+        BeforeEach {
+            $script:rerunCredential = New-Object System.Management.Automation.PSCredential(
+                'admin',
+                (ConvertTo-SecureString 'password' -AsPlainText -Force)
+            )
+            $script:rerunParameters = @{
+                containerName = 'test'
+                credential    = $script:rerunCredential
+                extensionId   = [Guid]::NewGuid().ToString()
+                appName       = 'Test App'
+            }
+            $script:rerunCodeunit = [PSCustomObject]@{
+                Id    = 130001
+                Name  = 'My Tests'
+                Tests = @('TestOne')
+            }
+
+            Mock -ModuleName AlToolTestRunner Install-AlTool { return '1.2.3' }
+            Mock -ModuleName AlToolTestRunner Get-AlToolConnection {
+                return @{ Server = 'http://test'; ServerInstance = 'BC'; Port = 7049 }
+            }
+            Mock -ModuleName AlToolTestRunner New-AlToolProject { return $TestDrive }
+            Mock -ModuleName AlToolTestRunner Get-AlToolCompany { return 'CRONUS' }
+            Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits { return @($script:rerunCodeunit) }
+        }
+
+        It 'Does not retry an initial failure' {
+            $script:runInvocations = 0
+            Mock -ModuleName AlToolTestRunner Invoke-AlRunTestsForCodeunit {
+                $script:runInvocations++
+                return @{
+                    Results    = @{ TestOne = @{ Outcome = 'Fail'; Ms = 1; Message = 'boom'; Stacktrace = '' } }
+                    ElapsedSec = 0.1
+                    Raw        = ''
+                    Connected  = $true
+                    ExitCode   = 1
+                }
+            }
+
+            Invoke-AlToolTestRun -Parameters $script:rerunParameters | Should -BeFalse
+
+            $script:runInvocations | Should -Be 1
+        }
+
+        It 'Retries and fills a result missing from the primary run' {
+            $script:runInvocations = 0
+            Mock -ModuleName AlToolTestRunner Invoke-AlRunTestsForCodeunit {
+                $script:runInvocations++
+                $results = if ($script:runInvocations -eq 1) {
+                    @{}
+                }
+                else {
+                    @{ TestOne = @{ Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' } }
+                }
+                return @{
+                    Results    = $results
+                    ElapsedSec = 0.1
+                    Raw        = ''
+                    Connected  = $true
+                    ExitCode   = 0
+                }
+            }
+
+            Invoke-AlToolTestRun -Parameters $script:rerunParameters | Should -BeTrue
+
+            $script:runInvocations | Should -Be 2
+        }
+
+        It 'Leaves a still-missing retry result as a final JUnit failure' {
+            $junitFile = Join-Path $TestDrive 'TestResults.xml'
+            $script:rerunParameters.JUnitResultFileName = $junitFile
+            $script:runInvocations = 0
+            Mock -ModuleName AlToolTestRunner Invoke-AlRunTestsForCodeunit {
+                $script:runInvocations++
+                return @{
+                    Results    = @{}
+                    ElapsedSec = 0.1
+                    Raw        = ''
+                    Connected  = $true
+                    ExitCode   = 0
+                }
+            }
+
+            Invoke-AlToolTestRun -Parameters $script:rerunParameters | Should -BeFalse
+
+            $script:runInvocations | Should -Be 2
+            [xml] $junit = Get-Content -Path $junitFile -Raw
+            $failure = $junit.SelectSingleNode('testsuites/testsuite/testcase/failure')
+            $failure.GetAttribute('message') | Should -Be 'No result produced by al runtests'
+        }
+    }
+
     Context 'Add-JUnitTestSuite' {
         BeforeEach {
             $script:doc = New-Object System.Xml.XmlDocument
