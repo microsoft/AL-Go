@@ -225,13 +225,21 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
             $script:runnerCalls | Should -Be 0
+            Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
+            Test-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml') | Should -BeFalse
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Runs tests in every test app when tests pass' {
+        It 'Copies passing test results to build artifacts and preserves the root result' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $script:runnerCalls = 0
-            $override = { param($parameters) $script:runnerCalls++; return $true }
+            $script:resultContent = '<testsuites name="passing" />'
+            $override = {
+                param($parameters)
+                $script:runnerCalls++
+                Set-Content -Path $parameters.JUnitResultFileName -Value $script:resultContent -Encoding UTF8
+                return $true
+            }
             $settings = @{
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
@@ -243,6 +251,29 @@ Describe 'RunTests.psm1 Tests' {
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Not -Throw
 
             $script:runnerCalls | Should -Be 2
+            $rootResult = Join-Path $projectPath 'TestResults.xml'
+            $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
+            (Get-Content -Path $rootResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            (Get-Content -Path $artifactResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Does not create an artifact when test execution produces no result file' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
+            Set-Content -Path $artifactResult -Value '<testsuites name="stale" />' -Encoding UTF8
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride { return $true }
+
+            Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
+            Test-Path $artifactResult | Should -BeFalse
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -342,9 +373,14 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Throws when a test fails and treatTestFailuresAsWarnings is not set' {
+        It 'Copies failed test results before throwing when treatTestFailuresAsWarnings is not set' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $override = { param($parameters) return $false }
+            $script:resultContent = '<testsuites name="hard-failure" />'
+            $override = {
+                param($parameters)
+                Set-Content -Path $parameters.JUnitResultFileName -Value $script:resultContent -Encoding UTF8
+                return $false
+            }
             $settings = @{
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
@@ -353,14 +389,24 @@ Describe 'RunTests.psm1 Tests' {
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
-            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Throw
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } |
+                Should -Throw '*There are test failures*'
 
+            $rootResult = Join-Path $projectPath 'TestResults.xml'
+            $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
+            (Get-Content -Path $rootResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            (Get-Content -Path $artifactResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Does not throw when a test fails but treatTestFailuresAsWarnings is set' {
+        It 'Copies failed test results when treatTestFailuresAsWarnings is set' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $override = { param($parameters) return $false }
+            $script:resultContent = '<testsuites name="warning-failure" />'
+            $override = {
+                param($parameters)
+                Set-Content -Path $parameters.JUnitResultFileName -Value $script:resultContent -Encoding UTF8
+                return $false
+            }
             $settings = @{
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
@@ -370,6 +416,32 @@ Describe 'RunTests.psm1 Tests' {
             }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Not -Throw
+
+            $rootResult = Join-Path $projectPath 'TestResults.xml'
+            $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
+            (Get-Content -Path $rootResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            (Get-Content -Path $artifactResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Surfaces artifact copy errors before a test failure message' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $override = {
+                param($parameters)
+                Set-Content -Path $parameters.JUnitResultFileName -Value '<testsuites name="copy-error" />' -Encoding UTF8
+                return $false
+            }
+            Mock -ModuleName RunTests Copy-Item { throw 'copy blocked' }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } |
+                Should -Throw '*Failed to copy test results*copy blocked*'
 
             Remove-Item -Path $projectPath -Recurse -Force
         }

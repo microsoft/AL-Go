@@ -15,7 +15,8 @@ Param(
     Runs the normal tests (testFolders) of an AL-Go project against the build container that the
     RunPipeline action created and kept alive. This runs as part of the build when the
     useSeparateTestAction setting is enabled; when it is not, RunPipeline runs the tests instead.
-    Results are written to TestResults.xml in the project folder.
+    Results are written to TestResults.xml in the project folder for AnalyzeTests and copied to
+    .buildartifacts/TestResults.xml for artifact upload when a result file is produced.
 
     Only normal tests (testFolders) are run here. BCPT and page scripting tests are run by the
     RunPipeline action.

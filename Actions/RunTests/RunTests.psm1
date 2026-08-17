@@ -150,15 +150,48 @@ function Get-DisabledTestsForApp {
     return @($disabledTests)
 }
 
+function Copy-TestResultsToBuildArtifacts {
+    <#
+    .SYNOPSIS
+        Copies an existing test result file to the project build artifacts folder.
+    .DESCRIPTION
+        Preserves the canonical test result file in the project root for AnalyzeTests and copies it
+        to .buildartifacts for artifact upload. If no result file was produced, no file is created.
+    .PARAMETER projectPath
+        The full path to the project folder.
+    .PARAMETER testResultsFile
+        The canonical test result file in the project root.
+    #>
+    Param(
+        [string] $projectPath,
+        [string] $testResultsFile
+    )
+
+    $buildArtifactsFolder = Join-Path $projectPath ".buildartifacts"
+    $artifactTestResultsFile = Join-Path $buildArtifactsFolder "TestResults.xml"
+    try {
+        if (-not (Test-Path -Path $testResultsFile -PathType Leaf -ErrorAction Stop)) {
+            return
+        }
+        New-Item -Path $buildArtifactsFolder -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        Copy-Item -Path $testResultsFile -Destination $artifactTestResultsFile -Force -ErrorAction Stop
+    }
+    catch {
+        throw "Failed to copy test results from '$testResultsFile' to '$artifactTestResultsFile'. Error: $($_.Exception.Message)"
+    }
+}
+
 function Invoke-AlGoTestRun {
     <#
     .SYNOPSIS
         Runs the normal tests for an AL-Go project against a kept-alive build container.
     .DESCRIPTION
         Runs tests in each test app against the given container and writes the results to
-        testResultsFile in JUnit format. Honors the treatTestFailuresAsWarnings setting. By default
-        the tests are run through the AlTool (`al runtests`) runner. When a RunTestsInBcContainer
-        override script is provided, it is used instead of the built-in AlTool runner.
+        TestResults.xml in the project root for AnalyzeTests. When a result file is produced, it is
+        also copied to .buildartifacts for artifact upload before test failures are surfaced. Honors
+        the treatTestFailuresAsWarnings setting. By default the tests are run through the AlTool
+        (`al runtests`) runner. When a RunTestsInBcContainer override script is provided, it is used
+        instead of the built-in AlTool runner.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -190,8 +223,11 @@ function Invoke-AlGoTestRun {
     Write-Host "Running tests against container '$containerName'"
 
     $testResultsFile = Join-Path $projectPath "TestResults.xml"
-    if (Test-Path $testResultsFile) {
-        Remove-Item $testResultsFile -Force
+    $artifactTestResultsFile = Join-Path (Join-Path $projectPath ".buildartifacts") "TestResults.xml"
+    foreach ($previousResultFile in @($testResultsFile, $artifactTestResultsFile)) {
+        if (Test-Path $previousResultFile) {
+            Remove-Item $previousResultFile -Force
+        }
     }
 
     # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
@@ -234,6 +270,8 @@ function Invoke-AlGoTestRun {
     finally {
         Pop-Location
     }
+
+    Copy-TestResultsToBuildArtifacts -projectPath $projectPath -testResultsFile $testResultsFile
 
     if (-not $allTestsPassed) {
         if ($settings.treatTestFailuresAsWarnings) {

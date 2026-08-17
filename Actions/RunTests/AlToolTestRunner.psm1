@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Built-in test executor that drives Microsoft's headless `al runtests` (AlTool) CLI while
-    producing the same JUnit XML the AL-Go pipeline already consumes downstream.
+    producing JUnit XML compatible with AL-Go AnalyzeTests and downstream processing.
 
 .DESCRIPTION
     This module is the default test executor used by the RunTests action (Invoke-AlGoTestRun) when no
@@ -16,8 +16,7 @@
       3. Enumerates the app's test codeunits + methods via Get-TestsFromBcContainer.
       4. Runs `al runtests <codeunitId> --testmethods` once per test codeunit (each in its own
          session), with a rerun pass that retries only methods that produced no result.
-      5. Emits a JUnit results file matching the exact schema BcContainerHelper produces, so the
-         downstream AnalyzeTests step keeps working unchanged.
+      5. Emits a JUnit results file compatible with AL-Go AnalyzeTests and downstream processing.
 
     Credentials are taken from the parameters' PSCredential and exposed to `al` through the
     BC_SERVER_USERNAME / BC_SERVER_PASSWORD environment variables (the only auth mechanism the CLI
@@ -557,8 +556,8 @@ function Invoke-AlRunTestsForCodeunit {
 
 <#
 .SYNOPSIS
-    Appends a JUnit <testsuite> for one codeunit to the given <testsuites> document, matching the
-    exact schema BcContainerHelper produces.
+    Appends an AL-Go AnalyzeTests-compatible JUnit <testsuite> for one codeunit to the given
+    <testsuites> document.
 .PARAMETER Doc
     The JUnit XmlDocument being built.
 .PARAMETER TestSuitesNode
@@ -685,8 +684,8 @@ function Merge-MissingAlTestResults {
     disabledTests and JUnitResultFileName. BcContainerHelper supplies app metadata, container
     configuration, company discovery, and test enumeration; AlTool replaces only test execution.
     Runs each of the app's test codeunits in its own `al runtests` invocation, then re-runs any method
-    that produced no result once, and appends a BcContainerHelper-schema JUnit result. Returns whether
-    every executed method passed.
+    that produced no result once, and appends JUnit output compatible with AL-Go AnalyzeTests and
+    downstream processing. Returns whether every executed method passed.
 .PARAMETER Parameters
     The BcContainerHelper-shaped test parameters built by Invoke-AlGoTestRun.
 .OUTPUTS

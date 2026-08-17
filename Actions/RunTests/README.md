@@ -2,7 +2,7 @@
 
 Run the normal tests (testFolders) for an AL-Go project against the build container created and kept alive by the RunPipeline action.
 
-This action runs when the `useSeparateTestAction` setting is enabled and RunPipeline can keep a single local build container alive. RunPipeline compiles, publishes and installs the apps, skips the normal tests and keeps the container alive. This action then runs the normal tests against that same container and writes the results to `TestResults.xml` in the project folder. Builds with `additionalCountries` continue to run normal tests inside RunPipeline so every country is tested.
+This action runs when the `useSeparateTestAction` setting is enabled and RunPipeline can keep a single local build container alive. RunPipeline compiles, publishes and installs the apps, skips the normal tests and keeps the container alive. This action then runs the normal tests against that same container and writes the results to `TestResults.xml` in the project folder. That root file remains available to AnalyzeTests and is also copied to `.buildartifacts/TestResults.xml` for artifact upload. If test execution produces no result file, no artifact result is created. Builds with `additionalCountries` continue to run normal tests inside RunPipeline so every country is tested.
 
 Only normal tests (testFolders) are handled here. BCPT and page scripting tests continue to be executed by the RunPipeline action.
 
@@ -12,7 +12,7 @@ For each normal test app, the action honors `disabledTests.json` files found rec
 
 ## Test runner
 
-By default this action executes tests through Microsoft's headless `al runtests` (AlTool) runner. BcContainerHelper remains in use for app metadata, container configuration, company discovery, and test enumeration. The action installs the AL developer tools as a `dotnet` global tool (`dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --prerelease`), then AlTool executes each enumerated test codeunit in its own `al runtests <codeunitId>` invocation. The action writes the same `TestResults.xml` (JUnit) schema BcContainerHelper produces so downstream test result analysis is unchanged.
+By default this action executes tests through Microsoft's headless `al runtests` (AlTool) runner. BcContainerHelper remains in use for app metadata, container configuration, company discovery, and test enumeration. The action installs the AL developer tools as a `dotnet` global tool (`dotnet tool install Microsoft.Dynamics.BusinessCentral.Development.Tools --prerelease`), then AlTool executes each enumerated test codeunit in its own `al runtests <codeunitId>` invocation. The action writes JUnit output compatible with AL-Go AnalyzeTests and downstream processing.
 
 To replace AlTool test execution with BcContainerHelper (or another runner), add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. When present, it replaces the built-in AlTool execution path and is called once per test app with the same parameters BcContainerHelper's `Run-TestsInBcContainer` expects.
 
