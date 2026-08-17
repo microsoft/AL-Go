@@ -15,25 +15,67 @@ Describe 'RunTests.psm1 Tests' {
     BeforeAll {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testCredential', Justification = 'Used in tests')]
         $testCredential = New-Object System.Management.Automation.PSCredential("admin", (ConvertTo-SecureString "password" -AsPlainText -Force))
+        $script:compiledAppMetadataByPath = @{}
+        $script:testFoldersByProject = @{}
 
         function New-TestProject {
             Param(
-                [string[]] $CompiledTestApps = @()
+                [string[]] $CompiledTestApps = @(),
+                [hashtable] $CompiledAppIds = @{}
             )
             $projectPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-            $testAppsFolder = Join-Path $projectPath ".buildartifacts\TestApps"
+            $testAppsFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
             New-Item -Path $testAppsFolder -ItemType Directory -Force | Out-Null
+            $testFolders = @()
+            $index = 0
             foreach ($app in $CompiledTestApps) {
-                New-Item -Path (Join-Path $testAppsFolder $app) -ItemType File -Force | Out-Null
+                $index++
+                $appPath = Join-Path $testAppsFolder $app
+                New-Item -Path $appPath -ItemType File -Force | Out-Null
+                $appId = if ($CompiledAppIds.ContainsKey($app)) { "$($CompiledAppIds[$app])" } else { [Guid]::NewGuid().ToString() }
+                $appName = [System.IO.Path]::GetFileNameWithoutExtension($app)
+                $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($appPath)] = [PSCustomObject]@{
+                    id   = $appId
+                    name = $appName
+                }
+
+                $testFolder = "TestApp$index"
+                $testFolderPath = Join-Path $projectPath $testFolder
+                New-Item -Path $testFolderPath -ItemType Directory -Force | Out-Null
+                @{ id = $appId; name = $appName } | ConvertTo-Json |
+                    Set-Content -Path (Join-Path $testFolderPath "app.json") -Encoding UTF8
+                $testFolders += $testFolder
             }
+            $script:testFoldersByProject[$projectPath] = @($testFolders)
             return $projectPath
+        }
+
+        function Get-TestFoldersForProject {
+            Param(
+                [string] $ProjectPath
+            )
+
+            return @($script:testFoldersByProject[$ProjectPath])
+        }
+    }
+
+    BeforeEach {
+        Mock -ModuleName RunTests Get-AppJsonFromAppFile {
+            $fullPath = [System.IO.Path]::GetFullPath("$appFile")
+            if (-not $script:compiledAppMetadataByPath.ContainsKey($fullPath)) {
+                throw "No test metadata configured for '$appFile'."
+            }
+            return $script:compiledAppMetadataByPath[$fullPath]
         }
     }
 
     Context 'Get-TestAppsToRun' {
         It 'Collects compiled test apps from the build artifacts folder' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
-            $settings = @{ runTestsInAllInstalledTestApps = $false }
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath
 
@@ -50,7 +92,7 @@ Describe 'RunTests.psm1 Tests' {
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @($installedApp1, "($installedApp2)") | Set-Content -Path $installJson -Encoding UTF8
 
-            $settings = @{ runTestsInAllInstalledTestApps = $true }
+            $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
 
             @($testApps).Count | Should -Be 2
@@ -66,7 +108,10 @@ Describe 'RunTests.psm1 Tests' {
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @($installedApp) | Set-Content -Path $installJson -Encoding UTF8
 
-            $settings = @{ runTestsInAllInstalledTestApps = $false }
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
 
             @($testApps).Count | Should -Be 1
@@ -82,7 +127,10 @@ Describe 'RunTests.psm1 Tests' {
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @() | Set-Content -Path $installJson -Encoding UTF8
 
-            $settings = @{ runTestsInAllInstalledTestApps = $true }
+            $settings = @{
+                runTestsInAllInstalledTestApps = $true
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
 
             @($testApps).Count | Should -Be 1
@@ -98,11 +146,71 @@ Describe 'RunTests.psm1 Tests' {
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @("($installedApp)") | Set-Content -Path $installJson -Encoding UTF8
 
-            $settings = @{ runTestsInAllInstalledTestApps = $true }
+            $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
             $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
 
             @($testApps).Count | Should -Be 1
             $testApps | Should -Contain $installedApp
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Selects only compiled apps whose IDs belong to normal test folders' {
+            $projectPath = New-TestProject -CompiledTestApps @('Normal.Test.app', 'Performance.Test.app')
+            $testFolders = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @($testFolders[0])
+                bcptTestFolders                = @($testFolders[1])
+            }
+
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath)
+
+            $testApps.Count | Should -Be 1
+            [System.IO.Path]::GetFileName($testApps[0]) | Should -Be 'Normal.Test.app'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Selects one compiled artifact when normal test folders contain duplicate app IDs' {
+            $duplicateAppId = [Guid]::NewGuid().ToString()
+            $projectPath = New-TestProject -CompiledTestApps @('Duplicate1.Test.app', 'Duplicate2.Test.app') -CompiledAppIds @{
+                'Duplicate1.Test.app' = $duplicateAppId
+                'Duplicate2.Test.app' = $duplicateAppId
+            }
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath)
+
+            $testApps.Count | Should -Be 1
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Reports corrupt normal source app metadata clearly' {
+            $projectPath = New-TestProject
+            $testFolder = Join-Path $projectPath 'BrokenTestApp'
+            New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $testFolder 'app.json') -Value '{invalid' -Encoding UTF8
+            $settings = @{ runTestsInAllInstalledTestApps = $false; testFolders = @('BrokenTestApp') }
+
+            { Get-TestAppsToRun -settings $settings -projectPath $projectPath } |
+                Should -Throw "*Failed to read normal test app metadata*BrokenTestApp*app.json*"
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Reports unreadable compiled app metadata clearly' {
+            $projectPath = New-TestProject -CompiledTestApps @('Broken.Test.app')
+            Mock -ModuleName RunTests Get-AppJsonFromAppFile { throw 'corrupt package' }
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Get-TestAppsToRun -settings $settings -projectPath $projectPath } |
+                Should -Throw "*Failed to read compiled test app metadata*Broken.Test.app*corrupt package*"
+
             Remove-Item -Path $projectPath -Recurse -Force
         }
     }
@@ -112,7 +220,7 @@ Describe 'RunTests.psm1 Tests' {
             $projectPath = New-TestProject
             $script:runnerCalls = 0
             $override = { param($parameters) $script:runnerCalls++; return $true }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false; testFolders = @() }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
@@ -121,11 +229,16 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Runs tests in every test app when tests pass' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $script:runnerCalls = 0
             $override = { param($parameters) $script:runnerCalls++; return $true }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Not -Throw
 
@@ -133,11 +246,36 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
+        It 'Invokes only the normal test app when compiled artifacts also contain a BCPT app' {
+            $projectPath = New-TestProject -CompiledTestApps @('Normal.Test.app', 'Performance.Test.app')
+            $testFolders = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            $script:invokedExtensionIds = @()
+            $override = {
+                param($parameters)
+                $script:invokedExtensionIds += "$($parameters.extensionId)"
+                return $true
+            }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @($testFolders[0])
+                bcptTestFolders                = @($testFolders[1])
+            }
+            $normalAppPath = Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestApps') 'Normal.Test.app'
+            $normalAppId = "$($script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($normalAppPath)].id)"
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
+
+            $script:invokedExtensionIds | Should -Be @($normalAppId)
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Passes nested and project-wide disabled tests to an override as recursive hashtables' {
             $appId = [Guid]::NewGuid().ToString()
             $otherAppId = [Guid]::NewGuid().ToString()
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = $appId; name = 'TestApp' } }
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') -CompiledAppIds @{ 'App1.Test.app' = $appId }
 
             $testFolder = Join-Path $projectPath 'TestApp'
             $nestedFolder = Join-Path $testFolder 'Nested'
@@ -185,8 +323,7 @@ Describe 'RunTests.psm1 Tests' {
 
         It 'Fails with the disabled tests file path when its JSON is invalid' {
             $appId = [Guid]::NewGuid().ToString()
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = $appId; name = 'TestApp' } }
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') -CompiledAppIds @{ 'App1.Test.app' = $appId }
             $testFolder = Join-Path $projectPath 'TestApp'
             New-Item -Path $testFolder -ItemType Directory -Force | Out-Null
             @{ id = $appId } | ConvertTo-Json | Set-Content -Path (Join-Path $testFolder 'app.json') -Encoding UTF8
@@ -206,10 +343,15 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Throws when a test fails and treatTestFailuresAsWarnings is not set' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $override = { param($parameters) return $false }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Throw
 
@@ -217,10 +359,15 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Does not throw when a test fails but treatTestFailuresAsWarnings is set' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $override = { param($parameters) return $false }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $true }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $true
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Not -Throw
 
@@ -228,11 +375,16 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Passes GitHubActions severity error when treatTestFailuresAsWarnings is not set' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $script:capturedSeverity = $null
             $override = { param($parameters) $script:capturedSeverity = $parameters.GitHubActions; return $true }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
@@ -241,11 +393,16 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Passes GitHubActions severity warning when treatTestFailuresAsWarnings is set' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $script:capturedSeverity = $null
             $override = { param($parameters) $script:capturedSeverity = $parameters.GitHubActions; return $true }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $true }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $true
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
@@ -265,11 +422,16 @@ Describe 'RunTests.psm1 Tests' {
             }
             if (($command -is [System.Management.Automation.AliasInfo]) -and $command.ResolvedCommand) { $command = $command.ResolvedCommand }
 
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $script:capturedParams = $null
             $override = { param($parameters) $script:capturedParams = $parameters; return $true }
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
@@ -290,10 +452,15 @@ Describe 'RunTests.psm1 Tests' {
 
     Context 'Invoke-AlGoTestRun (default AlTool runner)' {
         It 'Runs the AlTool runner for every test app when no override is supplied' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
 
@@ -302,10 +469,15 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Passes the container and credential through to the AlTool runner' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = 'CRONUS'; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = 'CRONUS'
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential
 
@@ -317,10 +489,9 @@ Describe 'RunTests.psm1 Tests' {
 
         It 'Passes project-wide disabled tests to the AlTool runner' {
             $appId = [Guid]::NewGuid().ToString()
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = $appId; name = 'TestApp' } }
             $script:capturedAlToolParams = $null
             Mock -ModuleName RunTests Invoke-AlToolTestRun { param($Parameters) $script:capturedAlToolParams = $Parameters; return $true }
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') -CompiledAppIds @{ 'App1.Test.app' = $appId }
             @(@{ codeunitName = 'Project Tests'; method = 'TestOne' }) | ConvertTo-Json |
                 Set-Content -Path (Join-Path $projectPath "$appId.disabledTests.json") -Encoding UTF8
             $settings = @{
@@ -328,7 +499,7 @@ Describe 'RunTests.psm1 Tests' {
                 runTestsInAllInstalledTestApps = $false
                 companyName                    = ''
                 treatTestFailuresAsWarnings    = $false
-                testFolders                    = @()
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential
@@ -340,10 +511,15 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Throws when the AlTool runner reports failure and treatTestFailuresAsWarnings is not set' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $false }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Throw
 
@@ -351,10 +527,15 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Does not throw when the AlTool runner reports failure but treatTestFailuresAsWarnings is set' {
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { [PSCustomObject]@{ id = [Guid]::NewGuid().ToString(); name = 'TestApp' } }
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $false }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $true }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $true
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
 

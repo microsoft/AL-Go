@@ -18,10 +18,12 @@ function Get-TestAppsToRun {
     .SYNOPSIS
         Determines the set of test app files to run tests in.
     .DESCRIPTION
-        Collects the test apps compiled for the project (found in the build artifacts TestApps
-        folder) and, when runTestsInAllInstalledTestApps is enabled, the test apps installed from
-        previous jobs (listed in installTestAppsJson). Test apps wrapped in parentheses are
-        unwrapped (matching Run-AlPipeline semantics where such apps are otherwise not tested).
+        Reads app IDs from the analyzed normal testFolders and selects only matching compiled apps
+        from the build artifacts TestApps folder. This excludes BCPT apps that share that artifact
+        folder. When runTestsInAllInstalledTestApps is enabled, test apps installed from previous
+        jobs (listed in installTestAppsJson) are included independently. Installed test apps wrapped
+        in parentheses are unwrapped (matching Run-AlPipeline semantics where such apps are otherwise
+        not tested).
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -35,16 +37,53 @@ function Get-TestAppsToRun {
         [string] $installTestAppsJson = ''
     )
 
-    $testAppOutputFolder = Join-Path $projectPath ".buildartifacts\TestApps"
+    $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
     $testApps = @()
+    $normalTestAppIds = @{}
+    if ($settings.ContainsKey("testFolders")) {
+        foreach ($testFolder in @($settings.testFolders)) {
+            $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
+            try {
+                $sourceAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 -ErrorAction Stop |
+                    ConvertFrom-Json |
+                    ConvertTo-HashTable -recurse
+                $sourceAppId = "$($sourceAppJson.id)"
+                if ([string]::IsNullOrWhiteSpace($sourceAppId)) {
+                    throw "The app.json file does not contain an app ID."
+                }
+            }
+            catch {
+                throw "Failed to read normal test app metadata from '$appJsonPath'. Error: $($_.Exception.Message)"
+            }
+            $normalTestAppIds[$sourceAppId] = $true
+        }
+    }
+
     if (Test-Path $testAppOutputFolder) {
-        $testApps += @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+        $selectedCompiledAppIds = @{}
+        foreach ($compiledApp in @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)) {
+            try {
+                $compiledAppJson = Get-AppJsonFromAppFile -appFile $compiledApp.FullName
+                $compiledAppId = "$($compiledAppJson.id)"
+                if ([string]::IsNullOrWhiteSpace($compiledAppId)) {
+                    throw "The compiled app metadata does not contain an app ID."
+                }
+            }
+            catch {
+                throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
+            }
+
+            if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
+                $testApps += $compiledApp.FullName
+                $selectedCompiledAppIds[$compiledAppId] = $true
+            }
+        }
     }
 
     if ($settings.runTestsInAllInstalledTestApps -and $installTestAppsJson -and (Test-Path $installTestAppsJson)) {
         try {
-            $installedTestApps = Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json
+            $installedTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"

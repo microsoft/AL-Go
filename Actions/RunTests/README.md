@@ -6,6 +6,8 @@ This action runs when the `useSeparateTestAction` setting is enabled and RunPipe
 
 Only normal tests (testFolders) are handled here. BCPT and page scripting tests continue to be executed by the RunPipeline action.
 
+Compiled apps are selected from `.buildartifacts/TestApps` by matching their app IDs to the source `app.json` files in `testFolders`. BCPT apps share the same artifact folder but are not selected unless their app ID is also configured as a normal test app. When `runTestsInAllInstalledTestApps` is enabled, apps listed in `installTestAppsJson` are added independently of `testFolders`.
+
 For each normal test app, the action honors `disabledTests.json` files found recursively under its source test folder and `<appId>.disabledTests.json` files found recursively under the AL-Go project folder. These exclusions are passed to both the built-in AlTool runner and `RunTestsInBcContainer` overrides.
 
 ## Test runner
