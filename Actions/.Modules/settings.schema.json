@@ -805,5 +805,18 @@
             },
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
+    },
+    "patternProperties": {
+        "^DeployTo": {
+            "type": "object",
+            "description": "Structure with additional properties for the environment specified. See https://aka.ms/ALGoSettings#deployto",
+            "properties": {
+                "unpublishOldVersions": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "When set to true, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment. Only applies to PTE deployments (Scope PTE) and is non-fatal. See https://aka.ms/ALGoSettings#deployto"
+                }
+            }
+        }
     }
 }
