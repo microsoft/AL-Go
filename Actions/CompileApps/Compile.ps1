@@ -63,7 +63,7 @@ try {
         throw "Invalid workspaceCompilation.dependencyResolution '$workspaceCompilationDependencyResolution'. Valid values are 'Artifacts' and 'NuGet'."
     }
     if ($workspaceCompilationDependencyResolution -eq "NuGet" -and [string]::IsNullOrWhiteSpace($settings.workspaceCompilation.ALToolVersion)) {
-        throw "workspaceCompilation.ALToolVersion must be specified when workspaceCompilation.dependencyResolution is 'NuGet'."
+        throw "workspaceCompilation.ALToolVersion is required when workspaceCompilation.dependencyResolution is 'NuGet'."
     }
 
     # Check for precompile and postcompile overrides

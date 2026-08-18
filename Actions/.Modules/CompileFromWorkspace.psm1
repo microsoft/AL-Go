@@ -250,6 +250,7 @@ function Install-ALToolFromNuGet {
         [string] $ToolPath,
 
         [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
         [string] $PackageVersion,
 
         [Parameter(Mandatory = $false)]
@@ -260,7 +261,7 @@ function Install-ALToolFromNuGet {
     )
 
     if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
-        throw "workspaceCompilation.ALToolVersion must be specified when workspaceCompilation.dependencyResolution is 'NuGet'."
+        throw "workspaceCompilation.ALToolVersion is required when workspaceCompilation.dependencyResolution is 'NuGet'."
     }
 
     if (-not (Test-Path $ToolPath)) {
