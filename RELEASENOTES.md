@@ -1,6 +1,6 @@
-### Preview NuGet acquisition for workspace compilation
+### Preview NuGet dependency resolution for workspace compilation
 
-Workspace compilation can now opt in to `workspaceCompilation.acquisition: "nuget"` to install a pinned `Microsoft.Dynamics.BusinessCentral.Development.Tools` package with `dotnet tool install`, run `al workspace restore` into an AL-Go-controlled package cache, and compile with the restored symbols. The default remains `bcCompilerFolder`, which preserves the existing `New-BcCompilerFolder` behavior.
+Workspace compilation can now opt in to `workspaceCompilation.dependencyResolution: "NuGet"` to install a pinned `Microsoft.Dynamics.BusinessCentral.Development.Tools` package with `dotnet tool install`, run `al workspace restore` into an AL-Go-controlled package cache, and compile with the restored symbols. The default remains `Artifacts`, which preserves the existing `New-BcCompilerFolder` behavior.
 
 ### New `doNotPerformUpgrade` setting
 

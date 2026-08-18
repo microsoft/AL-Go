@@ -541,7 +541,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Defaults workspaceCompilation acquisition to bcCompilerFolder with no floating tool version' {
+        It 'Defaults workspaceCompilation dependencyResolution to Artifacts with no floating AL tool version' {
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
             $githubFolder = Join-Path $tempName ".github"
@@ -550,8 +550,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $settings = ReadSettings -baseFolder $tempName -project '' -repoName 'repo' -workflowName '' -branchName '' -userName ''
 
-            $settings.workspaceCompilation.acquisition | Should -Be "bcCompilerFolder"
-            $settings.workspaceCompilation.toolPackageVersion | Should -Be ""
+            $settings.workspaceCompilation.dependencyResolution | Should -Be "Artifacts"
+            $settings.workspaceCompilation.ALToolVersion | Should -Be ""
             $settings.workspaceCompilation.toolPackageSource | Should -Be ""
             $settings.workspaceCompilation.toolPackageUrl | Should -Be ""
 
@@ -559,7 +559,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Settings schema accepts nuget workspaceCompilation acquisition' {
+        It 'Settings schema accepts NuGet workspaceCompilation dependencyResolution' {
             if ($PSVersionTable.PSVersion.Major -lt 7) {
                 Set-ItResult -Skipped -Because "Test-Json -SchemaFile requires PowerShell 7"
                 return
@@ -568,9 +568,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = @{
                 workspaceCompilation = @{
                     enabled = $true
-                    acquisition = "nuget"
+                    dependencyResolution = "NuGet"
                     parallelism = 1
-                    toolPackageVersion = "17.0.34.45391"
+                    ALToolVersion = "17.0.34.45391"
                     toolPackageSource = "c:\local-source"
                     toolPackageUrl = "https://example.invalid/package.nupkg"
                 }
@@ -579,7 +579,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Test-Json -Json $settings -Schema $schema | Should -BeTrue
         }
 
-        It 'Settings schema rejects invalid workspaceCompilation acquisition' {
+        It 'Settings schema rejects invalid workspaceCompilation dependencyResolution' {
             if ($PSVersionTable.PSVersion.Major -lt 7) {
                 Set-ItResult -Skipped -Because "Test-Json -SchemaFile requires PowerShell 7"
                 return
@@ -588,9 +588,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = @{
                 workspaceCompilation = @{
                     enabled = $true
-                    acquisition = "latest"
+                    dependencyResolution = "latest"
                     parallelism = 1
-                    toolPackageVersion = "17.0.34.45391"
+                    ALToolVersion = "17.0.34.45391"
                     toolPackageSource = ""
                     toolPackageUrl = ""
                 }

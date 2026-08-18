@@ -55,15 +55,15 @@ try {
         New-Item $testAppOutputFolder -ItemType Directory -Force | Out-Null
     }
 
-    $workspaceCompilationAcquisition = $settings.workspaceCompilation.acquisition
-    if ([string]::IsNullOrWhiteSpace($workspaceCompilationAcquisition)) {
-        $workspaceCompilationAcquisition = "bcCompilerFolder"
+    $workspaceCompilationDependencyResolution = $settings.workspaceCompilation.dependencyResolution
+    if ([string]::IsNullOrWhiteSpace($workspaceCompilationDependencyResolution)) {
+        $workspaceCompilationDependencyResolution = "Artifacts"
     }
-    if ($workspaceCompilationAcquisition -notin @("bcCompilerFolder", "nuget")) {
-        throw "Invalid workspaceCompilation.acquisition '$workspaceCompilationAcquisition'. Valid values are 'bcCompilerFolder' and 'nuget'."
+    if ($workspaceCompilationDependencyResolution -notin @("Artifacts", "NuGet")) {
+        throw "Invalid workspaceCompilation.dependencyResolution '$workspaceCompilationDependencyResolution'. Valid values are 'Artifacts' and 'NuGet'."
     }
-    if ($workspaceCompilationAcquisition -eq "nuget" -and [string]::IsNullOrWhiteSpace($settings.workspaceCompilation.toolPackageVersion)) {
-        throw "workspaceCompilation.toolPackageVersion must be specified when workspaceCompilation.acquisition is 'nuget'."
+    if ($workspaceCompilationDependencyResolution -eq "NuGet" -and [string]::IsNullOrWhiteSpace($settings.workspaceCompilation.ALToolVersion)) {
+        throw "workspaceCompilation.ALToolVersion must be specified when workspaceCompilation.dependencyResolution is 'NuGet'."
     }
 
     # Check for precompile and postcompile overrides
@@ -107,7 +107,7 @@ try {
         }
     }
 
-    # Set up compiler/tool acquisition
+    # Set up compiler/tool dependency resolution
     $compilerFolder = ""
     $alToolPath = ""
     $containerName = GetContainerName($project)
@@ -117,12 +117,12 @@ try {
         $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
     }
 
-    if ($workspaceCompilationAcquisition -eq "nuget") {
+    if ($workspaceCompilationDependencyResolution -eq "NuGet") {
         $toolRoot = Join-Path $buildArtifactFolder "ALTool"
         if (Test-Path $toolRoot) {
             Remove-Item -Path $toolRoot -Recurse -Force
         }
-        $alToolPath = Install-ALToolFromNuGet -ToolPath $toolRoot -PackageVersion $settings.workspaceCompilation.toolPackageVersion -PackageUrl $settings.workspaceCompilation.toolPackageUrl -PackageSource $settings.workspaceCompilation.toolPackageSource
+        $alToolPath = Install-ALToolFromNuGet -ToolPath $toolRoot -PackageVersion $settings.workspaceCompilation.ALToolVersion -PackageUrl $settings.workspaceCompilation.toolPackageUrl -PackageSource $settings.workspaceCompilation.toolPackageSource
         $packageCachePath = Join-Path $buildArtifactFolder "PackageCache"
         if (-not (Test-Path $packageCachePath)) {
             New-Item -Path $packageCachePath -ItemType Directory -Force | Out-Null
@@ -227,7 +227,7 @@ try {
         }
     }
 
-    if ($workspaceCompilationAcquisition -eq "nuget") {
+    if ($workspaceCompilationDependencyResolution -eq "NuGet") {
         $restoreFolders = @(@($appFoldersToBuild) + @($testFoldersToBuild) + @($bcptTestFoldersToBuild) | Where-Object { $_ })
         if ($restoreFolders.Count -gt 0) {
             $restoreWorkspaceFile = Join-Path $buildArtifactFolder "restore.code-workspace"
@@ -278,9 +278,9 @@ try {
         PreCompileApp               = $scriptOverrides['PreCompileApp']
         PostCompileApp              = $scriptOverrides['PostCompileApp']
     }
-    if ($workspaceCompilationAcquisition -eq "nuget") {
+    if ($workspaceCompilationDependencyResolution -eq "NuGet") {
         $buildParams.ALToolPath = $alToolPath
-        # TODO: Decide whether NuGet acquisition needs replacement assembly probing paths.
+        # TODO: Decide whether NuGet dependency resolution needs replacement assembly probing paths.
         $buildParams.AssemblyProbingPaths = @()
     }
     else {

@@ -585,7 +585,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
     }
 
-    Describe 'NuGet AL tool acquisition and restore' {
+    Describe 'NuGet AL tool installation and restore' {
         It 'Resolves the installed AL tool from a Windows tool path' -Skip:((Get-Variable -Name IsLinux -ValueOnly -ErrorAction SilentlyContinue) -or (Get-Variable -Name IsMacOS -ValueOnly -ErrorAction SilentlyContinue)) {
             $toolPath = Join-Path $TestDrive 'tool-win'
             New-Item -Path $toolPath -ItemType Directory -Force | Out-Null
@@ -623,7 +623,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Requires a pinned tool package version' {
-            { Install-ALToolFromNuGet -ToolPath (Join-Path $TestDrive 'tool-no-version') -PackageVersion '' } | Should -Throw "*toolPackageVersion*"
+            { Install-ALToolFromNuGet -ToolPath (Join-Path $TestDrive 'tool-no-version') -PackageVersion '' } | Should -Throw "*ALToolVersion*"
         }
 
         It 'Runs workspace restore with an explicit package cache path' {

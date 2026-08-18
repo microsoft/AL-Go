@@ -81,7 +81,7 @@ function Get-CustomAnalyzers {
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
             if ([string]::IsNullOrWhiteSpace($CompilerFolder)) {
-                throw "URL-based customCodeCops are not supported when workspaceCompilation.acquisition is 'nuget'."
+                throw "URL-based customCodeCops are not supported when workspaceCompilation.dependencyResolution is 'NuGet'."
             }
             # Analyzers live in the Analyzers/ subfolder for platform-layout extensions, or
             # directly in bin/ for framework-dependent / marketplace-packaged extensions.
@@ -260,7 +260,7 @@ function Install-ALToolFromNuGet {
     )
 
     if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
-        throw "workspaceCompilation.toolPackageVersion must be specified when workspaceCompilation.acquisition is 'nuget'."
+        throw "workspaceCompilation.ALToolVersion must be specified when workspaceCompilation.dependencyResolution is 'NuGet'."
     }
 
     if (-not (Test-Path $ToolPath)) {

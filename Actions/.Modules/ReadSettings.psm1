@@ -216,9 +216,9 @@ function GetDefaultSettings
         "useCompilerFolder"                             = $false
         "workspaceCompilation"                          = [ordered]@{
             "enabled"                                   = $false
-            "acquisition"                               = "bcCompilerFolder"
+            "dependencyResolution"                      = "Artifacts"
             "parallelism"                               = 1
-            "toolPackageVersion"                        = ""
+            "ALToolVersion"                             = ""
             "toolPackageSource"                         = ""
             "toolPackageUrl"                            = ""
         }

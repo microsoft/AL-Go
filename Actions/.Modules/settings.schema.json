@@ -544,29 +544,29 @@
                     "type": "boolean",
                     "description": "Enable workspace compilation for building apps"
                 },
-                "acquisition": {
+                "dependencyResolution": {
                     "type": "string",
                     "enum": [
-                        "bcCompilerFolder",
-                        "nuget"
+                        "Artifacts",
+                        "NuGet"
                     ],
-                    "description": "Compiler and symbol acquisition mode for workspace compilation. 'bcCompilerFolder' uses New-BcCompilerFolder. 'nuget' installs the AL Development Tools package and restores symbols with al workspace restore."
+                    "description": "Dependency resolution mode for workspace compilation. 'Artifacts' uses New-BcCompilerFolder. 'NuGet' installs the AL Development Tools package and restores symbols with al workspace restore."
                 },
                 "parallelism": {
                     "type": "integer",
                     "description": "The number of parallel processes to use for workspace compilation. Set to 0 or -1 to use all available processors."
                 },
-                "toolPackageVersion": {
+                "ALToolVersion": {
                     "type": "string",
-                    "description": "Pinned Microsoft.Dynamics.BusinessCentral.Development.Tools package version. Required when workspaceCompilation.acquisition is 'nuget'."
+                    "description": "Pinned Microsoft.Dynamics.BusinessCentral.Development.Tools package version. Required when workspaceCompilation.dependencyResolution is 'NuGet'."
                 },
                 "toolPackageSource": {
                     "type": "string",
-                    "description": "Optional NuGet package source for Microsoft.Dynamics.BusinessCentral.Development.Tools. Used only when workspaceCompilation.acquisition is 'nuget'."
+                    "description": "Optional NuGet package source for Microsoft.Dynamics.BusinessCentral.Development.Tools. Used only when workspaceCompilation.dependencyResolution is 'NuGet'."
                 },
                 "toolPackageUrl": {
                     "type": "string",
-                    "description": "Optional direct .nupkg URL for Microsoft.Dynamics.BusinessCentral.Development.Tools. Used only when workspaceCompilation.acquisition is 'nuget'."
+                    "description": "Optional direct .nupkg URL for Microsoft.Dynamics.BusinessCentral.Development.Tools. Used only when workspaceCompilation.dependencyResolution is 'NuGet'."
                 }
             },
             "additionalProperties": false
