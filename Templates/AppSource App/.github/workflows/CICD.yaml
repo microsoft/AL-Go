@@ -245,6 +245,9 @@ jobs:
       codeunitRange: ${{ matrix.linuxCodeunitRange }}
       dependencyArtifactSubdir: ${{ matrix.linuxDependencySubdir }}
       artifactNameSuffix: ${{ matrix.linuxArtifactNameSuffix }}
+      appVersionMajorMinor: ${{ matrix.linuxAppVersionMajorMinor }}
+      appVersionBuild: ${{ matrix.linuxAppVersionBuild }}
+      appVersionRevision: ${{ matrix.linuxAppVersionRevision }}
 
   # Re-shapes the plain "bc-linux-build-<suffix>" artifact BuildLinux's compile step
   # uploaded (Apps/ and TestApps/ subfolders, bc-linux-agnostic naming) into AL-Go's own

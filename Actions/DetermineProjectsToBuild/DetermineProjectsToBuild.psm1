@@ -86,6 +86,73 @@ function ShouldBuildProject {
 
 <#
 .Synopsis
+    Computes appBuild/appRevision from the current GitHub Actions run context (GITHUB_RUN_NUMBER,
+    GITHUB_RUN_ATTEMPT) the same way Actions/ReadSettings/ReadSettings.ps1 does for the Windows
+    pipeline, so a project on the Linux fast lane gets the identical version numbers the Windows
+    pipeline would have computed for it.
+
+.Description
+    Get-VersionNumber (AL-Go-Helper.ps1) only reads whatever's already in Settings.appBuild/
+    appRevision - it does not compute them from the run context itself. In the real Windows
+    pipeline, Actions/ReadSettings/ReadSettings.ps1 does that computation as a separate step
+    before Get-VersionNumber is ever called. DetermineProjectsToBuild runs in the Initialization
+    job, before that step exists for a Linux fast lane project (which never runs the Windows
+    ReadSettings action at all), so this mirrors that same computation here instead of leaving
+    appBuild/appRevision at their schema defaults.
+
+    Deliberately a standalone duplicate, not a shared function with ReadSettings.ps1: that script
+    ships as part of upstream microsoft/AL-Go, and this fork's rule 2 (see this repo's CLAUDE.md)
+    is to keep fork changes additive rather than rewriting existing upstream logic in place, to
+    stay cleanly mergeable from upstream. Keep this in sync by hand if that switch ever changes.
+
+.PARAMETER Settings
+    The resolved settings hashtable. Mutated in place, matching ReadSettings.ps1's own style.
+#>
+function Set-RunNumberVersioning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Settings
+    )
+    if ($ENV:GITHUB_EVENT_NAME -in @("pull_request_target", "pull_request", "merge_group")) {
+        $Settings.versioningStrategy = 15
+    }
+    if ($Settings.appBuild -eq [int32]::MaxValue) {
+        $Settings.versioningStrategy = 15
+    }
+    if ($Settings.versioningStrategy -eq -1) {
+        # Get-VersionNumber derives everything from the resolved artifact URL for this strategy -
+        # nothing to compute here.
+        return
+    }
+    switch ($Settings.versioningStrategy -band 15) {
+        0 {
+            # Use RUN_NUMBER and RUN_ATTEMPT
+            $Settings.appBuild = $Settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+            $Settings.appRevision = [Int32]($ENV:GITHUB_RUN_ATTEMPT) - 1
+        }
+        2 {
+            # USE DATETIME
+            $Settings.appBuild = [Int32]([DateTime]::UtcNow.ToString('yyyyMMdd'))
+            $Settings.appRevision = [Int32]([DateTime]::UtcNow.ToString('HHmmss'))
+        }
+        3 {
+            # USE BUILD from app.json and RUN_NUMBER
+            $Settings.appBuild = -1
+            $Settings.appRevision = $Settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+        }
+        15 {
+            # Use maxValue and RUN_NUMBER
+            $Settings.appBuild = [Int32]::MaxValue
+            $Settings.appRevision = $Settings.runNumberOffset + [Int32]($ENV:GITHUB_RUN_NUMBER)
+        }
+        default {
+            Write-Host "::warning::Unsupported versioningStrategy $($Settings.versioningStrategy) while computing the Linux fast lane app version centrally; leaving appBuild/appRevision unchanged."
+        }
+    }
+}
+
+<#
+.Synopsis
     Creates buils dimensions for a list of projects.
 
 .Outputs
@@ -100,6 +167,7 @@ function ShouldBuildProject {
     - linuxCodeunitRange: pipe-separated "from..to" span(s) built from the idRanges declared in each test app's app.json, used to scope the Linux fast lane's test-codeunit discovery; empty if no idRanges could be read (the fast lane then falls back to its own unbounded default)
     - linuxDependencySubdir: sanitized project name used as the subfolder under the LinuxFastLaneDependencies artifact holding this project's third-party (appDependencyProbingPaths) and same-repo project dependency .apps; empty if the project has none
     - linuxArtifactNameSuffix: "<sanitized project>-<buildMode>", used as bc-linux's compiled-apps upload suffix ("bc-linux-build-<suffix>") and read back by the PublishLinuxArtifacts job to re-shape that artifact into AL-Go's own Apps/TestApps naming; empty when linuxFastLane is false
+    - linuxAppVersionMajorMinor / linuxAppVersionBuild / linuxAppVersionRevision: the same Major.Minor/Build/Revision Get-VersionNumber computes for the Windows pipeline's own Update-AppJsonProperties call, passed through to bc-test-from-source.yml's app_version_* inputs so the Linux fast lane's compiled apps carry a version that climbs run over run instead of reusing whatever's committed in app.json (which BC's Deploy step would then see as no higher than what's already installed, and skip). Blank/0 when linuxFastLane is false or the value couldn't be resolved.
     - artifact: the resolved BC artifact URL for this project (best-effort resolved centrally here, the same way the project's own "Determine ArtifactUrl" build step would); empty if it couldn't be resolved, in which case the build step resolves it itself as a fallback
     - artifactCacheKey: cache key for the Cache Business Central Artifacts step, mirroring DetermineArtifactUrl.ps1's own logic (set only when useCompilerFolder is true and symbolsSource is not 'nuGet'); empty otherwise, or when artifact couldn't be resolved
 #>
@@ -195,6 +263,9 @@ function CreateBuildDimensions {
         $linuxTestAppDirs = ''
         $linuxCodeunitRange = ''
         $linuxDependencySubdir = ''
+        $linuxAppVersionMajorMinor = ''
+        $linuxAppVersionBuild = 0
+        $linuxAppVersionRevision = 0
         $artifact = ''
         $artifactCacheKey = ''
 
@@ -266,6 +337,28 @@ function CreateBuildDimensions {
             Write-Host "::warning::Could not resolve the BC artifact URL centrally for project $project ($($_.Exception.Message)); its own build job will resolve it as a fallback."
             if ($linuxFastLane) {
                 Write-Host "::warning::Could not resolve a concrete BC version from the artifact setting for project $project ($($_.Exception.Message)); the Linux fast lane will use its own default version. Pin the artifact setting to a concrete version to control this."
+            }
+        }
+
+        if ($linuxFastLane) {
+            try {
+                # Independent of the artifact resolution above succeeding: Get-VersionNumber only reads
+                # Settings.artifact for versioningStrategy -1 ("derive the version from the artifact
+                # setting"), every other strategy ignores it completely. Gating this on artifact
+                # resolution having succeeded would silently reintroduce the exact bug this fixes (see
+                # bc-linux issue #38) whenever artifact resolution fails for a reason that has nothing
+                # to do with versioning. $artifact is '' when resolution above failed - fine for every
+                # strategy except -1, which then throws here and is caught below like everything else.
+                $versionSettings = $resolvedSettings.Clone()
+                $versionSettings.artifact = $artifact
+                Set-RunNumberVersioning -Settings $versionSettings
+                $versionNumber = Get-VersionNumber -Settings $versionSettings
+                $linuxAppVersionMajorMinor = $versionNumber.MajorMinorVersion
+                $linuxAppVersionBuild = $versionNumber.BuildNumber
+                $linuxAppVersionRevision = $versionNumber.RevisionNumber
+            }
+            catch {
+                Write-Host "::warning::Could not resolve the app version centrally for project $project ($($_.Exception.Message)); the Linux fast lane will compile with each app's own committed app.json version, which BC's Deploy step may then skip as not higher than what's already installed."
             }
         }
 
@@ -357,6 +450,9 @@ function CreateBuildDimensions {
                 linuxCodeunitRange = $linuxCodeunitRange
                 linuxDependencySubdir = $linuxDependencySubdir
                 linuxArtifactNameSuffix = $linuxArtifactNameSuffix
+                linuxAppVersionMajorMinor = $linuxAppVersionMajorMinor
+                linuxAppVersionBuild = $linuxAppVersionBuild
+                linuxAppVersionRevision = $linuxAppVersionRevision
                 artifact = $artifact
                 artifactCacheKey = $artifactCacheKey
             }

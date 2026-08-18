@@ -66,13 +66,28 @@ on:
         required: false
         default: ''
         type: string
+      appVersionMajorMinor:
+        description: Major.Minor to stamp into each compiled app's app.json before compile, from AL-Go's own Get-VersionNumber (the same computation Update-AppJsonProperties uses for the Windows pipeline). Blank keeps each app's own committed major.minor.
+        required: false
+        default: ''
+        type: string
+      appVersionBuild:
+        description: Build (3rd) segment to stamp into each compiled app's app.json before compile. 0 keeps the committed build segment - without this climbing every run, BC's Deploy step sees a same-or-lower version than what's already installed and skips the app.
+        required: false
+        default: 0
+        type: number
+      appVersionRevision:
+        description: Revision (4th) segment to stamp into each compiled app's app.json before compile. 0 keeps the committed revision segment.
+        required: false
+        default: 0
+        type: number
 
 jobs:
   BuildALGoProjectLinux:
     name: ${{ inputs.projectName }} (${{ inputs.buildMode }}, Linux fast lane)
     # Pinned to a specific commit (not @master) so an upstream change in
     # bc-linux can't silently break this repo's PR gate.
-    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@00cd8e91485cbe293ae81498f16d65d154722868
+    uses: StefanMaron/MsDyn365Bc.On.Linux/.github/workflows/bc-test-from-source.yml@badaa87e011ba3bd39063ac4b5cf8bfdde770edd
     with:
       bc_version: ${{ inputs.bcVersion != '' && inputs.bcVersion || '27.5' }}
       bc_country: ${{ inputs.bcCountry }}
@@ -83,3 +98,6 @@ jobs:
       extra_symbols_artifact_name: ${{ inputs.dependencyArtifactSubdir != '' && 'LinuxFastLaneDependencies' || '' }}
       extra_symbols_artifact_subdir: ${{ inputs.dependencyArtifactSubdir }}
       artifact_name_suffix: ${{ inputs.artifactNameSuffix }}
+      app_version_major_minor: ${{ inputs.appVersionMajorMinor }}
+      app_version_build: ${{ inputs.appVersionBuild }}
+      app_version_revision: ${{ inputs.appVersionRevision }}

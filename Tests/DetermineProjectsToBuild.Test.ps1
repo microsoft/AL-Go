@@ -1434,6 +1434,102 @@ Describe "Get-ProjectsToBuild" {
         Should -Invoke DetermineArtifactUrl -ModuleName DetermineProjectsToBuild -Times 2 -Exactly
     }
 
+    It 'computes linuxAppVersionMajorMinor/Build/Revision for a linuxFastLane project from the run context, keeping the app''s own major.minor' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '2.3.0.0'; dependencies = @() } | ConvertTo-Json)
+
+        # versioningStrategy 0: neither the -1 (artifact-derived) nor the +16 (repoVersion-forced)
+        # branch of Get-VersionNumber applies, so major.minor is retained from the app's own
+        # app.json (blank MajorMinorVersion) while build/revision come from GITHUB_RUN_NUMBER/
+        # GITHUB_RUN_ATTEMPT via Set-RunNumberVersioning - the same run context
+        # Actions/ReadSettings/ReadSettings.ps1 uses for the Windows pipeline.
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; versioningStrategy = 0; runNumberOffset = 0 }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock AnalyzeRepo { param($settings, $baseFolder, $project, [switch]$doNotCheckArtifactSetting, [switch]$doNotIssueWarnings) $settings } -ModuleName DetermineProjectsToBuild
+        Mock DetermineArtifactUrl { param($projectSettings, [switch]$doNotIssueWarnings) 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1' } -ModuleName DetermineProjectsToBuild
+
+        $savedRunNumber = $env:GITHUB_RUN_NUMBER
+        $savedRunAttempt = $env:GITHUB_RUN_ATTEMPT
+        $env:GITHUB_RUN_NUMBER = '142'
+        $env:GITHUB_RUN_ATTEMPT = '3'
+        try {
+            $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        }
+        finally {
+            $env:GITHUB_RUN_NUMBER = $savedRunNumber
+            $env:GITHUB_RUN_ATTEMPT = $savedRunAttempt
+        }
+
+        $dimension = $buildOrder[0].buildDimensionsLinux | Where-Object { $_.project -eq 'Project1' }
+        $dimension.linuxAppVersionMajorMinor | Should -BeExactly ''
+        $dimension.linuxAppVersionBuild | Should -BeExactly 142
+        $dimension.linuxAppVersionRevision | Should -BeExactly 2
+    }
+
+    It 'leaves linuxAppVersionMajorMinor/Build/Revision at their no-op defaults for a non-linuxFastLane project' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; versioningStrategy = 0; runNumberOffset = 0 }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock AnalyzeRepo { param($settings, $baseFolder, $project, [switch]$doNotCheckArtifactSetting, [switch]$doNotIssueWarnings) $settings } -ModuleName DetermineProjectsToBuild
+        Mock DetermineArtifactUrl { param($projectSettings, [switch]$doNotIssueWarnings) 'https://bcartifacts.azureedge.net/sandbox/24.0.12345.0/w1' } -ModuleName DetermineProjectsToBuild
+
+        # Not a linuxFastLane project, so Set-RunNumberVersioning never runs for it - the run
+        # context shouldn't matter, but pin it anyway so the test can't accidentally pass by luck.
+        $savedRunNumber = $env:GITHUB_RUN_NUMBER
+        $savedRunAttempt = $env:GITHUB_RUN_ATTEMPT
+        $env:GITHUB_RUN_NUMBER = '142'
+        $env:GITHUB_RUN_ATTEMPT = '3'
+        try {
+            $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+        }
+        finally {
+            $env:GITHUB_RUN_NUMBER = $savedRunNumber
+            $env:GITHUB_RUN_ATTEMPT = $savedRunAttempt
+        }
+
+        $dimension = $buildOrder[0].buildDimensions | Where-Object { $_.project -eq 'Project1' }
+        $dimension.linuxAppVersionMajorMinor | Should -BeExactly ''
+        $dimension.linuxAppVersionBuild | Should -BeExactly 0
+        $dimension.linuxAppVersionRevision | Should -BeExactly 0
+    }
+
+    It 'still computes linuxAppVersionBuild/Revision when central artifact resolution fails (not tied to versioningStrategy -1)' {
+        # A caller not using versioningStrategy -1 doesn't need the resolved artifact URL for its
+        # version at all - an unrelated artifact-resolution failure (network hiccup, bad artifact
+        # setting) must not also silently drop the version stamp back to the bc-linux issue #38 bug.
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; country = 'fail' } | ConvertTo-Json) -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -type File -Force
+        Set-Content -Path "$baseFolder/Project1/app/app.json" -Value (@{ id = [Guid]::NewGuid().ToString(); name = 'App'; publisher = 'Test'; version = '2.3.0.0'; dependencies = @() } | ConvertTo-Json)
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false; versioningStrategy = 0; runNumberOffset = 0 }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        Mock AnalyzeRepo { param($settings, $baseFolder, $project, [switch]$doNotCheckArtifactSetting, [switch]$doNotIssueWarnings) $settings } -ModuleName DetermineProjectsToBuild
+        Mock DetermineArtifactUrl { param($projectSettings, [switch]$doNotIssueWarnings) throw "Simulated artifact resolution failure" } -ModuleName DetermineProjectsToBuild
+
+        $savedRunNumber = $env:GITHUB_RUN_NUMBER
+        $savedRunAttempt = $env:GITHUB_RUN_ATTEMPT
+        $env:GITHUB_RUN_NUMBER = '142'
+        $env:GITHUB_RUN_ATTEMPT = '3'
+        try {
+            { $script:buildOrder = (Get-ProjectsToBuild -baseFolder $baseFolder)[4] } | Should -Not -Throw
+        }
+        finally {
+            $env:GITHUB_RUN_NUMBER = $savedRunNumber
+            $env:GITHUB_RUN_ATTEMPT = $savedRunAttempt
+        }
+
+        $dimension = $script:buildOrder[0].buildDimensionsLinux | Where-Object { $_.project -eq 'Project1' }
+        $dimension.artifact | Should -BeExactly ''
+        $dimension.linuxAppVersionMajorMinor | Should -BeExactly ''
+        $dimension.linuxAppVersionBuild | Should -BeExactly 142
+        $dimension.linuxAppVersionRevision | Should -BeExactly 2
+    }
+
     It 'sets artifactCacheKey only when useCompilerFolder is true and symbolsSource is not nuGet' {
         foreach ($case in @(
             @{ useCompilerFolder = $true; symbolsSource = ''; expectKey = $true }
