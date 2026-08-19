@@ -1,32 +1,12 @@
 <#
 .SYNOPSIS
-    Built-in test executor that drives Microsoft's headless `al runtests` (AlTool) CLI while
-    producing JUnit XML compatible with AL-Go AnalyzeTests and downstream processing.
+    Executes tests with AlTool and produces JUnit XML compatible with AL-Go AnalyzeTests.
 
 .DESCRIPTION
-    This module is the default test executor used by the RunTests action (Invoke-AlGoTestRun) when no
-    RunTestsInBcContainer override script is supplied. BcContainerHelper remains responsible for
-    reading app metadata, resolving container configuration, discovering the company, and enumerating
-    tests. AlTool replaces only the execution of each test codeunit. For a single test app (identified
-    by extensionId), this module:
-      1. Ensures the `al` CLI is installed (dotnet global tool, prerelease).
-      2. Resolves the kept-alive container's on-prem connection settings (server/instance/port)
-         host-side from the container name via BcContainerHelper, and generates a throw-away AL
-         project with a launch.json so `al runtests` has connection settings.
-      3. Enumerates the app's test codeunits + methods via Get-TestsFromBcContainer.
-      4. Runs `al runtests <codeunitId> --testmethods` once per test codeunit (each in its own
-         session), with a rerun pass that retries only methods that produced no result.
-      5. Emits a JUnit results file compatible with AL-Go AnalyzeTests and downstream processing.
-
-    Credentials are taken from the parameters' PSCredential and exposed to `al` through the
-    BC_SERVER_USERNAME / BC_SERVER_PASSWORD environment variables (the only auth mechanism the CLI
-    supports for on-prem UserPassword).
-
-    Known altool output quirks handled here:
-      - The Results: block emits a phantom `PASS OnRun (..)` trigger entry and a trailing
-        empty-named aggregate entry per codeunit; both are dropped so counts match the real methods.
-      - Failure text is the indented lines after `FAIL <name> (Nms)` up to `AL Callstack:`; the
-        callstack follows until the next result line.
+    This is the default RunTests executor when no RunTestsInBcContainer override is supplied.
+    BcContainerHelper provides app metadata, container configuration, company discovery, and test
+    enumeration; AlTool executes each codeunit in a separate session. Methods without a result are
+    retried once, and the final outcomes are written as JUnit.
 #>
 
 $ErrorActionPreference = "Stop"
@@ -37,10 +17,8 @@ $script:AlToolPackageId = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
 .SYNOPSIS
     Invokes a native executable and returns normalized output with its exit code.
 .DESCRIPTION
-    Temporarily makes native stderr nonterminating while the executable runs so Windows PowerShell 5
-    can merge stderr into the captured output instead of raising NativeCommandError under a caller's
-    ErrorActionPreference of Stop. The original preference is restored immediately after the native
-    invocation. Command resolution and other invocation failures remain terminating errors.
+    Captures native stderr without terminating under Windows PowerShell 5 and restores the caller's
+    error preference after invocation. Command resolution and invocation failures remain terminating.
 .PARAMETER FilePath
     The native executable name or path.
 .PARAMETER ArgumentList
@@ -90,9 +68,8 @@ function Invoke-AlNativeCommand {
 .SYNOPSIS
     Ensures the `al` CLI is available on PATH, installing the prerelease dotnet global tool.
 .DESCRIPTION
-    Installs (or, when already present, leaves in place) the AL developer tools as a dotnet global
-    tool. The install is guarded by a named mutex so concurrent jobs on the same runner do not
-    collide on the shared tools store, and availability is re-checked after acquiring the mutex.
+    Installs the AL developer tools when unavailable. A named mutex prevents concurrent jobs from
+    modifying the shared tool store at the same time.
 .OUTPUTS
     [string] The resolved `al` version string.
 #>
@@ -179,9 +156,8 @@ function Install-AlTool {
 .SYNOPSIS
     Resolves the on-prem connection settings (server URL, instance, dev-service port) for a container.
 .DESCRIPTION
-    BcContainerHelper's Run-TestsInBcContainer only needs the container name and resolves the
-    endpoint internally, but `al runtests` needs an explicit server/instance/port. This reads them
-    host-side from the container's server configuration, falling back to conventional defaults.
+    Reads the container server configuration required by AlTool and falls back to conventional
+    defaults when it is unavailable.
 .PARAMETER ContainerName
     The name of the build container.
 .OUTPUTS
@@ -212,8 +188,7 @@ function Get-AlToolConnection {
 
 <#
 .SYNOPSIS
-    Creates a throw-away AL project folder with a launch.json targeting the container so `al runtests`
-    can resolve connection settings.
+    Creates the temporary AL project used to connect AlTool to the container.
 .PARAMETER ContainerName
     The name of the build container.
 .PARAMETER Tenant
@@ -272,8 +247,8 @@ function New-AlToolProject {
 .SYNOPSIS
     Resolves the company `al runtests` should target.
 .DESCRIPTION
-    Honors an explicitly requested company name first, then falls back to the container's default
-    (preferring an evaluation company) via Get-CompanyInBcContainer.
+    Uses an explicitly requested company or selects a container company, preferring an evaluation
+    company.
 .PARAMETER ContainerName
     The name of the build container.
 .PARAMETER Tenant
@@ -310,13 +285,9 @@ function Get-AlToolCompany {
 
 <#
 .SYNOPSIS
-    Builds disabled-test lookups from the disabledTests list: per-method keys plus whole-codeunit
-    names (where a `*` wildcard method disables the entire codeunit).
+    Builds case-insensitive disabled-method and disabled-codeunit lookups.
 .DESCRIPTION
-    Each disabledTests entry has a codeunitName and either a single 'method', an array of methods, or
-    the wildcard '*'. A '*' entry means the ENTIRE codeunit is disabled, so it must exclude every
-    method of that codeunit - not a literal method named '*'. Names/keys are lowercased for
-    case-insensitive matching.
+    A `*` method disables the complete codeunit instead of a method named `*`.
 .PARAMETER DisabledTests
     Array of disabled-test entries.
 .OUTPUTS
@@ -348,12 +319,9 @@ function Get-DisabledTestKeySet {
 
 <#
 .SYNOPSIS
-    Enumerates the test codeunits + enabled methods for an app in the container.
+    Enumerates enabled test methods for an app in the container.
 .DESCRIPTION
-    Uses Get-TestsFromBcContainer with the app's extensionId to list every test codeunit and method.
-    When a disabledTests list is supplied, disabled methods (and whole codeunits marked with a `*`
-    wildcard) are filtered out here, because `al runtests` has no equivalent of BCH's run-time
-    DisableTestMethod control.
+    Removes configured disabled methods and codeunits before AlTool execution.
 .PARAMETER Parameters
     Hashtable with containerName, tenant, credential, extensionId and optionally testType and
     disabledTests.
@@ -511,9 +479,7 @@ function Invoke-AlRunTestsForCodeunit {
         [Parameter(Mandatory = $true)][hashtable] $Connection
     )
 
-    # `al runtests` emits structured JSON by default in newer builds; `--raw` restores the
-    # human-readable text summary ("Test run completed: ..." + a "Results:" block of
-    # "PASS|FAIL|SKIP <name> (Nms)" lines) that ConvertFrom-AlRunTestsOutput parses.
+    # Use textual output because ConvertFrom-AlRunTestsOutput parses the Results block.
     $alArgs = @(
         'runtests', $CodeunitId,
         '--project', $ProjectPath,
@@ -623,7 +589,7 @@ function Add-JUnitTestSuite {
         $tc.SetAttribute("name", $method)
 
         if ($null -eq $res) {
-            # Method was requested but the runner produced no result (e.g. connect failure) -> error.
+            # Missing results remain failures in the final JUnit output.
             $tc.SetAttribute("time", "0")
             $failure = $Doc.CreateElement("failure")
             $failure.SetAttribute("message", "No result produced by al runtests")
@@ -679,15 +645,10 @@ function Merge-MissingAlTestResults {
 .SYNOPSIS
     Runs all of a single app's test codeunits through `al runtests` and writes a JUnit results file.
 .DESCRIPTION
-    The built-in default test runner for the RunTests action. Expects $Parameters to contain
-    containerName, credential, extensionId and (optionally) tenant, companyName, appName,
-    disabledTests and JUnitResultFileName. BcContainerHelper supplies app metadata, container
-    configuration, company discovery, and test enumeration; AlTool replaces only test execution.
-    Runs each of the app's test codeunits in its own `al runtests` invocation, then re-runs any method
-    that produced no result once, and appends JUnit output compatible with AL-Go AnalyzeTests and
-    downstream processing. Returns whether every executed method passed.
+    Runs each codeunit in a separate session, retries methods without a result once, and appends
+    JUnit output compatible with AL-Go AnalyzeTests.
 .PARAMETER Parameters
-    The BcContainerHelper-shaped test parameters built by Invoke-AlGoTestRun.
+    Test parameters containing containerName, credential, extensionId, and optional runner settings.
 .OUTPUTS
     [bool] $true if all executed methods passed; $false otherwise.
 #>
@@ -708,8 +669,7 @@ function Invoke-AlToolTestRun {
         throw "Invoke-AlToolTestRun requires 'extensionId' in parameters."
     }
 
-    # Expose credentials to the al CLI (only auth channel it supports for on-prem UserPassword).
-    # Set inside the try below so the finally always clears them from the process environment.
+    # Set credentials inside the guarded scope so they are always removed after the run.
     if ($Parameters.credential -isnot [System.Management.Automation.PSCredential]) {
         throw "Invoke-AlToolTestRun requires a PSCredential in parameters.credential."
     }
@@ -736,8 +696,7 @@ function Invoke-AlToolTestRun {
 
         $hostname = [System.Net.Dns]::GetHostName()
 
-        # Append to an existing JUnit file when present (Invoke-AlGoTestRun runs one app at a time
-        # into the same TestResults.xml), matching BCH's AppendToJUnitResultFile behavior.
+        # Multiple test apps append to the same result file.
         $junitFile = if ($Parameters.ContainsKey("JUnitResultFileName")) { $Parameters.JUnitResultFileName } else { "" }
         $doc = New-Object System.Xml.XmlDocument
         $suites = $null
@@ -760,12 +719,10 @@ function Invoke-AlToolTestRun {
         }
 
         $allPassed = $true
-        $merged = @{}         # merged[codeunitId] = @{ method -> result }
+        $merged = @{}
         $totalElapsed = 0.0
 
-        # PRIMARY execution: run each test codeunit in its OWN `al runtests <id> --testmethods`
-        # invocation (a fresh session per codeunit). The official altool has no batch/plan mode,
-        # so per-codeunit is the only supported execution model.
+        # Run each codeunit in a fresh session.
         foreach ($cu in $codeunits) {
             $cid = "$($cu.Id)"
             $methods = @($cu.Tests | ForEach-Object { "$_" })
@@ -779,8 +736,7 @@ function Invoke-AlToolTestRun {
             $merged[$cid] = $run.Results
         }
 
-        # Rerun unreported methods. Each affected codeunit runs again in its OWN `al runtests` call
-        # (a fresh session). Existing Pass, Fail, and Skip outcomes are final and are never retried.
+        # Retry only unreported methods; existing outcomes are final.
         $isoGroups = @()
         foreach ($cu in $codeunits) {
             $cid = "$($cu.Id)"
@@ -804,9 +760,7 @@ function Invoke-AlToolTestRun {
             }
         }
 
-        # Distribute the app's REAL al wall-clock across its codeunits weighted by each codeunit's
-        # method-ms share (al's per-method `ms` under-reports real work, so it is used only for
-        # weighting, not as the absolute suite time). Equal split as a fallback.
+        # Attribute the app duration across codeunits using method durations as weights.
         $cuMsShare = @{}
         $grandMs = 0.0
         foreach ($cu in $codeunits) {
@@ -817,7 +771,6 @@ function Invoke-AlToolTestRun {
             $grandMs += $ms
         }
 
-        # Build one JUnit <testsuite> per codeunit from the merged results.
         $idx = 0
         foreach ($cu in $codeunits) {
             $idx++
@@ -860,7 +813,7 @@ function Invoke-AlToolTestRun {
         return $allPassed
     }
     finally {
-        # Do not let the container credential linger in the process environment after the run.
+        # Do not retain container credentials after the run.
         Remove-Item Env:\BC_SERVER_USERNAME -ErrorAction SilentlyContinue
         Remove-Item Env:\BC_SERVER_PASSWORD -ErrorAction SilentlyContinue
     }

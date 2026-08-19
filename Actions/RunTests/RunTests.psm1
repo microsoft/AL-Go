@@ -2,13 +2,8 @@
 .SYNOPSIS
     Helper module for the RunTests action.
 .DESCRIPTION
-    Contains the logic for running the normal tests (testFolders) of an AL-Go project against a
-    build container that was created and kept alive by the RunPipeline action. Kept in a module
-    so the logic can be unit tested independently of the action entry script.
-
-    By default the tests are run through the AlTool (`al runtests`) runner in AlToolTestRunner.psm1.
-    A RunTestsInBcContainer override script, when supplied, replaces that default with the
-    BcContainerHelper test runner (this is how, for example, BCApps supplies its own runner).
+    Selects and runs normal test apps against the kept-alive build container. AlTool is the default
+    executor; a RunTestsInBcContainer override can replace it.
 #>
 
 Import-Module (Join-Path $PSScriptRoot 'AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
@@ -18,12 +13,9 @@ function Get-TestAppsToRun {
     .SYNOPSIS
         Determines the set of test app files to run tests in.
     .DESCRIPTION
-        Reads app IDs from the analyzed normal testFolders and selects only matching compiled apps
-        from the build artifacts TestApps folder. This excludes BCPT apps that share that artifact
-        folder. When runTestsInAllInstalledTestApps is enabled, test apps installed from previous
-        jobs (listed in installTestAppsJson) are included independently. Installed test apps wrapped
-        in parentheses are unwrapped (matching Run-AlPipeline semantics where such apps are otherwise
-        not tested).
+        Selects compiled apps matching normal testFolders and excludes BCPT-only apps. When
+        runTestsInAllInstalledTestApps is enabled, installed test apps are included independently.
+        Parentheses around installed app paths are removed to match RunPipeline behavior.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -99,9 +91,8 @@ function Get-DisabledTestsForApp {
     .SYNOPSIS
         Gets the disabled tests configured for a test app.
     .DESCRIPTION
-        Finds disabledTests.json files recursively under the matching source test folder and
-        <appId>.disabledTests.json files recursively under the project folder. Each JSON entry is
-        converted to a recursive hashtable before it is passed to the test runner.
+        Loads disabledTests.json files recursively under the matching test folder and project-wide
+        <appId>.disabledTests.json files.
     .PARAMETER settings
         The analyzed AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -155,8 +146,8 @@ function Copy-TestResultsToBuildArtifacts {
     .SYNOPSIS
         Copies an existing test result file to the project build artifacts folder.
     .DESCRIPTION
-        Preserves the canonical test result file in the project root for AnalyzeTests and copies it
-        to .buildartifacts for artifact upload. If no result file was produced, no file is created.
+        Preserves the project result for AnalyzeTests and creates an artifact copy only when a result
+        exists.
     .PARAMETER projectPath
         The full path to the project folder.
     .PARAMETER testResultsFile
@@ -186,9 +177,8 @@ function Export-AlGoContainerEventLog {
     .SYNOPSIS
         Exports the kept-alive container event log to the project folder.
     .DESCRIPTION
-        Calls Get-BcContainerEventLog with containerName and doNotOpen, then copies the completed
-        export to ContainerEventLog.evtx in the project folder.
-        Any existing diagnostic is replaced only after the helper returns a readable export file.
+        Replaces ContainerEventLog.evtx only after a readable export is available, preserving an
+        existing diagnostic when export fails.
     .PARAMETER projectPath
         The full path to the project folder.
     .PARAMETER containerName
@@ -218,15 +208,10 @@ function Invoke-AlGoTestRun {
     .SYNOPSIS
         Runs the normal tests for an AL-Go project against a kept-alive build container.
     .DESCRIPTION
-        Runs tests in each test app against the given container and writes the results to
-        TestResults.xml in the project root for AnalyzeTests. When a result file is produced, it is
-        also copied to .buildartifacts for artifact upload before test failures are surfaced. Honors
-        the treatTestFailuresAsWarnings setting. By default the tests are run through the AlTool
-        (`al runtests`) runner. When a RunTestsInBcContainer override script is provided, it is used
-        instead of the built-in AlTool runner. After every outcome, including no selected test apps,
-        the kept-alive container event log is refreshed in ContainerEventLog.evtx in the project
-        folder. A capture failure is terminating unless the test path is already terminating, in
-        which case the capture failure is reported as a warning and the original error is preserved.
+        Runs each selected test app with AlTool or a RunTestsInBcContainer override. Preserves
+        TestResults.xml for AnalyzeTests, copies produced results to .buildartifacts, and refreshes
+        ContainerEventLog.evtx after every outcome. Event-log errors do not replace an existing test
+        error.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath

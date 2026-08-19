@@ -12,20 +12,12 @@ Param(
     Runs the normal tests (testFolders) for an AL-Go project against the build container
     created and kept alive by the RunPipeline action.
 .DESCRIPTION
-    Runs the normal tests (testFolders) of an AL-Go project against the build container that the
-    RunPipeline action created and kept alive. This runs as part of the build when the
-    useSeparateTestAction setting is enabled; when it is not, RunPipeline runs the tests instead.
-    Results are written to TestResults.xml in the project folder for AnalyzeTests and copied to
-    .buildartifacts/TestResults.xml for artifact upload when a result file is produced.
-    After test execution, the kept-alive container event log is refreshed in
-    ContainerEventLog.evtx in the project folder.
-
-    Only normal tests (testFolders) are run here. BCPT and page scripting tests are run by the
-    RunPipeline action.
+    Runs normal tests in eligible separate-test builds. Test results remain in the project folder
+    for AnalyzeTests and are copied to .buildartifacts when produced. The action also refreshes the
+    project container event log for failure diagnostics. BCPT and page scripting tests remain in
+    RunPipeline.
 .PARAMETER token
-    The GitHub token running the action. It is exposed as the _token environment variable so
-    downstream test override scripts (for example, BCApps test tolerance, which downloads the
-    unstable-tests artifact) can authenticate against GitHub.
+    The GitHub token running the action. It is exposed to test override scripts as _token.
 .PARAMETER project
     Project folder.
 .PARAMETER installTestAppsJson
@@ -44,10 +36,7 @@ function Get-TestRunnerCredential {
     .SYNOPSIS
         Returns the credential used by the test runner to connect to the build container.
     .DESCRIPTION
-        RunPipeline creates the container and keeps it alive when useSeparateTestAction is set.
-        When RunPipeline surfaces the container credential (masked, as base64-encoded JSON in
-        the containerCredential environment variable), it is used here so the test runner can
-        connect to the same container. Otherwise a default credential is used.
+        Uses the credential supplied by RunPipeline, with a generated fallback when none is present.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The container credential is surfaced by RunPipeline as plain text')]
     param()
@@ -68,19 +57,17 @@ $projectPath = Join-Path $baseFolder $project
 Write-Host "Use settings"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
-# Surface the token so RunTestsInBcContainer override scripts (e.g. BCApps test tolerance) can authenticate against GitHub.
+# Make the token available to RunTestsInBcContainer overrides.
 $ENV:_token = $token
 
-# Analyze the repository to determine the test folders (and other test related settings)
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 
-# Resolve the container kept alive by RunPipeline (name is deterministic per project, also exported to the environment).
+# Prefer the container selected by RunPipeline.
 $containerName = $ENV:containerName
 if (-not $containerName) {
     $containerName = GetContainerName($project)
 }
 
-# Credentials used to connect to the build container.
 $credential = Get-TestRunnerCredential
 
 # A RunTestsInBcContainer override script, if present, replaces the built-in AlTool test runner.

@@ -22,12 +22,10 @@ Param(
 function New-KeepAliveContainerCredential {
     <#
     .SYNOPSIS
-        Generates a credential used to create a build container that is kept alive for the RunTests action.
+        Creates a credential for a build container kept alive for the RunTests action.
     .DESCRIPTION
-        When useSeparateTestAction is enabled, RunPipeline keeps the build container alive so the RunTests
-        action can run tests against it. BcContainerHelper requires an explicit credential when a container
-        is kept (otherwise it is created with a random password that cannot be reused). This function returns
-        a PSCredential with a randomly generated complex password.
+        Returns a random administrator credential so the RunTests action can reconnect to the
+        container after RunPipeline completes.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'A container password must be generated as plain text to build a reusable credential')]
     param()
@@ -499,8 +497,7 @@ try {
         Write-Host "useSeparateTestAction is enabled: skipping normal test execution in RunPipeline and keeping the container alive for the RunTests action"
         $runAlPipelineParams["doNotRunTests"] = $true
 
-        # A kept-alive container needs an explicit credential so the RunTests action can reconnect to it.
-        # Generate one, pass it to Run-AlPipeline, and surface it (masked, base64 JSON) via containerCredential.
+        # Surface a reusable credential so RunTests can reconnect to the kept-alive container.
         if (-not $runAlPipelineParams.ContainsKey('credential')) {
             $containerCredential = New-KeepAliveContainerCredential
             $runAlPipelineParams["credential"] = $containerCredential
