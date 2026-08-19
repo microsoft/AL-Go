@@ -1219,6 +1219,31 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].PSObject.Properties.Name.Count | Should -BeGreaterThan 0
     }
 
+    It 'serializes buildDimensions/buildDimensionsLinux as plain JSON arrays, not {value,Count} objects' {
+        # DetermineProjectsToBuild.Action.ps1 does `ConvertTo-Json $buildOrder -Depth 99 -Compress` and hands the
+        # result straight to strategy.matrix.include in CICD.yaml/PullRequestHandler.yaml. If buildDimensions or
+        # buildDimensionsLinux round-trip as a JSON object instead of an array, GitHub Actions can't iterate it as
+        # a matrix - the Build/BuildLinux jobs silently never run (no error, no skipped-job entry, just absent),
+        # and PostProcess still reports the whole run as a failure. This only ever reproduced on Windows
+        # PowerShell 5.1 (the Initialization job's actual shell), not on pwsh - assert the JSON shape directly
+        # instead of trusting the in-process PowerShell object, which looked correct on every PowerShell version.
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        # Matches DetermineProjectsToBuild.Action.ps1's own `ConvertTo-Json $buildOrder -Depth 99 -Compress` call exactly.
+        $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
+        $parsedBuildOrder = $buildOrderJson | ConvertFrom-Json
+
+        # -ActualValue (not a pipe) is required: piping a single-element array into Should enumerates it,
+        # handing Should the bare element instead of the array and invalidating the assertion.
+        Should -ActualValue $parsedBuildOrder[0].buildDimensions -BeOfType [System.Object[]]
+        Should -ActualValue $parsedBuildOrder[0].buildDimensionsLinux -BeOfType [System.Object[]]
+    }
+
     It 'skips linuxFastLane for a compile-only project (useCompilerFolder)' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -Value $(@{ linuxFastLane = $true; useCompilerFolder = $true } | ConvertTo-Json) -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -Value $(@{ } | ConvertTo-Json) -type File -Force
@@ -1452,14 +1477,22 @@ Describe "Get-ProjectsToBuild" {
 
         $savedRunNumber = $env:GITHUB_RUN_NUMBER
         $savedRunAttempt = $env:GITHUB_RUN_ATTEMPT
+        # Also saved/cleared: Set-RunNumberVersioning forces versioningStrategy 15 (ignoring the
+        # explicit 0 above) for pull_request/pull_request_target/merge_group events, so this test
+        # would flip to expecting appBuild = [int32]::MaxValue whenever it happens to run as part
+        # of this repo's own pull_request CI, instead of testing the versioningStrategy 0 path it's
+        # actually named for.
+        $savedEventName = $env:GITHUB_EVENT_NAME
         $env:GITHUB_RUN_NUMBER = '142'
         $env:GITHUB_RUN_ATTEMPT = '3'
+        $env:GITHUB_EVENT_NAME = 'push'
         try {
             $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
         }
         finally {
             $env:GITHUB_RUN_NUMBER = $savedRunNumber
             $env:GITHUB_RUN_ATTEMPT = $savedRunAttempt
+            $env:GITHUB_EVENT_NAME = $savedEventName
         }
 
         $dimension = $buildOrder[0].buildDimensionsLinux | Where-Object { $_.project -eq 'Project1' }
@@ -1513,14 +1546,19 @@ Describe "Get-ProjectsToBuild" {
 
         $savedRunNumber = $env:GITHUB_RUN_NUMBER
         $savedRunAttempt = $env:GITHUB_RUN_ATTEMPT
+        # Also saved/cleared: see the matching comment in the previous test - Set-RunNumberVersioning
+        # forces versioningStrategy 15 for pull_request/pull_request_target/merge_group events.
+        $savedEventName = $env:GITHUB_EVENT_NAME
         $env:GITHUB_RUN_NUMBER = '142'
         $env:GITHUB_RUN_ATTEMPT = '3'
+        $env:GITHUB_EVENT_NAME = 'push'
         try {
             { $script:buildOrder = (Get-ProjectsToBuild -baseFolder $baseFolder)[4] } | Should -Not -Throw
         }
         finally {
             $env:GITHUB_RUN_NUMBER = $savedRunNumber
             $env:GITHUB_RUN_ATTEMPT = $savedRunAttempt
+            $env:GITHUB_EVENT_NAME = $savedEventName
         }
 
         $dimension = $script:buildOrder[0].buildDimensionsLinux | Where-Object { $_.project -eq 'Project1' }

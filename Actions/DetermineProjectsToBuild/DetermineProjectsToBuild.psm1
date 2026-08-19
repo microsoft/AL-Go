@@ -213,12 +213,16 @@ function ProtectEmptyBuildDimensions {
             githubRunnerShell = 'powershell'
         })
     }
-    # -NoEnumerate is required: a plain `return $dimensions` (or wrapping it again in @() at the
-    # call site) unrolls a single-element array back down to its bare element when PowerShell
-    # captures the function's output - a Hashtable element then reports .Count as its key count,
-    # not 1, and a real (already multi/single-element) array gets nested inside an extra array
-    # instead. -NoEnumerate is what preserves the array itself as the one output object.
-    Write-Output -NoEnumerate $dimensions
+    # A plain `return $dimensions` (or wrapping it again in @() at the call site) unrolls a
+    # single-element array back down to its bare element when PowerShell captures the function's
+    # output - a Hashtable element then reports .Count as its key count, not 1. `return @(, $x)`
+    # (the same idiom CreateBuildDimensions above uses) preserves the array itself as the one
+    # output object instead. `Write-Output -NoEnumerate $dimensions` looks equivalent and behaves
+    # identically on PowerShell 7, but on Windows PowerShell 5.1 - the Initialization job's actual
+    # shell - ConvertTo-Json then mis-serializes the result as {"value":[...],"Count":N} (a JSON
+    # object, not an array) instead of a plain array, which breaks the Build/BuildLinux jobs'
+    # strategy.matrix.include. See RELEASENOTES.md.
+    return @(, $dimensions)
 }
 
 function CreateBuildDimensions {
@@ -298,7 +302,11 @@ function CreateBuildDimensions {
             # directly rather than guessing at a convention.
             $idRangeSpans = [System.Collections.Generic.List[string]]::new()
             foreach ($testFolderRelPath in $testFolderRelPaths) {
-                $testAppJsonFile = Join-Path $baseFolder $project $testFolderRelPath 'app.json'
+                # Join-Path's -AdditionalChildPath (letting it take more than two path segments at once) is
+                # PowerShell 6+ only - Windows PowerShell 5.1 (the Initialization job's actual shell) throws
+                # "A positional parameter cannot be found that accepts argument" on a 3+-segment call. Nest
+                # instead, which works on both.
+                $testAppJsonFile = Join-Path (Join-Path (Join-Path $baseFolder $project) $testFolderRelPath) 'app.json'
                 if (Test-Path $testAppJsonFile) {
                     try {
                         $testAppJson = Get-Content $testAppJsonFile -Encoding UTF8 | ConvertFrom-Json
@@ -377,7 +385,8 @@ function CreateBuildDimensions {
             if ($sanitizedProject -eq '.') {
                 $sanitizedProject = '_root_'
             }
-            $depFolder = Join-Path $baseFolder "LinuxFastLaneDependencies_staging" $sanitizedProject
+            # Nested, not a single 3-segment call: see the Join-Path comment above, same PS5.1 incompatibility.
+            $depFolder = Join-Path (Join-Path $baseFolder "LinuxFastLaneDependencies_staging") $sanitizedProject
             $downloadedCount = 0
 
             try {

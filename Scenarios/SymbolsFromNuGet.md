@@ -35,11 +35,13 @@ build never opens.
   you compile against. `Microsoft.Application.<COUNTRY>.symbols` declares its own
   dependency closure - System Application, Business Foundation, Base Application,
   Platform - and that closure is walked rather than assumed.
+
 - **Microsoft app dependencies** - anything your `app.json` files declare with publisher
   `Microsoft` is resolved as
   `Microsoft.<AppNameWithoutSpaces>[.<COUNTRY>].symbols.<appId>`. A test app declaring
   Library Assert, Test Runner and Any gets exactly those. Nothing is staged that no app
   asked for.
+
 - **The AL compiler and analyzers** - `Microsoft.Dynamics.BusinessCentral.Development.Tools`
   on nuget.org, which carries `alc`, `altool` and CodeCop, AppSourceCop,
   PerTenantExtensionCop and UICop.
