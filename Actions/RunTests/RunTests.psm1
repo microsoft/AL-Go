@@ -181,6 +181,38 @@ function Copy-TestResultsToBuildArtifacts {
     }
 }
 
+function Export-AlGoContainerEventLog {
+    <#
+    .SYNOPSIS
+        Exports the kept-alive container event log to the project folder.
+    .DESCRIPTION
+        Calls Get-BcContainerEventLog with containerName and doNotOpen, then copies the completed
+        export to ContainerEventLog.evtx in the project folder.
+        Any existing diagnostic is replaced only after the helper returns a readable export file.
+    .PARAMETER projectPath
+        The full path to the project folder.
+    .PARAMETER containerName
+        The name of the kept-alive build container.
+    #>
+    Param(
+        [string] $projectPath,
+        [string] $containerName
+    )
+
+    $containerEventLogFile = Join-Path $projectPath "ContainerEventLog.evtx"
+    try {
+        $exportedEventLogFile = Get-BcContainerEventLog -containerName $containerName -doNotOpen
+        if ([string]::IsNullOrWhiteSpace("$exportedEventLogFile") -or -not (Test-Path -Path $exportedEventLogFile -PathType Leaf -ErrorAction Stop)) {
+            throw "Get-BcContainerEventLog did not return a readable event log file."
+        }
+
+        Copy-Item -Path $exportedEventLogFile -Destination $containerEventLogFile -Force -ErrorAction Stop
+    }
+    catch {
+        throw "Failed to capture event log from container '$containerName' to '$containerEventLogFile'. Error: $($_.Exception.Message)"
+    }
+}
+
 function Invoke-AlGoTestRun {
     <#
     .SYNOPSIS
@@ -191,7 +223,10 @@ function Invoke-AlGoTestRun {
         also copied to .buildartifacts for artifact upload before test failures are surfaced. Honors
         the treatTestFailuresAsWarnings setting. By default the tests are run through the AlTool
         (`al runtests`) runner. When a RunTestsInBcContainer override script is provided, it is used
-        instead of the built-in AlTool runner.
+        instead of the built-in AlTool runner. After every outcome, including no selected test apps,
+        the kept-alive container event log is refreshed in ContainerEventLog.evtx in the project
+        folder. A capture failure is terminating unless the test path is already terminating, in
+        which case the capture failure is reported as a warning and the original error is preserved.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -214,71 +249,93 @@ function Invoke-AlGoTestRun {
         [scriptblock] $runTestsOverride = $null
     )
 
-    $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installTestAppsJson
-    if (@($testApps).Count -eq 0) {
-        Write-Host "No test apps found to run tests in. Skipping test execution."
-        return
-    }
-
-    Write-Host "Running tests against container '$containerName'"
-
-    $testResultsFile = Join-Path $projectPath "TestResults.xml"
-    $artifactTestResultsFile = Join-Path (Join-Path $projectPath ".buildartifacts") "TestResults.xml"
-    foreach ($previousResultFile in @($testResultsFile, $artifactTestResultsFile)) {
-        if (Test-Path $previousResultFile) {
-            Remove-Item $previousResultFile -Force
-        }
-    }
-
-    # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
-    $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
-
-    $allTestsPassed = $true
-    Push-Location $projectPath
+    $testRunFailed = $false
     try {
-        foreach ($testApp in $testApps) {
-            $appJson = Get-AppJsonFromAppFile -appFile $testApp
-            Write-Host "Running tests in $($appJson.name) ($($appJson.id))"
-            $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($appJson.id)")
+        $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installTestAppsJson
+        if (@($testApps).Count -eq 0) {
+            Write-Host "No test apps found to run tests in. Skipping test execution."
+            return
+        }
 
-            $runTestsParams = @{
-                "containerName"           = $containerName
-                "credential"              = $credential
-                "companyName"             = $settings.companyName
-                "extensionId"             = $appJson.id
-                "appName"                 = $appJson.name
-                "disabledTests"           = $disabledTests
-                "JUnitResultFileName"     = $testResultsFile
-                "AppendToJUnitResultFile" = $true
-                "detailed"                = $true
-                "GitHubActions"           = $gitHubActionsSeverity
-                "returnTrueIfAllPassed"   = $true
+        Write-Host "Running tests against container '$containerName'"
+
+        $testResultsFile = Join-Path $projectPath "TestResults.xml"
+        $artifactTestResultsFile = Join-Path (Join-Path $projectPath ".buildartifacts") "TestResults.xml"
+        foreach ($previousResultFile in @($testResultsFile, $artifactTestResultsFile)) {
+            if (Test-Path $previousResultFile) {
+                Remove-Item $previousResultFile -Force
             }
+        }
 
-            if ($runTestsOverride) {
-                $passed = & $runTestsOverride -parameters $runTestsParams
+        # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
+        $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
+
+        $allTestsPassed = $true
+        Push-Location $projectPath
+        try {
+            foreach ($testApp in $testApps) {
+                $appJson = Get-AppJsonFromAppFile -appFile $testApp
+                Write-Host "Running tests in $($appJson.name) ($($appJson.id))"
+                $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($appJson.id)")
+
+                $runTestsParams = @{
+                    "containerName"           = $containerName
+                    "credential"              = $credential
+                    "companyName"             = $settings.companyName
+                    "extensionId"             = $appJson.id
+                    "appName"                 = $appJson.name
+                    "disabledTests"           = $disabledTests
+                    "JUnitResultFileName"     = $testResultsFile
+                    "AppendToJUnitResultFile" = $true
+                    "detailed"                = $true
+                    "GitHubActions"           = $gitHubActionsSeverity
+                    "returnTrueIfAllPassed"   = $true
+                }
+
+                if ($runTestsOverride) {
+                    $passed = & $runTestsOverride -parameters $runTestsParams
+                }
+                else {
+                    $passed = Invoke-AlToolTestRun -Parameters $runTestsParams
+                }
+
+                if (-not $passed) {
+                    $allTestsPassed = $false
+                }
+            }
+        }
+        finally {
+            Pop-Location
+        }
+
+        Copy-TestResultsToBuildArtifacts -projectPath $projectPath -testResultsFile $testResultsFile
+
+        if (-not $allTestsPassed) {
+            if ($settings.treatTestFailuresAsWarnings) {
+                OutputWarning -message "There are test failures, but they are treated as warnings (treatTestFailuresAsWarnings is set)."
             }
             else {
-                $passed = Invoke-AlToolTestRun -Parameters $runTestsParams
-            }
-
-            if (-not $passed) {
-                $allTestsPassed = $false
+                throw "There are test failures."
             }
         }
+    }
+    catch {
+        $testRunFailed = $true
+        throw
     }
     finally {
-        Pop-Location
-    }
-
-    Copy-TestResultsToBuildArtifacts -projectPath $projectPath -testResultsFile $testResultsFile
-
-    if (-not $allTestsPassed) {
-        if ($settings.treatTestFailuresAsWarnings) {
-            OutputWarning -message "There are test failures, but they are treated as warnings (treatTestFailuresAsWarnings is set)."
+        try {
+            Export-AlGoContainerEventLog `
+                -projectPath $projectPath `
+                -containerName $containerName
         }
-        else {
-            throw "There are test failures."
+        catch {
+            if ($testRunFailed) {
+                OutputWarning -message "Tests failed and the post-test container event log could not be captured. $($_.Exception.Message)"
+            }
+            else {
+                throw
+            }
         }
     }
 }

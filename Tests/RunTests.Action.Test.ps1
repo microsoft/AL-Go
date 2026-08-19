@@ -11,6 +11,8 @@ Describe "RunTests Action Tests" {
         $scriptPath = Join-Path $scriptRoot $scriptName
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'rawActionScript', Justification = 'Used by event-log wiring tests.')]
+        $rawActionScript = Get-Content -Path $scriptPath -Raw
     }
 
     It 'Compile Action' {
@@ -21,6 +23,12 @@ Describe "RunTests Action Tests" {
         $outputs = [ordered]@{
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+    }
+
+    It 'Uses the integrated event log lifecycle without loading an event log override' {
+        $rawActionScript | Should -Match 'OverrideScriptNames @\("RunTestsInBcContainer"\)'
+        $rawActionScript | Should -Match '(?m)^Invoke-AlGoTestRun '
+        $rawActionScript | Should -Not -Match 'GetBcContainerEventLog'
     }
 
     # Call action

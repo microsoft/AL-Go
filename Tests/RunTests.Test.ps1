@@ -8,6 +8,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 # Stub for the BcContainerHelper function so it can be mocked within the module scope
 function Get-AppJsonFromAppFile { param($appFile) }
+function Get-BcContainerEventLog { param($containerName, [switch] $doNotOpen) }
 
 Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/RunTests.psm1' -Resolve) -DisableNameChecking -Force
 
@@ -60,6 +61,8 @@ Describe 'RunTests.psm1 Tests' {
     }
 
     BeforeEach {
+        $script:eventLogSource = Join-Path $TestDrive "$([Guid]::NewGuid()).evtx"
+        Set-Content -Path $script:eventLogSource -Value 'post-test-events' -Encoding UTF8
         Mock -ModuleName RunTests Get-AppJsonFromAppFile {
             $fullPath = [System.IO.Path]::GetFullPath("$appFile")
             if (-not $script:compiledAppMetadataByPath.ContainsKey($fullPath)) {
@@ -67,6 +70,7 @@ Describe 'RunTests.psm1 Tests' {
             }
             return $script:compiledAppMetadataByPath[$fullPath]
         }
+        Mock -ModuleName RunTests Get-BcContainerEventLog { return $script:eventLogSource }
     }
 
     Context 'Get-TestAppsToRun' {
@@ -443,6 +447,7 @@ Describe 'RunTests.psm1 Tests' {
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } |
                 Should -Throw '*Failed to copy test results*copy blocked*'
 
+            Should -Invoke -ModuleName RunTests Get-BcContainerEventLog -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -611,6 +616,161 @@ Describe 'RunTests.psm1 Tests' {
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
 
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+    }
+
+    Context 'Invoke-AlGoTestRun event log lifecycle' {
+        It 'Captures after a passing no-result test run with the expected root path and API parameters' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
+            Set-Content -Path $eventLogDestination -Value 'pre-test-events' -Encoding UTF8
+            $script:invocationOrder = @()
+            $runTestsOverride = {
+                param($parameters)
+                $script:invocationOrder += 'run'
+                return $true
+            }
+            Mock -ModuleName RunTests Get-BcContainerEventLog {
+                $script:invocationOrder += 'capture'
+                return $script:eventLogSource
+            }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride $runTestsOverride
+
+            $script:invocationOrder | Should -Be @('run', 'capture')
+            Should -Invoke -ModuleName RunTests Get-BcContainerEventLog -Times 1 -Exactly -ParameterFilter {
+                $containerName -eq 'kept-container' -and $doNotOpen
+            }
+            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
+            Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Captures after a hard test failure and rethrows that failure' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $false } } |
+                Should -Throw '*There are test failures*'
+
+            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Preserves the original hard test failure when event log capture also fails' {
+            Mock -ModuleName RunTests OutputWarning {}
+            Mock -ModuleName RunTests Get-BcContainerEventLog { throw 'event export failed' }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            try {
+                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $false }
+                throw 'Expected the test run to fail.'
+            }
+            catch {
+                $_.Exception.Message | Should -Be 'There are test failures.'
+            }
+
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like '*Tests failed*event log could not be captured*event export failed*'
+            }
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Surfaces event log capture failure after passing tests and preserves the stale diagnostic' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
+            Set-Content -Path $eventLogDestination -Value 'pre-test-events' -Encoding UTF8
+            Mock -ModuleName RunTests Get-BcContainerEventLog { return (Join-Path $TestDrive 'missing.evtx') }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $true } } |
+                Should -Throw "*Failed to capture event log*did not return a readable event log file*"
+
+            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'pre-test-events'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Captures after warning-mode test failures' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $true
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $false } } |
+                Should -Not -Throw
+
+            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Captures for a no-test run' {
+            $projectPath = New-TestProject
+            $script:runnerCalls = 0
+            $runTestsOverride = { param($parameters) $script:runnerCalls++; return $true }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @()
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride $runTestsOverride
+
+            $script:runnerCalls | Should -Be 0
+            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
+            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Captures after a runner exception and preserves that exception' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { throw 'runner failed' } } |
+                Should -Throw '*runner failed*'
+
+            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
+            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
             Remove-Item -Path $projectPath -Recurse -Force
         }
     }
