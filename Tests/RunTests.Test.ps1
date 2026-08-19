@@ -545,9 +545,36 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Passes the container and credential through to the AlTool runner' {
-            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+        It 'Maps only the built-in runner parameters with the expected defaults' {
+            $appId = [Guid]::NewGuid().ToString()
+            $script:capturedAlToolParams = $null
+            Mock -ModuleName RunTests Invoke-AlToolTestRun {
+                param(
+                    $ContainerName,
+                    [System.Management.Automation.PSCredential] $Credential,
+                    $ExtensionId,
+                    $AppName,
+                    $CompanyName,
+                    $Tenant,
+                    $DisabledTests,
+                    $TestType,
+                    $JUnitResultFileName
+                )
+                $script:capturedAlToolParams = @{
+                    Keys                = @($PSBoundParameters.Keys)
+                    ContainerName       = $ContainerName
+                    Credential          = $Credential
+                    ExtensionId         = $ExtensionId
+                    AppName             = $AppName
+                    CompanyName         = $CompanyName
+                    Tenant              = $Tenant
+                    DisabledTests       = @($DisabledTests)
+                    TestType            = $TestType
+                    JUnitResultFileName = $JUnitResultFileName
+                }
+                return $true
+            }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') -CompiledAppIds @{ 'App1.Test.app' = $appId }
             $settings = @{
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
@@ -558,16 +585,38 @@ Describe 'RunTests.psm1 Tests' {
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential
 
-            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly -ParameterFilter {
-                $Parameters.containerName -eq 'mycontainer' -and $Parameters.companyName -eq 'CRONUS' -and ($Parameters.credential -is [System.Management.Automation.PSCredential])
-            }
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly
+            @($script:capturedAlToolParams.Keys | Sort-Object) | Should -Be @(
+                'AppName',
+                'CompanyName',
+                'ContainerName',
+                'Credential',
+                'DisabledTests',
+                'ExtensionId',
+                'JUnitResultFileName',
+                'Tenant',
+                'TestType'
+            )
+            $script:capturedAlToolParams.ContainerName | Should -Be 'mycontainer'
+            $script:capturedAlToolParams.Credential | Should -BeOfType [System.Management.Automation.PSCredential]
+            $script:capturedAlToolParams.ExtensionId | Should -Be $appId
+            $script:capturedAlToolParams.AppName | Should -Be 'App1.Test'
+            $script:capturedAlToolParams.CompanyName | Should -Be 'CRONUS'
+            $script:capturedAlToolParams.Tenant | Should -Be 'default'
+            $script:capturedAlToolParams.DisabledTests.Count | Should -Be 0
+            $script:capturedAlToolParams.TestType | Should -Be ''
+            $script:capturedAlToolParams.JUnitResultFileName | Should -Be (Join-Path $projectPath 'TestResults.xml')
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
         It 'Passes project-wide disabled tests to the AlTool runner' {
             $appId = [Guid]::NewGuid().ToString()
             $script:capturedAlToolParams = $null
-            Mock -ModuleName RunTests Invoke-AlToolTestRun { param($Parameters) $script:capturedAlToolParams = $Parameters; return $true }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun {
+                param($DisabledTests)
+                $script:capturedAlToolParams = @($DisabledTests)
+                return $true
+            }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') -CompiledAppIds @{ 'App1.Test.app' = $appId }
             @(@{ codeunitName = 'Project Tests'; method = 'TestOne' }) | ConvertTo-Json |
                 Set-Content -Path (Join-Path $projectPath "$appId.disabledTests.json") -Encoding UTF8
@@ -582,8 +631,8 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly
-            @($script:capturedAlToolParams.disabledTests).Count | Should -Be 1
-            $script:capturedAlToolParams.disabledTests[0].codeunitName | Should -Be 'Project Tests'
+            $script:capturedAlToolParams.Count | Should -Be 1
+            $script:capturedAlToolParams[0].codeunitName | Should -Be 'Project Tests'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

@@ -263,25 +263,35 @@ function Invoke-AlGoTestRun {
                 Write-Host "Running tests in $($appJson.name) ($($appJson.id))"
                 $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($appJson.id)")
 
-                $runTestsParams = @{
-                    "containerName"           = $containerName
-                    "credential"              = $credential
-                    "companyName"             = $settings.companyName
-                    "extensionId"             = $appJson.id
-                    "appName"                 = $appJson.name
-                    "disabledTests"           = $disabledTests
-                    "JUnitResultFileName"     = $testResultsFile
-                    "AppendToJUnitResultFile" = $true
-                    "detailed"                = $true
-                    "GitHubActions"           = $gitHubActionsSeverity
-                    "returnTrueIfAllPassed"   = $true
-                }
-
                 if ($runTestsOverride) {
+                    $runTestsParams = @{
+                        "containerName"           = $containerName
+                        "credential"              = $credential
+                        "companyName"             = $settings.companyName
+                        "extensionId"             = $appJson.id
+                        "appName"                 = $appJson.name
+                        "disabledTests"           = $disabledTests
+                        "JUnitResultFileName"     = $testResultsFile
+                        "AppendToJUnitResultFile" = $true
+                        "detailed"                = $true
+                        "GitHubActions"           = $gitHubActionsSeverity
+                        "returnTrueIfAllPassed"   = $true
+                    }
                     $passed = & $runTestsOverride -parameters $runTestsParams
                 }
                 else {
-                    $passed = Invoke-AlToolTestRun -Parameters $runTestsParams
+                    $alToolTestRunParams = @{
+                        ContainerName       = $containerName
+                        Credential          = $credential
+                        ExtensionId         = "$($appJson.id)"
+                        AppName             = "$($appJson.name)"
+                        CompanyName         = "$($settings.companyName)"
+                        Tenant              = "default"
+                        DisabledTests       = @($disabledTests)
+                        TestType            = ""
+                        JUnitResultFileName = $testResultsFile
+                    }
+                    $passed = Invoke-AlToolTestRun @alToolTestRunParams
                 }
 
                 if (-not $passed) {
