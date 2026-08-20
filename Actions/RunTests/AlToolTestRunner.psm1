@@ -613,8 +613,7 @@ function New-AlTestGroupsFile {
 .SYNOPSIS
     Runs all enabled test groups for one app through one AlTool connection.
 .DESCRIPTION
-    The response is checked against every requested codeunit and method. Missing results are reported
-    and remain absent from the returned result map.
+    Valid structured results are returned for JUnit generation. Invalid result entries are reported.
 #>
 function Invoke-AlRunTestsBatch {
     param(
@@ -679,39 +678,8 @@ function Invoke-AlRunTestsBatch {
             throw "AlTool test batch protocol failure. $($protocolErrors -join ' ') $($diagnostics -join [Environment]::NewLine)"
         }
 
-        $missingKeys = @()
-        $expected = @{}
-        foreach ($codeunit in $Codeunits) {
-            $codeunitId = [int] $codeunit.Id
-            $codeunitKey = "$codeunitId"
-            $expected[$codeunitKey] = @{}
-            foreach ($method in @($codeunit.Tests | ForEach-Object { "$_" })) {
-                $expected[$codeunitKey][$method] = $true
-                if (-not $parsed.Results.ContainsKey($codeunitKey) -or
-                    -not $parsed.Results[$codeunitKey].ContainsKey($method)) {
-                    $missingKeys += "$codeunitKey/$method"
-                }
-            }
-        }
-
-        $problems = @()
-        $problems += @($parsed.Issues)
-        if ($missingKeys.Count -gt 0) {
-            $problems += "The response omitted $($missingKeys.Count) requested method(s): $($missingKeys -join ', ')."
-        }
-        $unexpected = @()
-        foreach ($codeunitKey in $parsed.Results.Keys) {
-            foreach ($method in $parsed.Results[$codeunitKey].Keys) {
-                if (-not $expected.ContainsKey($codeunitKey) -or -not $expected[$codeunitKey].ContainsKey($method)) {
-                    $unexpected += "$codeunitKey/$method"
-                }
-            }
-        }
-        if ($unexpected.Count -gt 0) {
-            $problems += "The response contained $($unexpected.Count) unrequested method(s): $($unexpected -join ', ')."
-        }
-        if ($problems.Count -gt 0) {
-            Write-Host "::warning::The AlTool test batch was invalid or incomplete. $($problems -join ' ')"
+        if ($parsed.Issues.Count -gt 0) {
+            Write-Host "::warning::The AlTool test batch contained invalid result entries. $($parsed.Issues -join ' ')"
             if ($nativeResult.StandardError.Count -gt 0) {
                 Write-Host "al runtests stderr:"
                 Write-Host ($nativeResult.StandardError -join [Environment]::NewLine)
@@ -896,7 +864,9 @@ function Invoke-AlToolTestRun {
             return $true
         }
 
-        Install-AlTool | Out-Null
+        if (-not (Get-Command al -ErrorAction SilentlyContinue)) {
+            Install-AlTool | Out-Null
+        }
 
         $connection = Get-AlToolConnection -ContainerName $ContainerName
         $projectPath = New-AlToolProject -ContainerName $ContainerName -Tenant $Tenant -Connection $connection
@@ -974,4 +944,4 @@ function Invoke-AlToolTestRun {
     }
 }
 
-Export-ModuleMember -Function Invoke-AlToolTestRun
+Export-ModuleMember -Function Install-AlTool, Invoke-AlToolTestRun

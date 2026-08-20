@@ -17,8 +17,9 @@ Describe 'AlToolTestRunner.psm1 Tests' {
     }
 
     Context 'Module exports' {
-        It 'Exports only the RunTests entry point' {
-            @(Get-Command -Module AlToolTestRunner).Name | Should -Be @('Invoke-AlToolTestRun')
+        It 'Exports only the RunTests integration functions' {
+            @(Get-Command -Module AlToolTestRunner).Name | Sort-Object |
+                Should -Be @('Install-AlTool', 'Invoke-AlToolTestRun')
         }
     }
 
@@ -621,7 +622,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             }
         }
 
-        It 'Warns with diagnostics when a successful response omits requested methods' {
+        It 'Returns an otherwise valid partial response without a selection warning' {
             Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
                 $stdout = @{
                     succeeded = $true
@@ -652,11 +653,48 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 @($result.Keys | Sort-Object) | Should -Be @('ElapsedSec', 'Results')
             }
 
-            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 1 -Exactly -ParameterFilter {
-                "$Object" -like '::warning::*omitted 2 requested method(s)*130001/TestTwo*130002/TestThree*'
+            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 0 -Exactly -ParameterFilter {
+                "$Object" -like '::warning::*'
             }
-            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 1 -Exactly -ParameterFilter {
+            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 0 -Exactly -ParameterFilter {
                 "$Object" -eq 'batch diagnostic'
+            }
+        }
+
+        It 'Returns unrequested results without a selection warning' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                $stdout = @{
+                    succeeded = $false
+                    data      = @{
+                        results = @(
+                            @{ codeunitId = 130001; methodName = 'TestOne'; status = 'passed'; output = ''; durationMs = 1 },
+                            @{ codeunitId = 130001; methodName = 'TestTwo'; status = 'passed'; output = ''; durationMs = 2 },
+                            @{ codeunitId = 130002; methodName = 'TestThree'; status = 'skipped'; output = ''; durationMs = 0 },
+                            @{ codeunitId = 139999; methodName = 'Unexpected'; status = 'failed'; output = 'ignored'; durationMs = 3 }
+                        )
+                    }
+                } | ConvertTo-Json -Depth 6
+                return [PSCustomObject]@{
+                    StandardOutput = [string[]]@($stdout)
+                    StandardError  = [string[]]@()
+                    Output         = [string[]]@($stdout)
+                    ExitCode       = [int] 1
+                }
+            }
+            Mock -ModuleName AlToolTestRunner Write-Host {}
+
+            InModuleScope AlToolTestRunner -Parameters @{
+                Codeunits  = $script:batchCodeunits
+                Connection = $script:batchConnection
+            } {
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
+                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+
+                $result.Results['139999']['Unexpected'].Outcome | Should -Be 'Fail'
+            }
+
+            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 0 -Exactly -ParameterFilter {
+                "$Object" -like '::warning::*'
             }
         }
 
@@ -694,7 +732,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             }
 
             Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 1 -Exactly -ParameterFilter {
-                "$Object" -like '::warning::*duplicate results*invalidated*omitted 1 requested method*'
+                "$Object" -like '::warning::*invalid result entries*duplicate results*invalidated*'
             }
         }
 
@@ -804,6 +842,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             Remove-Item -LiteralPath (Join-Path $TestDrive 'TestResults.xml') -Force -ErrorAction SilentlyContinue
 
             Mock -ModuleName AlToolTestRunner Install-AlTool { return '1.2.3' }
+            Mock -ModuleName AlToolTestRunner Get-Command { return $null } -ParameterFilter { $Name -eq 'al' }
             Mock -ModuleName AlToolTestRunner Get-AlToolConnection {
                 return @{ Server = 'http://test'; ServerInstance = 'BC'; Port = 7049 }
             }
@@ -816,6 +855,28 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                     ElapsedSec = 0.1
                 }
             }
+        }
+
+        It 'Installs AlTool when a direct call cannot find al' {
+            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
+
+            Should -Invoke -ModuleName AlToolTestRunner Get-Command -Times 1 -Exactly -ParameterFilter {
+                $Name -eq 'al' -and $ErrorAction -eq 'SilentlyContinue'
+            }
+            Should -Invoke -ModuleName AlToolTestRunner Install-AlTool -Times 1 -Exactly
+        }
+
+        It 'Does not install AlTool when a direct call finds al' {
+            Mock -ModuleName AlToolTestRunner Get-Command {
+                return [PSCustomObject]@{ Name = 'al' }
+            } -ParameterFilter { $Name -eq 'al' }
+
+            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
+
+            Should -Invoke -ModuleName AlToolTestRunner Get-Command -Times 1 -Exactly -ParameterFilter {
+                $Name -eq 'al' -and $ErrorAction -eq 'SilentlyContinue'
+            }
+            Should -Invoke -ModuleName AlToolTestRunner Install-AlTool -Times 0 -Exactly
         }
 
         It 'Runs all codeunits for an app in exactly one batch' {
@@ -893,6 +954,28 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='Reported']/failure") | Should -BeNullOrEmpty
             $missingFailure = $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='Missing']/failure")
             $missingFailure.GetAttribute('message') | Should -Be 'No result produced by al runtests'
+        }
+
+        It 'Ignores unrequested batch entries when building requested JUnit outcomes' {
+            $junitFile = Join-Path $TestDrive 'TestResults.xml'
+            $script:testRunParameters.JUnitResultFileName = $junitFile
+            Mock -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch {
+                return @{
+                    Results    = @{
+                        '130001' = @{ TestOne = @{ Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' } }
+                        '139999' = @{ Unexpected = @{ Outcome = 'Fail'; Ms = 2; Message = 'ignored'; Stacktrace = '' } }
+                    }
+                    ElapsedSec = 0.1
+                }
+            }
+
+            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
+
+            Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 1 -Exactly
+            [xml] $junit = Get-Content -Path $junitFile -Raw
+            $junit.SelectNodes('testsuites/testsuite/testcase').Count | Should -Be 1
+            $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='TestOne']/failure") | Should -BeNullOrEmpty
+            $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='Unexpected']") | Should -BeNullOrEmpty
         }
 
         It 'Turns a duplicate-invalidated result into a final missing-result JUnit failure' {

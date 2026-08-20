@@ -71,6 +71,16 @@ Describe 'RunTests.psm1 Tests' {
             return $script:compiledAppMetadataByPath[$fullPath]
         }
         Mock -ModuleName RunTests Get-BcContainerEventLog { return $script:eventLogSource }
+        Mock -ModuleName RunTests Install-AlTool { return '1.2.3' }
+    }
+
+    Context 'Nested AlTool module integration' {
+        It 'Resolves both public integration functions from the nested module' {
+            InModuleScope RunTests {
+                (Get-Command Install-AlTool -ErrorAction Stop).Name | Should -Be 'Install-AlTool'
+                (Get-Command Invoke-AlToolTestRun -ErrorAction Stop).Name | Should -Be 'Invoke-AlToolTestRun'
+            }
+        }
     }
 
     Context 'Get-TestAppsToRun' {
@@ -223,12 +233,13 @@ Describe 'RunTests.psm1 Tests' {
         It 'Does not run tests when there are no test apps' {
             $projectPath = New-TestProject
             $script:runnerCalls = 0
-            $override = { param($parameters) $script:runnerCalls++; return $true }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { $script:runnerCalls++; return $true }
             $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false; testFolders = @() }
 
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential
 
             $script:runnerCalls | Should -Be 0
+            Should -Invoke -ModuleName RunTests Install-AlTool -Times 0 -Exactly
             Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
             Test-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml') | Should -BeFalse
             Remove-Item -Path $projectPath -Recurse -Force
@@ -237,10 +248,12 @@ Describe 'RunTests.psm1 Tests' {
         It 'Copies passing test results to build artifacts and preserves the root result' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $script:runnerCalls = 0
+            $script:capturedOverrideKeys = @()
             $script:resultContent = '<testsuites name="passing" />'
             $override = {
                 param($parameters)
                 $script:runnerCalls++
+                $script:capturedOverrideKeys = @($parameters.Keys)
                 Set-Content -Path $parameters.JUnitResultFileName -Value $script:resultContent -Encoding UTF8
                 return $true
             }
@@ -255,6 +268,20 @@ Describe 'RunTests.psm1 Tests' {
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Not -Throw
 
             $script:runnerCalls | Should -Be 2
+            Should -Invoke -ModuleName RunTests Install-AlTool -Times 0 -Exactly
+            @($script:capturedOverrideKeys | Sort-Object) | Should -Be @(
+                'AppendToJUnitResultFile',
+                'appName',
+                'companyName',
+                'containerName',
+                'credential',
+                'detailed',
+                'disabledTests',
+                'extensionId',
+                'GitHubActions',
+                'JUnitResultFileName',
+                'returnTrueIfAllPassed'
+            )
             $rootResult = Join-Path $projectPath 'TestResults.xml'
             $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
             (Get-Content -Path $rootResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
@@ -542,6 +569,7 @@ Describe 'RunTests.psm1 Tests' {
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly
+            Should -Invoke -ModuleName RunTests Install-AlTool -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -586,6 +614,7 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly
+            Should -Invoke -ModuleName RunTests Install-AlTool -Times 1 -Exactly
             @($script:capturedAlToolParams.Keys | Sort-Object) | Should -Be @(
                 'AppName',
                 'CompanyName',

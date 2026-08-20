@@ -252,6 +252,10 @@ function Invoke-AlGoTestRun {
             }
         }
 
+        if (-not $runTestsOverride) {
+            Install-AlTool | Out-Null
+        }
+
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
 
