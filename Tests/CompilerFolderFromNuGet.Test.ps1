@@ -569,6 +569,35 @@ Describe "CompilerFolderFromNuGet Module Tests" {
             $bcContainerHelperConfig.TrustedNuGetFeeds[1].url | Should -Be 'https://dynamicssmb2.pkgs.visualstudio.com/DynamicsBCPublicFeeds/_packaging/AppSourceSymbols/nuget/v3/index.json'
         }
 
+        It 'pre-populates Token/Patterns/Fingerprints on every trusted feed so BcContainerHelper''s lazy Add-Member guard is a no-op' {
+            # Find-BcNuGetPackage.ps1 (BcContainerHelper) lazily Add-Members these properties onto
+            # each feed object on first use, guarded by a check-then-act pattern that is not
+            # thread-safe when the same feed object is shared by reference across the parallel
+            # worker runspaces this module dispatches (AddArgument on a local RunspacePool passes
+            # by reference, not by clone). Pre-populating them here - one PSCustomObject feed built
+            # by this module, one Hashtable feed from settings, since both shapes reach
+            # $trustedFeeds in production - means that guard always finds the property already
+            # present and never calls Add-Member at all, so two workers racing it can no longer
+            # throw "Cannot add a member with the name 'Patterns' because a member with that name
+            # already exists."
+            $appFolder = Join-Path $testFolder 'App'
+            New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString())
+            Mock -ModuleName CompilerFolderFromNuGet Download-BcNuGetPackageToFolder { }
+
+            $settings = @{
+                trustedNuGetFeeds        = @(@{ url = 'https://example.com/index.json'; token = '' })
+                trustMicrosoftNuGetFeeds = $true
+            }
+            Install-NonMicrosoftDependenciesFromNuGet -AppFolders @($appFolder) -PackageCachePath $testFolder -Settings $settings -ArtifactUrl $artifactUrl
+
+            $bcContainerHelperConfig.TrustedNuGetFeeds.Count | Should -Be 2
+            foreach ($feed in $bcContainerHelperConfig.TrustedNuGetFeeds) {
+                $feed.PSObject.Properties.Name | Should -Contain 'Token'
+                $feed.PSObject.Properties.Name | Should -Contain 'Patterns'
+                $feed.PSObject.Properties.Name | Should -Contain 'Fingerprints'
+            }
+        }
+
         It 'omits the AppSourceSymbols feed when trustMicrosoftNuGetFeeds is false' {
             $appFolder = Join-Path $testFolder 'App'
             New-TestAppJson -Folder $appFolder -Id ([Guid]::NewGuid().ToString())

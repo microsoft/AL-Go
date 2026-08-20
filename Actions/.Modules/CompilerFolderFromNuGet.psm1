@@ -1277,6 +1277,24 @@ function Install-NonMicrosoftDependenciesFromNuGet {
             token = ''
         })
     }
+
+    # BcContainerHelper's own Find-BcNuGetPackage.ps1 lazily decorates each feed object with
+    # Token/Patterns/Fingerprints NoteProperties on first use, guarded by a check-then-Add-Member
+    # pattern that is not thread-safe: `if (!($feed.PSObject.Properties.Name -eq 'Patterns')) {
+    # $feed | Add-Member ... }`. Every entry in $trustedFeeds below is the *same* object instance
+    # shared by reference across every parallel worker runspace this function dispatches -
+    # AddArgument on a local RunspacePool passes objects by reference, it does not clone them - so
+    # two workers racing that guard on the same feed object can both pass the check before either
+    # finishes Add-Member, and the second throws "Cannot add a member with the name 'Patterns'
+    # because a member with that name already exists." Doing the equivalent decoration here, once,
+    # before any runspace exists, means BcContainerHelper's own guard always finds the property
+    # already present and never calls Add-Member at all - nothing left to race on.
+    foreach ($feed in $trustedFeeds) {
+        if (-not ($feed.PSObject.Properties.Name -eq 'Token')) { $feed | Add-Member -MemberType NoteProperty -Name 'Token' -Value '' }
+        if (-not ($feed.PSObject.Properties.Name -eq 'Patterns')) { $feed | Add-Member -MemberType NoteProperty -Name 'Patterns' -Value @('*') }
+        if (-not ($feed.PSObject.Properties.Name -eq 'Fingerprints')) { $feed | Add-Member -MemberType NoteProperty -Name 'Fingerprints' -Value @() }
+    }
+
     $bcContainerHelperConfig.TrustedNuGetFeeds = $trustedFeeds
 
     $gitHubPackagesServerUrl = ''
