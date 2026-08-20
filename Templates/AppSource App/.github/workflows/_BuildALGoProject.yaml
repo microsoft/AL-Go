@@ -400,8 +400,15 @@ jobs:
           project: ${{ inputs.project }}
           testType: "pageScripting"
 
+      # Skipped for the same workspace-compiled, compile-only projects the Build step above skips:
+      # no container was ever created (RunPipeline.ps1 no-ops for workspaceCompilation.enabled &&
+      # doNotPublishApps), so PipelineCleanup's Remove-BcContainer -> Test-BcContainer -> `docker ps`
+      # call hits a runner with no Docker daemon running at all. That native-command failure was
+      # observed to kill the whole step with a bare non-zero exit and no PowerShell-level error
+      # message (PipelineCleanup.ps1's own try/catch never got a chance to log it), failing an
+      # otherwise-successful compile-only build for nothing to actually clean up.
       - name: Cleanup
-        if: always() && steps.DetermineBuildProject.outputs.BuildIt == 'True'
+        if: always() && steps.DetermineBuildProject.outputs.BuildIt == 'True' && !(fromJson(env.workspaceCompilation).enabled == true && env.doNotPublishApps == 'True')
         uses: microsoft/AL-Go-Actions/PipelineCleanup@main
         with:
           shell: ${{ inputs.shell }}
