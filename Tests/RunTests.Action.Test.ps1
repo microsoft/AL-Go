@@ -1,0 +1,36 @@
+Get-Module TestActionsHelper | Remove-Module -Force
+Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
+Describe "RunTests Action Tests" {
+    BeforeAll {
+        $actionName = "RunTests"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $scriptName = "$actionName.ps1"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
+        $scriptPath = Join-Path $scriptRoot $scriptName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'rawActionScript', Justification = 'Used by event-log wiring tests.')]
+        $rawActionScript = Get-Content -Path $scriptPath -Raw
+    }
+
+    It 'Compile Action' {
+        Invoke-Expression $actionScript
+    }
+
+    It 'Test action.yaml matches script' {
+        $outputs = [ordered]@{
+        }
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+    }
+
+    It 'Uses the integrated event log lifecycle without loading an event log override' {
+        $rawActionScript | Should -Match 'OverrideScriptNames @\("RunTestsInBcContainer"\)'
+        $rawActionScript | Should -Match '(?m)^Invoke-AlGoTestRun '
+        $rawActionScript | Should -Not -Match 'GetBcContainerEventLog'
+    }
+
+    # Call action
+
+}
