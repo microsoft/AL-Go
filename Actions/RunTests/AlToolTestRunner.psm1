@@ -464,13 +464,77 @@ function ConvertFrom-AlFailureOutput {
 
 <#
 .SYNOPSIS
-    Parses an AlTool test-groups response into codeunit and method result maps.
+    Parses an AlTool test-groups ToolResponse into result occurrences.
 .DESCRIPTION
-    Valid batch entries are retained even when other entries are invalid or missing.
+    Parses every structurally valid result occurrence from the default ToolResponse JSON contract.
+    A CLI or input failure before ToolResponse serialization has empty OutputLines; its diagnostics
+    are emitted on stderr by the native command.
 .PARAMETER OutputLines
     The complete structured stdout from `al runtests --testgroups`.
 .OUTPUTS
-    [hashtable] containing Results, HasFailedOutcome, Parsed, Issues, and ParseError.
+    [hashtable] containing the parsed envelope state, result occurrences, message, and parse error.
+.EXAMPLE
+    $outputLines = @'
+    {
+      "succeeded": true,
+      "message": "Test run completed.",
+      "data": {
+        "success": true,
+        "results": [
+          { "codeunitId": 130001, "methodName": "TestOne[Case A]", "status": "passed", "output": "", "durationMs": 12 }
+        ]
+      },
+      "nextSteps": [],
+      "warnings": []
+    }
+    '@
+    ConvertFrom-AlTestGroupsOutput -OutputLines $outputLines
+.EXAMPLE
+    $outputLines = @'
+    {
+      "succeeded": false,
+      "message": "One or more tests failed.",
+      "data": {
+        "success": false,
+        "results": [
+          { "codeunitId": 130001, "methodName": "TestOne", "status": "failed", "output": "Assertion failed.\nAL Callstack:\nTestOne line 10", "durationMs": 25 }
+        ]
+      },
+      "nextSteps": [],
+      "errorDetails": {
+        "code": "TestRunFailed",
+        "description": "One or more tests failed.",
+        "possibleCauses": [],
+        "suggestedActions": ["Review the failed test output."],
+        "alternatives": [],
+        "missingPrerequisites": [],
+        "diagnosticHints": ["Inspect the AL callstack."],
+        "retryable": false
+      },
+      "warnings": []
+    }
+    '@
+    ConvertFrom-AlTestGroupsOutput -OutputLines $outputLines
+.EXAMPLE
+    $outputLines = @'
+    {
+      "succeeded": false,
+      "message": "The server connection is not configured.",
+      "nextSteps": ["Configure the Business Central server connection."],
+      "errorDetails": {
+        "code": "ConnectionConfigurationMissing",
+        "description": "No server connection configuration was found.",
+        "possibleCauses": ["The project configuration is incomplete."],
+        "suggestedActions": ["Add the missing server settings."],
+        "alternatives": [],
+        "missingPrerequisites": ["Business Central server connection"],
+        "diagnosticHints": ["Verify the project launch configuration."],
+        "retryable": false
+      },
+      "warnings": ["No test run was started."]
+    }
+    '@
+    ConvertFrom-AlTestGroupsOutput -OutputLines $outputLines
 #>
 function ConvertFrom-AlTestGroupsOutput {
     param(
@@ -478,11 +542,11 @@ function ConvertFrom-AlTestGroupsOutput {
     )
 
     $result = @{
-        Results          = @{}
-        HasFailedOutcome = $false
-        Parsed           = $false
-        Issues           = @()
-        ParseError       = ""
+        Results    = @{}
+        Parsed     = $false
+        Succeeded  = $null
+        Message    = ""
+        ParseError = ""
     }
     $json = ($OutputLines -join [Environment]::NewLine).Trim()
     if ([string]::IsNullOrWhiteSpace($json)) {
@@ -499,51 +563,84 @@ function ConvertFrom-AlTestGroupsOutput {
     }
 
     if ($toolResponse -isnot [hashtable] -or
-        -not $toolResponse.ContainsKey("succeeded") -or $toolResponse.succeeded -isnot [bool] -or
-        -not $toolResponse.ContainsKey("data") -or $toolResponse.data -isnot [hashtable] -or
-        -not $toolResponse.data.ContainsKey("results") -or $null -eq $toolResponse.data.results) {
-        $result.ParseError = "The structured response does not contain a valid ToolResponse data.results collection."
+        -not $toolResponse.ContainsKey("succeeded") -or $toolResponse.succeeded -isnot [bool]) {
+        $result.ParseError = "The structured response does not contain a valid Boolean ToolResponse succeeded value."
         return $result
     }
 
-    $result.Parsed = $true
-    $invalidResults = @{}
-    foreach ($entry in @($toolResponse.data.results)) {
+    $result.Succeeded = $toolResponse.succeeded
+    if ($toolResponse.ContainsKey("message") -and $toolResponse.message -is [string]) {
+        $result.Message = "$($toolResponse.message)".Trim()
+    }
+
+    $entries = @()
+    if ($toolResponse.ContainsKey("data") -and $null -ne $toolResponse.data) {
+        if ($toolResponse.data -isnot [hashtable]) {
+            $result.ParseError = "The structured response contains an invalid ToolResponse data object."
+            return $result
+        }
+        if ($toolResponse.data.ContainsKey("results")) {
+            if ($toolResponse.data.results -isnot [array]) {
+                $result.ParseError = "The structured response contains a ToolResponse data.results value that is not an array."
+                return $result
+            }
+            $entries = @($toolResponse.data.results)
+        }
+        elseif ($result.Succeeded) {
+            $result.ParseError = "The successful structured response does not contain a ToolResponse data.results array."
+            return $result
+        }
+    }
+    elseif ($result.Succeeded) {
+        $result.ParseError = "The successful structured response does not contain a ToolResponse data.results array."
+        return $result
+    }
+
+    foreach ($entry in $entries) {
         if ($entry -isnot [hashtable]) {
-            $result.Issues += "A result entry is not an object."
-            continue
+            $result.ParseError = "The ToolResponse data.results array contains an entry that is not an object."
+            return $result
         }
 
         $codeunitId = 0
-        if (-not [int]::TryParse("$($entry.codeunitId)", [ref] $codeunitId) -or $codeunitId -le 0) {
-            $result.Issues += "A result entry has an invalid codeunitId '$($entry.codeunitId)'."
-            continue
+        $codeunitIdValue = if ($entry.ContainsKey("codeunitId")) { "$($entry.codeunitId)" } else { "<missing>" }
+        if (-not $entry.ContainsKey("codeunitId") -or
+            -not [int]::TryParse($codeunitIdValue, [ref] $codeunitId) -or $codeunitId -le 0) {
+            $result.ParseError = "A ToolResponse result entry has an invalid codeunitId '$codeunitIdValue'."
+            return $result
+        }
+        if (-not $entry.ContainsKey("methodName") -or $entry.methodName -isnot [string] -or
+            [string]::IsNullOrWhiteSpace($entry.methodName)) {
+            $result.ParseError = "A ToolResponse result entry for codeunit $codeunitId has an invalid methodName."
+            return $result
         }
         $methodName = "$($entry.methodName)"
-        if ([string]::IsNullOrWhiteSpace($methodName)) {
-            $result.Issues += "A result entry for codeunit $codeunitId has no methodName."
-            continue
-        }
 
-        $outcome = switch ("$($entry.status)".ToLowerInvariant()) {
+        if (-not $entry.ContainsKey("status") -or $entry.status -isnot [string]) {
+            $result.ParseError = "Result $codeunitId/$methodName has an invalid status."
+            return $result
+        }
+        $outcome = switch ($entry.status.ToLowerInvariant()) {
             "passed" { "Pass" }
             "failed" { "Fail" }
             "skipped" { "Skip" }
             default { $null }
         }
         if (-not $outcome) {
-            $result.Issues += "Result $codeunitId/$methodName has unknown status '$($entry.status)'."
-            continue
-        }
-        if ($outcome -eq "Fail") {
-            $result.HasFailedOutcome = $true
+            $result.ParseError = "Result $codeunitId/$methodName has unknown status '$($entry.status)'."
+            return $result
         }
 
-        $durationMs = 0
-        if ($entry.ContainsKey("durationMs") -and $null -ne $entry.durationMs -and
-            -not [int]::TryParse("$($entry.durationMs)", [ref] $durationMs)) {
-            $result.Issues += "Result $codeunitId/$methodName has invalid durationMs '$($entry.durationMs)'; using zero."
-            $durationMs = 0
+        [long] $durationMs = 0
+        $durationMsValue = if ($entry.ContainsKey("durationMs")) { "$($entry.durationMs)" } else { "<missing>" }
+        if (-not $entry.ContainsKey("durationMs") -or
+            -not [long]::TryParse($durationMsValue, [ref] $durationMs)) {
+            $result.ParseError = "Result $codeunitId/$methodName has invalid durationMs '$durationMsValue'."
+            return $result
+        }
+        if (-not $entry.ContainsKey("output") -or $entry.output -isnot [string]) {
+            $result.ParseError = "Result $codeunitId/$methodName has invalid output."
+            return $result
         }
 
         $message = ""
@@ -555,20 +652,11 @@ function ConvertFrom-AlTestGroupsOutput {
         }
 
         $codeunitKey = "$codeunitId"
-        $resultKey = "$codeunitKey::$methodName"
-        if ($invalidResults.ContainsKey($resultKey)) {
-            continue
-        }
         if (-not $result.Results.ContainsKey($codeunitKey)) {
-            $result.Results[$codeunitKey] = @{}
+            $result.Results[$codeunitKey] = @()
         }
-        if ($result.Results[$codeunitKey].ContainsKey($methodName)) {
-            $result.Results[$codeunitKey].Remove($methodName)
-            $invalidResults[$resultKey] = $true
-            $result.Issues += "The response contains duplicate results for $codeunitId/$methodName; the result was invalidated."
-            continue
-        }
-        $result.Results[$codeunitKey][$methodName] = @{
+        $result.Results[$codeunitKey] += @{
+            MethodName = $methodName
             Outcome    = $outcome
             Ms         = $durationMs
             Message    = $message
@@ -576,9 +664,27 @@ function ConvertFrom-AlTestGroupsOutput {
         }
     }
 
+    $result.Parsed = $true
     return $result
 }
 
+<#
+.SYNOPSIS
+    Creates an AlTool test-groups input file.
+.DESCRIPTION
+    Writes the JSON file required by `al runtests --testgroups`, containing each codeunit and its
+    enabled test methods.
+.PARAMETER Codeunits
+    Codeunits with Id and Tests properties to serialize.
+.OUTPUTS
+    [string] Path to the temporary JSON file.
+.EXAMPLE
+    $codeunits = @([pscustomobject]@{ Id = 130001; Tests = @("TestOne", "TestTwo") })
+    New-AlTestGroupsFile -Codeunits $codeunits
+
+    # Generated JSON:
+    # [{ "codeunitId": 130001, "testMethods": ["TestOne", "TestTwo"] }]
+#>
 function New-AlTestGroupsFile {
     param(
         [Parameter(Mandatory = $true)][object[]] $Codeunits
@@ -613,7 +719,8 @@ function New-AlTestGroupsFile {
 .SYNOPSIS
     Runs all enabled test groups for one app through one AlTool connection.
 .DESCRIPTION
-    Valid structured results are returned for JUnit generation. Invalid result entries are reported.
+    Valid structured results are returned for JUnit generation. Invalid structured output terminates
+    as one protocol failure.
 #>
 function Invoke-AlRunTestsBatch {
     param(
@@ -647,51 +754,75 @@ function Invoke-AlRunTestsBatch {
             $sw.Stop()
         }
 
-        $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($nativeResult.StandardOutput)
-        $protocolErrors = @()
         if ($nativeResult.ExitCode -notin @(0, 1)) {
-            $protocolErrors += "The command exited with unexpected code $($nativeResult.ExitCode)."
+            $details = @("al runtests exited with unexpected code $($nativeResult.ExitCode).")
+            if ($nativeResult.StandardError.Count -gt 0) {
+                $details += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
+            }
+            if ($nativeResult.StandardOutput.Count -gt 0) {
+                $details += "stdout: $($nativeResult.StandardOutput -join [Environment]::NewLine)"
+            }
+            if ($details.Count -eq 1) {
+                $details += "The command produced no stdout or stderr."
+            }
+            throw "AlTool process failure. $($details -join [Environment]::NewLine)"
         }
+
+        $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
+        if ([string]::IsNullOrWhiteSpace($standardOutputText)) {
+            if ($nativeResult.StandardError.Count -gt 0) {
+                throw "al runtests failed: $($nativeResult.StandardError -join [Environment]::NewLine) (exit code $($nativeResult.ExitCode))."
+            }
+            throw "al runtests returned no structured stdout or stderr (exit code $($nativeResult.ExitCode))."
+        }
+
+        $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($nativeResult.StandardOutput)
         if (-not $parsed.Parsed) {
-            $protocolErrors += $parsed.ParseError
-        }
-        else {
-            if ($nativeResult.ExitCode -eq 1 -and -not $parsed.HasFailedOutcome) {
-                $protocolErrors += "The command exited with code 1 without reporting a failed test."
+            $details = @($parsed.ParseError, "stdout: $standardOutputText")
+            if ($nativeResult.StandardError.Count -gt 0) {
+                $details += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
             }
-            if ($nativeResult.ExitCode -eq 0 -and $parsed.HasFailedOutcome) {
-                $protocolErrors += "The command exited with code 0 after reporting a failed test."
-            }
+            throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
         }
 
-        if ($protocolErrors.Count -gt 0) {
-            $diagnostics = @()
+        $exitIndicatesSuccess = $nativeResult.ExitCode -eq 0
+        if ($exitIndicatesSuccess -ne $parsed.Succeeded) {
+            $details = @(
+                "ToolResponse succeeded=$($parsed.Succeeded.ToString().ToLowerInvariant()) is inconsistent with exit code $($nativeResult.ExitCode).",
+                "stdout: $standardOutputText"
+            )
             if ($nativeResult.StandardError.Count -gt 0) {
-                $diagnostics += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
+                $details += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
             }
-            if ($nativeResult.StandardOutput.Count -gt 0) {
-                $diagnostics += "stdout: $($nativeResult.StandardOutput -join [Environment]::NewLine)"
-            }
-            if ($diagnostics.Count -eq 0) {
-                $diagnostics += "The command produced no stdout or stderr."
-            }
-            throw "AlTool test batch protocol failure. $($protocolErrors -join ' ') $($diagnostics -join [Environment]::NewLine)"
+            throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
         }
 
-        if ($parsed.Issues.Count -gt 0) {
-            Write-Host "::warning::The AlTool test batch contained invalid result entries. $($parsed.Issues -join ' ')"
-            if ($nativeResult.StandardError.Count -gt 0) {
-                Write-Host "al runtests stderr:"
-                Write-Host ($nativeResult.StandardError -join [Environment]::NewLine)
+        if (-not $parsed.Succeeded -and $parsed.Results.Count -eq 0) {
+            $details = @()
+            $stderrLines = @($nativeResult.StandardError |
+                ForEach-Object { "$_".Trim() } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            if (-not [string]::IsNullOrWhiteSpace($parsed.Message)) {
+                $details += $parsed.Message
+                $stderrLines = @($stderrLines | Where-Object {
+                        -not [string]::Equals($_, $parsed.Message, [StringComparison]::OrdinalIgnoreCase)
+                    })
+                if ($stderrLines.Count -gt 0) {
+                    $details += "stderr: $($stderrLines -join [Environment]::NewLine)"
+                }
             }
-            if ($nativeResult.StandardOutput.Count -gt 0) {
-                Write-Host "al runtests stdout:"
-                Write-Host ($nativeResult.StandardOutput -join [Environment]::NewLine)
+            else {
+                if ($stderrLines.Count -gt 0) {
+                    $details += "stderr: $($stderrLines -join [Environment]::NewLine)"
+                }
+                $details += "stdout: $standardOutputText"
             }
+            throw "al runtests failed: $($details -join [Environment]::NewLine)"
         }
 
         return @{
             Results    = $parsed.Results
+            Succeeded  = $parsed.Succeeded
             ElapsedSec = [Math]::Round($sw.Elapsed.TotalSeconds, 3)
         }
     }
@@ -713,7 +844,7 @@ function Invoke-AlRunTestsBatch {
 .PARAMETER RequestedMethods
     The method names that were requested for this codeunit.
 .PARAMETER MethodResults
-    The parsed per-method result map for this codeunit.
+    The parsed result occurrences for this codeunit.
 .PARAMETER ExtensionId
     The extension (app) id.
 .PARAMETER AppName
@@ -721,7 +852,7 @@ function Invoke-AlRunTestsBatch {
 .PARAMETER Hostname
     The runner host name.
 .OUTPUTS
-    [int] Number of failing methods in this codeunit.
+    [int] Number of failing result occurrences in this codeunit.
 #>
 function Add-JUnitTestSuite {
     param(
@@ -729,7 +860,7 @@ function Add-JUnitTestSuite {
         [Parameter(Mandatory = $true)][System.Xml.XmlElement] $TestSuitesNode,
         [Parameter(Mandatory = $true)] $Codeunit,
         [Parameter(Mandatory = $true)][string[]] $RequestedMethods,
-        [Parameter(Mandatory = $true)][hashtable] $MethodResults,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $MethodResults,
         [Parameter(Mandatory = $true)][string] $ExtensionId,
         [Parameter(Mandatory = $true)][string] $AppName,
         [Parameter(Mandatory = $true)][string] $Hostname
@@ -759,14 +890,35 @@ function Add-JUnitTestSuite {
     $failed = 0
     $skipped = 0
     $suiteMs = 0.0
+    $testCount = 0
+    $requestedMethodLookup = @{}
+    $resultsByRequestedMethod = @{}
     foreach ($method in $RequestedMethods) {
-        $res = $MethodResults[$method]
+        $requestedMethodLookup[$method] = $true
+        $resultsByRequestedMethod[$method] = @()
+    }
 
-        $tc = $Doc.CreateElement("testcase")
-        $tc.SetAttribute("classname", $suiteName)
-        $tc.SetAttribute("name", $method)
+    foreach ($res in $MethodResults) {
+        $resultName = "$($res.MethodName)"
+        $requestedMethod = $null
+        if ($requestedMethodLookup.ContainsKey($resultName)) {
+            $requestedMethod = $resultName
+        }
+        elseif ($resultName -match '^([^\[]+)\[(.+)\]$' -and
+            $requestedMethodLookup.ContainsKey($Matches[1])) {
+            $requestedMethod = $Matches[1]
+        }
+        if ($null -ne $requestedMethod) {
+            $resultsByRequestedMethod[$requestedMethod] += $res
+        }
+    }
 
-        if ($null -eq $res) {
+    foreach ($method in $RequestedMethods) {
+        $methodResults = @($resultsByRequestedMethod[$method])
+        if ($methodResults.Count -eq 0) {
+            $tc = $Doc.CreateElement("testcase")
+            $tc.SetAttribute("classname", $suiteName)
+            $tc.SetAttribute("name", $method)
             # Missing results remain failures in the final JUnit output.
             $tc.SetAttribute("time", "0")
             $failure = $Doc.CreateElement("failure")
@@ -774,29 +926,37 @@ function Add-JUnitTestSuite {
             $failure.InnerText = ""
             $tc.AppendChild($failure) | Out-Null
             $failed++
+            $testCount++
+            $suite.AppendChild($tc) | Out-Null
         }
         else {
-            $suiteMs += [double] $res.Ms
-            $tc.SetAttribute("time", ([Math]::Round($res.Ms / 1000.0, 3)).ToString($ci))
-            switch ($res.Outcome) {
-                'Fail' {
-                    $failure = $Doc.CreateElement("failure")
-                    $failure.SetAttribute("message", "$($res.Message)")
-                    $failure.InnerText = "$($res.Stacktrace)".Replace(";", "`n")
-                    $tc.AppendChild($failure) | Out-Null
-                    $failed++
+            foreach ($res in $methodResults) {
+                $tc = $Doc.CreateElement("testcase")
+                $tc.SetAttribute("classname", $suiteName)
+                $tc.SetAttribute("name", "$($res.MethodName)")
+                $suiteMs += [double] $res.Ms
+                $tc.SetAttribute("time", ([Math]::Round($res.Ms / 1000.0, 3)).ToString($ci))
+                switch ($res.Outcome) {
+                    'Fail' {
+                        $failure = $Doc.CreateElement("failure")
+                        $failure.SetAttribute("message", "$($res.Message)")
+                        $failure.InnerText = "$($res.Stacktrace)".Replace(";", "`n")
+                        $tc.AppendChild($failure) | Out-Null
+                        $failed++
+                    }
+                    'Skip' {
+                        $sk = $Doc.CreateElement("skipped")
+                        $tc.AppendChild($sk) | Out-Null
+                        $skipped++
+                    }
                 }
-                'Skip' {
-                    $sk = $Doc.CreateElement("skipped")
-                    $tc.AppendChild($sk) | Out-Null
-                    $skipped++
-                }
+                $testCount++
+                $suite.AppendChild($tc) | Out-Null
             }
         }
-        $suite.AppendChild($tc) | Out-Null
     }
 
-    $suite.SetAttribute("tests", "$($RequestedMethods.Count)")
+    $suite.SetAttribute("tests", "$testCount")
     $suite.SetAttribute("errors", "0")
     $suite.SetAttribute("failures", "$failed")
     $suite.SetAttribute("skipped", "$skipped")
@@ -900,18 +1060,17 @@ function Invoke-AlToolTestRun {
             $doc.AppendChild($suites) | Out-Null
         }
 
-        $allPassed = $true
-
         $batch = Invoke-AlRunTestsBatch -Codeunits $codeunits -ProjectPath $projectPath `
             -Company $company -Tenant $Tenant -Connection $connection
         $batchResults = $batch.Results
+        $allPassed = [bool] $batch.Succeeded
 
         $idx = 0
         foreach ($cu in $codeunits) {
             $idx++
             $methods = @($cu.Tests | ForEach-Object { "$_" })
             $cuResults = $batchResults["$($cu.Id)"]
-            if ($null -eq $cuResults) { $cuResults = @{} }
+            if ($null -eq $cuResults) { $cuResults = @() }
 
             $failed = Add-JUnitTestSuite -Doc $doc -TestSuitesNode $suites -Codeunit $cu `
                 -RequestedMethods $methods -MethodResults $cuResults -ExtensionId $ExtensionId `
@@ -919,7 +1078,7 @@ function Invoke-AlToolTestRun {
 
             if ($failed -gt 0) { $allPassed = $false }
 
-            Write-Host ("[{0}/{1}] cu {2} '{3}' -> {4} failed of {5} method(s)" -f `
+            Write-Host ("[{0}/{1}] cu {2} '{3}' -> {4} failed result(s) from {5} requested method(s)" -f `
                     $idx, $codeunits.Count, $cu.Id, $cu.Name, $failed, $methods.Count)
         }
         Write-Host ("Run for app '{0}': {1} codeunit(s) in {2}s real al wall-clock." -f `
