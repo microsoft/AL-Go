@@ -4,7 +4,7 @@
     "eTag": "8e9a0389-c89c-4dd7-9e43-11054c8020a7",
     "title": "AL-Go Telemetry",
     "schema_version": "60",
-    "pagesNavWidth": 187,
+    "pagesNavWidth": 210,
     "dataSources": [
         {
             "id": "8320a60e-6341-4e9d-9245-9b89f7c218f0",
@@ -12,7 +12,8 @@
             "scopeId": "kusto",
             "name": "AL-Go Telemetry",
             "clusterUri": "<Insert your cluster URI here>",
-            "database": "<Insert your application insights name here"
+            "database": "<Insert your application insights name here>",
+            "queryResultsCacheMaxAge": 300000
         }
     ],
     "tiles": [
@@ -20,21 +21,21 @@
             "id": "5c705191-ebab-4de3-91b3-ec75046496d2",
             "title": "Workflow Runs",
             "visualType": "table",
-            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "pageId": "a7be3875-d31c-5943-8ff4-be3131ba5b29",
             "layout": {
                 "x": 0,
-                "y": 13,
+                "y": 3,
                 "width": 22,
-                "height": 10
+                "height": 11
             },
             "queryRef": {
                 "kind": "query",
                 "queryId": "fa4c75b2-ebce-4ced-a249-2fc75f4cddd2"
             },
-            "description": "All completed workflow runs except PR Builds",
+            "description": "The 500 latest completed workflow runs in the selected range. Use RunId to inspect action errors.",
             "visualOptions": {
                 "table__enableRenderLinks": true,
-                "colorRulesDisabled": false,
+                "colorRulesDisabled": true,
                 "colorStyle": "light",
                 "crossFilterDisabled": false,
                 "drillthroughDisabled": true,
@@ -43,6 +44,12 @@
                         "interaction": "column",
                         "property": "RunId",
                         "parameterId": "e35cb8d1-bb86-4cf1-a5eb-8a213b27d53a",
+                        "disabled": false
+                    },
+                    {
+                        "interaction": "column",
+                        "property": "RepositoryName",
+                        "parameterId": "03cef627-cbb5-4acc-b2b0-fa61d1bad48c",
                         "disabled": false
                     }
                 ],
@@ -53,41 +60,17 @@
                         "disabled": false
                     }
                 ],
-                "colorRules": [
-                    {
-                        "id": "a64df981-f922-4a0e-a012-d9018a003584",
-                        "ruleType": "colorByCondition",
-                        "applyToColumn": null,
-                        "hideText": false,
-                        "applyTo": "rows",
-                        "conditions": [
-                            {
-                                "operator": ">=",
-                                "column": "severityLevel",
-                                "values": [
-                                    "3"
-                                ]
-                            }
-                        ],
-                        "chainingOperator": "or",
-                        "colorStyle": "bold",
-                        "color": "red",
-                        "tag": "",
-                        "icon": null,
-                        "ruleName": "",
-                        "visualType": "table"
-                    }
-                ]
+                "colorRules": []
             }
         },
         {
             "id": "adc0cefe-4ceb-4422-9dd0-3e7a0263b048",
-            "title": "Deprecation Warnings",
+            "title": "Observed Deprecation Warnings by Repository",
             "visualType": "table",
             "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
             "layout": {
                 "x": 0,
-                "y": 23,
+                "y": 27,
                 "width": 21,
                 "height": 11
             },
@@ -97,38 +80,19 @@
             },
             "visualOptions": {
                 "table__enableRenderLinks": true,
-                "colorRulesDisabled": false,
+                "colorRulesDisabled": true,
                 "colorStyle": "light",
                 "crossFilterDisabled": false,
                 "drillthroughDisabled": false,
                 "crossFilter": [],
                 "drillthrough": [],
-                "table__renderLinks": [],
-                "colorRules": [
+                "table__renderLinks": [
                     {
-                        "id": "eebd31ac-3e93-49ad-9430-d100d988815c",
-                        "ruleType": "colorByCondition",
-                        "applyToColumn": null,
-                        "hideText": false,
-                        "applyTo": "rows",
-                        "conditions": [
-                            {
-                                "operator": "==",
-                                "column": "severityLevel",
-                                "values": [
-                                    "2"
-                                ]
-                            }
-                        ],
-                        "chainingOperator": "and",
-                        "colorStyle": "bold",
-                        "color": "yellow",
-                        "tag": "",
-                        "icon": null,
-                        "ruleName": "",
-                        "visualType": "table"
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
                     }
-                ]
+                ],
+                "colorRules": []
             }
         },
         {
@@ -192,34 +156,15 @@
             "visualOptions": {
                 "multiStat__textSize": "auto",
                 "multiStat__valueColumn": null,
-                "colorRulesDisabled": false,
+                "colorRulesDisabled": true,
                 "colorStyle": "light",
-                "colorRules": [
-                    {
-                        "id": "a64df981-f922-4a0e-a012-d9018a003584",
-                        "ruleType": "colorByCondition",
-                        "applyToColumn": null,
-                        "hideText": false,
-                        "applyTo": "cells",
-                        "conditions": [
-                            {
-                                "operator": ">=",
-                                "column": "severityLevel",
-                                "values": [
-                                    "3"
-                                ]
-                            }
-                        ],
-                        "chainingOperator": "or",
-                        "colorStyle": "bold",
-                        "color": "red",
-                        "tag": "",
-                        "icon": null,
-                        "ruleName": "",
-                        "visualType": "card"
-                    }
-                ]
-            }
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            },
+            "description": "Non-PR workflow runs in the selected range."
         },
         {
             "id": "36bed6a0-3b4d-4e02-a055-a88c5e52f4e9",
@@ -236,49 +181,29 @@
                 "kind": "query",
                 "queryId": "faff193e-c054-48a3-ac1a-b1b3f8d9f80e"
             },
-            "description": "Failed workflow runs excluding PR Builds as it is expected they might fail",
+            "description": "Failed and timed-out non-PR workflow runs.",
             "visualOptions": {
                 "multiStat__textSize": "auto",
                 "multiStat__valueColumn": null,
-                "colorRulesDisabled": false,
+                "colorRulesDisabled": true,
                 "colorStyle": "light",
-                "colorRules": [
-                    {
-                        "id": "a64df981-f922-4a0e-a012-d9018a003584",
-                        "ruleType": "colorByCondition",
-                        "applyToColumn": null,
-                        "hideText": false,
-                        "applyTo": "cells",
-                        "conditions": [
-                            {
-                                "operator": ">=",
-                                "column": "severityLevel",
-                                "values": [
-                                    "3"
-                                ]
-                            }
-                        ],
-                        "chainingOperator": "or",
-                        "colorStyle": "bold",
-                        "color": "red",
-                        "tag": "",
-                        "icon": null,
-                        "ruleName": "",
-                        "visualType": "card"
-                    }
-                ]
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
             }
         },
         {
             "id": "d218dfd9-ea24-409b-a8f9-fbf6269b942f",
-            "title": "AL-Go Version",
+            "title": "AL-Go Versions Observed in Selected Range",
             "visualType": "table",
             "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
             "layout": {
                 "x": 0,
                 "y": 7,
-                "width": 21,
-                "height": 6
+                "width": 14,
+                "height": 8
             },
             "queryRef": {
                 "kind": "query",
@@ -317,23 +242,23 @@
             "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
             "layout": {
                 "x": 0,
-                "y": 19,
+                "y": 23,
                 "width": 21,
                 "height": 4
             },
-            "markdownText": "## AL-Go Deprecations\nFrom time to time certain settings/features in AL-Go will be deprecated. \n\nPlease check https://aka.ms/ALGoDeprecations for more information on deprecated settings and what to do to remove dependencies on deprecated settings. ",
+            "markdownText": "## AL-Go Deprecations\nThe table below shows deprecation warnings emitted by the selected repositories during the selected time range; it is not the complete catalogue.\n\nSee https://aka.ms/ALGoDeprecations for all deprecated settings and migration guidance.",
             "visualOptions": {}
         },
         {
             "id": "01ec79fe-b564-44dd-a3b8-1d8f301af957",
-            "title": "Workflow Run Duration",
+            "title": "Workflow Duration Percentiles",
             "visualType": "table",
             "pageId": "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
             "layout": {
                 "x": 0,
                 "y": 0,
-                "width": 18,
-                "height": 7
+                "width": 22,
+                "height": 10
             },
             "queryRef": {
                 "kind": "query",
@@ -353,14 +278,14 @@
         },
         {
             "id": "ea86e1a1-84e4-4f88-a659-8c401b7581b4",
-            "title": "Workflow run duration over time",
+            "title": "Workflow p50 / p95 Duration Over Time",
             "visualType": "line",
             "pageId": "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
             "layout": {
                 "x": 0,
-                "y": 14,
-                "width": 18,
-                "height": 10
+                "y": 10,
+                "width": 22,
+                "height": 12
             },
             "queryRef": {
                 "kind": "query",
@@ -396,7 +321,7 @@
         },
         {
             "id": "837ad13d-4cf6-4e0b-bbc1-e33d2b2e7857",
-            "title": "Repositories",
+            "title": "Active Repositories",
             "visualType": "card",
             "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
             "layout": {
@@ -419,7 +344,7 @@
         },
         {
             "id": "5b968dec-fd4e-4621-b9f0-855effe66911",
-            "title": "Runner minutes by Environment Type",
+            "title": "AL-Go Action Hours by Runner Environment",
             "visualType": "pie",
             "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
             "layout": {
@@ -460,14 +385,14 @@
         },
         {
             "id": "bc356a22-f3df-48ee-be34-22d0c1708d10",
-            "title": "Last time \"Update AL-Go System Files\" was run",
+            "title": "Latest Update AL-Go System Files Run",
             "visualType": "table",
             "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
             "layout": {
                 "x": 0,
-                "y": 13,
+                "y": 15,
                 "width": 21,
-                "height": 6
+                "height": 8
             },
             "queryRef": {
                 "kind": "query",
@@ -562,7 +487,7 @@
         },
         {
             "id": "3a849546-61bc-4a59-b0c5-58ad0c561ba2",
-            "title": "The total compute time of AL-Go actions by repo and environment",
+            "title": "AL-Go Action Hours by Repository and Environment",
             "visualType": "table",
             "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
             "layout": {
@@ -591,12 +516,12 @@
             "id": "1374eb1c-8b7e-486b-8110-68c2c307872c",
             "title": "Error Messages",
             "visualType": "table",
-            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "pageId": "a7be3875-d31c-5943-8ff4-be3131ba5b29",
             "layout": {
                 "x": 0,
-                "y": 23,
+                "y": 14,
                 "width": 22,
-                "height": 12
+                "height": 11
             },
             "queryRef": {
                 "kind": "query",
@@ -618,11 +543,12 @@
                     }
                 ],
                 "colorRules": []
-            }
+            },
+            "description": "The 500 latest raw AL-Go action errors. Restrict dashboard and underlying telemetry access appropriately."
         },
         {
             "id": "f4baf8ce-3177-45c6-a4d8-893991b2a58f",
-            "title": "Runner minutes by OS",
+            "title": "AL-Go Action Hours by OS",
             "visualType": "pie",
             "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
             "layout": {
@@ -663,7 +589,7 @@
         },
         {
             "id": "b4052b08-c95d-4060-bede-0a75a48c5a04",
-            "title": "The total compute time in hours of AL-Go over time",
+            "title": "AL-Go Action Hours Over Time",
             "visualType": "timechart",
             "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
             "layout": {
@@ -731,6 +657,905 @@
             },
             "markdownText": "## Runner OS\r\nAL-Go also supports running certain jobs on linux. You can learn more about that [here](https://github.com/microsoft/AL-Go/blob/main/Scenarios/SelfHostedGitHubRunner.md#githubrunner-vs-runs-on)\r\n",
             "visualOptions": {}
+        },
+        {
+            "id": "287d5509-e037-59d2-a5f6-562494bac376",
+            "title": "Telemetry Freshness",
+            "visualType": "card",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 12,
+                "y": 0,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "ef8b89fa-032a-5703-9a97-ff611127167c"
+            },
+            "description": "Freshness of the latest workflow telemetry event.",
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "5390969c-ad6a-50be-98bb-aa58312ee8ca",
+            "title": "Workflow Success Rate",
+            "visualType": "card",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 17,
+                "y": 0,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "c01f0873-b99b-5129-bfe3-c3f53a39e550"
+            },
+            "description": "Non-PR workflow success rate for the selected range.",
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "a0d6df94-dc28-5ec1-9e44-79756edf4598",
+            "title": "Currently Failing Workflows",
+            "visualType": "table",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 0,
+                "y": 13,
+                "width": 14,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "ff3d7f06-e36c-565c-a005-e2a5081660e9"
+            },
+            "description": "Repositories and workflows whose latest observed non-PR run failed or timed out.",
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [
+                    {
+                        "interaction": "column",
+                        "property": "RepositoryName",
+                        "parameterId": "03cef627-cbb5-4acc-b2b0-fa61d1bad48c",
+                        "disabled": false
+                    }
+                ],
+                "drillthrough": [
+                    {
+                        "pairs": [
+                            {
+                                "parameterId": "03cef627-cbb5-4acc-b2b0-fa61d1bad48c",
+                                "property": "RepositoryName"
+                            },
+                            {
+                                "parameterId": "e35cb8d1-bb86-4cf1-a5eb-8a213b27d53a",
+                                "property": "RunId"
+                            }
+                        ],
+                        "destinationPages": [
+                            "a7be3875-d31c-5943-8ff4-be3131ba5b29"
+                        ],
+                        "disabled": false
+                    }
+                ],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "bc0d773a-f65a-5fd6-8329-435a8d2061bd",
+            "title": "Action Failure Hotspots",
+            "visualType": "table",
+            "pageId": "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+            "layout": {
+                "x": 14,
+                "y": 13,
+                "width": 8,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "bff4ce71-9e8c-5ab9-8f1e-87e235c8448e"
+            },
+            "description": "Most frequent failing AL-Go actions.",
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "28c943c5-9da1-58b5-abf3-c65f91aeb58e",
+            "title": " ",
+            "visualType": "markdownCard",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 22,
+                "height": 3
+            },
+            "markdownText": "## Reliability\nWorkflow outcomes exclude Pull Request Build unless a tile explicitly says otherwise. Empty results are reported as **No telemetry**, not healthy.",
+            "visualOptions": {}
+        },
+        {
+            "id": "ff622089-d4dc-5b4f-9a11-7b2bc9f9e15b",
+            "title": "Workflow Success Rate",
+            "visualType": "card",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 0,
+                "y": 3,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "f0140d85-c424-5038-b390-78c05959bea7"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "fc30d3be-3af4-53c1-bd3e-0861e7d51652",
+            "title": "Failed Runs",
+            "visualType": "card",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 5,
+                "y": 3,
+                "width": 4,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "59bd778d-061f-57af-9a7f-9936f34e5b47"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "807d2d6c-fb8b-5137-8916-214357320b68",
+            "title": "Timed Out",
+            "visualType": "card",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 9,
+                "y": 3,
+                "width": 4,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "7abbc6c5-7c27-5ae8-b75f-c57680e016c1"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "5b9b11a7-6fc9-57f6-bf81-211566ec7ecc",
+            "title": "Cancelled",
+            "visualType": "card",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 13,
+                "y": 3,
+                "width": 4,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "ee888fd9-ee60-54bf-97a8-e9fe7f12352a"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "1378a978-a787-509b-8e61-0ac722a76b58",
+            "title": "First-Attempt Success",
+            "visualType": "card",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 17,
+                "y": 3,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "e087721e-8ab0-5f40-a428-8a5d3c569253"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "9e8a8251-c966-5837-bf52-8c37cef6dbea",
+            "title": "Workflow Outcome Trend",
+            "visualType": "line",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 0,
+                "y": 6,
+                "width": 22,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "1db58590-f405-5ddd-a969-08aee09a7775"
+            },
+            "visualOptions": {
+                "multipleYAxes": {
+                    "base": {
+                        "id": "-1",
+                        "label": "",
+                        "columns": [],
+                        "yAxisMaximumValue": null,
+                        "yAxisMinimumValue": null,
+                        "yAxisScale": "linear",
+                        "horizontalLines": []
+                    },
+                    "additional": [],
+                    "showMultiplePanels": false
+                },
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumnTitle": "",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "xAxisScale": "linear",
+                "verticalLine": "",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "c1de642b-21ba-5871-ba68-8b6a6f723702",
+            "title": "Repositories Needing Attention",
+            "visualType": "table",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 0,
+                "y": 16,
+                "width": 12,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "146ffb22-ea10-59fb-a109-8cb148ea3ace"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [
+                    {
+                        "pairs": [
+                            {
+                                "parameterId": "03cef627-cbb5-4acc-b2b0-fa61d1bad48c",
+                                "property": "RepositoryName"
+                            },
+                            {
+                                "parameterId": "e35cb8d1-bb86-4cf1-a5eb-8a213b27d53a",
+                                "property": "RunId"
+                            }
+                        ],
+                        "destinationPages": [
+                            "a7be3875-d31c-5943-8ff4-be3131ba5b29"
+                        ],
+                        "disabled": false
+                    }
+                ],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "bf1b26b9-faa0-5a9a-96b7-4948b79ead39",
+            "title": "Failure Rate by Repository",
+            "visualType": "table",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 12,
+                "y": 16,
+                "width": 10,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "f453b4ab-4845-5369-843c-fa2f48f0b198"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "ab318e5f-e89c-50d4-8c72-a35f12c752a0",
+            "title": "Pull Request Build Outcomes",
+            "visualType": "line",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 0,
+                "y": 26,
+                "width": 11,
+                "height": 9
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "99c803f5-fb05-5948-ac43-e7c5e44286ad"
+            },
+            "visualOptions": {
+                "multipleYAxes": {
+                    "base": {
+                        "id": "-1",
+                        "label": "",
+                        "columns": [],
+                        "yAxisMaximumValue": null,
+                        "yAxisMinimumValue": null,
+                        "yAxisScale": "linear",
+                        "horizontalLines": []
+                    },
+                    "additional": [],
+                    "showMultiplePanels": false
+                },
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumnTitle": "",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "xAxisScale": "linear",
+                "verticalLine": "",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "557c9a17-f73d-5d4c-9349-3070a85b6924",
+            "title": "Workflow Duration Percentiles",
+            "visualType": "table",
+            "pageId": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+            "layout": {
+                "x": 11,
+                "y": 26,
+                "width": 11,
+                "height": 9
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "c673642c-4035-5bd3-b0f0-24a2fb1e0752"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "b98dc321-0ba9-589d-9910-04b24c401ebb",
+            "title": " ",
+            "visualType": "markdownCard",
+            "pageId": "a7be3875-d31c-5943-8ff4-be3131ba5b29",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 22,
+                "height": 3
+            },
+            "markdownText": "## Run Explorer\nFilter by repository, workflow, ref, conclusion, or RunId. GitHub links open the original workflow run. Raw error messages are operationally sensitive.",
+            "visualOptions": {}
+        },
+        {
+            "id": "5539221a-f367-5020-9de0-ed4a3a7b1ec7",
+            "title": "Slowest AL-Go Actions",
+            "visualType": "table",
+            "pageId": "a7be3875-d31c-5943-8ff4-be3131ba5b29",
+            "layout": {
+                "x": 0,
+                "y": 25,
+                "width": 11,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "c081d9eb-c54e-538d-8a40-6e9d397026bc"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "6b2c1cd9-fa2b-5407-b251-bc5a2170b26f",
+            "title": "Most Frequent Failing Actions",
+            "visualType": "table",
+            "pageId": "a7be3875-d31c-5943-8ff4-be3131ba5b29",
+            "layout": {
+                "x": 11,
+                "y": 25,
+                "width": 11,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "a144444a-c4a9-52c0-ac35-d4d1b7c10398"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "dd22b383-beb8-57e9-b544-6304f9d6d492",
+            "title": " ",
+            "visualType": "markdownCard",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 22,
+                "height": 3
+            },
+            "markdownText": "## Tests & Quality\nAggregate AL-Go test, page scripting, and BCPT results. Test telemetry is emitted only when AL-Go executes at least one test, so **No telemetry** is expected for repositories without test runs. BCPT does not emit TotalTime, so duration visuals exclude BCPT.",
+            "visualOptions": {}
+        },
+        {
+            "id": "19cb8733-4e2a-5306-bcf2-15c9d77c0932",
+            "title": "Tests",
+            "visualType": "card",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 0,
+                "y": 3,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "f9945299-edc0-5e00-88b1-1988fcc15ac5"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "f1955865-ef3b-55af-b671-cfee87e247ab",
+            "title": "Failed Tests",
+            "visualType": "card",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 5,
+                "y": 3,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "535292fd-c0e2-5dcf-a647-e4b0853ccde9"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "3982edce-7dcf-5edd-a6c5-5626b79ab917",
+            "title": "Test Pass Rate",
+            "visualType": "card",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 10,
+                "y": 3,
+                "width": 5,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "6f95f542-a162-5c90-8157-b21618dd4ce4"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "6d06f854-03aa-5762-ba4e-e1416e9f0b03",
+            "title": "Test Execution Time",
+            "visualType": "card",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 15,
+                "y": 3,
+                "width": 7,
+                "height": 3
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "67f3f7e1-7e82-5d46-967b-e9726d14e140"
+            },
+            "visualOptions": {
+                "multiStat__textSize": "auto",
+                "multiStat__valueColumn": null,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "colorRules": [],
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "966b3ff4-1634-50e2-b580-eb32ff461c79",
+            "title": "Test Outcomes Over Time",
+            "visualType": "line",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 0,
+                "y": 6,
+                "width": 22,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "7af9f4d1-6ff2-57d8-8958-abfc90c3085c"
+            },
+            "visualOptions": {
+                "multipleYAxes": {
+                    "base": {
+                        "id": "-1",
+                        "label": "",
+                        "columns": [],
+                        "yAxisMaximumValue": null,
+                        "yAxisMinimumValue": null,
+                        "yAxisScale": "linear",
+                        "horizontalLines": []
+                    },
+                    "additional": [],
+                    "showMultiplePanels": false
+                },
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumnTitle": "",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "xAxisScale": "linear",
+                "verticalLine": "",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "3e75f668-a1ff-50cf-9b93-c603ffc2eac8",
+            "title": "Results by Repository and Type",
+            "visualType": "table",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 0,
+                "y": 16,
+                "width": 11,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "cae6a81b-28cd-5ee5-80ca-0db059abed54"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "afb58e37-16cc-5861-b433-923ef66aae6b",
+            "title": "Latest Test Runs",
+            "visualType": "table",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 11,
+                "y": 16,
+                "width": 11,
+                "height": 10
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "aeb70deb-d1bd-5b0e-b3c4-e5aa8ed04e85"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "2a7130da-6d67-586e-86d8-da3e3b5ba7de",
+            "title": "Test Duration Percentiles",
+            "visualType": "table",
+            "pageId": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+            "layout": {
+                "x": 0,
+                "y": 26,
+                "width": 22,
+                "height": 9
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "1f6b78ad-754c-548f-a987-fb8c4e59e379"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "c95d6ec1-140e-5069-84dc-7adf459b1930",
+            "title": "Action Duration by Runner",
+            "visualType": "table",
+            "pageId": "f0f6ab50-b9c8-4d2c-98da-a1af20f48647",
+            "layout": {
+                "x": 10,
+                "y": 24,
+                "width": 10,
+                "height": 8
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "45d4b613-0203-571b-a3d5-e28d5a0ff717"
+            },
+            "visualOptions": {
+                "table__enableRenderLinks": false,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [],
+                "colorRules": []
+            }
+        },
+        {
+            "id": "3875ba98-eb45-5ec2-81a6-9f9d938eff14",
+            "title": "Version Distribution in Selected Range",
+            "visualType": "pie",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 14,
+                "y": 7,
+                "width": 7,
+                "height": 8
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "49c90e85-5a32-5d59-baa1-b020d265da40"
+            },
+            "visualOptions": {
+                "hideLegend": false,
+                "legendLocation": "bottom",
+                "xColumn": null,
+                "yColumns": null,
+                "seriesColumns": null,
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "labelDisabled": false,
+                "pie__label": [
+                    "name",
+                    "percentage"
+                ],
+                "tooltipDisabled": false,
+                "pie__tooltip": [
+                    "name",
+                    "percentage",
+                    "value"
+                ],
+                "pie__orderBy": "size",
+                "pie__kind": "pie",
+                "pie__topNSlices": null,
+                "crossFilter": [],
+                "drillthrough": []
+            }
+        },
+        {
+            "id": "a330b130-7e41-5a9b-b076-45956ba16432",
+            "title": "Execution Runtime & Supportability",
+            "visualType": "table",
+            "pageId": "1301ea78-9dbd-4fc1-94e0-e0756e5d8519",
+            "layout": {
+                "x": 0,
+                "y": 38,
+                "width": 21,
+                "height": 11
+            },
+            "queryRef": {
+                "kind": "query",
+                "queryId": "b7e31aed-14ea-5014-b8f9-190fc050e4c0"
+            },
+            "description": "One row per repository using the latest telemetry in the selected range. BcContainerHelper shows the latest action that reported the module as loaded; Not loaded/reported is not an installation failure. Set the optional expected version to assess drift.",
+            "visualOptions": {
+                "table__enableRenderLinks": true,
+                "colorRulesDisabled": true,
+                "colorStyle": "light",
+                "crossFilterDisabled": false,
+                "drillthroughDisabled": false,
+                "crossFilter": [],
+                "drillthrough": [],
+                "table__renderLinks": [
+                    {
+                        "urlColumn": "HtmlUrl",
+                        "disabled": false
+                    }
+                ],
+                "colorRules": []
+            }
         }
     ],
     "baseQueries": [
@@ -743,6 +1568,16 @@
             "id": "d1709fb2-9c37-494b-acea-d170f6dfc881",
             "queryId": "15db6a5a-4615-4d75-a316-3047f1a7c7a7",
             "variableName": "ActionTelemetry"
+        },
+        {
+            "id": "2d6bcd40-2dcc-59d1-b88c-408399c3009a",
+            "queryId": "46855698-abc3-5c98-8c83-a2182cff09fe",
+            "variableName": "TestTelemetry"
+        },
+        {
+            "id": "820c9801-792e-5c6a-acf9-bee1c444b3aa",
+            "queryId": "c94452da-fb81-5c26-8a5c-cfb0c7edd471",
+            "variableName": "DeprecationTelemetry"
         }
     ],
     "parameters": [
@@ -800,7 +1635,229 @@
             "showOnPages": {
                 "kind": "selection",
                 "pageIds": [
-                    "6a960332-dd3e-47e6-bad1-54502c0f21eb"
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "4213c2b9-d0fb-545c-8c33-3c20bba72c07",
+            "displayName": "Workflow",
+            "description": "Filter workflow telemetry by workflow name.",
+            "variableName": "_workflow",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "WorkflowName"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "71ce5825-c056-525a-a1ff-1b7f3c56cbc5"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+                    "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29",
+                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "97da2a95-9dc8-58e6-94f4-3749ca5c9072",
+            "displayName": "Branch / ref",
+            "description": "Filter telemetry by Git ref name.",
+            "variableName": "_refName",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "RefName"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "5a063426-d373-53b6-8029-2a3d6f789b8d"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+                    "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29",
+                    "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
+                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "8f296351-9802-59d7-a1b2-b05e440a7826",
+            "displayName": "Conclusion",
+            "description": "Filter workflow duration telemetry by conclusion.",
+            "variableName": "_conclusion",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "WorkflowConclusion"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "82af2ab8-cdd3-5523-a9cf-4ad7161ecc24"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "b35ac681-0985-5ce3-9e0c-1766fa892e80",
+            "displayName": "Repository type",
+            "description": "Filter AppSource and PTE workflow telemetry.",
+            "variableName": "_repoType",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "RepoType"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "4d07f7e0-e34d-5b83-be1f-15615ac2c2a2"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
+                    "1301ea78-9dbd-4fc1-94e0-e0756e5d8519"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "4018a914-330d-5379-a468-b11581481e07",
+            "displayName": "Test type",
+            "description": "Filter test, page scripting, and BCPT telemetry.",
+            "variableName": "_testType",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "TestType"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "de4c5bd9-f0f4-5ae4-9c7f-0a03a7e40bc8"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "f4350af0-d2ed-56fb-8205-aecccb1ba66c",
+            "displayName": "Runner environment",
+            "description": "Filter GitHub-hosted and self-hosted action telemetry.",
+            "variableName": "_runnerEnvironment",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "RunnerEnvironment"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "4e8db09d-878b-58ab-b247-e4b0709b28ac"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "id": "7267b373-d08f-585f-8248-d76385d01857",
+            "displayName": "Runner OS",
+            "description": "Filter runner operating systems.",
+            "variableName": "_runnerOs",
+            "selectionType": "scalar",
+            "includeAllOption": true,
+            "defaultValue": {
+                "kind": "all"
+            },
+            "dataSource": {
+                "kind": "query",
+                "columns": {
+                    "value": "RunnerOs"
+                },
+                "queryRef": {
+                    "kind": "query",
+                    "queryId": "9d2be782-697c-5987-a462-34ddeb0995cb"
+                }
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
+                ]
+            }
+        },
+        {
+            "kind": "string",
+            "selectionType": "freetext",
+            "id": "0eb26adb-5bc2-5735-8031-530f84ce7f56",
+            "displayName": "Expected BcContainerHelper version",
+            "variableName": "_bcContainerHelperBaseline",
+            "description": "Optional organizational baseline, for example 6.1.15. Leave empty to report observed versions without a drift assessment.",
+            "defaultValue": {
+                "kind": "all"
+            },
+            "showOnPages": {
+                "kind": "selection",
+                "pageIds": [
+                    "1301ea78-9dbd-4fc1-94e0-e0756e5d8519"
                 ]
             }
         }
@@ -809,6 +1866,18 @@
         {
             "name": "Overview",
             "id": "6a960332-dd3e-47e6-bad1-54502c0f21eb"
+        },
+        {
+            "name": "Reliability",
+            "id": "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f"
+        },
+        {
+            "name": "Run Explorer",
+            "id": "a7be3875-d31c-5943-8ff4-be3131ba5b29"
+        },
+        {
+            "name": "Tests & Quality",
+            "id": "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67"
         },
         {
             "name": "Workflow Duration",
@@ -829,11 +1898,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| where (RunId == _runId) or (_runId == \"\")\r\n| where WorkflowName != \"Pull Request Build\" // Filter out PR Builds as it is expected they might fail\r\n| sort by timestamp desc ",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isempty(_conclusion) or WorkflowConclusion == _conclusion\n| where isempty(_runId) or RunId == _runId\n| project timestamp, RepositoryName, WorkflowName, RefName, RunAttempt, WorkflowConclusion, WorkflowDurationMinutes, ALGoVersion, HtmlUrl\n| top 500 by timestamp desc",
             "id": "fa4c75b2-ebce-4ced-a249-2fc75f4cddd2",
             "usedVariables": [
                 "WorkflowTelemetry",
                 "_repository",
+                "_workflow",
+                "_refName",
+                "_conclusion",
+                "_repoType",
                 "_runId"
             ]
         },
@@ -842,11 +1915,11 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "traces\n| where timestamp > _startTime\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDuration = todouble(customDimensions.WorkflowDuration),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where severityLevel == 2 // Warning \n| where message startswith \"Deprecation Warning:\"\n| where (RepositoryName == _repository) or (_repository == \"\")\n| distinct message, RepositoryName, severityLevel",
+            "text": "DeprecationTelemetry\n| where isempty(_repository) or RepositoryName == _repository\n| summarize Occurrences=sum(ItemCount), FirstSeen=min(timestamp), arg_max(timestamp, HtmlUrl) by RepositoryName, DeprecationTag, message\n| project RepositoryName, DeprecationTag, message, Occurrences, FirstSeen, LastSeen=timestamp, HtmlUrl\n| top 500 by LastSeen desc",
             "id": "fbcdbfa7-92c7-4dab-ac58-a4ac93799249",
             "usedVariables": [
-                "_repository",
-                "_startTime"
+                "DeprecationTelemetry",
+                "_repository"
             ]
         },
         {
@@ -854,11 +1927,14 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| where WorkflowName != \"Pull Request Build\" // Filter out PR Builds as it is expected they might fail\r\n| sort by timestamp desc \r\n| summarize Count=count() by bin(timestamp, 1d), WorkflowConclusion",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Runs=sum(ItemCount) by bin(timestamp, 1d), WorkflowConclusion\n  | order by timestamp asc",
             "id": "96799d0d-f921-4e4a-b8f2-a3ad700ba841",
             "usedVariables": [
                 "WorkflowTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
             ]
         },
         {
@@ -866,11 +1942,14 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| summarize Count=count()",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount)\n  | project WorkflowRuns=iff(Total == 0, \"No telemetry\", tostring(Total))",
             "id": "169a97e3-a6d5-4b9c-895a-2ce6ef434864",
             "usedVariables": [
                 "WorkflowTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
             ]
         },
         {
@@ -878,11 +1957,14 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\r\n| where (RepositoryName == _repository) or (_repository == \"\")\r\n| where severityLevel == 3\r\n| where WorkflowName != \"Pull Request Build\" // Filter out PR Builds as it is expected they might fail\r\n| summarize Count=count()",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), Failed=sumif(ItemCount, WorkflowConclusion in~ (\"Failure\", \"TimedOut\"))\n  | project FailedWorkflowRuns=iff(Total == 0, \"No telemetry\", tostring(Failed))",
             "id": "faff193e-c054-48a3-ac1a-b1b3f8d9f80e",
             "usedVariables": [
                 "WorkflowTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
             ]
         },
         {
@@ -890,11 +1972,12 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "traces\n| where timestamp > _startTime\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDuration = todouble(customDimensions.WorkflowDuration),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where ALGoVersion <> \"\"\n| summarize arg_max(timestamp, *) by RepositoryName\n| project RepositoryName, ALGoVersion\n",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isnotempty(ALGoVersion)\n  | summarize arg_max(timestamp, *) by RepositoryName\n  | extend DaysSinceLastSeen=datetime_diff('day', now(), timestamp)\n  | project RepositoryName, RepoType, ALGoVersion, LastSeenUTC=timestamp, DaysSinceLastSeen, WorkflowConclusion, HtmlUrl\n  | order by DaysSinceLastSeen desc",
             "id": "575ba48b-4b8c-477d-a0a6-afc203b85746",
             "usedVariables": [
+                "WorkflowTelemetry",
                 "_repository",
-                "_startTime"
+                "_repoType"
             ]
         },
         {
@@ -902,11 +1985,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunAttempt == 1\n| where (WorkflowName == \"CI/CD\") or (WorkflowName == \"Test Next Major\") or (WorkflowName == \"Test Next Minor\") or (WorkflowName == \"Test Current\") or (WorkflowName == \"Pull Request Build\")\n| summarize AvgWorkflowDuration=round(avg(WorkflowDurationMinutes), 1) by WorkflowName, RepositoryName\n| project RepositoryName, WorkflowName, AvgWorkflowDuration\n| order by RepositoryName asc, AvgWorkflowDuration desc ",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isempty(_conclusion) or WorkflowConclusion == _conclusion\n  | where RunAttempt == 1 and isnotnull(WorkflowDurationMinutes)\n  | where WorkflowName in (\"CI/CD\", \"Test Next Major\", \"Test Next Minor\", \"Test Current\", \"Pull Request Build\")\n  | summarize P50Minutes=round(percentilew(WorkflowDurationMinutes, ItemCount, 50), 1), P95Minutes=round(percentilew(WorkflowDurationMinutes, ItemCount, 95), 1), Runs=sum(ItemCount) by RepositoryName, WorkflowName\n  | order by P95Minutes desc",
             "id": "244b9392-5f43-43f2-9ae9-dc74ba5db279",
             "usedVariables": [
                 "WorkflowTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_conclusion",
+                "_repoType"
             ]
         },
         {
@@ -914,11 +2001,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunAttempt == 1\n| where (WorkflowName == \"CI/CD\") or (WorkflowName == \"Test Next Major\") or (WorkflowName == \"Test Next Minor\") or (WorkflowName == \"Test Current\") or (WorkflowName == \"Pull Request Build\")\n| summarize Duration=avg(WorkflowDurationMinutes) by bin(timestamp, 1d), WorkflowName",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isempty(_conclusion) or WorkflowConclusion == _conclusion\n  | where RunAttempt == 1 and isnotnull(WorkflowDurationMinutes)\n  | where WorkflowName in (\"CI/CD\", \"Test Next Major\", \"Test Next Minor\", \"Test Current\", \"Pull Request Build\")\n  | summarize P50Minutes=percentilew(WorkflowDurationMinutes, ItemCount, 50), P95Minutes=percentilew(WorkflowDurationMinutes, ItemCount, 95) by bin(timestamp, 1d), WorkflowName",
             "id": "fe341fbe-4704-4715-b745-14ab79a7663d",
             "usedVariables": [
                 "WorkflowTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_conclusion",
+                "_repoType"
             ]
         },
         {
@@ -926,11 +2017,14 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| distinct RepositoryName\n| summarize count()",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | summarize ActiveRepositories=dcount(RepositoryName)",
             "id": "0487c350-e72b-420f-ae4d-030f171a4a99",
             "usedVariables": [
                 "WorkflowTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
             ]
         },
         {
@@ -938,11 +2032,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunnerEnvironment <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeHours=round(sum(ActionDurationSeconds)/3600,1) by RunnerEnvironment",
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where isnotempty(RunnerEnvironment) and isnotnull(ActionDurationSeconds) and ActionDurationSeconds > 0\n  | summarize ActionHours=round(sum(ActionDurationSeconds * ItemCount) / 3600.0, 1) by RunnerEnvironment",
             "id": "e8b24c11-b45a-44ce-b50a-949c3331be68",
             "usedVariables": [
                 "ActionTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs"
             ]
         },
         {
@@ -950,10 +2048,9 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n| where WorkflowName == \"Update AL-Go System Files\"\n| where (RepositoryName == _repository) or (_repository == \"\")\n| summarize arg_max(timestamp, *) by RepositoryName\n| extend DaysSinceLastRun = datetime_diff('day', now(), timestamp)\n| project RepositoryName, WorkflowName, WorkflowConclusion, LastRunUTC=format_datetime(timestamp, 'yyyy-MM-dd [HH:mm:ss]') , DaysSinceLastRun, HtmlUrl\n| sort by DaysSinceLastRun desc",
+            "text": "traces\n  | where timestamp > ago(365d)\n  | where message startswith \"AL-Go workflow\"\n  | project timestamp,\n            RepositoryName=tostring(customDimensions.RepositoryName),\n            WorkflowName=tostring(customDimensions.WorkflowName),\n            WorkflowConclusion=tostring(customDimensions.WorkflowConclusion),\n            RunId=tostring(customDimensions.RunId)\n  | where WorkflowName == \"Update AL-Go System Files\"\n  | where isempty(_repository) or RepositoryName == _repository\n  | summarize arg_max(timestamp, *) by RepositoryName\n  | extend DaysSinceLastRun=datetime_diff('day', now(), timestamp)\n  | extend HtmlUrl=strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n  | project RepositoryName, WorkflowConclusion, LastRunUTC=timestamp, DaysSinceLastRun, HtmlUrl\n  | order by DaysSinceLastRun desc",
             "id": "ac949667-7db6-45d7-be58-c3a89009ca13",
             "usedVariables": [
-                "WorkflowTelemetry",
                 "_repository"
             ]
         },
@@ -962,11 +2059,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=round(sum(ActionDurationSeconds)/3600,1) by RepositoryName, RunnerEnvironment",
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where isnotnull(ActionDurationSeconds) and ActionDurationSeconds > 0\n  | summarize ActionHours=round(sum(ActionDurationSeconds * ItemCount) / 3600.0, 1) by RepositoryName, RunnerEnvironment\n  | order by ActionHours desc",
             "id": "80eda281-74c1-43a1-8208-f8892e968141",
             "usedVariables": [
                 "ActionTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs"
             ]
         },
         {
@@ -974,10 +2075,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where ErrorMessage != \"\"\n| where WorkflowName != \"Pull Request Build\"\n| where (RunId == _runId) or (_runId == \"\")\n| project timestamp, message, RepositoryName, WorkflowName, RefName, ErrorMessage, HtmlUrl\n| order by timestamp desc ",
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n| where isnotempty(ErrorMessage)\n| where isempty(_runId) or RunId == _runId\n| project timestamp, RepositoryName, WorkflowName, RefName, RunAttempt, ActionName, ErrorMessage, HtmlUrl\n| top 500 by timestamp desc",
             "id": "5924e7fd-4c10-4724-a7c5-27e4fde9973a",
             "usedVariables": [
                 "ActionTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs",
                 "_runId"
             ]
         },
@@ -986,11 +2092,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where RunnerOs <> \"\"\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalCompute=round(sum(ActionDurationSeconds),1) by RunnerOs",
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where isnotempty(RunnerOs) and isnotnull(ActionDurationSeconds) and ActionDurationSeconds > 0\n  | summarize ActionHours=round(sum(ActionDurationSeconds * ItemCount) / 3600.0, 1) by RunnerOs",
             "id": "791009e7-ed47-492c-ac47-1284e0360da1",
             "usedVariables": [
                 "ActionTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs"
             ]
         },
         {
@@ -998,11 +2108,15 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "ActionTelemetry\n| where (RepositoryName == _repository) or (_repository == \"\")\n| where (ActionDurationSeconds <> \"\") and (ActionDurationSeconds > 0)\n| summarize TotalComputeTimeHours=sum(ActionDurationSeconds)/3600 by bin(timestamp, 1d), RunnerEnvironment",
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where isnotnull(ActionDurationSeconds) and ActionDurationSeconds > 0\n  | summarize ActionHours=sum(ActionDurationSeconds * ItemCount) / 3600.0 by bin(timestamp, 1d), RunnerEnvironment",
             "id": "a3b1b3a3-3b88-44cc-9822-00d581b8eef0",
             "usedVariables": [
                 "ActionTelemetry",
-                "_repository"
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs"
             ]
         },
         {
@@ -1011,7 +2125,7 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "traces\n| where timestamp between (_startTime .. _endTime)\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDurationMinutes = round(todouble(customDimensions.WorkflowDuration) / 60, 2),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where message contains \"AL-Go workflow\"",
+            "text": "traces\n  | where timestamp between (_startTime .. _endTime)\n  | where message startswith \"AL-Go workflow\"\n  | project timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tolong(customDimensions.RunNumber),\n            RunAttempt = toint(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDurationMinutes = round(todouble(customDimensions.WorkflowDuration) / 60.0, 2),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName),\n            RepoType = tostring(customDimensions.RepoType),\n            GitHubRunner = tostring(customDimensions.GitHubRunner),\n            RunsOn = tostring(customDimensions.RunsOn),\n            RunnerOs = tostring(customDimensions.RunnerOs),\n            RunnerEnvironment = tostring(customDimensions.RunnerEnvironment),\n            PowerShellVersion = tostring(customDimensions.PowerShellVersion),\n            BcContainerHelperVersion = tostring(customDimensions.BcContainerHelperVersion),\n            ItemCount = coalesce(tolong(itemCount), tolong(1))\n  | extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)",
             "usedVariables": [
                 "_endTime",
                 "_startTime"
@@ -1023,7 +2137,7 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "traces\n| where timestamp between (_startTime .. _endTime)\n| project   timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tostring(customDimensions.RunNumber),\n            RunAttempt = tostring(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            WorkflowConclusion = tostring(customDimensions.WorkflowConclusion),\n            WorkflowDuration = todouble(customDimensions.WorkflowDuration),\n            ALGoVersion = tostring(customDimensions.ALGoVersion),\n            RefName = tostring(customDimensions.RefName),\n            RunnerOs = tostring(customDimensions.RunnerOs),\n            RunnerEnvironment = tostring(customDimensions.RunnerEnvironment),\n            ErrorMessage = tostring(customDimensions.ErrorMessage),\n            ActionDurationSeconds = todouble(customDimensions.ActionDuration)\n| extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)\n| where message contains \"AL-Go action\"",
+            "text": "traces\n  | where timestamp between (_startTime .. _endTime)\n  | where message startswith \"AL-Go action\"\n  | project timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tolong(customDimensions.RunNumber),\n            RunAttempt = toint(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            RefName = tostring(customDimensions.RefName),\n            RunnerOs = tostring(customDimensions.RunnerOs),\n            RunnerEnvironment = tostring(customDimensions.RunnerEnvironment),\n            ErrorMessage = tostring(customDimensions.ErrorMessage),\n            ActionDurationSeconds = todouble(customDimensions.ActionDuration),\n            PowerShellVersion = tostring(customDimensions.PowerShellVersion),\n            BcContainerHelperVersion = tostring(customDimensions.BcContainerHelperVersion),\n            ItemCount = coalesce(tolong(itemCount), tolong(1))\n  | extend ActionName = extract(@\"^AL-Go action (?:ran|failed):\\s*(.*)$\", 1, message)\n  | extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)",
             "usedVariables": [
                 "_endTime",
                 "_startTime"
@@ -1034,10 +2148,517 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n| where timestamp > ago(30d)\n| distinct RepositoryName",
+            "text": "traces\n  | where timestamp > ago(365d)\n  | where message startswith \"AL-Go workflow\"\n  | project RepositoryName=tostring(customDimensions.RepositoryName)\n  | where isnotempty(RepositoryName)\n  | distinct RepositoryName\n  | order by RepositoryName asc",
             "id": "caac08b2-8c59-4e15-a4d6-eae88351e628",
+            "usedVariables": []
+        },
+        {
+            "id": "46855698-abc3-5c98-8c83-a2182cff09fe",
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "traces\n  | where timestamp between (_startTime .. _endTime)\n  | where message startswith \"AL-Go Test Results\"\n  | project timestamp,\n            message,\n            severityLevel,\n            RepositoryOwner = tostring(customDimensions.RepositoryOwner),\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RunNumber = tolong(customDimensions.RunNumber),\n            RunAttempt = toint(customDimensions.RunAttempt),\n            WorkflowName = tostring(customDimensions.WorkflowName),\n            RefName = tostring(customDimensions.RefName),\n            TotalTests = tolong(customDimensions.TotalTests),\n            TotalFailed = tolong(customDimensions.TotalFailed),\n            TotalSkipped = tolong(customDimensions.TotalSkipped),\n            TotalPassed = tolong(customDimensions.TotalPassed),\n            TotalTimeSeconds = todouble(customDimensions.TotalTime),\n            ItemCount = coalesce(tolong(itemCount), tolong(1))\n  | extend TestType = case(\n      message == \"AL-Go Test Results - Tests\", \"Tests\",\n      message == \"AL-Go Test Results - Page scripting Tests\", \"Page scripting Tests\",\n      message == \"AL-Go Test Results - BCPT Tests\", \"BCPT Tests\",\n      \"Other\")\n  | extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)",
             "usedVariables": [
-                "WorkflowTelemetry"
+                "_endTime",
+                "_startTime"
+            ]
+        },
+        {
+            "id": "c94452da-fb81-5c26-8a5c-cfb0c7edd471",
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "traces\n  | where timestamp between (_startTime .. _endTime)\n  | where severityLevel == 2\n  | where message startswith \"Deprecation Warning:\"\n  | project timestamp,\n            message,\n            severityLevel,\n            RepositoryName = tostring(customDimensions.RepositoryName),\n            RunId = tostring(customDimensions.RunId),\n            RefName = tostring(customDimensions.RefName),\n            DeprecationTag = tostring(customDimensions.DeprecationTag),\n            ItemCount = coalesce(tolong(itemCount), tolong(1))\n  | extend HtmlUrl = strcat(\"https://github.com/\", RepositoryName, \"/actions/runs/\", RunId)",
+            "usedVariables": [
+                "_endTime",
+                "_startTime"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(WorkflowName)\n  | distinct WorkflowName\n  | order by WorkflowName asc",
+            "id": "71ce5825-c056-525a-a1ff-1b7f3c56cbc5",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(RefName)\n  | distinct RefName\n  | order by RefName asc",
+            "id": "5a063426-d373-53b6-8029-2a3d6f789b8d",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(WorkflowConclusion)\n  | distinct WorkflowConclusion\n  | order by WorkflowConclusion asc",
+            "id": "82af2ab8-cdd3-5523-a9cf-4ad7161ecc24",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(RepoType)\n  | distinct RepoType\n  | order by RepoType asc",
+            "id": "4d07f7e0-e34d-5b83-be1f-15615ac2c2a2",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | distinct TestType\n  | order by TestType asc",
+            "id": "de4c5bd9-f0f4-5ae4-9c7f-0a03a7e40bc8",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(RunnerEnvironment)\n  | distinct RunnerEnvironment\n  | order by RunnerEnvironment asc",
+            "id": "4e8db09d-878b-58ab-b247-e4b0709b28ac",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(RunnerOs)\n  | distinct RunnerOs\n  | order by RunnerOs asc",
+            "id": "9d2be782-697c-5987-a462-34ddeb0995cb",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n| where WorkflowName != \"Pull Request Build\"\n| summarize Total=sum(ItemCount), Successful=sumif(ItemCount, WorkflowConclusion =~ \"Success\")\n| project SuccessRate=iff(Total == 0, \"No telemetry\", strcat(round(100.0 * Successful / Total, 1), \"%\"))",
+            "id": "f0140d85-c424-5038-b390-78c05959bea7",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), Failed=sumif(ItemCount, WorkflowConclusion in~ (\"Failure\", \"TimedOut\"))\n  | project FailedWorkflowRuns=iff(Total == 0, \"No telemetry\", tostring(Failed))",
+            "id": "59bd778d-061f-57af-9a7f-9936f34e5b47",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), TimedOut=sumif(ItemCount, WorkflowConclusion =~ \"TimedOut\")\n  | project TimedOut=iff(Total == 0, \"No telemetry\", tostring(TimedOut))",
+            "id": "7abbc6c5-7c27-5ae8-b75f-c57680e016c1",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), Cancelled=sumif(ItemCount, WorkflowConclusion =~ \"Cancelled\")\n  | project Cancelled=iff(Total == 0, \"No telemetry\", tostring(Cancelled))",
+            "id": "ee888fd9-ee60-54bf-97a8-e9fe7f12352a",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\" and RunAttempt == 1\n  | summarize Total=sum(ItemCount), Successful=sumif(ItemCount, WorkflowConclusion =~ \"Success\")\n  | project FirstAttemptSuccess=iff(Total == 0, \"No telemetry\", strcat(round(100.0 * Successful / Total, 1), \"%\"))",
+            "id": "e087721e-8ab0-5f40-a428-8a5d3c569253",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Runs=sum(ItemCount) by bin(timestamp, 1d), WorkflowConclusion\n  | order by timestamp asc",
+            "id": "1db58590-f405-5ddd-a969-08aee09a7775",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n| summarize arg_max(timestamp, *) by RepositoryName, WorkflowName\n| where WorkflowConclusion in~ (\"Failure\", \"TimedOut\")\n| project timestamp, RepositoryName, WorkflowName, RefName, RunId, RunAttempt, WorkflowConclusion, WorkflowDurationMinutes, HtmlUrl\n| top 200 by timestamp desc",
+            "id": "146ffb22-ea10-59fb-a109-8cb148ea3ace",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), Failures=sumif(ItemCount, WorkflowConclusion in~ (\"Failure\", \"TimedOut\")) by RepositoryName\n  | extend FailureRatePct=round(100.0 * Failures / Total, 1)\n  | where Failures > 0\n  | project RepositoryName, TotalRuns=Total, Failures, FailureRatePct\n  | top 20 by FailureRatePct desc",
+            "id": "f453b4ab-4845-5369-843c-fa2f48f0b198",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName == \"Pull Request Build\"\n  | summarize Runs=sum(ItemCount) by bin(timestamp, 1d), WorkflowConclusion\n  | order by timestamp asc",
+            "id": "99c803f5-fb05-5948-ac43-e7c5e44286ad",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\" and isnotnull(WorkflowDurationMinutes)\n  | summarize P50Minutes=round(percentilew(WorkflowDurationMinutes, ItemCount, 50), 1), P95Minutes=round(percentilew(WorkflowDurationMinutes, ItemCount, 95), 1), Runs=sum(ItemCount) by WorkflowName\n  | order by P95Minutes desc",
+            "id": "c673642c-4035-5bd3-b0f0-24a2fb1e0752",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n| summarize LastSeen=max(timestamp)\n| project LastTelemetry=iff(isnull(LastSeen), \"No telemetry\", strcat(datetime_diff('minute', now(), LastSeen), \" min ago\"))",
+            "id": "ef8b89fa-032a-5703-9a97-ff611127167c",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n| where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n| where WorkflowName != \"Pull Request Build\"\n| summarize Total=sum(ItemCount), Successful=sumif(ItemCount, WorkflowConclusion =~ \"Success\")\n| project SuccessRate=iff(Total == 0, \"No telemetry\", strcat(round(100.0 * Successful / Total, 1), \"%\"))",
+            "id": "c01f0873-b99b-5129-bfe3-c3f53a39e550",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n| summarize arg_max(timestamp, *) by RepositoryName, WorkflowName\n| where WorkflowConclusion in~ (\"Failure\", \"TimedOut\")\n| project timestamp, RepositoryName, WorkflowName, RefName, RunId, RunAttempt, WorkflowConclusion, WorkflowDurationMinutes, HtmlUrl\n| top 200 by timestamp desc",
+            "id": "ff3d7f06-e36c-565c-a005-e2a5081660e9",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where message startswith \"AL-Go action failed\"\n  | summarize Failures=sum(ItemCount), LastSeen=max(timestamp) by ActionName\n  | top 10 by Failures desc",
+            "id": "bff4ce71-9e8c-5ab9-8f1e-87e235c8448e",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where isnotnull(ActionDurationSeconds) and ActionDurationSeconds > 0 and isnotempty(ActionName)\n  | where isempty(_runId) or RunId == _runId\n  | summarize Runs=sum(ItemCount), AverageSeconds=round(sum(ActionDurationSeconds * ItemCount) / sum(ItemCount), 1), P95Seconds=round(percentilew(ActionDurationSeconds, ItemCount, 95), 1) by RepositoryName, ActionName\n  | top 30 by P95Seconds desc",
+            "id": "c081d9eb-c54e-538d-8a40-6e9d397026bc",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs",
+                "_runId"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where message startswith \"AL-Go action failed\" and isnotempty(ActionName)\n  | where isempty(_runId) or RunId == _runId\n  | summarize Failures=sum(ItemCount), LastSeen=max(timestamp) by RepositoryName, WorkflowName, ActionName\n  | top 30 by Failures desc",
+            "id": "a144444a-c4a9-52c0-ac35-d4d1b7c10398",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs",
+                "_runId"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | summarize Events=sum(ItemCount), Total=sum(TotalTests * ItemCount)\n  | project Tests=iff(Events == 0, \"No telemetry\", tostring(Total))",
+            "id": "f9945299-edc0-5e00-88b1-1988fcc15ac5",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | summarize Events=sum(ItemCount), Failed=sum(TotalFailed * ItemCount)\n  | project FailedTests=iff(Events == 0, \"No telemetry\", tostring(Failed))",
+            "id": "535292fd-c0e2-5dcf-a647-e4b0853ccde9",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | summarize Events=sum(ItemCount), Total=sum(TotalTests * ItemCount), Passed=sum(TotalPassed * ItemCount)\n  | project PassRate=case(Events == 0, \"No telemetry\", Total == 0, \"No tests\", strcat(round(100.0 * Passed / Total, 1), \"%\"))",
+            "id": "6f95f542-a162-5c90-8157-b21618dd4ce4",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | where TestType != \"BCPT Tests\" and isnotnull(TotalTimeSeconds)\n  | summarize Events=sum(ItemCount), TotalSeconds=sum(TotalTimeSeconds * ItemCount)\n  | project TestHours=iff(Events == 0, \"No duration data\", strcat(round(TotalSeconds / 3600.0, 1), \" h\"))",
+            "id": "67f3f7e1-7e82-5d46-967b-e9726d14e140",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | summarize Passed=sum(TotalPassed * ItemCount), Failed=sum(TotalFailed * ItemCount), Skipped=sum(TotalSkipped * ItemCount) by bin(timestamp, 1d), TestType\n  | order by timestamp asc",
+            "id": "7af9f4d1-6ff2-57d8-8958-abfc90c3085c",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | summarize Total=sum(TotalTests * ItemCount), Passed=sum(TotalPassed * ItemCount), Failed=sum(TotalFailed * ItemCount), Skipped=sum(TotalSkipped * ItemCount) by RepositoryName, TestType\n  | extend PassRatePct=iff(Total == 0, real(null), round(100.0 * Passed / Total, 1))\n  | order by Failed desc, Total desc",
+            "id": "cae6a81b-28cd-5ee5-80ca-0db059abed54",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n| project timestamp, RepositoryName, WorkflowName, RefName, TestType, TotalTests, TotalPassed, TotalFailed, TotalSkipped, TotalTimeSeconds, RunId, HtmlUrl\n| top 500 by timestamp desc",
+            "id": "aeb70deb-d1bd-5b0e-b3c4-e5aa8ed04e85",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "TestTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_testType) or TestType == _testType\n  | where TestType != \"BCPT Tests\" and isnotnull(TotalTimeSeconds)\n  | summarize Runs=sum(ItemCount), P50Minutes=round(percentilew(TotalTimeSeconds / 60.0, ItemCount, 50), 1), P95Minutes=round(percentilew(TotalTimeSeconds / 60.0, ItemCount, 95), 1) by RepositoryName, TestType\n  | order by P95Minutes desc",
+            "id": "1f6b78ad-754c-548f-a987-fb8c4e59e379",
+            "usedVariables": [
+                "TestTelemetry",
+                "_repository",
+                "_refName",
+                "_testType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isnotempty(ALGoVersion)\n  | summarize arg_max(timestamp, ALGoVersion) by RepositoryName\n  | summarize Repositories=count() by ALGoVersion\n  | order by Repositories desc",
+            "id": "49c90e85-5a32-5d59-baa1-b020d265da40",
+            "usedVariables": [
+                "WorkflowTelemetry",
+                "_repository",
+                "_repoType"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "let LatestActionRuntime = materialize(\n  ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(RepositoryName)\n  | summarize arg_max(timestamp, PowerShellVersion, WorkflowName, ActionName, HtmlUrl) by RepositoryName\n  | project RepositoryName,\n            PowerShellVersion=iff(isempty(PowerShellVersion), \"Not reported\", PowerShellVersion),\n            RuntimeLastSeenUTC=timestamp,\n            WorkflowName,\n            ActionName,\n            HtmlUrl\n);\nlet LatestBcContainerHelper = materialize(\n  ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isnotempty(RepositoryName) and isnotempty(BcContainerHelperVersion)\n  | summarize arg_max(timestamp, BcContainerHelperVersion) by RepositoryName\n  | project RepositoryName,\n            BcContainerHelperVersion,\n            BcContainerHelperLastSeenUTC=timestamp\n);\nlet LatestWorkflowRuntime = materialize(\n  WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isnotempty(RepositoryName)\n  | summarize arg_max(timestamp, RepoType, ALGoVersion) by RepositoryName\n  | project RepositoryName, RepoType, ALGoVersion\n);\nLatestActionRuntime\n| join kind=leftouter LatestBcContainerHelper on RepositoryName\n| join kind=leftouter LatestWorkflowRuntime on RepositoryName\n| where isempty(_repoType) or RepoType == _repoType\n| extend BcContainerHelperStatus=case(\n    isempty(BcContainerHelperVersion), \"Not loaded/reported\",\n    isempty(_bcContainerHelperBaseline), \"Observed (baseline not set)\",\n    BcContainerHelperVersion == _bcContainerHelperBaseline, \"Matches baseline\",\n    \"Different from baseline\")\n| extend BcContainerHelperVersion=iff(isempty(BcContainerHelperVersion), \"Not loaded/reported\", BcContainerHelperVersion),\n         ALGoVersion=iff(isempty(ALGoVersion), \"Not reported\", ALGoVersion)\n| project RepositoryName,\n          RepoType,\n          ALGoVersion,\n          PowerShellVersion,\n          BcContainerHelperVersion,\n          BcContainerHelperStatus,\n          RuntimeLastSeenUTC,\n          BcContainerHelperLastSeenUTC,\n          WorkflowName,\n          ActionName,\n          HtmlUrl\n| top 500 by RuntimeLastSeenUTC desc",
+            "id": "b7e31aed-14ea-5014-b8f9-190fc050e4c0",
+            "usedVariables": [
+                "ActionTelemetry",
+                "WorkflowTelemetry",
+                "_repository",
+                "_repoType",
+                "_bcContainerHelperBaseline"
+            ]
+        },
+        {
+            "dataSource": {
+                "kind": "inline",
+                "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
+            },
+            "text": "ActionTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_runnerEnvironment) or RunnerEnvironment == _runnerEnvironment\n  | where isempty(_runnerOs) or RunnerOs == _runnerOs\n  | where isnotnull(ActionDurationSeconds) and ActionDurationSeconds > 0 and isnotempty(ActionName)\n  | summarize Runs=sum(ItemCount), P50Seconds=round(percentilew(ActionDurationSeconds, ItemCount, 50), 1), P95Seconds=round(percentilew(ActionDurationSeconds, ItemCount, 95), 1) by ActionName, RunnerEnvironment, RunnerOs\n  | top 30 by P95Seconds desc",
+            "id": "45d4b613-0203-571b-a3d5-e28d5a0ff717",
+            "usedVariables": [
+                "ActionTelemetry",
+                "_repository",
+                "_workflow",
+                "_refName",
+                "_runnerEnvironment",
+                "_runnerOs"
             ]
         }
     ]
