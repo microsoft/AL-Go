@@ -442,7 +442,7 @@ function ConvertFrom-AlFailureOutput {
 .PARAMETER OutputLines
     The complete structured stdout from `al runtests --testgroups`.
 .OUTPUTS
-    [hashtable] containing the parsed envelope state, result occurrences, message, and parse error.
+    [hashtable] containing the parsed envelope state, result occurrences, and message.
 .EXAMPLE
     $outputLines = @'
     {
@@ -511,108 +511,57 @@ function ConvertFrom-AlTestGroupsOutput {
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]] $OutputLines
     )
 
-    $result = @{
-        Results    = @{}
-        Parsed     = $false
-        Succeeded  = $null
-        Message    = ""
-        ParseError = ""
-    }
     $json = ($OutputLines -join [Environment]::NewLine).Trim()
-    if ([string]::IsNullOrWhiteSpace($json)) {
-        $result.ParseError = "The command returned no structured stdout."
-        return $result
-    }
-
     try {
         $toolResponse = ConvertTo-HashTable -object ($json | ConvertFrom-Json) -recurse
     }
     catch {
-        $result.ParseError = "The structured stdout could not be parsed as JSON: $($_.Exception.Message)"
-        return $result
+        throw "The structured stdout could not be parsed as JSON: $($_.Exception.Message)"
     }
 
-    if ($toolResponse -isnot [hashtable] -or
-        -not $toolResponse.ContainsKey("succeeded") -or $toolResponse.succeeded -isnot [bool]) {
-        $result.ParseError = "The structured response does not contain a valid Boolean ToolResponse succeeded value."
-        return $result
+    if (-not $toolResponse.ContainsKey("succeeded") -or $toolResponse.succeeded -isnot [bool]) {
+        throw "The structured response does not contain a valid Boolean ToolResponse succeeded value."
     }
 
-    $result.Succeeded = $toolResponse.succeeded
+    $responseMessage = ""
     if ($toolResponse.ContainsKey("message") -and $toolResponse.message -is [string]) {
-        $result.Message = "$($toolResponse.message)".Trim()
+        $responseMessage = "$($toolResponse.message)".Trim()
     }
 
     $entries = @()
+    $hasResults = $false
     if ($toolResponse.ContainsKey("data") -and $null -ne $toolResponse.data) {
         if ($toolResponse.data -isnot [hashtable]) {
-            $result.ParseError = "The structured response contains an invalid ToolResponse data object."
-            return $result
+            throw "The structured response contains an invalid ToolResponse data object."
         }
         if ($toolResponse.data.ContainsKey("results")) {
             if ($toolResponse.data.results -isnot [array]) {
-                $result.ParseError = "The structured response contains a ToolResponse data.results value that is not an array."
-                return $result
+                throw "The structured response contains a ToolResponse data.results value that is not an array."
             }
             $entries = @($toolResponse.data.results)
-        }
-        elseif ($result.Succeeded) {
-            $result.ParseError = "The successful structured response does not contain a ToolResponse data.results array."
-            return $result
+            $hasResults = $true
         }
     }
-    elseif ($result.Succeeded) {
-        $result.ParseError = "The successful structured response does not contain a ToolResponse data.results array."
-        return $result
+    if ($toolResponse.succeeded -and -not $hasResults) {
+        throw "The successful structured response does not contain a ToolResponse data.results array."
     }
 
+    $results = @{}
     foreach ($entry in $entries) {
-        if ($entry -isnot [hashtable]) {
-            $result.ParseError = "The ToolResponse data.results array contains an entry that is not an object."
-            return $result
-        }
-
-        $codeunitId = 0
-        $codeunitIdValue = if ($entry.ContainsKey("codeunitId")) { "$($entry.codeunitId)" } else { "<missing>" }
-        if (-not $entry.ContainsKey("codeunitId") -or
-            -not [int]::TryParse($codeunitIdValue, [ref] $codeunitId) -or $codeunitId -le 0) {
-            $result.ParseError = "A ToolResponse result entry has an invalid codeunitId '$codeunitIdValue'."
-            return $result
-        }
-        if (-not $entry.ContainsKey("methodName") -or $entry.methodName -isnot [string] -or
-            [string]::IsNullOrWhiteSpace($entry.methodName)) {
-            $result.ParseError = "A ToolResponse result entry for codeunit $codeunitId has an invalid methodName."
-            return $result
-        }
+        [int] $codeunitId = $entry.codeunitId
         $methodName = "$($entry.methodName)"
-
-        if (-not $entry.ContainsKey("status") -or $entry.status -isnot [string]) {
-            $result.ParseError = "Result $codeunitId/$methodName has an invalid status."
-            return $result
-        }
-        $outcome = switch ($entry.status.ToLowerInvariant()) {
+        $status = "$($entry.status)"
+        $outcome = switch ($status.ToLowerInvariant()) {
             "passed" { "Pass" }
             "failed" { "Fail" }
             "skipped" { "Skip" }
             default { $null }
         }
         if (-not $outcome) {
-            $result.ParseError = "Result $codeunitId/$methodName has unknown status '$($entry.status)'."
-            return $result
+            throw "Result $codeunitId/$methodName has unknown status '$status'."
         }
 
-        [long] $durationMs = 0
-        $durationMsValue = if ($entry.ContainsKey("durationMs")) { "$($entry.durationMs)" } else { "<missing>" }
-        if (-not $entry.ContainsKey("durationMs") -or
-            -not [long]::TryParse($durationMsValue, [ref] $durationMs)) {
-            $result.ParseError = "Result $codeunitId/$methodName has invalid durationMs '$durationMsValue'."
-            return $result
-        }
-        if (-not $entry.ContainsKey("output") -or $entry.output -isnot [string]) {
-            $result.ParseError = "Result $codeunitId/$methodName has invalid output."
-            return $result
-        }
-
+        [long] $durationMs = $entry.durationMs
         $message = ""
         $callstackText = ""
         if ($outcome -eq "Fail") {
@@ -622,10 +571,10 @@ function ConvertFrom-AlTestGroupsOutput {
         }
 
         $codeunitKey = "$codeunitId"
-        if (-not $result.Results.ContainsKey($codeunitKey)) {
-            $result.Results[$codeunitKey] = @()
+        if (-not $results.ContainsKey($codeunitKey)) {
+            $results[$codeunitKey] = @()
         }
-        $result.Results[$codeunitKey] += @{
+        $results[$codeunitKey] += @{
             MethodName = $methodName
             Outcome    = $outcome
             Ms         = $durationMs
@@ -634,8 +583,11 @@ function ConvertFrom-AlTestGroupsOutput {
         }
     }
 
-    $result.Parsed = $true
-    return $result
+    return @{
+        Results   = $results
+        Succeeded = $toolResponse.succeeded
+        Message   = $responseMessage
+    }
 }
 
 <#
@@ -717,56 +669,48 @@ function Invoke-AlRunTestsBatch {
         )
 
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        try {
-            $nativeResult = Invoke-AlNativeCommand -FilePath "al" -ArgumentList $alArgs
-        }
-        finally {
-            $sw.Stop()
-        }
+        $nativeResult = Invoke-AlNativeCommand -FilePath "al" -ArgumentList $alArgs
+        $sw.Stop()
 
-        if ($nativeResult.StandardError.Count -gt 0) {
-            OutputDebug -message "al runtests stderr:$([Environment]::NewLine)$($nativeResult.StandardError -join [Environment]::NewLine)"
+        $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
+        $standardErrorText = ($nativeResult.StandardError -join [Environment]::NewLine).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
+            OutputDebug -message "al runtests stderr:$([Environment]::NewLine)$standardErrorText"
         }
 
         if ($nativeResult.ExitCode -notin @(0, 1)) {
             $details = @("al runtests exited with unexpected code $($nativeResult.ExitCode).")
-            if ($nativeResult.StandardError.Count -gt 0) {
-                $details += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
+            if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
+                $details += "stderr: $standardErrorText"
             }
-            if ($nativeResult.StandardOutput.Count -gt 0) {
-                $details += "stdout: $($nativeResult.StandardOutput -join [Environment]::NewLine)"
-            }
-            if ($details.Count -eq 1) {
-                $details += "The command produced no stdout or stderr."
+            if (-not [string]::IsNullOrWhiteSpace($standardOutputText)) {
+                $details += "stdout: $standardOutputText"
             }
             throw "AlTool process failure. $($details -join [Environment]::NewLine)"
         }
 
-        $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
         if ([string]::IsNullOrWhiteSpace($standardOutputText)) {
-            if ($nativeResult.StandardError.Count -gt 0) {
-                throw "al runtests failed: $($nativeResult.StandardError -join [Environment]::NewLine) (exit code $($nativeResult.ExitCode))."
+            if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
+                throw "al runtests failed: $standardErrorText (exit code $($nativeResult.ExitCode))."
             }
             throw "al runtests returned no structured stdout or stderr (exit code $($nativeResult.ExitCode))."
         }
 
-        $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($nativeResult.StandardOutput)
-        if (-not $parsed.Parsed) {
-            $details = @($parsed.ParseError, "stdout: $standardOutputText")
-            if ($nativeResult.StandardError.Count -gt 0) {
-                $details += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
+        try {
+            $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($nativeResult.StandardOutput)
+        }
+        catch {
+            $details = @($_.Exception.Message, "stdout: $standardOutputText")
+            if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
+                $details += "stderr: $standardErrorText"
             }
             throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
         }
 
-        $exitIndicatesSuccess = $nativeResult.ExitCode -eq 0
-        if ($exitIndicatesSuccess -ne $parsed.Succeeded) {
-            $details = @(
-                "ToolResponse succeeded=$($parsed.Succeeded.ToString().ToLowerInvariant()) is inconsistent with exit code $($nativeResult.ExitCode).",
-                "stdout: $standardOutputText"
-            )
-            if ($nativeResult.StandardError.Count -gt 0) {
-                $details += "stderr: $($nativeResult.StandardError -join [Environment]::NewLine)"
+        if (($nativeResult.ExitCode -eq 0) -ne $parsed.Succeeded) {
+            $details = @("ToolResponse succeeded=$($parsed.Succeeded.ToString().ToLowerInvariant()) is inconsistent with exit code $($nativeResult.ExitCode).")
+            if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
+                $details += "stderr: $standardErrorText"
             }
             throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
         }
@@ -781,15 +725,12 @@ function Invoke-AlRunTestsBatch {
                 $stderrLines = @($stderrLines | Where-Object {
                         -not [string]::Equals($_, $parsed.Message, [StringComparison]::OrdinalIgnoreCase)
                     })
-                if ($stderrLines.Count -gt 0) {
-                    $details += "stderr: $($stderrLines -join [Environment]::NewLine)"
-                }
             }
-            else {
-                if ($stderrLines.Count -gt 0) {
-                    $details += "stderr: $($stderrLines -join [Environment]::NewLine)"
-                }
-                $details += "stdout: $standardOutputText"
+            if ($stderrLines.Count -gt 0) {
+                $details += "stderr: $($stderrLines -join [Environment]::NewLine)"
+            }
+            if ($details.Count -eq 0) {
+                $details += "No failure message or stderr was returned."
             }
             throw "al runtests failed: $($details -join [Environment]::NewLine)"
         }
