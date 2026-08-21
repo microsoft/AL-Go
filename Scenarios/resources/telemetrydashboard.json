@@ -1706,7 +1706,7 @@
             "kind": "string",
             "id": "8f296351-9802-59d7-a1b2-b05e440a7826",
             "displayName": "Conclusion",
-            "description": "Filter workflow duration telemetry by conclusion.",
+            "description": "Filter workflow telemetry by conclusion.",
             "variableName": "_conclusion",
             "selectionType": "scalar",
             "includeAllOption": true,
@@ -1726,6 +1726,7 @@
             "showOnPages": {
                 "kind": "selection",
                 "pageIds": [
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29",
                     "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
                 ]
             }
@@ -1898,7 +1899,7 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isempty(_conclusion) or WorkflowConclusion == _conclusion\n| where isempty(_runId) or RunId == _runId\n| project timestamp, RepositoryName, WorkflowName, RefName, RunAttempt, WorkflowConclusion, WorkflowDurationMinutes, ALGoVersion, HtmlUrl\n| top 500 by timestamp desc",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where isempty(_conclusion) or WorkflowConclusion == _conclusion\n| where isempty(_runId) or RunId == _runId\n| project timestamp, RepositoryName, WorkflowName, RefName, RunId, RunAttempt, WorkflowConclusion, WorkflowDurationMinutes, ALGoVersion, HtmlUrl\n| top 500 by timestamp desc",
             "id": "fa4c75b2-ebce-4ced-a249-2fc75f4cddd2",
             "usedVariables": [
                 "WorkflowTelemetry",
@@ -2280,7 +2281,7 @@
                 "kind": "inline",
                 "dataSourceId": "8320a60e-6341-4e9d-9245-9b89f7c218f0"
             },
-            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), Failed=sumif(ItemCount, WorkflowConclusion in~ (\"Failure\", \"TimedOut\"))\n  | project FailedWorkflowRuns=iff(Total == 0, \"No telemetry\", tostring(Failed))",
+            "text": "WorkflowTelemetry\n  | where isempty(_repository) or RepositoryName == _repository\n  | where isempty(_workflow) or WorkflowName == _workflow\n  | where isempty(_refName) or RefName == _refName\n  | where isempty(_repoType) or RepoType == _repoType\n  | where WorkflowName != \"Pull Request Build\"\n  | summarize Total=sum(ItemCount), Failed=sumif(ItemCount, WorkflowConclusion =~ \"Failure\")\n  | project FailedWorkflowRuns=iff(Total == 0, \"No telemetry\", tostring(Failed))",
             "id": "59bd778d-061f-57af-9a7f-9936f34e5b47",
             "usedVariables": [
                 "WorkflowTelemetry",
