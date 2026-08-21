@@ -16,9 +16,9 @@ $script:AlToolPackageId = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
 .SYNOPSIS
     Invokes a native executable and returns its output streams and exit code.
 .DESCRIPTION
-    Keeps stdout separate from native stderr under Windows PowerShell 5 and restores the caller's
-    error preference immediately after invocation. Command resolution and invocation failures remain
-    terminating.
+    Keeps stdout separate from native stderr and restores the caller's error preference immediately
+    after invocation. Windows PowerShell 5 stderr can include PowerShell formatting metadata.
+    Command resolution and invocation failures remain terminating.
 .PARAMETER FilePath
     The native executable name or path.
 .PARAMETER ArgumentList
@@ -34,7 +34,6 @@ function Invoke-AlNativeCommand {
 
     $nativeCommand = Get-Command -Name $FilePath -CommandType Application -ErrorAction Stop
     $standardErrorPath = Join-Path ([System.IO.Path]::GetTempPath()) "altool-stderr-$([Guid]::NewGuid().ToString('N')).txt"
-    $errorBeforeInvocation = if ($Error.Count -gt 0) { $Error[0] } else { $null }
     $originalErrorActionPreference = $ErrorActionPreference
     $nativeErrorPreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue
     $originalNativeErrorPreference = if ($nativeErrorPreference) { $nativeErrorPreference.Value } else { $null }
@@ -44,14 +43,8 @@ function Invoke-AlNativeCommand {
             if ($nativeErrorPreference) {
                 $PSNativeCommandUseErrorActionPreference = $false
             }
-            if ($PSVersionTable.PSVersion.Major -le 5) {
-                $nativeOutput = & $nativeCommand.Source @ArgumentList 2>&1
-                [int] $exitCode = $LASTEXITCODE
-            }
-            else {
-                $standardOutput = & $nativeCommand.Source @ArgumentList 2> $standardErrorPath
-                [int] $exitCode = $LASTEXITCODE
-            }
+            $standardOutput = & $nativeCommand.Source @ArgumentList 2> $standardErrorPath
+            [int] $exitCode = $LASTEXITCODE
         }
         finally {
             $ErrorActionPreference = $originalErrorActionPreference
@@ -60,35 +53,12 @@ function Invoke-AlNativeCommand {
             }
         }
 
-        $invocationErrors = @()
-        foreach ($errorRecord in $Error) {
-            if ($null -ne $errorBeforeInvocation -and [object]::ReferenceEquals($errorRecord, $errorBeforeInvocation)) {
-                break
-            }
-            if ($errorRecord.FullyQualifiedErrorId -notin @("NativeCommandError", "NativeCommandErrorMessage")) {
-                $invocationErrors += $errorRecord
-            }
-        }
-        if ($invocationErrors.Count -gt 0) {
-            throw $invocationErrors[0]
-        }
-
-        if ($PSVersionTable.PSVersion.Major -le 5) {
-            [string[]] $standardOutputLines = @($nativeOutput |
-                Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] } |
-                ForEach-Object { "$_" })
-            [string[]] $standardErrorLines = @($nativeOutput |
-                Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } |
-                ForEach-Object { "$($_.Exception.Message)" })
+        [string[]] $standardOutputLines = @($standardOutput | ForEach-Object { "$_" })
+        if (Test-Path -LiteralPath $standardErrorPath) {
+            [string[]] $standardErrorLines = @(Get-Content -LiteralPath $standardErrorPath | ForEach-Object { "$_" })
         }
         else {
-            [string[]] $standardOutputLines = @($standardOutput | ForEach-Object { "$_" })
-            if (Test-Path -LiteralPath $standardErrorPath) {
-                [string[]] $standardErrorLines = @(Get-Content -LiteralPath $standardErrorPath | ForEach-Object { "$_" })
-            }
-            else {
-                [string[]] $standardErrorLines = @()
-            }
+            [string[]] $standardErrorLines = @()
         }
 
         return [PSCustomObject]@{
@@ -752,6 +722,10 @@ function Invoke-AlRunTestsBatch {
         }
         finally {
             $sw.Stop()
+        }
+
+        if ($nativeResult.StandardError.Count -gt 0) {
+            OutputDebug -message "al runtests stderr:$([Environment]::NewLine)$($nativeResult.StandardError -join [Environment]::NewLine)"
         }
 
         if ($nativeResult.ExitCode -notin @(0, 1)) {

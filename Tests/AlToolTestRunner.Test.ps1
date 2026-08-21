@@ -4,6 +4,7 @@ param()
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/DebugLogHelper.psm1' -Resolve) -DisableNameChecking -Force
 Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
 
 Describe 'AlToolTestRunner.psm1 Tests' {
@@ -24,7 +25,12 @@ Describe 'AlToolTestRunner.psm1 Tests' {
     }
 
     Context 'Invoke-AlNativeCommand' {
-        It 'Captures native stdout, stderr and exit code in Windows PowerShell 5 without terminating' {
+        It 'Captures native stdout, redirected stderr and exit code in Windows PowerShell 5 for exit <ExitCode>' -TestCases @(
+            @{ ExitCode = 0 }
+            @{ ExitCode = 1 }
+        ) {
+            param($ExitCode)
+
             if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
                 Set-ItResult -Skipped -Because 'Windows PowerShell 5 is only available on Windows'
                 return
@@ -32,7 +38,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 
             $modulePath = (Resolve-Path (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1')).Path
             $windowsPowerShell = (Get-Command (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -ErrorAction Stop).Source
-            $childScript = '[Console]::Out.WriteLine("native-stdout"); [Console]::Error.WriteLine("native-stderr"); exit 23'
+            $childScript = "[Console]::Out.WriteLine('native-stdout'); [Console]::Error.WriteLine('native-stderr'); exit $ExitCode"
             $encodedChildScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
             $escapedModulePath = $modulePath.Replace("'", "''")
             $escapedWindowsPowerShell = $windowsPowerShell.Replace("'", "''")
@@ -42,7 +48,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 `$module = Import-Module '$escapedModulePath' -Force -PassThru
 `$result = & `$module {
     Invoke-AlNativeCommand -FilePath '$escapedWindowsPowerShell' -ArgumentList @(
-        '-NoLogo', '-NoProfile', '-EncodedCommand', '$encodedChildScript'
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', '$encodedChildScript'
     )
 }
 @{
@@ -60,31 +66,72 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 
             $parentExitCode | Should -Be 0
             $payload = ($parentOutput -join "`n") | ConvertFrom-Json
-            $payload.ExitCode | Should -Be 23
+            $payload.ExitCode | Should -Be $ExitCode
             $payload.ErrorActionPreference | Should -Be 'Stop'
             @($payload.StandardOutput) | Should -Be @('native-stdout')
-            @($payload.StandardError) | Should -Be @('native-stderr')
+            ($payload.StandardError -join "`n") | Should -Match 'native-stderr'
             ($payload.Output -join "`n") | Should -Match 'native-stdout'
             ($payload.Output -join "`n") | Should -Match 'native-stderr'
         }
 
-        It 'Separates native stdout and stderr in the current PowerShell process' {
+        It 'Uses one stderr-file invocation and captures LASTEXITCODE immediately' {
+            InModuleScope AlToolTestRunner {
+                $functionText = (Get-Command Invoke-AlNativeCommand).ScriptBlock.ToString()
+
+                $functionText | Should -Match '(?s)\$standardOutput\s*=\s*&\s*\$nativeCommand\.Source\s+@ArgumentList\s+2>\s*\$standardErrorPath\s*\r?\n\s*\[int\]\s*\$exitCode\s*=\s*\$LASTEXITCODE'
+                $functionText | Should -Not -Match '2>&1|PSVersionTable'
+            }
+        }
+
+        It 'Preserves stdout, captures stderr and does not throw for exit <ExitCode> in the current process' -TestCases @(
+            @{ ExitCode = 0 }
+            @{ ExitCode = 1 }
+        ) {
+            param($ExitCode)
+
             $powerShell = (Get-Process -Id $PID).Path
-            $childScript = '[Console]::Out.WriteLine("native-stdout"); [Console]::Error.WriteLine("native-stderr"); exit 29'
+            $childScript = "[Console]::Out.WriteLine('native-stdout'); [Console]::Error.WriteLine('native-stderr'); exit $ExitCode"
             $encodedChildScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
 
             InModuleScope AlToolTestRunner -Parameters @{
                 PowerShellPath = $powerShell
                 EncodedScript  = $encodedChildScript
+                ExpectedExit   = $ExitCode
             } {
-                $result = Invoke-AlNativeCommand -FilePath $PowerShellPath -ArgumentList @(
-                    '-NoLogo', '-NoProfile', '-EncodedCommand', $EncodedScript
-                )
+                $originalErrorActionPreference = $ErrorActionPreference
+                $nativePreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue
+                $originalNativePreference = if ($nativePreference) { $nativePreference.Value } else { $null }
+                $existingTempFiles = @(Get-ChildItem -LiteralPath ([System.IO.Path]::GetTempPath()) -Filter 'altool-stderr-*.txt' |
+                    ForEach-Object { $_.FullName })
+                try {
+                    $ErrorActionPreference = 'Stop'
+                    if ($nativePreference) {
+                        $PSNativeCommandUseErrorActionPreference = $true
+                    }
 
-                $result.ExitCode | Should -Be 29
-                $result.StandardOutput | Should -Be @('native-stdout')
-                $result.StandardError | Should -Be @('native-stderr')
-                $result.Output | Should -Be @('native-stdout', 'native-stderr')
+                    $result = Invoke-AlNativeCommand -FilePath $PowerShellPath -ArgumentList @(
+                        '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $EncodedScript
+                    )
+
+                    $result.ExitCode | Should -Be $ExpectedExit
+                    $result.StandardOutput | Should -Be @('native-stdout')
+                    ($result.StandardError -join "`n") | Should -Match 'native-stderr'
+                    $result.Output[0] | Should -Be 'native-stdout'
+                    ($result.Output -join "`n") | Should -Match 'native-stderr'
+                    $ErrorActionPreference | Should -Be 'Stop'
+                    if ($nativePreference) {
+                        $PSNativeCommandUseErrorActionPreference | Should -BeTrue
+                    }
+                    $remainingTempFiles = @(Get-ChildItem -LiteralPath ([System.IO.Path]::GetTempPath()) -Filter 'altool-stderr-*.txt' |
+                        ForEach-Object { $_.FullName })
+                    @($remainingTempFiles | Where-Object { $_ -notin $existingTempFiles }).Count | Should -Be 0
+                }
+                finally {
+                    $ErrorActionPreference = $originalErrorActionPreference
+                    if ($nativePreference) {
+                        $PSNativeCommandUseErrorActionPreference = $originalNativePreference
+                    }
+                }
             }
         }
 
@@ -105,8 +152,34 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             Set-Content -Path $invalidExecutable -Value 'not an executable' -Encoding ASCII
 
             InModuleScope AlToolTestRunner -Parameters @{ InvalidExecutable = $invalidExecutable } {
-                { Invoke-AlNativeCommand -FilePath $InvalidExecutable } |
-                    Should -Throw '*failed to run*'
+                $originalErrorActionPreference = $ErrorActionPreference
+                $nativePreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue
+                $originalNativePreference = if ($nativePreference) { $nativePreference.Value } else { $null }
+                $existingTempFiles = @(Get-ChildItem -LiteralPath ([System.IO.Path]::GetTempPath()) -Filter 'altool-stderr-*.txt' |
+                    ForEach-Object { $_.FullName })
+                try {
+                    $ErrorActionPreference = 'Stop'
+                    if ($nativePreference) {
+                        $PSNativeCommandUseErrorActionPreference = $true
+                    }
+
+                    { Invoke-AlNativeCommand -FilePath $InvalidExecutable } |
+                        Should -Throw '*failed to run*'
+
+                    $ErrorActionPreference | Should -Be 'Stop'
+                    if ($nativePreference) {
+                        $PSNativeCommandUseErrorActionPreference | Should -BeTrue
+                    }
+                    $remainingTempFiles = @(Get-ChildItem -LiteralPath ([System.IO.Path]::GetTempPath()) -Filter 'altool-stderr-*.txt' |
+                        ForEach-Object { $_.FullName })
+                    @($remainingTempFiles | Where-Object { $_ -notin $existingTempFiles }).Count | Should -Be 0
+                }
+                finally {
+                    $ErrorActionPreference = $originalErrorActionPreference
+                    if ($nativePreference) {
+                        $PSNativeCommandUseErrorActionPreference = $originalNativePreference
+                    }
+                }
             }
         }
     }
@@ -466,6 +539,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             $script:capturedBatchArguments = $null
             $script:capturedTestGroupsPath = $null
             $script:capturedTestGroupsJson = $null
+            Mock -ModuleName AlToolTestRunner OutputDebug {}
         }
 
         It 'Uses one testgroups invocation with the exact enabled method lists and removes the temporary file' {
@@ -513,6 +587,45 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             $script:capturedTestGroupsJson.Trim() |
                 Should -Be '[{"codeunitId":130001,"testMethods":["TestOne","TestTwo"]},{"codeunitId":130002,"testMethods":["TestThree"]}]'
             Test-Path -LiteralPath $script:capturedTestGroupsPath | Should -BeFalse
+            Should -Invoke -ModuleName AlToolTestRunner OutputDebug -Times 0 -Exactly
+        }
+
+        It 'Writes successful native stderr only to debug output' {
+            Mock -ModuleName AlToolTestRunner Write-Host {}
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                $stdout = @{
+                    succeeded = $true
+                    data      = @{
+                        results = @(
+                            @{ codeunitId = 130001; methodName = 'TestOne'; status = 'passed'; output = ''; durationMs = 1 },
+                            @{ codeunitId = 130001; methodName = 'TestTwo'; status = 'passed'; output = ''; durationMs = 2 },
+                            @{ codeunitId = 130002; methodName = 'TestThree'; status = 'passed'; output = ''; durationMs = 3 }
+                        )
+                    }
+                } | ConvertTo-Json -Depth 6
+                return [PSCustomObject]@{
+                    StandardOutput = [string[]]@($stdout)
+                    StandardError  = [string[]]@('informational diagnostic', 'server trace')
+                    Output         = [string[]]@($stdout, 'informational diagnostic', 'server trace')
+                    ExitCode       = [int] 0
+                }
+            }
+
+            InModuleScope AlToolTestRunner -Parameters @{
+                Codeunits  = $script:batchCodeunits
+                Connection = $script:batchConnection
+            } {
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
+                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                $result.Succeeded | Should -BeTrue
+            }
+
+            Should -Invoke -ModuleName AlToolTestRunner OutputDebug -Times 1 -Exactly -ParameterFilter {
+                $message -like 'al runtests stderr:*informational diagnostic*server trace*'
+            }
+            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 0 -Exactly -ParameterFilter {
+                "$Object" -match '(?i)warning|error'
+            }
         }
 
         It 'Parses valid failed-test JSON when AlTool exits with code one' {
@@ -550,6 +663,9 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 
             Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 0 -Exactly -ParameterFilter {
                 "$Object" -like '::warning::*'
+            }
+            Should -Invoke -ModuleName AlToolTestRunner OutputDebug -Times 1 -Exactly -ParameterFilter {
+                $message -like 'al runtests stderr:*test diagnostics*'
             }
         }
 
