@@ -683,7 +683,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             Should -Invoke -ModuleName AlToolTestRunner ConvertFrom-AlTestGroupsOutput -Times 0 -Exactly
         }
 
-        It 'Terminates when a successful envelope exits with code one' {
+        It 'Returns results as unsuccessful when a successful envelope exits with code one' {
             Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
                 $stdout = @{
                     succeeded = $true
@@ -707,14 +707,15 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Codeunits  = $script:batchCodeunits
                 Connection = $script:batchConnection
             } {
-                {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
-                } | Should -Throw '*protocol failure*succeeded=true is inconsistent with exit code 1*connection failed after response*'
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
+                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+
+                $result.Succeeded | Should -BeFalse
+                $result.Results['130001'][0].Outcome | Should -Be 'Pass'
             }
         }
 
-        It 'Terminates when a failed envelope exits with code zero' {
+        It 'Returns failed-envelope results as unsuccessful when the process exits with code zero' {
             Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
                 $stdout = @{
                     succeeded = $false
@@ -738,10 +739,11 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Codeunits  = $script:batchCodeunits
                 Connection = $script:batchConnection
             } {
-                {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
-                } | Should -Throw '*protocol failure*succeeded=false is inconsistent with exit code 0*'
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
+                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+
+                $result.Succeeded | Should -BeFalse
+                $result.Results['130001'][0].Outcome | Should -Be 'Fail'
             }
         }
 
@@ -844,7 +846,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             }
         }
 
-        It 'Surfaces the failed-envelope message and nonduplicate stderr when results are absent' {
+        It 'Surfaces the failed-envelope message and stderr when results are absent' {
             Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
                 $stdout = @{
                     succeeded = $false
@@ -881,8 +883,34 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 }
                 catch {
                     $_.Exception.Message | Should -Match '^al runtests failed: The company could not be opened\.'
-                    $_.Exception.Message | Should -Match 'stderr: server refused the connection'
+                    $_.Exception.Message | Should -Match 'stderr:'
+                    $_.Exception.Message | Should -Match 'server refused the connection'
                 }
+            }
+        }
+
+        It 'Does not repeat stderr that exactly matches a failed-envelope message' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                $stdout = @{
+                    succeeded = $false
+                    message   = 'The company could not be opened.'
+                } | ConvertTo-Json
+                return [PSCustomObject]@{
+                    StandardOutput = [string[]]@($stdout)
+                    StandardError  = [string[]]@('The company could not be opened.')
+                    Output         = [string[]]@($stdout, 'The company could not be opened.')
+                    ExitCode       = [int] 1
+                }
+            }
+
+            InModuleScope AlToolTestRunner -Parameters @{
+                Codeunits  = $script:batchCodeunits
+                Connection = $script:batchConnection
+            } {
+                {
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
+                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                } | Should -Throw 'al runtests failed: The company could not be opened.'
             }
         }
 

@@ -707,27 +707,14 @@ function Invoke-AlRunTestsBatch {
             throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
         }
 
-        if (($nativeResult.ExitCode -eq 0) -ne $parsed.Succeeded) {
-            $details = @("ToolResponse succeeded=$($parsed.Succeeded.ToString().ToLowerInvariant()) is inconsistent with exit code $($nativeResult.ExitCode).")
-            if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
-                $details += "stderr: $standardErrorText"
-            }
-            throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
-        }
-
         if (-not $parsed.Succeeded -and $parsed.Results.Count -eq 0) {
             $details = @()
-            $stderrLines = @($nativeResult.StandardError |
-                ForEach-Object { "$_".Trim() } |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
             if (-not [string]::IsNullOrWhiteSpace($parsed.Message)) {
                 $details += $parsed.Message
-                $stderrLines = @($stderrLines | Where-Object {
-                        -not [string]::Equals($_, $parsed.Message, [StringComparison]::OrdinalIgnoreCase)
-                    })
             }
-            if ($stderrLines.Count -gt 0) {
-                $details += "stderr: $($stderrLines -join [Environment]::NewLine)"
+            if (-not [string]::IsNullOrWhiteSpace($standardErrorText) -and
+                -not [string]::Equals($standardErrorText, $parsed.Message, [StringComparison]::OrdinalIgnoreCase)) {
+                $details += "stderr: $standardErrorText"
             }
             if ($details.Count -eq 0) {
                 $details += "No failure message or stderr was returned."
@@ -737,7 +724,7 @@ function Invoke-AlRunTestsBatch {
 
         return @{
             Results    = $parsed.Results
-            Succeeded  = $parsed.Succeeded
+            Succeeded  = [bool] ($parsed.Succeeded -and ($nativeResult.ExitCode -eq 0))
             ElapsedSec = [Math]::Round($sw.Elapsed.TotalSeconds, 3)
         }
     }
