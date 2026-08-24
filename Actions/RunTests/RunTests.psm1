@@ -210,8 +210,8 @@ function Invoke-AlGoTestRun {
     .DESCRIPTION
         Runs each selected test app with AlTool or a RunTestsInBcContainer override. Preserves
         TestResults.xml for AnalyzeTests, copies produced results to .buildartifacts, and refreshes
-        ContainerEventLog.evtx after every outcome. Event-log errors do not replace an existing test
-        error.
+        ContainerEventLog.evtx after every outcome. Event-log capture failures are warnings and do
+        not change the test outcome.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -234,7 +234,6 @@ function Invoke-AlGoTestRun {
         [scriptblock] $runTestsOverride = $null
     )
 
-    $testRunFailed = $false
     try {
         $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installTestAppsJson
         if (@($testApps).Count -eq 0) {
@@ -318,10 +317,6 @@ function Invoke-AlGoTestRun {
             }
         }
     }
-    catch {
-        $testRunFailed = $true
-        throw
-    }
     finally {
         try {
             Export-AlGoContainerEventLog `
@@ -329,12 +324,7 @@ function Invoke-AlGoTestRun {
                 -containerName $containerName
         }
         catch {
-            if ($testRunFailed) {
-                OutputWarning -message "Tests failed and the post-test container event log could not be captured. $($_.Exception.Message)"
-            }
-            else {
-                throw
-            }
+            OutputWarning -message "The post-test container event log could not be captured. $($_.Exception.Message)"
         }
     }
 }

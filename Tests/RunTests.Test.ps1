@@ -700,6 +700,7 @@ Describe 'RunTests.psm1 Tests' {
 
     Context 'Invoke-AlGoTestRun event log lifecycle' {
         It 'Captures after a passing no-result test run with the expected root path and API parameters' {
+            Mock -ModuleName RunTests OutputWarning {}
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
             Set-Content -Path $eventLogDestination -Value 'pre-test-events' -Encoding UTF8
@@ -729,6 +730,7 @@ Describe 'RunTests.psm1 Tests' {
             }
             (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
             Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 0 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -771,12 +773,13 @@ Describe 'RunTests.psm1 Tests' {
             }
 
             Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
-                $message -like '*Tests failed*event log could not be captured*event export failed*'
+                $message -like '*post-test container event log could not be captured*event export failed*'
             }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Surfaces event log capture failure after passing tests and preserves the stale diagnostic' {
+        It 'Warns and succeeds when event log capture fails after passing tests' {
+            Mock -ModuleName RunTests OutputWarning {}
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
             Set-Content -Path $eventLogDestination -Value 'pre-test-events' -Encoding UTF8
@@ -790,9 +793,12 @@ Describe 'RunTests.psm1 Tests' {
             }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $true } } |
-                Should -Throw "*Failed to capture event log*did not return a readable event log file*"
+                Should -Not -Throw
 
             (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'pre-test-events'
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like '*post-test container event log could not be captured*did not return a readable event log file*'
+            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -849,6 +855,29 @@ Describe 'RunTests.psm1 Tests' {
 
             $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
             (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Preserves a runner exception when event log capture also fails' {
+            Mock -ModuleName RunTests OutputWarning {}
+            Mock -ModuleName RunTests Get-BcContainerEventLog { throw 'event export failed' }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            {
+                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' `
+                    -credential $testCredential -runTestsOverride { throw 'runner failed' }
+            } | Should -Throw -ExpectedMessage 'runner failed'
+
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like '*post-test container event log could not be captured*event export failed*'
+            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
     }
