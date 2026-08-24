@@ -29,31 +29,58 @@ Param(
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path $PSScriptRoot 'RunTests.psm1' -Resolve) -DisableNameChecking -Force
-DownloadAndImportBcContainerHelper
 
 function Get-TestRunnerCredential {
     <#
     .SYNOPSIS
         Returns the credential used by the test runner to connect to the build container.
     .DESCRIPTION
-        Uses the credential supplied by RunPipeline, with a generated fallback when none is present.
+        Uses the credential supplied by RunPipeline and fails when that pipeline output is unavailable.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The container credential is surfaced by RunPipeline as plain text')]
     param()
-    if ($ENV:containerCredential) {
-        $credentialJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:containerCredential)) | ConvertFrom-Json
+
+    if ([string]::IsNullOrWhiteSpace($ENV:containerCredential)) {
+        throw "RunPipeline-to-RunTests wiring error: the kept container credential was not provided."
+    }
+
+    try {
+        $credentialJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENV:containerCredential)) |
+            ConvertFrom-Json |
+            ConvertTo-HashTable -recurse
+        if ([string]::IsNullOrWhiteSpace("$($credentialJson.username)") -or [string]::IsNullOrWhiteSpace("$($credentialJson.password)")) {
+            throw "The credential does not contain a username and password."
+        }
         $securePassword = ConvertTo-SecureString -String $credentialJson.password -AsPlainText -Force
         return New-Object System.Management.Automation.PSCredential($credentialJson.username, $securePassword)
     }
-    $securePassword = ConvertTo-SecureString -String ([GUID]::NewGuid().ToString()) -AsPlainText -Force
-    return New-Object System.Management.Automation.PSCredential("admin", $securePassword)
+    catch {
+        throw "RunPipeline-to-RunTests wiring error: the kept container credential was not provided in the expected format."
+    }
+}
+
+function Get-TestRunnerContainerName {
+    <#
+    .SYNOPSIS
+        Returns the kept container name supplied by RunPipeline.
+    #>
+    param()
+
+    if ([string]::IsNullOrWhiteSpace($ENV:containerName)) {
+        throw "RunPipeline-to-RunTests wiring error: the kept container name was not provided."
+    }
+
+    return $ENV:containerName
 }
 
 if ($project -eq ".") { $project = "" }
 
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $projectPath = Join-Path $baseFolder $project
+$containerName = Get-TestRunnerContainerName
+$credential = Get-TestRunnerCredential
 
+DownloadAndImportBcContainerHelper
 Write-Host "Use settings"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 
@@ -61,14 +88,6 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $ENV:_token = $token
 
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
-
-# Prefer the container selected by RunPipeline.
-$containerName = $ENV:containerName
-if (-not $containerName) {
-    $containerName = GetContainerName($project)
-}
-
-$credential = Get-TestRunnerCredential
 
 # A RunTestsInBcContainer override script, if present, replaces the built-in AlTool test runner.
 $overrideParams = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectPath ".AL-Go") -OverrideScriptNames @("RunTestsInBcContainer")

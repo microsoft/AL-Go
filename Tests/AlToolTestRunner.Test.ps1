@@ -996,13 +996,14 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 (ConvertTo-SecureString 'password' -AsPlainText -Force)
             )
             $script:requiredParameterExtensionId = [Guid]::NewGuid().ToString()
+            $script:requiredParameterResultFile = Join-Path $TestDrive 'RequiredParameters.xml'
         }
 
         It 'Declares only the explicit runner contract and marks required values mandatory' {
             $command = Get-Command Invoke-AlToolTestRun
 
             $command.Parameters.ContainsKey('Parameters') | Should -BeFalse
-            foreach ($parameterName in @('ContainerName', 'Credential', 'ExtensionId')) {
+            foreach ($parameterName in @('ContainerName', 'Credential', 'ExtensionId', 'JUnitResultFileName')) {
                 $parameterAttribute = $command.Parameters[$parameterName].Attributes |
                     Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } |
                     Select-Object -First 1
@@ -1013,19 +1014,42 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         It 'Rejects calls that omit ContainerName' {
             {
                 Invoke-AlToolTestRun -Credential $script:requiredParameterCredential `
-                    -ExtensionId $script:requiredParameterExtensionId
+                    -ExtensionId $script:requiredParameterExtensionId `
+                    -JUnitResultFileName $script:requiredParameterResultFile
             } | Should -Throw
         }
 
         It 'Rejects calls that omit Credential' {
             {
-                Invoke-AlToolTestRun -ContainerName 'test' -ExtensionId $script:requiredParameterExtensionId
+                Invoke-AlToolTestRun -ContainerName 'test' -ExtensionId $script:requiredParameterExtensionId `
+                    -JUnitResultFileName $script:requiredParameterResultFile
             } | Should -Throw
         }
 
         It 'Rejects calls that omit ExtensionId' {
             {
-                Invoke-AlToolTestRun -ContainerName 'test' -Credential $script:requiredParameterCredential
+                Invoke-AlToolTestRun -ContainerName 'test' -Credential $script:requiredParameterCredential `
+                    -JUnitResultFileName $script:requiredParameterResultFile
+            } | Should -Throw
+        }
+
+        It 'Rejects calls that omit JUnitResultFileName' {
+            {
+                Invoke-AlToolTestRun -ContainerName 'test' -Credential $script:requiredParameterCredential `
+                    -ExtensionId $script:requiredParameterExtensionId
+            } | Should -Throw
+        }
+
+        It 'Rejects a blank JUnitResultFileName' -TestCases @(
+            @{ Value = $null }
+            @{ Value = '' }
+            @{ Value = ' ' }
+        ) {
+            param($Value)
+
+            {
+                Invoke-AlToolTestRun -ContainerName 'test' -Credential $script:requiredParameterCredential `
+                    -ExtensionId $script:requiredParameterExtensionId -JUnitResultFileName $Value
             } | Should -Throw
         }
     }
@@ -1037,10 +1061,11 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 (ConvertTo-SecureString 'password' -AsPlainText -Force)
             )
             $script:testRunParameters = @{
-                ContainerName = 'test'
-                Credential    = $script:testRunCredential
-                ExtensionId   = [Guid]::NewGuid().ToString()
-                AppName       = 'Test App'
+                ContainerName       = 'test'
+                Credential          = $script:testRunCredential
+                ExtensionId         = [Guid]::NewGuid().ToString()
+                AppName             = 'Test App'
+                JUnitResultFileName = Join-Path $TestDrive 'TestResults.xml'
             }
             $script:testRunCodeunit = [PSCustomObject]@{
                 Id    = 130001

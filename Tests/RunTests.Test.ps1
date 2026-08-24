@@ -91,9 +91,17 @@ Describe 'RunTests.psm1 Tests' {
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
-            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath)
 
-            @($testApps).Count | Should -Be 2
+            $testApps.Count | Should -Be 2
+            $testApps | ForEach-Object { $_ | Should -BeOfType System.Management.Automation.PSCustomObject }
+            @($testApps.Path | ForEach-Object { [System.IO.Path]::GetFileName($_) }) |
+                Should -Be @('App1.Test.app', 'App2.Test.app')
+            @($testApps.Name) | Should -Be @('App1.Test', 'App2.Test')
+            @($testApps.Id) | Should -Be @(
+                "$($script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($testApps[0].Path)].id)",
+                "$($script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($testApps[1].Path)].id)"
+            )
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -103,15 +111,24 @@ Describe 'RunTests.psm1 Tests' {
             $installedApp2 = Join-Path $projectPath 'Installed2.app'
             New-Item -Path $installedApp1 -ItemType File -Force | Out-Null
             New-Item -Path $installedApp2 -ItemType File -Force | Out-Null
+            $installedApp1Id = [Guid]::NewGuid().ToString()
+            $installedApp2Id = [Guid]::NewGuid().ToString()
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp1)] = [PSCustomObject]@{
+                id = $installedApp1Id; name = 'Installed1'
+            }
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp2)] = [PSCustomObject]@{
+                id = $installedApp2Id; name = 'Installed2'
+            }
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @($installedApp1, "($installedApp2)") | Set-Content -Path $installJson -Encoding UTF8
 
             $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
-            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson)
 
-            @($testApps).Count | Should -Be 2
-            $testApps | Should -Contain $installedApp1
-            $testApps | Should -Contain $installedApp2
+            $testApps.Count | Should -Be 2
+            @($testApps.Path) | Should -Be @($installedApp1, $installedApp2)
+            @($testApps.Id) | Should -Be @($installedApp1Id, $installedApp2Id)
+            @($testApps.Name) | Should -Be @('Installed1', 'Installed2')
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -119,6 +136,9 @@ Describe 'RunTests.psm1 Tests' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $installedApp = Join-Path $projectPath 'Installed1.app'
             New-Item -Path $installedApp -ItemType File -Force | Out-Null
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp)] = [PSCustomObject]@{
+                id = [Guid]::NewGuid().ToString(); name = 'Installed1'
+            }
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @($installedApp) | Set-Content -Path $installJson -Encoding UTF8
 
@@ -126,9 +146,10 @@ Describe 'RunTests.psm1 Tests' {
                 runTestsInAllInstalledTestApps = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
-            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson)
 
-            @($testApps).Count | Should -Be 1
+            $testApps.Count | Should -Be 1
+            [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'App1.Test.app'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -145,9 +166,10 @@ Describe 'RunTests.psm1 Tests' {
                 runTestsInAllInstalledTestApps = $true
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
-            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson)
 
-            @($testApps).Count | Should -Be 1
+            $testApps.Count | Should -Be 1
+            [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'App1.Test.app'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -157,14 +179,33 @@ Describe 'RunTests.psm1 Tests' {
             $projectPath = New-TestProject
             $installedApp = Join-Path $projectPath 'Installed1.app'
             New-Item -Path $installedApp -ItemType File -Force | Out-Null
+            $installedAppId = [Guid]::NewGuid().ToString()
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp)] = [PSCustomObject]@{
+                id = $installedAppId; name = 'Installed1'
+            }
             $installJson = Join-Path $projectPath 'installTestApps.json'
             ConvertTo-Json @("($installedApp)") | Set-Content -Path $installJson -Encoding UTF8
 
             $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
-            $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson)
 
-            @($testApps).Count | Should -Be 1
-            $testApps | Should -Contain $installedApp
+            $testApps.Count | Should -Be 1
+            $testApps[0].Path | Should -Be $installedApp
+            $testApps[0].Id | Should -Be $installedAppId
+            $testApps[0].Name | Should -Be 'Installed1'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Fails when an installed test app listed by RunPipeline is missing' {
+            $projectPath = New-TestProject
+            $missingApp = Join-Path $projectPath 'Missing.Test.app'
+            $installJson = Join-Path $projectPath 'installTestApps.json'
+            ConvertTo-Json @($missingApp) | Set-Content -Path $installJson -Encoding UTF8
+            $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
+
+            { Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson } |
+                Should -Throw "*Failed to read installed test app metadata*$missingApp*"
+
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -180,7 +221,8 @@ Describe 'RunTests.psm1 Tests' {
             $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath)
 
             $testApps.Count | Should -Be 1
-            [System.IO.Path]::GetFileName($testApps[0]) | Should -Be 'Normal.Test.app'
+            [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'Normal.Test.app'
+            $testApps[0].Name | Should -Be 'Normal.Test'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -198,6 +240,8 @@ Describe 'RunTests.psm1 Tests' {
             $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath)
 
             $testApps.Count | Should -Be 1
+            [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'Duplicate1.Test.app'
+            $testApps[0].Id | Should -Be $duplicateAppId
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -224,6 +268,21 @@ Describe 'RunTests.psm1 Tests' {
 
             { Get-TestAppsToRun -settings $settings -projectPath $projectPath } |
                 Should -Throw "*Failed to read compiled test app metadata*Broken.Test.app*corrupt package*"
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Reports invalid selected compiled app metadata clearly' {
+            $projectPath = New-TestProject -CompiledTestApps @('Broken.Test.app')
+            $compiledAppPath = Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestApps') 'Broken.Test.app'
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($compiledAppPath)].name = ''
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Get-TestAppsToRun -settings $settings -projectPath $projectPath } |
+                Should -Throw "*Failed to read compiled test app metadata*Broken.Test.app*app name*"
 
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -331,6 +390,23 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
             $script:invokedExtensionIds | Should -Be @($normalAppId)
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Uses selected app metadata without reading the compiled app again during execution' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
+                -credential $testCredential -runTestsOverride { return $true }
+
+            Should -Invoke -ModuleName RunTests Get-AppJsonFromAppFile -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

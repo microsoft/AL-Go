@@ -11,11 +11,12 @@ Import-Module (Join-Path $PSScriptRoot 'AlToolTestRunner.psm1' -Resolve) -Disabl
 function Get-TestAppsToRun {
     <#
     .SYNOPSIS
-        Determines the set of test app files to run tests in.
+        Determines the selected test apps and their validated metadata.
     .DESCRIPTION
         Selects compiled apps matching normal testFolders and excludes BCPT-only apps. When
         runTestsInAllInstalledTestApps is enabled, installed test apps are included independently.
-        Parentheses around installed app paths are removed to match RunPipeline behavior.
+        Parentheses around installed app paths are removed to match RunPipeline behavior. Returns
+        each selected app as a record containing Path, Id, and Name.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -32,6 +33,7 @@ function Get-TestAppsToRun {
     $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
     $testApps = @()
+    $selectedAppPaths = @{}
     $normalTestAppIds = @{}
     if ($settings.ContainsKey("testFolders")) {
         foreach ($testFolder in @($settings.testFolders)) {
@@ -67,23 +69,56 @@ function Get-TestAppsToRun {
             }
 
             if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
-                $testApps += $compiledApp.FullName
+                $compiledAppName = "$($compiledAppJson.name)"
+                if ([string]::IsNullOrWhiteSpace($compiledAppName)) {
+                    throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: The compiled app metadata does not contain an app name."
+                }
+                $testApps += [PSCustomObject]@{
+                    Path = $compiledApp.FullName
+                    Id   = $compiledAppId
+                    Name = $compiledAppName
+                }
                 $selectedCompiledAppIds[$compiledAppId] = $true
+                $selectedAppPaths[$compiledApp.FullName] = $true
             }
         }
     }
 
-    if ($settings.runTestsInAllInstalledTestApps -and $installTestAppsJson -and (Test-Path $installTestAppsJson)) {
+    if ($settings.runTestsInAllInstalledTestApps -and $installTestAppsJson) {
         try {
-            $installedTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 | ConvertFrom-Json
+            $installedTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
         }
-        $testApps += @($installedTestApps | ForEach-Object { "$_".TrimStart("(").TrimEnd(")") } | Where-Object { $_ -and (Test-Path $_) })
+        foreach ($installedTestApp in @($installedTestApps)) {
+            $installedTestAppPath = "$installedTestApp".TrimStart("(").TrimEnd(")")
+            if ([string]::IsNullOrWhiteSpace($installedTestAppPath)) {
+                throw "The installed test app list '$installTestAppsJson' contains a blank path."
+            }
+            try {
+                $installedAppJson = Get-AppJsonFromAppFile -appFile $installedTestAppPath
+                $installedAppId = "$($installedAppJson.id)"
+                $installedAppName = "$($installedAppJson.name)"
+                if ([string]::IsNullOrWhiteSpace($installedAppId) -or [string]::IsNullOrWhiteSpace($installedAppName)) {
+                    throw "The installed app metadata does not contain an app ID and name."
+                }
+            }
+            catch {
+                throw "Failed to read installed test app metadata from '$installedTestAppPath'. Error: $($_.Exception.Message)"
+            }
+            if (-not $selectedAppPaths.ContainsKey($installedTestAppPath)) {
+                $testApps += [PSCustomObject]@{
+                    Path = $installedTestAppPath
+                    Id   = $installedAppId
+                    Name = $installedAppName
+                }
+                $selectedAppPaths[$installedTestAppPath] = $true
+            }
+        }
     }
 
-    return @($testApps | Select-Object -Unique)
+    return @($testApps)
 }
 
 function Get-DisabledTestsForApp {
@@ -235,7 +270,8 @@ function Invoke-AlGoTestRun {
     )
 
     try {
-        $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installTestAppsJson
+        $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath `
+            -installTestAppsJson $installTestAppsJson
         if (@($testApps).Count -eq 0) {
             Write-Host "No test apps found to run tests in. Skipping test execution."
             return
@@ -262,17 +298,16 @@ function Invoke-AlGoTestRun {
         Push-Location $projectPath
         try {
             foreach ($testApp in $testApps) {
-                $appJson = Get-AppJsonFromAppFile -appFile $testApp
-                Write-Host "Running tests in $($appJson.name) ($($appJson.id))"
-                $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($appJson.id)")
+                Write-Host "Running tests in $($testApp.Name) ($($testApp.Id))"
+                $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($testApp.Id)")
 
                 if ($runTestsOverride) {
                     $runTestsParams = @{
                         "containerName"           = $containerName
                         "credential"              = $credential
                         "companyName"             = $settings.companyName
-                        "extensionId"             = $appJson.id
-                        "appName"                 = $appJson.name
+                        "extensionId"             = $testApp.Id
+                        "appName"                 = $testApp.Name
                         "disabledTests"           = $disabledTests
                         "JUnitResultFileName"     = $testResultsFile
                         "AppendToJUnitResultFile" = $true
@@ -286,8 +321,8 @@ function Invoke-AlGoTestRun {
                     $alToolTestRunParams = @{
                         ContainerName       = $containerName
                         Credential          = $credential
-                        ExtensionId         = "$($appJson.id)"
-                        AppName             = "$($appJson.name)"
+                        ExtensionId         = "$($testApp.Id)"
+                        AppName             = "$($testApp.Name)"
                         CompanyName         = "$($settings.companyName)"
                         Tenant              = "default"
                         DisabledTests       = @($disabledTests)

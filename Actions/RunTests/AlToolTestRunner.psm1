@@ -890,7 +890,7 @@ function Add-JUnitTestSuite {
 .PARAMETER TestType
     Optional BcContainerHelper test type filter.
 .PARAMETER JUnitResultFileName
-    JUnit file to create or append.
+    Required JUnit file to create or append.
 .OUTPUTS
     [bool] $true if all executed methods passed; $false otherwise.
 #>
@@ -904,11 +904,14 @@ function Invoke-AlToolTestRun {
         [string] $Tenant = "default",
         [AllowEmptyCollection()][object[]] $DisabledTests = @(),
         [string] $TestType = "",
-        [string] $JUnitResultFileName = ""
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName
     )
 
     if ([string]::IsNullOrWhiteSpace($ExtensionId)) {
         throw "Invoke-AlToolTestRun requires a nonblank ExtensionId."
+    }
+    if ([string]::IsNullOrWhiteSpace($JUnitResultFileName)) {
+        throw "Invoke-AlToolTestRun requires a nonblank JUnitResultFileName."
     }
     if ([string]::IsNullOrWhiteSpace($Tenant)) {
         $Tenant = "default"
@@ -986,15 +989,10 @@ function Invoke-AlToolTestRun {
         Write-Host ("Run for app '{0}': {1} codeunit(s) in {2}s real al wall-clock." -f `
                 $AppName, $codeunits.Count, [Math]::Round([double] $batch.ElapsedSec, 2))
 
-        if (-not [string]::IsNullOrWhiteSpace($JUnitResultFileName)) {
-            $dir = [System.IO.Path]::GetDirectoryName($JUnitResultFileName)
-            if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-            $doc.Save($JUnitResultFileName)
-            Write-Host "Wrote JUnit results for app '$AppName' to $JUnitResultFileName"
-        }
-        else {
-            Write-Host "WARNING: No JUnitResultFileName in parameters; results not persisted for app '$AppName'."
-        }
+        $dir = [System.IO.Path]::GetDirectoryName($JUnitResultFileName)
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $doc.Save($JUnitResultFileName)
+        Write-Host "Wrote JUnit results for app '$AppName' to $JUnitResultFileName"
 
         return $allPassed
     }
