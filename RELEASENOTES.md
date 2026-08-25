@@ -7,6 +7,8 @@ The action uses AlTool by default, running each app's enabled normal tests in on
 > [!NOTE]
 > The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to execute their tests through BcContainerHelper instead.
 
+## v9.2
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
