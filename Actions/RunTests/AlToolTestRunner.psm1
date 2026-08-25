@@ -184,66 +184,6 @@ function Get-AlToolConnection {
 
 <#
 .SYNOPSIS
-    Creates the temporary AL project used to connect AlTool to the container.
-.DESCRIPTION
-    Creates the project at the unique path owned by the current Invoke-AlToolTestRun call. The caller
-    removes that exact directory when the run finishes.
-.PARAMETER ProjectPath
-    Unique temporary directory for this test run.
-.PARAMETER Tenant
-    The tenant to connect to.
-.PARAMETER Connection
-    The connection hashtable produced by Get-AlToolConnection.
-.OUTPUTS
-    [string] Path to the generated project folder.
-#>
-function New-AlToolProject {
-    param(
-        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $ProjectPath,
-        [Parameter(Mandatory = $true)][string] $Tenant,
-        [Parameter(Mandatory = $true)][hashtable] $Connection
-    )
-
-    $projectRoot = [System.IO.Path]::GetFullPath($ProjectPath)
-    $vscodeDir = Join-Path $projectRoot ".vscode"
-    New-Item -ItemType Directory -Path $vscodeDir -Force | Out-Null
-
-    $appJson = [ordered]@{
-        id        = [System.Guid]::NewGuid().ToString()
-        name      = "AlToolTestDriver"
-        publisher = "AL-Go"
-        version   = "1.0.0.0"
-        platform  = "1.0.0.0"
-        runtime   = "15.0"
-    }
-    $appJson | ConvertTo-Json | Set-Content -Path (Join-Path $projectRoot "app.json") -Encoding UTF8
-
-    $launch = [ordered]@{
-        version        = "0.2.0"
-        configurations = @(
-            [ordered]@{
-                name              = "altool"
-                type              = "al"
-                request           = "launch"
-                server            = $Connection.Server
-                serverInstance    = $Connection.ServerInstance
-                port              = $Connection.Port
-                tenant            = $Tenant
-                authentication    = "UserPassword"
-                environmentType   = "OnPrem"
-                startupObjectId   = 22
-                startupObjectType = "Page"
-                schemaUpdateMode  = "Synchronize"
-            }
-        )
-    }
-    $launch | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $vscodeDir "launch.json") -Encoding UTF8
-
-    return $projectRoot
-}
-
-<#
-.SYNOPSIS
     Resolves the company `al runtests` should target.
 .DESCRIPTION
     Uses an explicitly requested company or selects a container company, preferring an evaluation
@@ -621,7 +561,6 @@ function New-AlTestGroupsFile {
 function Invoke-AlRunTestsBatch {
     param(
         [Parameter(Mandatory = $true)][object[]] $Codeunits,
-        [Parameter(Mandatory = $true)][string] $ProjectPath,
         [Parameter(Mandatory = $true)][string] $Company,
         [Parameter(Mandatory = $true)][string] $Tenant,
         [Parameter(Mandatory = $true)][hashtable] $Connection
@@ -632,7 +571,6 @@ function Invoke-AlRunTestsBatch {
         $alArgs = @(
             'runtests',
             '--testgroups', $testGroupsFile,
-            '--project', $ProjectPath,
             '--company', $Company,
             '--server', $Connection.Server,
             '--serverinstance', $Connection.ServerInstance,
@@ -888,7 +826,6 @@ function Invoke-AlToolTestRun {
         $Tenant = "default"
     }
 
-    $projectPath = $null
     try {
         $env:BC_SERVER_USERNAME = $Credential.UserName
         $env:BC_SERVER_PASSWORD = $Credential.GetNetworkCredential().Password
@@ -906,10 +843,6 @@ function Invoke-AlToolTestRun {
         }
 
         $connection = Get-AlToolConnection -ContainerName $ContainerName
-        $projectPath = [System.IO.Path]::GetFullPath(
-            (Join-Path ([System.IO.Path]::GetTempPath()) "altool-project-$([System.Guid]::NewGuid().ToString('N'))")
-        )
-        New-AlToolProject -ProjectPath $projectPath -Tenant $Tenant -Connection $connection | Out-Null
         $company = Get-AlToolCompany -ContainerName $ContainerName -Tenant $Tenant -CompanyName $CompanyName
         if ([string]::IsNullOrWhiteSpace($company)) {
             throw "Could not resolve a company to run tests against in container '$ContainerName'."
@@ -942,8 +875,8 @@ function Invoke-AlToolTestRun {
             $doc.AppendChild($suites) | Out-Null
         }
 
-        $batch = Invoke-AlRunTestsBatch -Codeunits $codeunits -ProjectPath $projectPath `
-            -Company $company -Tenant $Tenant -Connection $connection
+        $batch = Invoke-AlRunTestsBatch -Codeunits $codeunits -Company $company `
+            -Tenant $Tenant -Connection $connection
         $batchResults = $batch.Results
         $allPassed = [bool] $batch.Succeeded
 
@@ -977,9 +910,6 @@ function Invoke-AlToolTestRun {
         # Do not retain container credentials after the run.
         Remove-Item Env:\BC_SERVER_USERNAME -ErrorAction SilentlyContinue
         Remove-Item Env:\BC_SERVER_PASSWORD -ErrorAction SilentlyContinue
-        if ($projectPath -and (Test-Path -LiteralPath $projectPath -PathType Container)) {
-            Remove-Item -LiteralPath $projectPath -Recurse -Force
-        }
     }
 }
 

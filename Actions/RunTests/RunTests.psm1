@@ -312,17 +312,15 @@ function Invoke-AlGoTestRun {
                     $passed = & $runTestsOverride -parameters $runTestsParams
                 }
                 else {
-                    $alToolTestRunParams = @{
-                        ContainerName       = $containerName
-                        Credential          = $credential
-                        ExtensionId         = "$($testApp.Id)"
-                        AppName             = "$($testApp.Name)"
-                        CompanyName         = "$($settings.companyName)"
-                        Tenant              = "default"
-                        DisabledTests       = @($disabledTests)
-                        JUnitResultFileName = $testResultsFile
-                    }
-                    $passed = Invoke-AlToolTestRun @alToolTestRunParams
+                    $passed = Invoke-AlToolTestRun `
+                        -ContainerName $containerName `
+                        -Credential $credential `
+                        -ExtensionId "$($testApp.Id)" `
+                        -AppName "$($testApp.Name)" `
+                        -CompanyName "$($settings.companyName)" `
+                        -Tenant "default" `
+                        -DisabledTests @($disabledTests) `
+                        -JUnitResultFileName $testResultsFile
                 }
 
                 if (-not $passed) {

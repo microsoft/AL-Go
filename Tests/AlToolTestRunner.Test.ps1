@@ -557,28 +557,6 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
     }
 
-    Context 'New-AlToolProject' {
-        InModuleScope AlToolTestRunner {
-        It 'Creates the project at the exact caller-owned path' {
-            $projectPath = Join-Path $TestDrive "altool-project-$([Guid]::NewGuid().ToString('N'))"
-
-            try {
-                $result = New-AlToolProject -ProjectPath $projectPath -Tenant 'default' -Connection @{
-                    Server = 'http://test'; ServerInstance = 'BC'; Port = 7049
-                }
-
-                $result | Should -Be ([System.IO.Path]::GetFullPath($projectPath))
-                Test-Path -LiteralPath (Join-Path $projectPath 'app.json') -PathType Leaf | Should -BeTrue
-                Test-Path -LiteralPath (Join-Path (Join-Path $projectPath '.vscode') 'launch.json') -PathType Leaf |
-                    Should -BeTrue
-            }
-            finally {
-                Remove-Item -LiteralPath $projectPath -Recurse -Force -ErrorAction SilentlyContinue
-            }
-        }
-        }
-    }
-
     Context 'Get-AlToolConnection' {
         InModuleScope AlToolTestRunner {
         It 'Reads server instance and developer services port from the container configuration' {
@@ -754,8 +732,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Codeunits  = $script:batchCodeunits
                 Connection = $script:batchConnection
             } {
-                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                    -Tenant 'default' -Connection $Connection
                 $result.Results['130001'].Count | Should -Be 2
                 $result.Results['130002'].Count | Should -Be 1
                 $result.ElapsedSec | Should -BeGreaterOrEqual 0
@@ -764,6 +742,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlNativeCommand -Times 1 -Exactly
             $script:capturedBatchArguments[0] | Should -Be 'runtests'
             $script:capturedBatchArguments | Should -Contain '--testgroups'
+            $script:capturedBatchArguments | Should -Not -Contain '--project'
             $script:capturedBatchArguments | Should -Not -Contain '--raw'
             $script:capturedBatchArguments | Should -Not -Contain '--testmethods'
             $script:capturedBatchArguments | Should -Not -Contain '130001'
@@ -798,8 +777,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Codeunits  = $script:batchCodeunits
                 Connection = $script:batchConnection
             } {
-                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                    -Tenant 'default' -Connection $Connection
                 $result.Succeeded | Should -BeTrue
             }
 
@@ -833,8 +812,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Codeunits  = $script:batchCodeunits
                 Connection = $script:batchConnection
             } {
-                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                    -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                $result = Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                    -Tenant 'default' -Connection $Connection
                 $result.Succeeded | Should -BeFalse
                 ($result.Results['130001'] | Where-Object MethodName -eq 'TestOne').Outcome | Should -Be 'Fail'
                 ($result.Results['130001'] | Where-Object MethodName -eq 'TestTwo').Outcome | Should -Be 'Pass'
@@ -877,8 +856,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                 } | Should -Throw '*process failure*unexpected code 9*stderr: transport failed*'
             }
             Should -Invoke -ModuleName AlToolTestRunner ConvertFrom-AlTestGroupsOutput -Times 0 -Exactly
@@ -902,8 +881,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                 } | Should -Throw '*al runtests failed: no response diagnostic*exit code 1*'
             }
             Should -Invoke -ModuleName AlToolTestRunner ConvertFrom-AlTestGroupsOutput -Times 0 -Exactly
@@ -924,8 +903,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                 } | Should -Throw '*no structured stdout or stderr*exit code 1*'
             }
         }
@@ -949,8 +928,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 try {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                     throw 'Expected Invoke-AlRunTestsBatch to fail.'
                 }
                 catch {
@@ -979,8 +958,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                 } | Should -Throw 'al runtests failed: The company could not be opened.'
             }
         }
@@ -1001,8 +980,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                 } | Should -Throw '*protocol failure*could not be parsed as JSON*stdout: {not-json*stderr: parse diagnostic*'
             }
 
@@ -1021,8 +1000,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Connection = $script:batchConnection
             } {
                 {
-                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -ProjectPath $TestDrive `
-                        -Company 'CRONUS' -Tenant 'default' -Connection $Connection
+                    Invoke-AlRunTestsBatch -Codeunits $Codeunits -Company 'CRONUS' `
+                        -Tenant 'default' -Connection $Connection
                 } | Should -Throw '*native invocation failed*'
             }
 
@@ -1130,18 +1109,12 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 Name  = 'My Tests'
                 Tests = @('TestOne')
             }
-            $script:testRunProjectPaths = @()
             Remove-Item -LiteralPath (Join-Path $TestDrive 'TestResults.xml') -Force -ErrorAction SilentlyContinue
 
             Mock -ModuleName AlToolTestRunner Install-AlTool { return '1.2.3' }
             Mock -ModuleName AlToolTestRunner Get-Command { return $null } -ParameterFilter { $Name -eq 'al' }
             Mock -ModuleName AlToolTestRunner Get-AlToolConnection {
                 return @{ Server = 'http://test'; ServerInstance = 'BC'; Port = 7049 }
-            }
-            Mock -ModuleName AlToolTestRunner New-AlToolProject {
-                $script:testRunProjectPaths += $ProjectPath
-                New-Item -ItemType Directory -Path $ProjectPath -Force | Out-Null
-                return $ProjectPath
             }
             Mock -ModuleName AlToolTestRunner Get-AlToolCompany { return 'CRONUS' }
             Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits { return @($script:testRunCodeunit) }
@@ -1168,19 +1141,6 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             $junit.DocumentElement.LocalName | Should -Be 'testsuites'
             $junit.SelectNodes('testsuites/testsuite').Count | Should -Be 1
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='TestOne']") | Should -Not -BeNullOrEmpty
-            $script:testRunProjectPaths.Count | Should -Be 1
-            Test-Path -LiteralPath $script:testRunProjectPaths[0] | Should -BeFalse
-        }
-
-        It 'Uses a unique temporary project for each call and removes both projects' {
-            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
-            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
-
-            $script:testRunProjectPaths.Count | Should -Be 2
-            @($script:testRunProjectPaths | Select-Object -Unique).Count | Should -Be 2
-            foreach ($projectPath in $script:testRunProjectPaths) {
-                Test-Path -LiteralPath $projectPath | Should -BeFalse
-            }
         }
 
         It 'Installs AlTool when a direct call cannot find al' {
@@ -1304,7 +1264,6 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             [xml] $junit = Get-Content -Path $junitFile -Raw
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='TestOne']") | Should -Not -BeNullOrEmpty
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='TestOne']/failure") | Should -BeNullOrEmpty
-            Test-Path -LiteralPath $script:testRunProjectPaths[0] | Should -BeFalse
         }
 
         It 'Emits exact duplicate results and includes a duplicate failure in allPassed' {
@@ -1345,7 +1304,6 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 { Invoke-AlToolTestRun @script:testRunParameters } | Should -Throw '*batch failed*'
                 Test-Path Env:\BC_SERVER_USERNAME | Should -BeFalse
                 Test-Path Env:\BC_SERVER_PASSWORD | Should -BeFalse
-                Test-Path -LiteralPath $script:testRunProjectPaths[0] | Should -BeFalse
             }
             finally {
                 if ($null -ne $previousUserName) {
@@ -1379,20 +1337,6 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                     $env:BC_SERVER_PASSWORD = $previousPassword
                 }
             }
-        }
-
-        It 'Removes the temporary project when project creation fails after creating the directory' {
-            Mock -ModuleName AlToolTestRunner New-AlToolProject {
-                $script:testRunProjectPaths += $ProjectPath
-                New-Item -ItemType Directory -Path $ProjectPath -Force | Out-Null
-                throw 'project configuration failed'
-            }
-
-            { Invoke-AlToolTestRun @script:testRunParameters } | Should -Throw '*project configuration failed*'
-
-            $script:testRunProjectPaths.Count | Should -Be 1
-            Test-Path -LiteralPath $script:testRunProjectPaths[0] | Should -BeFalse
-            Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 0 -Exactly
         }
 
         It 'Skips AlTool when enumeration finds no enabled codeunits' {
