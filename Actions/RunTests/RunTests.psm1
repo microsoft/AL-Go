@@ -35,23 +35,21 @@ function Get-TestAppsToRun {
     $testApps = @()
     $selectedAppPaths = @{}
     $normalTestAppIds = @{}
-    if ($settings.ContainsKey("testFolders")) {
-        foreach ($testFolder in @($settings.testFolders)) {
-            $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
-            try {
-                $sourceAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 -ErrorAction Stop |
-                    ConvertFrom-Json |
-                    ConvertTo-HashTable -recurse
-                $sourceAppId = "$($sourceAppJson.id)"
-                if ([string]::IsNullOrWhiteSpace($sourceAppId)) {
-                    throw "The app.json file does not contain an app ID."
-                }
+    foreach ($testFolder in @($settings.testFolders)) {
+        $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
+        try {
+            $sourceAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 -ErrorAction Stop |
+                ConvertFrom-Json |
+                ConvertTo-HashTable -recurse
+            $sourceAppId = "$($sourceAppJson.id)"
+            if ([string]::IsNullOrWhiteSpace($sourceAppId)) {
+                throw "The app.json file does not contain an app ID."
             }
-            catch {
-                throw "Failed to read normal test app metadata from '$appJsonPath'. Error: $($_.Exception.Message)"
-            }
-            $normalTestAppIds[$sourceAppId] = $true
         }
+        catch {
+            throw "Failed to read normal test app metadata from '$appJsonPath'. Error: $($_.Exception.Message)"
+        }
+        $normalTestAppIds[$sourceAppId] = $true
     }
 
     if (Test-Path $testAppOutputFolder) {
@@ -60,9 +58,6 @@ function Get-TestAppsToRun {
             try {
                 $compiledAppJson = Get-AppJsonFromAppFile -appFile $compiledApp.FullName
                 $compiledAppId = "$($compiledAppJson.id)"
-                if ([string]::IsNullOrWhiteSpace($compiledAppId)) {
-                    throw "The compiled app metadata does not contain an app ID."
-                }
             }
             catch {
                 throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
@@ -142,18 +137,16 @@ function Get-DisabledTestsForApp {
     )
 
     $disabledTestFiles = @()
-    if ($settings.ContainsKey("testFolders")) {
-        foreach ($testFolder in @($settings.testFolders)) {
-            $testFolderPath = Join-Path $projectPath $testFolder
-            $appJsonPath = Join-Path $testFolderPath "app.json"
-            if (-not (Test-Path $appJsonPath -PathType Leaf)) {
-                continue
-            }
+    foreach ($testFolder in @($settings.testFolders)) {
+        $testFolderPath = Join-Path $projectPath $testFolder
+        $appJsonPath = Join-Path $testFolderPath "app.json"
+        if (-not (Test-Path $appJsonPath -PathType Leaf)) {
+            continue
+        }
 
-            $testAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
-            if ("$($testAppJson.id)" -eq $appId) {
-                $disabledTestFiles += @(Get-ChildItem -Path $testFolderPath -Filter "disabledTests.json" -File -Recurse | ForEach-Object { $_.FullName })
-            }
+        $testAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        if ("$($testAppJson.id)" -eq $appId) {
+            $disabledTestFiles += @(Get-ChildItem -Path $testFolderPath -Filter "disabledTests.json" -File -Recurse | ForEach-Object { $_.FullName })
         }
     }
 
@@ -326,7 +319,6 @@ function Invoke-AlGoTestRun {
                         CompanyName         = "$($settings.companyName)"
                         Tenant              = "default"
                         DisabledTests       = @($disabledTests)
-                        TestType            = ""
                         JUnitResultFileName = $testResultsFile
                     }
                     $passed = Invoke-AlToolTestRun @alToolTestRunParams

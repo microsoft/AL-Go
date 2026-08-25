@@ -83,9 +83,7 @@ function Invoke-AlNativeCommand {
     [string] The resolved `al` version string.
 #>
 function Install-AlTool {
-    param(
-        [switch] $Force
-    )
+    param()
 
     $toolsPath = Join-Path $env:USERPROFILE ".dotnet\tools"
     if ($env:HOME -and -not $env:USERPROFILE) {
@@ -122,21 +120,6 @@ function Install-AlTool {
                         throw "Failed to install or update '$script:AlToolPackageId'. The fallback dotnet tool update exited with code $($updateResult.ExitCode). Output: $($updateResult.Output -join [Environment]::NewLine)"
                     }
                 }
-            }
-        }
-        elseif ($Force) {
-            # Explicit opt-in moves to the newest prerelease once, under the mutex.
-            try {
-                $updateResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
-                    "tool", "update", $script:AlToolPackageId, "--global", "--prerelease"
-                )
-                $updateResult.Output | ForEach-Object { Write-Host $_ }
-                if ($updateResult.ExitCode -ne 0) {
-                    Write-Host "WARNING: 'al' update check exited with code $($updateResult.ExitCode). Using existing version."
-                }
-            }
-            catch {
-                Write-Host "WARNING: 'al' update check failed ($($_.Exception.Message)). Using existing version."
             }
         }
     }
@@ -198,8 +181,11 @@ function Get-AlToolConnection {
 <#
 .SYNOPSIS
     Creates the temporary AL project used to connect AlTool to the container.
-.PARAMETER ContainerName
-    The name of the build container.
+.DESCRIPTION
+    Creates the project at the unique path owned by the current Invoke-AlToolTestRun call. The caller
+    removes that exact directory when the run finishes.
+.PARAMETER ProjectPath
+    Unique temporary directory for this test run.
 .PARAMETER Tenant
     The tenant to connect to.
 .PARAMETER Connection
@@ -209,12 +195,12 @@ function Get-AlToolConnection {
 #>
 function New-AlToolProject {
     param(
-        [Parameter(Mandatory = $true)][string] $ContainerName,
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $ProjectPath,
         [Parameter(Mandatory = $true)][string] $Tenant,
         [Parameter(Mandatory = $true)][hashtable] $Connection
     )
 
-    $projectRoot = Join-Path ([System.IO.Path]::GetTempPath()) "altool-project-$ContainerName"
+    $projectRoot = [System.IO.Path]::GetFullPath($ProjectPath)
     $vscodeDir = Join-Path $projectRoot ".vscode"
     New-Item -ItemType Directory -Path $vscodeDir -Force | Out-Null
 
@@ -298,22 +284,22 @@ function Get-AlToolCompany {
 .DESCRIPTION
     A `*` method disables the complete codeunit instead of a method named `*`.
 .PARAMETER DisabledTests
-    Array of disabled-test entries.
+    Array of disabled-test hashtables.
 .OUTPUTS
     [hashtable] @{ Methods = <set of "<codeunitname>::<method>">; Codeunits = <set of "<codeunitname>"> }
 #>
 function Get-DisabledTestKeySet {
     param(
-        [array] $DisabledTests = @()
+        [AllowEmptyCollection()][hashtable[]] $DisabledTests = @()
     )
 
     $methodSet = @{}
     $codeunitSet = @{}
     foreach ($entry in $DisabledTests) {
         if (-not $entry) { continue }
-        $cuName = "$($entry.codeunitName)".ToLowerInvariant()
+        $cuName = "$($entry['codeunitName'])".ToLowerInvariant()
         $methods = @()
-        if ($entry.PSObject.Properties['method'] -and $entry.method) { $methods = @($entry.method) }
+        if ($entry.ContainsKey('method') -and $entry['method']) { $methods = @($entry['method']) }
         foreach ($m in $methods) {
             if ("$m" -eq '*') {
                 $codeunitSet[$cuName] = $true
@@ -339,10 +325,8 @@ function Get-DisabledTestKeySet {
     App ID whose test codeunits are enumerated.
 .PARAMETER Tenant
     Tenant used for test enumeration.
-.PARAMETER TestType
-    Optional BcContainerHelper test type filter.
 .PARAMETER DisabledTests
-    Test methods or codeunits excluded from the run.
+    Hashtable entries describing test methods or codeunits excluded from the run.
 .OUTPUTS
     [object[]] Codeunit objects with .Id, .Name, .Tests (enabled method name array).
 #>
@@ -352,8 +336,7 @@ function Get-AlToolTestCodeunits {
         [Parameter(Mandatory = $true)][System.Management.Automation.PSCredential] $Credential,
         [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $ExtensionId,
         [string] $Tenant = "default",
-        [string] $TestType = "",
-        [AllowEmptyCollection()][object[]] $DisabledTests = @()
+        [AllowEmptyCollection()][hashtable[]] $DisabledTests = @()
     )
 
     $getTestsParams = @{
@@ -362,9 +345,6 @@ function Get-AlToolTestCodeunits {
         credential    = $Credential
         extensionId   = $ExtensionId
         ignoreGroups  = $true
-    }
-    if (-not [string]::IsNullOrWhiteSpace($TestType)) {
-        $getTestsParams.testType = $TestType
     }
 
     $codeunits = @(Get-TestsFromBcContainer @getTestsParams)
@@ -613,20 +593,10 @@ function New-AlTestGroupsFile {
     )
 
     $groups = @()
-    $seenCodeunits = @{}
     foreach ($codeunit in $Codeunits) {
-        $codeunitId = 0
-        if (-not [int]::TryParse("$($codeunit.Id)", [ref] $codeunitId) -or $codeunitId -le 0) {
-            throw "AlTool test codeunit id '$($codeunit.Id)' must be a positive integer."
-        }
-        if ($seenCodeunits.ContainsKey("$codeunitId")) {
-            throw "AlTool test codeunit id '$codeunitId' was enumerated more than once."
-        }
-        $seenCodeunits["$codeunitId"] = $true
         $methods = @($codeunit.Tests | ForEach-Object { "$_" })
-        if ($methods.Count -eq 0) { continue }
         $groups += [ordered]@{
-            codeunitId = $codeunitId
+            codeunitId = $codeunit.Id
             testMethods = [string[]] $methods
         }
     }
@@ -886,9 +856,7 @@ function Add-JUnitTestSuite {
 .PARAMETER Tenant
     Tenant used for container discovery and AlTool execution.
 .PARAMETER DisabledTests
-    Test methods or codeunits excluded from the run.
-.PARAMETER TestType
-    Optional BcContainerHelper test type filter.
+    Hashtable entries describing test methods or codeunits excluded from the run.
 .PARAMETER JUnitResultFileName
     Required JUnit file to create or append.
 .OUTPUTS
@@ -902,8 +870,7 @@ function Invoke-AlToolTestRun {
         [string] $AppName = "",
         [string] $CompanyName = "",
         [string] $Tenant = "default",
-        [AllowEmptyCollection()][object[]] $DisabledTests = @(),
-        [string] $TestType = "",
+        [AllowEmptyCollection()][hashtable[]] $DisabledTests = @(),
         [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName
     )
 
@@ -917,12 +884,13 @@ function Invoke-AlToolTestRun {
         $Tenant = "default"
     }
 
+    $projectPath = $null
     try {
         $env:BC_SERVER_USERNAME = $Credential.UserName
         $env:BC_SERVER_PASSWORD = $Credential.GetNetworkCredential().Password
 
         $codeunits = @(Get-AlToolTestCodeunits -ContainerName $ContainerName -Credential $Credential `
-                -ExtensionId $ExtensionId -Tenant $Tenant -TestType $TestType -DisabledTests $DisabledTests)
+                -ExtensionId $ExtensionId -Tenant $Tenant -DisabledTests $DisabledTests)
         Write-Host "Enumerated $($codeunits.Count) test codeunit(s) for app '$AppName'."
         if ($codeunits.Count -eq 0) {
             Write-Host "No test codeunits to run for app '$AppName'; nothing to do."
@@ -934,7 +902,10 @@ function Invoke-AlToolTestRun {
         }
 
         $connection = Get-AlToolConnection -ContainerName $ContainerName
-        $projectPath = New-AlToolProject -ContainerName $ContainerName -Tenant $Tenant -Connection $connection
+        $projectPath = [System.IO.Path]::GetFullPath(
+            (Join-Path ([System.IO.Path]::GetTempPath()) "altool-project-$([System.Guid]::NewGuid().ToString('N'))")
+        )
+        New-AlToolProject -ProjectPath $projectPath -Tenant $Tenant -Connection $connection | Out-Null
         $company = Get-AlToolCompany -ContainerName $ContainerName -Tenant $Tenant -CompanyName $CompanyName
         if ([string]::IsNullOrWhiteSpace($company)) {
             throw "Could not resolve a company to run tests against in container '$ContainerName'."
@@ -946,20 +917,22 @@ function Invoke-AlToolTestRun {
 
         # Multiple test apps append to the same result file.
         $doc = New-Object System.Xml.XmlDocument
-        $suites = $null
-        if (-not [string]::IsNullOrWhiteSpace($JUnitResultFileName) -and (Test-Path $JUnitResultFileName)) {
+        if (Test-Path -LiteralPath $JUnitResultFileName) {
             try {
                 $doc.Load($JUnitResultFileName)
-                $suites = $doc.DocumentElement
-                if (-not $suites -or $suites.LocalName -ne 'testsuites') { $suites = $null; $doc = New-Object System.Xml.XmlDocument }
             }
             catch {
-                Write-Host "WARNING: Could not load existing JUnit file '$JUnitResultFileName' ($($_.Exception.Message)); starting fresh."
-                $doc = New-Object System.Xml.XmlDocument
-                $suites = $null
+                $message = "Could not load existing JUnit file '$JUnitResultFileName': $($_.Exception.Message)"
+                throw [System.IO.InvalidDataException]::new($message, $_.Exception)
+            }
+
+            $suites = $doc.DocumentElement
+            if (-not $suites -or $suites.LocalName -ne 'testsuites') {
+                $rootName = if ($suites) { "'$($suites.LocalName)'" } else { "no root element" }
+                throw "Existing JUnit file '$JUnitResultFileName' has $rootName; expected a 'testsuites' root element."
             }
         }
-        if (-not $suites) {
+        else {
             $doc.AppendChild($doc.CreateXmlDeclaration("1.0", "UTF-8", $null)) | Out-Null
             $suites = $doc.CreateElement("testsuites")
             $doc.AppendChild($suites) | Out-Null
@@ -1000,6 +973,9 @@ function Invoke-AlToolTestRun {
         # Do not retain container credentials after the run.
         Remove-Item Env:\BC_SERVER_USERNAME -ErrorAction SilentlyContinue
         Remove-Item Env:\BC_SERVER_PASSWORD -ErrorAction SilentlyContinue
+        if ($projectPath -and (Test-Path -LiteralPath $projectPath -PathType Container)) {
+            Remove-Item -LiteralPath $projectPath -Recurse -Force
+        }
     }
 }
 

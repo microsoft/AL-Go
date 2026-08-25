@@ -26,6 +26,9 @@ Param(
     RunTests.ps1 -project 'MyProject'
 #>
 
+# Make the token available to RunTestsInBcContainer overrides.
+$ENV:_token = $token
+
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path $PSScriptRoot 'RunTests.psm1' -Resolve) -DisableNameChecking -Force
@@ -83,9 +86,6 @@ $credential = Get-TestRunnerCredential
 DownloadAndImportBcContainerHelper
 Write-Host "Use settings"
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
-
-# Make the token available to RunTestsInBcContainer overrides.
-$ENV:_token = $token
 
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 

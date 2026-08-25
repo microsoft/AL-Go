@@ -109,7 +109,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
-          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotPublishApps,doNotRunBcptTests,doNotRunpageScriptingTests,useSeparateTestAction,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
+          get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
 
       - name: Run Build Initialize hook
         if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''
@@ -234,7 +234,6 @@ jobs:
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.runTestsInSeparateAction == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
-          BuildMode: ${{ inputs.buildMode }}
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}

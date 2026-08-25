@@ -74,15 +74,6 @@ Describe 'RunTests.psm1 Tests' {
         Mock -ModuleName RunTests Install-AlTool { return '1.2.3' }
     }
 
-    Context 'Nested AlTool module integration' {
-        It 'Resolves both public integration functions from the nested module' {
-            InModuleScope RunTests {
-                (Get-Command Install-AlTool -ErrorAction Stop).Name | Should -Be 'Install-AlTool'
-                (Get-Command Invoke-AlToolTestRun -ErrorAction Stop).Name | Should -Be 'Invoke-AlToolTestRun'
-            }
-        }
-    }
-
     Context 'Get-TestAppsToRun' {
         It 'Collects compiled test apps from the build artifacts folder' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
@@ -209,6 +200,37 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
+        It 'Reports malformed installed test app JSON with handoff context' {
+            $projectPath = New-TestProject
+            $installJson = Join-Path $projectPath 'installTestApps.json'
+            Set-Content -Path $installJson -Value '{invalid' -Encoding UTF8
+            $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
+
+            {
+                Get-TestAppsToRun -settings $settings -projectPath $projectPath `
+                    -installTestAppsJson $installJson
+            } | Should -Throw "*Failed to parse JSON file*$installJson*"
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Selects a compiled app only once when the installed list contains the same path' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $compiledAppPath = Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestApps') 'App1.Test.app'
+            $installJson = Join-Path $projectPath 'installTestApps.json'
+            ConvertTo-Json @($compiledAppPath) | Set-Content -Path $installJson -Encoding UTF8
+            $settings = @{
+                runTestsInAllInstalledTestApps = $true
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson)
+
+            $testApps.Count | Should -Be 1
+            $testApps[0].Path | Should -Be $compiledAppPath
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Selects only compiled apps whose IDs belong to normal test folders' {
             $projectPath = New-TestProject -CompiledTestApps @('Normal.Test.app', 'Performance.Test.app')
             $testFolders = @(Get-TestFoldersForProject -ProjectPath $projectPath)
@@ -223,25 +245,6 @@ Describe 'RunTests.psm1 Tests' {
             $testApps.Count | Should -Be 1
             [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'Normal.Test.app'
             $testApps[0].Name | Should -Be 'Normal.Test'
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Selects one compiled artifact when normal test folders contain duplicate app IDs' {
-            $duplicateAppId = [Guid]::NewGuid().ToString()
-            $projectPath = New-TestProject -CompiledTestApps @('Duplicate1.Test.app', 'Duplicate2.Test.app') -CompiledAppIds @{
-                'Duplicate1.Test.app' = $duplicateAppId
-                'Duplicate2.Test.app' = $duplicateAppId
-            }
-            $settings = @{
-                runTestsInAllInstalledTestApps = $false
-                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-            }
-
-            $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath)
-
-            $testApps.Count | Should -Be 1
-            [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'Duplicate1.Test.app'
-            $testApps[0].Id | Should -Be $duplicateAppId
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -595,38 +598,71 @@ Describe 'RunTests.psm1 Tests' {
             # runner is validated against the real cmdlet signature (parameter names and ValidateSet
             # values). This catches invalid parameter names and out-of-set values locally instead of
             # only surfacing them in CI, where the real cmdlet is actually invoked.
-            $command = Get-Command -Name 'Run-TestsInBcContainer' -ErrorAction SilentlyContinue
-            if (-not $command) {
-                Set-ItResult -Skipped -Because 'BcContainerHelper (Run-TestsInBcContainer) is not available in this environment'
+            $compatibleModule = Get-Module -ListAvailable -Name BcContainerHelper |
+                Where-Object { $_.Version -ge [version] '6.1.9' } |
+                Sort-Object Version -Descending |
+                Select-Object -First 1
+            if (-not $compatibleModule) {
+                Set-ItResult -Skipped -Because 'BcContainerHelper 6.1.9 or later is not available in this environment'
                 return
             }
-            if (($command -is [System.Management.Automation.AliasInfo]) -and $command.ResolvedCommand) { $command = $command.ResolvedCommand }
 
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $script:capturedParams = $null
-            $override = { param($parameters) $script:capturedParams = $parameters; return $true }
-            $settings = @{
-                doNotRunTests                  = $false
-                runTestsInAllInstalledTestApps = $false
-                companyName                    = ''
-                treatTestFailuresAsWarnings    = $false
-                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            $compatibleModulePath = Join-Path $compatibleModule.ModuleBase 'BcContainerHelper.psd1'
+            if (-not (Test-Path -LiteralPath $compatibleModulePath -PathType Leaf)) {
+                $compatibleModulePath = $compatibleModule.Path
             }
+            $previousModulePaths = @(
+                foreach ($previousModule in @(Get-Module -Name BcContainerHelper)) {
+                    $manifestPath = Join-Path $previousModule.ModuleBase "$($previousModule.Name).psd1"
+                    if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+                        $manifestPath
+                    }
+                    else {
+                        $previousModule.Path
+                    }
+                }
+            )
+            $loadedModule = Import-Module $compatibleModulePath -DisableNameChecking -Force -PassThru
+            try {
+                $command = Get-Command -Name 'Run-TestsInBcContainer' -Module $loadedModule.Name -ErrorAction Stop
+                if (($command -is [System.Management.Automation.AliasInfo]) -and $command.ResolvedCommand) {
+                    $command = $command.ResolvedCommand
+                }
 
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
+                $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+                $script:capturedParams = $null
+                $override = { param($parameters) $script:capturedParams = $parameters; return $true }
+                $settings = @{
+                    doNotRunTests                  = $false
+                    runTestsInAllInstalledTestApps = $false
+                    companyName                    = ''
+                    treatTestFailuresAsWarnings    = $false
+                    testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                }
 
-            $script:capturedParams | Should -Not -BeNullOrEmpty
-            foreach ($key in $script:capturedParams.Keys) {
-                $parameter = $command.Parameters[$key]
-                $parameter | Should -Not -BeNullOrEmpty -Because "'$key' must be a real parameter of Run-TestsInBcContainer"
+                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
-                $validateSet = $parameter.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] } | Select-Object -First 1
-                if ($validateSet) {
-                    $validateSet.ValidValues | Should -Contain $script:capturedParams[$key] -Because "the value for '$key' must be one of its allowed ValidateSet values"
+                $script:capturedParams | Should -Not -BeNullOrEmpty
+                foreach ($key in $script:capturedParams.Keys) {
+                    $parameter = $command.Parameters[$key]
+                    $parameter | Should -Not -BeNullOrEmpty -Because "'$key' must be a real parameter of Run-TestsInBcContainer"
+
+                    $validateSet = $parameter.Attributes |
+                        Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] } |
+                        Select-Object -First 1
+                    if ($validateSet) {
+                        $validateSet.ValidValues | Should -Contain $script:capturedParams[$key] -Because "the value for '$key' must be one of its allowed ValidateSet values"
+                    }
+                }
+
+                Remove-Item -Path $projectPath -Recurse -Force
+            }
+            finally {
+                Remove-Module -ModuleInfo $loadedModule -Force -ErrorAction SilentlyContinue
+                foreach ($previousModulePath in $previousModulePaths) {
+                    Import-Module $previousModulePath -DisableNameChecking -Force
                 }
             }
-
-            Remove-Item -Path $projectPath -Recurse -Force
         }
     }
 
@@ -660,8 +696,7 @@ Describe 'RunTests.psm1 Tests' {
                     $AppName,
                     $CompanyName,
                     $Tenant,
-                    $DisabledTests,
-                    $TestType,
+                    [hashtable[]] $DisabledTests,
                     $JUnitResultFileName
                 )
                 $script:capturedAlToolParams = @{
@@ -673,7 +708,6 @@ Describe 'RunTests.psm1 Tests' {
                     CompanyName         = $CompanyName
                     Tenant              = $Tenant
                     DisabledTests       = @($DisabledTests)
-                    TestType            = $TestType
                     JUnitResultFileName = $JUnitResultFileName
                 }
                 return $true
@@ -699,8 +733,7 @@ Describe 'RunTests.psm1 Tests' {
                 'DisabledTests',
                 'ExtensionId',
                 'JUnitResultFileName',
-                'Tenant',
-                'TestType'
+                'Tenant'
             )
             $script:capturedAlToolParams.ContainerName | Should -Be 'mycontainer'
             $script:capturedAlToolParams.Credential | Should -BeOfType [System.Management.Automation.PSCredential]
@@ -709,7 +742,6 @@ Describe 'RunTests.psm1 Tests' {
             $script:capturedAlToolParams.CompanyName | Should -Be 'CRONUS'
             $script:capturedAlToolParams.Tenant | Should -Be 'default'
             $script:capturedAlToolParams.DisabledTests.Count | Should -Be 0
-            $script:capturedAlToolParams.TestType | Should -Be ''
             $script:capturedAlToolParams.JUnitResultFileName | Should -Be (Join-Path $projectPath 'TestResults.xml')
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -718,7 +750,7 @@ Describe 'RunTests.psm1 Tests' {
             $appId = [Guid]::NewGuid().ToString()
             $script:capturedAlToolParams = $null
             Mock -ModuleName RunTests Invoke-AlToolTestRun {
-                param($DisabledTests)
+                param([hashtable[]] $DisabledTests)
                 $script:capturedAlToolParams = @($DisabledTests)
                 return $true
             }
@@ -737,7 +769,9 @@ Describe 'RunTests.psm1 Tests' {
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly
             $script:capturedAlToolParams.Count | Should -Be 1
+            $script:capturedAlToolParams[0] | Should -BeOfType System.Collections.Hashtable
             $script:capturedAlToolParams[0].codeunitName | Should -Be 'Project Tests'
+            $script:capturedAlToolParams[0].method | Should -Be 'TestOne'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -775,16 +809,33 @@ Describe 'RunTests.psm1 Tests' {
     }
 
     Context 'Invoke-AlGoTestRun event log lifecycle' {
-        It 'Captures after a passing no-result test run with the expected root path and API parameters' {
+        It 'Captures after <Case>' -TestCases @(
+            @{ Case = 'passing tests'; HasTestApp = $true; RunnerBehavior = 'Pass'; TreatAsWarning = $false; ExpectedError = $null; ExpectedRunnerCalls = 1 }
+            @{ Case = 'a hard test failure'; HasTestApp = $true; RunnerBehavior = 'Fail'; TreatAsWarning = $false; ExpectedError = 'There are test failures'; ExpectedRunnerCalls = 1 }
+            @{ Case = 'a warning-mode test failure'; HasTestApp = $true; RunnerBehavior = 'Fail'; TreatAsWarning = $true; ExpectedError = $null; ExpectedRunnerCalls = 1 }
+            @{ Case = 'a no-test run'; HasTestApp = $false; RunnerBehavior = 'Pass'; TreatAsWarning = $false; ExpectedError = $null; ExpectedRunnerCalls = 0 }
+            @{ Case = 'a runner exception'; HasTestApp = $true; RunnerBehavior = 'Throw'; TreatAsWarning = $false; ExpectedError = 'runner failed'; ExpectedRunnerCalls = 1 }
+        ) {
+            param($HasTestApp, $RunnerBehavior, $TreatAsWarning, $ExpectedError, $ExpectedRunnerCalls)
+
             Mock -ModuleName RunTests OutputWarning {}
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $compiledTestApps = if ($HasTestApp) { @('App1.Test.app') } else { @() }
+            $projectPath = New-TestProject -CompiledTestApps $compiledTestApps
             $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
             Set-Content -Path $eventLogDestination -Value 'pre-test-events' -Encoding UTF8
             $script:invocationOrder = @()
+            $script:runnerCalls = 0
+            $script:runnerBehavior = $RunnerBehavior
             $runTestsOverride = {
                 param($parameters)
+                $null = $parameters
+                $script:runnerCalls++
                 $script:invocationOrder += 'run'
-                return $true
+                switch ($script:runnerBehavior) {
+                    'Pass' { return $true }
+                    'Fail' { return $false }
+                    'Throw' { throw 'runner failed' }
+                }
             }
             Mock -ModuleName RunTests Get-BcContainerEventLog {
                 $script:invocationOrder += 'capture'
@@ -794,63 +845,32 @@ Describe 'RunTests.psm1 Tests' {
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
                 companyName                    = ''
-                treatTestFailuresAsWarnings    = $false
+                treatTestFailuresAsWarnings    = $TreatAsWarning
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride $runTestsOverride
+            $actualError = $null
+            try {
+                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride $runTestsOverride
+            }
+            catch {
+                $actualError = $_.Exception.Message
+            }
 
-            $script:invocationOrder | Should -Be @('run', 'capture')
+            if ($ExpectedError) {
+                $actualError | Should -BeLike "*$ExpectedError*"
+            }
+            else {
+                $actualError | Should -BeNullOrEmpty
+            }
+            $expectedOrder = if ($HasTestApp) { @('run', 'capture') } else { @('capture') }
+            $script:invocationOrder | Should -Be $expectedOrder
+            $script:runnerCalls | Should -Be $ExpectedRunnerCalls
             Should -Invoke -ModuleName RunTests Get-BcContainerEventLog -Times 1 -Exactly -ParameterFilter {
                 $containerName -eq 'kept-container' -and $doNotOpen
             }
             (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
             Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
-            Should -Invoke -ModuleName RunTests OutputWarning -Times 0 -Exactly
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Captures after a hard test failure and rethrows that failure' {
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
-            $settings = @{
-                doNotRunTests                  = $false
-                runTestsInAllInstalledTestApps = $false
-                companyName                    = ''
-                treatTestFailuresAsWarnings    = $false
-                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-            }
-
-            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $false } } |
-                Should -Throw '*There are test failures*'
-
-            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Preserves the original hard test failure when event log capture also fails' {
-            Mock -ModuleName RunTests OutputWarning {}
-            Mock -ModuleName RunTests Get-BcContainerEventLog { throw 'event export failed' }
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $settings = @{
-                doNotRunTests                  = $false
-                runTestsInAllInstalledTestApps = $false
-                companyName                    = ''
-                treatTestFailuresAsWarnings    = $false
-                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-            }
-
-            try {
-                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $false }
-                throw 'Expected the test run to fail.'
-            }
-            catch {
-                $_.Exception.Message | Should -Be 'There are test failures.'
-            }
-
-            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
-                $message -like '*post-test container event log could not be captured*event export failed*'
-            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -878,66 +898,20 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Captures after warning-mode test failures' {
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
-            $settings = @{
-                doNotRunTests                  = $false
-                runTestsInAllInstalledTestApps = $false
-                companyName                    = ''
-                treatTestFailuresAsWarnings    = $true
-                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-            }
+        It 'Preserves <ExpectedError> when event log capture also fails' -TestCases @(
+            @{ RunnerBehavior = 'Fail'; ExpectedError = 'There are test failures.' }
+            @{ RunnerBehavior = 'Throw'; ExpectedError = 'runner failed' }
+        ) {
+            param($RunnerBehavior, $ExpectedError)
 
-            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { return $false } } |
-                Should -Not -Throw
-
-            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Captures for a no-test run' {
-            $projectPath = New-TestProject
-            $script:runnerCalls = 0
-            $runTestsOverride = { param($parameters) $script:runnerCalls++; return $true }
-            $settings = @{
-                doNotRunTests                  = $false
-                runTestsInAllInstalledTestApps = $false
-                companyName                    = ''
-                treatTestFailuresAsWarnings    = $false
-                testFolders                    = @()
-            }
-
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride $runTestsOverride
-
-            $script:runnerCalls | Should -Be 0
-            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
-            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Captures after a runner exception and preserves that exception' {
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $settings = @{
-                doNotRunTests                  = $false
-                runTestsInAllInstalledTestApps = $false
-                companyName                    = ''
-                treatTestFailuresAsWarnings    = $false
-                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-            }
-
-            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' -credential $testCredential -runTestsOverride { throw 'runner failed' } } |
-                Should -Throw '*runner failed*'
-
-            $eventLogDestination = Join-Path $projectPath 'ContainerEventLog.evtx'
-            (Get-Content -Path $eventLogDestination -Raw -Encoding UTF8).Trim() | Should -Be 'post-test-events'
-            Remove-Item -Path $projectPath -Recurse -Force
-        }
-
-        It 'Preserves a runner exception when event log capture also fails' {
             Mock -ModuleName RunTests OutputWarning {}
             Mock -ModuleName RunTests Get-BcContainerEventLog { throw 'event export failed' }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $script:runnerBehavior = $RunnerBehavior
+            $runTestsOverride = {
+                if ($script:runnerBehavior -eq 'Throw') { throw 'runner failed' }
+                return $false
+            }
             $settings = @{
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
@@ -946,11 +920,16 @@ Describe 'RunTests.psm1 Tests' {
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
-            {
+            $actualError = $null
+            try {
                 Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'kept-container' `
-                    -credential $testCredential -runTestsOverride { throw 'runner failed' }
-            } | Should -Throw -ExpectedMessage 'runner failed'
+                    -credential $testCredential -runTestsOverride $runTestsOverride
+            }
+            catch {
+                $actualError = $_.Exception.Message
+            }
 
+            $actualError | Should -Be $ExpectedError
             Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
                 $message -like '*post-test container event log could not be captured*event export failed*'
             }

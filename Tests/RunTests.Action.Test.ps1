@@ -11,8 +11,6 @@ Describe "RunTests Action Tests" {
         $scriptPath = Join-Path $scriptRoot $scriptName
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'rawActionScript', Justification = 'Used by event-log wiring tests.')]
-        $rawActionScript = Get-Content -Path $scriptPath -Raw
 
         $tokens = $null
         $parseErrors = $null
@@ -35,11 +33,18 @@ Describe "RunTests Action Tests" {
             }, $true)
         . ([ScriptBlock]::Create($convertToHashTableAst.Extent.Text))
 
+        . $helperPath
+        Import-Module (Join-Path $scriptRoot 'RunTests.psm1' -Resolve) -DisableNameChecking -Force
+
     }
 
     BeforeEach {
         $script:previousContainerCredential = $ENV:containerCredential
         $script:previousContainerName = $ENV:containerName
+        $script:previousRunTestsToken = $ENV:_token
+        $script:previousTokenObservationPath = $ENV:_runTestsTokenObservationPath
+        $script:previousGitHubWorkspace = $ENV:GITHUB_WORKSPACE
+        $script:previousSettings = $ENV:Settings
     }
 
     AfterEach {
@@ -55,6 +60,30 @@ Describe "RunTests Action Tests" {
         else {
             $ENV:containerName = $script:previousContainerName
         }
+        if ($null -eq $script:previousRunTestsToken) {
+            Remove-Item Env:\_token -ErrorAction SilentlyContinue
+        }
+        else {
+            $ENV:_token = $script:previousRunTestsToken
+        }
+        if ($null -eq $script:previousTokenObservationPath) {
+            Remove-Item Env:\_runTestsTokenObservationPath -ErrorAction SilentlyContinue
+        }
+        else {
+            $ENV:_runTestsTokenObservationPath = $script:previousTokenObservationPath
+        }
+        if ($null -eq $script:previousGitHubWorkspace) {
+            Remove-Item Env:\GITHUB_WORKSPACE -ErrorAction SilentlyContinue
+        }
+        else {
+            $ENV:GITHUB_WORKSPACE = $script:previousGitHubWorkspace
+        }
+        if ($null -eq $script:previousSettings) {
+            Remove-Item Env:\Settings -ErrorAction SilentlyContinue
+        }
+        else {
+            $ENV:Settings = $script:previousSettings
+        }
     }
 
     It 'Compile Action' {
@@ -67,10 +96,79 @@ Describe "RunTests Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
-    It 'Uses the integrated event log lifecycle without loading an event log override' {
-        $rawActionScript | Should -Match 'OverrideScriptNames @\("RunTestsInBcContainer"\)'
-        $rawActionScript | Should -Match '(?m)^Invoke-AlGoTestRun '
-        $rawActionScript | Should -Not -Match 'GetBcContainerEventLog'
+    It 'Loads only the runner override and delegates event log capture to the module' {
+        $overrideCommands = @($actionAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq 'Get-ScriptOverrides'
+                }, $true))
+        $overrideCommands.Count | Should -Be 1
+        $overrideParameter = @($overrideCommands[0].CommandElements |
+                Where-Object {
+                    $_ -is [System.Management.Automation.Language.CommandParameterAst] -and
+                    $_.ParameterName -eq 'OverrideScriptNames'
+                })[0]
+        $overrideParameterIndex = [Array]::IndexOf($overrideCommands[0].CommandElements, $overrideParameter)
+        $overrideArgument = $overrideCommands[0].CommandElements[$overrideParameterIndex + 1]
+        @($overrideArgument.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.StringConstantExpressionAst]
+                }, $true).Value) | Should -Be @('RunTestsInBcContainer')
+
+        $actionEventLogCalls = @($actionAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq 'Export-AlGoContainerEventLog'
+                }, $true))
+        $actionEventLogCalls.Count | Should -Be 0
+
+        $moduleTokens = $null
+        $moduleParseErrors = $null
+        $moduleAst = [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $scriptRoot 'RunTests.psm1'),
+            [ref] $moduleTokens,
+            [ref] $moduleParseErrors
+        )
+        $moduleParseErrors | Should -BeNullOrEmpty
+        @($moduleAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq 'Export-AlGoContainerEventLog'
+                }, $true)).Count | Should -Be 1
+    }
+
+    It 'Refreshes the override token from a direct script parameter' {
+        $providedToken = "provided-$([Guid]::NewGuid())"
+        $ENV:_token = 'stale-token'
+        $ENV:GITHUB_WORKSPACE = $TestDrive
+        $ENV:Settings = '{}'
+        $ENV:containerName = 'test-container'
+        $ENV:_runTestsTokenObservationPath = Join-Path $TestDrive 'observed-token.txt'
+        $ENV:containerCredential = [Convert]::ToBase64String(
+            [Text.Encoding]::UTF8.GetBytes('{"username":"test-user","password":"test-password"}')
+        )
+
+        Mock DownloadAndImportBcContainerHelper {}
+        Mock AnalyzeRepo { return @{ testFolders = @() } }
+        Mock Get-ScriptOverrides {
+            return @{
+                RunTestsInBcContainer = {
+                    param([hashtable] $parameters)
+                    $null = $parameters
+                    Set-Content -Path $ENV:_runTestsTokenObservationPath -Value $ENV:_token -Encoding UTF8
+                    return $true
+                }
+            }
+        }
+        Mock Invoke-AlGoTestRun {
+            param($runTestsOverride)
+            return (& $runTestsOverride -parameters @{})
+        }
+
+        & $scriptPath -token $providedToken
+
+        (Get-Content -Path $ENV:_runTestsTokenObservationPath -Raw).Trim() | Should -Be $providedToken
+        $ENV:_token | Should -Be $providedToken
     }
 
     Context 'RunPipeline wiring' {
