@@ -216,7 +216,11 @@ try {
 
         # Generate AppSourceCop.json with mandatory affixes / obsoleteTag settings (always when AppSourceCop is enabled)
         # When baseline apps are available, also include the baseline version + package cache path for breaking change detection
-        New-AppSourceCopJson -AppFolders $settings.appFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
+        $appSourceCopFolders = @($settings.appFolders)
+        if ($settings.enableCodeAnalyzersOnTestApps) {
+            $appSourceCopFolders += @($settings.testFolders) + @($settings.bcptTestFolders)
+        }
+        New-AppSourceCopJson -AppFolders $appSourceCopFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
@@ -240,8 +244,23 @@ try {
         EnableExternalRulesets      = $settings.enableExternalRulesets
         PreCompileApp               = $scriptOverrides['PreCompileApp']
         PostCompileApp              = $scriptOverrides['PostCompileApp']
-        Analyzers                   = (Get-CodeAnalyzers -Settings $settings)
-        CustomAnalyzers             = (Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
+    }
+
+    # Full set of analyzers configured for the build. Get-AnalyzersForAppType decides
+    # per app type which of these actually apply (test/BCPT apps get none when
+    # enableCodeAnalyzersOnTestApps is false - both built-in and custom analyzers).
+    $allAnalyzers = @(Get-CodeAnalyzers -Settings $settings)
+    $allCustomAnalyzers = @(Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
+
+    # When AL alert tracking is enabled, direct per-project error logs to the same folder the classic
+    # Run-AlPipeline path uses (.buildartifacts/ErrorLogs), so ProcessALCodeAnalysisLogs and the
+    # ErrorLogs artifact-publish step pick them up unchanged.
+    if ($settings.trackALAlertsInGitHub) {
+        $errorLogsFolder = Join-Path $buildArtifactFolder "ErrorLogs"
+        if (-not (Test-Path $errorLogsFolder)) {
+            New-Item $errorLogsFolder -ItemType Directory -Force | Out-Null
+        }
+        $buildParams.ErrorLogDirectory = $errorLogsFolder
     }
 
     # Start compilation - only compile folders that need building (all in full build, modified-only in incremental)
@@ -250,32 +269,36 @@ try {
     $bcptTestAppFiles = @()
     try {
         if ($appFoldersToBuild.Count -gt 0) {
+            $analyzers = Get-AnalyzersForAppType -Settings $settings -AppType 'app' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+
             # Compile Apps
             $appFiles = Build-AppsInWorkspace @buildParams `
+                -Analyzers $analyzers.Analyzers `
+                -CustomAnalyzers $analyzers.CustomAnalyzers `
                 -Folders $appFoldersToBuild `
                 -OutFolder $appOutputFolder `
                 -AppType 'app'
         }
 
         if ($testFoldersToBuild.Count -gt 0) {
-            if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
-                $buildParams.Analyzers = @()
-            }
+            $analyzers = Get-AnalyzersForAppType -Settings $settings -AppType 'testApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
 
             # Compile Test Apps
             $testAppFiles = Build-AppsInWorkspace @buildParams `
+                -Analyzers $analyzers.Analyzers `
+                -CustomAnalyzers $analyzers.CustomAnalyzers `
                 -Folders $testFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'testApp'
         }
 
         if ($bcptTestFoldersToBuild.Count -gt 0) {
-            if (-not ($settings.enableCodeAnalyzersOnTestApps)) {
-                $buildParams.Analyzers = @()
-            }
+            $analyzers = Get-AnalyzersForAppType -Settings $settings -AppType 'bcptApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
 
             # Compile BCPT Test Apps
             $bcptTestAppFiles = Build-AppsInWorkspace @buildParams `
+                -Analyzers $analyzers.Analyzers `
+                -CustomAnalyzers $analyzers.CustomAnalyzers `
                 -Folders $bcptTestFoldersToBuild `
                 -OutFolder $testAppOutputFolder `
                 -AppType 'bcptApp'
@@ -286,6 +309,17 @@ try {
     }
 
     Trace-Information -message "Compilation completed. Compiled $(@($appFiles).Count) apps, $(@($testAppFiles).Count) test apps and $(@($bcptTestAppFiles).Count) BCPT test apps."
+
+    # Check for new warnings. This action produces the compiler output when workspace compilation is
+    # enabled, so the new-warning check runs here (RunPipeline skips it in that case).
+    # Test-ForNewWarnings only acts on pull requests when failOn is set to 'newWarning'.
+    Import-Module (Join-Path $PSScriptRoot "..\.Modules\CheckForWarningsUtils.psm1" -Resolve) -DisableNameChecking
+    Test-ForNewWarnings -token $token `
+        -project $project `
+        -settings $settings `
+        -buildMode $buildMode `
+        -baselineWorkflowRunId $baselineWorkflowRunId `
+        -prBuildOutputFile (Join-Path $projectFolder "BuildOutput.txt")
 } finally {
     Pop-Location
 }

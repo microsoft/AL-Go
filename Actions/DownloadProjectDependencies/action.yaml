@@ -40,8 +40,44 @@ runs:
           ${{ github.action_path }}/ComputeDependencyArtifactPattern.ps1
         }
 
-    - name: Download dependency artifacts from current build
+    - name: Download dependency artifacts from current build (attempt 1 of 3)
+      id: downloadDependenciesAttempt1
       if: steps.computePattern.outputs.hasPattern == 'true'
+      continue-on-error: true
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      env:
+        ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1
+      with:
+        pattern: ${{ steps.computePattern.outputs.pattern }}
+        path: ${{ github.workspace }}/.dependencies
+
+    - name: Wait before retrying dependency artifact download (attempt 2 of 3)
+      if: steps.computePattern.outputs.hasPattern == 'true' && steps.downloadDependenciesAttempt1.outcome == 'failure'
+      shell: ${{ inputs.shell }}
+      run: |
+        Write-Host "Downloading dependency artifacts failed. Waiting 30 seconds before retrying..."
+        Start-Sleep -Seconds 30
+
+    - name: Download dependency artifacts from current build (attempt 2 of 3)
+      id: downloadDependenciesAttempt2
+      if: steps.computePattern.outputs.hasPattern == 'true' && steps.downloadDependenciesAttempt1.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      env:
+        ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1
+      with:
+        pattern: ${{ steps.computePattern.outputs.pattern }}
+        path: ${{ github.workspace }}/.dependencies
+
+    - name: Wait before retrying dependency artifact download (attempt 3 of 3)
+      if: steps.computePattern.outputs.hasPattern == 'true' && steps.downloadDependenciesAttempt1.outcome == 'failure' && steps.downloadDependenciesAttempt2.outcome == 'failure'
+      shell: ${{ inputs.shell }}
+      run: |
+        Write-Host "Downloading dependency artifacts failed again. Waiting 30 seconds before the final retry..."
+        Start-Sleep -Seconds 30
+
+    - name: Download dependency artifacts from current build (attempt 3 of 3)
+      if: steps.computePattern.outputs.hasPattern == 'true' && steps.downloadDependenciesAttempt1.outcome == 'failure' && steps.downloadDependenciesAttempt2.outcome == 'failure'
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       env:
         ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1

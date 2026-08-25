@@ -784,6 +784,106 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result.Count | Should -Be 1
             $result[0] | Should -BeLike '*MyAnalyzer.dll'
         }
+
+        It 'Downloads URL-based analyzers to the flat bin folder when no Analyzers subfolder exists' {
+            # Framework-dependent / marketplace-packaged extensions have no Analyzers/ subfolder,
+            # so downloads must target the flat bin/ folder instead.
+            $compilerFolder = Join-Path $TestDrive 'compiler-flat-layout'
+            $binFolder = Join-Path $compilerFolder 'compiler/extension/bin'
+            New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
+
+            Mock Invoke-WebRequest {
+                param($Uri, $OutFile)
+                Set-Content -Path $OutFile -Value 'mock-dll'
+            } -ModuleName CompileFromWorkspace
+
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeLike '*MyAnalyzer.dll'
+            $result[0] | Should -Not -BeLike '*Analyzers*'
+            (Split-Path $result[0] -Parent).Replace('/', '\') | Should -Be $binFolder.Replace('/', '\')
+        }
+    }
+
+    Describe 'Get-AnalyzersForAppType' {
+        BeforeAll {
+            $script:allAnalyzers = @('CodeCop', 'UICop')
+            $script:allCustomAnalyzers = @('C:\Analyzers\MyCop.dll')
+        }
+
+        It 'Returns full analyzers for regular apps regardless of enableCodeAnalyzersOnTestApps' {
+            foreach ($enabled in @($true, $false)) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $enabled } -AppType 'app' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers) | Should -Be $allAnalyzers
+                @($result.CustomAnalyzers) | Should -Be $allCustomAnalyzers
+            }
+        }
+
+        It 'Returns full analyzers for test apps when enableCodeAnalyzersOnTestApps is true' {
+            foreach ($appType in @('testApp', 'bcptApp')) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $true } -AppType $appType -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers) | Should -Be $allAnalyzers
+                @($result.CustomAnalyzers) | Should -Be $allCustomAnalyzers
+            }
+        }
+
+        It 'Disables built-in AND custom analyzers for test and BCPT apps when enableCodeAnalyzersOnTestApps is false' {
+            foreach ($appType in @('testApp', 'bcptApp')) {
+                $result = Get-AnalyzersForAppType -Settings @{ enableCodeAnalyzersOnTestApps = $false } -AppType $appType -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+                @($result.Analyzers).Count | Should -Be 0
+                @($result.CustomAnalyzers).Count | Should -Be 0
+            }
+        }
+
+        It 'Treats a missing enableCodeAnalyzersOnTestApps setting as disabled for test apps' {
+            $result = Get-AnalyzersForAppType -Settings @{} -AppType 'testApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
+            @($result.Analyzers).Count | Should -Be 0
+            @($result.CustomAnalyzers).Count | Should -Be 0
+        }
+    }
+
+    Describe 'Get-ALTool' {
+        It 'Finds altool in the platform-specific subfolder (win32/linux)' {
+            $cf = Join-Path $TestDrive 'altool-platform'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
+                $toolRelative = if ($IsLinux) { "linux/altool" } else { "win32/altool.exe" }
+                $expected = Join-Path $binFolder $toolRelative
+                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
+                Set-Content -Path $expected -Value 'tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Falls back to the flat bin folder for framework-dependent / marketplace VSIX layouts' {
+            $cf = Join-Path $TestDrive 'altool-flat'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
+                $toolRelative = if ($IsLinux) { "altool" } else { "altool.exe" }
+                $expected = Join-Path $binFolder $toolRelative
+                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
+                Set-Content -Path $expected -Value 'tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Throws when no AL tool is found in the compiler folder' {
+            $cf = Join-Path $TestDrive 'altool-missing'
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                New-Item -Path (Join-Path $CompilerFolder "compiler/extension/bin") -ItemType Directory -Force | Out-Null
+
+                { Get-ALTool -CompilerFolder $CompilerFolder } | Should -Throw "*Could not find AL tool in the compiler folder*"
+            }
+        }
     }
 
     Describe 'Get-AssemblyProbingPaths' {
@@ -1073,6 +1173,43 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
         }
 
+        It 'Includes --customanalyzers when custom analyzers are specified' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-custom1'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -CustomAnalyzers @('C:\Analyzers\MyCop.dll', 'C:\Analyzers\OtherCop.dll')
+
+                $script:capturedArguments | Should -Contain '--customanalyzers'
+                $script:capturedArguments | Should -Contain 'C:\Analyzers\MyCop.dll,C:\Analyzers\OtherCop.dll'
+            }
+        }
+
+        It 'Omits --customanalyzers when custom analyzers are empty (e.g. enableCodeAnalyzersOnTestApps is false)' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-custom2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -CustomAnalyzers @()
+
+                $script:capturedArguments | Should -Not -Contain '--customanalyzers'
+            }
+        }
+
         It 'Includes --features when features are specified' {
             InModuleScope CompileFromWorkspace {
                 $script:capturedArguments = @()
@@ -1163,6 +1300,116 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir
 
                 $script:capturedArguments | Should -Contain '--logdirectory'
+            }
+        }
+
+        It 'Includes --errorlogdirectory when ErrorLogDirectory is set and the compiler supports it' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-errorlog1'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                $errorLogDir = Join-Path $TestDrive 'ErrorLogs'
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+                # Simulate a compiler that advertises the --errorlogdirectory option in its help
+                Mock Test-ALToolWorkspaceCompileSupportsOption { return $true }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -ErrorLogDirectory $errorLogDir
+
+                $script:capturedArguments | Should -Contain '--errorlogdirectory'
+                $script:capturedArguments | Should -Contain $errorLogDir
+            }
+        }
+
+        It 'Omits --errorlogdirectory and warns when the compiler does not support it' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-errorlog2'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                $errorLogDir = Join-Path $TestDrive 'ErrorLogs'
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+                Mock OutputWarning {}
+                # Simulate a compiler whose help does not mention the option
+                Mock Test-ALToolWorkspaceCompileSupportsOption { return $false }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir -ErrorLogDirectory $errorLogDir
+
+                $script:capturedArguments | Should -Not -Contain '--errorlogdirectory'
+                Should -Invoke OutputWarning -Times 1
+            }
+        }
+
+        It 'Omits --errorlogdirectory when ErrorLogDirectory is not set' {
+            InModuleScope CompileFromWorkspace {
+                $script:capturedArguments = @()
+                $wsFile = Join-Path $TestDrive 'test.code-workspace'
+                Set-Content -Path $wsFile -Value '{}'
+                $outDir = Join-Path $TestDrive 'out-args-errorlog3'
+                New-Item -Path $outDir -ItemType Directory -Force | Out-Null
+                Mock RunAndCheck {
+                    $script:capturedArguments = $args
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                CompileAppsInWorkspace -ALToolPath 'altool.exe' -WorkspaceFile $wsFile -MaxCpuCount 1 -OutFolder $outDir -PackageCachePath $outDir
+
+                $script:capturedArguments | Should -Not -Contain '--errorlogdirectory'
+            }
+        }
+    }
+
+    Describe 'Test-ALToolWorkspaceCompileSupportsOption' {
+        BeforeAll {
+            # The probe invokes '& $ALToolPath workspace compile --help'. We stand in a fake altool as a
+            # .ps1 script (invoked via the call operator on both PS5 and PS7) whose output and exit code we
+            # control per test, so the real help-matching and exit-code handling are exercised - not mocked.
+            $script:fakeAltool = Join-Path $TestDrive "fake-altool.ps1"
+        }
+
+        It 'Returns true when the option appears in the help output and the probe succeeds' {
+            Set-Content -Path $script:fakeAltool -Value @'
+Write-Output "Usage: altool workspace compile [options]"
+Write-Output "  --errorlogdirectory <dir>   Write diagnostics to <dir>"
+exit 0
+'@
+            InModuleScope CompileFromWorkspace -Parameters @{ altool = $script:fakeAltool } {
+                param($altool)
+                Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $altool -Option 'errorlogdirectory' | Should -BeTrue
+            }
+        }
+
+        It 'Returns false when the option is absent from the help output' {
+            Set-Content -Path $script:fakeAltool -Value @'
+Write-Output "Usage: altool workspace compile [options]"
+Write-Output "  --outfolder <dir>   Output folder"
+exit 0
+'@
+            InModuleScope CompileFromWorkspace -Parameters @{ altool = $script:fakeAltool } {
+                param($altool)
+                Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $altool -Option 'errorlogdirectory' | Should -BeFalse
+            }
+        }
+
+        It 'Returns false when the probe fails (non-zero exit) even if the output contains the option' {
+            # An older altool may emit usage text mentioning the option while still failing. A non-zero exit
+            # must win so the caller falls back to warn-and-skip rather than passing an unsupported argument.
+            Set-Content -Path $script:fakeAltool -Value @'
+Write-Output "error: unknown command 'workspace'"
+Write-Output "did you mean --errorlogdirectory?"
+exit 1
+'@
+            InModuleScope CompileFromWorkspace -Parameters @{ altool = $script:fakeAltool } {
+                param($altool)
+                Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $altool -Option 'errorlogdirectory' | Should -BeFalse
             }
         }
     }

@@ -54,12 +54,17 @@ function GenerateSARIFJson {
             continue
         }
 
+        # Encode the path into a valid SARIF artifact URI once, so the de-duplication comparison
+        # below and the stored result use the exact same value (raw and encoded paths differ when
+        # the path contains characters like spaces).
+        $artifactUri = ConvertTo-SarifArtifactUri -RelativePath $relativePath
+
         # Check if result already exists in the sarif object
         $existingResults = $sarif.runs[0].results | Where-Object {
             $_.ruleId -eq $issue.ruleId -and
             $_.message.text -eq $message -and
             $_.level -eq ($issueSeverity).ToLower() -and
-            ($_.locations[0].physicalLocation.artifactLocation.uri -eq $relativePath) -and
+            ($_.locations[0].physicalLocation.artifactLocation.uri -eq $artifactUri) -and
             ($_.locations[0].physicalLocation.region | ConvertTo-Json) -eq ($issue.locations[0].analysisTarget[0].region | ConvertTo-Json)
         }
 
@@ -98,7 +103,7 @@ function GenerateSARIFJson {
             message = @{ text = $message }
             locations = @(@{
                 physicalLocation = @{
-                    artifactLocation = @{ uri = $relativePath }
+                    artifactLocation = @{ uri = $artifactUri }
                     region = $issue.locations[0].analysisTarget[0].region
                 }
             })
