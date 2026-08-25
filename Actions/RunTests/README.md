@@ -10,9 +10,9 @@ Compiled apps are selected by matching their app IDs to `testFolders`, which exc
 
 ## Test runner
 
-By default, AlTool runs all enabled normal tests for each app through one batch and connection while BcContainerHelper provides app metadata, container configuration, company discovery, and test enumeration. The action writes JUnit output compatible with AL-Go AnalyzeTests and downstream processing.
+By default, AlTool runs enabled normal tests for each app through one batch and connection while BcContainerHelper provides app metadata, container configuration, company discovery, and server-side test enumeration. The optional `testType` setting limits enumeration to `UnitTest`, `IntegrationTest`, or `Uncategorized`; blank runs all test types. The action writes JUnit output compatible with AL-Go AnalyzeTests and downstream processing.
 
-To use another test runner, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. The override replaces AlTool execution and receives the standard BcContainerHelper test parameters once per test app.
+To use another test runner, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. The override replaces AlTool execution and receives the standard BcContainerHelper test parameters once per test app, including a configured `testType`. Custom overrides may interpret additional values such as `Legacy`.
 
 ### Known limitations
 

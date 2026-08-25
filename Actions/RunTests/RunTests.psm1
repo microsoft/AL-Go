@@ -286,6 +286,7 @@ function Invoke-AlGoTestRun {
 
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
+        $testType = if ($settings.ContainsKey("testType")) { "$($settings.testType)" } else { "" }
 
         $allTestsPassed = $true
         $testRunError = $null
@@ -309,6 +310,9 @@ function Invoke-AlGoTestRun {
                         "GitHubActions"           = $gitHubActionsSeverity
                         "returnTrueIfAllPassed"   = $true
                     }
+                    if (-not [string]::IsNullOrWhiteSpace($testType)) {
+                        $runTestsParams["testType"] = $testType
+                    }
                     $passed = & $runTestsOverride -parameters $runTestsParams
                 }
                 else {
@@ -319,6 +323,7 @@ function Invoke-AlGoTestRun {
                         -AppName "$($testApp.Name)" `
                         -CompanyName "$($settings.companyName)" `
                         -Tenant "default" `
+                        -TestType $testType `
                         -DisabledTests @($disabledTests) `
                         -JUnitResultFileName $testResultsFile
                 }

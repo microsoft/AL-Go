@@ -269,6 +269,9 @@ function Get-DisabledTestKeySet {
     App ID whose test codeunits are enumerated.
 .PARAMETER Tenant
     Tenant used for test enumeration.
+.PARAMETER TestType
+    Optional platform test type. Supported values are UnitTest, IntegrationTest, and Uncategorized.
+    Blank enumerates all test types.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
 .OUTPUTS
@@ -280,6 +283,7 @@ function Get-AlToolTestCodeunits {
         [Parameter(Mandatory = $true)][System.Management.Automation.PSCredential] $Credential,
         [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $ExtensionId,
         [string] $Tenant = "default",
+        [string] $TestType = "",
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @()
     )
 
@@ -289,6 +293,15 @@ function Get-AlToolTestCodeunits {
         credential    = $Credential
         extensionId   = $ExtensionId
         ignoreGroups  = $true
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($TestType)) {
+        $supportedTestTypes = @("UnitTest", "IntegrationTest", "Uncategorized")
+        $matchingTestType = @($supportedTestTypes | Where-Object { $_ -eq $TestType })
+        if ($matchingTestType.Count -eq 0) {
+            throw "Unsupported testType '$TestType' for the built-in AlTool runner. Supported values are UnitTest, IntegrationTest, Uncategorized, or blank."
+        }
+        $getTestsParams["testType"] = $matchingTestType[0]
     }
 
     $codeunits = @(Get-TestsFromBcContainer @getTestsParams)
@@ -809,6 +822,9 @@ function Add-JUnitTestSuite {
     Company used for the test run. The container default is used when omitted.
 .PARAMETER Tenant
     Tenant used for container discovery and AlTool execution.
+.PARAMETER TestType
+    Optional platform test type used by BcContainerHelper for server-side test enumeration. Supported
+    values are UnitTest, IntegrationTest, and Uncategorized. Blank enumerates all test types.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
 .PARAMETER JUnitResultFileName
@@ -824,6 +840,7 @@ function Invoke-AlToolTestRun {
         [string] $AppName = "",
         [string] $CompanyName = "",
         [string] $Tenant = "default",
+        [string] $TestType = "",
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @(),
         [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName
     )
@@ -843,7 +860,7 @@ function Invoke-AlToolTestRun {
         $env:BC_SERVER_PASSWORD = $Credential.GetNetworkCredential().Password
 
         $codeunits = @(Get-AlToolTestCodeunits -ContainerName $ContainerName -Credential $Credential `
-                -ExtensionId $ExtensionId -Tenant $Tenant -DisabledTests $DisabledTests)
+                -ExtensionId $ExtensionId -Tenant $Tenant -TestType $TestType -DisabledTests $DisabledTests)
         Write-Host "Enumerated $($codeunits.Count) test codeunit(s) for app '$AppName'."
         if ($codeunits.Count -eq 0) {
             Write-Host "No test codeunits to run for app '$AppName'; nothing to do."

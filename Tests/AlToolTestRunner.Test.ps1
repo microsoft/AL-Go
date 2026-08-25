@@ -20,6 +20,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                     [string] $tenant,
                     [System.Management.Automation.PSCredential] $credential,
                     [string] $extensionId,
+                    [string] $testType,
                     [switch] $ignoreGroups
                 )
                 throw 'Get-TestsFromBcContainer must be mocked by the test.'
@@ -538,7 +539,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             @($codeunits[1].Tests) | Should -Be @('First', 'Second')
         }
 
-        It 'Returns every codeunit when there are no disabled tests' {
+        It 'Omits testType when blank and returns every codeunit' {
             Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
                 @([PSCustomObject]@{ Id = 130001; Name = 'My Tests'; Tests = @('TestOne') })
             }
@@ -546,6 +547,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 ContainerName = 'test'
                 Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
                 ExtensionId   = [Guid]::NewGuid().ToString()
+                TestType      = ''
             }
 
             $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
@@ -553,6 +555,41 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             Should -Invoke -ModuleName AlToolTestRunner Get-TestsFromBcContainer -Times 1 -Exactly -ParameterFilter {
                 -not $PSBoundParameters.ContainsKey('testType')
             }
+        }
+
+        It 'Passes a supported testType to BcContainerHelper' {
+            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
+                @([PSCustomObject]@{ Id = 130001; Name = 'Integration Tests'; Tests = @('TestOne') })
+            }
+            $testCodeunitParams = @{
+                ContainerName = 'test'
+                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
+                ExtensionId   = [Guid]::NewGuid().ToString()
+                TestType      = 'IntegrationTest'
+            }
+
+            $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
+
+            $codeunits.Count | Should -Be 1
+            Should -Invoke -ModuleName AlToolTestRunner Get-TestsFromBcContainer -Times 1 -Exactly -ParameterFilter {
+                $testType -eq 'IntegrationTest'
+            }
+        }
+
+        It 'Rejects an unsupported built-in testType before calling BcContainerHelper' {
+            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
+                throw 'BcContainerHelper should not be called'
+            }
+            $testCodeunitParams = @{
+                ContainerName = 'test'
+                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
+                ExtensionId   = [Guid]::NewGuid().ToString()
+                TestType      = 'Legacy'
+            }
+
+            { Get-AlToolTestCodeunits @testCodeunitParams } |
+                Should -Throw "*Unsupported testType 'Legacy'*UnitTest*IntegrationTest*Uncategorized*"
+            Should -Invoke -ModuleName AlToolTestRunner Get-TestsFromBcContainer -Times 0 -Exactly
         }
         }
     }
@@ -1052,6 +1089,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 $parameterAttribute.Mandatory | Should -BeTrue
             }
             $command.Parameters.DisabledTests.ParameterType | Should -Be ([hashtable[]])
+            $command.Parameters.TestType.ParameterType | Should -Be ([string])
         }
 
         It 'Rejects calls that omit required parameter <ParameterName>' -TestCases @(
@@ -1184,6 +1222,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
         }
 
         It 'Runs all codeunits for an app in exactly one batch' {
+            $script:testRunParameters.TestType = 'UnitTest'
             $secondCodeunit = [PSCustomObject]@{ Id = 130002; Name = 'Other Tests'; Tests = @('TestTwo') }
             Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits {
                 return @($script:testRunCodeunit, $secondCodeunit)
@@ -1206,6 +1245,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 $Credential.UserName -eq 'admin' -and
                 $ExtensionId -eq $script:testRunParameters.ExtensionId -and
                 $Tenant -eq 'default' -and
+                $TestType -eq 'UnitTest' -and
                 $DisabledTests.Count -eq 0
             }
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 1 -Exactly -ParameterFilter {

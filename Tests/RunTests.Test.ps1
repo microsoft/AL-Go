@@ -351,6 +351,35 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
+        It 'Passes an override-specific testType without built-in validation' {
+            Mock -ModuleName RunTests Invoke-AlToolTestRun {
+                throw 'The built-in runner should not be called'
+            }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $script:capturedTestType = $null
+            $override = {
+                param($parameters)
+                $script:capturedTestType = $parameters.testType
+                return $true
+            }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                testType                       = 'Legacy'
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
+                -credential $testCredential -runTestsOverride $override
+
+            $script:capturedTestType | Should -Be 'Legacy'
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 0 -Exactly
+            Should -Invoke -ModuleName RunTests Install-AlTool -Times 0 -Exactly
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Does not create an artifact when test execution produces no result file' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
@@ -758,7 +787,7 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Maps only the built-in runner parameters with the expected defaults' {
+        It 'Maps the testType setting and other built-in runner parameters' {
             $appId = [Guid]::NewGuid().ToString()
             $script:capturedAlToolParams = $null
             Mock -ModuleName RunTests Invoke-AlToolTestRun {
@@ -769,6 +798,7 @@ Describe 'RunTests.psm1 Tests' {
                     $AppName,
                     $CompanyName,
                     $Tenant,
+                    $TestType,
                     [hashtable[]] $DisabledTests,
                     $JUnitResultFileName
                 )
@@ -780,6 +810,7 @@ Describe 'RunTests.psm1 Tests' {
                     AppName             = $AppName
                     CompanyName         = $CompanyName
                     Tenant              = $Tenant
+                    TestType            = $TestType
                     DisabledTests       = @($DisabledTests)
                     JUnitResultFileName = $JUnitResultFileName
                 }
@@ -792,6 +823,7 @@ Describe 'RunTests.psm1 Tests' {
                 companyName                    = 'CRONUS'
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                testType                       = 'IntegrationTest'
             }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential
@@ -806,7 +838,8 @@ Describe 'RunTests.psm1 Tests' {
                 'DisabledTests',
                 'ExtensionId',
                 'JUnitResultFileName',
-                'Tenant'
+                'Tenant',
+                'TestType'
             )
             $script:capturedAlToolParams.ContainerName | Should -Be 'mycontainer'
             $script:capturedAlToolParams.Credential | Should -BeOfType [System.Management.Automation.PSCredential]
@@ -814,6 +847,7 @@ Describe 'RunTests.psm1 Tests' {
             $script:capturedAlToolParams.AppName | Should -Be 'App1.Test'
             $script:capturedAlToolParams.CompanyName | Should -Be 'CRONUS'
             $script:capturedAlToolParams.Tenant | Should -Be 'default'
+            $script:capturedAlToolParams.TestType | Should -Be 'IntegrationTest'
             $script:capturedAlToolParams.DisabledTests.Count | Should -Be 0
             $script:capturedAlToolParams.JUnitResultFileName | Should -Be (Join-Path $projectPath 'TestResults.xml')
             Remove-Item -Path $projectPath -Recurse -Force
