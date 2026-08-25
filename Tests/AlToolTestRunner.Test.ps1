@@ -473,8 +473,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         It 'Enumerates codeunits and filters disabled methods and whole codeunits' {
             Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
                 @(
-                    [PSCustomObject]@{ Id = 130001; Name = 'My Tests'; Tests = @('TestOne', 'TestTwo') },
-                    [PSCustomObject]@{ Id = 130002; Name = 'Whole CU'; Tests = @('X', 'Y') }
+                    [PSCustomObject]@{ Id = '130001'; Name = 'My Tests'; Tests = @('TestOne', 'TestTwo') },
+                    [PSCustomObject]@{ Id = '130002'; Name = 'Whole CU'; Tests = @('X', 'Y') }
                 )
             }
             $testCodeunitParams = @{
@@ -691,11 +691,29 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
     }
 
+    Context 'New-AlTestGroupsFile' {
+        It 'Rejects an invalid codeunit ID' -TestCases @(
+            @{ Id = ' ' }
+            @{ Id = 'not-a-number' }
+            @{ Id = '2147483648' }
+        ) {
+            param($Id)
+
+            InModuleScope AlToolTestRunner -Parameters @{ CodeunitId = $Id } {
+                {
+                    New-AlTestGroupsFile -Codeunits @(
+                        [PSCustomObject]@{ Id = $CodeunitId; Tests = @('TestOne') }
+                    )
+                } | Should -Throw "*must be a valid Int32 value*"
+            }
+        }
+    }
+
     Context 'Invoke-AlRunTestsBatch' {
         BeforeEach {
             $script:batchCodeunits = @(
-                [PSCustomObject]@{ Id = 130001; Name = 'First Tests'; Tests = @('TestOne', 'TestTwo') },
-                [PSCustomObject]@{ Id = 130002; Name = 'Second Tests'; Tests = @('TestThree') }
+                [PSCustomObject]@{ Id = '130001'; Name = 'First Tests'; Tests = @('TestOne', 'TestTwo') },
+                [PSCustomObject]@{ Id = '130002'; Name = 'Second Tests'; Tests = @('TestThree') }
             )
             $script:batchConnection = @{ Server = 'http://test'; ServerInstance = 'BC'; Port = 7049 }
             $script:capturedBatchArguments = $null

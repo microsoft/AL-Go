@@ -525,7 +525,7 @@ function ConvertFrom-AlTestGroupsOutput {
 .OUTPUTS
     [string] Path to the temporary JSON file.
 .EXAMPLE
-    $codeunits = @([pscustomobject]@{ Id = 130001; Tests = @("TestOne", "TestTwo") })
+    $codeunits = @([pscustomobject]@{ Id = "130001"; Tests = @("TestOne", "TestTwo") })
     New-AlTestGroupsFile -Codeunits $codeunits
 
     # Generated JSON:
@@ -538,9 +538,21 @@ function New-AlTestGroupsFile {
 
     $groups = @()
     foreach ($codeunit in $Codeunits) {
+        $codeunitIdText = "$($codeunit.Id)"
+        [int] $codeunitId = 0
+        if ([string]::IsNullOrWhiteSpace($codeunitIdText) -or
+            -not [int]::TryParse(
+                $codeunitIdText,
+                [System.Globalization.NumberStyles]::Integer,
+                [System.Globalization.CultureInfo]::InvariantCulture,
+                [ref] $codeunitId
+            )) {
+            throw "Test codeunit ID '$codeunitIdText' must be a valid Int32 value."
+        }
+
         $methods = @($codeunit.Tests | ForEach-Object { "$_" })
         $groups += [ordered]@{
-            codeunitId = $codeunit.Id
+            codeunitId  = $codeunitId
             testMethods = [string[]] $methods
         }
     }
