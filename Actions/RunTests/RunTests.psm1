@@ -146,11 +146,11 @@ function Get-DisabledTestsForApp {
 
         $testAppJson = Get-Content -Path $appJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
         if ("$($testAppJson.id)" -eq $appId) {
-            $disabledTestFiles += @(Get-ChildItem -Path $testFolderPath -Filter "disabledTests.json" -File -Recurse | ForEach-Object { $_.FullName })
+            $disabledTestFiles += @(Get-ChildItem -LiteralPath $testFolderPath -Filter "disabledTests.json" -File -Recurse -Force | ForEach-Object { $_.FullName })
         }
     }
 
-    $disabledTestFiles += @(Get-ChildItem -Path $projectPath -Filter "$appId.disabledTests.json" -File -Recurse | ForEach-Object { $_.FullName })
+    $disabledTestFiles += @(Get-ChildItem -LiteralPath $projectPath -Filter "$appId.disabledTests.json" -File -Recurse -Force | ForEach-Object { $_.FullName })
 
     $disabledTests = @()
     foreach ($disabledTestFile in @($disabledTestFiles | Sort-Object -Unique)) {
@@ -288,6 +288,7 @@ function Invoke-AlGoTestRun {
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
 
         $allTestsPassed = $true
+        $testRunError = $null
         Push-Location $projectPath
         try {
             foreach ($testApp in $testApps) {
@@ -329,11 +330,28 @@ function Invoke-AlGoTestRun {
                 }
             }
         }
+        catch {
+            $testRunError = $_
+        }
         finally {
             Pop-Location
         }
 
-        Copy-TestResultsToBuildArtifacts -projectPath $projectPath -testResultsFile $testResultsFile
+        try {
+            Copy-TestResultsToBuildArtifacts -projectPath $projectPath -testResultsFile $testResultsFile
+        }
+        catch {
+            if ($testRunError) {
+                OutputWarning -message "The test run failed and produced test results could not be copied to build artifacts. $($_.Exception.Message)"
+            }
+            else {
+                throw
+            }
+        }
+
+        if ($testRunError) {
+            throw $testRunError
+        }
 
         if (-not $allTestsPassed) {
             if ($settings.treatTestFailuresAsWarnings) {

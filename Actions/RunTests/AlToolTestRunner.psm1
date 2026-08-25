@@ -85,10 +85,11 @@ function Invoke-AlNativeCommand {
 function Install-AlTool {
     param()
 
-    $toolsPath = Join-Path $env:USERPROFILE ".dotnet\tools"
-    if ($env:HOME -and -not $env:USERPROFILE) {
-        $toolsPath = Join-Path $env:HOME ".dotnet/tools"
+    $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+    if ([string]::IsNullOrWhiteSpace($userProfile)) {
+        throw "Could not resolve the current user's profile directory required for the dotnet global tools path."
     }
+    $toolsPath = Join-Path (Join-Path $userProfile ".dotnet") "tools"
     if (($env:PATH -split [System.IO.Path]::PathSeparator) -notcontains $toolsPath) {
         $env:PATH = "$env:PATH$([System.IO.Path]::PathSeparator)$toolsPath"
     }
@@ -99,6 +100,9 @@ function Install-AlTool {
     $acquired = $false
     try {
         try { $acquired = $mutex.WaitOne([TimeSpan]::FromMinutes(10)) } catch [System.Threading.AbandonedMutexException] { $acquired = $true }
+        if (-not $acquired) {
+            throw "Timed out after 10 minutes waiting to acquire the AlTool installation mutex."
+        }
 
         $alAvailable = $null -ne (Get-Command al -ErrorAction SilentlyContinue)
 

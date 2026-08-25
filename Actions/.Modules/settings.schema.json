@@ -346,6 +346,7 @@
         },
         "useSeparateTestAction": {
             "type": "boolean",
+            "default": false,
             "description": "PREVIEW: When set to true, normal tests (testFolders) run in a separate RunTests action against the build container kept alive by RunPipeline. Builds with additionalCountries continue to run normal tests inside RunPipeline so every country is tested. See https://aka.ms/ALGoSettings#useSeparateTestAction"
         },
         "doNotRunBcptTests": {
