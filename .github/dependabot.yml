@@ -15,3 +15,5 @@ updates:
     - dependency-name: "microsoft/AL-Go-Actions/*"
   schedule:
     interval: weekly
+  cooldown:
+    default-days: 7

@@ -252,6 +252,17 @@ try {
     $allAnalyzers = @(Get-CodeAnalyzers -Settings $settings)
     $allCustomAnalyzers = @(Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
 
+    # When AL alert tracking is enabled, direct per-project error logs to the same folder the classic
+    # Run-AlPipeline path uses (.buildartifacts/ErrorLogs), so ProcessALCodeAnalysisLogs and the
+    # ErrorLogs artifact-publish step pick them up unchanged.
+    if ($settings.trackALAlertsInGitHub) {
+        $errorLogsFolder = Join-Path $buildArtifactFolder "ErrorLogs"
+        if (-not (Test-Path $errorLogsFolder)) {
+            New-Item $errorLogsFolder -ItemType Directory -Force | Out-Null
+        }
+        $buildParams.ErrorLogDirectory = $errorLogsFolder
+    }
+
     # Start compilation - only compile folders that need building (all in full build, modified-only in incremental)
     $appFiles = @()
     $testAppFiles = @()
