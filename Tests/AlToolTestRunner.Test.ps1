@@ -10,11 +10,50 @@ Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm
 Describe 'AlToolTestRunner.psm1 Tests' {
 
     BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        $script:stubbedGlobalCommands = @()
+        $stubDefinitions = @{
+            'ConvertTo-HashTable'               = ${function:ConvertTo-HashTable}
+            'Get-TestsFromBcContainer'          = {
+                param(
+                    [string] $containerName,
+                    [string] $tenant,
+                    [System.Management.Automation.PSCredential] $credential,
+                    [string] $extensionId,
+                    [switch] $ignoreGroups
+                )
+                throw 'Get-TestsFromBcContainer must be mocked by the test.'
+            }
+            'Get-BcContainerServerConfiguration' = {
+                param([string] $containerName)
+                throw 'Get-BcContainerServerConfiguration must be mocked by the test.'
+            }
+            'Get-CompanyInBcContainer'           = {
+                param(
+                    [string] $containerName,
+                    [string] $tenant
+                )
+                throw 'Get-CompanyInBcContainer must be mocked by the test.'
+            }
+        }
+        foreach ($commandName in $stubDefinitions.Keys) {
+            if (-not (Test-Path -LiteralPath "Function:\global:$commandName")) {
+                Set-Item -LiteralPath "Function:\global:$commandName" -Value $stubDefinitions[$commandName]
+                $script:stubbedGlobalCommands += $commandName
+            }
+        }
+
         # Re-import in the run phase so the module functions are guaranteed to be available even when
         # this file runs in the same Invoke-Pester session as RunTests.Test.ps1. RunTests.psm1
         # imports AlToolTestRunner.psm1 as a nested module with -Force, which removes the standalone
         # module's functions from the global scope during discovery.
         Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
+    }
+
+    AfterAll {
+        foreach ($commandName in $script:stubbedGlobalCommands) {
+            Remove-Item "Function:\global:$commandName" -Force -ErrorAction SilentlyContinue
+        }
     }
 
     Context 'Module exports' {
@@ -193,6 +232,101 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 
     Context 'Install-AlTool native command handling' {
         InModuleScope AlToolTestRunner {
+        BeforeAll {
+            function Get-TestInstallMutex {
+                param(
+                    [ValidateSet('Acquired', 'Timeout')]
+                    [string] $WaitBehavior
+                )
+
+                $mutex = [PSCustomObject]@{
+                    WaitBehavior = $WaitBehavior
+                    ReleaseCount = 0
+                    DisposeCount = 0
+                }
+                $mutex | Add-Member -MemberType ScriptMethod -Name WaitOne -Value {
+                    param([TimeSpan] $Timeout)
+                    $null = $Timeout
+                    return $this.WaitBehavior -eq 'Acquired'
+                }
+                $mutex | Add-Member -MemberType ScriptMethod -Name ReleaseMutex -Value {
+                    $this.ReleaseCount = [int] $this.ReleaseCount + 1
+                }
+                $mutex | Add-Member -MemberType ScriptMethod -Name Dispose -Value {
+                    $this.DisposeCount = [int] $this.DisposeCount + 1
+                }
+                return $mutex
+            }
+        }
+
+        It 'Stops before native work when the installation mutex times out' {
+            $script:testInstallMutex = Get-TestInstallMutex -WaitBehavior Timeout
+            Mock -ModuleName AlToolTestRunner New-Object { return $script:testInstallMutex } -ParameterFilter {
+                $TypeName -eq 'System.Threading.Mutex'
+            }
+            Mock -ModuleName AlToolTestRunner Get-Command { return $null }
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {}
+
+            { Install-AlTool } | Should -Throw '*Timed out after 10 minutes*AlTool installation mutex*'
+
+            $script:testInstallMutex.ReleaseCount | Should -Be 0
+            $script:testInstallMutex.DisposeCount | Should -Be 1
+            Should -Invoke -ModuleName AlToolTestRunner Get-Command -Times 0 -Exactly
+            Should -Invoke -ModuleName AlToolTestRunner Invoke-AlNativeCommand -Times 0 -Exactly
+        }
+
+        It 'Releases the installation mutex after normal acquisition' {
+            $script:testInstallMutex = Get-TestInstallMutex -WaitBehavior Acquired
+            Mock -ModuleName AlToolTestRunner New-Object { return $script:testInstallMutex } -ParameterFilter {
+                $TypeName -eq 'System.Threading.Mutex'
+            }
+            Mock -ModuleName AlToolTestRunner Get-Command {
+                return [PSCustomObject]@{ Source = 'al' }
+            } -ParameterFilter { $Name -eq 'al' }
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                return [PSCustomObject]@{
+                    StandardOutput = [string[]]@('1.2.3')
+                    StandardError  = [string[]]@()
+                    Output         = [string[]]@('1.2.3')
+                    ExitCode       = [int] 0
+                }
+            }
+
+            Install-AlTool | Should -Be '1.2.3'
+
+            $script:testInstallMutex.ReleaseCount | Should -Be 1
+            $script:testInstallMutex.DisposeCount | Should -Be 1
+        }
+
+        It 'Adds the platform dotnet global tools directory to PATH' {
+            $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+            $userProfile | Should -Not -BeNullOrEmpty
+            $expectedToolsPath = Join-Path (Join-Path $userProfile '.dotnet') 'tools'
+            $previousPath = $env:PATH
+            try {
+                $env:PATH = @($env:PATH -split [System.IO.Path]::PathSeparator |
+                        Where-Object { $_ -ne $expectedToolsPath }) -join [System.IO.Path]::PathSeparator
+                Mock -ModuleName AlToolTestRunner Get-Command {
+                    return [PSCustomObject]@{ Source = 'al' }
+                } -ParameterFilter { $Name -eq 'al' }
+                Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                    return [PSCustomObject]@{
+                        StandardOutput = [string[]]@('1.2.3')
+                        StandardError  = [string[]]@()
+                        Output         = [string[]]@('1.2.3')
+                        ExitCode       = [int] 0
+                    }
+                }
+
+                Install-AlTool | Should -Be '1.2.3'
+
+                @($env:PATH -split [System.IO.Path]::PathSeparator) | Should -Contain $expectedToolsPath
+            }
+            finally {
+                $env:PATH = $previousPath
+            }
+        }
+
         It 'Falls back to update after install failure only when al is still unavailable' {
             $script:availabilityChecks = 0
             Mock -ModuleName AlToolTestRunner Get-Command {
@@ -904,6 +1038,10 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             )
             $script:requiredParameterExtensionId = [Guid]::NewGuid().ToString()
             $script:requiredParameterResultFile = Join-Path $TestDrive 'RequiredParameters.xml'
+            $script:requiredParameterModulePath = (Resolve-Path (
+                    Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1'
+                )).Path
+            $script:requiredParameterPowerShell = (Get-Process -Id $PID).Path
         }
 
         It 'Declares only the explicit runner contract and marks required values mandatory' {
@@ -927,15 +1065,37 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         ) {
             param($ParameterName)
 
-            $parameters = @{
-                ContainerName       = 'test'
-                Credential          = $script:requiredParameterCredential
-                ExtensionId         = $script:requiredParameterExtensionId
-                JUnitResultFileName = $script:requiredParameterResultFile
+            $parameterExpressions = [ordered]@{
+                ContainerName       = "-ContainerName 'test'"
+                Credential          = '-Credential $credential'
+                ExtensionId         = "-ExtensionId '$($script:requiredParameterExtensionId)'"
+                JUnitResultFileName = "-JUnitResultFileName '$($script:requiredParameterResultFile)'"
             }
-            $null = $parameters.Remove($ParameterName)
+            $null = $parameterExpressions.Remove($ParameterName)
+            $escapedModulePath = $script:requiredParameterModulePath.Replace("'", "''")
+            $childScript = @"
+`$ErrorActionPreference = 'Stop'
+Import-Module '$escapedModulePath' -Force
+`$credential = New-Object System.Management.Automation.PSCredential(
+    'admin',
+    (ConvertTo-SecureString 'password' -AsPlainText -Force)
+)
+Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
+"@
+            $encodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
+            $standardOutputPath = Join-Path $TestDrive "$ParameterName-stdout.txt"
+            $standardErrorPath = Join-Path $TestDrive "$ParameterName-stderr.txt"
 
-            { Invoke-AlToolTestRun @parameters } | Should -Throw
+            $process = Start-Process -FilePath $script:requiredParameterPowerShell -ArgumentList @(
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $encodedScript
+            ) -RedirectStandardOutput $standardOutputPath -RedirectStandardError $standardErrorPath -Wait -PassThru
+            $bindingOutput = @(
+                Get-Content -LiteralPath $standardOutputPath -Raw -ErrorAction SilentlyContinue
+                Get-Content -LiteralPath $standardErrorPath -Raw -ErrorAction SilentlyContinue
+            ) -join "`n"
+
+            $process.ExitCode | Should -Not -Be 0
+            $bindingOutput | Should -Match ([regex]::Escape($ParameterName))
         }
 
         It 'Rejects a blank JUnitResultFileName' -TestCases @(

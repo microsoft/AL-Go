@@ -426,7 +426,7 @@ Describe 'RunTests.psm1 Tests' {
                 @{
                     codeunitName = 'Nested Tests'
                     method       = @('TestOne')
-                    metadata     = @{ issue = @{ id = 123 } }
+                    metadata     = @{ source = 'nested'; issue = @{ id = 123 } }
                 }
             ) | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $nestedFolder 'disabledTests.json') -Encoding UTF8
 
@@ -437,7 +437,9 @@ Describe 'RunTests.psm1 Tests' {
 
             $projectSettingsFolder = Join-Path $projectPath '.AL-Go'
             New-Item -Path $projectSettingsFolder -ItemType Directory -Force | Out-Null
-            @(@{ codeunitName = 'Project Tests'; method = 'TestTwo' }) | ConvertTo-Json | Set-Content -Path (Join-Path $projectSettingsFolder "$appId.disabledTests.json") -Encoding UTF8
+            @(
+                @{ codeunitName = 'Project Tests'; method = 'TestTwo'; metadata = @{ source = 'project-wide' } }
+            ) | ConvertTo-Json -Depth 3 | Set-Content -Path (Join-Path $projectSettingsFolder "$appId.disabledTests.json") -Encoding UTF8
 
             $script:capturedDisabledTests = @()
             $override = { param($parameters) $script:capturedDisabledTests = @($parameters.disabledTests); return $true }
@@ -452,12 +454,18 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override
 
             $script:capturedDisabledTests.Count | Should -Be 2
+            @($script:capturedDisabledTests.codeunitName | Sort-Object) |
+                Should -Be @('Nested Tests', 'Project Tests')
             $nestedDisabledTest = $script:capturedDisabledTests | Where-Object { $_.codeunitName -eq 'Nested Tests' }
             $nestedDisabledTest | Should -BeOfType System.Collections.Hashtable
             $nestedDisabledTest.metadata | Should -BeOfType System.Collections.Hashtable
             $nestedDisabledTest.metadata.issue | Should -BeOfType System.Collections.Hashtable
             $nestedDisabledTest.metadata.issue.id | Should -Be 123
-            $script:capturedDisabledTests.codeunitName | Should -Contain 'Project Tests'
+            $nestedDisabledTest.metadata.source | Should -Be 'nested'
+            @($nestedDisabledTest.method) | Should -Be @('TestOne')
+            $projectDisabledTest = $script:capturedDisabledTests | Where-Object { $_.codeunitName -eq 'Project Tests' }
+            $projectDisabledTest.metadata.source | Should -Be 'project-wide'
+            $projectDisabledTest.method | Should -Be 'TestTwo'
             $script:capturedDisabledTests.codeunitName | Should -Not -Contain 'Other Tests'
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -531,6 +539,71 @@ Describe 'RunTests.psm1 Tests' {
             $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
             (Get-Content -Path $rootResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
             (Get-Content -Path $artifactResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Copies partial test results before rethrowing a later runner error' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
+            $script:runnerCalls = 0
+            $script:resultContent = '<testsuites name="partial-runner-error" />'
+            $override = {
+                param($parameters)
+                $script:runnerCalls++
+                if ($script:runnerCalls -eq 1) {
+                    Set-Content -Path $parameters.JUnitResultFileName -Value $script:resultContent -Encoding UTF8
+                    return $true
+                }
+                throw 'second app runner failed'
+            }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } |
+                Should -Throw '*second app runner failed*'
+
+            $artifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
+            (Get-Content -Path $artifactResult -Raw -Encoding UTF8).Trim() | Should -Be $script:resultContent
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Preserves a later runner error when copying partial results also fails' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
+            $script:runnerCalls = 0
+            $script:resultContent = '<testsuites name="partial-copy-error" />'
+            $script:partialArtifactResult = Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml'
+            $override = {
+                param($parameters)
+                $script:runnerCalls++
+                if ($script:runnerCalls -eq 1) {
+                    Set-Content -Path $parameters.JUnitResultFileName -Value $script:resultContent -Encoding UTF8
+                    return $true
+                }
+                throw 'second app runner failed'
+            }
+            Mock -ModuleName RunTests Copy-Item { throw 'partial copy blocked' } -ParameterFilter {
+                $Destination -eq $script:partialArtifactResult
+            }
+            Mock -ModuleName RunTests OutputWarning {}
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } |
+                Should -Throw '*second app runner failed*'
+
+            Test-Path $script:partialArtifactResult | Should -BeFalse
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like '*test results could not be copied to build artifacts*partial copy blocked*'
+            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

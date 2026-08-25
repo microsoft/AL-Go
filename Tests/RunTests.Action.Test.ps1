@@ -171,6 +171,36 @@ Describe "RunTests Action Tests" {
         $ENV:_token | Should -Be $providedToken
     }
 
+    It 'Passes nested settings to AnalyzeRepo as recursive hashtables' {
+        $ENV:GITHUB_WORKSPACE = $TestDrive
+        $ENV:Settings = @{
+            workspaceCompilation = @{
+                enabled = $true
+                options = @(@{ name = 'nested-entry' })
+            }
+        } | ConvertTo-Json -Depth 4
+        $ENV:containerName = 'test-container'
+        $ENV:containerCredential = [Convert]::ToBase64String(
+            [Text.Encoding]::UTF8.GetBytes('{"username":"test-user","password":"test-password"}')
+        )
+
+        Mock DownloadAndImportBcContainerHelper {}
+        Mock AnalyzeRepo {
+            param($settings)
+            $settings | Should -BeOfType System.Collections.Hashtable
+            $settings.workspaceCompilation | Should -BeOfType System.Collections.Hashtable
+            $settings.workspaceCompilation.options[0] | Should -BeOfType System.Collections.Hashtable
+            $settings.workspaceCompilation.options[0].name | Should -Be 'nested-entry'
+            return @{ testFolders = @() }
+        }
+        Mock Get-ScriptOverrides { return @{} }
+        Mock Invoke-AlGoTestRun {}
+
+        & $scriptPath
+
+        Should -Invoke AnalyzeRepo -Times 1 -Exactly
+    }
+
     Context 'RunPipeline wiring' {
         It 'Rejects a missing or blank kept container credential' -TestCases @(
             @{ Value = $null }

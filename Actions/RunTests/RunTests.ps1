@@ -85,7 +85,7 @@ $credential = Get-TestRunnerCredential
 
 DownloadAndImportBcContainerHelper
 Write-Host "Use settings"
-$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 
