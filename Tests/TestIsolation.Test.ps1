@@ -1,3 +1,5 @@
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/TestIsolation.psm1') -Force
 
 Describe 'TestIsolation' {
@@ -282,7 +284,7 @@ Describe 'TestIsolation' {
         It 'returns $false when the InnerScriptBlock reports a failed partition' {
             $inner = {
                 Param([Hashtable] $parameters)
-                return ($parameters.testRunnerCodeunitId -ne '130451')
+                return ($parameters['testRunnerCodeunitId'] -ne '130451')
             }
             $sb = New-PartitionedTestRunnerScriptBlock -InnerScriptBlock $inner -Settings @{
                 defaultRunnerCodeunitId = 0
