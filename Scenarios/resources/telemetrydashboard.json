@@ -1666,7 +1666,8 @@
                     "6a960332-dd3e-47e6-bad1-54502c0f21eb",
                     "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
                     "a7be3875-d31c-5943-8ff4-be3131ba5b29",
-                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
+                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
+                    "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
                 ]
             }
         },
@@ -1698,7 +1699,8 @@
                     "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
                     "a7be3875-d31c-5943-8ff4-be3131ba5b29",
                     "2cb1ae93-47eb-5114-8bea-0d06f0e1cc67",
-                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3"
+                    "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
+                    "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
                 ]
             }
         },
@@ -1755,7 +1757,9 @@
             "showOnPages": {
                 "kind": "selection",
                 "pageIds": [
+                    "6a960332-dd3e-47e6-bad1-54502c0f21eb",
                     "0db9b7a4-dbc9-5f0e-b4fe-1a34aa754f4f",
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29",
                     "2ddc2052-15d4-47f3-8f5b-4f806a243dd3",
                     "1301ea78-9dbd-4fc1-94e0-e0756e5d8519"
                 ]
@@ -1813,6 +1817,8 @@
             "showOnPages": {
                 "kind": "selection",
                 "pageIds": [
+                    "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29",
                     "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
                 ]
             }
@@ -1841,6 +1847,8 @@
             "showOnPages": {
                 "kind": "selection",
                 "pageIds": [
+                    "6a960332-dd3e-47e6-bad1-54502c0f21eb",
+                    "a7be3875-d31c-5943-8ff4-be3131ba5b29",
                     "f0f6ab50-b9c8-4d2c-98da-a1af20f48647"
                 ]
             }
