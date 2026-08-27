@@ -1828,7 +1828,7 @@ function CreateDevEnv {
             $imageName = ""
             if ($kind -eq "local") {
                 $imageName = $settings.cacheImageName
-            }            
+            }
 
             Run-AlPipeline @runAlPipelineParams `
                 -accept_insiderEula:$accept_insiderEula `
