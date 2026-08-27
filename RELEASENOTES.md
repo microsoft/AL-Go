@@ -1,3 +1,7 @@
+### Expanded AL-Go telemetry dashboard
+
+The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
+
 ## v9.2
 
 ### New `doNotPerformUpgrade` setting
