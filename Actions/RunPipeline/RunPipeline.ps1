@@ -220,7 +220,10 @@ try {
 
     if ($installAppsJson -and (Test-Path $installAppsJson)) {
         try {
-            $install.Apps = Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json
+            # ConvertFrom-Json returns a plain string, not a one-element array, when the JSON array has
+            # exactly one entry. Run-AlPipeline then sees a string and re-splits it on commas, which
+            # breaks a file path whose publisher name itself contains a comma.
+            $install.Apps = @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)
         }
         catch {
             throw "Failed to parse JSON file at path '$installAppsJson'. Error: $($_.Exception.Message)"
@@ -229,7 +232,7 @@ try {
 
     if ($installTestAppsJson -and (Test-Path $installTestAppsJson)) {
         try {
-            $install.TestApps = Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json
+            $install.TestApps = @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"

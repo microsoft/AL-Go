@@ -23,6 +23,29 @@ Describe "RunPipeline Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
+    # ConvertFrom-Json returns a plain string, not a one-element array, when the source JSON array has
+    # exactly one entry. installAppsJson/installTestAppsJson can legitimately contain just one app (e.g. a
+    # single cross-project dependency), so the script must wrap the result in @(...) - otherwise a single
+    # app whose publisher name contains a comma gets handed to Run-AlPipeline as a bare string, which then
+    # re-splits it on commas and reports the app as two nonexistent files.
+    It 'installAppsJson with a single entry stays an array after parsing' {
+        $scriptContent = Get-Content -Path $scriptPath -Raw
+        $scriptContent | Should -Match ([regex]::Escape('$install.Apps = @(Get-Content -Path $installAppsJson -Raw | ConvertFrom-Json)'))
+
+        $tempJson = Join-Path $TestDrive 'DownloadedApps.json'
+        $appPath = 'C:\deps\Stoneridge Software, LLC_Longhorn Midstream BC Extension_25.2.2147483647.2.app'
+        ConvertTo-Json @($appPath) -Compress | Out-File -Encoding UTF8 -FilePath $tempJson
+
+        $install = @(Get-Content -Path $tempJson -Raw | ConvertFrom-Json)
+        $install.Count | Should -Be 1
+        $install[0] | Should -Be $appPath
+    }
+
+    It 'installTestAppsJson with a single entry stays an array after parsing' {
+        $scriptContent = Get-Content -Path $scriptPath -Raw
+        $scriptContent | Should -Match ([regex]::Escape('$install.TestApps = @(Get-Content -Path $installTestAppsJson -Raw | ConvertFrom-Json)'))
+    }
+
     # Call action
 
 }
