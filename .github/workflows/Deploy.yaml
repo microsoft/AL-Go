@@ -29,7 +29,7 @@ on:
         required: false
         default: false
       defaultBcContainerHelperVersion:
-        description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/freddydk/navcontainerhelper/archive/master.zip). Leave empty to use latest (or preview for preview branches)'
+        description: 'Which version of BcContainerHelper to use? (latest, preview, private, a specific version number or a direct download URL like https://github.com/microsoft/navcontainerhelper/archive/main.zip). Leave empty to use latest (or preview for preview branches)'
         required: false
         default: 'latest'
 
@@ -54,7 +54,7 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
@@ -87,7 +87,7 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
@@ -129,7 +129,7 @@ jobs:
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
