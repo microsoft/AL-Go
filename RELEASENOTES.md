@@ -8,6 +8,12 @@ The `customALGoFiles` setting of a custom template was only applied on the next 
 
 Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
 
+### Expanded AL-Go telemetry dashboard
+
+The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
+
+## v9.2
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
