@@ -226,7 +226,7 @@ function GetDefaultSettings
         }
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
-        "noMatchingEnvironmentsAction"                   = "ignore"
+        "noMatchingEnvironmentsAction"                  = "ignore"
         "alDoc"                                         = [ordered]@{
             "continuousDeployment"                      = $false
             "deployToGitHubPages"                       = $true

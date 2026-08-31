@@ -397,4 +397,25 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         # Should throw with a clear error message
         { . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' } | Should -Throw "*No environments matched deployment criteria*"
     }
+
+    # noMatchingEnvironmentsAction should NOT affect continuous deployment (CD) - matching zero environments is expected there
+    It 'Test calling action directly - noMatchingEnvironmentsAction error should not throw for CD' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "error"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should not throw for CD, even with error setting - and should end up with 0 environments
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+    }
 }
