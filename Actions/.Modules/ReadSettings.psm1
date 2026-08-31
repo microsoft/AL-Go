@@ -160,6 +160,7 @@ function GetDefaultSettings
         "enableCodeCop"                                 = $false
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
+        "enableCopilotCodeReview"                       = $false
         "customCodeCops"                                = @()
         "preprocessorSymbols"                           = @()
         "features"                                      = @()
