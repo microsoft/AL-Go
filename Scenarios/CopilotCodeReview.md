@@ -1,6 +1,6 @@
 # Enable Copilot code review for AL pull requests
 
-AL-Go can use the public [BC-ALAgents](https://github.com/microsoft/BC-ALAgents) reviewer to review AL changes and post findings as pull request comments. The reviewer uses the [BCQuality](https://github.com/microsoft/BCQuality) knowledge base and runs when a non-draft pull request targeting `main` is opened, reopened, synchronized, or marked ready for review.
+AL-Go can use the public [BC-ALAgents](https://github.com/microsoft/BC-ALAgents) reviewer to review AL changes and post findings as pull request comments. The reviewer uses the [BCQuality](https://github.com/microsoft/BCQuality) knowledge base and runs when a non-draft pull request targeting a branch in `CICDPullRequestBranches` is opened, reopened, synchronized, or marked ready for review. The default target branch is `main`.
 
 ## Prerequisites
 
