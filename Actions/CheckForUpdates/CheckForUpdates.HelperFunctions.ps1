@@ -147,11 +147,11 @@ function ModifyCopilotPRReviewWorkflow {
         $CICDPullRequestBranches = $defaultCICDPullRequestBranches
     }
 
+    $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
     if ($baseName -eq 'CopilotPRReview') {
-        $yaml.Replace("on:/pull_request:/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+        $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
     }
     else {
-        $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
         $yaml.Replace("env:/ALLOWED_BASE_BRANCHES:", "ALLOWED_BASE_BRANCHES: '$($branchesJson.Replace("'", "''"))'")
     }
 }
@@ -1018,7 +1018,7 @@ function GetDefaultFilesToExclude {
         )
     }
 
-    if (!$settings.enableCopilotCodeReview) {
+    if ($settings.Keys -notcontains 'enableCopilotCodeReview' -or !$settings['enableCopilotCodeReview']) {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }

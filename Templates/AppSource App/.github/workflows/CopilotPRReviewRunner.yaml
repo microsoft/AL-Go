@@ -81,11 +81,65 @@ jobs:
           }
 
           $pullRequest = Invoke-RestMethod -Uri "$env:GITHUB_API_URL/repos/$($env:TARGET_REPOSITORY)/pulls/$prNumber" -Headers $headers
+          function ConvertTo-GitHubGlobRegex {
+            param([string] $glob)
+
+            $regex = [System.Text.StringBuilder]::new('^')
+            for ($index = 0; $index -lt $glob.Length; $index++) {
+              $character = $glob[$index]
+              if ($character -eq '\') {
+                if (++$index -lt $glob.Length) {
+                  [void] $regex.Append([regex]::Escape([string] $glob[$index]))
+                }
+              }
+              elseif ($character -eq '*') {
+                if ($index + 1 -lt $glob.Length -and $glob[$index + 1] -eq '*') {
+                  $index++
+                  if ($index + 1 -lt $glob.Length -and $glob[$index + 1] -eq '/') {
+                    $index++
+                    [void] $regex.Append('(?:.*/)?')
+                  }
+                  else {
+                    [void] $regex.Append('.*')
+                  }
+                }
+                else {
+                  [void] $regex.Append('[^/]*')
+                }
+              }
+              elseif ($character -eq '?') {
+                [void] $regex.Append('?')
+              }
+              elseif ($character -eq '[') {
+                $closingBracket = $glob.IndexOf(']', $index + 1)
+                if ($closingBracket -gt $index + 1) {
+                  $characterClass = $glob.Substring($index + 1, $closingBracket - $index - 1)
+                  if ($characterClass.StartsWith('!')) {
+                    $characterClass = "^$($characterClass.Substring(1))"
+                  }
+                  [void] $regex.Append("[$characterClass]")
+                  $index = $closingBracket
+                }
+                else {
+                  [void] $regex.Append('\[')
+                }
+              }
+              elseif ($character -eq '+') {
+                [void] $regex.Append('+')
+              }
+              else {
+                [void] $regex.Append([regex]::Escape([string] $character))
+              }
+            }
+            [void] $regex.Append('$')
+            return $regex.ToString()
+          }
+
           $baseBranchAllowed = $false
           foreach ($branchPattern in @($env:ALLOWED_BASE_BRANCHES | ConvertFrom-Json)) {
             $exclude = $branchPattern.StartsWith('!')
             $pattern = if ($exclude) { $branchPattern.Substring(1) } else { $branchPattern }
-            if ([System.Management.Automation.WildcardPattern]::new($pattern).IsMatch($pullRequest.base.ref)) {
+            if ($pullRequest.base.ref -cmatch (ConvertTo-GitHubGlobRegex -glob $pattern)) {
               $baseBranchAllowed = -not $exclude
             }
           }

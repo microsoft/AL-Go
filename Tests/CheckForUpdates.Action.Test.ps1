@@ -2352,7 +2352,17 @@ Describe "GetFilesToUpdate (real template)" {
             CICDPullRequestBranches = @('main', 'release/*')
         }
 
-        $yaml.Get('on:/pull_request:/branches:').content | Should -Be "branches: [ 'main', 'release/*' ]"
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["main","release/*"]'
+    }
+
+    It 'Escapes CICDPullRequestBranches in the Copilot review intake workflow' {
+        $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml"))
+
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -baseName 'CopilotPRReview' -repoSettings @{
+            CICDPullRequestBranches = @("release/o'clock")
+        }
+
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["release/o''clock"]'
     }
 
     It 'Applies CICDPullRequestBranches to the Copilot review runner validation' {

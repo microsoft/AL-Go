@@ -63,7 +63,9 @@ Describe "GitHub event payload should not be used in code" {
 Describe "Copilot code review workflows" {
     BeforeAll {
         $workflowFolder = Join-Path $PSScriptRoot '..\..\Templates\Per Tenant Extension\.github\workflows' -Resolve
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'intakeWorkflow', Justification = 'False positive across Pester scopes.')]
         $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
         $runnerWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw
     }
 
@@ -97,6 +99,8 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match ([regex]::Escape('$matchingCandidates.Count -eq 1'))
         $runnerWorkflow | Should -Match ([regex]::Escape('$pullRequest.state -eq ''open'''))
         $runnerWorkflow | Should -Match ([regex]::Escape('$baseBranchAllowed'))
+        $runnerWorkflow | Should -Match ([regex]::Escape("[^/]*"))
+        $runnerWorkflow | Should -Not -Match ([regex]::Escape('[System.Management.Automation.WildcardPattern]'))
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Match 'pr_number:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
         $runnerWorkflow | Should -Match 'head_sha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
