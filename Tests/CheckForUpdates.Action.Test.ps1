@@ -2362,7 +2362,8 @@ Describe "GetFilesToUpdate (real template)" {
             CICDPullRequestBranches = @("release/o'clock")
         }
 
-        $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["release/o''clock"]'
+        $expectedBranches = ConvertTo-Json -InputObject @("release/o'clock") -Compress
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be "branches: $expectedBranches"
     }
 
     It 'Applies CICDPullRequestBranches to the Copilot review runner validation' {
