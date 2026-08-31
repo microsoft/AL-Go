@@ -59,3 +59,46 @@ Describe "GitHub event payload should not be used in code" {
         }
     }
 }
+
+Describe "Copilot code review workflows" {
+    BeforeAll {
+        $workflowFolder = Join-Path $PSScriptRoot '..\..\Templates\Per Tenant Extension\.github\workflows' -Resolve
+        $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
+        $runnerWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw
+    }
+
+    It 'Reads the repository-level opt-in setting from trusted content' {
+        $runnerWorkflow | Should -Match 'name:\s+Checkout trusted settings'
+        $runnerWorkflow | Should -Match 'get:\s+enableCopilotCodeReview'
+        $runnerWorkflow | Should -Match "project:\s+''"
+        $runnerWorkflow | Should -Match "workflowName:\s+''"
+        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
+    }
+
+    It 'Uses the latest BC-ALAgents reviewer release' {
+        $runnerWorkflow | Should -Match ([regex]::Escape('uses: microsoft/BC-ALAgents/.github/workflows/review.yml@latest'))
+        $runnerWorkflow | Should -Match 'engine_ref:\s+latest'
+    }
+
+    It 'Grants only the permissions required by each security boundary' {
+        $intakeWorkflow | Should -Match "(?ms)permissions:\s+contents: read\s+jobs:"
+        $runnerWorkflow | Should -Match "(?ms)Settings:.*?permissions:\s+contents: read\s+pull-requests: read"
+        $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
+        $runnerWorkflow | Should -Match 'pull-requests:\s+write'
+        $runnerWorkflow | Should -Match 'issues:\s+write'
+    }
+
+    It 'Revalidates pull request eligibility before invoking the reviewer' {
+        $runnerWorkflow | Should -Match ([regex]::Escape("pullRequest.user.login -ne 'business-central-bot[bot]'"))
+        $runnerWorkflow | Should -Match ([regex]::Escape('-not $pullRequest.draft'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('$pullRequest.head.sha -eq $env:WORKFLOW_HEAD_SHA'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('$env:WORKFLOW_HEAD_OWNER -and $env:WORKFLOW_HEAD_BRANCH'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('Where-Object { $_.head.sha -eq $env:WORKFLOW_HEAD_SHA }'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('$matchingCandidates.Count -eq 1'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('$pullRequest.state -eq ''open'''))
+        $runnerWorkflow | Should -Match ([regex]::Escape('$baseBranchAllowed'))
+        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
+        $runnerWorkflow | Should -Match 'pr_number:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
+        $runnerWorkflow | Should -Match 'head_sha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
+    }
+}

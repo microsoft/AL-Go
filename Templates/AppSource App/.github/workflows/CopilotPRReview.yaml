@@ -1,0 +1,25 @@
+name: Copilot PR Review
+
+on:
+  pull_request:
+    branches: [ 'main' ]
+    types: [ opened, reopened, synchronize, ready_for_review ]
+
+concurrency:
+  group: copilot-pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+permissions:
+  contents: read
+
+jobs:
+  Intake:
+    if: github.event.pull_request.draft == false && github.event.pull_request.user.login != 'business-central-bot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start trusted review runner
+        run: Write-Host "::Notice::The Copilot PR Review Runner will validate this pull request and start the review."

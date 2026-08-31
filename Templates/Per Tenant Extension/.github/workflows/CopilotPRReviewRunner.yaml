@@ -1,0 +1,114 @@
+name: Copilot PR Review Runner
+
+on:
+  workflow_run:
+    workflows: [ Copilot PR Review ]
+    types: [ completed ]
+
+concurrency:
+  group: copilot-pr-review-runner-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+  ALLOWED_BASE_BRANCHES: '["main"]'
+
+jobs:
+  Settings:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      enabled: ${{ steps.output.outputs.enabled }}
+      eligible: ${{ steps.pullRequest.outputs.eligible }}
+      prNumber: ${{ steps.pullRequest.outputs.prNumber }}
+      headSha: ${{ steps.pullRequest.outputs.headSha }}
+      baseRef: ${{ steps.pullRequest.outputs.baseRef }}
+    steps:
+      - name: Checkout trusted settings
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: pwsh
+          project: ''
+          workflowName: ''
+          get: enableCopilotCodeReview
+
+      - name: Set output
+        id: output
+        run: Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "enabled=$($env:enableCopilotCodeReview.ToLowerInvariant())"
+
+      - name: Validate pull request
+        id: pullRequest
+        if: steps.output.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          WORKFLOW_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          $headers = @{
+            Accept = 'application/vnd.github+json'
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            'User-Agent' = 'al-go-copilot-review'
+          }
+
+          $prNumber = $env:PR_NUMBER
+          if (-not $prNumber -and $env:WORKFLOW_HEAD_OWNER -and $env:WORKFLOW_HEAD_BRANCH) {
+            $head = [System.Uri]::EscapeDataString("$($env:WORKFLOW_HEAD_OWNER):$($env:WORKFLOW_HEAD_BRANCH)")
+            $candidates = Invoke-RestMethod -Uri "$env:GITHUB_API_URL/repos/$($env:TARGET_REPOSITORY)/pulls?state=open&head=$head&per_page=30" -Headers $headers
+            $matchingCandidates = @($candidates | Where-Object { $_.head.sha -eq $env:WORKFLOW_HEAD_SHA })
+            if ($matchingCandidates.Count -eq 1) {
+              $prNumber = [string]$matchingCandidates[0].number
+            }
+          }
+
+          if (-not $prNumber) {
+            Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "eligible=false"
+            exit 0
+          }
+
+          $pullRequest = Invoke-RestMethod -Uri "$env:GITHUB_API_URL/repos/$($env:TARGET_REPOSITORY)/pulls/$prNumber" -Headers $headers
+          $baseBranchAllowed = $false
+          foreach ($branchPattern in @($env:ALLOWED_BASE_BRANCHES | ConvertFrom-Json)) {
+            $exclude = $branchPattern.StartsWith('!')
+            $pattern = if ($exclude) { $branchPattern.Substring(1) } else { $branchPattern }
+            if ([System.Management.Automation.WildcardPattern]::new($pattern).IsMatch($pullRequest.base.ref)) {
+              $baseBranchAllowed = -not $exclude
+            }
+          }
+          $eligible = $pullRequest.state -eq 'open' -and $baseBranchAllowed -and $pullRequest.head.sha -eq $env:WORKFLOW_HEAD_SHA -and -not $pullRequest.draft -and $pullRequest.user.login -ne 'business-central-bot[bot]'
+
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "eligible=$($eligible.ToString().ToLowerInvariant())"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "prNumber=$($pullRequest.number)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "headSha=$($pullRequest.head.sha)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "baseRef=$($pullRequest.base.ref)"
+
+  Review:
+    needs: Settings
+    if: needs.Settings.outputs.enabled == 'true' && needs.Settings.outputs.eligible == 'true' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      issues: write
+      copilot-requests: write
+    uses: microsoft/BC-ALAgents/.github/workflows/review.yml@latest
+    with:
+      pr_number: ${{ needs.Settings.outputs.prNumber }}
+      head_sha: ${{ needs.Settings.outputs.headSha }}
+      base_ref: ${{ needs.Settings.outputs.baseRef }}
+      target_repo: ${{ github.repository }}
+      engine_ref: latest
