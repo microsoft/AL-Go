@@ -24,7 +24,8 @@ Compile AL apps by using workspace compilation from the ALTool
 | dependencyTestAppsJson | | Path to a JSON file containing a list of dependency test apps | '' |
 | baselineWorkflowRunId | | RunId of the baseline workflow run | '' |
 | baselineWorkflowSHA | | SHA of the baseline workflow run | '' |
+| previousAppsPath | | Path to folder containing previous release apps for AppSourceCop baseline | '' |
 
 ## OUTPUT
 
-None but the action will edit the dependencyAppsJson (installAppsJson) and dependencyTestAppsJson (installTestAppsJson) to include the compiled apps. That way the apps will be installed in the RunPipeline step.
+None

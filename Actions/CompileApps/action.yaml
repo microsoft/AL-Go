@@ -37,6 +37,10 @@ inputs:
     description: SHA of the baseline workflow run
     required: false
     default: ''
+  previousAppsPath:
+    description: Path to folder containing previous release apps for AppSourceCop baseline
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -51,9 +55,10 @@ runs:
         _dependencyTestAppsJson: ${{ inputs.dependencyTestAppsJson }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
         _baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
+        _previousAppsPath: ${{ inputs.previousAppsPath }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Compile Apps" -Action {
-          ${{ github.action_path }}/Compile.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -dependencyAppsJson $ENV:_dependencyAppsJson -dependencyTestAppsJson $ENV:_dependencyTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA
+          ${{ github.action_path }}/Compile.ps1 -token $ENV:_token -artifact $ENV:_artifact -project $ENV:_project -buildMode $ENV:_buildMode -dependencyAppsJson $ENV:_dependencyAppsJson -dependencyTestAppsJson $ENV:_dependencyTestAppsJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baselineWorkflowSHA $ENV:_baselineWorkflowSHA -previousAppsPath $ENV:_previousAppsPath
         }
 branding:
   icon: terminal
