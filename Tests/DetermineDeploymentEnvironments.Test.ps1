@@ -440,9 +440,11 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $allOutput = . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' *>&1
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 0
-        # Both allowed lists must be reported so the actual reason is not hidden
-        $text = $allOutput | Out-String
-        $text | Should -Match "GitHub policy allows branches: feature/\*"
-        $text | Should -Match "allowed branches in settings: release/\*"
+        # Both allowed lists must be reported so the actual reason is not hidden.
+        # Match against the raw output lines rather than Out-String, which word-wraps long
+        # lines at the console width and can split the searched text across a newline.
+        $skipMessage = @($allOutput | ForEach-Object { "$_" }) -join "`n"
+        $skipMessage | Should -Match "GitHub policy allows branches: feature/\*"
+        $skipMessage | Should -Match "allowed branches in settings: release/\*"
     }
 }
