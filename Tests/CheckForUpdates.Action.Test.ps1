@@ -1357,8 +1357,27 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 1
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "project/folder/File4.md")
-        Should -Invoke OutputWarning -Times 3 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectFolder*" }
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectFolder*" }
         Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectSubfolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the project destination folder '$destinationProjectFolder*" }
+    }
+
+    It 'ResolveFilePaths warns and skips per-project path <project> outside the destination folder' -TestCases @(
+        @{ project = ".." }
+        @{ project = "project/.." }
+    ) {
+        param($project)
+
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "perProject" = $true }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @($project))
+
+        $fullFilePaths | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': destination folder*outside the project destination folder*" }
     }
 
     It 'ResolveFilePaths with type' {
@@ -1555,7 +1574,7 @@ Describe "ResolveFilePaths" {
         if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
     }
 
-    It 'ResolveFilePaths skips files in a source folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+    It 'ResolveFilePaths skips files in a source folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
         $externalFolder = Join-Path $rootFolder 'sourcefolder'
         $externalFile = Join-Path $externalFolder 'outside.txt'
         New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
@@ -1576,7 +1595,7 @@ Describe "ResolveFilePaths" {
         }
     }
 
-    It 'ResolveFilePaths skips destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+    It 'ResolveFilePaths skips destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = '../casefolder/outside.txt' }
@@ -1589,7 +1608,7 @@ Describe "ResolveFilePaths" {
         Should -Invoke OutputWarning -Times 1
     }
 
-    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = ''; 'destinationName' = '../caseproject/outside.txt'; 'perProject' = $true }
@@ -1667,6 +1686,34 @@ Describe "ResolveFilePaths" {
         $fullFilePaths | Should -Not -BeNullOrEmpty
         $fullFilePaths.Count | Should -Be 1
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths keeps case-distinct destination entries on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt' }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 2
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeTrue
+    }
+
+    It 'ResolveFilePaths removes case-distinct destination entries on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt' }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 1
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeFalse
     }
 
     It 'ResolveFilePaths treats dot project as repository root for per-project files' {
@@ -1821,6 +1868,34 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
     }
 
+    It 'ResolveFilePaths keeps case-distinct per-project destination entries on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('ProjectA'))
+
+        $fullFilePaths.Count | Should -Be 2
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeTrue
+    }
+
+    It 'ResolveFilePaths removes case-distinct per-project destination entries on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('ProjectA'))
+
+        $fullFilePaths.Count | Should -Be 1
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeFalse
+    }
+
     It 'ResolveFilePaths handles empty sourceFolder value' {
         # Create a file in the root of the sourceFolder
         $rootFile = Join-Path $sourceFolder "RootFile.txt"
@@ -1888,6 +1963,28 @@ Describe "ResolveFilePaths" {
         }
         finally {
             if (Test-Path $onlyInSourceFile) { Remove-Item -Path $onlyInSourceFile -Force }
+        }
+    }
+
+    It 'ResolveFilePaths resolves original paths containing wildcard characters literally' {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $sourceFile = Join-Path $sourceFolder 'folder/File[1].ps1'
+        $originalSourceFile = Join-Path $originalSourceFolder 'folder/File[1].ps1'
+        Set-Content -LiteralPath $sourceFile -Value '# source file'
+        Set-Content -LiteralPath $originalSourceFile -Value '# original source file'
+        $currentLocation = Get-Location
+
+        try {
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files @(@{ sourceFolder = 'folder'; filter = '*.ps1' }) -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder)
+            $resolvedFile = @($fullFilePaths | Where-Object { $_.sourceFullPath -eq $sourceFile })
+
+            $resolvedFile.Count | Should -Be 1
+            $resolvedFile[0].originalSourceFullPath | Should -Be $originalSourceFile
+            (Get-Location).Path | Should -Be $currentLocation.Path
+        }
+        finally {
+            Remove-Item -LiteralPath $sourceFile -Force
+            Remove-Item -LiteralPath $originalSourceFile -Force
         }
     }
 
@@ -2481,8 +2578,8 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         # test.txt should be in filesToExclude two times with different destinations
         $testTxtFiles = $filesToExclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
         $testTxtFiles.Count | Should -Be 2
-        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.renamed.txt')
-        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
+        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.renamed.txt')
     }
 
     It 'GetFilesToUpdate handles overlapping include patterns with different destinations' {
@@ -2525,6 +2622,168 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
         # The first-listed entry should win over the later entry for the same destination
         $conflict[0].sourceFullPath | Should -Be $testPSFile
+    }
+
+    It 'GetFilesToUpdate keeps case-distinct destination entries on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = 'test.ps1'; destinationFolder = 'CaseFolder'; destinationName = 'conflict.txt' }
+                    @{ filter = 'test.txt'; destinationFolder = 'casefolder'; destinationName = 'conflict.txt' }
+                )
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeTrue
+    }
+
+    It 'GetFilesToUpdate excludes only the exact-case source path on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+        $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
+        $lowerCaseFolder = Join-Path $templateFolder 'casefolder'
+        $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
+        $lowerCaseFile = Join-Path $lowerCaseFolder 'script.ps1'
+        New-Item -ItemType Directory -Path $upperCaseFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path $lowerCaseFolder -Force | Out-Null
+        Set-Content -Path $upperCaseFile -Value '# upper case folder'
+        Set-Content -Path $lowerCaseFile -Value '# lower case folder'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @()
+                customALGoFiles       = @{
+                    filesToInclude = @(
+                        @{ sourceFolder = 'CaseFolder'; filter = 'script.ps1' }
+                        @{ sourceFolder = 'casefolder'; filter = 'script.ps1' }
+                    )
+                    filesToExclude = @(@{ sourceFolder = 'casefolder'; filter = 'script.ps1' })
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.Count | Should -Be 1
+            $filesToInclude[0].sourceFullPath | Should -BeExactly $upperCaseFile
+            $filesToExclude.Count | Should -Be 1
+            $filesToExclude[0].sourceFullPath | Should -BeExactly $lowerCaseFile
+        }
+        finally {
+            Remove-Item -Path $upperCaseFolder -Recurse -Force
+            Remove-Item -Path $lowerCaseFolder -Recurse -Force
+        }
+    }
+
+    It 'GetFilesToUpdate excludes only the exact-case unused file on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+        $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
+        $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
+        Set-Content -Path $upperCaseFile -Value '# upper case file'
+        Set-Content -Path $lowerCaseFile -Value '# lower case file'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @('unusedfile.ps1')
+                customALGoFiles       = @{
+                    filesToInclude = @(@{ filter = '*.ps1' })
+                    filesToExclude = @()
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.sourceFullPath -ccontains $upperCaseFile | Should -BeTrue
+            $filesToInclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $upperCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeTrue
+        }
+        finally {
+            Remove-Item -Path $upperCaseFile -Force
+            Remove-Item -Path $lowerCaseFile -Force
+        }
+    }
+
+    It 'GetFilesToUpdate removes case-distinct destination entries on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = 'test.ps1'; destinationFolder = 'CaseFolder'; destinationName = 'conflict.txt' }
+                    @{ filter = 'test.txt'; destinationFolder = 'casefolder'; destinationName = 'conflict.txt' }
+                )
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeFalse
+    }
+
+    It 'GetFilesToUpdate excludes any case source path on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
+        $lowerCaseFolder = Join-Path $templateFolder 'casefolder'
+        $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
+        $lowerCaseFile = Join-Path $lowerCaseFolder 'script.ps1'
+        New-Item -ItemType Directory -Path $upperCaseFolder -Force | Out-Null
+        Set-Content -Path $upperCaseFile -Value '# upper case folder'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @()
+                customALGoFiles       = @{
+                    filesToInclude = @(
+                        @{ sourceFolder = 'CaseFolder'; filter = 'script.ps1' }
+                        @{ sourceFolder = 'casefolder'; filter = 'script.ps1' }
+                    )
+                    filesToExclude = @(@{ sourceFolder = 'casefolder'; filter = 'script.ps1' })
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.Count | Should -Be 0
+            $filesToExclude.Count | Should -Be 1
+            $filesToExclude[0].sourceFullPath | Should -BeExactly $upperCaseFile
+        }
+        finally {
+            Remove-Item -Path $upperCaseFolder -Recurse -Force
+        }
+    }
+
+    It 'GetFilesToUpdate excludes any case unused file on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
+        $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
+        Set-Content -Path $upperCaseFile -Value '# upper case file'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @('unusedfile.ps1')
+                customALGoFiles       = @{
+                    filesToInclude = @(@{ filter = '*.ps1' })
+                    filesToExclude = @()
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.sourceFullPath -ccontains $upperCaseFile | Should -BeFalse
+            $filesToInclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $upperCaseFile | Should -BeTrue
+            $filesToExclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
+        }
+        finally {
+            Remove-Item -Path $upperCaseFile -Force
+        }
     }
 
     It 'GetFilesToUpdate filesToInclude includes original template files missing in template' {
@@ -2838,9 +3097,9 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude | Should -Not -BeNullOrEmpty
         $filesToExclude.Count | Should -Be $powerPlatformFiles.Count
 
-        for ($i = 0; $i -lt $powerPlatformFiles.Count; $i++) {
-            $filesToExclude[$i].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder $powerPlatformFiles[$i])
-            $filesToExclude[$i].destinationFullPath | Should -Be (Join-Path $baseFolder $powerPlatformFiles[$i])
+        $powerPlatformFiles | ForEach-Object {
+            $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+            $filesToExclude.destinationFullPath | Should -Contain (Join-Path $baseFolder $_)
         }
     }
 

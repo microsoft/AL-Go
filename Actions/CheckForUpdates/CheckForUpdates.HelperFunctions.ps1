@@ -772,6 +772,24 @@ function UpdateSettingsFile {
     return $modified
 }
 
+function GetPathStringComparison {
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        return [System.StringComparison]::Ordinal
+    }
+    else {
+        return [System.StringComparison]::OrdinalIgnoreCase
+    }
+}
+
+function GetPathStringComparer {
+    if ((GetPathStringComparison) -eq [System.StringComparison]::Ordinal) {
+        return [System.StringComparer]::Ordinal
+    }
+    else {
+        return [System.StringComparer]::OrdinalIgnoreCase
+    }
+}
+
 <#
 .SYNOPSIS
 Resolves file paths based on the provided source folder, destination folder, and file specifications.
@@ -833,12 +851,11 @@ function ResolveFilePaths {
     $destinationFolder = [System.IO.Path]::GetFullPath($destinationFolder) # Canonicalize the destination folder to an absolute path
     $destinationFolder = Join-Path $destinationFolder '' # Ensure destination folder has a trailing slash for correct path resolution
 
-    $pathComparison = [System.StringComparison]::OrdinalIgnoreCase
-    if ($PSVersionTable.PSVersion.Major -ge 6 -and ($IsLinux -or $IsMacOS)) {
-        $pathComparison = [System.StringComparison]::Ordinal
-    }
+    $pathComparison = GetPathStringComparison
+    $pathComparer = GetPathStringComparer
 
     $fullFilePaths = @()
+    $destinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
     foreach($file in $files) {
         if($file.Keys -notcontains 'sourceFolder') {
             $file.sourceFolder = '' # Default to current folder
@@ -900,12 +917,12 @@ function ResolveFilePaths {
 
             # Try to find the same files in the original template folder if it is specified. Exclude custom template files
             if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
-                Push-Location $sourceFolder
-                $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
-                Pop-Location
-                if (Test-Path (Join-Path $originalSourceFolder $relativePath) -PathType Leaf) {
+                $relativeSourceFile = $srcFile.Substring($sourceFolder.Length)
+                $originalSourceFile = Join-Path $originalSourceFolder $relativeSourceFile
+                $originalSourceFile = [System.IO.Path]::GetFullPath($originalSourceFile)
+                if (Test-Path -LiteralPath $originalSourceFile -PathType Leaf) {
                     # If the file exists in the original template folder, use that file instead
-                    $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
+                    $fullFilePath.originalSourceFullPath = $originalSourceFile
                 }
             }
 
@@ -923,9 +940,18 @@ function ResolveFilePaths {
                         $project = '' # If project is '.', it means the root folder, so we use an empty string
                     }
 
-                    $fileDestinationFolder = Join-Path $destinationFolder $project
-                    $fileDestinationFolder = Join-Path $fileDestinationFolder $file.destinationFolder
+                    $projectDestinationFolder = Join-Path $destinationFolder $project
+                    $projectDestinationFolder = Join-Path $projectDestinationFolder '' # Ensure project destination folder has a trailing slash for correct path resolution
+
+                    $fileDestinationFolder = Join-Path $projectDestinationFolder $file.destinationFolder
+                    $fileDestinationFolder = [System.IO.Path]::GetFullPath($fileDestinationFolder) # Canonicalize the file destination folder to an absolute path
                     $fileDestinationFolder = Join-Path $fileDestinationFolder '' # Ensure file destination folder has a trailing slash for correct path resolution
+
+                    # Check if the destination folder is under the project destination folder
+                    if (-not $fileDestinationFolder.StartsWith($projectDestinationFolder, $pathComparison)) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': destination folder '$fileDestinationFolder' is outside the project destination folder '$projectDestinationFolder'."
+                        continue
+                    }
 
                     $fullProjectFilePath = $fullFilePath.Clone()
                     $fullProjectFilePath.destinationFullPath = Join-Path $fileDestinationFolder $destinationName
@@ -937,7 +963,7 @@ function ResolveFilePaths {
                         continue
                     }
 
-                    if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullProjectFilePath.destinationFullPath) {
+                    if(-not $destinationFullPaths.Add($fullProjectFilePath.destinationFullPath)) {
                         OutputDebug "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
                         continue
                     }
@@ -950,7 +976,14 @@ function ResolveFilePaths {
                 # Destination full path is the destination base folder + destinationFolder + destinationName
 
                 $fileDestinationFolder = Join-Path $destinationFolder $file.destinationFolder
+                $fileDestinationFolder = [System.IO.Path]::GetFullPath($fileDestinationFolder) # Canonicalize the file destination folder to an absolute path
                 $fileDestinationFolder = Join-Path $fileDestinationFolder '' # Ensure file destination folder has a trailing slash for correct path resolution
+
+                # Check if the destination folder is under the base destination folder
+                if (-not $fileDestinationFolder.StartsWith($destinationFolder, $pathComparison)) {
+                    OutputWarning "Skipping file '$srcFile': destination folder '$fileDestinationFolder' is outside the destination folder '$destinationFolder'."
+                    continue
+                }
 
                 $fullFilePath.destinationFullPath = Join-Path $fileDestinationFolder $destinationName
                 $fullFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
@@ -961,7 +994,7 @@ function ResolveFilePaths {
                     continue
                 }
 
-                if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullFilePath.destinationFullPath) {
+                if(-not $destinationFullPaths.Add($fullFilePath.destinationFullPath)) {
                     OutputDebug "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
                     continue
                 }
@@ -1130,6 +1163,9 @@ function GetFilesToUpdate {
     if ($settings.customALGoFiles.filesToExclude.Count -gt 0) {
         Trace-Information -Message "Usage: Custom AL-Go Files (Exclude)"
     }
+
+    $pathComparer = GetPathStringComparer
+
     # Determine files to include
     $filesToIncludeUnresolved = GetDefaultFilesToInclude -includeCustomTemplateFiles:$hasOriginalTemplate
     $filesToIncludeUnresolved += $settings.customALGoFiles.filesToInclude
@@ -1138,7 +1174,8 @@ function GetFilesToUpdate {
         $filesToInclude += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
     }
     # Deduplicate files to include based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder)
-    $filesToInclude = @($filesToInclude | Group-Object { $_.destinationFullPath } | Sort-Object -Property Name | ForEach-Object { $_.Group[0] })
+    $filesToIncludeDestinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
+    $filesToInclude = @($filesToInclude | Where-Object { $filesToIncludeDestinationFullPaths.Add($_.destinationFullPath) })
 
     # Determine files to exclude
     $filesToExcludeUnresolved = GetDefaultFilesToExclude -settings $settings
@@ -1154,29 +1191,31 @@ function GetFilesToUpdate {
     # Settings for filesToExclude only define the sources (sourceFolder and filter) but not the destinations (destinationFolder, destinationName and perProject)
     $filesToExclude = @($filesToInclude | Where-Object {
         $fileToInclude = $_
-        return $filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToInclude.sourceFullPath }
+        return $filesToExclude | Where-Object { $pathComparer.Equals($_.sourceFullPath, $fileToInclude.sourceFullPath) }
     })
 
     # Exclude files from filesToInclude that are in filesToExclude (based on source)
     $filesToInclude = @($filesToInclude | Where-Object {
         $file = $_
-        $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $file.sourceFullPath })
+        $include = -not ($filesToExclude | Where-Object { $pathComparer.Equals($_.sourceFullPath, $file.sourceFullPath) })
         if (-not $include) { OutputDebug "Excluding source file '$($file.sourceFullPath)' from include list as it is in the exclude list" }
         return $include
     })
 
     # Apply unusedALGoSystemFiles logic
     $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
+    $unusedALGoSystemFileNames = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
+    $unusedALGoSystemFileNames.UnionWith([string[]]$unusedALGoSystemFiles)
 
     # Exclude unusedALGoSystemFiles from $filesToInclude and add them to $filesToExclude
-    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
+    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) }
     if ($unusedFilesToExclude) {
         Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions." -DeprecationTag "unusedALGoSystemFiles"
 
         OutputDebug "The following files are marked as unused and will be removed if they exist:"
         $unusedFilesToExclude | ForEach-Object { OutputDebug "- $($_.destinationFullPath)" }
 
-        $filesToInclude = @($filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) })
+        $filesToInclude = @($filesToInclude | Where-Object { -not $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) })
         $filesToExclude += @($unusedFilesToExclude)
     }
 
