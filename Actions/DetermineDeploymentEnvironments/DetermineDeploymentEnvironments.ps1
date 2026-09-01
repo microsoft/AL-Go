@@ -270,10 +270,16 @@ else {
                 }
             }
             if (!$includeEnvironment) {
-                if ($deploymentSettings.BranchesFromPolicy -and $deploymentSettings.BranchesFromPolicy.Count -gt 0) {
+                $hasPolicyBranches = $deploymentSettings.BranchesFromPolicy -and $deploymentSettings.BranchesFromPolicy.Count -gt 0
+                $hasSettingsBranches = $deploymentSettings.Branches -and $deploymentSettings.Branches.Count -gt 0
+                if ($hasPolicyBranches -and $hasSettingsBranches) {
+                    # Both restrictions are enforced - a branch must satisfy both, so report both allowed lists
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (GitHub policy allows branches: $($deploymentSettings.BranchesFromPolicy -join ', '); allowed branches in settings: $($deploymentSettings.Branches -join ', '))"
+                }
+                elseif ($hasPolicyBranches) {
                     Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (GitHub policy allows branches: $($deploymentSettings.BranchesFromPolicy -join ', '))"
                 }
-                elseif ($deploymentSettings.Branches -and $deploymentSettings.Branches.Count -gt 0) {
+                elseif ($hasSettingsBranches) {
                     Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (allowed branches in settings: $($deploymentSettings.Branches -join ', '))"
                 }
                 else {

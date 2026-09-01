@@ -418,4 +418,31 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         PassGeneratedOutput
         $EnvironmentCount | Should -Be 0
     }
+
+    # Skip message should list both allowed branch lists when a GitHub policy and settings Branches are both configured
+    It 'Test calling action directly - skip message lists both GitHub policy and settings branches' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } } ) })}
+        }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/deployment-branch-policies' } -MockWith {
+            return @{"Content" = (@{ "branch_policies" = @( @{ "name" = "feature/*" } ) } | ConvertTo-Json -Depth 99 -Compress)}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        # Branch passes the GitHub policy (feature/*) but is rejected by the settings Branches (release/*)
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        $allOutput = . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' *>&1
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+        # Both allowed lists must be reported so the actual reason is not hidden
+        $text = $allOutput | Out-String
+        $text | Should -Match "GitHub policy allows branches: feature/\*"
+        $text | Should -Match "allowed branches in settings: release/\*"
+    }
 }

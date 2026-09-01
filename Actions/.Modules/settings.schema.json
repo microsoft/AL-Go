@@ -596,7 +596,8 @@
         },
         "noMatchingEnvironmentsAction": {
             "type": "string",
-            "pattern": "^(ignore|warning|error)$",
+            "enum": ["ignore", "warning", "error"],
+            "default": "ignore",
             "description": "Specifies what happens when deployment environments are found but all are excluded by branch policies or deployment type filters. Allowed values are ignore, warning and error. See https://aka.ms/ALGoSettings#nomatchingenvironmentsaction"
         },
         "alDoc": {
