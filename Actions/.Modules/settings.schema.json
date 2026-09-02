@@ -466,7 +466,8 @@
             "description": "The shell to be used for the GitHub runner. See https://aka.ms/ALGoSettings#githubrunnershell"
         },
         "cacheImageName": {
-            "type": "string"
+            "type": "string",
+            "description": "When using self-hosted runners or localDevEnv, cacheImageName specifies the prefix for the docker image created for increased performance. Set to an empty string to retain the previous local-development behavior. See https://aka.ms/ALGoSettings#cacheimagename"
         },
         "cacheKeepDays": {
             "type": "number",

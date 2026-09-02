@@ -2,6 +2,11 @@
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
 
+### Local development environments use cacheImageName
+
+localDevEnv now passes the configured cacheImageName to Run-AlPipeline, allowing BcContainerHelper to reuse artifact-specific images.
+To retain the previous behavior, set `cacheImageName` to an empty string in .AL-Go/localDevEnv.settings.json.
+
 ## v9.2
 
 ### New `doNotPerformUpgrade` setting
