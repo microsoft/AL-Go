@@ -44,6 +44,7 @@ Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth worksh
 1. [How to set up Service Principal for Power Platform](Scenarios/SetupServicePrincipalForPowerPlatform.md)
 1. [Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
 1. [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md)
+1. [Enable Copilot code review for AL pull requests](Scenarios/CopilotCodeReview.md)
 
 ## Migration scenarios
 

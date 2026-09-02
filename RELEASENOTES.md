@@ -1,3 +1,7 @@
+### Copilot code review for AL pull requests
+
+AL-Go repositories can now opt in to AI-powered review of AL pull request changes by setting `enableCopilotCodeReview` to `true` in `.github/AL-Go-Settings.json`. The new Copilot PR Review workflows use the public [BC-ALAgents](https://github.com/microsoft/BC-ALAgents) reviewer and its BCQuality knowledge base to post findings as pull request comments. Copilot CLI requests are billed to the GitHub organization and require the corresponding organization policy and workflow permissions.
+
 ### Expanded AL-Go telemetry dashboard
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
