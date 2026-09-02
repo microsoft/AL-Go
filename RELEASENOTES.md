@@ -1,3 +1,7 @@
+### New setting noMatchingEnvironmentsAction to control behavior when nothing is deployed
+
+The manual `Publish To Environment` workflow could report success even when no environment matched the deployment criteria (for example when the selected branch is not allowed by the environment branch policy), making it look like a deployment happened when it did not. A new setting `noMatchingEnvironmentsAction` controls this behavior for `Publish` deployments. Allowed values are `ignore` (default, workflow succeeds silently as before), `warning` (workflow succeeds but shows a visible warning annotation) and `error` (workflow fails with a clear error message). Continuous deployment is unaffected, since matching zero environments is expected there. The `DumpWorkflowInfo` action now also logs the branch, and the skip message explains which branches are allowed for the environment.
+
 ### Expanded AL-Go telemetry dashboard
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.

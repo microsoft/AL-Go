@@ -270,7 +270,21 @@ else {
                 }
             }
             if (!$includeEnvironment) {
-                Write-Host "Environment $environmentName is not setup for deployments from branch $ENV:GITHUB_REF_NAME"
+                $hasPolicyBranches = $deploymentSettings.BranchesFromPolicy -and $deploymentSettings.BranchesFromPolicy.Count -gt 0
+                $hasSettingsBranches = $deploymentSettings.Branches -and $deploymentSettings.Branches.Count -gt 0
+                if ($hasPolicyBranches -and $hasSettingsBranches) {
+                    # Both restrictions are enforced - a branch must satisfy both, so report both allowed lists
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (GitHub policy allows branches: $($deploymentSettings.BranchesFromPolicy -join ', '); allowed branches in settings: $($deploymentSettings.Branches -join ', '))"
+                }
+                elseif ($hasPolicyBranches) {
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (GitHub policy allows branches: $($deploymentSettings.BranchesFromPolicy -join ', '))"
+                }
+                elseif ($hasSettingsBranches) {
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (allowed branches in settings: $($deploymentSettings.Branches -join ', '))"
+                }
+                else {
+                    Write-Host "Environment $environmentName is not setup for deployments from branch '$($ENV:GITHUB_REF_NAME)' (no branch policy defined - only 'main' is allowed by default)"
+                }
             }
         }
         if ($includeEnvironment) {
@@ -304,3 +318,20 @@ Write-Host "EnvironmentCount=$($deploymentEnvironments.Keys.Count)"
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "UnknownEnvironment=$unknownEnvironment"
 Write-Host "UnknownEnvironment=$unknownEnvironment"
+
+# Handle noMatchingEnvironmentsAction when environments were found but all filtered out.
+# Only applies to manual 'Publish' deployments - for continuous deployment (CD), matching zero
+# environments (e.g. when pushing to a branch that no environment allows) is expected and must not fail.
+if ($type -eq 'Publish' -and $deploymentEnvironments.Keys.Count -eq 0 -and $environments -and @($environments).Count -gt 0) {
+    $noMatchAction = if ($settings.ContainsKey('noMatchingEnvironmentsAction')) { $settings.noMatchingEnvironmentsAction } else { 'ignore' }
+    $message = "No environments matched deployment criteria. $(@($environments).Count) environment(s) were found ($($environments -join ', ')) but all were excluded by branch policies or deployment type filters. Current branch: $ENV:GITHUB_REF_NAME"
+    switch ($noMatchAction) {
+        'warning' {
+            OutputWarning $message
+        }
+        'error' {
+            throw $message
+        }
+        # 'ignore' - current behavior, do nothing
+    }
+}
