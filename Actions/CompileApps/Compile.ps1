@@ -145,9 +145,10 @@ try {
 
     if ($baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         try {
-            $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
-            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
-            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+            $baselineModifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+            OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
+            $prModifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -useMergeBase)
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $prModifiedFiles
         }
         catch {
             OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
@@ -168,7 +169,7 @@ try {
                     -baseFolder $baseFolder `
                     -project $project `
                     -baselineWorkflowRunId $baselineWorkflowRunId `
-                    -modifiedFiles $modifiedFiles `
+                    -modifiedFiles $baselineModifiedFiles `
                     -buildArtifactFolder $buildArtifactFolder `
                     -buildMode $buildMode `
                     -projectPath $projectFolder

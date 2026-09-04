@@ -194,6 +194,48 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "Project1"
     }
 
+    It 'does not build any project when the pull request modifies no project, even if files changed on the target branch since the baseline build (merge-base gate)' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        # The baseline diff attributes a change in Project1 to the run (e.g. a commit merged to the target branch after the baseline build)...
+        $baselineModifiedFiles = @('Project1/.AL-Go/settings.json')
+        # ...but the pull request itself only changed a non-project file.
+        $prModifiedFiles = @('README.md')
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
+
+        $allProjects | Should -BeExactly @("Project1", "Project2")
+        $modifiedProjects | Should -BeExactly @()
+        $projectsToBuild | Should -BeExactly @()
+    }
+
+    It 'keeps the baseline-based projects to build when the pull request modifies at least one project (merge-base gate passes)' {
+        # Setup project structure
+        $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project1/app/app.json" -Value (ConvertTo-Json $appJson) -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        # The baseline diff sees changes in both projects (Project2 changed on the target branch after the baseline build)...
+        $baselineModifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
+        # ...and the pull request itself modifies Project1, so the gate passes and the baseline-based set is kept
+        # (this ensures dependencies changed since the baseline build are still rebuilt).
+        $prModifiedFiles = @('Project1/.AL-Go/settings.json')
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
+
+        $modifiedProjects | Should -BeExactly @("Project1", "Project2")
+        $projectsToBuild | Should -BeExactly @("Project1", "Project2")
+    }
+
     It 'loads correct projects, based on the modified files: multiple modified files in Project1 and Project2' {
         # Setup project structure
         $appJson = @{ id = '83fb8305-4079-415d-a25d-8132f0436fd1'; name = 'My app'; publisher = 'Contoso'; version = '1.0.0.0' }
@@ -1168,6 +1210,28 @@ Describe "Get-ProjectsToBuild" {
 
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
+    }
+}
+
+Describe "Test-IsPullRequest" {
+    BeforeAll {
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    }
+
+    It "returns true for <eventName>" -ForEach @(
+        @{ eventName = 'pull_request' }
+        @{ eventName = 'pull_request_target' }
+    ) {
+        Test-IsPullRequest -ghEventName $eventName | Should -BeTrue
+    }
+
+    It "returns false for <eventName>" -ForEach @(
+        @{ eventName = 'push' }
+        @{ eventName = 'schedule' }
+        @{ eventName = 'workflow_dispatch' }
+        @{ eventName = 'merge_group' }
+    ) {
+        Test-IsPullRequest -ghEventName $eventName | Should -BeFalse
     }
 }
 
