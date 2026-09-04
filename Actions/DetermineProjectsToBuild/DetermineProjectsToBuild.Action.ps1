@@ -16,8 +16,9 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuil
 
 $settings = $env:Settings | ConvertFrom-Json
 
+$isPullRequest = Test-IsPullRequest -ghEventName $ENV:GITHUB_EVENT_NAME
 $targetBranch = $env:GITHUB_REF_NAME
-if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
+if ($isPullRequest) {
     $targetBranch = $env:GITHUB_BASE_REF
 }
 
@@ -26,6 +27,7 @@ Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
 $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
 $modifiedFiles = @()
+$prModifiedFiles = @()
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
@@ -40,8 +42,19 @@ if(-not $buildAllProjects) {
     else {
         Write-Host "::group::Get Modified Files"
         try {
+            # Files modified since the baseline build. Used to determine which apps must be (re)built versus reused from the baseline artifacts.
             $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
-            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $modifiedFiles
+            # Files modified by the pull request itself (diffed against its merge-base). Used to decide whether a full build is
+            # required and whether the pull request modifies anything at all, so that unrelated commits merged to the target branch
+            # after the baseline build are not attributed to the pull request.
+            if ($isPullRequest) {
+                $prModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -useMergeBase
+                OutputMessageAndArray -message "Modified files (pull request)" -arrayOfStrings $prModifiedFiles
+            }
+            else {
+                $prModifiedFiles = $modifiedFiles
+            }
         }
         catch {
             OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, the Error was $($_.Exception.Message). Building all projects"
@@ -53,7 +66,9 @@ if(-not $buildAllProjects) {
 
 if (-not $buildAllProjects) {
     Write-Host "::group::Determine Incremental Build"
-    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    # Whether a full build is required is based on what the pull request itself changed ($prModifiedFiles), not on unrelated
+    # commits merged to the target branch after the baseline build.
+    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $prModifiedFiles -baseFolder $baseFolder
     Write-Host "::endgroup::"
 }
 
@@ -61,7 +76,18 @@ if (-not $buildAllProjects) {
 # buildAllProjects is set to true if we are to build all projects
 # publishSkippedProjects is set to true if we are to publish artifacts for skipped projects (meaning we are still going through the build process for all projects, just not building)
 Write-Host "::group::Get Projects To Build"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$getProjectsToBuildParams = @{
+    baseFolder = $baseFolder
+    buildAllProjects = ($buildAllProjects -or $publishSkippedProjects)
+    modifiedFiles = $modifiedFiles
+    maxBuildDepth = $maxBuildDepth
+}
+# For pull requests, pass the pull request's own modified files so that a pull request that modifies no project is not built,
+# even if unrelated files changed on the target branch since the baseline build.
+if ($isPullRequest) {
+    $getProjectsToBuildParams['prModifiedFiles'] = $prModifiedFiles
+}
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild @getProjectsToBuildParams
 if ($buildAllProjects) {
     $skippedProjects = @()
 }

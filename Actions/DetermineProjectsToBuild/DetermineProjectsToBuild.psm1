@@ -7,7 +7,9 @@
 function Get-ModifiedFiles {
     param(
         [Parameter(HelpMessage = "The baseline SHA", Mandatory = $true)]
-        [string] $baselineSHA
+        [string] $baselineSHA,
+        [Parameter(HelpMessage = "For pull requests, diff against the merge-base of the pull request instead of the baseline SHA, so only the files the pull request itself changed are returned", Mandatory = $false)]
+        [switch] $useMergeBase
     )
 
     Push-Location $ENV:GITHUB_WORKSPACE
@@ -17,7 +19,15 @@ function Get-ModifiedFiles {
             $headSHA = $ghEvent.pull_request.head.sha
             Write-Host "Using head SHA $headSHA from pull request"
             Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $headSHA | Out-Host }
-            if ($baselineSHA) {
+            if ($useMergeBase) {
+                # Diff against the pull request's merge-base so that only what the pull request itself changed is returned.
+                # This avoids attributing commits merged to the target branch after the baseline build to the pull request.
+                $prBaseSHA = $ghEvent.pull_request.base.sha
+                Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $prBaseSHA | Out-Host }
+                $baselineSHA = (RunAndCheck git merge-base $prBaseSHA $headSHA).Trim()
+                Write-Host "This is a pull request, using merge-base SHA $baselineSHA (base $prBaseSHA, head $headSHA)"
+            }
+            elseif ($baselineSHA) {
                 Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
             }
             else {
@@ -156,6 +166,8 @@ function Get-ProjectsToBuild {
         [bool] $buildAllProjects = $true,
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "An array of files changed by the pull request itself (diffed against its merge-base). When provided and the pull request modifies no project, nothing is built.", Mandatory = $false)]
+        [string[]] $prModifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
         [int] $maxBuildDepth = 0
     )
@@ -187,6 +199,19 @@ function Get-ProjectsToBuild {
                                         Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths } |
                                         ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } |
                                         Select-Object -Unique)
+
+                # $modifiedFiles is diffed against the baseline (last successful) build, which may include commits merged to the
+                # target branch after that build. For pull requests, $prModifiedFiles reflects only what the pull request itself
+                # changed (diffed against its merge-base). If the pull request does not modify any project, nothing needs to be built,
+                # even if unrelated files changed on the target branch since the baseline build.
+                if ($PSBoundParameters.ContainsKey('prModifiedFiles') -and $modifiedProjects) {
+                    $prModifiedFilesFullPaths = @($prModifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+                    $prModifiedProjects = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $prModifiedFilesFullPaths })
+                    if (-not $prModifiedProjects) {
+                        Write-Host "The pull request does not modify any project (based on the merge-base diff). Nothing to build."
+                        $modifiedProjects = @()
+                    }
+                }
             }
 
             if($buildAllProjects) {
@@ -237,6 +262,18 @@ function Get-ProjectsToBuild {
 
 <#
 .Synopsis
+    Determines whether a GitHub event is a pull request event.
+#>
+function Test-IsPullRequest {
+    Param(
+        [string] $ghEventName
+    )
+
+    return ($ghEventName -in @('pull_request', 'pull_request_target'))
+}
+
+<#
+.Synopsis
     Determines whether a full build is required and whether to publish artifacts from skipped projects based on the event and settings.
 .Outputs
     A boolean indicating whether a full build is required and a boolean indicating whether to publish artifacts from skipped projects.
@@ -257,7 +294,7 @@ function Get-BuildAllProjectsBasedOnEventAndSettings {
     )
     $buildAllProjects = $true
     $publishSkippedProjects = $true
-    if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') {
+    if (Test-IsPullRequest -ghEventName $ghEventName) {
         # DEPRECATION: REMOVE AFTER October 1st 2025 --->
         if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects' -and $settings.alwaysBuildAllProjects) {
             $buildAllProjects = $settings.alwaysBuildAllProjects
