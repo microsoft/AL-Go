@@ -164,8 +164,9 @@ function Get-ProjectsToBuild {
         $baseFolder,
         [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $false)]
         [bool] $buildAllProjects = $true,
-        [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-        [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "An array of files changed since the baseline build, used to filter the projects to build", Mandatory = $false)]
+        [Alias('modifiedFiles')]
+        [string[]] $baselineModifiedFiles = @(),
         [Parameter(HelpMessage = "An array of files changed by the pull request itself (diffed against its merge-base). When provided and the pull request modifies no project, nothing is built.", Mandatory = $false)]
         [string[]] $prModifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
@@ -190,18 +191,18 @@ function Get-ProjectsToBuild {
             # Calculate the full projects order
             $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects
 
-            if ($modifiedFiles) {
-                Write-Host "Calculating modified projects based on the modified files"
+            if ($baselineModifiedFiles) {
+                Write-Host "Calculating modified projects based on files changed since the baseline build"
 
                 #Include the base folder in the modified files
-                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+                $baselineModifiedFilesFullPaths = @($baselineModifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
                 $modifiedProjects = @($projects |
-                                        Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths } |
+                                        Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $baselineModifiedFilesFullPaths } |
                                         ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } |
                                         Select-Object -Unique)
 
-                # $modifiedFiles is diffed against the baseline (last successful) build, which may include commits merged to the
-                # target branch after that build. For pull requests, $prModifiedFiles reflects only what the pull request itself
+                # $baselineModifiedFiles may include commits merged to the target branch after the baseline build.
+                # For pull requests, $prModifiedFiles reflects only what the pull request itself
                 # changed (diffed against its merge-base). If the pull request does not modify any project, nothing needs to be built,
                 # even if unrelated files changed on the target branch since the baseline build.
                 if ($PSBoundParameters.ContainsKey('prModifiedFiles') -and $modifiedProjects) {

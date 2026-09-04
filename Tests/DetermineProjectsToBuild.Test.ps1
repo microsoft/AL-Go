@@ -205,10 +205,10 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         # The baseline diff attributes a change in Project1 to the run (e.g. a commit merged to the target branch after the baseline build)...
-        $modifiedFiles = @('Project1/.AL-Go/settings.json')
+        $baselineModifiedFiles = @('Project1/.AL-Go/settings.json')
         # ...but the pull request itself only changed a non-project file.
         $prModifiedFiles = @('README.md')
-        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $modifiedProjects | Should -BeExactly @()
@@ -226,11 +226,11 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         # The baseline diff sees changes in both projects (Project2 changed on the target branch after the baseline build)...
-        $modifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
+        $baselineModifiedFiles = @('Project1/.AL-Go/settings.json', 'Project2/.AL-Go/settings.json')
         # ...and the pull request itself modifies Project1, so the gate passes and the baseline-based set is kept
         # (this ensures dependencies changed since the baseline build are still rebuilt).
         $prModifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -modifiedFiles $modifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
 
         $modifiedProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")

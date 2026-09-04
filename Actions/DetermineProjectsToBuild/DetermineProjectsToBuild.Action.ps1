@@ -26,7 +26,7 @@ if ($isPullRequest) {
 Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
 $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
-$modifiedFiles = @()
+$baselineModifiedFiles = @()
 $prModifiedFiles = @()
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
@@ -43,8 +43,8 @@ if(-not $buildAllProjects) {
         Write-Host "::group::Get Modified Files"
         try {
             # Files modified since the baseline build. Used to determine which apps must be (re)built versus reused from the baseline artifacts.
-            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
-            OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $modifiedFiles
+            $baselineModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
             # Files modified by the pull request itself (diffed against its merge-base). Used to decide whether a full build is
             # required and whether the pull request modifies anything at all, so that unrelated commits merged to the target branch
             # after the baseline build are not attributed to the pull request.
@@ -53,7 +53,7 @@ if(-not $buildAllProjects) {
                 OutputMessageAndArray -message "Modified files (pull request)" -arrayOfStrings $prModifiedFiles
             }
             else {
-                $prModifiedFiles = $modifiedFiles
+                $prModifiedFiles = $baselineModifiedFiles
             }
         }
         catch {
@@ -79,7 +79,7 @@ Write-Host "::group::Get Projects To Build"
 $getProjectsToBuildParams = @{
     baseFolder = $baseFolder
     buildAllProjects = ($buildAllProjects -or $publishSkippedProjects)
-    modifiedFiles = $modifiedFiles
+    baselineModifiedFiles = $baselineModifiedFiles
     maxBuildDepth = $maxBuildDepth
 }
 # For pull requests, pass the pull request's own modified files so that a pull request that modifies no project is not built,
