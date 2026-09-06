@@ -157,6 +157,7 @@ function GetKeyVaultSecret {
     }
     if ($secret.Contains('_')) {
         # Secret name contains a '_', which is not allowed in Key Vault secret names
+        OutputWarning "Secret name '$secret' contains an underscore ('_'), which is not supported in Azure Key Vault. The Key Vault lookup will be skipped for this secret. Rename the requested secret to a Key Vault-compatible name, or map '$secret' to '$($secret.Replace('_','-'))' in callers that support secret-name mappings."
         return $null
     }
 

@@ -2,6 +2,12 @@
 
 Several actions no longer assume the public `github.com`/`api.github.com` hosts, so they work on GitHub Enterprise (including `ghe.com`) organizations. REST calls now use `$ENV:GITHUB_API_URL` instead of a hardcoded `https://api.github.com` (Deploy, GetArtifactsForDeployment, VerifyPRChanges and app dependency probing), app dependency repositories default to `$ENV:GITHUB_SERVER_URL` instead of `https://github.com`, and the WorkflowPostProcess `gh api` call now sets `GH_HOST` so relative API calls target the correct host. When downloading app dependencies (artifacts and releases), the GitHub API URL is now derived from each dependency repository's host (`api.<host>`) instead of always using the current workflow's `$ENV:GITHUB_API_URL`, so dependencies hosted on a different GitHub host (e.g. `github.com` referenced from a `ghe.com` workflow, or vice versa) resolve correctly. Note that repositories using AL-Go for GitHub are supported on GHE, but the AL-Go for GitHub repository itself is not (it must run on github.com).
 
+### Expanded AL-Go telemetry dashboard
+
+The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
+
+## v9.2
+
 ### New `doNotPerformUpgrade` setting
 
 AL-Go now supports a new `doNotPerformUpgrade` setting that is passed through to `Run-AlPipeline`. Use it to skip the upgrade phase while still running the rest of the pipeline.
@@ -27,10 +33,16 @@ As part of this, the warning comparison now also parses the raw AL compiler outp
 - Reference documentation no longer fails with "InvalidTocInclude: Referenced TOC file ... does not exist" for apps whose name contains an underscore (e.g. `_Exclude_*` apps). The toc.yml folder names are now derived using the same rules as the aldoc tool, which keeps underscores instead of turning them into hyphens.
 - Issue 2319 - Under workspace compilation, `enableCodeAnalyzersOnTestApps: false` now also disables custom analyzers (`customCodeCops`) for test apps and BCPT test apps, not just the built-in code analyzers.
 - Issue 2267 - `AppSourceCop.json` is now created for test apps when `enableCodeAnalyzersOnTestApps` is true.
+- Issue 2320 - Deliver to NuGet of release workflow failing with app and test app
+- Issue 2337 - Incremental builds: skipped projects re-publish Default-mode apps into ALL buildMode-specific artifacts
 
 ### Valid SARIF URIs for file paths containing spaces
 
 `ProcessALCodeAnalysisLogs` now URI-encodes each segment of the artifact location path when writing SARIF (for example `1.Setup Data/Foo.al` becomes `1.Setup%20Data/Foo.al`). Paths that contain spaces or other characters that are not valid in a URI previously caused `github/codeql-action/upload-sarif` to log "is not a valid URI" warnings and could prevent AL code scanning alerts from mapping to the correct files. The `/` path separators are preserved so the path structure is unchanged.
+
+### AL alerts for the workspace compilation build
+
+The `trackALAlertsInGitHub` setting now also works when `workspaceCompilation` (preview) is enabled. When both are turned on, AL-Go passes `--errorlogdirectory` to `altool workspace compile` so each project emits an `*.errorLog.json` diagnostics file into `.buildartifacts/ErrorLogs/`, which is processed into SARIF and surfaced as code scanning alerts — matching the classic Run-AlPipeline behavior. If the consumed compiler version does not yet support `--errorlogdirectory`, the option is skipped and a warning is logged (the rest of the build is unaffected).
 
 ## v9.1
 

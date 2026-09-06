@@ -35,7 +35,7 @@ runs:
   using: composite
   steps:
     - name: Install Power Platform Tools
-      uses: microsoft/powerplatform-actions/actions-install@v1
+      uses: microsoft/powerplatform-actions/actions-install@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
 
     - name: Update Power Platform Files
       shell: ${{ inputs.shell }}
@@ -51,7 +51,7 @@ runs:
         }
 
     - name: Test Pack (Not real - just workaround for https://github.com/microsoft/powerplatform-vscode/issues/412)
-      uses: microsoft/powerplatform-actions/pack-solution@v1
+      uses: microsoft/powerplatform-actions/pack-solution@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
       with:
         solution-file: forgetMe.zip
         solution-folder: ${{ inputs.solutionFolder }}
@@ -63,7 +63,7 @@ runs:
         Remove-Item -Path forgetMe.zip -Force
 
     - name: Pack Solution
-      uses: microsoft/powerplatform-actions/pack-solution@v1
+      uses: microsoft/powerplatform-actions/pack-solution@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
       with:
         solution-file: ${{ inputs.outputFolder }}/${{ inputs.outputFileName }}.zip
         solution-folder: ${{ inputs.solutionFolder }}

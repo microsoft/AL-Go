@@ -127,6 +127,7 @@ jobs:
           skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
           project: ${{ inputs.project }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+          buildMode: ${{ inputs.buildMode }}
 
       - name: Read secrets
         id: ReadSecrets
