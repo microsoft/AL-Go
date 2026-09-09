@@ -24,15 +24,24 @@ Sending extended telemetry to Microsoft is helpful for when we need to help inve
 
 ### Getting Started with Data Explorer
 
-AL-Go provides a template data explorer report to help you get started. To use this report:
+AL-Go provides a template Azure Data Explorer dashboard to help you monitor workflow reliability, inspect workflow and action runs, review test results, compare workflow duration and runner usage, and track AL-Go maintenance information across repositories.
 
-1. Download the telemetrydashboard.json file from [here](resources/telemetrydashboard.json)
+The dashboard reports missing telemetry as **No telemetry** rather than treating missing data as a successful or healthy result. Test telemetry is emitted only when AL-Go executes at least one AL test, page scripting test, or BCPT test, so repositories without test runs don't populate the Tests & Quality page.
+
+The Run Explorer includes raw action error messages. Grant access to the dashboard and underlying Application Insights resource only to operators who are allowed to see repository operational details. The dashboard uses a five-minute query results cache to reduce repeated query load and doesn't enable automatic refresh by default.
+
+The **Execution Runtime & Supportability** table shows the latest observed AL-Go and PowerShell runtime per repository, together with the latest action in the selected range that reported BcContainerHelper as loaded. **Not loaded/reported** doesn't indicate an installation failure. Optionally enter an expected BcContainerHelper version on the AL-Go Maintenance page to identify repositories that differ from your organizational baseline.
+
+To use this dashboard:
+
+1. Download the [telemetry dashboard JSON](resources/telemetrydashboard.json).
 1. Open the file in an editor and replace the clusterUri and database:
-   - **database**: Name of your application insights resource in Azure
+   - **database**: Name of your Application Insights resource in Azure
    - **clusterUri**: Use the following uri but replace YourSubscriptionId, YourResourceGroup and YourApplicationInsightsName
      - https://ade.applicationinsights.io/subscriptions/YourSubscriptionId/resourcegroups/YourResourceGroup/providers/microsoft.insights/components/YourApplicationInsightsName
-1. Go to https://dataexplorer.azure.com/dashboards
-1. In the top left corner, click on the arrow next to "New Dashboard" and select "Import dashboard from file".
+1. Go to [Azure Data Explorer dashboards](https://dataexplorer.azure.com/dashboards).
+1. In the top-left corner, select the arrow next to **New Dashboard**, and then select **Import dashboard from file**.
+1. Open each page and verify its queries against representative workflow, action, test, and deprecation telemetry. An empty Tests & Quality page is expected when no tests ran in the selected time range.
 
 ### Getting Started with writing your own queries
 

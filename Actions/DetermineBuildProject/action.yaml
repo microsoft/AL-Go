@@ -18,6 +18,10 @@ inputs:
   baselineWorkflowRunId:
     description: Id of the baseline workflow run, from which to download artifacts if build is skipped
     required: true
+  buildMode:
+    description: Build mode used when building the artifacts
+    required: false
+    default: Default
 outputs:
   BuildIt:
     description: Determines whether the project needs to be built
@@ -33,9 +37,10 @@ runs:
         _skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
         _project: ${{ inputs.project }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+        _buildMode: ${{ inputs.buildMode }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineBuildProject" -Action {
-          ${{ github.action_path }}/DetermineBuildProject.ps1 -token $env:_token -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId
+          ${{ github.action_path }}/DetermineBuildProject.ps1 -token $env:_token -skippedProjectsJson $env:_skippedProjectsJson -project $env:_project -baselineWorkflowRunId $env:_baselineWorkflowRunId -buildMode $env:_buildMode
         }
 branding:
   icon: terminal

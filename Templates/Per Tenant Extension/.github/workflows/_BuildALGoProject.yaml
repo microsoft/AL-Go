@@ -119,6 +119,7 @@ jobs:
           skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
           project: ${{ inputs.project }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+          buildMode: ${{ inputs.buildMode }}
 
       - name: Run Build Initialize hook
         if: hashFiles(format('{0}/.AL-Go/BuildInitialize.ps1', inputs.project)) != ''

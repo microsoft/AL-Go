@@ -241,7 +241,7 @@ jobs:
 
       - name: Deliver to NuGet
         uses: microsoft/AL-Go-Actions/Deliver@main
-        if: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).nuGetContext != '' }}
+        if: ${{ matrix.atype == 'Apps' && fromJson(steps.ReadSecrets.outputs.Secrets).nuGetContext != '' }}
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
@@ -254,7 +254,7 @@ jobs:
 
       - name: Deliver to Storage
         uses: microsoft/AL-Go-Actions/Deliver@main
-        if: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).storageContext != '' }}
+        if: ${{ matrix.atype == 'Apps' && fromJson(steps.ReadSecrets.outputs.Secrets).storageContext != '' }}
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
