@@ -233,7 +233,7 @@ jobs:
           shell: powershell
 
       - name: Upload SARIF file to GitHub
-        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         if: (success() || failure()) && (hashFiles(format('{0}/ErrorLogs/output.sarif.json',github.workspace)) != '')
         with:
           sarif_file: '${{ github.workspace }}/ErrorLogs/output.sarif.json'
@@ -293,7 +293,7 @@ jobs:
       - name: Deploy to GitHub Pages
         if: needs.Initialization.outputs.deployALDocArtifact == 1
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   Deploy:
     needs: [ Initialization, Build ]
