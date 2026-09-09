@@ -166,7 +166,7 @@ function YamlTest {
 
 <#
 .SYNOPSIS
-Test that all actions are referenced from microsoft/AL-Go-Actions@<main|preview> or actions/ (by GitHub)
+Test that all actions and reusable workflows are referenced from approved repositories.
 #>
 function TestActionsReferences {
     param(
@@ -184,22 +184,26 @@ function TestActionsReferences {
     $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
     $gitHubActionPattern = "^actions/*"
     $gitHubCodeQLActionPattern = "^github/codeql-action/*"
+    $bcALAgentsWorkflowPattern = "^microsoft/BC-ALAgents/\.github/workflows/review\.yml$"
 
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
-        $version = $_.Groups[2].Value
+        $version = $_.Groups[2].Value.Trim()
 
-        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern)"
+        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern|$bcALAgentsWorkflowPattern)"
 
         if($origin -match $alGoActionPattern) {
             $version | Should -Match "main"
+        }
+        elseif($origin -match $bcALAgentsWorkflowPattern) {
+            $version | Should -Be "latest"
         }
     }
 }
 
 <#
 .SYNOPSIS
-Test that all referenced workflows are coming from .github/workflows/
+Test that all referenced workflows are local or explicitly approved external workflows.
 #>
 function TestWorkflowReferences {
     param(
@@ -210,15 +214,20 @@ function TestWorkflowReferences {
     $yaml = Get-Content -Path $YamlPath -Raw
 
     # Test all referenced workflows are coming from .github/workflows/
-    $alGoWorkflowReferencePatterns = 'uses:\s*(.*).(yaml|yml)'
+    $alGoWorkflowReferencePatterns = 'uses:\s*([^\s]+\.ya?ml)@([^\s#]+)'
 
     $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
 
     $localWorkflowsPattern = '^./.github/workflows/*'
+    $bcALAgentsWorkflowPattern = '^microsoft/BC-ALAgents/\.github/workflows/review\.yml$'
 
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
-        $workflowPath | Should -Match "$localWorkflowsPattern"
+        $workflowVersion = $_.Groups[2].Value.Trim()
+        $workflowPath | Should -Match "($localWorkflowsPattern|$bcALAgentsWorkflowPattern)"
+        if($workflowPath -match $bcALAgentsWorkflowPattern) {
+            $workflowVersion | Should -Be "latest"
+        }
     }
 }
 

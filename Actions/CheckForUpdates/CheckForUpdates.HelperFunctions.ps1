@@ -133,6 +133,29 @@ function ModifyPullRequestHandlerWorkflow {
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
 }
 
+function ModifyCopilotPRReviewWorkflow {
+    Param(
+        [Yaml] $yaml,
+        [hashtable] $repoSettings,
+        [string] $baseName
+    )
+
+    if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
+        $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
+    }
+    else {
+        $CICDPullRequestBranches = $defaultCICDPullRequestBranches
+    }
+
+    $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
+    if ($baseName -eq 'CopilotPRReview') {
+        $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
+    }
+    else {
+        $yaml.Replace("env:/ALLOWED_BASE_BRANCHES:", "ALLOWED_BASE_BRANCHES: '$($branchesJson.Replace("'", "''"))'")
+    }
+}
+
 function ModifyRunsOnAndShell {
     Param(
         [Yaml] $yaml,
@@ -573,6 +596,10 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
+    if ($baseName -in @("CopilotPRReview", "CopilotPRReviewRunner")) {
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings -baseName $baseName
+    }
+
     $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
     $allowedRunners = @('windows-latest', 'ubuntu-latest')
     $modifyRunsOnAndShell = $true
@@ -988,6 +1015,13 @@ function GetDefaultFilesToExclude {
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+        )
+    }
+
+    if ($settings.Keys -notcontains 'enableCopilotCodeReview' -or !$settings['enableCopilotCodeReview']) {
+        $filesToExclude += @(
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
         )
     }
 

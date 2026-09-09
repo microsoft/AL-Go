@@ -280,6 +280,10 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
+        It 'Disables Copilot code review by default' {
+            (GetDefaultSettings).enableCopilotCodeReview | Should -Be $false
+        }
+
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
