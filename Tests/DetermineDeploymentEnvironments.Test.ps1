@@ -331,4 +331,120 @@ Describe "DetermineDeploymentEnvironments Action Test" {
         $EnvironmentCount | Should -Be 0
         $UnknownEnvironment | Should -Be 0
     }
+
+    # noMatchingEnvironmentsAction = ignore (default) - should succeed silently when all environments are filtered out by branch policy
+    It 'Test calling action directly - noMatchingEnvironmentsAction ignore should succeed silently' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "ignore"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should succeed silently with 0 environments
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+    }
+
+    # noMatchingEnvironmentsAction = warning - should succeed with a warning when all environments are filtered out by branch policy
+    It 'Test calling action directly - noMatchingEnvironmentsAction warning should output warning' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "warning"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should succeed but output a warning
+        # OutputWarning uses Write-Warning when running locally, but Write-Host (::Warning::) on GitHub Actions.
+        # Capture all output streams so we can check for the message in either case.
+        $allOutput = . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' *>&1
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+        # Verify the warning was emitted in any output stream
+        # Use Out-String so Should -Match checks the combined text rather than requiring every element to match
+        ($allOutput | Out-String) | Should -Match "No environments matched deployment criteria"
+    }
+
+    # noMatchingEnvironmentsAction = error - should throw when all environments are filtered out by branch policy
+    It 'Test calling action directly - noMatchingEnvironmentsAction error should throw' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "error"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should throw with a clear error message
+        { . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' } | Should -Throw "*No environments matched deployment criteria*"
+    }
+
+    # noMatchingEnvironmentsAction should NOT affect continuous deployment (CD) - matching zero environments is expected there
+    It 'Test calling action directly - noMatchingEnvironmentsAction error should not throw for CD' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @() } ) })}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "noMatchingEnvironmentsAction" = "error"
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        # Should not throw for CD, even with error setting - and should end up with 0 environments
+        . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'CD'
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+    }
+
+    # Skip message should list both allowed branch lists when a GitHub policy and settings Branches are both configured
+    It 'Test calling action directly - skip message lists both GitHub policy and settings branches' {
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/environments' } -MockWith {
+            return @{"Content" = (ConvertTo-Json -Compress -Depth 99 -InputObject @{ "environments" = @( @{ "name" = "test"; "protection_rules" = @( @{ "type" = "branch_policy"}); "deployment_branch_policy" = @{ "protected_branches" = $false; "custom_branch_policies" = $true } } ) })}
+        }
+        Mock InvokeWebRequest -ParameterFilter { $uri -like '*/deployment-branch-policies' } -MockWith {
+            return @{"Content" = (@{ "branch_policies" = @( @{ "name" = "feature/*" } ) } | ConvertTo-Json -Depth 99 -Compress)}
+        }
+
+        $settings = @{
+            "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh"; "environments" = @(); "excludeEnvironments" = @( 'github-pages' )
+            "alDoc" = @{ "continuousDeployment" = $false; "deployToGitHubPages" = $false }
+            "DeployToTest" = @{ "Branches" = @("release/*") }
+        }
+        $env:Settings = $settings | ConvertTo-Json -Compress
+        # Branch passes the GitHub policy (feature/*) but is rejected by the settings Branches (release/*)
+        $env:GITHUB_REF_NAME = "feature/my-feature"
+
+        $allOutput = . (Join-Path $scriptRoot $scriptName) -getEnvironments '*' -type 'Publish' *>&1
+        PassGeneratedOutput
+        $EnvironmentCount | Should -Be 0
+        # Both allowed lists must be reported so the actual reason is not hidden.
+        # Match against the raw output lines rather than Out-String, which word-wraps long
+        # lines at the console width and can split the searched text across a newline.
+        $skipMessage = @($allOutput | ForEach-Object { "$_" }) -join "`n"
+        $skipMessage | Should -Match "GitHub policy allows branches: feature/\*"
+        $skipMessage | Should -Match "allowed branches in settings: release/\*"
+    }
 }
