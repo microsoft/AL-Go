@@ -2,7 +2,7 @@
 
 When incremental builds are enabled, the set of modified files used to decide whether a full build is required (`fullBuildPatterns`) and whether any project/app needs building was diffed against the last successful build of the target branch. On a busy branch, commits merged after that baseline build were attributed to the pull request, so an unrelated change (for example under a `fullBuildPatterns` path) could escalate a pull request that changed no AL code into a full build.
 
-The decision about what a pull request changed is now evaluated against the pull request's merge-base (only what the pull request itself changed). If a pull request modifies neither a project nor a full-build pattern, nothing is built. Artifact reuse still uses the last successful build as the baseline, so dependencies that changed on the target branch since that build are still rebuilt rather than reused.
+When a usable baseline is available, the pull request's merge-base diff determines whether any build is needed. If the pull request modifies neither a project nor a full-build pattern, nothing is built. Otherwise, project selection, full-build decisions and artifact reuse continue to use the last successful build as the baseline. This ensures changes to dependencies, settings and other build inputs since that build still invalidate affected artifacts. Without a usable baseline, the existing full-build fallback is unchanged.
 
 ### Expanded AL-Go telemetry dashboard
 

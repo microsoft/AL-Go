@@ -45,9 +45,7 @@ if(-not $buildAllProjects) {
             # Files modified since the baseline build. Used to determine which apps must be (re)built versus reused from the baseline artifacts.
             $baselineModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
             OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
-            # Files modified by the pull request itself (diffed against its merge-base). Used to decide whether a full build is
-            # required and whether the pull request modifies anything at all, so that unrelated commits merged to the target branch
-            # after the baseline build are not attributed to the pull request.
+            # The PR diff only decides whether a build is needed; the baseline determines its scope.
             if ($isPullRequest) {
                 $prModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -useMergeBase
                 OutputMessageAndArray -message "Modified files (pull request)" -arrayOfStrings $prModifiedFiles
@@ -66,9 +64,17 @@ if(-not $buildAllProjects) {
 
 if (-not $buildAllProjects) {
     Write-Host "::group::Determine Incremental Build"
-    # Whether a full build is required is based on what the pull request itself changed ($prModifiedFiles), not on unrelated
-    # commits merged to the target branch after the baseline build.
-    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $prModifiedFiles -baseFolder $baseFolder
+    $buildRequired = $true
+    if ($isPullRequest) {
+        $buildRequired = Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles $prModifiedFiles
+    }
+    if ($buildRequired) {
+        $buildAllProjects = Get-BuildAllProjects -modifiedFiles $baselineModifiedFiles -baseFolder $baseFolder
+    }
+    else {
+        OutputNotice -message "The pull request has no build-relevant changes. Nothing to build."
+        $baselineModifiedFiles = @()
+    }
     Write-Host "::endgroup::"
 }
 
@@ -81,11 +87,6 @@ $getProjectsToBuildParams = @{
     buildAllProjects = ($buildAllProjects -or $publishSkippedProjects)
     baselineModifiedFiles = $baselineModifiedFiles
     maxBuildDepth = $maxBuildDepth
-}
-# For pull requests, pass the pull request's own modified files so that a pull request that modifies no project is not built,
-# even if unrelated files changed on the target branch since the baseline build.
-if ($isPullRequest) {
-    $getProjectsToBuildParams['prModifiedFiles'] = $prModifiedFiles
 }
 $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild @getProjectsToBuildParams
 if ($buildAllProjects) {

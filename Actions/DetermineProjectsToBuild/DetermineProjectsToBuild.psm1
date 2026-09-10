@@ -167,8 +167,6 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "An array of files changed since the baseline build, used to filter the projects to build", Mandatory = $false)]
         [Alias('modifiedFiles')]
         [string[]] $baselineModifiedFiles = @(),
-        [Parameter(HelpMessage = "An array of files changed by the pull request itself (diffed against its merge-base). When provided and the pull request modifies no project, nothing is built.", Mandatory = $false)]
-        [string[]] $prModifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
         [int] $maxBuildDepth = 0
     )
@@ -201,18 +199,6 @@ function Get-ProjectsToBuild {
                                         ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } |
                                         Select-Object -Unique)
 
-                # $baselineModifiedFiles may include commits merged to the target branch after the baseline build.
-                # For pull requests, $prModifiedFiles reflects only what the pull request itself
-                # changed (diffed against its merge-base). If the pull request does not modify any project, nothing needs to be built,
-                # even if unrelated files changed on the target branch since the baseline build.
-                if ($PSBoundParameters.ContainsKey('prModifiedFiles') -and $modifiedProjects) {
-                    $prModifiedFilesFullPaths = @($prModifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
-                    $prModifiedProjects = @($projects | Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $prModifiedFilesFullPaths })
-                    if (-not $prModifiedProjects) {
-                        Write-Host "The pull request does not modify any project (based on the merge-base diff). Nothing to build."
-                        $modifiedProjects = @()
-                    }
-                }
             }
 
             if($buildAllProjects) {
@@ -271,6 +257,41 @@ function Test-IsPullRequest {
     )
 
     return ($ghEventName -in @('pull_request', 'pull_request_target'))
+}
+
+<#
+.SYNOPSIS
+    Determines whether the pull request changes a project or a full-build input.
+.PARAMETER baseFolder
+    The repository folder.
+.PARAMETER prModifiedFiles
+    Repository-relative files changed by the pull request, compared to its merge-base.
+#>
+function Test-PullRequestBuildRequired {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $baseFolder,
+        [string[]] $prModifiedFiles = @()
+    )
+
+    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $prModifiedFiles) {
+        return $true
+    }
+    Push-Location $baseFolder
+    try {
+        $settings = $env:Settings | ConvertFrom-Json
+        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
+        $fullPaths = @($prModifiedFiles | ForEach-Object { Join-Path $baseFolder $_ })
+        foreach ($project in $projects) {
+            if (ShouldBuildProject -baseFolder $baseFolder -project $project -modifiedFiles $fullPaths) {
+                return $true
+            }
+        }
+        return $false
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 <#

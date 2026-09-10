@@ -152,8 +152,7 @@ try {
         try {
             $baselineModifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
             OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
-            $prModifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -useMergeBase)
-            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $prModifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $baselineModifiedFiles
         }
         catch {
             OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"

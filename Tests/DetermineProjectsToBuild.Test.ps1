@@ -208,7 +208,10 @@ Describe "Get-ProjectsToBuild" {
         $baselineModifiedFiles = @('Project1/.AL-Go/settings.json')
         # ...but the pull request itself only changed a non-project file.
         $prModifiedFiles = @('README.md')
-        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
+        $baselineModifiedFiles += '.github/AL-Go-Settings.json'
+        Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $baselineModifiedFiles | Should -BeTrue
+        Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles $prModifiedFiles | Should -BeFalse
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles @() -buildAllProjects $false
 
         $allProjects | Should -BeExactly @("Project1", "Project2")
         $modifiedProjects | Should -BeExactly @()
@@ -230,10 +233,30 @@ Describe "Get-ProjectsToBuild" {
         # ...and the pull request itself modifies Project1, so the gate passes and the baseline-based set is kept
         # (this ensures dependencies changed since the baseline build are still rebuilt).
         $prModifiedFiles = @('Project1/.AL-Go/settings.json')
-        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -prModifiedFiles $prModifiedFiles -buildAllProjects $false
+        Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles $prModifiedFiles | Should -BeTrue
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -buildAllProjects $false
 
         $modifiedProjects | Should -BeExactly @("Project1", "Project2")
         $projectsToBuild | Should -BeExactly @("Project1", "Project2")
+    }
+
+    It 'preserves baseline full-build invalidation after a relevant PR passes the gate' {
+        New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+        New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+        $env:Settings = @{ fullBuildPatterns = @('build/*'); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false } | ConvertTo-Json -Depth 99
+
+        $prModifiedFiles = @('Project1/.AL-Go/settings.json')
+        Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles $prModifiedFiles | Should -BeTrue
+        Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles @('build/shared.ruleset.json') | Should -BeTrue
+        Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles @('.github/AL-Go-Settings.json') | Should -BeTrue
+        Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles @() | Should -BeFalse
+
+        $baselineModifiedFiles = $prModifiedFiles + @('build/shared.ruleset.json')
+        $buildAll = Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $baselineModifiedFiles
+        $buildAll | Should -BeTrue
+        Get-BuildAllApps -baseFolder $baseFolder -project 'Project2' -modifiedFiles $baselineModifiedFiles | Should -BeTrue
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -baselineModifiedFiles $baselineModifiedFiles -buildAllProjects $buildAll
+        $projectsToBuild | Should -BeExactly @('Project1', 'Project2')
     }
 
     It 'loads correct projects, based on the modified files: multiple modified files in Project1 and Project2' {
@@ -889,6 +912,7 @@ Describe "Get-ProjectsToBuild" {
         $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
 
         { Get-ProjectsToBuild -baseFolder $baseFolder -maxBuildDepth 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"
+        { Get-ProjectsToBuild $baseFolder $true @() 1 } | Should -Throw "The build depth is too deep, the maximum build depth is 1. You need to run 'Update AL-Go System Files' to update the workflows"
     }
 
     It 'postpones projects if postponeProjectInBuildOrder is set to true' {
