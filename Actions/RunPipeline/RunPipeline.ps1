@@ -406,7 +406,8 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
-                        "select" = $settings.nuGetFeedSelectMode
+                        "select" = $settings.nuGetFeedSelectMode.Replace("-allowPrerelease", "", [System.StringComparison]::OrdinalIgnoreCase)
+                        "allowPrerelease" = $settings.nuGetFeedSelectMode.EndsWith("-allowPrerelease",[System.StringComparison]::OrdinalIgnoreCase)
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
