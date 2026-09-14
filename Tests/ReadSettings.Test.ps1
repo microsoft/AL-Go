@@ -541,6 +541,533 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
+        It 'protectedSettings from higher priority source prevents overwrite from lower priority' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: protected settings includes "country", set country = "de"
+            @{ "protectedSettings" = @("country"); "country" = "de" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override country = "ch"
+            @{ "country" = "ch" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Protected setting from repo should prevent project from overwriting
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'de'   # Repo protected value wins
+            $settings.protectedSettings | Should -Contain 'country'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Multiple protectedSettings are respected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: mark both country and keyVaultName as protected
+            @{
+                "protectedSettings" = @("country", "keyVaultName")
+                "country"           = "de"
+                "keyVaultName"      = "orgVault"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override both
+            @{
+                "country"      = "ch"
+                "keyVaultName" = "projectVault"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'de'
+            $settings.keyVaultName | Should -Be 'orgVault'
+            $settings.protectedSettings | Should -Contain 'country'
+            $settings.protectedSettings | Should -Contain 'keyVaultName'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Lower-priority protected settings can override higher-priority protected settings' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings (via variable): mark country as protected and set to "de"
+            $ENV:ALGoOrgSettings = @{
+                "protectedSettings" = @("country")
+                "country"           = "de"
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: try to override country with normal (non-protected) setting = "us"
+            @{ "country" = "us" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override with protected setting = "ch"
+            @{
+                "protectedSettings" = @("country")
+                "country"           = "ch"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Project setting is also marked as protected and should be allowed to override
+            # an protected setting from a higher-priority source.
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'ch'   # Source protected overrides destination protected
+
+            $ENV:ALGoOrgSettings = ''
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'protectedSettings marked arrays are still merged with lower priority arrays' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: mark additionalCountries as protected with specific values
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to add more countries
+            @{
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Protected array settings are still merged with lower priority arrays (exception: if overwriteSettings is used)
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # Org + Project values merged
+            $settings.protectedSettings | Should -Contain "additionalCountries"
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'protectedSettings are not overridden by overwriteSettings unless source also marks them protected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: mark additionalCountries as protected
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: use overwriteSettings to override additionalCountries (force replacement instead of merge)
+            @{
+                "overwriteSettings"   = @("additionalCountries")
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # overwriteSettings should be ignored because source does not mark the setting as protected.
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'protectedSettings can be overridden with overwriteSettings when source also marks them protected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "overwriteSettings"   = @("additionalCountries")
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("ch", "be")
+
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Non-protected array settings are merged normally (baseline)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: additionalCountries WITHOUT marking as protected
+            @{
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: add more countries
+            @{
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Without protected marking, arrays should be merged
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # All values merged
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Empty protectedSettings has no effect (backward compatibility)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: protectedSettings is empty
+            @{
+                "protectedSettings" = @()
+                "country"           = "us"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: override country
+            @{
+                "country" = "ch"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'ch'   # Project wins (normal behavior)
+            $settings.protectedSettings | Should -Be @()   # Empty array preserved
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'ConditionalSetting with protectedSettings at repo level overrides project setting for specific buildMode' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: ConditionalSetting for buildMode "ValidateUS" with protected country marking
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("ValidateUS")
+                        "settings"   = @{
+                            "protectedSettings" = @("country")   # Mark country as protected
+                            "country"           = "us"
+                        }
+                    }
+                )
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: country = "w1", buildModes include "ValidateUS"
+            @{
+                "country"    = "w1"
+                "buildModes" = @("Default", "ValidateUS")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # When reading for buildMode "Default", project country "w1" should be used
+            $settingsDefault = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'Default' -userName ''
+            $settingsDefault.country | Should -Be 'w1'   # No org conditional applies for "Default"
+
+            # When reading for buildMode "ValidateUS", repo conditional with protected marking should override project
+            $settingsValidateUS = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName ''
+            $settingsValidateUS.country | Should -Be 'us'   # Repo conditional protected setting wins
+            $settingsValidateUS.buildModes | Should -Contain 'ValidateUS'
+            $settingsValidateUS.protectedSettings | Should -Contain 'country'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'protectedSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: protectedSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "protectedSettings" = @("country")
+                "country"           = "us"
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another protected setting
+            $ENV:ALGoRepoSettings = @{
+                "protectedSettings" = @("companyName")
+                "country"           = "de"
+                "companyName"       = "MyCompany"
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another protected setting
+            @{
+                "protectedSettings" = @("keyVaultName")
+                "country"           = "ch"
+                "keyVaultName"      = "mykv"
+                "companyName"       = "AnotherCompany"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.protectedSettings | Should -Contain 'country'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'keyVaultName'   # from project settings
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+        It 'conditional protectedSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: protectedSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{
+                            "protectedSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another protected setting
+            $ENV:ALGoRepoSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{   "protectedSettings" = @("companyName")
+                            "country"                         = "de"
+                            "companyName"                     = "MyCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another protected setting
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{ "protectedSettings" = @("keyVaultName")
+                            "country"                       = "ch"
+                            "keyVaultName"                  = "mykv"
+                            "companyName"                   = "AnotherCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
+            $settings.protectedSettings | Should -Contain 'country'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'keyVaultName'   # from project settings
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+        It 'mixed protectedSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: protectedSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{
+                            "protectedSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another protected setting
+            $ENV:ALGoRepoSettings = @{
+                "protectedSettings" = @("companyName")
+                "country"           = "de"
+                "companyName"       = "MyCompany"
+
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another protected setting
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{ "protectedSettings" = @("keyVaultName")
+                            "country"                       = "ch"
+                            "keyVaultName"                  = "mykv"
+                            "companyName"                   = "AnotherCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
+            $settings.protectedSettings | Should -Contain 'country'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'keyVaultName'   # from project settings
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
         It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
             Mock OutputWarning { }
             Mock ConvertTo-Json { '{}' }

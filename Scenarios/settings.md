@@ -317,6 +317,83 @@ then, after merging, the result settings object will contain the following value
 
 > _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value.
 
+## Protected settings <a id="protectedSettings"></a>
+
+By default, AL-Go follows a standard settings hierarchy where settings from higher priority levels (closer to deployment) override settings from lower priority levels. However, you can mark specific settings as **protected** to protect them from being overridden by lower priority settings using the `protectedSettings` array.
+
+When a setting is marked as protected at a higher level in the hierarchy, it cannot be overridden by non-protected values from lower priority levels. If a lower-priority source also marks the same setting as protected, then the lower-priority value is allowed to override.
+
+_Example_:
+Say, `ALGoOrgSettings` (organization level) contains the following values:
+
+```json
+{
+    "protectedSettings": ["country", "keyVaultName"],
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+and `.AL-Go\settings.json` (project level, lower priority) contains the following values:
+
+```json
+{
+    "country": "us",
+    "keyVaultName": "ProjectVault"
+}
+```
+
+then, after merging, the result settings object will contain the following values:
+
+```json
+{
+    "protectedSettings": ["country", "keyVaultName"],
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+The `country` and `keyVaultName` settings from the organization level are protected and cannot be overridden by the project level settings.
+
+_Example with ConditionalSettings_:
+Say, `ALGoOrgSettings` (organization level) contains conditional settings that set country based on buildMode:
+
+```json
+{
+    "ConditionalSettings": [
+        {
+            "buildModes": ["ValidateUS"],
+            "settings": {
+                "protectedSettings": ["country"],
+                "country": "us"
+            }
+        }
+    ]
+}
+```
+
+and `.AL-Go\settings.json` (project level) contains:
+
+```json
+{
+    "country": "w1",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+When reading settings for buildMode `ValidateUS`, the conditional setting from the organization level will apply. The result will be:
+
+```json
+{
+    "country": "us",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+Even though the project specifies `country: "w1"`, the conditional setting from the organization level marked the country as protected for the `ValidateUS` buildMode and the project value is not marked protected, so the conditional value takes precedence.
+
+> _**Note**_: `protectedSettings` is an array of setting names that should be protected from non-protected overrides from lower priority settings. If the same setting is marked as protected at both levels, the source (lower-priority) value is allowed to override the destination value. Only top-level setting names can be marked as protected; nested properties within complex objects cannot be individually marked as protected. Array settings marked as protected are still merged with lower-priority arrays. `overwriteSettings` can force replacement for protected settings only when the source also marks that same setting as protected.
+
 <a id="customdelivery"></a>
 
 ## Custom Delivery
