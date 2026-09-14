@@ -243,6 +243,8 @@ function Get-ALTool {
     Path to the output folder for compiled .app files. Defaults to PackageCachePath.
 .PARAMETER LogDirectory
     Path to the directory for compilation log files.
+.PARAMETER ErrorLogDirectory
+    Path to the directory where per-project error log files (SARIF-style diagnostics) are written. When set (and supported by the compiler), each project's alc invocation produces a '<project>_<timestamp>.errorLog.json' file used to surface AL alerts in GitHub.
 .PARAMETER MaxCpuCount
     Maximum number of parallel compilation processes. Defaults to 1.
 .PARAMETER AssemblyProbingPaths
@@ -287,6 +289,8 @@ function Build-AppsInWorkspace {
         [string]$OutFolder,
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
+        [Parameter(Mandatory = $false)]
+        [string]$ErrorLogDirectory,
         # Optional parameters
         [Parameter(Mandatory = $false)]
         [int]$MaxCpuCount = 1,
@@ -359,6 +363,7 @@ function Build-AppsInWorkspace {
         PackageCachePath = $PackageCachePath
         OutFolder = $OutputFolder
         LogDirectory = $LogDirectory
+        ErrorLogDirectory = $ErrorLogDirectory
         AssemblyProbingPaths = $AssemblyProbingPaths
         Analyzers = $Analyzers
         CustomAnalyzers = $CustomAnalyzers
@@ -445,11 +450,47 @@ function Copy-CompiledAppsToOutput {
     return $generatedAppFiles
 }
 
+<#
+    .SYNOPSIS
+    Determines whether the AL tool's 'workspace compile' command supports a given option.
+    .DESCRIPTION
+    Probes 'altool workspace compile --help' and checks whether the specified option name appears in the output.
+    Used to remain compatible with compiler versions that predate newly introduced options.
+    .PARAMETER ALToolPath
+    Path to the AL tool executable (altool).
+    .PARAMETER Option
+    The option name to look for (without leading dashes), e.g. 'errorlogdirectory'.
+    .OUTPUTS
+    Boolean indicating whether the option is supported.
+#>
+function Test-ALToolWorkspaceCompileSupportsOption {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ALToolPath,
+        [Parameter(Mandatory = $true)]
+        [string]$Option
+    )
+
+    try {
+        $compileHelp = & $ALToolPath workspace compile --help 2>&1 | Out-String
+        # A native executable does not throw merely because it exits non-zero, so the exit code must be
+        # checked explicitly. If the probe failed, treat the option as unsupported so the caller takes the
+        # promised warn-and-skip fallback instead of parsing error/usage output as a positive match.
+        if ($LASTEXITCODE -ne 0) {
+            OutputDebug -message "Probing altool workspace compile --help for option '$Option' returned exit code $LASTEXITCODE; treating the option as unsupported."
+            return $false
+        }
+        return ($compileHelp -match [regex]::Escape($Option))
+    } catch {
+        OutputDebug -message "Failed to probe altool workspace compile --help for option '$Option': $_"
+        return $false
+    }
+}
+
 function CompileAppsInWorkspace {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ALToolPath,
-
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFile,
 
@@ -498,6 +539,9 @@ function CompileAppsInWorkspace {
 
         [Parameter(Mandatory = $false)]
         [string]$LogDirectory,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ErrorLogDirectory,
 
         [Parameter(Mandatory = $false)]
         [string]$OutFolder
@@ -600,6 +644,18 @@ function CompileAppsInWorkspace {
         $defaultLogDir = Join-Path $OutFolder "Logs"
         $arguments += "--logdirectory"
         $arguments += $defaultLogDir
+    }
+
+    if ($ErrorLogDirectory) {
+        # The --errorlogdirectory option emits one '<project>_<timestamp>.errorLog.json' per project,
+        # which ProcessALCodeAnalysisLogs consumes to surface AL alerts in GitHub.
+        # It may not exist in the consumed compiler version yet, so probe --help before using it.
+        if (Test-ALToolWorkspaceCompileSupportsOption -ALToolPath $ALToolPath -Option 'errorlogdirectory') {
+            $arguments += "--errorlogdirectory"
+            $arguments += $ErrorLogDirectory
+        } else {
+            OutputWarning "--errorlogdirectory is not supported by this compiler version and will be ignored. AL code alerts will not be generated for the workspace compilation build."
+        }
     }
 
     $generatedAppFiles = @()

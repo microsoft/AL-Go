@@ -62,7 +62,7 @@
 }
 
 function SanitizeFileName([string] $fileName) {
-    $fileName.Replace('_','-').Replace('?','_').Replace('*','_').Replace(' ','-').Replace('\','-').Replace('/','-').Replace(':','-').Replace('<','-').Replace('>','-').Replace('|','-').Replace('%','pct')
+    ($fileName.ToLower().Split([System.IO.Path]::GetInvalidFileNameChars()) -join '').Replace(' ', '-')
 }
 
 function GetAppNameAndFolder {
