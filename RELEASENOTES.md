@@ -1,21 +1,21 @@
-### Important settings protection
+### Protected settings
 
-A new `importantSettings` setting allows you to protect specific settings from being overridden by lower-priority sources in the settings hierarchy. When a setting is marked as important at a higher priority level, it cannot be overridden by non-important settings from lower priority sources.
+A new `protectedSettings` setting allows you to protect specific settings from being overridden by lower-priority sources in the settings hierarchy. When a setting is marked as protected at a higher priority level, it cannot be overridden by non-protected settings from lower priority sources.
 
 ```json
 {
-  "importantSettings": ["country", "keyVaultName"],
+  "protectedSettings": ["country", "keyVaultName"],
   "country": "de",
   "keyVaultName": "orgVault"
 }
 ```
 
 **Behavior:**
-- Settings marked as important in organization or repository settings cannot be overridden by non-important values from project, workflow, user, or environment settings
-- If a lower-priority source also marks the same setting as important, the lower-priority value is allowed to override
-- Important arrays are still merged by default
-- The `overwriteSettings` mechanism can replace an important setting only when the source also marks that same setting as important
-- `ConditionalSettings` respect importantSettings markings, allowing you to enforce conditional important settings based on buildMode, branch, trigger, or user
+- Settings marked as protected in organization or repository settings cannot be overridden by non-protected values from project, workflow, user, or environment settings
+- If a lower-priority source also marks the same setting as protected, the lower-priority value is allowed to override
+- Protected arrays are still merged by default
+- The `overwriteSettings` mechanism can replace a protected setting only when the source also marks that same setting as protected
+- `ConditionalSettings` respect protectedSettings markings, allowing you to enforce conditional protected settings based on buildMode, branch, trigger, or user
 
 **Example with ConditionalSettings:**
 ```json
@@ -24,7 +24,7 @@ A new `importantSettings` setting allows you to protect specific settings from b
     {
       "buildModes": ["Validate"],
       "settings": {
-        "importantSettings": ["country"],
+        "protectedSettings": ["country"],
         "country": "us"
       }
     }

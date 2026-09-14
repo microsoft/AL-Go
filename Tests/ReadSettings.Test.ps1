@@ -541,7 +541,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'importantSettings from higher priority source prevents overwrite from lower priority' {
+        It 'protectedSettings from higher priority source prevents overwrite from lower priority' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -553,8 +553,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: important settings includes "country", set country = "de"
-            @{ "importantSettings" = @("country"); "country" = "de" } | ConvertTo-Json -Depth 99 |
+            # Repo settings: protected settings includes "country", set country = "de"
+            @{ "protectedSettings" = @("country"); "country" = "de" } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
 
             # Project settings: try to override country = "ch"
@@ -564,17 +564,17 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
-            # Important setting from repo should prevent project from overwriting
+            # Protected setting from repo should prevent project from overwriting
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.country | Should -Be 'de'   # Repo important value wins
-            $settings.importantSettings | Should -Contain 'country'
+            $settings.country | Should -Be 'de'   # Repo protected value wins
+            $settings.protectedSettings | Should -Contain 'country'
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Multiple importantSettings are respected' {
+        It 'Multiple protectedSettings are respected' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -586,9 +586,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: mark both country and keyVaultName as important
+            # Repo settings: mark both country and keyVaultName as protected
             @{
-                "importantSettings" = @("country", "keyVaultName")
+                "protectedSettings" = @("country", "keyVaultName")
                 "country"           = "de"
                 "keyVaultName"      = "orgVault"
             } | ConvertTo-Json -Depth 99 |
@@ -607,15 +607,15 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.country | Should -Be 'de'
             $settings.keyVaultName | Should -Be 'orgVault'
-            $settings.importantSettings | Should -Contain 'country'
-            $settings.importantSettings | Should -Contain 'keyVaultName'
+            $settings.protectedSettings | Should -Contain 'country'
+            $settings.protectedSettings | Should -Contain 'keyVaultName'
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Lower-priority important settings can override higher-priority important settings' {
+        It 'Lower-priority protected settings can override higher-priority protected settings' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -627,27 +627,27 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings (via variable): mark country as important and set to "de"
+            # Org settings (via variable): mark country as protected and set to "de"
             $ENV:ALGoOrgSettings = @{
-                "importantSettings" = @("country")
+                "protectedSettings" = @("country")
                 "country"           = "de"
             } | ConvertTo-Json -Depth 99
 
-            # Repo settings: try to override country with normal (non-important) setting = "us"
+            # Repo settings: try to override country with normal (non-protected) setting = "us"
             @{ "country" = "us" } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
 
-            # Project settings: try to override with important setting = "ch"
+            # Project settings: try to override with protected setting = "ch"
             @{
-                "importantSettings" = @("country")
+                "protectedSettings" = @("country")
                 "country"           = "ch"
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
 
-            # Project setting is also marked as important and should be allowed to override
-            # an important setting from a higher-priority source.
+            # Project setting is also marked as protected and should be allowed to override
+            # an protected setting from a higher-priority source.
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.country | Should -Be 'ch'   # Source important overrides destination important
+            $settings.country | Should -Be 'ch'   # Source protected overrides destination protected
 
             $ENV:ALGoOrgSettings = ''
 
@@ -656,7 +656,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'importantSettings marked arrays are still merged with lower priority arrays' {
+        It 'protectedSettings marked arrays are still merged with lower priority arrays' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -668,9 +668,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: mark additionalCountries as important with specific values
+            # Repo settings: mark additionalCountries as protected with specific values
             @{
-                "importantSettings"   = @("additionalCountries")
+                "protectedSettings"   = @("additionalCountries")
                 "additionalCountries" = @("de", "at")
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
@@ -684,17 +684,17 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
-            # Important array settings are still merged with lower priority arrays (exception: if overwriteSettings is used)
+            # Protected array settings are still merged with lower priority arrays (exception: if overwriteSettings is used)
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # Org + Project values merged
-            $settings.importantSettings | Should -Contain "additionalCountries"
+            $settings.protectedSettings | Should -Contain "additionalCountries"
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'importantSettings are not overridden by overwriteSettings unless source also marks them important' {
+        It 'protectedSettings are not overridden by overwriteSettings unless source also marks them protected' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -706,9 +706,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: mark additionalCountries as important
+            # Repo settings: mark additionalCountries as protected
             @{
-                "importantSettings"   = @("additionalCountries")
+                "protectedSettings"   = @("additionalCountries")
                 "additionalCountries" = @("de", "at")
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
@@ -723,7 +723,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
-            # overwriteSettings should be ignored because source does not mark the setting as important.
+            # overwriteSettings should be ignored because source does not mark the setting as protected.
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")
 
@@ -732,7 +732,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'importantSettings can be overridden with overwriteSettings when source also marks them important' {
+        It 'protectedSettings can be overridden with overwriteSettings when source also marks them protected' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -745,13 +745,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
             @{
-                "importantSettings"   = @("additionalCountries")
+                "protectedSettings"   = @("additionalCountries")
                 "additionalCountries" = @("de", "at")
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
 
             @{
-                "importantSettings"   = @("additionalCountries")
+                "protectedSettings"   = @("additionalCountries")
                 "overwriteSettings"   = @("additionalCountries")
                 "additionalCountries" = @("ch", "be")
             } | ConvertTo-Json -Depth 99 |
@@ -767,7 +767,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Non-important array settings are merged normally (baseline)' {
+        It 'Non-protected array settings are merged normally (baseline)' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -779,7 +779,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: additionalCountries WITHOUT marking as important
+            # Repo settings: additionalCountries WITHOUT marking as protected
             @{
                 "additionalCountries" = @("de", "at")
             } | ConvertTo-Json -Depth 99 |
@@ -794,7 +794,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
-            # Without important marking, arrays should be merged
+            # Without protected marking, arrays should be merged
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # All values merged
 
@@ -803,7 +803,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'Empty importantSettings has no effect (backward compatibility)' {
+        It 'Empty protectedSettings has no effect (backward compatibility)' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -815,9 +815,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: importantSettings is empty
+            # Repo settings: protectedSettings is empty
             @{
-                "importantSettings" = @()
+                "protectedSettings" = @()
                 "country"           = "us"
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
@@ -831,17 +831,17 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
-            # Without important marking, normal hierarchy applies
+            # Without protected marking, normal hierarchy applies
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.country | Should -Be 'ch'   # Project wins (normal behavior)
-            $settings.importantSettings | Should -Be @()   # Empty array preserved
+            $settings.protectedSettings | Should -Be @()   # Empty array preserved
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'ConditionalSetting with importantSettings at repo level overrides project setting for specific buildMode' {
+        It 'ConditionalSetting with protectedSettings at repo level overrides project setting for specific buildMode' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -853,13 +853,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Repo settings: ConditionalSetting for buildMode "ValidateUS" with important country marking
+            # Repo settings: ConditionalSetting for buildMode "ValidateUS" with protected country marking
             @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("ValidateUS")
                         "settings"   = @{
-                            "importantSettings" = @("country")
+                            "protectedSettings" = @("country")   # Mark country as protected
                             "country"           = "us"
                         }
                     }
@@ -881,18 +881,18 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settingsDefault = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'Default' -userName ''
             $settingsDefault.country | Should -Be 'w1'   # No org conditional applies for "Default"
 
-            # When reading for buildMode "ValidateUS", repo conditional with important marking should override project
+            # When reading for buildMode "ValidateUS", repo conditional with protected marking should override project
             $settingsValidateUS = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName ''
-            $settingsValidateUS.country | Should -Be 'us'   # Repo conditional important setting wins
+            $settingsValidateUS.country | Should -Be 'us'   # Repo conditional protected setting wins
             $settingsValidateUS.buildModes | Should -Contain 'ValidateUS'
-            $settingsValidateUS.importantSettings | Should -Contain 'country'
+            $settingsValidateUS.protectedSettings | Should -Contain 'country'
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'importantSettings are merged correctly' {
+        It 'protectedSettings are merged correctly' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -904,33 +904,33 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: importantSettings is filled
+            # Org settings: protectedSettings is filled
             $ENV:ALGoOrgSettings = @{
-                "importantSettings" = @("country")
+                "protectedSettings" = @("country")
                 "country"           = "us"
             } | ConvertTo-Json -Depth 99
 
-            # Repo settings: add another important setting
+            # Repo settings: add another protected setting
             $ENV:ALGoRepoSettings = @{
-                "importantSettings" = @("companyName")
+                "protectedSettings" = @("companyName")
                 "country"           = "de"
                 "companyName"       = "MyCompany"
             } | ConvertTo-Json -Depth 99
 
-            # Project settings: add another important setting
+            # Project settings: add another protected setting
             @{
-                "importantSettings" = @("keyVaultName")
+                "protectedSettings" = @("keyVaultName")
                 "country"           = "ch"
                 "keyVaultName"      = "mykv"
                 "companyName"       = "AnotherCompany"
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
 
-            # Without important marking, normal hierarchy applies
+            # Without protected marking, normal hierarchy applies
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.importantSettings | Should -Contain 'country'    # from repo settings
-            $settings.importantSettings | Should -Contain 'companyName'    # from repo settings
-            $settings.importantSettings | Should -Contain 'keyVaultName'   # from project settings
+            $settings.protectedSettings | Should -Contain 'country'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'keyVaultName'   # from project settings
 
             $settings.country | Should -Be 'us'   # from org settings
             $settings.companyName | Should -Be 'MyCompany'   # from repo settings
@@ -941,7 +941,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
-        It 'conditional importantSettings are merged correctly' {
+        It 'conditional protectedSettings are merged correctly' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -953,36 +953,36 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: importantSettings is filled
+            # Org settings: protectedSettings is filled
             $ENV:ALGoOrgSettings = @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("CustomBuildMode")
                         "settings"   = @{
-                            "importantSettings" = @("country")
+                            "protectedSettings" = @("country")
                             "country"           = "us"
                         }
                     })
             } | ConvertTo-Json -Depth 99
 
-            # Repo settings: add another important setting
+            # Repo settings: add another protected setting
             $ENV:ALGoRepoSettings = @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("CustomBuildMode")
-                        "settings"   = @{   "importantSettings" = @("companyName")
+                        "settings"   = @{   "protectedSettings" = @("companyName")
                             "country"                         = "de"
                             "companyName"                     = "MyCompany"
                         }
                     })
             } | ConvertTo-Json -Depth 99
 
-            # Project settings: add another important setting
+            # Project settings: add another protected setting
             @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("CustomBuildMode")
-                        "settings"   = @{ "importantSettings" = @("keyVaultName")
+                        "settings"   = @{ "protectedSettings" = @("keyVaultName")
                             "country"                       = "ch"
                             "keyVaultName"                  = "mykv"
                             "companyName"                   = "AnotherCompany"
@@ -991,11 +991,11 @@ InModuleScope ReadSettings { # Allows testing of private functions
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
 
-            # Without important marking, normal hierarchy applies
+            # Without protected marking, normal hierarchy applies
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
-            $settings.importantSettings | Should -Contain 'country'    # from repo settings
-            $settings.importantSettings | Should -Contain 'companyName'    # from repo settings
-            $settings.importantSettings | Should -Contain 'keyVaultName'   # from project settings
+            $settings.protectedSettings | Should -Contain 'country'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'keyVaultName'   # from project settings
 
             $settings.country | Should -Be 'us'   # from org settings
             $settings.companyName | Should -Be 'MyCompany'   # from repo settings
@@ -1006,7 +1006,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
-        It 'mixed importantSettings are merged correctly' {
+        It 'mixed protectedSettings are merged correctly' {
             Mock Write-Host { }
             Mock Out-Host { }
 
@@ -1018,32 +1018,32 @@ InModuleScope ReadSettings { # Allows testing of private functions
             New-Item $githubFolder -ItemType Directory | Out-Null
             New-Item $projectALGoFolder -ItemType Directory | Out-Null
 
-            # Org settings: importantSettings is filled
+            # Org settings: protectedSettings is filled
             $ENV:ALGoOrgSettings = @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("CustomBuildMode")
                         "settings"   = @{
-                            "importantSettings" = @("country")
+                            "protectedSettings" = @("country")
                             "country"           = "us"
                         }
                     })
             } | ConvertTo-Json -Depth 99
 
-            # Repo settings: add another important setting
+            # Repo settings: add another protected setting
             $ENV:ALGoRepoSettings = @{
-                "importantSettings" = @("companyName")
+                "protectedSettings" = @("companyName")
                 "country"           = "de"
                 "companyName"       = "MyCompany"
 
             } | ConvertTo-Json -Depth 99
 
-            # Project settings: add another important setting
+            # Project settings: add another protected setting
             @{
                 "ConditionalSettings" = @(
                     @{
                         "buildModes" = @("CustomBuildMode")
-                        "settings"   = @{ "importantSettings" = @("keyVaultName")
+                        "settings"   = @{ "protectedSettings" = @("keyVaultName")
                             "country"                       = "ch"
                             "keyVaultName"                  = "mykv"
                             "companyName"                   = "AnotherCompany"
@@ -1052,11 +1052,11 @@ InModuleScope ReadSettings { # Allows testing of private functions
             } | ConvertTo-Json -Depth 99 |
             Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
 
-            # Without important marking, normal hierarchy applies
+            # Without protected marking, normal hierarchy applies
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
-            $settings.importantSettings | Should -Contain 'country'    # from repo settings
-            $settings.importantSettings | Should -Contain 'companyName'    # from repo settings
-            $settings.importantSettings | Should -Contain 'keyVaultName'   # from project settings
+            $settings.protectedSettings | Should -Contain 'country'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'companyName'    # from repo settings
+            $settings.protectedSettings | Should -Contain 'keyVaultName'   # from project settings
 
             $settings.country | Should -Be 'us'   # from org settings
             $settings.companyName | Should -Be 'MyCompany'   # from repo settings
