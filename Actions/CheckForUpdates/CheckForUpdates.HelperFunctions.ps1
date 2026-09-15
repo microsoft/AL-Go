@@ -974,6 +974,7 @@ function GetDefaultFilesToInclude {
     $filesToInclude = @(
         [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yaml'; 'type' = 'workflow' }
         [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.yml'; 'type' = 'workflow' }
+        [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '*.md'; 'type' = 'agentic workflow' }
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.copy.md' }
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = '*.ps1' }
         [ordered]@{ 'sourceFolder' = '.github'; 'filter' = "$RepoSettingsFileName"; 'type' = 'settings' }
