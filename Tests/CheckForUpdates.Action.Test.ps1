@@ -4,6 +4,28 @@ Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1")
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+# Computed here (not in BeforeAll) because -Skip: expressions are evaluated at discovery time, and
+# these variables are used by -Skip: expressions in Describe blocks throughout this file.
+# $IsWindows doesn't exist in Windows PowerShell 5.1, which only ever runs on Windows anyway.
+$script:isWindowsPlatform = ($PSVersionTable.PSVersion.Major -lt 6) -or $IsWindows
+$script:isLinuxPlatform = ($PSVersionTable.PSVersion.Major -ge 6) -and $IsLinux
+
+# Determine if the runner has the capability to create symlinks
+$script:hasSymlinkCapability = $true
+if ($script:isWindowsPlatform) {
+    # Probe once whether this runner can create symlinks; Junctions never need this privilege, SymbolicLinks do
+    $probeLinkPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    try {
+        New-Item -ItemType SymbolicLink -Path $probeLinkPath -Target $PSScriptRoot -ErrorAction Stop | Out-Null
+    }
+    catch {
+        $script:hasSymlinkCapability = $false
+    }
+    finally {
+        Remove-Item -Path $probeLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Describe "CheckForUpdates Action Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
@@ -1336,8 +1358,9 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 1
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
-        Should -Invoke OutputWarning -Times 3 -ParameterFilter { $message -like "*outside the destination folder '$destinationFolder*" }
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder '$destinationSubfolder*" }
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like "*outside the file destination folder '$destinationFolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the file destination folder '$destinationSubfolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the base destination folder '$destinationFolder*" }
     }
 
     It 'ResolveFilePaths warns and skips per-project destinations outside the destination folder' {
@@ -1357,8 +1380,8 @@ Describe "ResolveFilePaths" {
         $fullFilePaths.Count | Should -Be 1
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "project/folder/File4.md")
-        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectFolder*" }
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the destination folder '$destinationProjectSubfolder*" }
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like "*outside the file destination folder '$destinationProjectFolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the file destination folder '$destinationProjectSubfolder*" }
         Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the project destination folder '$destinationProjectFolder*" }
     }
 
@@ -1377,7 +1400,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @($project))
 
         $fullFilePaths | Should -BeNullOrEmpty
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': destination folder*outside the project destination folder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': destination folder*outside the * destination folder*" }
     }
 
     It 'ResolveFilePaths with type' {
@@ -1526,62 +1549,60 @@ Describe "ResolveFilePaths" {
     }
 
     It 'ResolveFilePaths skips files outside the source folder' {
-        # Create an external file outside the source folder
         $externalFolder = Join-Path $PSScriptRoot "external"
-        if (-not (Test-Path $externalFolder)) { New-Item -Path $externalFolder -ItemType Directory | Out-Null }
         $externalFile = Join-Path $externalFolder "outside.txt"
-        Set-Content -Path $externalFile -Value "outside"
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path $externalFile -Value "outside"
 
-        $destinationFolder = "destinationFolder"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+            $files = @(
+                @{ "sourceFolder" = "../external"; "filter" = "*.txt" }
+            )
 
-        $files = @(
-            @{ "sourceFolder" = "../external"; "filter" = "*.txt" }
-        )
+            # Intentionally call ResolveFilePaths with the real sourceFolder (so external file should not be included)
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
-        # Intentionally call ResolveFilePaths with the real sourceFolder (so external file should not be included)
-        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
-
-        # Ensure none of the returned sourceFullPath entries point to the external file
-        $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -Be $externalFile }
-
-        # Cleanup
-        if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
-        if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+            # Ensure none of the returned sourceFullPath entries point to the external file
+            $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -Be $externalFile }
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It 'ResolveFilePaths skips files in folder whose name starts with source folder name' {
-        # Create an external file in a folder whose name starts with the same prefix as sourceFolder
         $externalFolder = "${sourceFolder}-external"
-        if (-not (Test-Path $externalFolder)) { New-Item -Path $externalFolder -ItemType Directory | Out-Null }
         $externalFile = Join-Path $externalFolder "outside.txt"
-        Set-Content -Path $externalFile -Value "outside"
-
-        $destinationFolder = "destinationFolder"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
-
-        $files = @(
-            @{ "sourceFolder" = "../sourceFolder-external"; "filter" = "*.txt" }
-        )
-
-        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
-
-        # The file in the prefix-colliding folder must NOT be included
-        $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -BeLike "${externalFolder}*" }
-
-        # Cleanup
-        if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
-        if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
-    }
-
-    It 'ResolveFilePaths skips files in a source folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
-        $externalFolder = Join-Path $rootFolder 'sourcefolder'
-        $externalFile = Join-Path $externalFolder 'outside.txt'
-        New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
-        Set-Content -Path $externalFile -Value 'outside'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
 
         try {
-            $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path $externalFile -Value "outside"
+
+            $files = @(
+                @{ "sourceFolder" = "../sourceFolder-external"; "filter" = "*.txt" }
+            )
+
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+            # The file in the prefix-colliding folder must NOT be included
+            $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -BeLike "${externalFolder}*" }
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips files in a source folder that differs only by case' -Skip:(-not $script:isLinuxPlatform) {
+        $externalFolder = Join-Path $rootFolder 'sourcefolder'
+        $externalFile = Join-Path $externalFolder 'outside.txt'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path $externalFile -Value 'outside'
+
             $files = @(
                 @{ 'sourceFolder' = '../sourcefolder'; 'filter' = '*.txt' }
             )
@@ -1591,11 +1612,11 @@ Describe "ResolveFilePaths" {
             $fullFilePaths | Should -BeNullOrEmpty
         }
         finally {
-            if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 
-    It 'ResolveFilePaths skips destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'ResolveFilePaths skips destinations in a folder that differs only by case' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = '../casefolder/outside.txt' }
@@ -1608,7 +1629,7 @@ Describe "ResolveFilePaths" {
         Should -Invoke OutputWarning -Times 1
     }
 
-    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = ''; 'destinationName' = '../caseproject/outside.txt'; 'perProject' = $true }
@@ -1619,6 +1640,204 @@ Describe "ResolveFilePaths" {
 
         $fullFilePaths | Should -BeNullOrEmpty
         Should -Invoke OutputWarning -Times 1
+    }
+
+    It 'ResolveFilePaths skips destinations reachable only through a junction pointing outside the destination folder' -Skip:(-not $script:isWindowsPlatform) {
+        $externalFolder = Join-Path $rootFolder 'external'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $destinationLinkPath = Join-Path $destinationFolder 'externalLink'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $destinationLinkPath -Target $externalFolder -Force | Out-Null
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'externalLink' }
+            )
+            Mock OutputWarning {}
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -BeNullOrEmpty
+            Should -Invoke OutputWarning -Times 1
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips destinations reachable only through a symlink pointing outside the destination folder' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalFolder = Join-Path $rootFolder 'external'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $destinationLinkPath = Join-Path $destinationFolder 'externalLink'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $destinationLinkPath -Target $externalFolder -Force | Out-Null
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'externalLink' }
+            )
+            Mock OutputWarning {}
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -BeNullOrEmpty
+            Should -Invoke OutputWarning -Times 1
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths resolves destinations reachable through a junction that stays within the destination folder' -Skip:(-not $script:isWindowsPlatform) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $destinationSubfolder = Join-Path $destinationFolder 'subfolder'
+        $destinationLinkPath = Join-Path $destinationFolder 'internalLink'
+        New-Item -Path $destinationSubfolder -ItemType Directory -Force | Out-Null
+        New-Item -ItemType Junction -Path $destinationLinkPath -Target $destinationSubfolder -Force | Out-Null
+
+        try {
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'internalLink' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'internalLink/File1.txt')
+        }
+        finally {
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths resolves destinations reachable through a symlink that stays within the destination folder' -Skip:(-not $script:hasSymlinkCapability) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $destinationSubfolder = Join-Path $destinationFolder 'subfolder'
+        $destinationLinkPath = Join-Path $destinationFolder 'internalLink'
+        New-Item -Path $destinationSubfolder -ItemType Directory -Force | Out-Null
+        New-Item -ItemType SymbolicLink -Path $destinationLinkPath -Target $destinationSubfolder -Force | Out-Null
+
+        try {
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'internalLink' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'internalLink/File1.txt')
+        }
+        finally {
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips source files reachable only through a junction pointing outside the source folder' -Skip:(-not $script:isWindowsPlatform) {
+        $externalFolder = Join-Path $rootFolder 'external'
+        $sourceFile = Join-Path $externalFolder 'File.txt'
+        $sourceLinkPath = Join-Path $sourceFolder 'externalLink'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $sourceFile -ItemType File -Force | Out-Null
+            New-Item -ItemType Junction -Path $sourceLinkPath -Target $externalFolder -Force | Out-Null
+            $files = @(
+                @{ 'sourceFolder' = 'externalLink'; 'filter' = '*.txt' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -BeNullOrEmpty
+        }
+        finally {
+            Remove-Item -Path $sourceLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips source files reachable only through a symlink pointing outside the source folder' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalFolder = Join-Path $rootFolder 'external'
+        $sourceFile = Join-Path $externalFolder 'File.txt'
+        $sourceLinkPath = Join-Path $sourceFolder 'externalLink'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $sourceFile -ItemType File -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $sourceLinkPath -Target $externalFolder -Force | Out-Null
+            $files = @(
+                @{ 'sourceFolder' = 'externalLink'; 'filter' = '*.txt' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -BeNullOrEmpty
+        }
+        finally {
+            Remove-Item -Path $sourceLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths resolves source files reachable through a junction that stays within the source folder' -Skip:(-not $script:isWindowsPlatform) {
+        $sourceSubfolder = Join-Path $sourceFolder 'subfolder'
+        $sourceFile = Join-Path $sourceSubfolder 'File.txt'
+        $sourceLinkPath = Join-Path $sourceFolder 'internalLink'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $sourceSubfolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $sourceFile -ItemType File -Force | Out-Null
+            New-Item -ItemType Junction -Path $sourceLinkPath -Target $sourceSubfolder -Force | Out-Null
+
+            $files = @(
+                @{ 'sourceFolder' = 'internalLink'; 'filter' = '*.txt' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder 'internalLink/File.txt')
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'internalLink/File.txt')
+        }
+        finally {
+            Remove-Item -Path $sourceLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $sourceSubfolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths resolves source files reachable through a symlink that stays within the source folder' -Skip:(-not $script:hasSymlinkCapability) {
+        $sourceSubfolder = Join-Path $sourceFolder 'subfolder'
+        $sourceFile = Join-Path $sourceSubfolder 'File.txt'
+        $sourceLinkPath = Join-Path $sourceFolder 'internalLink'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $sourceSubfolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $sourceFile -ItemType File -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $sourceLinkPath -Target $sourceSubfolder -Force | Out-Null
+
+            $files = @(
+                @{ 'sourceFolder' = 'internalLink'; 'filter' = '*.txt' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder 'internalLink/File.txt')
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'internalLink/File.txt')
+        }
+        finally {
+            Remove-Item -Path $sourceLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $sourceSubfolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It 'ResolveFilePaths returns empty when no files match filter' {
@@ -1688,7 +1907,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
     }
 
-    It 'ResolveFilePaths keeps case-distinct destination entries on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'ResolveFilePaths keeps case-distinct destination entries on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
@@ -1702,7 +1921,7 @@ Describe "ResolveFilePaths" {
         ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeTrue
     }
 
-    It 'ResolveFilePaths removes case-distinct destination entries on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+    It 'ResolveFilePaths removes case-distinct destination entries on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
@@ -1868,7 +2087,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
     }
 
-    It 'ResolveFilePaths keeps case-distinct per-project destination entries on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'ResolveFilePaths keeps case-distinct per-project destination entries on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
@@ -1882,7 +2101,7 @@ Describe "ResolveFilePaths" {
         ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeTrue
     }
 
-    It 'ResolveFilePaths removes case-distinct per-project destination entries on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+    It 'ResolveFilePaths removes case-distinct per-project destination entries on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
@@ -2029,6 +2248,312 @@ Describe "ResolveFilePaths" {
         finally {
             if (Test-Path $upperFile) { Remove-Item -Path $upperFile -Force }
             if (Test-Path $lowerFile) { Remove-Item -Path $lowerFile -Force }
+        }
+    }
+}
+
+Describe "Test-PathPhysicallyContained" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "physicallyContainedTests"
+        $externalFolder = Join-Path $PSScriptRoot "physicallyContainedTestsExternal"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        if (Test-Path $rootFolder) {
+            Remove-Item -Path $rootFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $externalFolder) {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true for a path lexically inside the root folder (no I/O involved)' {
+        $path = Join-Path $rootFolder "folder/file.txt"
+        Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+    }
+
+    It 'Test-PathPhysicallyContained returns false for a path lexically outside the root folder (no I/O involved)' {
+        $path = Join-Path $externalFolder "file.txt"
+        Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+    }
+
+    It 'Test-PathPhysicallyContained returns true when trailing path segments do not exist yet' {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $path = Join-Path $internalFolderPath "subfolder/file.txt"
+        try {
+            New-Item -Path $internalFolderPath -ItemType Directory -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Symbolic link tests (requires symlink capability)
+
+    It 'Test-PathPhysicallyContained returns true through a single symlink that stays within the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -Path $internalFolderPath -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $internalFolderPath -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $internalFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a single symlink that points outside the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $externalFolder -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true through a chain of two symlinks landing inside the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -Path $internalFolderPath -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath2 -Target $internalFolderPath -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath1 -Target $internalLinkPath2 -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath, $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true through a chain of two symlinks going outside but landing back inside the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $externalLinkPath2 = Join-Path $externalFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -Path $internalFolderPath -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $externalLinkPath2 -Target $internalFolderPath -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath1 -Target $externalLinkPath2 -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath, $internalLinkPath1, $externalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a chain of two symlinks landing outside the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath2 -Target $externalFolder -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath1 -Target $internalLinkPath2 -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true through a symlink with a relative target that stays within the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            Push-Location $rootFolder
+            New-Item -ItemType Directory -Path $internalFolderPath -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target "folder" -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath, $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Pop-Location
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a symlink with a relative target landing outside the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            Push-Location $rootFolder
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target "../physicallyContainedTestsExternal" -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Pop-Location
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false and completes without hanging for a cyclic symlink pair' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalLinkPath1 -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath2 -Target $internalLinkPath1 -Force | Out-Null
+            Remove-Item -Path $internalLinkPath1 -Recurse -Force -ErrorAction SilentlyContinue
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath1 -Target $internalLinkPath2 -Force | Out-Null
+            Mock OutputWarning {}
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "Path '$path' could not be resolved: reparse point chain exceeded * hops (cyclic or too deep) at '*'. Treating as not contained." }
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Junction tests (Windows only)
+
+    It 'Test-PathPhysicallyContained returns true through a single junction that stays within the root' -Skip:(-not $script:isWindowsPlatform) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath -Target $internalFolderPath -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath, $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a single junction that points outside the root' -Skip:(-not $script:isWindowsPlatform) {
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType Junction -Path $internalLinkPath -Target $externalFolder -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true through a chain of two junctions landing inside the root' -Skip:(-not $script:isWindowsPlatform) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath2 -Target $internalFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath1 -Target $internalLinkPath2 -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath,$internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true through a chain of two junctions going outside but landing back inside the root' -Skip:(-not $script:isWindowsPlatform) {
+        $internalFolderPath = Join-Path $rootFolder "folder"
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $externalLinkPath2 = Join-Path $externalFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $externalLinkPath2 -Target $internalFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath1 -Target $externalLinkPath2 -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFolderPath, $internalLinkPath1, $externalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a chain of two junctions landing outside the root' -Skip:(-not $script:isWindowsPlatform) {
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -ItemType Junction -Path $internalLinkPath2 -Target $externalFolder -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath1 -Target $internalLinkPath2 -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false and completes without hanging for a cyclic junction pair' -Skip:(-not $script:isWindowsPlatform) {
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalLinkPath1 -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath2 -Target $internalLinkPath1 -Force | Out-Null
+            Remove-Item -Path $internalLinkPath1 -Recurse -Force
+            New-Item -ItemType Junction -Path $internalLinkPath1 -Target $internalLinkPath2 -Force | Out-Null
+            Mock OutputWarning {}
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "Path '$path' could not be resolved: reparse point chain exceeded * hops (cyclic or too deep) at '*'. Treating as not contained." }
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Hard link tests (no elevation needed on any platform)
+
+    It 'Test-PathPhysicallyContained returns true for a hard-linked file inside the root' {
+        $internalFilePath = Join-Path $rootFolder "file.txt"
+        $internalLinkPath = Join-Path $rootFolder "link.txt"
+        $path = $internalLinkPath
+        try {
+            New-Item -ItemType File -Path $internalFilePath -Force | Out-Null
+            New-Item -ItemType HardLink -Path $internalLinkPath -Target $internalFilePath -Force | Out-Null
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalFilePath, $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns true for a hard-linked file outside the root' {
+        $externalFilePath = Join-Path $externalFolder "file.txt"
+        $internalLinkPath = Join-Path $rootFolder "link.txt"
+        $path = $internalLinkPath
+        try {
+            New-Item -ItemType File -Path $externalFilePath -Force | Out-Null
+            New-Item -ItemType HardLink -Path $internalLinkPath -Target $externalFilePath -Force | Out-Null
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $externalFilePath, $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -2624,7 +3149,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $conflict[0].sourceFullPath | Should -Be $testPSFile
     }
 
-    It 'GetFilesToUpdate keeps case-distinct destination entries on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'GetFilesToUpdate keeps case-distinct destination entries on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
         $settings = @{
             type                  = 'NotPTE'
             unusedALGoSystemFiles = @()
@@ -2643,7 +3168,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeTrue
     }
 
-    It 'GetFilesToUpdate excludes only the exact-case source path on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'GetFilesToUpdate excludes only the exact-case source path on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
         $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
         $lowerCaseFolder = Join-Path $templateFolder 'casefolder'
         $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
@@ -2679,7 +3204,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate excludes only the exact-case unused file on case-sensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -lt 6 -or -not $IsLinux) {
+    It 'GetFilesToUpdate excludes only the exact-case unused file on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
         $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
         $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
         Set-Content -Path $upperCaseFile -Value '# upper case file'
@@ -2708,7 +3233,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate removes case-distinct destination entries on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+    It 'GetFilesToUpdate removes case-distinct destination entries on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
         $settings = @{
             type                  = 'NotPTE'
             unusedALGoSystemFiles = @()
@@ -2727,11 +3252,9 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeFalse
     }
 
-    It 'GetFilesToUpdate excludes any case source path on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+    It 'GetFilesToUpdate excludes any case source path on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
         $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
-        $lowerCaseFolder = Join-Path $templateFolder 'casefolder'
         $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
-        $lowerCaseFile = Join-Path $lowerCaseFolder 'script.ps1'
         New-Item -ItemType Directory -Path $upperCaseFolder -Force | Out-Null
         Set-Content -Path $upperCaseFile -Value '# upper case folder'
 
@@ -2759,7 +3282,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate excludes any case unused file on case-insensitive platforms' -Skip:($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+    It 'GetFilesToUpdate excludes any case unused file on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
         $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
         $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
         Set-Content -Path $upperCaseFile -Value '# upper case file'

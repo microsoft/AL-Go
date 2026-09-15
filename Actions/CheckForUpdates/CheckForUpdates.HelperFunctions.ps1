@@ -792,12 +792,86 @@ function GetPathStringComparer {
 
 <#
 .SYNOPSIS
+Checks whether a path is physically contained within a root folder, resolving symlinks/junctions.
+.DESCRIPTION
+Verifies that $Path is located under $RootFolder both lexically and after resolving any
+symbolic links or junctions along the way, protecting against paths that escape the root
+folder via reparse points. Both parameters are treated as literal paths (no wildcard expansion).
+.PARAMETER Path
+The literal path to check.
+.PARAMETER RootFolder
+The literal root folder that $Path must be contained within.
+.OUTPUTS
+$true if the path is physically contained within the root folder, otherwise $false.
+#>
+function Test-PathPhysicallyContained {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [Parameter(Mandatory=$true)]
+        [string] $RootFolder
+    )
+
+    $pathComparison = GetPathStringComparison
+    $RootFolder = Join-Path $RootFolder '' # ensure the root folder path ends with a directory separator
+
+    # Early exit if the path is obviously outside the root folder lexically
+    if (-not $Path.StartsWith($RootFolder, $pathComparison)) {
+        return $false
+    }
+
+    $realPath = $RootFolder
+    $resolveReparsePoints = $true # once an ancestor doesn't exist, no deeper segment can be a reparse point either
+    $hopLimit = 40 # matches the classic OS/.NET max-followed-symlinks limit (guards against cyclic chains)
+    $hopCount = 0
+
+    # Split the relative path into individual segments for iterative resolution
+    $segments = $Path.Substring($RootFolder.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    foreach ($segment in $segments) {
+        $realPath = Join-Path $realPath $segment
+
+        # Follow a possible chain of reparse points (link -> link -> real) until fully resolved
+        while ($true) {
+            if (-not $resolveReparsePoints) {
+                break
+            }
+            if (-not (Test-Path -LiteralPath $realPath)) {
+                $resolveReparsePoints = $false
+                break
+            }
+
+            $item = Get-Item -LiteralPath $realPath -Force
+            if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
+                break
+            }
+            if ($hopCount++ -gt $hopLimit) {
+                # Cyclic or pathologically deep chain - fail closed, like the OS would refuse to resolve it too
+                OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'. Treating as not contained."
+                return $false
+            }
+
+            $target = @($item.Target)[0]
+            if (-not [System.IO.Path]::IsPathRooted($target)) {
+                $target = Join-Path (Split-Path -Path $realPath -Parent) $target
+            }
+            $realPath = [System.IO.Path]::GetFullPath($target)
+        }
+    }
+
+    $realPath = [System.IO.Path]::GetFullPath($realPath)
+
+    return $realPath.StartsWith($RootFolder, $pathComparison)
+}
+
+<#
+.SYNOPSIS
 Resolves file paths based on the provided source folder, destination folder, and file specifications.
 
 .DESCRIPTION
 This function takes a source folder, an optional original source folder, a destination folder, and an array of file specifications. It resolves the full paths for each specified file, considering their origin (template or custom template), type, and whether they are per-project files.
 The function returns an array of hashtables containing the resolved source and destination file paths.
 The function is used to determine which files need to be copied from the template repository to the target repository during the AL-Go update process.
+Destination boundary checks are symlink/junction-aware (see Test-PathPhysicallyContained): a destination path is only accepted if it is both lexically and physically (after resolving reparse points) contained within the destination folder.
 sourceFolder: The base folder of the template used to resolve the source file paths.
 originalSourceFolder: The base folder of the original template used to check for original files (can be $null). This is in the case of custom templates, where if the file exists in the original template, it should be used instead of the custom template file.
 destinationFolder: The base folder used to construct the destination file paths. This is typically the root folder of the target repository.
@@ -851,7 +925,6 @@ function ResolveFilePaths {
     $destinationFolder = [System.IO.Path]::GetFullPath($destinationFolder) # Canonicalize the destination folder to an absolute path
     $destinationFolder = Join-Path $destinationFolder '' # Ensure destination folder has a trailing slash for correct path resolution
 
-    $pathComparison = GetPathStringComparison
     $pathComparer = GetPathStringComparer
 
     $fullFilePaths = @()
@@ -907,8 +980,8 @@ function ResolveFilePaths {
                 'destinationFullPath' = $null
             }
 
-            # Check if the source file is under the source folder
-            if (-not $srcFile.StartsWith($sourceFolder, $pathComparison)) {
+            # Check if the source file is under the source folder (symlink/junction-aware)
+            if (-not (Test-PathPhysicallyContained -Path $srcFile -RootFolder $sourceFolder)) {
                 OutputDebug "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
                 continue
             }
@@ -942,13 +1015,14 @@ function ResolveFilePaths {
 
                     $projectDestinationFolder = Join-Path $destinationFolder $project
                     $projectDestinationFolder = Join-Path $projectDestinationFolder '' # Ensure project destination folder has a trailing slash for correct path resolution
+                    # Do not canonicalize the project destination folder to an absolute path, or "dest/foo/bar/../" would become the valid project folder "dest/foo/" and potentially allow files to escape the intended project folder.
 
                     $fileDestinationFolder = Join-Path $projectDestinationFolder $file.destinationFolder
                     $fileDestinationFolder = [System.IO.Path]::GetFullPath($fileDestinationFolder) # Canonicalize the file destination folder to an absolute path
                     $fileDestinationFolder = Join-Path $fileDestinationFolder '' # Ensure file destination folder has a trailing slash for correct path resolution
 
-                    # Check if the destination folder is under the project destination folder
-                    if (-not $fileDestinationFolder.StartsWith($projectDestinationFolder, $pathComparison)) {
+                    # Check if the destination folder is under the project destination folder (symlink/junction-aware)
+                    if (-not (Test-PathPhysicallyContained -Path $fileDestinationFolder -RootFolder $projectDestinationFolder)) {
                         OutputWarning "Skipping file '$srcFile' for project '$project': destination folder '$fileDestinationFolder' is outside the project destination folder '$projectDestinationFolder'."
                         continue
                     }
@@ -957,9 +1031,9 @@ function ResolveFilePaths {
                     $fullProjectFilePath.destinationFullPath = Join-Path $fileDestinationFolder $destinationName
                     $fullProjectFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullProjectFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
 
-                    # Check if the destination file is under the file destination folder
-                    if (-not $fullProjectFilePath.destinationFullPath.StartsWith($fileDestinationFolder, $pathComparison)) {
-                        OutputWarning "Skipping file '$srcFile' for project '$project': destination file '$($fullProjectFilePath.destinationFullPath)' is outside the destination folder '$fileDestinationFolder'."
+                    # Check if the destination file is under the file destination folder (symlink/junction-aware)
+                    if (-not (Test-PathPhysicallyContained -Path $fullProjectFilePath.destinationFullPath -RootFolder $fileDestinationFolder)) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': destination file '$($fullProjectFilePath.destinationFullPath)' is outside the file destination folder '$fileDestinationFolder'."
                         continue
                     }
 
@@ -979,18 +1053,18 @@ function ResolveFilePaths {
                 $fileDestinationFolder = [System.IO.Path]::GetFullPath($fileDestinationFolder) # Canonicalize the file destination folder to an absolute path
                 $fileDestinationFolder = Join-Path $fileDestinationFolder '' # Ensure file destination folder has a trailing slash for correct path resolution
 
-                # Check if the destination folder is under the base destination folder
-                if (-not $fileDestinationFolder.StartsWith($destinationFolder, $pathComparison)) {
-                    OutputWarning "Skipping file '$srcFile': destination folder '$fileDestinationFolder' is outside the destination folder '$destinationFolder'."
+                # Check if the destination folder is under the base destination folder (symlink/junction-aware)
+                if (-not (Test-PathPhysicallyContained -Path $fileDestinationFolder -RootFolder $destinationFolder)) {
+                    OutputWarning "Skipping file '$srcFile': destination folder '$fileDestinationFolder' is outside the base destination folder '$destinationFolder'."
                     continue
                 }
 
                 $fullFilePath.destinationFullPath = Join-Path $fileDestinationFolder $destinationName
                 $fullFilePath.destinationFullPath = [System.IO.Path]::GetFullPath($fullFilePath.destinationFullPath) # Canonicalize the destination full path to an absolute path
 
-                # Check if the destination file is under the file destination folder
-                if (-not $fullFilePath.destinationFullPath.StartsWith($fileDestinationFolder, $pathComparison)) {
-                    OutputWarning "Skipping file '$srcFile': destination file '$($fullFilePath.destinationFullPath)' is outside the destination folder '$fileDestinationFolder'."
+                # Check if the destination file is under the file destination folder (symlink/junction-aware)
+                if (-not (Test-PathPhysicallyContained -Path $fullFilePath.destinationFullPath -RootFolder $fileDestinationFolder)) {
+                    OutputWarning "Skipping file '$srcFile': destination file '$($fullFilePath.destinationFullPath)' is outside the file destination folder '$fileDestinationFolder'."
                     continue
                 }
 
