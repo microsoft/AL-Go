@@ -813,49 +813,69 @@ function Test-PathPhysicallyContained {
     )
 
     $pathComparison = GetPathStringComparison
+
+    $Path = [System.IO.Path]::GetFullPath($Path) # canonicalize the path to an absolute path
+    $RootFolder = [System.IO.Path]::GetFullPath($RootFolder) # canonicalize the root folder to an absolute path
     $RootFolder = Join-Path $RootFolder '' # ensure the root folder path ends with a directory separator
 
     # Early exit if the path is obviously outside the root folder lexically
     if (-not $Path.StartsWith($RootFolder, $pathComparison)) {
         return $false
     }
-
-    $realPath = $RootFolder
     $resolveReparsePoints = $true # once an ancestor doesn't exist, no deeper segment can be a reparse point either
     $hopLimit = 40 # matches the classic OS/.NET max-followed-symlinks limit (guards against cyclic chains)
     $hopCount = 0
 
-    # Split the relative path into individual segments for iterative resolution
-    $segments = $Path.Substring($RootFolder.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    foreach ($segment in $segments) {
-        $realPath = Join-Path $realPath $segment
+    # List of verified paths that have been confirmed to contain no unresolved reparse points.
+    $verifiedPaths = [System.Collections.Generic.List[string]]::new()
+    $verifiedPaths.Add($RootFolder)
 
-        # Follow a possible chain of reparse points (link -> link -> real) until fully resolved
-        while ($true) {
-            if (-not $resolveReparsePoints) {
-                break
-            }
-            if (-not (Test-Path -LiteralPath $realPath)) {
-                $resolveReparsePoints = $false
-                break
-            }
+    # Initialize the work queue of remaining path segments to walk.
+    $segments = [System.Collections.Generic.List[string]]::new()
+    $segments.AddRange([string[]] $Path.Substring($RootFolder.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
 
-            $item = Get-Item -LiteralPath $realPath -Force
-            if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
-                break
-            }
-            if ($hopCount++ -gt $hopLimit) {
-                # Cyclic or pathologically deep chain - fail closed, like the OS would refuse to resolve it too
-                OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'. Treating as not contained."
-                return $false
-            }
+    $realPath = $RootFolder
 
-            $target = @($item.Target)[0]
-            if (-not [System.IO.Path]::IsPathRooted($target)) {
-                $target = Join-Path (Split-Path -Path $realPath -Parent) $target
-            }
-            $realPath = [System.IO.Path]::GetFullPath($target)
+    while ($segments.Count -gt 0) {
+        $realPath = Join-Path $realPath $segments[0]
+        $segments.RemoveAt(0)
+
+        if (-not $resolveReparsePoints) {
+            continue
         }
+        if (-not (Test-Path -LiteralPath $realPath)) {
+            $resolveReparsePoints = $false
+            continue
+        }
+
+        $item = Get-Item -LiteralPath $realPath -Force
+        if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
+            $verifiedPaths.Add((Join-Path $realPath '')) # this segment itself is confirmed not a reparse point
+            continue
+        }
+        if ($hopCount++ -gt $hopLimit) {
+            # Cyclic or pathologically deep chain - fail closed, like the OS would refuse to resolve it too
+            OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'. Treating as not contained."
+            return $false
+        }
+
+        $target = @($item.Target)[0]
+        if (-not [System.IO.Path]::IsPathRooted($target)) {
+            $target = Join-Path (Split-Path -Path $realPath -Parent) $target
+        }
+        $target = [System.IO.Path]::GetFullPath($target)
+
+        # Find the longest verified path that is a prefix of the target. This helps to minimize redundant checks for already verified path segments.
+        $verifiedPath = $verifiedPaths | Sort-Object -Descending | Where-Object { $target.StartsWith($_, $pathComparison) } | Select-Object -First 1
+        if (-not $verifiedPath) {
+            # If no verified path matches the target, start verification from the root of the target path.
+            $verifiedPath = [System.IO.Path]::GetPathRoot($target)
+        }
+
+        # Re-inject every unverified segment of the resolved target so an embedded reparse point (e.g. link1 ->
+        # "link2/sub" where link2 itself escapes the root) gets its own check on a later iteration.
+        $segments.InsertRange(0, [string[]] $target.Substring($verifiedPath.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
+        $realPath = $verifiedPath
     }
 
     $realPath = [System.IO.Path]::GetFullPath($realPath)
@@ -1013,9 +1033,15 @@ function ResolveFilePaths {
                         $project = '' # If project is '.', it means the root folder, so we use an empty string
                     }
 
-                    $projectDestinationFolder = Join-Path $destinationFolder $project
+                    $unresolvedProjectDestinationFolder = Join-Path $destinationFolder $project
+                    $unresolvedProjectDestinationFolder = Join-Path $unresolvedProjectDestinationFolder '' # Ensure unresolved project destination folder has a trailing slash for correct path resolution
+                    $projectDestinationFolder = [System.IO.Path]::GetFullPath($unresolvedProjectDestinationFolder) # Canonicalize the unresolved project destination folder to an absolute path
                     $projectDestinationFolder = Join-Path $projectDestinationFolder '' # Ensure project destination folder has a trailing slash for correct path resolution
-                    # Do not canonicalize the project destination folder to an absolute path, or "dest/foo/bar/../" would become the valid project folder "dest/foo/" and potentially allow files to escape the intended project folder.
+
+                    if ($unresolvedProjectDestinationFolder -ne $projectDestinationFolder) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': project destination folder '$unresolvedProjectDestinationFolder' resolves to a different path '$projectDestinationFolder'."
+                        continue
+                    }
 
                     $fileDestinationFolder = Join-Path $projectDestinationFolder $file.destinationFolder
                     $fileDestinationFolder = [System.IO.Path]::GetFullPath($fileDestinationFolder) # Canonicalize the file destination folder to an absolute path

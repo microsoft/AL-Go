@@ -1400,7 +1400,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @($project))
 
         $fullFilePaths | Should -BeNullOrEmpty
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': destination folder*outside the * destination folder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': project destination folder * resolves to a different path *" }
     }
 
     It 'ResolveFilePaths with type' {
@@ -2376,6 +2376,25 @@ Describe "Test-PathPhysicallyContained" {
         }
     }
 
+    It 'Test-PathPhysicallyContained returns false when a symlink target embeds another symlink that escapes the root as a non-final segment' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $externalSubFolder = Join-Path $externalFolder "sub"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -Path $externalSubFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath2 -Target $externalFolder -Force | Out-Null
+            # link1's target textually starts under the root, but embeds link2 (which escapes the root) as a non-final segment
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath1 -Target (Join-Path $internalLinkPath2 "sub") -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalSubFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'Test-PathPhysicallyContained returns true through a symlink with a relative target that stays within the root' -Skip:(-not $script:hasSymlinkCapability) {
         $internalFolderPath = Join-Path $rootFolder "folder"
         $internalLinkPath = Join-Path $rootFolder "link"
@@ -2504,6 +2523,25 @@ Describe "Test-PathPhysicallyContained" {
         }
         finally {
             Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false when a junction target embeds another junction that escapes the root as a non-final segment' -Skip:(-not $script:isWindowsPlatform) {
+        $internalLinkPath1 = Join-Path $rootFolder "link1"
+        $internalLinkPath2 = Join-Path $rootFolder "link2"
+        $externalSubFolder = Join-Path $externalFolder "sub"
+        $path = Join-Path $internalLinkPath1 "file.txt"
+        try {
+            New-Item -Path $externalSubFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath2 -Target $externalFolder -Force | Out-Null
+            # link1's target textually starts under the root, but embeds link2 (which escapes the root) as a non-final segment
+            New-Item -ItemType Junction -Path $internalLinkPath1 -Target (Join-Path $internalLinkPath2 "sub") -Force | Out-Null
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalSubFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 
