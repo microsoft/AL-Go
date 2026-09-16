@@ -49,6 +49,14 @@ on:
         required: false
         type: boolean
         default: true
+      target_repo:
+        description: >-
+          Repository to read the issue from, if different from the one this workflow runs in.
+          Lets a private clone or internal repo triage real issues. Publishing is forced off
+          whenever this differs from the running repository.
+        required: false
+        type: string
+        default: ''
 
 defaults:
   run:
@@ -86,6 +94,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TRIAGE_ISSUE_NUMBER: ${{ env._issueNumber }}
+          TRIAGE_TARGET_REPO: ${{ inputs.target_repo }}
           TRIAGE_OUTPUT_DIR: ${{ env._triageOutputDir }}
         run: |
           ./.github/agents/issue-triage/scripts/Invoke-CopilotIssueTriage.ps1 -Phase resolve
@@ -110,6 +119,15 @@ jobs:
         if: github.repository_owner == 'microsoft'
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
+          # This job runs a tool-enabled model over untrusted issue content and holds GITHUB_TOKEN
+          # for inference, so audit mode alone is not a control - it records exfiltration, it does
+          # not stop it. Defence here is layered: the tool allow-list grants no network-capable
+          # tool (no gh, curl or wget), the job has no write scope, and rendering happens in a
+          # separate trusted job.
+          #
+          # TODO: switch to `egress-policy: block` with an allowed-endpoints list once the first
+          # runs have recorded which endpoints Copilot CLI actually needs. Audit first, then block,
+          # is the documented way to adopt this without guessing endpoints and breaking the run.
           egress-policy: audit
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -135,6 +153,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TRIAGE_OUTPUT_DIR: ${{ env._triageOutputDir }}
+          TRIAGE_TARGET_REPO: ${{ inputs.target_repo }}
         run: |
           ./.github/agents/issue-triage/scripts/Invoke-CopilotIssueTriage.ps1 -Phase triage
 
@@ -163,6 +182,12 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Deliberately the default branch, NOT the dispatched ref. This job holds issues: write,
+          # and dispatching a feature branch is an encouraged part of the workflow, so running
+          # branch-supplied code here would let anyone who can push a branch execute arbitrary code
+          # with the write token - defeating the whole resolve/triage/publish trust boundary. The
+          # findings artifact is data; the code that acts on it stays trusted.
+          ref: ${{ github.event.repository.default_branch }}
           # This job posts via the REST API rather than git, so it needs no stored credentials.
           persist-credentials: false
 
@@ -176,6 +201,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TRIAGE_OUTPUT_DIR: ${{ env._triageOutputDir }}
+          TRIAGE_TARGET_REPO: ${{ inputs.target_repo }}
         run: |
           $dryRun = '${{ inputs.dry_run }}' -eq 'true'
           ./.github/agents/issue-triage/scripts/Invoke-CopilotIssueTriage.ps1 -Phase publish -DryRun:$dryRun
