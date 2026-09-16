@@ -1038,8 +1038,15 @@ function ResolveFilePaths {
                     $projectDestinationFolder = [System.IO.Path]::GetFullPath($unresolvedProjectDestinationFolder) # Canonicalize the unresolved project destination folder to an absolute path
                     $projectDestinationFolder = Join-Path $projectDestinationFolder '' # Ensure project destination folder has a trailing slash for correct path resolution
 
+                    # Check if the unresolved project destination folder resolves to the same absolute path (e.g. catches ".." and "." segments)
                     if ($unresolvedProjectDestinationFolder -ne $projectDestinationFolder) {
                         OutputWarning "Skipping file '$srcFile' for project '$project': project destination folder '$unresolvedProjectDestinationFolder' resolves to a different path '$projectDestinationFolder'."
+                        continue
+                    }
+
+                    # Check if the project destination folder is under the base destination folder (symlink/junction-aware)
+                    if (-not (Test-PathPhysicallyContained -Path $projectDestinationFolder -RootFolder $destinationFolder)) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': project destination folder '$projectDestinationFolder' is outside the base destination folder '$destinationFolder'."
                         continue
                     }
 

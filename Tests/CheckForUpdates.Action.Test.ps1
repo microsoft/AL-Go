@@ -1642,6 +1642,99 @@ Describe "ResolveFilePaths" {
         Should -Invoke OutputWarning -Times 1
     }
 
+    It 'ResolveFilePaths skips per-project entries when the project folder is a junction pointing outside the destination folder' -Skip:(-not $script:isWindowsPlatform) {
+        $externalFolder = Join-Path $rootFolder 'external'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $projectLinkPath = Join-Path $destinationFolder 'externalProject'
+
+        try {
+            # 'sub' must exist under the escape target so the per-project checks don't short-circuit on a not-yet-existing path
+            New-Item -Path (Join-Path $externalFolder 'sub') -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $projectLinkPath -Target $externalFolder -Force | Out-Null
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'sub'; 'perProject' = $true }
+            )
+            Mock OutputWarning {}
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('externalProject'))
+
+            $fullFilePaths | Should -BeNullOrEmpty
+            Should -Invoke OutputWarning -Times 1
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips per-project entries when the project folder is a symlink pointing outside the destination folder' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalFolder = Join-Path $rootFolder 'external'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $projectLinkPath = Join-Path $destinationFolder 'externalProject'
+
+        try {
+            New-Item -Path (Join-Path $externalFolder 'sub') -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $projectLinkPath -Target $externalFolder -Force | Out-Null
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'sub'; 'perProject' = $true }
+            )
+            Mock OutputWarning {}
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('externalProject'))
+
+            $fullFilePaths | Should -BeNullOrEmpty
+            Should -Invoke OutputWarning -Times 1
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths resolves per-project entries when the project folder is a junction that stays within the destination folder' -Skip:(-not $script:isWindowsPlatform) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $destinationSubfolder = Join-Path $destinationFolder 'subfolder'
+        $projectLinkPath = Join-Path $destinationFolder 'internalProject'
+        New-Item -Path (Join-Path $destinationSubfolder 'sub') -ItemType Directory -Force | Out-Null
+        New-Item -ItemType Junction -Path $projectLinkPath -Target $destinationSubfolder -Force | Out-Null
+
+        try {
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'sub'; 'perProject' = $true }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('internalProject'))
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'internalProject/sub/File1.txt')
+        }
+        finally {
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths resolves per-project entries when the project folder is a symlink that stays within the destination folder' -Skip:(-not $script:hasSymlinkCapability) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $destinationSubfolder = Join-Path $destinationFolder 'subfolder'
+        $projectLinkPath = Join-Path $destinationFolder 'internalProject'
+        New-Item -Path (Join-Path $destinationSubfolder 'sub') -ItemType Directory -Force | Out-Null
+        New-Item -ItemType SymbolicLink -Path $projectLinkPath -Target $destinationSubfolder -Force | Out-Null
+
+        try {
+            $files = @(
+                @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'sub'; 'perProject' = $true }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('internalProject'))
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'internalProject/sub/File1.txt')
+        }
+        finally {
+            Remove-Item -Path $destinationFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'ResolveFilePaths skips destinations reachable only through a junction pointing outside the destination folder' -Skip:(-not $script:isWindowsPlatform) {
         $externalFolder = Join-Path $rootFolder 'external'
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
