@@ -2,6 +2,10 @@
 
 Several actions no longer assume the public `github.com`/`api.github.com` hosts, so they work on GitHub Enterprise (including `ghe.com`) organizations. REST calls now use `$ENV:GITHUB_API_URL` instead of a hardcoded `https://api.github.com` (Deploy, GetArtifactsForDeployment, VerifyPRChanges and app dependency probing), app dependency repositories default to `$ENV:GITHUB_SERVER_URL` instead of `https://github.com`, and the WorkflowPostProcess `gh api` call now sets `GH_HOST` so relative API calls target the correct host. When downloading app dependencies (artifacts and releases), the GitHub API URL is now derived from each dependency repository's host (`api.<host>`) instead of always using the current workflow's `$ENV:GITHUB_API_URL`, so dependencies hosted on a different GitHub host (e.g. `github.com` referenced from a `ghe.com` workflow, or vice versa) resolve correctly. Note that repositories using AL-Go for GitHub are supported on GHE, but the AL-Go for GitHub repository itself is not (it must run on github.com).
 
+### Include agentic workflows when updating system files from AL-Go or indirect templates
+
+Update AL-Go System Files will now also include .md files from .github/workflows. This is the recommended location for storing agentic workflows (.md files).
+
 ### Expanded AL-Go telemetry dashboard
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
