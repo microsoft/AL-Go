@@ -1,3 +1,7 @@
+### Modified files with non-ASCII characters (e.g. umlauts) are now detected correctly
+
+`Get-ModifiedFiles` now runs `git diff` with `core.quotepath=false` and temporarily switches the console to UTF-8 output encoding. Previously, filenames containing non-ASCII characters could come back octal-escaped or garbled, so changes to such files could fail to be matched against the project folders and be silently skipped from incremental builds.
+
 ### New `unpublishOldVersions` setting for deployment
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
@@ -14,6 +18,10 @@ The `Create Release` workflow now checks for available AL-Go system file updates
 
 localDevEnv now passes the configured cacheImageName to Run-AlPipeline, allowing BcContainerHelper to reuse artifact-specific images.
 To retain the previous behavior, set `cacheImageName` to an empty string in .AL-Go/localDevEnv.settings.json.
+
+### Issues
+
+- Issue 2375 - Project/App folder with umlaut breaks incremental build check
 
 ## v9.2
 
