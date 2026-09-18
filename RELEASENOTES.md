@@ -1,7 +1,3 @@
-### Modified files with non-ASCII characters (e.g. umlauts) are now detected correctly
-
-`Get-ModifiedFiles` now runs `git diff` with `core.quotepath=false` and temporarily switches the console to UTF-8 output encoding. Previously, filenames containing non-ASCII characters could come back octal-escaped or garbled, so changes to such files could fail to be matched against the project folders and be silently skipped from incremental builds.
-
 ### New `unpublishOldVersions` setting for deployment
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
