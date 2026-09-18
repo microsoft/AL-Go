@@ -31,6 +31,22 @@ Describe "CheckForUpdates Action Tests" {
             $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
         }
     }
+
+    It 'Create Release runs update checks independently but waits for them before finalizing in <template>' -TestCases @(
+        @{ template = 'AppSource App' }
+        @{ template = 'Per Tenant Extension' }
+    ) {
+        Param($template)
+
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+        $yaml = [Yaml]::Load((Join-Path $scriptRoot "..\..\Templates\$template\.github\workflows\CreateRelease.yaml"))
+
+        $yaml.Get('jobs:/CheckForUpdates:/steps:/- name: Check for updates to AL-Go system files') | Should -Not -BeNullOrEmpty
+        $yaml.Get('jobs:/CheckForUpdates:/needs:') | Should -BeNullOrEmpty
+        ($yaml.Get('jobs:/CreateRelease:/needs:').content -join '') | Should -Be 'needs: [ ]'
+        ($yaml.Get('jobs:/PostProcess:/needs:').content -join '') | Should -Match '\bCheckForUpdates\b'
+        ($yaml.Get('jobs:/PostProcess:/if:').content -join '') | Should -Be 'if: always()'
+    }
 }
 
 Describe "YamlClass Tests" {
