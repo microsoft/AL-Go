@@ -466,7 +466,8 @@
             "description": "The shell to be used for the GitHub runner. See https://aka.ms/ALGoSettings#githubrunnershell"
         },
         "cacheImageName": {
-            "type": "string"
+            "type": "string",
+            "description": "When using self-hosted runners or localDevEnv, cacheImageName specifies the prefix for the docker image created for increased performance. Set to an empty string to retain the previous local-development behavior. See https://aka.ms/ALGoSettings#cacheimagename"
         },
         "cacheKeepDays": {
             "type": "number",
@@ -810,6 +811,19 @@
                 "required": ["name", "value"]
             },
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
+        }
+    },
+    "patternProperties": {
+        "^DeployTo": {
+            "type": "object",
+            "description": "Structure with additional properties for the environment specified. See https://aka.ms/ALGoSettings#deployto",
+            "properties": {
+                "unpublishOldVersions": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "When set to true, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment. Only applies to PTE deployments (Scope PTE) and is non-fatal. See https://aka.ms/ALGoSettings#deployto"
+                }
+            }
         }
     }
 }
