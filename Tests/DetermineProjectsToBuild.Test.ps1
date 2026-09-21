@@ -6,8 +6,11 @@ Describe "Get-ModifiedFiles" {
     }
 
     BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'savedWorkspace', Justification = 'Read in AfterEach to restore the environment.')]
         $savedWorkspace = $env:GITHUB_WORKSPACE
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'savedEventPath', Justification = 'Read in AfterEach to restore the environment.')]
         $savedEventPath = $env:GITHUB_EVENT_PATH
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalLocation', Justification = 'Read in AfterEach to verify location restoration.')]
         $originalLocation = (Get-Location).Path
         $env:GITHUB_WORKSPACE = $TestDrive
         $env:GITHUB_EVENT_PATH = Join-Path $TestDrive 'event.json'
