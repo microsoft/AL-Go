@@ -279,7 +279,7 @@ function Test-PullRequestBuildRequired {
     }
     Push-Location $baseFolder
     try {
-        $settings = $env:Settings | ConvertFrom-Json
+        $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
         $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
         $fullPaths = @($prModifiedFiles | ForEach-Object { Join-Path $baseFolder $_ })
         foreach ($project in $projects) {

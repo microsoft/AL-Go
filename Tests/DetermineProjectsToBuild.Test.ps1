@@ -1,5 +1,109 @@
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
+Describe "Get-ModifiedFiles" {
+    BeforeAll {
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+    }
+
+    BeforeEach {
+        $savedWorkspace = $env:GITHUB_WORKSPACE
+        $savedEventPath = $env:GITHUB_EVENT_PATH
+        $originalLocation = (Get-Location).Path
+        $env:GITHUB_WORKSPACE = $TestDrive
+        $env:GITHUB_EVENT_PATH = Join-Path $TestDrive 'event.json'
+        @{
+            pull_request = @{
+                head = @{ sha = 'pr-head-sha' }
+                base = @{ sha = 'target-sha' }
+            }
+        } | ConvertTo-Json -Depth 10 | Set-Content -Path $env:GITHUB_EVENT_PATH -Encoding UTF8
+
+        InModuleScope DetermineProjectsToBuild {
+            $script:gitCommands = @()
+            $script:diffFiles = @('Project1/app/code.al', 'Project2/app/app.json')
+            Mock Invoke-CommandWithRetry { & $ScriptBlock }
+            Mock RunAndCheck {
+                $command = $args -join ' '
+                $script:gitCommands += $command
+                switch -Wildcard ($command) {
+                    'git fetch origin *' { return }
+                    'git merge-base target-sha pr-head-sha' { return "merge-base-sha`n" }
+                    'git diff --name-only *' { return $script:diffFiles }
+                    default { throw "Unexpected git command: $command" }
+                }
+            }
+        }
+    }
+
+    AfterEach {
+        $env:GITHUB_WORKSPACE = $savedWorkspace
+        $env:GITHUB_EVENT_PATH = $savedEventPath
+        (Get-Location).Path | Should -BeExactly $originalLocation
+    }
+
+    It 'fetches both PR tips and compares the merge-base to the PR head for PR-only changes' {
+        InModuleScope DetermineProjectsToBuild {
+            $files = @(Get-ModifiedFiles -baselineSHA 'baseline-sha' -pullRequestChangesOnly)
+
+            $script:gitCommands | Should -BeExactly @(
+                'git fetch origin pr-head-sha'
+                'git fetch origin target-sha'
+                'git merge-base target-sha pr-head-sha'
+                'git fetch origin merge-base-sha'
+                'git diff --name-only merge-base-sha pr-head-sha'
+            )
+            $files | Should -BeExactly @($script:diffFiles | ForEach-Object { $_.Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+        }
+    }
+
+    It 'keeps the successful-build baseline when PR-only changes are not requested' {
+        InModuleScope DetermineProjectsToBuild {
+            Get-ModifiedFiles -baselineSHA 'baseline-sha' | Out-Null
+
+            $script:gitCommands | Should -Contain 'git fetch origin baseline-sha'
+            @($script:gitCommands | Where-Object { $_ -like 'git merge-base *' }).Count | Should -Be 0
+            $script:gitCommands[-1] | Should -Match '^git diff --name-only baseline-sha '
+        }
+    }
+
+    It 'uses the checked-out HEAD for a non-PR event with pullRequestChangesOnly=<prOnly>' -ForEach @(
+        @{ prOnly = $false }
+        @{ prOnly = $true }
+    ) {
+        @{ ref = 'refs/heads/main' } | ConvertTo-Json | Set-Content -Path $env:GITHUB_EVENT_PATH -Encoding UTF8
+        InModuleScope DetermineProjectsToBuild -Parameters @{ prOnly = $prOnly } {
+            Mock git { 'checkout-sha' } -ParameterFilter { ($args -join ' ') -eq 'rev-parse HEAD' }
+
+            Get-ModifiedFiles -baselineSHA 'baseline-sha' -pullRequestChangesOnly:$prOnly | Out-Null
+
+            $script:gitCommands | Should -BeExactly @(
+                'git fetch origin baseline-sha'
+                'git diff --name-only baseline-sha checkout-sha'
+            )
+        }
+    }
+
+    It 'returns no files for an empty PR diff' {
+        InModuleScope DetermineProjectsToBuild {
+            $script:diffFiles = @()
+
+            @(Get-ModifiedFiles -baselineSHA 'baseline-sha' -pullRequestChangesOnly).Count | Should -Be 0
+        }
+    }
+
+    It 'propagates a <operation> failure so the caller can fall back to a full build' -ForEach @(
+        @{ operation = 'fetch' }
+        @{ operation = 'merge-base' }
+        @{ operation = 'diff' }
+    ) {
+        InModuleScope DetermineProjectsToBuild -Parameters @{ operation = $operation } {
+            Mock RunAndCheck { throw 'Git failed' } -ParameterFilter { $args[1] -eq $operation }
+
+            { Get-ModifiedFiles -baselineSHA 'baseline-sha' -pullRequestChangesOnly } | Should -Throw '*Git failed*'
+        }
+    }
+}
+
 Describe "Get-ProjectsToBuild" {
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
