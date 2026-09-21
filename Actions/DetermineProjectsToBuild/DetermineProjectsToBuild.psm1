@@ -9,7 +9,7 @@ function Get-ModifiedFiles {
         [Parameter(HelpMessage = "The baseline SHA", Mandatory = $true)]
         [string] $baselineSHA,
         [Parameter(HelpMessage = "For pull requests, diff against the merge-base of the pull request instead of the baseline SHA, so only the files the pull request itself changed are returned", Mandatory = $false)]
-        [switch] $useMergeBase
+        [switch] $pullRequestChangesOnly
     )
 
     Push-Location $ENV:GITHUB_WORKSPACE
@@ -19,7 +19,7 @@ function Get-ModifiedFiles {
             $headSHA = $ghEvent.pull_request.head.sha
             Write-Host "Using head SHA $headSHA from pull request"
             Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $headSHA | Out-Host }
-            if ($useMergeBase) {
+            if ($pullRequestChangesOnly) {
                 # Diff against the pull request's merge-base so that only what the pull request itself changed is returned.
                 # This avoids attributing commits merged to the target branch after the baseline build to the pull request.
                 $prBaseSHA = $ghEvent.pull_request.base.sha

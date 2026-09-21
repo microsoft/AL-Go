@@ -47,7 +47,7 @@ if(-not $buildAllProjects) {
             OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
             # The PR diff only decides whether a build is needed; the baseline determines its scope.
             if ($isPullRequest) {
-                $prModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -useMergeBase
+                $prModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -pullRequestChangesOnly
                 OutputMessageAndArray -message "Modified files (pull request)" -arrayOfStrings $prModifiedFiles
             }
             else {
