@@ -3,10 +3,22 @@
 When incremental builds are enabled, the set of modified files used to decide whether a full build is required (`fullBuildPatterns`) and whether any project/app needs building was diffed against the last successful build of the target branch. On a busy branch, commits merged after that baseline build were attributed to the pull request, so an unrelated change (for example under a `fullBuildPatterns` path) could escalate a pull request that changed no AL code into a full build.
 
 When a usable baseline is available, the pull request's merge-base diff determines whether any build is needed. If the pull request modifies neither a project nor a full-build pattern, nothing is built. Otherwise, project selection, full-build decisions and artifact reuse continue to use the last successful build as the baseline. This ensures changes to dependencies, settings and other build inputs since that build still invalidate affected artifacts. Without a usable baseline, the existing full-build fallback is unchanged.
+### New `unpublishOldVersions` setting for deployment
+
+The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
 
 ### Expanded AL-Go telemetry dashboard
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
+
+### Create Release checks AL-Go system file updates separately
+
+The `Create Release` workflow now checks for available AL-Go system file updates in a separate job that runs in parallel with and independently of release creation. This allows the release to be created without waiting for the update check and can reduce the overall workflow duration.
+
+### Local development environments use cacheImageName
+
+localDevEnv now passes the configured cacheImageName to Run-AlPipeline, allowing BcContainerHelper to reuse artifact-specific images.
+To retain the previous behavior, set `cacheImageName` to an empty string in .AL-Go/localDevEnv.settings.json.
 
 ## v9.2
 
