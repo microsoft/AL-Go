@@ -230,6 +230,15 @@ if ($update -ne 'Y') {
     }
 }
 else {
+    $settingsFile = Join-Path $baseFolder $RepoSettingsFile
+    if (-not $updateFiles -and -not $removeFiles -and (Test-Path -Path $settingsFile -PathType Leaf)) {
+        $currentSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        # Keep the last applied revision when only the template SHA would change.
+        if ($currentSettings['templateUrl'] -ceq $templateUrl -and $currentSettings['templateSha']) {
+            $templateSha = $currentSettings['templateSha']
+        }
+    }
+
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit

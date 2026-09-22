@@ -17,6 +17,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
+- Issue 2358 - Update AL-Go System Files no longer creates a commit or pull request when only the template SHA would change, avoiding unnecessary CI/CD runs.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
 
 ## v9.2

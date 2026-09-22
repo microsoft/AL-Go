@@ -49,6 +49,178 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
+Describe "CheckForUpdates no-op updates" {
+    BeforeAll {
+        $scriptRoot = Join-Path (Join-Path $PSScriptRoot '..') 'Actions'
+        . (Join-Path $scriptRoot 'AL-Go-Helper.ps1')
+        $scriptRoot = Join-Path $scriptRoot 'CheckForUpdates'
+        . (Join-Path $scriptRoot 'yamlclass.ps1')
+        . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+        $commitFromNewFolderScript = ${function:CommitFromNewFolder}
+
+        # Load dependencies before mocking instead of reloading them inside the action.
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName 'CheckForUpdates.ps1'
+        $actionScript = $actionScript -replace '(?m)^(\. |Import-Module ).*\r?\n', ''
+        Invoke-Expression $actionScript
+
+        function GetProjectsFromRepository {}
+        $savedWorkspace = $env:GITHUB_WORKSPACE
+        $savedToken = $env:GH_TOKEN
+        $savedRepository = $env:GITHUB_REPOSITORY
+    }
+
+    BeforeEach {
+        $baseFolder = Join-Path $TestDrive 'repository'
+        $templateFolder = Join-Path $TestDrive 'template'
+        New-Item -Path (Join-Path $baseFolder '.github') -ItemType Directory -Force | Out-Null
+        New-Item -Path $templateFolder -ItemType Directory -Force | Out-Null
+        $settingsFile = Join-Path (Join-Path $baseFolder '.github') 'AL-Go-Settings.json'
+        $templateUrl = 'https://github.com/contoso/AL-Go@main'
+        $settings = @{
+            templateUrl = $templateUrl
+            templateSha = 'old-sha'
+            type = 'PTE'
+            projects = @()
+        }
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+        $env:GITHUB_WORKSPACE = $baseFolder
+        $env:GITHUB_REPOSITORY = 'contoso/app'
+        Push-Location $baseFolder
+
+        Mock ReadSettings { $settings }
+        Mock DownloadAndImportBcContainerHelper {}
+        Mock DownloadTemplateRepository {
+            $templateSha.Value = 'new-sha'
+            return $templateFolder
+        }
+        Mock GetSrcFolder { $templateFolder }
+        Mock GetProjectsFromRepository { @() }
+        Mock GetFilesToUpdate { return @(), @() }
+        Mock RunAndCheck { '1234567890' }
+        Mock GetAccessToken { 'test-token' }
+        Mock gh { '[]' }
+        Mock CloneIntoNewFolder { 'https://github.com', 'update-branch' }
+        Mock invoke-git {}
+        Mock CommitFromNewFolder { $true }
+        Mock OutputNotice {}
+        Mock OutputWarning {}
+    }
+
+    AfterEach {
+        Pop-Location
+        $env:GITHUB_WORKSPACE = $savedWorkspace
+        $env:GH_TOKEN = $savedToken
+        $env:GITHUB_REPOSITORY = $savedRepository
+    }
+
+    It 'Does not change files or create a commit/PR for a SHA-only update (directCommit: <directCommit>)' -TestCases @(
+        @{ directCommit = $true }
+        @{ directCommit = $false }
+    ) {
+        Param($directCommit)
+
+        Mock CommitFromNewFolder {
+            & $commitFromNewFolderScript -serverUrl $serverUrl -commitMessage $commitMessage -branch $branch -body $body -headBranch $headBranch
+        }
+        $originalContent = [System.IO.File]::ReadAllBytes($settingsFile)
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $templateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $directCommit
+
+        [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($settingsFile)) | Should -Be ([System.Convert]::ToBase64String($originalContent))
+        Should -Invoke CloneIntoNewFolder -Exactly -Times 1
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1 -ParameterFilter { $commitMessage -like '* - old-sha' }
+        Should -Invoke invoke-git -Exactly -Times 0 -ParameterFilter { $command -in @('commit', 'push') }
+        Should -Invoke gh -Exactly -Times 1
+        Should -Invoke OutputNotice -Exactly -Times 1 -ParameterFilter { $message -eq 'No updates available for AL-Go for GitHub.' }
+    }
+
+    It 'Still updates changed files and advances the template SHA' {
+        $sourceFile = Join-Path $templateFolder 'script.ps1'
+        $destinationFile = Join-Path $baseFolder 'script.ps1'
+        Set-Content $sourceFile -Value 'new content' -Encoding UTF8
+        Set-Content $destinationFile -Value 'old content' -Encoding UTF8
+        Mock GetFilesToUpdate {
+            return @(@{ type = 'file'; sourceFullPath = $sourceFile; originalSourceFullPath = $sourceFile; destinationFullPath = $destinationFile }), @()
+        }
+
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $templateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $true
+
+        Get-Content $destinationFile -Encoding UTF8 | Should -Be 'new content'
+        (Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json).templateSha | Should -Be 'new-sha'
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1
+    }
+
+    It 'Still removes excluded files and advances the template SHA' {
+        $destinationFile = Join-Path $baseFolder 'obsolete.ps1'
+        Set-Content $destinationFile -Value 'obsolete content' -Encoding UTF8
+        Mock GetFilesToUpdate {
+            return @(), @(@{ destinationFullPath = $destinationFile })
+        }
+
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $templateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $true
+
+        Test-Path $destinationFile | Should -BeFalse
+        (Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json).templateSha | Should -Be 'new-sha'
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1
+    }
+
+    It 'Still applies a template URL change even with identical system files' {
+        $newTemplateUrl = 'https://github.com/contoso/AL-Go@preview'
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $newTemplateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $true
+
+        $updatedSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $updatedSettings.templateUrl | Should -Be $newTemplateUrl
+        $updatedSettings.templateSha | Should -Be 'new-sha'
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1
+    }
+
+    It 'Still initializes template metadata when <missingMetadata> is missing' -TestCases @(
+        @{ missingMetadata = 'templateUrl' }
+        @{ missingMetadata = 'templateSha' }
+    ) {
+        Param($missingMetadata)
+
+        $fileSettings = $settings.Clone()
+        $fileSettings.Remove($missingMetadata)
+        $fileSettings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $templateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $true
+
+        $updatedSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $updatedSettings.templateUrl | Should -Be $templateUrl
+        $updatedSettings.templateSha | Should -Be 'new-sha'
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1
+    }
+
+    It 'Does not skip the settings writer when the repository settings file is missing' {
+        Remove-Item $settingsFile
+        Mock UpdateSettingsFile {}
+
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $templateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $true
+
+        Should -Invoke UpdateSettingsFile -Exactly -Times 1 -ParameterFilter {
+            $updateSettings.templateUrl -eq $templateUrl -and $updateSettings.templateSha -eq 'new-sha'
+        }
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1
+    }
+
+    It 'Still applies changes to other repository settings' {
+        $sourceFile = Join-Path $templateFolder 'settings.json'
+        $newSettings = $settings.Clone()
+        $newSettings.doNotPerformUpgrade = $true
+        $newSettings | ConvertTo-Json | Set-Content $sourceFile -Encoding UTF8
+        Mock GetFilesToUpdate {
+            return @(@{ type = 'file'; sourceFullPath = $sourceFile; originalSourceFullPath = $sourceFile; destinationFullPath = $settingsFile }), @()
+        }
+
+        CheckForUpdates -token 'dGVzdA==' -templateUrl $templateUrl -downloadLatest $true -update Y -updateBranch main -directCommit $true
+
+        $updatedSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $updatedSettings.doNotPerformUpgrade | Should -BeTrue
+        $updatedSettings.templateSha | Should -Be 'new-sha'
+        Should -Invoke CommitFromNewFolder -Exactly -Times 1
+    }
+}
+
 Describe "YamlClass Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
