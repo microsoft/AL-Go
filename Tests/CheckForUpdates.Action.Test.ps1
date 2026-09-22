@@ -56,6 +56,7 @@ Describe "CheckForUpdates no-op updates" {
         $scriptRoot = Join-Path $scriptRoot 'CheckForUpdates'
         . (Join-Path $scriptRoot 'yamlclass.ps1')
         . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'commitFromNewFolderScript', Justification = 'Used in the CommitFromNewFolder mock in the SHA-only update test.')]
         $commitFromNewFolderScript = ${function:CommitFromNewFolder}
 
         # Load dependencies before mocking instead of reloading them inside the action.
@@ -64,8 +65,11 @@ Describe "CheckForUpdates no-op updates" {
         Invoke-Expression $actionScript
 
         function GetProjectsFromRepository {}
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'savedWorkspace', Justification = 'Used in AfterEach to restore the environment.')]
         $savedWorkspace = $env:GITHUB_WORKSPACE
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'savedToken', Justification = 'Used in AfterEach to restore the environment.')]
         $savedToken = $env:GH_TOKEN
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'savedRepository', Justification = 'Used in AfterEach to restore the environment.')]
         $savedRepository = $env:GITHUB_REPOSITORY
     }
 
