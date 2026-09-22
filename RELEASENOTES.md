@@ -21,6 +21,10 @@ The `Create Release` workflow now checks for available AL-Go system file updates
 localDevEnv now passes the configured cacheImageName to Run-AlPipeline, allowing BcContainerHelper to reuse artifact-specific images.
 To retain the previous behavior, set `cacheImageName` to an empty string in .AL-Go/localDevEnv.settings.json.
 
+### Issues
+
+- Issue 2375 - Project/App folder with umlaut breaks incremental build check
+
 ## v9.2
 
 ### New `doNotPerformUpgrade` setting

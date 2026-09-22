@@ -42,8 +42,16 @@ function Get-ModifiedFiles {
             Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $baselineSHA | Out-Host }
             Write-Host "Not a pull request, using baseline SHA $baselineSHA and current HEAD $headSHA"
         }
-        Write-Host "git diff --name-only $baselineSHA $headSHA"
-        $modifiedFiles = @(RunAndCheck git diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+        Write-Host "git -c core.quotepath=false diff --name-only $baselineSHA $headSHA"
+        # -c core.quotepath=false prevents git from octal-escaping non-ASCII path characters (e.g. umlauts)
+        $originalEncoding = [Console]::OutputEncoding
+        try {
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            $modifiedFiles = @(RunAndCheck git -c core.quotepath=false diff --name-only $baselineSHA $headSHA | ForEach-Object { "$_".Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
+        }
+        finally {
+            [Console]::OutputEncoding = $originalEncoding
+        }
         return $modifiedFiles
     }
     finally {
