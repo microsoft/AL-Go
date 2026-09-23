@@ -18,6 +18,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 ### Issues
 
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
+- Issue 2381 - Dependency artifacts from the current build are not downloaded when the branch name contains glob-special characters (e.g. `,`), silently falling back to baseline artifacts
 
 ## v9.2
 

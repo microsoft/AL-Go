@@ -341,6 +341,9 @@ function Get-DependenciesFromInstallApps {
     '*BuildOutput' is included to ensure the pattern matches multiple artifacts, preventing download-artifact
     v8 from flattening a single artifact directly into the destination path (which breaks the subdirectory
     structure that GetDependencies expects).
+
+    Glob-special characters in the branch and project names (e.g. ',' which would split the brace expansion)
+    are replaced with the single-character wildcard '?', so the literal artifact names still match.
     .PARAMETER Project
     The name of the current AL-Go project.
     .PARAMETER ProjectDependencies
@@ -365,7 +368,8 @@ function Get-DependencyArtifactPattern {
         return $null
     }
 
-    $branchName = Get-CurrentBranchName
+    $globSpecialChars = '[{},!+@()#\[\]*?]'
+    $branchName = (Get-CurrentBranchName) -replace $globSpecialChars, '?'
 
     # Build brace-expansion entries per dependency project.
     # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.
@@ -374,7 +378,7 @@ function Get-DependencyArtifactPattern {
     # destination root (which breaks the subdirectory structure GetDependencies expects).
     $entries = @()
     foreach ($dep in $dependencyProjects) {
-        $sanitizedDep = $dep.Replace('\', '_').Replace('/', '_')
+        $sanitizedDep = $dep.Replace('\', '_').Replace('/', '_') -replace $globSpecialChars, '?'
         $entries += "$sanitizedDep-$branchName-*Apps-*"
         $entries += "$sanitizedDep-$branchName-*Dependencies-*"
         $entries += "$sanitizedDep-$branchName-*BuildOutput-*"
