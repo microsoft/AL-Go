@@ -148,6 +148,25 @@ foreach($fileToInclude in $filesToInclude) {
         $originalSrcPath = $srcPath
     }
 
+    # Skip files that do not physically resolve to themselves within the template or original template folders
+    if (Test-PathLexicallyContained -Path $srcPath -RootFolder $templateFolder -and -not (Test-PathPhysicallyEqual -Path $srcPath -RootFolder $templateFolder)) {
+        OutputWarning "Skipping file '$srcPath': source does not physically resolve to itself within the template folder. This may indicate a symlink/junction redirect."
+        continue
+    } elseif (Test-PathLexicallyContained -Path $srcPath -RootFolder $originalTemplateFolder -and -not (Test-PathPhysicallyEqual -Path $srcPath -RootFolder $originalTemplateFolder)) {
+        OutputWarning "Skipping file '$srcPath': source does not physically resolve to itself within the original template folder. This may indicate a symlink/junction redirect."
+        continue
+    }
+    if ($originalSrcPath -ne $srcPath) {
+        # Skip files with original files that do not physically resolve to themselves within the template or original template folders
+        if (Test-PathLexicallyContained -Path $originalSrcPath -RootFolder $templateFolder -and -not (Test-PathPhysicallyEqual -Path $originalSrcPath -RootFolder $templateFolder)) {
+            OutputWarning "Skipping file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the template folder. This may indicate a symlink/junction redirect."
+            continue
+        } elseif (Test-PathLexicallyContained -Path $originalSrcPath -RootFolder $originalTemplateFolder -and -not (Test-PathPhysicallyEqual -Path $originalSrcPath -RootFolder $originalTemplateFolder)) {
+            OutputWarning "Skipping file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the original template folder. This may indicate a symlink/junction redirect."
+            continue
+        }
+    }
+
     $dstPath = $fileToInclude.destinationFullPath
 
     $dstFileExists = Test-Path -Path $dstPath -PathType Leaf
@@ -257,10 +276,18 @@ else {
 
         invoke-git status
 
+        $dstRoot = (Get-Location).Path
+
         # Update the files
         # Calculate the release notes, while updating
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
+            # Skip files that do not physically resolve to themselves within the destination root folder
+            if (-not (Test-PathPhysicallyEqual -Path $_.DstFile -RootFolder $dstRoot)) {
+                OutputWarning "Skipping update of '$($_.DstFile)': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                return
+            }
+
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
             if ($path -and -not (Test-Path -path $path -PathType Container)) {
@@ -288,8 +315,14 @@ else {
             $releaseNotes = "No release notes available!"
         }
         $removeFiles | ForEach-Object {
+            # Skip files that do not physically resolve to themselves within the destination root folder
+            if (-not (Test-PathPhysicallyEqual -Path $_ -RootFolder $dstRoot)) {
+                OutputWarning "Skipping removal of '$_': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                return
+            }
+
             Write-Host "Remove $_"
-            Remove-Item (Join-Path (Get-Location).Path $_) -Force
+            Remove-Item -LiteralPath $_ -Force
         }
 
         # Update the templateUrl and templateSha in the repo settings file
