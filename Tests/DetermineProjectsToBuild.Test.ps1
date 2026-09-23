@@ -31,7 +31,7 @@ Describe "Get-ModifiedFiles" {
                 switch -Wildcard ($command) {
                     'git fetch origin *' { return }
                     'git merge-base target-sha pr-head-sha' { return "merge-base-sha`n" }
-                    'git diff --name-only *' { return $script:diffFiles }
+                    'git -c core.quotepath=false diff --name-only *' { return $script:diffFiles }
                     default { throw "Unexpected git command: $command" }
                 }
             }
@@ -53,7 +53,7 @@ Describe "Get-ModifiedFiles" {
                 'git fetch origin target-sha'
                 'git merge-base target-sha pr-head-sha'
                 'git fetch origin merge-base-sha'
-                'git diff --name-only merge-base-sha pr-head-sha'
+                'git -c core.quotepath=false diff --name-only merge-base-sha pr-head-sha'
             )
             $files | Should -BeExactly @($script:diffFiles | ForEach-Object { $_.Replace('/', [System.IO.Path]::DirectorySeparatorChar) })
         }
@@ -65,7 +65,7 @@ Describe "Get-ModifiedFiles" {
 
             $script:gitCommands | Should -Contain 'git fetch origin baseline-sha'
             @($script:gitCommands | Where-Object { $_ -like 'git merge-base *' }).Count | Should -Be 0
-            $script:gitCommands[-1] | Should -Match '^git diff --name-only baseline-sha '
+            $script:gitCommands[-1] | Should -Match '^git -c core\.quotepath=false diff --name-only baseline-sha '
         }
     }
 
@@ -81,7 +81,7 @@ Describe "Get-ModifiedFiles" {
 
             $script:gitCommands | Should -BeExactly @(
                 'git fetch origin baseline-sha'
-                'git diff --name-only baseline-sha checkout-sha'
+                'git -c core.quotepath=false diff --name-only baseline-sha checkout-sha'
             )
         }
     }
@@ -100,7 +100,7 @@ Describe "Get-ModifiedFiles" {
         @{ operation = 'diff' }
     ) {
         InModuleScope DetermineProjectsToBuild -Parameters @{ operation = $operation } {
-            Mock RunAndCheck { throw 'Git failed' } -ParameterFilter { $args[1] -eq $operation }
+            Mock RunAndCheck { throw 'Git failed' } -ParameterFilter { $args -contains $operation }
 
             { Get-ModifiedFiles -baselineSHA 'baseline-sha' -pullRequestChangesOnly } | Should -Throw '*Git failed*'
         }
