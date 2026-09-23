@@ -2594,6 +2594,40 @@ Describe "Test-PathPhysicallyContained" {
         }
     }
 
+    It 'Test-PathPhysicallyContained returns true through a single dangling symlink that stays within the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $internalDanglingFolderPath = Join-Path $rootFolder "dangling"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalDanglingFolderPath -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $internalDanglingFolderPath -Force | Out-Null
+            Remove-Item -Path $internalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $internalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a single dangling symlink that points outside the root' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalDanglingFolderPath = Join-Path $externalFolder "dangling"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $externalDanglingFolderPath -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $externalDanglingFolderPath -Force | Out-Null
+            Remove-Item -Path $externalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'Test-PathPhysicallyContained returns false and completes without hanging for a cyclic symlink pair' -Skip:(-not $script:hasSymlinkCapability) {
         $internalLinkPath1 = Join-Path $rootFolder "link1"
         $internalLinkPath2 = Join-Path $rootFolder "link2"
@@ -2709,6 +2743,41 @@ Describe "Test-PathPhysicallyContained" {
         finally {
             Remove-Item -Path $internalLinkPath1, $internalLinkPath2 -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -Path $externalSubFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+
+    It 'Test-PathPhysicallyContained returns true through a single dangling junctions that stays within the root' -Skip:(-not $script:isWindowsPlatform) {
+        $internalDanglingFolderPath = Join-Path $rootFolder "dangling"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $internalDanglingFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath -Target $internalDanglingFolderPath -Force | Out-Null
+            Remove-Item -Path $internalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $internalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyContained returns false through a single dangling junctions that points outside the root' -Skip:(-not $script:isWindowsPlatform) {
+        $externalDanglingFolderPath = Join-Path $externalFolder "dangling"
+        $internalLinkPath = Join-Path $rootFolder "link"
+        $path = Join-Path $internalLinkPath "file.txt"
+        try {
+            New-Item -ItemType Directory -Path $externalDanglingFolderPath -Force | Out-Null
+            New-Item -ItemType Junction -Path $internalLinkPath -Target $externalDanglingFolderPath -Force | Out-Null
+            Remove-Item -Path $externalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
+
+            Test-PathPhysicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalDanglingFolderPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 

@@ -843,12 +843,13 @@ function Test-PathPhysicallyContained {
         if (-not $resolveReparsePoints) {
             continue
         }
-        if (-not (Test-Path -LiteralPath $realPath)) {
+
+        $item = Get-Item -LiteralPath $realPath -Force -ErrorAction SilentlyContinue
+        if (-not $item) {
             $resolveReparsePoints = $false
             continue
         }
 
-        $item = Get-Item -LiteralPath $realPath -Force
         if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
             $verifiedPaths.Add((Join-Path $realPath '')) # this segment itself is confirmed not a reparse point
             continue
