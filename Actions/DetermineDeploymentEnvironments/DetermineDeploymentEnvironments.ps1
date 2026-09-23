@@ -131,6 +131,7 @@ if (!($environments)) {
                 "ppEnvironmentUrl" = ''
                 "includeTestAppsInSandboxEnvironment" = $false
                 "excludeAppIds" = @()
+                "unpublishOldVersions" = $false
             }
         }
         $unknownEnvironment = 1
@@ -174,6 +175,7 @@ else {
             "ppEnvironmentUrl" = ''
             "includeTestAppsInSandboxEnvironment" = $false
             "excludeAppIds" = @()
+            "unpublishOldVersions" = $false
         }
 
         # Check DeployTo<environmentName> setting
