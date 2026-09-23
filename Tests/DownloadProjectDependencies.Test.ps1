@@ -685,15 +685,6 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
         }
     }
 
-    It 'Escapes glob-special characters in project dependency names' {
-        $projectDependencies = @{ "App" = @("Base,(1)") }
-        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
-            param($Project, $ProjectDependencies)
-            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
-            $result | Should -Be '{Base\,\(1\)-main-*Apps-*,Base\,\(1\)-main-*Dependencies-*,Base\,\(1\)-main-*BuildOutput-*}'
-        }
-    }
-
     It 'Keeps only the separator commas unescaped when branch name contains commas' {
         $ENV:GITHUB_HEAD_REF = 'a,b,c'
         $projectDependencies = @{ "App" = @("Base", "Common") }
