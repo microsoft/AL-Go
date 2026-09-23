@@ -1,4 +1,4 @@
-name: Authenticate
+name: Authenticate to BC
 author: Microsoft Corporation
 inputs:
   shell:
