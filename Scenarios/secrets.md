@@ -113,6 +113,8 @@ Whenever AL-Go for GitHub deploys to an environment, it needs an AuthContext sec
 1. **`<EnvironmentName>_AuthContext`** (underscore variant, e.g. `QA_AuthContext`) – checked second
 1. **`AuthContext`** (generic fallback) – checked last
 
+When **Publish To Environment** targets an environment that is not registered for deployment, its Initialization job passes these candidates in this order to the Authenticate to BC action with `authType: Environment`. If no candidate resolves to credentials, the action initiates device login and lists the candidate names and sign-in instructions in the workflow summary.
+
 > [!IMPORTANT]
 > **Azure Key Vault users:** Azure Key Vault does not allow underscores (`_`) in secret names. If Azure Key Vault is configured as your secrets provider, any secret whose name contains an underscore will be **skipped** during Key Vault lookup (a warning will be emitted in the workflow log). This means the underscore variant `<EnvironmentName>_AuthContext` will not be found in Azure Key Vault. Use the **dash variant** `<EnvironmentName>-AuthContext` when storing per-environment AuthContext secrets in Azure Key Vault, as dashes are permitted in Key Vault secret names. If your environment name itself contains an underscore (for example, `CUSTOMER_A`), the dash variant still contains `_` (`CUSTOMER_A-AuthContext`) and will also be skipped by Key Vault unless you configure a secret-name mapping.
 

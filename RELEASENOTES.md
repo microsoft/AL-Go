@@ -17,6 +17,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
+- Issue 2113 - Fix device-login initialization in Create Online Dev. Environment and Publish To Environment when authentication secrets are unavailable.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
 
 ## v9.2
