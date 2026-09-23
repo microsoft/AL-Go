@@ -11,7 +11,7 @@ At the time when writing this, the Admin Center API does not yet support S2S, me
 
 `New-BcAuthContext -includeDeviceLogin | New-ALGoAuthContext | Set-Clipboard`
 
-*If you do NOT provide an **AdminCenterApiCredentials** secret, the workflow will initiate a device code flow and you can login using [https://aka.ms/devicelogin](https://aka.ms/devicelogin) using this code and have the workflow continue. In order to get the code, you will have to inspect the details of the workflow and open the job called **Check AdminCenterApiCredentials / Initiate Device Login (open to see code)***
+*If you do NOT provide an **AdminCenterApiCredentials** secret, the workflow will initiate a device code flow and you can login using [https://aka.ms/devicelogin](https://aka.ms/devicelogin) using this code and have the workflow continue. Find the sign-in instructions in the workflow summary or open the **Check AdminCenterApiCredentials / Initiate Device Login (open to see code)** step in the **Initialization** job.*
 
 ![Run Workflow](https://github.com/microsoft/AL-Go/assets/10775043/40f186a3-f6fe-4a67-8a21-ef50c8714b9c)
 

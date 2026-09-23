@@ -1,3 +1,9 @@
+### Device login initialization fix
+
+Create Online Dev. Environment and Publish To Environment now use a shared Authenticate action for credential checks and device login, with the standard AL-Go action initialization. This fixes missing helper dependencies, such as `OutputDebug`, preventing the sign-in instructions from appearing when no authentication secret is provided. Authentication secrets are passed as data rather than embedded in inline PowerShell; existing-credential summaries and configured admin credential secret names are preserved.
+
+Workflows explicitly specify the authentication target and ordered secret candidates, preserving existing precedence. Missing-credential messages list all requested candidates.
+
 ### New `unpublishOldVersions` setting for deployment
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
