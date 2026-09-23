@@ -160,6 +160,10 @@ Set-Content -Path '$sentinelPath' -Value `$parameters.value -Encoding UTF8
         { Invoke-ALGoHook -Project 'project' -HookName 'BuildInitialize' -Parameters @{} } | Should -Not -Throw
     }
 
+    It 'Accepts BuildCleanup from the allow-list' {
+        { Invoke-ALGoHook -Project 'project' -HookName 'BuildCleanup' -Parameters @{} } | Should -Not -Throw
+    }
+
     It 'Runs the hook script with the project folder as the current location' {
         $sentinelPath = Join-Path $script:workspace2 'cwd.txt'
         Set-Content -Path (Join-Path $script:projectPath2 '.AL-Go/BuildInitialize.ps1') -Value @"
