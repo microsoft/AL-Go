@@ -16,8 +16,9 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "DetermineProjectsToBuil
 
 $settings = $env:Settings | ConvertFrom-Json
 
+$isPullRequest = Test-IsPullRequest -ghEventName $ENV:GITHUB_EVENT_NAME
 $targetBranch = $env:GITHUB_REF_NAME
-if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
+if ($isPullRequest) {
     $targetBranch = $env:GITHUB_BASE_REF
 }
 
@@ -25,7 +26,8 @@ if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
 Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
 $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
 
-$modifiedFiles = @()
+$baselineModifiedFiles = @()
+$prModifiedFiles = @()
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
 $baselineWorkflowSHA = ''
 if(-not $buildAllProjects) {
@@ -40,8 +42,17 @@ if(-not $buildAllProjects) {
     else {
         Write-Host "::group::Get Modified Files"
         try {
-            $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
-            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
+            # Files modified since the baseline build. Used to determine which apps must be (re)built versus reused from the baseline artifacts.
+            $baselineModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA
+            OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
+            # The PR diff only decides whether a build is needed; the baseline determines its scope.
+            if ($isPullRequest) {
+                $prModifiedFiles = Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA -pullRequestChangesOnly
+                OutputMessageAndArray -message "Modified files (pull request)" -arrayOfStrings $prModifiedFiles
+            }
+            else {
+                $prModifiedFiles = $baselineModifiedFiles
+            }
         }
         catch {
             OutputWarning -message "Failed to calculate modified files since $baselineWorkflowSHA, the Error was $($_.Exception.Message). Building all projects"
@@ -53,7 +64,17 @@ if(-not $buildAllProjects) {
 
 if (-not $buildAllProjects) {
     Write-Host "::group::Determine Incremental Build"
-    $buildAllProjects = Get-BuildAllProjects -modifiedFiles $modifiedFiles -baseFolder $baseFolder
+    $buildRequired = $true
+    if ($isPullRequest) {
+        $buildRequired = Test-PullRequestBuildRequired -baseFolder $baseFolder -prModifiedFiles $prModifiedFiles
+    }
+    if ($buildRequired) {
+        $buildAllProjects = Get-BuildAllProjects -modifiedFiles $baselineModifiedFiles -baseFolder $baseFolder
+    }
+    else {
+        OutputNotice -message "The pull request has no build-relevant changes. Nothing to build."
+        $baselineModifiedFiles = @()
+    }
     Write-Host "::endgroup::"
 }
 
@@ -61,7 +82,13 @@ if (-not $buildAllProjects) {
 # buildAllProjects is set to true if we are to build all projects
 # publishSkippedProjects is set to true if we are to publish artifacts for skipped projects (meaning we are still going through the build process for all projects, just not building)
 Write-Host "::group::Get Projects To Build"
-$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects ($buildAllProjects -or $publishSkippedProjects) -modifiedFiles $modifiedFiles -maxBuildDepth $maxBuildDepth
+$getProjectsToBuildParams = @{
+    baseFolder = $baseFolder
+    buildAllProjects = ($buildAllProjects -or $publishSkippedProjects)
+    baselineModifiedFiles = $baselineModifiedFiles
+    maxBuildDepth = $maxBuildDepth
+}
+$allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild @getProjectsToBuildParams
 if ($buildAllProjects) {
     $skippedProjects = @()
 }

@@ -7,7 +7,9 @@
 function Get-ModifiedFiles {
     param(
         [Parameter(HelpMessage = "The baseline SHA", Mandatory = $true)]
-        [string] $baselineSHA
+        [string] $baselineSHA,
+        [Parameter(HelpMessage = "For pull requests, diff against the merge-base of the pull request instead of the baseline SHA, so only the files the pull request itself changed are returned", Mandatory = $false)]
+        [switch] $pullRequestChangesOnly
     )
 
     Push-Location $ENV:GITHUB_WORKSPACE
@@ -17,7 +19,15 @@ function Get-ModifiedFiles {
             $headSHA = $ghEvent.pull_request.head.sha
             Write-Host "Using head SHA $headSHA from pull request"
             Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $headSHA | Out-Host }
-            if ($baselineSHA) {
+            if ($pullRequestChangesOnly) {
+                # Diff against the pull request's merge-base so that only what the pull request itself changed is returned.
+                # This avoids attributing commits merged to the target branch after the baseline build to the pull request.
+                $prBaseSHA = $ghEvent.pull_request.base.sha
+                Invoke-CommandWithRetry -ScriptBlock { RunAndCheck git fetch origin $prBaseSHA | Out-Host }
+                $baselineSHA = (RunAndCheck git merge-base $prBaseSHA $headSHA).Trim()
+                Write-Host "This is a pull request, using merge-base SHA $baselineSHA (base $prBaseSHA, head $headSHA)"
+            }
+            elseif ($baselineSHA) {
                 Write-Host "This is a pull request, but baseline SHA was specified to $baselineSHA"
             }
             else {
@@ -162,8 +172,9 @@ function Get-ProjectsToBuild {
         $baseFolder,
         [Parameter(HelpMessage = "Whether a full build is required", Mandatory = $false)]
         [bool] $buildAllProjects = $true,
-        [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
-        [string[]] $modifiedFiles = @(),
+        [Parameter(HelpMessage = "An array of files changed since the baseline build, used to filter the projects to build", Mandatory = $false)]
+        [Alias('modifiedFiles')]
+        [string[]] $baselineModifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
         [int] $maxBuildDepth = 0
     )
@@ -186,15 +197,16 @@ function Get-ProjectsToBuild {
             # Calculate the full projects order
             $projectBuildInfo = AnalyzeProjectDependencies -baseFolder $baseFolder -projects $projects
 
-            if ($modifiedFiles) {
-                Write-Host "Calculating modified projects based on the modified files"
+            if ($baselineModifiedFiles) {
+                Write-Host "Calculating modified projects based on files changed since the baseline build"
 
                 #Include the base folder in the modified files
-                $modifiedFilesFullPaths = @($modifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
+                $baselineModifiedFilesFullPaths = @($baselineModifiedFiles | ForEach-Object { return Join-Path $baseFolder $_ })
                 $modifiedProjects = @($projects |
-                                        Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $modifiedFilesFullPaths } |
+                                        Where-Object { ShouldBuildProject -baseFolder $baseFolder -project $_ -modifiedFiles $baselineModifiedFilesFullPaths } |
                                         ForEach-Object { $_; if ($projectBuildInfo.AdditionalProjectsToBuild.Keys -contains $_) { $projectBuildInfo.AdditionalProjectsToBuild."$_" } } |
                                         Select-Object -Unique)
+
             }
 
             if($buildAllProjects) {
@@ -245,6 +257,53 @@ function Get-ProjectsToBuild {
 
 <#
 .Synopsis
+    Determines whether a GitHub event is a pull request event.
+#>
+function Test-IsPullRequest {
+    Param(
+        [string] $ghEventName
+    )
+
+    return ($ghEventName -in @('pull_request', 'pull_request_target'))
+}
+
+<#
+.SYNOPSIS
+    Determines whether the pull request changes a project or a full-build input.
+.PARAMETER baseFolder
+    The repository folder.
+.PARAMETER prModifiedFiles
+    Repository-relative files changed by the pull request, compared to its merge-base.
+#>
+function Test-PullRequestBuildRequired {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $baseFolder,
+        [string[]] $prModifiedFiles = @()
+    )
+
+    if (Get-BuildAllProjects -baseFolder $baseFolder -modifiedFiles $prModifiedFiles) {
+        return $true
+    }
+    Push-Location $baseFolder
+    try {
+        $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
+        $fullPaths = @($prModifiedFiles | ForEach-Object { Join-Path $baseFolder $_ })
+        foreach ($project in $projects) {
+            if (ShouldBuildProject -baseFolder $baseFolder -project $project -modifiedFiles $fullPaths) {
+                return $true
+            }
+        }
+        return $false
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+<#
+.Synopsis
     Determines whether a full build is required and whether to publish artifacts from skipped projects based on the event and settings.
 .Outputs
     A boolean indicating whether a full build is required and a boolean indicating whether to publish artifacts from skipped projects.
@@ -265,7 +324,7 @@ function Get-BuildAllProjectsBasedOnEventAndSettings {
     )
     $buildAllProjects = $true
     $publishSkippedProjects = $true
-    if ($ghEventName -eq 'pull_request' -or $ghEventName -eq 'pull_request_target') {
+    if (Test-IsPullRequest -ghEventName $ghEventName) {
         # DEPRECATION: REMOVE AFTER October 1st 2025 --->
         if ($settings.PSObject.Properties.Name -eq 'alwaysBuildAllProjects' -and $settings.alwaysBuildAllProjects) {
             $buildAllProjects = $settings.alwaysBuildAllProjects
