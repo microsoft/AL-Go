@@ -3785,6 +3785,132 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
+
+    It 'Throws and leaves the external target untouched when the base folder ".github" is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateForBaseGithubLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseWithGithubLinkEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForBaseLinkEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $baseFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $externalSnapshotFile = Join-Path $externalGithubFolder $CustomTemplateRepoSettingsFileName
+        $externalSnapshotContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalSnapshotFile -Value $externalSnapshotContent -Encoding UTF8
+
+        New-Item -ItemType SymbolicLink -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
+    }
+
+    It 'Throws and leaves the external target untouched when the snapshot file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateForSnapshotFileLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseWithSnapshotFileLinkEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $externalTargetFile = Join-Path $TestDrive "externalSnapshotTargetFile.json"
+        $externalTargetContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalTargetFile -Value $externalTargetContent -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        New-Item -ItemType SymbolicLink -Path $snapshotFile -Target $externalTargetFile -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
+    }
+
+    It 'Throws and leaves the external target untouched when the template folder ".github" is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateWithGithubLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseForTemplateGithubLinkEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForTemplateLinkEscape"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $externalSettingsFile = Join-Path $externalGithubFolder $RepoSettingsFileName
+        $externalSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"external.txt"}]}}'
+        Set-Content -LiteralPath $externalSettingsFile -Value $externalSettingsContent -Encoding UTF8
+
+        New-Item -ItemType SymbolicLink -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
+    }
+
+    It 'Throws and leaves the external target and the existing snapshot untouched when the template settings file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateWithSettingsFileLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseForTemplateSettingsFileLinkEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $externalTargetFile = Join-Path $TestDrive "externalTemplateSettingsTargetFile.json"
+        $externalTargetContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalTargetFile -Value $externalTargetContent -Encoding UTF8
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalTargetFile -Force | Out-Null
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
+        Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
+    }
+
+    It 'Throws and leaves the external target untouched when the base folder ".github" is a junction redirecting elsewhere' -Skip:(-not $script:isWindowsPlatform) {
+        $templateFolder = Join-Path $TestDrive "templateForBaseGithubJunctionEscape"
+        $baseFolder = Join-Path $TestDrive "baseWithGithubJunctionEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForBaseJunctionEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $baseFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $externalSnapshotFile = Join-Path $externalGithubFolder $CustomTemplateRepoSettingsFileName
+        $externalSnapshotContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalSnapshotFile -Value $externalSnapshotContent -Encoding UTF8
+
+        New-Item -ItemType Junction -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
+    }
+
+    It 'Throws and leaves the external target untouched when the template folder ".github" is a junction redirecting elsewhere' -Skip:(-not $script:isWindowsPlatform) {
+        $templateFolder = Join-Path $TestDrive "templateWithGithubJunctionEscape"
+        $baseFolder = Join-Path $TestDrive "baseForTemplateGithubJunctionEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForTemplateJunctionEscape"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $externalSettingsFile = Join-Path $externalGithubFolder $RepoSettingsFileName
+        $externalSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"external.txt"}]}}'
+        Set-Content -LiteralPath $externalSettingsFile -Value $externalSettingsContent -Encoding UTF8
+
+        New-Item -ItemType Junction -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
+    }
 }
 
 Describe "GetFilesToUpdate (real template)" {

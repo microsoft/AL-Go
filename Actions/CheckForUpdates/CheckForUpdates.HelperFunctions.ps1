@@ -1271,6 +1271,9 @@ function GetDefaultFilesToExclude {
     Temporarily refreshes the custom template repository settings snapshot, reads the merged settings, and restores
     the snapshot to its original state. This allows the current template settings to affect the current run while
     preserving the workspace state for the normal update comparison.
+    Both copy endpoints (the snapshot file under baseFolder and the settings file under templateFolder) are
+    validated to physically resolve to themselves before either is read or written; the function throws if a
+    symlink/junction anywhere along either path would redirect the backup, copy or restore to a different physical location
 .PARAMETER baseFolder
     The base folder of the repository whose settings are read.
 .PARAMETER templateFolder
@@ -1285,8 +1288,17 @@ function ReadSettingsWithCurrentCustomTemplateRepoSettings {
     )
 
     $templateFolderRepoSettingsPath = Join-Path $templateFolder $RepoSettingsFile
-
     $baseFolderTemplateSettingsPath = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+
+    # Validate both copy endpoints before touching them (even if the leaf file doesn't exist yet): a symlink/junction
+    # anywhere along either path can make it resolve to a different physical location than its literal path
+    if (-not (Test-PathPhysicallyEqual -Path $baseFolderTemplateSettingsPath -AnchorPaths @($baseFolder))) {
+        throw "Cannot read settings: '$baseFolderTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    }
+    if (-not (Test-PathPhysicallyEqual -Path $templateFolderRepoSettingsPath -AnchorPaths @($templateFolder))) {
+        throw "Cannot read settings: '$templateFolderRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    }
+
     $baseFolderTemplateSettingsBackupPath = $null
 
     if (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
