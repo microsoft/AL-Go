@@ -1,4 +1,4 @@
-Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
+﻿Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force
 
 Describe "Get-ProjectsToBuild" {
     BeforeAll {
@@ -1403,5 +1403,87 @@ Describe "Get-UnmodifiedAppsFromBaselineWorkflowRun" {
 
     AfterEach {
         Remove-Item $baseFolder -Force -Recurse
+    }
+}
+
+Describe "Get-ModifiedFiles" {
+    BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking -Force
+    }
+
+    BeforeEach {
+        $env:GITHUB_WORKSPACE = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+        $env:GITHUB_EVENT_PATH = Join-Path $env:GITHUB_WORKSPACE 'event.json'
+
+        Push-Location $env:GITHUB_WORKSPACE
+        try {
+            Set-Content -Path $env:GITHUB_EVENT_PATH -Value (@{ ref = 'refs/heads/main' } | ConvertTo-Json -Compress) -Encoding UTF8
+
+            git init --quiet | Out-Null
+            git config user.email 'test@example.com' | Out-Null
+            git config user.name 'Test User' | Out-Null
+            git add -A | Out-Null
+            git commit --quiet -m 'baseline' | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'baselineSha', Justification = 'False positive.')]
+            $baselineSha = git rev-parse HEAD
+        }
+        finally {
+            Pop-Location
+        }
+
+        # There is no 'origin' remote in this local-only test repo, so fetching must be skipped
+        Mock Invoke-CommandWithRetry {} -ModuleName DetermineProjectsToBuild
+    }
+
+    AfterEach {
+        Remove-Item $env:GITHUB_WORKSPACE -Force -Recurse -ErrorAction SilentlyContinue
+        Remove-Item Env:\GITHUB_WORKSPACE -ErrorAction SilentlyContinue
+        Remove-Item Env:\GITHUB_EVENT_PATH -ErrorAction SilentlyContinue
+    }
+
+    It 'invokes git diff with core.quotepath disabled and sets console encoding to UTF-8 during the call' {
+        $originalEncoding = [Console]::OutputEncoding
+        $script:capturedArgs = $null
+        $script:capturedEncoding = $null
+        Mock RunAndCheck {
+            $script:capturedArgs = $args
+            $script:capturedEncodingWebName = [Console]::OutputEncoding.WebName
+            return @()
+        } -ModuleName DetermineProjectsToBuild
+
+        Get-ModifiedFiles -baselineSHA $baselineSha | Out-Null
+
+        $script:capturedArgs -join ' ' | Should -BeLike 'git* -c core.quotepath=false *'
+        $script:capturedEncodingWebName | Should -Be ([System.Text.Encoding]::UTF8.WebName)
+        [Console]::OutputEncoding | Should -Be $originalEncoding
+    }
+
+    It 'restores the original console encoding even when the git diff command fails' {
+        $originalEncoding = [Console]::OutputEncoding
+        Mock RunAndCheck { throw 'Simulated git failure' } -ModuleName DetermineProjectsToBuild
+
+        { Get-ModifiedFiles -baselineSHA $baselineSha } | Should -Throw
+
+        [Console]::OutputEncoding | Should -Be $originalEncoding
+    }
+
+    It 'returns umlaut filenames decoded correctly instead of octal-escaped' {
+        $fileName = 'Sträuße.al'
+
+        Push-Location $env:GITHUB_WORKSPACE
+        try {
+            New-Item -Path (Join-Path $env:GITHUB_WORKSPACE $fileName) -ItemType File -Force | Out-Null
+            git add -A | Out-Null
+            git commit --quiet -m 'add umlaut file' | Out-Null
+        }
+        finally {
+            Pop-Location
+        }
+
+        $modifiedFiles = Get-ModifiedFiles -baselineSHA $baselineSha
+
+        $modifiedFiles | Should -Contain $fileName
     }
 }

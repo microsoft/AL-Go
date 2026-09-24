@@ -6,6 +6,9 @@
 
    ![Create Release](https://github.com/user-attachments/assets/748537f5-781f-4e96-bb8f-79b7294dbca5)
 
+> [!NOTE]
+> The existing AL-Go system file update check in the **Create Release** workflow is executed in a separate `CheckForUpdates` job. It runs independently of release creation and reports available updates to AL-Go system files. It does not apply updates; use the **Update AL-Go System Files** workflow to apply them.
+
 1. When the **create release** workflow completes, choose the **Code** section to see the releases.
 
    ![Releases](https://github.com/user-attachments/assets/71de15de-1d29-49cf-a593-85b0c5041f4c)
