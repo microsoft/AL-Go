@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "Base64 encoded GhTokenWorkflow secret", Mandatory = $false)]
@@ -155,13 +155,13 @@ foreach($fileToInclude in $filesToInclude) {
     }
 
     # Skip files that do not physically resolve to themselves within the template folders
-    if (-not (Test-PathPhysicallyEqual -Path $srcPath -AnchorFolders $templateFolders)) {
+    if (-not (Test-PathPhysicallyEqual -Path $srcPath -AnchorPaths $templateFolders)) {
         OutputWarning "Skipping file '$srcPath': source does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
         continue
     }
     if ($originalSrcPath -ne $srcPath) {
         # Skip files with original files that do not physically resolve to themselves within the template folders
-        if (-not (Test-PathPhysicallyEqual -Path $originalSrcPath -AnchorFolders $templateFolders)) {
+        if (-not (Test-PathPhysicallyEqual -Path $originalSrcPath -AnchorPaths $templateFolders)) {
             OutputWarning "Skipping file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
             continue
         }
@@ -283,7 +283,7 @@ else {
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
             # Skip files that do not physically resolve to themselves within the destination root folder
-            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_.DstFile) -AnchorFolders @($dstRoot))) {
+            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_.DstFile) -AnchorPaths @($dstRoot))) {
                 OutputWarning "Skipping update of '$($_.DstFile)': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
                 return
             }
@@ -316,7 +316,7 @@ else {
         }
         $removeFiles | ForEach-Object {
             # Skip files that do not physically resolve to themselves within the destination root folder
-            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_) -AnchorFolders @($dstRoot))) {
+            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_) -AnchorPaths @($dstRoot))) {
                 OutputWarning "Skipping removal of '$_': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
                 return
             }
