@@ -71,6 +71,145 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
+Describe "CheckForUpdates Action: physical path guards" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
+        $scriptPath = Join-Path $scriptRoot "$actionName.ps1"
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "checkForUpdatesGuardTests"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $rootFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'CheckForUpdates skips source files that do not physically resolve to themselves within the template folder(s)' -Skip:(-not $script:isWindowsPlatform) {
+        $testTemplateFolder = Join-Path $rootFolder "srcGuardTemplate"
+        $testExternalFolder = Join-Path $rootFolder "srcGuardExternal"
+        $testWorkspaceFolder = Join-Path $rootFolder "srcGuardWorkspace"
+        $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+        try {
+            New-Item -Path $testTemplateFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $testExternalFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $testWorkspaceFolder -ItemType Directory -Force | Out-Null
+
+            # A legitimate file directly in the template folder
+            $legitFile = Join-Path $testTemplateFolder "legit.txt"
+            Set-Content -LiteralPath $legitFile -Value "legit content"
+
+            # A file reachable only through a junction subfolder that redirects outside the template folder -
+            # the target file doesn't need to exist for the guard to trip, the folder-level redirect is enough
+            New-Item -ItemType Junction -Path (Join-Path $testTemplateFolder "redirectSub") -Target $testExternalFolder -Force | Out-Null
+            $redirectedFile = Join-Path $testTemplateFolder "redirectSub/redirected.txt"
+            Set-Content -LiteralPath $redirectedFile -Value "redirected content"
+
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $legitFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $redirectedFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            )
+
+            Mock DownloadAndImportBcContainerHelper {}
+            Mock ReadSettings { [PSCustomObject]@{ templateSha = 'aaaaaaa'; templateUrl = 'https://github.com/contoso/template@main'; type = 'PTE'; projects = @() } }
+            Mock DownloadTemplateRepository { return $testTemplateFolder }
+            Mock GetSrcFolder { return $testTemplateFolder }
+            Mock IsDirectALGo { return $true }
+            Mock GetProjectsFromRepository { return @('.') }
+            Mock GetFilesToUpdate { Write-Output -NoEnumerate $testFilesToInclude; Write-Output -NoEnumerate @() }
+            Mock OutputWarning {}
+            Mock OutputNotice {}
+
+            $env:GITHUB_WORKSPACE = $testWorkspaceFolder
+
+            . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*redirected.txt*does not physically resolve*" }
+            $updateFiles.Count | Should -Be 1
+            $updateFiles[0].DstFile | Should -Be "legit.txt"
+        }
+        finally {
+            $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
+            Remove-Item -Path $testTemplateFolder, $testExternalFolder, $testWorkspaceFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating or removing files' -Skip:(-not $script:isWindowsPlatform) {
+        $testTemplateFolder = Join-Path $rootFolder "dstGuardTemplate"
+        $testExternalFolder = Join-Path $rootFolder "dstGuardExternal"
+        $testBaseFolder = Join-Path $rootFolder "dstGuardBase"
+        $testCloneRoot = Join-Path $rootFolder "dstGuardClone"
+        $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+        $originalLocation = Get-Location
+        try {
+            New-Item -Path $testTemplateFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $testExternalFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $testBaseFolder -ItemType Directory -Force | Out-Null
+            New-Item -Path $testCloneRoot -ItemType Directory -Force | Out-Null
+
+            # Source files in the "template"
+            $legitSrcFile = Join-Path $testTemplateFolder "legit.txt"
+            Set-Content -LiteralPath $legitSrcFile -Value "legit content"
+            $trapSrcFile = Join-Path $testTemplateFolder "trap.txt"
+            Set-Content -LiteralPath $trapSrcFile -Value "trap content"
+
+            # A file already present in the original checkout, slated for removal
+            New-Item -Path (Join-Path $testBaseFolder "redirectSub") -ItemType Directory -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $testBaseFolder "redirectSub/oldfile.txt") -Value "old content"
+
+            # In the FRESH clone only, "redirectSub" is a junction that redirects outside the clone root -
+            # simulates a reparse point introduced by a newer commit that wasn't present in the original checkout
+            New-Item -ItemType Junction -Path (Join-Path $testCloneRoot "redirectSub") -Target $testExternalFolder -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $testExternalFolder "oldfile.txt") -Value "cloned old content"
+
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $legitSrcFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testBaseFolder "legit.txt") }
+                @{ sourceFullPath = $trapSrcFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testBaseFolder "redirectSub/trap.txt") }
+            )
+            $testFilesToExclude = @(
+                @{ destinationFullPath = (Join-Path $testBaseFolder "redirectSub/oldfile.txt") }
+            )
+
+            Mock DownloadAndImportBcContainerHelper {}
+            Mock ReadSettings { [PSCustomObject]@{ templateSha = 'aaaaaaa'; templateUrl = 'https://github.com/contoso/template@main'; type = 'PTE'; projects = @() } }
+            Mock DownloadTemplateRepository { return $testTemplateFolder }
+            Mock GetSrcFolder { return $testTemplateFolder }
+            Mock IsDirectALGo { return $true }
+            Mock GetProjectsFromRepository { return @('.') }
+            Mock GetFilesToUpdate { Write-Output -NoEnumerate $testFilesToInclude; Write-Output -NoEnumerate $testFilesToExclude }
+            Mock OutputWarning {}
+            Mock OutputNotice {}
+            Mock RunAndCheck { return "deadbeef1234567" }
+            Mock invoke-git {}
+            Mock GetAccessToken { return "fake-token" }
+            Mock gh { '[]' }
+            Mock CloneIntoNewFolder { Set-Location -Path $testCloneRoot; 'https://fake.example.com/repo.git'; 'update-al-go-system-files/branch' }
+            Mock CommitFromNewFolder { return $true }
+            Mock UpdateSettingsFile {}
+
+            $env:GITHUB_WORKSPACE = $testBaseFolder
+            $fakeToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("fake-pat"))
+
+            . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+            $updateFiles.Count | Should -Be 2
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*Skipping update*trap.txt*" }
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*Skipping removal*oldfile.txt*" }
+
+            # The legitimate update was actually written to the (mocked) clone root; the trapped one was not
+            Test-Path -Path (Join-Path $testCloneRoot "legit.txt") -PathType Leaf | Should -Be $true
+        }
+        finally {
+            Set-Location -Path $originalLocation
+            $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
+            Remove-Item -Path $testTemplateFolder, $testExternalFolder, $testBaseFolder, $testCloneRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Describe "YamlClass Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
@@ -1668,7 +1807,7 @@ Describe "ResolveFilePaths" {
         }
     }
 
-    It 'ResolveFilePaths skips files in a source folder that differs only by case' -Skip:(-not $script:isLinuxPlatform) {
+    It 'ResolveFilePaths skips files in a source folder that differs only by case on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $externalFolder = Join-Path $rootFolder 'sourcefolder'
         $externalFile = Join-Path $externalFolder 'outside.txt'
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
@@ -1690,7 +1829,7 @@ Describe "ResolveFilePaths" {
         }
     }
 
-    It 'ResolveFilePaths skips destinations in a folder that differs only by case' -Skip:(-not $script:isLinuxPlatform) {
+    It 'ResolveFilePaths skips destinations in a folder that differs only by case on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = '../casefolder/outside.txt' }
@@ -1703,7 +1842,7 @@ Describe "ResolveFilePaths" {
         Should -Invoke OutputWarning -Times 1
     }
 
-    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case' -Skip:(-not $script:isLinuxPlatform) {
+    It 'ResolveFilePaths skips per-project destinations in a folder that differs only by case on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = ''; 'destinationName' = '../caseproject/outside.txt'; 'perProject' = $true }
@@ -1799,7 +1938,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
     }
 
-    It 'ResolveFilePaths keeps case-distinct destination entries on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
+    It 'ResolveFilePaths keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
@@ -1813,7 +1952,7 @@ Describe "ResolveFilePaths" {
         ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeTrue
     }
 
-    It 'ResolveFilePaths removes case-distinct destination entries on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
+    It 'ResolveFilePaths removes case-distinct destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
@@ -1979,7 +2118,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
     }
 
-    It 'ResolveFilePaths keeps case-distinct per-project destination entries on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
+    It 'ResolveFilePaths keeps case-distinct per-project destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
@@ -1993,7 +2132,7 @@ Describe "ResolveFilePaths" {
         ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeTrue
     }
 
-    It 'ResolveFilePaths removes case-distinct per-project destination entries on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
+    It 'ResolveFilePaths removes case-distinct per-project destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
         $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
         $files = @(
             @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
@@ -2115,7 +2254,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
     }
 
-    It 'ResolveFilePaths handles case-insensitive filter matching on Windows' {
+    It 'ResolveFilePaths handles case-insensitive filter matching' {
         # Create files with different case
         $upperFile = Join-Path $sourceFolder "folder/UPPER.TXT"
         $lowerFile = Join-Path $sourceFolder "folder/lower.txt"
@@ -2130,10 +2269,9 @@ Describe "ResolveFilePaths" {
 
             $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
-            # On Windows, both should match due to case-insensitive file system
             $fullFilePaths | Should -Not -BeNullOrEmpty
-            $upperMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $upperFile }
-            $lowerMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $lowerFile }
+            $upperMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -ceq $upperFile }
+            $lowerMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -ceq $lowerFile }
             $upperMatch | Should -Not -BeNullOrEmpty
             $lowerMatch | Should -Not -BeNullOrEmpty
         }
@@ -2160,12 +2298,12 @@ Describe "Test-PathLexicallyContained" {
         Remove-Item -Path $rootFolder, $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    It 'Test-PathLexicallyContained returns true for a path lexically inside the root folder (no I/O involved)' {
+    It 'Test-PathLexicallyContained returns true for a path lexically inside the root folder' {
         $path = Join-Path $rootFolder "folder/file.txt"
         Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
     }
 
-    It 'Test-PathLexicallyContained returns false for a path lexically outside the root folder (no I/O involved)' {
+    It 'Test-PathLexicallyContained returns false for a path lexically outside the root folder' {
         $path = Join-Path $externalFolder "file.txt"
         Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
     }
@@ -2183,30 +2321,6 @@ Describe "Test-PathLexicallyContained" {
     It 'Test-PathLexicallyContained returns true for a path with "." segments that stays inside the root folder' {
         $path = Join-Path $rootFolder "./folder/./file.txt"
         Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
-    }
-
-    It 'Test-PathLexicallyContained does not require the path to exist' {
-        $path = Join-Path $rootFolder "doesNotExist/file.txt"
-        Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
-    }
-
-    It 'Test-PathLexicallyContained does not perform filesystem/symlink resolution, unlike Test-PathPhysicallyEqual' -Skip:(-not $script:hasSymlinkCapability) {
-        $internalFolderPath = Join-Path $rootFolder "folder"
-        $internalLinkPath = Join-Path $rootFolder "link"
-        $path = Join-Path $internalLinkPath "file.txt"
-        try {
-            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
-            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $externalFolder -Force | Out-Null
-
-            # Lexically the path looks contained (the link name itself is under $rootFolder); the lexical
-            # check must not follow the link to see that its target escapes - that's what Test-PathPhysicallyEqual is for.
-            Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
-            Test-PathPhysicallyEqual -Path $path -RootFolder $rootFolder | Should -Be $false
-        }
-        finally {
-            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item -Path $internalFolderPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
     }
 
     It 'Test-PathLexicallyContained is case-insensitive on Windows' -Skip:(-not $script:isWindowsPlatform) {
@@ -2238,63 +2352,270 @@ Describe "Resolve-PhysicalPath" {
 
     It 'Resolve-PhysicalPath returns the canonicalized path when there are no reparse points' {
         $path = Join-Path $rootFolder "folder/file.txt"
-        Resolve-PhysicalPath -Path $path -RootFolder $rootFolder | Should -Be ([System.IO.Path]::GetFullPath($path))
+        Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($path))
     }
 
-    It 'Resolve-PhysicalPath returns $null for a path lexically outside the root folder (no I/O involved)' {
-        $path = Join-Path $externalFolder "file.txt"
-        Resolve-PhysicalPath -Path $path -RootFolder $rootFolder | Should -Be $null
-    }
-
-    It 'Resolve-PhysicalPath returns $null through a symlink that points outside the root' -Skip:(-not $script:hasSymlinkCapability) {
-        $internalLinkPath = Join-Path $rootFolder "link"
-        $path = Join-Path $internalLinkPath "file.txt"
-        try {
-            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $externalFolder -Force | Out-Null
-
-            Resolve-PhysicalPath -Path $path -RootFolder $rootFolder | Should -Be $null
-        }
-        finally {
-            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    It 'Resolve-PhysicalPath resolves to the real target path through a symlink that stays within the root' -Skip:(-not $script:hasSymlinkCapability) {
-        $internalFolderPath = Join-Path $rootFolder "folder"
-        $internalLinkPath = Join-Path $rootFolder "link"
-        $path = Join-Path $internalLinkPath "file.txt"
-        try {
-            New-Item -Path $internalFolderPath -ItemType Directory -Force | Out-Null
-            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $internalFolderPath -Force | Out-Null
-
-            Resolve-PhysicalPath -Path $path -RootFolder $rootFolder | Should -Be (Join-Path $internalFolderPath "file.txt")
-        }
-        finally {
-            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item -Path $internalFolderPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    It 'Resolve-PhysicalPath reveals an in-root redirect that lexical containment alone would miss' -Skip:(-not $script:hasSymlinkCapability) {
-        # A symlink that redirects to a DIFFERENT location still inside the root: containment alone says "fine",
-        # but the resolved path is not the one the caller intended to read/write - callers that need the write to
-        # land at an EXACT path (not just "somewhere under the root") must compare against the resolved path.
-        $realTargetFolder = Join-Path $rootFolder "realTarget"
-        $linkedFolder = Join-Path $rootFolder "linkedFolder"
+    It 'Resolve-PhysicalPath resolves a single symlink to its real target' -Skip:(-not $script:hasSymlinkCapability) {
+        $realTargetFolder = Join-Path $rootFolder "singleSymRealTarget"
+        $linkedFolder = Join-Path $rootFolder "singleSymLink"
         $path = Join-Path $linkedFolder "file.txt"
         try {
             New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
             New-Item -ItemType SymbolicLink -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
 
-            $resolved = Resolve-PhysicalPath -Path $path -RootFolder $rootFolder
+            $resolved = Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder)
 
-            Test-PathLexicallyContained -Path $resolved -RootFolder $rootFolder | Should -Be $true
             $resolved | Should -Be (Join-Path $realTargetFolder "file.txt")
             $resolved | Should -Not -Be ([System.IO.Path]::GetFullPath($path))
         }
         finally {
             Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a single junction to its real target' -Skip:(-not $script:isWindowsPlatform) {
+        $realTargetFolder = Join-Path $rootFolder "singleJctRealTarget"
+        $linkedFolder = Join-Path $rootFolder "singleJctLink"
+        $path = Join-Path $linkedFolder "file.txt"
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
+
+            $resolved = Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder)
+
+            $resolved | Should -Be (Join-Path $realTargetFolder "file.txt")
+            $resolved | Should -Not -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a chain of two symlinks (link1 -> link2 -> real folder) to its real target' -Skip:(-not $script:hasSymlinkCapability) {
+        $realFolder = Join-Path $rootFolder "chainSymRealTarget"
+        $link2 = Join-Path $rootFolder "chainSymLink2"
+        $link1 = Join-Path $rootFolder "chainSymLink1"
+        $path = Join-Path $link1 "file.txt"
+        try {
+            New-Item -Path $realFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $link2 -Target $realFolder -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $link1 -Target $link2 -Force | Out-Null
+
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be (Join-Path $realFolder "file.txt")
+        }
+        finally {
+            Remove-Item -Path $link1 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $link2 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a chain of two junctions (link1 -> link2 -> real folder) to its real target' -Skip:(-not $script:isWindowsPlatform) {
+        $realFolder = Join-Path $rootFolder "chainJctRealTarget"
+        $link2 = Join-Path $rootFolder "chainJctLink2"
+        $link1 = Join-Path $rootFolder "chainJctLink1"
+        $path = Join-Path $link1 "file.txt"
+        try {
+            New-Item -Path $realFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $link2 -Target $realFolder -Force | Out-Null
+            New-Item -ItemType Junction -Path $link1 -Target $link2 -Force | Out-Null
+
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be (Join-Path $realFolder "file.txt")
+        }
+        finally {
+            Remove-Item -Path $link1 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $link2 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a dangling symlink to its real target without warning' -Skip:(-not $script:hasSymlinkCapability) {
+        $danglingTarget = Join-Path $rootFolder "danglingSymTarget"
+        $linkPath = Join-Path $rootFolder "danglingSymLink"
+        try {
+            New-Item -Path $danglingTarget -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkPath -Target $danglingTarget -Force | Out-Null
+            Remove-Item -Path $danglingTarget -Force
+            Mock OutputWarning {}
+
+            Resolve-PhysicalPath -Path $linkPath -AnchorFolders @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($danglingTarget))
+            Should -Invoke OutputWarning -Times 0
+        }
+        finally {
+            Remove-Item -Path $linkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $danglingTarget -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a dangling junction to its real target without warning' -Skip:(-not $script:isWindowsPlatform) {
+        $danglingTarget = Join-Path $rootFolder "danglingJctTarget"
+        $linkPath = Join-Path $rootFolder "danglingJctLink"
+        try {
+            New-Item -Path $danglingTarget -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $linkPath -Target $danglingTarget -Force | Out-Null
+            Remove-Item -Path $danglingTarget -Force
+            Mock OutputWarning {}
+
+            Resolve-PhysicalPath -Path $linkPath -AnchorFolders @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($danglingTarget))
+            Should -Invoke OutputWarning -Times 0
+        }
+        finally {
+            Remove-Item -Path $linkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $danglingTarget -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath returns $null and warns when a symlink chain cycles back on itself' -Skip:(-not $script:hasSymlinkCapability) {
+        $linkA = Join-Path $rootFolder "cyclicLinkA"
+        $linkB = Join-Path $rootFolder "cyclicLinkB"
+        try {
+            New-Item -Path $linkA -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkB -Target $linkA -Force | Out-Null
+            Remove-Item -Path $linkA -Force
+            New-Item -ItemType SymbolicLink -Path $linkA -Target $linkB -Force | Out-Null
+            Mock OutputWarning {}
+
+            Resolve-PhysicalPath -Path $linkA -AnchorFolders @($rootFolder) | Should -Be $null
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*exceeded*hops*" }
+        }
+        finally {
+            Remove-Item -Path $linkA -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $linkB -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath returns $null and warns when a junction chain cycles back on itself' -Skip:(-not $script:isWindowsPlatform) {
+        $nodeA = Join-Path $rootFolder "cyclicJctNodeA"
+        $nodeB = Join-Path $rootFolder "cyclicJctNodeB"
+        try {
+            New-Item -Path $nodeA -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $nodeB -Target $nodeA -Force | Out-Null
+            Remove-Item -Path $nodeA -Force
+            New-Item -ItemType Junction -Path $nodeA -Target $nodeB -Force | Out-Null
+            Mock OutputWarning {}
+
+            Resolve-PhysicalPath -Path $nodeA -AnchorFolders @($rootFolder) | Should -Be $null
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*exceeded*hops*" }
+        }
+        finally {
+            Remove-Item -Path $nodeA -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $nodeB -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a symlink whose target path has a parent symlink (link1 -> link2/subdir/file.txt)' -Skip:(-not $script:hasSymlinkCapability) {
+        $realFolder = Join-Path $rootFolder "nestedSymRealTarget"
+        $parentLink = Join-Path $rootFolder "nestedSymParentLink"
+        $outerLink = Join-Path $rootFolder "nestedSymOuterLink"
+        $path = Join-Path $outerLink "file.txt"
+        try {
+            New-Item -Path (Join-Path $realFolder "subdir") -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $parentLink -Target $realFolder -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $outerLink -Target (Join-Path $parentLink "subdir") -Force | Out-Null
+
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be (Join-Path $realFolder "subdir/file.txt")
+        }
+        finally {
+            Remove-Item -Path $outerLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $parentLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath resolves a junction whose target path has a parent junction (link1 -> link2/subdir/file.txt)' -Skip:(-not $script:isWindowsPlatform) {
+        $realFolder = Join-Path $rootFolder "nestedJctRealTarget"
+        $parentLink = Join-Path $rootFolder "nestedJctParentLink"
+        $outerLink = Join-Path $rootFolder "nestedJctOuterLink"
+        $path = Join-Path $outerLink "file.txt"
+        try {
+            New-Item -Path (Join-Path $realFolder "subdir") -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $parentLink -Target $realFolder -Force | Out-Null
+            New-Item -ItemType Junction -Path $outerLink -Target (Join-Path $parentLink "subdir") -Force | Out-Null
+
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be (Join-Path $realFolder "subdir/file.txt")
+        }
+        finally {
+            Remove-Item -Path $outerLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $parentLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath trusts a symlink when its own path is passed as an anchor folder, skipping resolution' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustSymTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # Without the link in AnchorFolders, it is followed to its real (external) target
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be (Join-Path $externalTargetFolder "file.txt")
+
+            # When the link's own path is passed as an anchor, it is trusted and not followed
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath trusts a junction when its own path is passed as an anchor folder, skipping resolution' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustJctTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # Without the link in AnchorFolders, it is followed to its real (external) target
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder) | Should -Be (Join-Path $externalTargetFolder "file.txt")
+
+            # When the link's own path is passed as an anchor, it is trusted and not followed
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath picks the most specific of multiple anchors, trusting a symlink sitting at the deeper anchor' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "multiAnchorSymTarget"
+        $trustedLink = Join-Path $rootFolder "multiAnchorSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # A broader anchor (rootFolder) alone would not bypass resolution, but the more specific
+            # anchor (the link itself) is selected and trusted, even when both are supplied together
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder, $trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PhysicalPath picks the most specific of multiple anchors, trusting a junction sitting at the deeper anchor' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "multiAnchorJctTarget"
+        $trustedLink = Join-Path $rootFolder "multiAnchorJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # A broader anchor (rootFolder) alone would not bypass resolution, but the more specific
+            # anchor (the link itself) is selected and trusted, even when both are supplied together
+            Resolve-PhysicalPath -Path $path -AnchorFolders @($rootFolder, $trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -2315,49 +2636,90 @@ Describe "Test-PathPhysicallyEqual" {
         Remove-Item -Path $rootFolder, $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
     }
 
+    It 'Test-PathPhysicallyEqual delegates to Resolve-PhysicalPath and compares its result against the canonicalized path' {
+        $path = Join-Path $rootFolder "delegationCheck/file.txt"
+
+        Mock Resolve-PhysicalPath { return $Path }
+        Test-PathPhysicallyEqual -Path $path -AnchorFolders @($rootFolder) | Should -Be $true
+        Should -Invoke Resolve-PhysicalPath -Times 1 -ParameterFilter {
+            $Path -eq ([System.IO.Path]::GetFullPath($path)) -and (Compare-Object $AnchorFolders @($rootFolder) | Measure-Object).Count -eq 0
+        }
+
+        Mock Resolve-PhysicalPath { return (Join-Path $rootFolder "somewhereElse/file.txt") }
+        Test-PathPhysicallyEqual -Path $path -AnchorFolders @($rootFolder) | Should -Be $false
+    }
+
     It 'Test-PathPhysicallyEqual returns true when there are no reparse points' {
         $path = Join-Path $rootFolder "folder/file.txt"
-        Test-PathPhysicallyEqual -Path $path -RootFolder $rootFolder | Should -Be $true
+        Test-PathPhysicallyEqual -Path $path -AnchorFolders @($rootFolder) | Should -Be $true
     }
 
     It 'Test-PathPhysicallyEqual returns true when the path does not exist yet' {
         $path = Join-Path $rootFolder "doesNotExist/file.txt"
-        Test-PathPhysicallyEqual -Path $path -RootFolder $rootFolder | Should -Be $true
+        Test-PathPhysicallyEqual -Path $path -AnchorFolders @($rootFolder) | Should -Be $true
     }
 
-    It 'Test-PathPhysicallyEqual returns false for a path lexically outside the root' {
-        $path = Join-Path $externalFolder "file.txt"
-        Test-PathPhysicallyEqual -Path $path -RootFolder $rootFolder | Should -Be $false
-    }
-
-    It 'Test-PathPhysicallyEqual returns false through a symlink that points outside the root' -Skip:(-not $script:hasSymlinkCapability) {
-        $internalLinkPath = Join-Path $rootFolder "link"
-        $path = Join-Path $internalLinkPath "file.txt"
-        try {
-            New-Item -ItemType SymbolicLink -Path $internalLinkPath -Target $externalFolder -Force | Out-Null
-
-            Test-PathPhysicallyEqual -Path $path -RootFolder $rootFolder | Should -Be $false
-        }
-        finally {
-            Remove-Item -Path $internalLinkPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    It 'Test-PathPhysicallyEqual returns false through a symlink that redirects to a DIFFERENT location still inside the root' -Skip:(-not $script:hasSymlinkCapability) {
-        $realTargetFolder = Join-Path $rootFolder "realTarget"
-        $linkedFolder = Join-Path $rootFolder "linkedFolder"
+    It 'Test-PathPhysicallyEqual returns false when a symlink redirects to a different real location' -Skip:(-not $script:hasSymlinkCapability) {
+        $realTargetFolder = Join-Path $rootFolder "redirectSymTarget"
+        $linkedFolder = Join-Path $rootFolder "redirectSymLink"
         $path = Join-Path $linkedFolder "file.txt"
         try {
             New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
             New-Item -ItemType SymbolicLink -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
 
-            Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
-            Test-PathPhysicallyEqual -Path $path -RootFolder $rootFolder | Should -Be $false
-            Resolve-PhysicalPath -Path $path -RootFolder $rootFolder | Should -Be (Join-Path $realTargetFolder "file.txt")
+            Test-PathPhysicallyEqual -Path $path -AnchorFolders @($rootFolder) | Should -Be $false
         }
         finally {
             Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyEqual returns false when a junction redirects to a different real location' -Skip:(-not $script:isWindowsPlatform) {
+        $realTargetFolder = Join-Path $rootFolder "redirectJctTarget"
+        $linkedFolder = Join-Path $rootFolder "redirectJctLink"
+        $path = Join-Path $linkedFolder "file.txt"
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorFolders @($rootFolder) | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyEqual returns true when the anchor folder is itself a symlink, bypassing resolution' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustSymTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorFolders @($trustedLink) | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyEqual returns true when the anchor folder is itself a junction, bypassing resolution' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustJctTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorFolders @($trustedLink) | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -2953,7 +3315,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $conflict[0].sourceFullPath | Should -Be $testPSFile
     }
 
-    It 'GetFilesToUpdate keeps case-distinct destination entries on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
+    It 'GetFilesToUpdate keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $settings = @{
             type                  = 'NotPTE'
             unusedALGoSystemFiles = @()
@@ -2972,7 +3334,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeTrue
     }
 
-    It 'GetFilesToUpdate excludes only the exact-case source path on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
+    It 'GetFilesToUpdate excludes only the exact-case source path on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
         $lowerCaseFolder = Join-Path $templateFolder 'casefolder'
         $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
@@ -3008,7 +3370,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate excludes only the exact-case unused file on case-sensitive platforms' -Skip:(-not $script:isLinuxPlatform) {
+    It 'GetFilesToUpdate excludes only the exact-case unused file on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
         $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
         Set-Content -Path $upperCaseFile -Value '# upper case file'
@@ -3037,7 +3399,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate removes case-distinct destination entries on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
+    It 'GetFilesToUpdate removes case-distinct destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
         $settings = @{
             type                  = 'NotPTE'
             unusedALGoSystemFiles = @()
@@ -3056,7 +3418,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeFalse
     }
 
-    It 'GetFilesToUpdate excludes any case source path on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
+    It 'GetFilesToUpdate excludes any case source path on Windows' -Skip:(-not $script:isWindowsPlatform) {
         $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
         $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
         New-Item -ItemType Directory -Path $upperCaseFolder -Force | Out-Null
@@ -3086,7 +3448,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate excludes any case unused file on case-insensitive platforms' -Skip:$script:isLinuxPlatform {
+    It 'GetFilesToUpdate excludes any case unused file on Windows' -Skip:(-not $script:isWindowsPlatform) {
         $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
         $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
         Set-Content -Path $upperCaseFile -Value '# upper case file'

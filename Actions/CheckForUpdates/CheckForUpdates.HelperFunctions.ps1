@@ -798,9 +798,9 @@ Verifies that $Path is located under $RootFolder purely by string/segment resolu
 (via [System.IO.Path]::GetFullPath()) - no filesystem access, so it does not detect escapes via
 symlinks/junctions. Both parameters are treated as literal paths (no wildcard expansion).
 .PARAMETER Path
-The literal path to check.
+The literal path to check. If not rooted, it is considered relative to the root folder.
 .PARAMETER RootFolder
-The literal root folder that $Path must be contained within.
+The literal root folder that $Path must be contained within. Defaults to the current location if not specified.
 .OUTPUTS
 $true if the path is lexically contained within the root folder, otherwise $false.
 #>
@@ -808,13 +808,16 @@ function Test-PathLexicallyContained {
     Param(
         [Parameter(Mandatory=$true)]
         [string] $Path,
-        [Parameter(Mandatory=$true)]
-        [string] $RootFolder
+        [string] $RootFolder = (Get-Location).Path
     )
 
     $pathComparison = GetPathStringComparison
 
-    $Path = [System.IO.Path]::GetFullPath($Path) # canonicalize the path to an absolute path (resolves ".."/".")
+    if (-not [System.IO.Path]::IsPathRooted($Path)) {
+        $Path = Join-Path $RootFolder $Path # resolve relative to the root folder
+    }
+    $Path = [System.IO.Path]::GetFullPath($Path) # canonicalize the path to an absolute path
+
     $RootFolder = [System.IO.Path]::GetFullPath($RootFolder) # canonicalize the root folder to an absolute path
     $RootFolder = Join-Path $RootFolder '' # ensure the root folder path ends with a directory separator
 
@@ -825,51 +828,42 @@ function Test-PathLexicallyContained {
 .SYNOPSIS
 Resolves a path to its final physical location, following any symbolic links/junctions along the way.
 .DESCRIPTION
-Walks $Path segment by segment starting from $RootFolder (ancestors at or above $RootFolder are assumed to
-already be free of reparse points and are not resolved), following any symbolic link or junction encountered
-so the result reflects where the OS would actually read/write - not just the literal path segments. This
-also catches a reparse point that redirects to another location INSIDE $RootFolder (e.g. ".github" being a
-symlink to "ProjectA/.github"): the resolved path differs from the literal $Path even though it never
-escapes $RootFolder, which plain containment checks would miss. Both parameters are treated as literal
-paths (no wildcard expansion).
+Walks $Path segment by segment starting from the most specific verified folder that lexically contains it,
+resolving any symbolic links or junctions encountered along the way.
 .PARAMETER Path
-The literal path to resolve. Must be lexically contained within $RootFolder.
-.PARAMETER RootFolder
-The root folder above which no further reparse-point resolution is needed/performed.
+The literal path to resolve.
+.PARAMETER AnchorFolders
+An array of anchor folders to start resolution from; reparse points within these folders are ignored (or they are otherwise known to be free of reparse points).
+The function will start resolution from the most specific folder in this list that lexically contains $Path.
 .OUTPUTS
-The fully resolved physical path, or $null if resolution failed (path not lexically contained within
-$RootFolder, or a reparse point chain exceeded the hop limit).
+The fully resolved physical path, or $null if resolution failed
+(path not lexically contained within any of the anchor folders, or a reparse point chain exceeded the hop limit).
 #>
 function Resolve-PhysicalPath {
     Param(
         [Parameter(Mandatory=$true)]
         [string] $Path,
-        [Parameter(Mandatory=$true)]
-        [string] $RootFolder
+        [string[]] $AnchorFolders = @()
     )
 
-    if (-not (Test-PathLexicallyContained -Path $Path -RootFolder $RootFolder)) {
-        return $null
-    }
-
     $Path = [System.IO.Path]::GetFullPath($Path) # canonicalize the path to an absolute path
-    $RootFolder = [System.IO.Path]::GetFullPath($RootFolder) # canonicalize the root folder to an absolute path
-    $RootFolder = Join-Path $RootFolder '' # ensure the root folder path ends with a directory separator
-
     $resolveReparsePoints = $true # once an ancestor doesn't exist, no deeper segment can be a reparse point either
     $hopLimit = 40 # matches the classic OS/.NET max-followed-symlinks limit (guards against cyclic chains)
     $hopCount = 0
 
-    # List of verified paths that have been confirmed to contain no unresolved reparse points.
-    $verifiedPaths = [System.Collections.Generic.List[string]]::new()
-    $verifiedPaths.Add($RootFolder)
+    # Determine the most specific anchor folder that lexically contains the target path. This helps to minimize redundant checks for already verified path segments.
+    $anchorPath = $AnchorFolders | Sort-Object -Descending | Where-Object { Test-PathLexicallyContained -Path $Path -RootFolder $_ } | Select-Object -First 1
+    if (-not $anchorPath) {
+        # If no anchor folder matches the target, start verification from the root of the target path.
+        $anchorPath = [System.IO.Path]::GetPathRoot($Path)
+    }
+    $anchorPath = Join-Path $anchorPath '' # Ensure the anchor path ends with a directory separator
 
     # Initialize the work queue of remaining path segments to walk.
     $segments = [System.Collections.Generic.List[string]]::new()
-    $segments.AddRange([string[]] $Path.Substring($RootFolder.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
+    $segments.AddRange([string[]] $Path.Substring($anchorPath.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
 
-    $realPath = $RootFolder
-
+    $realPath = $anchorPath
     while ($segments.Count -gt 0) {
         $realPath = Join-Path $realPath $segments[0]
         $segments.RemoveAt(0)
@@ -885,32 +879,36 @@ function Resolve-PhysicalPath {
         }
 
         if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
-            $verifiedPaths.Add((Join-Path $realPath '')) # this segment itself is confirmed not a reparse point
+            if ($item -is [System.IO.DirectoryInfo]) {
+                $AnchorFolders += $item.FullName # this segment itself is confirmed not a reparse point
+            }
             continue
         }
+
         if ($hopCount++ -gt $hopLimit) {
             # Cyclic or pathologically deep chain - fail closed, like the OS would refuse to resolve it too
             OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'. Treating as not contained."
             return $null
         }
 
-        $target = @($item.Target)[0]
-        if (-not [System.IO.Path]::IsPathRooted($target)) {
-            $target = Join-Path (Split-Path -Path $realPath -Parent) $target
+        $targetPath = @($item.Target)[0]
+        if (-not [System.IO.Path]::IsPathRooted($targetPath)) {
+            $targetPath = Join-Path $item.Parent.FullName $targetPath
         }
-        $target = [System.IO.Path]::GetFullPath($target)
+        $targetPath = [System.IO.Path]::GetFullPath($targetPath)
 
-        # Find the longest verified path that is a prefix of the target. This helps to minimize redundant checks for already verified path segments.
-        $verifiedPath = $verifiedPaths | Sort-Object -Descending | Where-Object { Test-PathLexicallyContained -Path $target -RootFolder $_ } | Select-Object -First 1
-        if (-not $verifiedPath) {
-            # If no verified path matches the target, start verification from the root of the target path.
-            $verifiedPath = [System.IO.Path]::GetPathRoot($target)
+        # Determine the most specific anchor folder that lexically contains the target path. This helps to minimize redundant checks for already verified path segments.
+        $anchorPath = $AnchorFolders | Sort-Object -Descending | Where-Object { Test-PathLexicallyContained -Path $targetPath -RootFolder $_ } | Select-Object -First 1
+        if (-not $anchorPath) {
+            # If no anchor folder matches the target, start verification from the root of the target path.
+            $anchorPath = [System.IO.Path]::GetPathRoot($targetPath)
         }
+        $anchorPath = Join-Path $anchorPath '' # Ensure the anchor path ends with a directory separator
 
         # Re-inject every unverified segment of the resolved target so an embedded reparse point (e.g. link1 ->
-        # "link2/sub" where link2 itself escapes the root) gets its own check on a later iteration.
-        $segments.InsertRange(0, [string[]] $target.Substring($verifiedPath.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
-        $realPath = $verifiedPath
+        # "link2/sub" where link2 itself escapes the root) gets its own resolve on a later iteration.
+        $segments.InsertRange(0, [string[]] $targetPath.Substring($anchorPath.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
+        $realPath = $anchorPath
     }
 
     return $realPath
@@ -920,15 +918,11 @@ function Resolve-PhysicalPath {
 .SYNOPSIS
 Checks whether a path physically resolves to itself, i.e. no reparse point along the way redirects it.
 .DESCRIPTION
-Resolves $Path (see Resolve-PhysicalPath) and compares the result to $Path itself. This requires the
-resolved path to be the EXACT path given - catching a reparse point that redirects to a different,
-still-in-bounds location (e.g. an ancestor directory symlinked to another folder within the same root),
-which plain lexical/physical containment checks would not detect. Use this to guard a destination that
-must be written to/removed at the exact intended path.
+Resolves $Path (see Resolve-PhysicalPath) and compares the result to $Path itself.
 .PARAMETER Path
 The literal path expected to be its own final physical location.
-.PARAMETER RootFolder
-The root folder above which no further reparse-point resolution is needed/performed.
+.PARAMETER AnchorFolders
+An array of anchor folders to start resolution from; reparse points within these folders are ignored (or they are otherwise known to be free of reparse points).
 .OUTPUTS
 $true if $Path resolves to itself, otherwise $false.
 #>
@@ -936,17 +930,19 @@ function Test-PathPhysicallyEqual {
     Param(
         [Parameter(Mandatory=$true)]
         [string] $Path,
-        [Parameter(Mandatory=$true)]
-        [string] $RootFolder
+        [string[]] $AnchorFolders = @()
     )
 
-    $realPath = Resolve-PhysicalPath -Path $Path -RootFolder $RootFolder
+    $pathComparer = GetPathStringComparer
+
+    $Path = [System.IO.Path]::GetFullPath($Path)
+
+    $realPath = Resolve-PhysicalPath -Path $Path -AnchorFolders $AnchorFolders
     if (-not $realPath) {
         return $false
     }
 
-    $pathComparer = GetPathStringComparer
-    return $pathComparer.Equals($realPath, [System.IO.Path]::GetFullPath($Path))
+    return $pathComparer.Equals($realPath, $Path)
 }
 
 <#

@@ -139,6 +139,12 @@ if ($projects.Count -gt 1) {
     Write-Host "Calculated dependency depth to be $depth"
 }
 
+# Prepare the list of template folders to be used for verification
+$templateFolders = @($templateFolder)
+if ($originalTemplateFolder) {
+    $templateFolders += $originalTemplateFolder
+}
+
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
 foreach($fileToInclude in $filesToInclude) {
     $type = $fileToInclude.type
@@ -148,21 +154,15 @@ foreach($fileToInclude in $filesToInclude) {
         $originalSrcPath = $srcPath
     }
 
-    # Skip files that do not physically resolve to themselves within the template or original template folders
-    if (Test-PathLexicallyContained -Path $srcPath -RootFolder $templateFolder -and -not (Test-PathPhysicallyEqual -Path $srcPath -RootFolder $templateFolder)) {
-        OutputWarning "Skipping file '$srcPath': source does not physically resolve to itself within the template folder. This may indicate a symlink/junction redirect."
-        continue
-    } elseif (Test-PathLexicallyContained -Path $srcPath -RootFolder $originalTemplateFolder -and -not (Test-PathPhysicallyEqual -Path $srcPath -RootFolder $originalTemplateFolder)) {
-        OutputWarning "Skipping file '$srcPath': source does not physically resolve to itself within the original template folder. This may indicate a symlink/junction redirect."
+    # Skip files that do not physically resolve to themselves within the template folders
+    if (-not (Test-PathPhysicallyEqual -Path $srcPath -AnchorFolders $templateFolders)) {
+        OutputWarning "Skipping file '$srcPath': source does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
         continue
     }
     if ($originalSrcPath -ne $srcPath) {
-        # Skip files with original files that do not physically resolve to themselves within the template or original template folders
-        if (Test-PathLexicallyContained -Path $originalSrcPath -RootFolder $templateFolder -and -not (Test-PathPhysicallyEqual -Path $originalSrcPath -RootFolder $templateFolder)) {
-            OutputWarning "Skipping file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the template folder. This may indicate a symlink/junction redirect."
-            continue
-        } elseif (Test-PathLexicallyContained -Path $originalSrcPath -RootFolder $originalTemplateFolder -and -not (Test-PathPhysicallyEqual -Path $originalSrcPath -RootFolder $originalTemplateFolder)) {
-            OutputWarning "Skipping file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the original template folder. This may indicate a symlink/junction redirect."
+        # Skip files with original files that do not physically resolve to themselves within the template folders
+        if (-not (Test-PathPhysicallyEqual -Path $originalSrcPath -AnchorFolders $templateFolders)) {
+            OutputWarning "Skipping file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
             continue
         }
     }
@@ -283,7 +283,7 @@ else {
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
             # Skip files that do not physically resolve to themselves within the destination root folder
-            if (-not (Test-PathPhysicallyEqual -Path $_.DstFile -RootFolder $dstRoot)) {
+            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_.DstFile) -AnchorFolders @($dstRoot))) {
                 OutputWarning "Skipping update of '$($_.DstFile)': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
                 return
             }
@@ -316,7 +316,7 @@ else {
         }
         $removeFiles | ForEach-Object {
             # Skip files that do not physically resolve to themselves within the destination root folder
-            if (-not (Test-PathPhysicallyEqual -Path $_ -RootFolder $dstRoot)) {
+            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_) -AnchorFolders @($dstRoot))) {
                 OutputWarning "Skipping removal of '$_': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
                 return
             }
