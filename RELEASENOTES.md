@@ -1,7 +1,3 @@
-### More resilient baseline discovery
-
-AL-Go retries CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics. Query values are URL-encoded so the discovery URL renders correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
-
 ### New `unpublishOldVersions` setting for deployment
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
@@ -21,6 +17,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
+- Issue 2370 - Retry CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics and URL-encoding query values so discovery URLs render correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
 
 ## v9.2
