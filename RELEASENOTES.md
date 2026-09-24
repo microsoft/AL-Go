@@ -17,6 +17,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
+- Issue 2370 - Retry CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics and URL-encoding query values so discovery URLs render correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
 
 ## v9.2
