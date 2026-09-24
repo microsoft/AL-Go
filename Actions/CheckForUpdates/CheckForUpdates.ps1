@@ -230,13 +230,9 @@ if ($update -ne 'Y') {
     }
 }
 else {
-    $settingsFile = Join-Path $baseFolder $RepoSettingsFile
-    if (-not $updateFiles -and -not $removeFiles -and (Test-Path -Path $settingsFile -PathType Leaf)) {
-        $currentSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
-        # Keep the last applied revision when only the template SHA would change.
-        if ($currentSettings['templateUrl'] -ceq $templateUrl -and $currentSettings['templateSha']) {
-            $templateSha = $currentSettings['templateSha']
-        }
+    if (-not (Test-HasSystemFileChanges -settingsFile (Join-Path $baseFolder $RepoSettingsFile) -templateUrl $templateUrl -updateFiles $updateFiles -removeFiles $removeFiles)) {
+        OutputNotice -message "No updates available for AL-Go for GitHub."
+        return
     }
 
     # $update set, update the files
