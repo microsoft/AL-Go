@@ -1,4 +1,4 @@
-﻿Param(
+Param(
     [Parameter(HelpMessage = "The GitHub actor running the action", Mandatory = $false)]
     [string] $actor,
     [Parameter(HelpMessage = "Base64 encoded GhTokenWorkflow secret", Mandatory = $false)]
@@ -51,8 +51,9 @@ if ($token) {
 # if $update is set to N, CheckForUpdates will only check for updates and output a warning if there are updates available
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
-# Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
-$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
+# Get repo settings independent of the build, project, workflow, user, branch, and trigger running this update.
+# Repository-scoped and unconditional settings still apply.
+$repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 
 # If templateUrl has changed, download latest version of the template repository (ignore templateSha)
@@ -113,6 +114,12 @@ if (-not $isDirectALGo) {
 
 # Get the list of projects in the current repository
 $baseFolder = $ENV:GITHUB_WORKSPACE
+
+if ($originalTemplateFolder) {
+    # Use current custom template settings for this run without changing the workspace before comparison.
+    $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+}
+
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
 $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
@@ -133,6 +140,12 @@ if ($projects.Count -gt 1) {
     Write-Host "Calculated dependency depth to be $depth"
 }
 
+# Prepare the list of template folders to be used for verification
+$templateFolders = @($templateFolder)
+if ($originalTemplateFolder) {
+    $templateFolders += $originalTemplateFolder
+}
+
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
 foreach($fileToInclude in $filesToInclude) {
     $type = $fileToInclude.type
@@ -141,10 +154,30 @@ foreach($fileToInclude in $filesToInclude) {
     if(-not $originalSrcPath) {
         $originalSrcPath = $srcPath
     }
+    $hasDistinctOriginalSource = -not (GetPathStringComparer).Equals($originalSrcPath, $srcPath)
+
+    # Skip files that do not physically resolve to themselves within the template folders
+    if (-not (Test-PathPhysicallyEqual -Path $srcPath -AnchorPaths $templateFolders)) {
+        OutputWarning "Skipping update for source file '$srcPath': source does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
+        continue
+    }
+    if ($hasDistinctOriginalSource) {
+        # Skip files with original files that do not physically resolve to themselves within the template folders
+        if (-not (Test-PathPhysicallyEqual -Path $originalSrcPath -AnchorPaths $templateFolders)) {
+            OutputWarning "Skipping update for source file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
+            continue
+        }
+    }
 
     $dstPath = $fileToInclude.destinationFullPath
 
-    $dstFileExists = Test-Path -Path $dstPath -PathType Leaf
+    # Skip files with destinations that do not physically resolve to themselves within the base folder
+    if (-not (Test-PathPhysicallyEqual -Path $dstPath -AnchorPaths @($baseFolder))) {
+        OutputWarning "Skipping update for source file '$srcPath': destination '$dstPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        continue
+    }
+
+    $dstFileExists = Test-Path -LiteralPath $dstPath -PathType Leaf
 
     Write-Host "Processing file: $srcPath -> $dstPath (type: $type)"
 
@@ -170,7 +203,7 @@ foreach($fileToInclude in $filesToInclude) {
         ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
     }
 
-    if ($type -eq 'workflow' -and $originalSrcPath -ne $srcPath) {
+    if ($type -eq 'workflow' -and $hasDistinctOriginalSource) {
         # Apply customizations from custom template repository
         Write-Host "Apply customizations from custom template repository, file: $srcPath"
         [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcPath)
@@ -204,8 +237,8 @@ foreach($fileToInclude in $filesToInclude) {
 
 Push-Location -Path $baseFolder
 # Remove files that are in $filesToExclude and exist in the repository
-$removeFiles = $filesToExclude | Where-Object { $_ -and (Test-Path -Path $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
-    $relativePath = Resolve-Path -Path $_.destinationFullPath -Relative
+$removeFiles = $filesToExclude | Where-Object { $_ -and (Test-Path -LiteralPath $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
+    $relativePath = Resolve-Path -LiteralPath $_.destinationFullPath -Relative
     Write-Host "File marked for removal: $relativePath"
     $relativePath
 }
@@ -251,16 +284,24 @@ else {
 
         invoke-git status
 
+        $dstRoot = (Get-Location).Path
+
         # Update the files
         # Calculate the release notes, while updating
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
+            # Skip files that do not physically resolve to themselves within the destination root folder
+            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_.DstFile) -AnchorPaths @($dstRoot))) {
+                OutputWarning "Skipping update of '$($_.DstFile)': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                return
+            }
+
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
-            if ($path -and -not (Test-Path -path $path -PathType Container)) {
+            if ($path -and -not (Test-Path -LiteralPath $path -PathType Container)) {
                 New-Item -Path $path -ItemType Directory | Out-Null
             }
-            if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path $_.DstFile)) {
+            if (([System.IO.Path]::GetFileName($_.DstFile) -eq "RELEASENOTES.copy.md") -and (Test-Path -LiteralPath $_.DstFile)) {
                 # Read the release notes of the version currently installed
                 $oldReleaseNotes = Get-ContentLF -Path $_.DstFile
                 # Get the release notes of the new version (for the PR body)
@@ -282,8 +323,14 @@ else {
             $releaseNotes = "No release notes available!"
         }
         $removeFiles | ForEach-Object {
+            # Skip files that do not physically resolve to themselves within the destination root folder
+            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_) -AnchorPaths @($dstRoot))) {
+                OutputWarning "Skipping removal of '$_': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                return
+            }
+
             Write-Host "Remove $_"
-            Remove-Item (Join-Path (Get-Location).Path $_) -Force
+            Remove-Item -LiteralPath $_ -Force
         }
 
         # Update the templateUrl and templateSha in the repo settings file

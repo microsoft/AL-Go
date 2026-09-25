@@ -4,6 +4,28 @@ Import-Module (Join-Path $PSScriptRoot "../Actions/TelemetryHelper.psm1")
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
+# Computed here (not in BeforeAll) because -Skip: expressions are evaluated at discovery time, and
+# these variables are used by -Skip: expressions in Describe blocks throughout this file.
+# $IsWindows doesn't exist in Windows PowerShell 5.1, which only ever runs on Windows anyway.
+$script:isWindowsPlatform = ($PSVersionTable.PSVersion.Major -lt 6) -or $IsWindows
+$script:isLinuxPlatform = ($PSVersionTable.PSVersion.Major -ge 6) -and $IsLinux
+
+# Determine if the runner has the capability to create symlinks
+$script:hasSymlinkCapability = $true
+if ($script:isWindowsPlatform) {
+    # Probe once whether this runner can create symlinks; Junctions never need this privilege, SymbolicLinks do
+    $probeLinkPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+    try {
+        New-Item -ItemType SymbolicLink -Path $probeLinkPath -Target $PSScriptRoot -ErrorAction Stop | Out-Null
+    }
+    catch {
+        $script:hasSymlinkCapability = $false
+    }
+    finally {
+        Remove-Item -Path $probeLinkPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Describe "CheckForUpdates Action Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
@@ -49,6 +71,471 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
+Describe "CheckForUpdates Action: runtime behavior" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
+        $scriptPath = Join-Path $scriptRoot "$actionName.ps1"
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "checkForUpdatesRuntimeTests"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $rootFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubWorkspace', Justification = 'False positive.')]
+        $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubRepository', Justification = 'False positive.')]
+        $originalGitHubRepository = $env:GITHUB_REPOSITORY
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalLocation', Justification = 'False positive.')]
+        $originalLocation = Get-Location
+
+        $testRepoName = 'contoso/check-for-updates-runtime-tests'
+
+        $testTemplateFolder = Join-Path $rootFolder 'template'
+        $testWorkspaceFolder = Join-Path $rootFolder 'workspace'
+        $testCloneRoot = Join-Path $rootFolder 'clone'
+
+        $testSettings = @{
+            templateSha = 'sha123456789'
+            templateUrl = 'https://github.com/microsoft/AL-Go-PTE@main'
+            type = 'PTE'
+            projects = @()
+            'runs-on' = 'windows-latest'
+            shell = 'powershell'
+        }
+
+        $testFilesToInclude = @()
+        $testFilesToExclude = @()
+
+        $fakeToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('fake-pat'))
+
+        Mock DownloadAndImportBcContainerHelper {}
+        Mock ReadSettings { [PSCustomObject]$testSettings }
+        Mock DownloadTemplateRepository { return $testTemplateFolder }
+        Mock GetSrcFolder { return $testTemplateFolder }
+        Mock IsDirectALGo { return $true }
+        Mock GetProjectsFromRepository { return @('.') }
+        Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output $testFilesToExclude -NoEnumerate }
+        Mock OutputWarning {}
+        Mock OutputNotice {}
+        Mock RunAndCheck { return 'sha123456789' }
+        Mock invoke-git {}
+        Mock GetAccessToken { return $fakeToken }
+        Mock gh { '[]' }
+        Mock CloneIntoNewFolder { Set-Location -Path $testCloneRoot; "https://fake.example.com/$testRepoName.git"; 'update-al-go-system-files/branch' }
+        Mock CommitFromNewFolder { return $true }
+        Mock UpdateSettingsFile {}
+
+        New-Item -Path $testTemplateFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $testWorkspaceFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $testCloneRoot -ItemType Directory -Force | Out-Null
+
+        Set-Location $testWorkspaceFolder
+        $env:GITHUB_WORKSPACE = $testWorkspaceFolder
+        $env:GITHUB_REPOSITORY = $testRepoName
+    }
+
+    AfterEach {
+        Set-Location $originalLocation
+        $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
+        $env:GITHUB_REPOSITORY = $originalGitHubRepository
+
+        if (Test-Path -LiteralPath $testTemplateFolder) {
+            Remove-Item -Path $testTemplateFolder -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $testWorkspaceFolder) {
+            Remove-Item -Path $testWorkspaceFolder -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $testCloneRoot) {
+            Remove-Item -Path $testCloneRoot -Recurse -Force
+        }
+    }
+
+    It 'Reads initial settings without execution-specific contexts' {
+        . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update N
+
+        Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+            $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
+            $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+            ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+        }
+    }
+
+    It 'Reads, updates and removes with literal bracketed paths' {
+        $newSource = Join-Path $testTemplateFolder 'New[1].txt'
+        $newDestination = Join-Path $testWorkspaceFolder 'New[1].txt'
+        Set-Content -LiteralPath $newSource -Value 'new content'
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'New1.txt') -Value 'wrong source'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'New1.txt') -Value 'wrong destination'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'New1.txt') -Value 'keep me'
+
+        $changedSource = Join-Path $testTemplateFolder 'Changed[1].txt'
+        $changedDestination = Join-Path $testWorkspaceFolder 'Changed[1].txt'
+        Set-Content -LiteralPath $changedSource -Value 'new content'
+        Set-Content -LiteralPath $changedDestination -Value 'old content'
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'Changed1.txt') -Value 'wrong source'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Changed1.txt') -Value 'wrong destination'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Changed[1].txt') -Value 'old content'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Changed1.txt') -Value 'keep me'
+
+        $unchangedSource = Join-Path $testTemplateFolder 'Same[1].txt'
+        $unchangedDestination = Join-Path $testWorkspaceFolder 'Same[1].txt'
+        Set-Content -LiteralPath $unchangedSource -Value 'same content'
+        Set-Content -LiteralPath $unchangedDestination -Value 'same content'
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'Same1.txt') -Value 'wrong source'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Same1.txt') -Value 'wrong destination'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Same[1].txt') -Value 'same content'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Same1.txt') -Value 'keep me'
+
+        $workflowSource = Join-Path $testTemplateFolder 'Workflow[1].yaml'
+        $workflowOriginalSource = Join-Path $testTemplateFolder 'WorkflowOriginal[1].yaml'
+        $workflowDestination = Join-Path $testWorkspaceFolder 'Workflow[1].yaml'
+        $workflowLines = @('jobs:', '  Build:', '    runs-on: [ windows-latest ]')
+        $workflowTemplateCustomJobLines = @('  CustomJob-Template:', '    runs-on: [ windows-latest ]')
+        $workflowDestinationCustomJobLines = @('  CustomJob-Destination:', '    runs-on: [ windows-latest ]')
+        Set-Content -LiteralPath $workflowSource -Value (@('name: Custom') + $workflowLines + $workflowTemplateCustomJobLines)
+        Set-Content -LiteralPath $workflowOriginalSource -Value (@('name: Original') + $workflowLines)
+        Set-Content -LiteralPath $workflowDestination -Value (@('name: Destination') + $workflowLines + $workflowDestinationCustomJobLines)
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'Workflow1.yaml') -Value (@('name: Wrong custom') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'WorkflowOriginal1.yaml') -Value (@('name: Wrong original') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Workflow1.yaml') -Value (@('name: Wrong destination') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow[1].yaml') -Value (@('name: Old content') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow1.yaml') -Value (@('name: Keep me') + $workflowLines)
+
+        $excludedDestination = Join-Path $testWorkspaceFolder 'Old[1].txt'
+        Set-Content -LiteralPath $excludedDestination -Value 'remove me'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Old1.txt') -Value 'keep me'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Old[1].txt') -Value 'remove me'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Old1.txt') -Value 'keep me'
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $newSource; originalSourceFullPath = $null; type = ''; destinationFullPath = $newDestination }
+            @{ sourceFullPath = $changedSource; originalSourceFullPath = $null; type = ''; destinationFullPath = $changedDestination }
+            @{ sourceFullPath = $unchangedSource; originalSourceFullPath = $null; type = ''; destinationFullPath = $unchangedDestination }
+            @{ sourceFullPath = $workflowSource; originalSourceFullPath = $workflowOriginalSource; type = 'workflow'; destinationFullPath = (Join-Path $testWorkspaceFolder 'Workflow[1].yaml') }
+        )
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+        $testFilesToExclude = @(
+            @{ destinationFullPath = $excludedDestination }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor'
+
+        $updateFiles.Count | Should -Be 3
+        $updateFiles[0].DstFile | Should -Be 'New[1].txt'
+        $updateFiles[0].content | Should -Be 'new content'
+        $updateFiles[1].DstFile | Should -Be 'Changed[1].txt'
+        $updateFiles[1].content | Should -Be 'new content'
+        $updateFiles[2].DstFile | Should -Be 'Workflow[1].yaml'
+        $updateFiles[2].content | Should -Match '(?s)^name: Original.*CustomJob-Template:.*CustomJob-Destination:'
+        @($removeFiles).Count | Should -Be 1
+        @($removeFiles)[0] | Should -Be (Join-Path '.' 'Old[1].txt')
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'New[1].txt') | Should -Be 'new content'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'New1.txt') | Should -Be 'keep me'
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Changed[1].txt') | Should -Be 'new content'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Changed1.txt') | Should -Be 'keep me'
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Same[1].txt') | Should -Be 'same content'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Same1.txt') | Should -Be 'keep me'
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow[1].yaml') -Raw | Should -Match '(?s)^name: Original.*CustomJob-Template:.*CustomJob-Destination:'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow1.yaml') -Raw | Should -Match '^name: Keep me'
+
+        Test-Path -LiteralPath (Join-Path $testCloneRoot 'Old[1].txt') | Should -BeFalse
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Old1.txt') | Should -Be 'keep me'
+    }
+
+    It 'Rejects an external original source on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $invalidSource = Join-Path $testTemplateFolder 'File.txt'
+        $invalidOriginalSource = Join-Path $testTemplateFolder 'file.txt'
+        Set-Content -LiteralPath $invalidSource -Value 'safe content'
+        $external = Join-Path $TestDrive 'file.txt'
+        Set-Content -LiteralPath $external -Value 'external content'
+        New-Item -ItemType SymbolicLink -Path $invalidOriginalSource -Target $external | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $invalidSource; originalSourceFullPath = $invalidOriginalSource; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder 'File.txt') }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*original source*does not physically resolve*' }
+        $updateFiles.Count | Should -Be 0
+    }
+
+    It 'Applies workflow customizations from case-distinct original sources on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $workflowSource = Join-Path $testTemplateFolder 'Workflow.yaml'
+        $workflowOriginalSource = Join-Path $testTemplateFolder 'WORKFLOW.yaml'
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt') -Destination $workflowSource
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'YamlSnippet.txt') -Destination $workflowOriginalSource
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $workflowSource; originalSourceFullPath = $workflowOriginalSource; type = 'workflow'; destinationFullPath = (Join-Path $testWorkspaceFolder 'Workflow.yaml') }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*There are updates for your AL-Go system*' }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be 'Workflow.yaml'
+        $updateFiles[0].content | Should -Match 'CustomJob-MyCustomTemplateJob:'
+    }
+
+    It 'Applies no workflow customizations from case-distinct original sources on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $workflowSource = Join-Path $testTemplateFolder 'Workflow.yaml'
+        $workflowOriginalSource = Join-Path $testTemplateFolder 'WORKFLOW.yaml'
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt') -Destination $workflowSource
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'YamlSnippet.txt') -Destination $workflowOriginalSource
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $workflowSource; originalSourceFullPath = $workflowOriginalSource; type = 'workflow'; destinationFullPath = (Join-Path $testWorkspaceFolder 'Workflow.yaml') }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*There are updates for your AL-Go system*' }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be 'Workflow.yaml'
+        $updateFiles[0].content | Should -Not -Match 'CustomJob-MyCustomTemplateJob:'
+    }
+
+    It 'CheckForUpdates skips source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        # A legitimate file directly in the template folder
+        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+
+        # Create a redirection folder and a junction pointing back to the template folder
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+        New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*redirected.txt': source does not physically resolve*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*': original source '*redirected.txt' does not physically resolve*" }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be "legit.txt"
+    }
+
+    It 'CheckForUpdates skips source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        # A legitimate file directly in the template folder
+        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+
+        # Create a redirection folder and a symbolic link pointing back to the template folder
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*redirected.txt': source does not physically resolve*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*': original source '*redirected.txt' does not physically resolve*" }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be "legit.txt"
+    }
+
+    It 'CheckForUpdates skips source files with case-distinct original sources that do not physically resolve to themselves using symlinks on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $directTemplateFolder = Join-Path $testTemplateFolder "folder"
+        $directTemplateFile = Join-Path $directTemplateFolder "file.txt"
+        New-Item -ItemType Directory -Path $directTemplateFolder -Force | Out-Null
+        Set-Content -LiteralPath $directTemplateFile -Value "direct content"
+
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "FOLDER"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "file.txt"
+        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+        Set-Content -LiteralPath $redirectedTemplateFile -Value "redirected content"
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $directTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "file.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -clike "Skipping update for source file '*folder*': original source '*FOLDER*' does not physically resolve*" }
+        $updateFiles.Count | Should -Be 0
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        # A file in the template folder
+        $templateFile = Join-Path $testTemplateFolder "template.txt"
+        Set-Content -LiteralPath $templateFile -Value "template content"
+
+        # A legitimate file directly in the clone folder
+        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+
+        # Create a redirected folder and a symbolic link pointing back to the workspace folder
+        $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
+        New-Item -ItemType Junction -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+
+        # Create a redirected folder and a symbolic link pointing back to the clone folder
+        $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
+        New-Item -ItemType Junction -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $updateFiles.Count | Should -Be 2
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update for source file '*template.txt':*'*redirectedInWorkspace*redirected.txt'*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate update was actually written to the (mocked) clone root; the redirected ones were not
+        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInWorkspace/redirected.txt") -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        # A file in the template folder
+        $templateFile = Join-Path $testTemplateFolder "template.txt"
+        Set-Content -LiteralPath $templateFile -Value "template content"
+
+        # A legitimate file directly in the clone folder
+        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+
+        # Create a redirected folder and a symbolic link pointing back to the workspace folder
+        $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
+        New-Item -ItemType SymbolicLink -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+
+        # Create a redirected folder and a symbolic link pointing back to the clone folder
+        $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
+        New-Item -ItemType SymbolicLink -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $updateFiles.Count | Should -Be 2
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update for source file '*template.txt':*'*redirectedInWorkspace*redirected.txt'*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate update was actually written to the (mocked) clone root; the redirected ones were not
+        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInWorkspace/redirected.txt") -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        $relativeLegitFile = "legit.txt"
+        $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
+        $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+        $relativeRedirectedInCloneFolder = "redirectedInClone"
+        $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+
+        # Create folders, files and junctions in workspace folder
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType Junction -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        # Create folders, files and junctions in clone folder
+        Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
+        New-Item -ItemType Junction -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+        $testFilesToExclude = @(
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $removeFiles.Count | Should -Be 3
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clone redirected file was not
+        Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        $relativeLegitFile = "legit.txt"
+        $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
+        $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+        $relativeRedirectedInCloneFolder = "redirectedInClone"
+        $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+
+        # Create folders, files and junctions in workspace folder
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType SymbolicLink -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        # Create folders, files and junctions in clone folder
+        Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
+        New-Item -ItemType SymbolicLink -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+        $testFilesToExclude = @(
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $removeFiles.Count | Should -Be 3
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
+        Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
+    }
+}
+
 Describe "YamlClass Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
@@ -56,6 +543,15 @@ Describe "YamlClass Tests" {
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
 
         Mock Trace-Information {}
+    }
+
+    It 'Loads only the literal YAML name containing brackets' {
+        . (Join-Path $scriptRoot 'yamlclass.ps1')
+        $literalFile = Join-Path $TestDrive 'Workflow[1].yaml'
+        Set-Content -LiteralPath $literalFile -Value 'name: Correct'
+        Set-Content -LiteralPath (Join-Path $TestDrive 'Workflow1.yaml') -Value 'name: Wrong'
+
+        [Yaml]::Load($literalFile).content | Should -Be 'name: Correct'
     }
 
     It 'Test YamlClass' {
@@ -316,6 +812,18 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $modifiedContent."`$schema" | Should -Be "someSchema"
     }
 
+    It 'GetModifiedSettingsContent reads a literal bracketed destination' {
+        $source = Join-Path $TestDrive 'SettingsSource.json'
+        $destination = Join-Path $TestDrive 'Settings[1].json'
+        Set-Content -LiteralPath $source -Value '{"setting":"source"}'
+        Set-Content -LiteralPath $destination -Value '{"setting":"destination"}'
+        Set-Content -LiteralPath (Join-Path $TestDrive 'Settings1.json') -Value '{"setting":"wrong"}'
+
+        $modifiedContent = GetModifiedSettingsContent -srcSettingsFile $source -dstSettingsFile $destination | ConvertFrom-Json
+
+        $modifiedContent.setting | Should -Be 'destination'
+    }
+
     It 'GetModifiedSettingsContent returns correct content when destination file is empty' {
         # Create only the source file
         @{ "`$schema" = "someSchema"; "srcSetting" = "value1" } | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpSrcFile -Force
@@ -363,6 +871,7 @@ Describe "CheckForUpdates Action: ApplyWorkflowDefaultInputs Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
     }
 
@@ -1393,6 +1902,67 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[1].type | Should -Be ''
     }
 
+    It 'ResolveFilePaths warns and skips destinations outside the destination folder' {
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $destinationSubfolder = Join-Path $destinationFolder "subfolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationName" = "../outside.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "destinationFolder" = "../outside" }
+            @{ "sourceFolder" = "folder"; "filter" = "File3.txt"; "destinationFolder" = "subfolder"; "destinationName" = "../outside.txt" }
+            @{ "sourceFolder" = "folder"; "filter" = "File4.md" }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File4.md")
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like "*outside the file destination folder '$destinationFolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the file destination folder '$destinationSubfolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the base destination folder '$destinationFolder*" }
+    }
+
+    It 'ResolveFilePaths warns and skips per-project destinations outside the destination folder' {
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $destinationProjectFolder = Join-Path $destinationFolder "project"
+        $destinationProjectSubfolder = Join-Path $destinationProjectFolder "subfolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "destinationName" = "../outside.txt"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File2.log"; "destinationFolder" = "../outside"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File3.txt"; "destinationFolder" = "subfolder"; "destinationName" = "../outside.txt"; "perProject" = $true }
+            @{ "sourceFolder" = "folder"; "filter" = "File4.md"; "perProject" = $true }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("project"))
+
+        $fullFilePaths.Count | Should -Be 1
+        $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File4.md")
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "project/folder/File4.md")
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like "*outside the file destination folder '$destinationProjectFolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the file destination folder '$destinationProjectSubfolder*" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the project destination folder '$destinationProjectFolder*" }
+    }
+
+    It 'ResolveFilePaths warns and skips per-project path <project> outside the destination folder' -TestCases @(
+        @{ project = ".." }
+        @{ project = "project/.." }
+    ) {
+        param($project)
+
+        $destinationFolder = Join-Path $rootFolder "destinationFolder"
+        $files = @(
+            @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; "perProject" = $true }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @($project))
+
+        $fullFilePaths | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': project destination folder * resolves to a different path *" }
+    }
+
     It 'ResolveFilePaths with type' {
         $destinationFolder = "destinationFolder"
         $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
@@ -1538,29 +2108,121 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[4].type | Should -Be "markdown"
     }
 
-    It 'ResolveFilePaths skips files outside the source folder' {
-        # Create an external file outside the source folder
+    It 'ResolveFilePaths skips source files lexically escaping outside the source folder' {
         $externalFolder = Join-Path $PSScriptRoot "external"
-        if (-not (Test-Path $externalFolder)) { New-Item -Path $externalFolder -ItemType Directory | Out-Null }
         $externalFile = Join-Path $externalFolder "outside.txt"
-        Set-Content -Path $externalFile -Value "outside"
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path $externalFile -Value "outside"
 
-        $destinationFolder = "destinationFolder"
-        $destinationFolder = Join-Path $PSScriptRoot $destinationFolder
+            $files = @(
+                @{ "sourceFolder" = "../external"; "filter" = "*.txt" }
+            )
 
+            # Intentionally call ResolveFilePaths with the real sourceFolder (so external file should not be included)
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+            # Ensure none of the returned sourceFullPath entries point to the external file
+            $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -Be $externalFile }
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips source files lexically escaping into a folder whose name starts with source folder name' {
+        $externalFolder = "${sourceFolder}-external"
+        $externalFile = Join-Path $externalFolder "outside.txt"
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path $externalFile -Value "outside"
+
+            $files = @(
+                @{ "sourceFolder" = "../sourceFolder-external"; "filter" = "*.txt" }
+            )
+
+            $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+
+            # The file in the prefix-colliding folder must NOT be included
+            $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -BeLike "${externalFolder}*" }
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips source files when its original source file lexically escapes the original source folder' {
+        $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
+        $escapedOriginalSourceFile = Resolve-PathLexically -Path (Join-Path $originalSourceFolder "folder/File1.txt")
+
+        # Test-PathLexicallyContained already guarantees this can't happen through legitimate inputs (both sides are
+        # always resolved consistently), so force just this one call to fail to exercise the defensive "else" branch.
+        $realTestPathLexicallyContained = (Get-Item function:Test-PathLexicallyContained).ScriptBlock
+        Mock Test-PathLexicallyContained {
+            if ($Path -eq $escapedOriginalSourceFile -and $RootFolder -eq $originalSourceFolder) {
+                return $false
+            }
+            & $realTestPathLexicallyContained -Path $Path -RootFolder $RootFolder
+        }
+        Mock OutputWarning {}
+
+        $files = @(@{ "sourceFolder" = "folder"; "filter" = "File1.txt" })
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder)
+
+        # The file must be skipped entirely, not merely left with originalSourceFullPath = $null
+        $fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File1.txt") } | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*is not under the original source folder*" }
+    }
+
+    It 'ResolveFilePaths skips source files lexically escaping to folder that differs only by case on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $externalFolder = Join-Path $rootFolder 'SOURCEFOLDER'
+        $externalFile = Join-Path $externalFolder 'outside.txt'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+
+        try {
+            New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+            Set-Content -Path $externalFile -Value 'outside'
+
+            $files = @(
+                @{ 'sourceFolder' = '../SOURCEFOLDER'; 'filter' = '*.txt' }
+            )
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+            $fullFilePaths | Should -BeNullOrEmpty
+        }
+        finally {
+            Remove-Item -Path $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'ResolveFilePaths skips destinations lexically escaping to folder that differs only by case on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
         $files = @(
-            @{ "sourceFolder" = "../external"; "filter" = "*.txt" }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'folder'; 'destinationName' = '../FOLDER/outside.txt' }
         )
+        Mock OutputWarning {}
 
-        # Intentionally call ResolveFilePaths with the real sourceFolder (so external file should not be included)
-        $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
-        # Ensure none of the returned sourceFullPath entries point to the external file
-        $fullFilePaths | ForEach-Object { $_.sourceFullPath | Should -Not -Be $externalFile }
+        $fullFilePaths | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1
+    }
 
-        # Cleanup
-        if (Test-Path $externalFile) { Remove-Item -Path $externalFile -Force }
-        if (Test-Path $externalFolder) { Remove-Item -Path $externalFolder -Recurse -Force }
+    It 'ResolveFilePaths skips per-project destinations lexically escaping to folder that differs only by case on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = ''; 'destinationName' = '../PROJECT/outside.txt'; 'perProject' = $true }
+        )
+        Mock OutputWarning {}
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('project'))
+
+        $fullFilePaths | Should -BeNullOrEmpty
+        Should -Invoke OutputWarning -Times 1
     }
 
     It 'ResolveFilePaths returns empty when no files match filter' {
@@ -1628,6 +2290,34 @@ Describe "ResolveFilePaths" {
         $fullFilePaths | Should -Not -BeNullOrEmpty
         $fullFilePaths.Count | Should -Be 1
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+    }
+
+    It 'ResolveFilePaths keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt' }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 2
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeTrue
+    }
+
+    It 'ResolveFilePaths removes case-distinct destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt' }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
+
+        $fullFilePaths.Count | Should -Be 1
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeFalse
     }
 
     It 'ResolveFilePaths treats dot project as repository root for per-project files' {
@@ -1782,6 +2472,34 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
     }
 
+    It 'ResolveFilePaths keeps case-distinct per-project destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('ProjectA'))
+
+        $fullFilePaths.Count | Should -Be 2
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeTrue
+    }
+
+    It 'ResolveFilePaths removes case-distinct per-project destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $files = @(
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
+        )
+
+        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('ProjectA'))
+
+        $fullFilePaths.Count | Should -Be 1
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/CaseFolder/conflict.txt')) | Should -BeTrue
+        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeFalse
+    }
+
     It 'ResolveFilePaths handles empty sourceFolder value' {
         # Create a file in the root of the sourceFolder
         $rootFile = Join-Path $sourceFolder "RootFile.txt"
@@ -1852,6 +2570,28 @@ Describe "ResolveFilePaths" {
         }
     }
 
+    It 'ResolveFilePaths resolves original paths containing wildcard characters literally' {
+        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
+        $sourceFile = Join-Path $sourceFolder 'folder/File[1].ps1'
+        $originalSourceFile = Join-Path $originalSourceFolder 'folder/File[1].ps1'
+        Set-Content -LiteralPath $sourceFile -Value '# source file'
+        Set-Content -LiteralPath $originalSourceFile -Value '# original source file'
+        $currentLocation = Get-Location
+
+        try {
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files @(@{ sourceFolder = 'folder'; filter = '*.ps1' }) -destinationFolder $destinationFolder -originalSourceFolder $originalSourceFolder)
+            $resolvedFile = @($fullFilePaths | Where-Object { $_.sourceFullPath -eq $sourceFile })
+
+            $resolvedFile.Count | Should -Be 1
+            $resolvedFile[0].originalSourceFullPath | Should -Be $originalSourceFile
+            (Get-Location).Path | Should -Be $currentLocation.Path
+        }
+        finally {
+            Remove-Item -LiteralPath $sourceFile -Force
+            Remove-Item -LiteralPath $originalSourceFile -Force
+        }
+    }
+
     It 'ResolveFilePaths with origin custom template and no originalSourceFolder skips files' {
         $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
         $files = @(
@@ -1868,7 +2608,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File2.log")
     }
 
-    It 'ResolveFilePaths handles case-insensitive filter matching on Windows' {
+    It 'ResolveFilePaths handles case-insensitive filter matching' {
         # Create files with different case
         $upperFile = Join-Path $sourceFolder "folder/UPPER.TXT"
         $lowerFile = Join-Path $sourceFolder "folder/lower.txt"
@@ -1883,16 +2623,596 @@ Describe "ResolveFilePaths" {
 
             $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder
 
-            # On Windows, both should match due to case-insensitive file system
             $fullFilePaths | Should -Not -BeNullOrEmpty
-            $upperMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $upperFile }
-            $lowerMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -eq $lowerFile }
+            $upperMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -ceq $upperFile }
+            $lowerMatch = $fullFilePaths | Where-Object { $_.sourceFullPath -ceq $lowerFile }
             $upperMatch | Should -Not -BeNullOrEmpty
             $lowerMatch | Should -Not -BeNullOrEmpty
         }
         finally {
             if (Test-Path $upperFile) { Remove-Item -Path $upperFile -Force }
             if (Test-Path $lowerFile) { Remove-Item -Path $lowerFile -Force }
+        }
+    }
+}
+
+Describe "Resolve-PathLexically" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "resolvePathLexicallyTests"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $rootFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'Resolve-PathLexically returns an already-rooted path unchanged' {
+        $path = Join-Path $rootFolder "folder/file.txt"
+        Resolve-PathLexically -Path $path | Should -Be ([System.IO.Path]::GetFullPath($path))
+    }
+
+    It 'Resolve-PathLexically resolves ".." and "." segments in a rooted path' {
+        $path = Join-Path $rootFolder "folder/../folder2/./file.txt"
+        Resolve-PathLexically -Path $path | Should -Be (Join-Path $rootFolder "folder2/file.txt")
+    }
+
+    It 'Resolve-PathLexically resolves a relative path against the current location' {
+        Push-Location -Path $rootFolder
+        try {
+            Resolve-PathLexically -Path "sub/file.txt" | Should -Be (Join-Path $rootFolder "sub/file.txt")
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
+    It 'Resolve-PathLexically with -AsDirectory ensures a trailing directory separator' {
+        $path = Join-Path $rootFolder "folder"
+        Resolve-PathLexically -Path $path -AsDirectory | Should -Be (Join-Path ([System.IO.Path]::GetFullPath($path)) '')
+    }
+
+    It 'Resolve-PathLexically with -AsDirectory does not duplicate an existing trailing directory separator' {
+        $path = Join-Path (Join-Path $rootFolder "folder") ''
+        Resolve-PathLexically -Path $path -AsDirectory | Should -Be $path
+    }
+
+    It 'Resolve-PathLexically without -AsDirectory does not add a trailing directory separator' {
+        $path = Join-Path $rootFolder "folder"
+        Resolve-PathLexically -Path $path | Should -Be ([System.IO.Path]::GetFullPath($path))
+    }
+}
+
+Describe "Test-PathLexicallyContained" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "lexicallyContainedTests"
+        $externalFolder = Join-Path $PSScriptRoot "lexicallyContainedTestsExternal"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $rootFolder, $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'Test-PathLexicallyContained returns true for a path lexically inside the root folder' {
+        $path = Join-Path $rootFolder "folder/file.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+    }
+
+    It 'Test-PathLexicallyContained returns false for a path lexically outside the root folder' {
+        $path = Join-Path $externalFolder "file.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+    }
+
+    It 'Test-PathLexicallyContained returns true for a path that stays inside the root folder after resolving ".." segments' {
+        $path = Join-Path $rootFolder "folder/../folder2/file.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+    }
+
+    It 'Test-PathLexicallyContained returns false for a path that escapes the root folder via ".." segments' {
+        $path = Join-Path $rootFolder "folder/../../outside.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $false
+    }
+
+    It 'Test-PathLexicallyContained returns true for a path with "." segments that stays inside the root folder' {
+        $path = Join-Path $rootFolder "./folder/./file.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder $rootFolder | Should -Be $true
+    }
+
+    It 'Test-PathLexicallyContained returns true when Path equals RootFolder exactly' {
+        Test-PathLexicallyContained -Path $rootFolder -RootFolder $rootFolder | Should -Be $true
+    }
+
+    It 'Test-PathLexicallyContained returns true when Path equals RootFolder with a trailing separator on either side' {
+        $rootFolderWithSlash = Join-Path $rootFolder ''
+        Test-PathLexicallyContained -Path $rootFolder -RootFolder $rootFolderWithSlash | Should -Be $true
+        Test-PathLexicallyContained -Path $rootFolderWithSlash -RootFolder $rootFolder | Should -Be $true
+    }
+
+    It 'Test-PathLexicallyContained is case-insensitive on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $path = Join-Path $rootFolder "FOLDER/file.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder (Join-Path $rootFolder "folder") | Should -Be $true
+    }
+
+    It 'Test-PathLexicallyContained is case-sensitive on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $path = Join-Path $rootFolder "FOLDER/file.txt"
+        Test-PathLexicallyContained -Path $path -RootFolder (Join-Path $rootFolder "folder") | Should -Be $false
+    }
+}
+
+Describe "Resolve-PathPhysically" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "resolvePhysicalPathTests"
+        $externalFolder = Join-Path $PSScriptRoot "resolvePhysicalPathTestsExternal"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $rootFolder, $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'Resolve-PathPhysically returns the canonicalized path when there are no reparse points' {
+        $path = Join-Path $rootFolder "folder/file.txt"
+        Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($path))
+    }
+
+    It 'Resolve-PathPhysically fails closed when a path segment cannot be inspected' {
+        $blockedPath = Join-Path $rootFolder 'blocked'
+        $path = Join-Path $blockedPath 'file.txt'
+        Mock Get-Item { throw [System.UnauthorizedAccessException]::new('Access denied') } -ParameterFilter { $LiteralPath -eq $blockedPath }
+        Mock OutputWarning {}
+
+        Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be $null
+        Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $false
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like '*unable to inspect*' }
+    }
+
+    It 'Resolve-PathPhysically returns a folder anchor unchanged when Path equals the anchor exactly' {
+        $folder = Join-Path $rootFolder "exactFolderAnchor"
+        New-Item -Path $folder -ItemType Directory -Force | Out-Null
+        Resolve-PathPhysically -Path $folder -AnchorPaths @($folder) | Should -Be ([System.IO.Path]::GetFullPath($folder))
+    }
+
+    It 'Resolve-PathPhysically returns a file anchor unchanged when Path equals the anchor exactly' {
+        $file = Join-Path $rootFolder "exactFileAnchor.txt"
+        Resolve-PathPhysically -Path $file -AnchorPaths @($file) | Should -Be ([System.IO.Path]::GetFullPath($file))
+    }
+
+    It 'Resolve-PathPhysically resolves a relative Path against the current location' {
+        $subFolder = Join-Path $rootFolder "relativePathInput"
+        New-Item -Path $subFolder -ItemType Directory -Force | Out-Null
+        Push-Location -Path $subFolder
+        try {
+            Resolve-PathPhysically -Path "file.txt" | Should -Be (Join-Path $subFolder "file.txt")
+        }
+        finally {
+            Pop-Location
+            Remove-Item -Path $subFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a single symlink to its real target' -Skip:(-not $script:hasSymlinkCapability) {
+        $realTargetFolder = Join-Path $rootFolder "singleSymRealTarget"
+        $linkedFolder = Join-Path $rootFolder "singleSymLink"
+        $path = Join-Path $linkedFolder "file.txt"
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
+
+            $resolved = Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder)
+
+            $resolved | Should -Be (Join-Path $realTargetFolder "file.txt")
+            $resolved | Should -Not -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a single junction to its real target' -Skip:(-not $script:isWindowsPlatform) {
+        $realTargetFolder = Join-Path $rootFolder "singleJctRealTarget"
+        $linkedFolder = Join-Path $rootFolder "singleJctLink"
+        $path = Join-Path $linkedFolder "file.txt"
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
+
+            $resolved = Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder)
+
+            $resolved | Should -Be (Join-Path $realTargetFolder "file.txt")
+            $resolved | Should -Not -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a chain of two symlinks (link1 -> link2 -> real folder) to its real target' -Skip:(-not $script:hasSymlinkCapability) {
+        $realFolder = Join-Path $rootFolder "chainSymRealTarget"
+        $link2 = Join-Path $rootFolder "chainSymLink2"
+        $link1 = Join-Path $rootFolder "chainSymLink1"
+        $path = Join-Path $link1 "file.txt"
+        try {
+            New-Item -Path $realFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $link2 -Target $realFolder -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $link1 -Target $link2 -Force | Out-Null
+
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $realFolder "file.txt")
+        }
+        finally {
+            Remove-Item -Path $link1 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $link2 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a chain of two junctions (link1 -> link2 -> real folder) to its real target' -Skip:(-not $script:isWindowsPlatform) {
+        $realFolder = Join-Path $rootFolder "chainJctRealTarget"
+        $link2 = Join-Path $rootFolder "chainJctLink2"
+        $link1 = Join-Path $rootFolder "chainJctLink1"
+        $path = Join-Path $link1 "file.txt"
+        try {
+            New-Item -Path $realFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $link2 -Target $realFolder -Force | Out-Null
+            New-Item -ItemType Junction -Path $link1 -Target $link2 -Force | Out-Null
+
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $realFolder "file.txt")
+        }
+        finally {
+            Remove-Item -Path $link1 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $link2 -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a dangling symlink to its real target without warning' -Skip:(-not $script:hasSymlinkCapability) {
+        $danglingTarget = Join-Path $rootFolder "danglingSymTarget"
+        $linkPath = Join-Path $rootFolder "danglingSymLink"
+        try {
+            New-Item -Path $danglingTarget -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkPath -Target $danglingTarget -Force | Out-Null
+            Remove-Item -Path $danglingTarget -Force
+            Mock OutputWarning {}
+
+            Resolve-PathPhysically -Path $linkPath -AnchorPaths @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($danglingTarget))
+            Should -Invoke OutputWarning -Times 0
+        }
+        finally {
+            Remove-Item -Path $linkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $danglingTarget -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a dangling junction to its real target without warning' -Skip:(-not $script:isWindowsPlatform) {
+        $danglingTarget = Join-Path $rootFolder "danglingJctTarget"
+        $linkPath = Join-Path $rootFolder "danglingJctLink"
+        try {
+            New-Item -Path $danglingTarget -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $linkPath -Target $danglingTarget -Force | Out-Null
+            Remove-Item -Path $danglingTarget -Force
+            Mock OutputWarning {}
+
+            Resolve-PathPhysically -Path $linkPath -AnchorPaths @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($danglingTarget))
+            Should -Invoke OutputWarning -Times 0
+        }
+        finally {
+            Remove-Item -Path $linkPath -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $danglingTarget -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically returns $null and warns when a symlink chain cycles back on itself' -Skip:(-not $script:hasSymlinkCapability) {
+        $linkA = Join-Path $rootFolder "cyclicLinkA"
+        $linkB = Join-Path $rootFolder "cyclicLinkB"
+        try {
+            New-Item -Path $linkA -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkB -Target $linkA -Force | Out-Null
+            Remove-Item -Path $linkA -Force
+            New-Item -ItemType SymbolicLink -Path $linkA -Target $linkB -Force | Out-Null
+            Mock OutputWarning {}
+
+            Resolve-PathPhysically -Path $linkA -AnchorPaths @($rootFolder) | Should -Be $null
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*exceeded*hops*" }
+        }
+        finally {
+            Remove-Item -Path $linkA -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $linkB -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically returns $null and warns when a junction chain cycles back on itself' -Skip:(-not $script:isWindowsPlatform) {
+        $nodeA = Join-Path $rootFolder "cyclicJctNodeA"
+        $nodeB = Join-Path $rootFolder "cyclicJctNodeB"
+        try {
+            New-Item -Path $nodeA -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $nodeB -Target $nodeA -Force | Out-Null
+            Remove-Item -Path $nodeA -Force
+            New-Item -ItemType Junction -Path $nodeA -Target $nodeB -Force | Out-Null
+            Mock OutputWarning {}
+
+            Resolve-PathPhysically -Path $nodeA -AnchorPaths @($rootFolder) | Should -Be $null
+            Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*exceeded*hops*" }
+        }
+        finally {
+            Remove-Item -Path $nodeA -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $nodeB -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a symlink whose target path has a parent symlink (link1 -> link2/subdir/file.txt)' -Skip:(-not $script:hasSymlinkCapability) {
+        $realFolder = Join-Path $rootFolder "nestedSymRealTarget"
+        $parentLink = Join-Path $rootFolder "nestedSymParentLink"
+        $outerLink = Join-Path $rootFolder "nestedSymOuterLink"
+        $path = Join-Path $outerLink "file.txt"
+        try {
+            New-Item -Path (Join-Path $realFolder "subdir") -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $parentLink -Target $realFolder -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $outerLink -Target (Join-Path $parentLink "subdir") -Force | Out-Null
+
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $realFolder "subdir/file.txt")
+        }
+        finally {
+            Remove-Item -Path $outerLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $parentLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a junction whose target path has a parent junction (link1 -> link2/subdir/file.txt)' -Skip:(-not $script:isWindowsPlatform) {
+        $realFolder = Join-Path $rootFolder "nestedJctRealTarget"
+        $parentLink = Join-Path $rootFolder "nestedJctParentLink"
+        $outerLink = Join-Path $rootFolder "nestedJctOuterLink"
+        $path = Join-Path $outerLink "file.txt"
+        try {
+            New-Item -Path (Join-Path $realFolder "subdir") -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $parentLink -Target $realFolder -Force | Out-Null
+            New-Item -ItemType Junction -Path $outerLink -Target (Join-Path $parentLink "subdir") -Force | Out-Null
+
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $realFolder "subdir/file.txt")
+        }
+        finally {
+            Remove-Item -Path $outerLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $parentLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically trusts a symlink when its own path is passed as an anchor folder, skipping resolution' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustSymTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # Without the link in AnchorPaths, it is followed to its real (external) target
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $externalTargetFolder "file.txt")
+
+            # When the link's own path is passed as an anchor, it is trusted and not followed
+            Resolve-PathPhysically -Path $path -AnchorPaths @($trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically trusts a junction when its own path is passed as an anchor folder, skipping resolution' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustJctTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # Without the link in AnchorPaths, it is followed to its real (external) target
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $externalTargetFolder "file.txt")
+
+            # When the link's own path is passed as an anchor, it is trusted and not followed
+            Resolve-PathPhysically -Path $path -AnchorPaths @($trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically trusts a symlink when its own path is passed as a relative anchor folder, skipping resolution' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustSymTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            Push-Location $rootFolder
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # Without the link in AnchorPaths, it is followed to its real (external) target
+            Resolve-PathPhysically -Path $path -AnchorPaths @(".") | Should -Be (Join-Path $externalTargetFolder "file.txt")
+
+            # When the link's own path is passed as an anchor, it is trusted and not followed
+            Resolve-PathPhysically -Path $path -AnchorPaths @(Split-Path $trustedLink -Leaf) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Pop-Location
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically trusts a junction when its own path is passed as a relative anchor folder, skipping resolution' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustJctTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            Push-Location $rootFolder
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # Without the link in AnchorPaths, it is followed to its real (external) target
+            Resolve-PathPhysically -Path $path -AnchorPaths @(".") | Should -Be (Join-Path $externalTargetFolder "file.txt")
+
+            # When the link's own path is passed as an anchor, it is trusted and not followed
+            Resolve-PathPhysically -Path $path -AnchorPaths @(Split-Path $trustedLink -Leaf) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Pop-Location
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically picks the most specific of multiple anchors, trusting a symlink sitting at the deeper anchor' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "multiAnchorSymTarget"
+        $trustedLink = Join-Path $rootFolder "multiAnchorSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # A broader anchor (rootFolder) alone would not bypass resolution, but the more specific
+            # anchor (the link itself) is selected and trusted, even when both are supplied together
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder, $trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically picks the most specific of multiple anchors, trusting a junction sitting at the deeper anchor' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "multiAnchorJctTarget"
+        $trustedLink = Join-Path $rootFolder "multiAnchorJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            # A broader anchor (rootFolder) alone would not bypass resolution, but the more specific
+            # anchor (the link itself) is selected and trusted, even when both are supplied together
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder, $trustedLink) | Should -Be ([System.IO.Path]::GetFullPath($path))
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+Describe "Test-PathPhysicallyEqual" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+
+        $rootFolder = Join-Path $PSScriptRoot "physicallyEqualTests"
+        $externalFolder = Join-Path $PSScriptRoot "physicallyEqualTestsExternal"
+        New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $externalFolder -ItemType Directory -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $rootFolder, $externalFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'Test-PathPhysicallyEqual delegates to Resolve-PathPhysically and compares its result against the canonicalized path' {
+        $path = Join-Path $rootFolder "delegationCheck/file.txt"
+
+        Mock Resolve-PathPhysically { return $Path }
+        Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $true
+        Should -Invoke Resolve-PathPhysically -Times 1 -ParameterFilter {
+            $Path -eq ([System.IO.Path]::GetFullPath($path)) -and (Compare-Object $AnchorPaths @($rootFolder) | Measure-Object).Count -eq 0
+        }
+
+        Mock Resolve-PathPhysically { return (Join-Path $rootFolder "somewhereElse/file.txt") }
+        Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $false
+    }
+
+    It 'Test-PathPhysicallyEqual returns true when there are no reparse points' {
+        $path = Join-Path $rootFolder "folder/file.txt"
+        Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $true
+    }
+
+    It 'Test-PathPhysicallyEqual returns true when the path does not exist yet' {
+        $path = Join-Path $rootFolder "doesNotExist/file.txt"
+        Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $true
+    }
+
+    It 'Test-PathPhysicallyEqual returns false when a symlink redirects to a different real location' -Skip:(-not $script:hasSymlinkCapability) {
+        $realTargetFolder = Join-Path $rootFolder "redirectSymTarget"
+        $linkedFolder = Join-Path $rootFolder "redirectSymLink"
+        $path = Join-Path $linkedFolder "file.txt"
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyEqual returns false when a junction redirects to a different real location' -Skip:(-not $script:isWindowsPlatform) {
+        $realTargetFolder = Join-Path $rootFolder "redirectJctTarget"
+        $linkedFolder = Join-Path $rootFolder "redirectJctLink"
+        $path = Join-Path $linkedFolder "file.txt"
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $linkedFolder -Target $realTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $false
+        }
+        finally {
+            Remove-Item -Path $linkedFolder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyEqual returns true when the anchor folder is itself a symlink, bypassing resolution' -Skip:(-not $script:hasSymlinkCapability) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustSymTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustSymLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorPaths @($trustedLink) | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Test-PathPhysicallyEqual returns true when the anchor folder is itself a junction, bypassing resolution' -Skip:(-not $script:isWindowsPlatform) {
+        $externalTargetFolder = Join-Path $externalFolder "anchorTrustJctTarget"
+        $trustedLink = Join-Path $rootFolder "anchorTrustJctLink"
+        $path = Join-Path $trustedLink "file.txt"
+        try {
+            New-Item -Path $externalTargetFolder -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Junction -Path $trustedLink -Target $externalTargetFolder -Force | Out-Null
+
+            Test-PathPhysicallyEqual -Path $path -AnchorPaths @($trustedLink) | Should -Be $true
+        }
+        finally {
+            Remove-Item -Path $trustedLink -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path $externalTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -1966,14 +3286,82 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         # .
         # ├── test.ps1
         # ├── test.txt
-        # └── test2.txt
+        # ├── test2.txt
         # └── subfolder
-        #     └── testsub.txt
+        #     ├── testsub.txt
+        #     └── testsub2.txt
+
+        $originalTemplateFolder = Join-Path $PSScriptRoot "originalTemplate"
+        Copy-Item -Path $templateFolder -Destination $originalTemplateFolder -Recurse -Force | Out-Null
+
+        $testOriginalTemplateTxtFile = Join-Path $originalTemplateFolder "test.original.txt"
+        Set-Content -Path $testOriginalTemplateTxtFile -Value "test original template txt file"
+
+        $testOriginalTemplatePSFile = Join-Path $originalTemplateFolder "test.original.ps1"
+        Set-Content -Path $testOriginalTemplatePSFile -Value "# test original template ps file"
+
+        # Display the created files structure for original template folder
+        # .
+        # ├── test.ps1
+        # ├── test.txt
+        # ├── test2.txt
+        # ├── test.original.ps1
+        # ├── test.original.txt
+        # └── subfolder
+        #     ├── testsub.txt
+        #     └── testsub2.txt
+
+        $baseFolder = Join-Path $PSScriptRoot "base"
+        Copy-Item -Path $templateFolder -Destination $baseFolder -Recurse -Force | Out-Null
+
+        $testBaseTxtFile = Join-Path $baseFolder "test.base.txt"
+        Set-Content -Path $testBaseTxtFile -Value "test base txt file"
+
+        $testBasePSFile = Join-Path $baseFolder "test.base.ps1"
+        Set-Content -Path $testBasePSFile -Value "# test base ps file"
+
+        $baseProject1Folder = Join-Path $baseFolder "project1"
+        Copy-Item -Path $templateFolder -Destination $baseProject1Folder -Recurse -Force | Out-Null
+
+        $baseProject2Folder = Join-Path $baseFolder "project2"
+        Copy-Item -Path $templateFolder -Destination $baseProject2Folder -Recurse -Force | Out-Null
+
+        Remove-Item -Path (Join-Path $baseFolder 'test2.txt') -Recurse -Force | Out-Null
+
+        # Display the created files structure for base folder
+        # .
+        # ├── test.ps1
+        # ├── test.txt
+        # ├── test.base.ps1
+        # ├── test.base.txt
+        # ├── subfolder
+        # │   ├── testsub.txt
+        # │   └── testsub2.txt
+        # ├── project1
+        # │   ├── test.ps1
+        # │   ├── test.txt
+        # │   ├── test2.txt
+        # │   └── subfolder
+        # │       ├── testsub.txt
+        # │       └── testsub2.txt
+        # └── project2
+        #     ├── test.ps1
+        #     ├── test.txt
+        #     ├── test2.txt
+        #     └── subfolder
+        #         ├── testsub.txt
+        #         └── testsub2.txt
     }
 
     AfterAll {
         if (Test-Path $templateFolder) {
             Remove-Item -Path $templateFolder -Recurse -Force
+        }
+        if (Test-Path $originalTemplateFolder) {
+            Remove-Item -Path $originalTemplateFolder -Recurse -Force
+        }
+        if (Test-Path $baseFolder) {
+            Remove-Item -Path $baseFolder -Recurse -Force
         }
     }
 
@@ -1987,14 +3375,14 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
         $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.ps1')
 
-        # No files to remove
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
@@ -2006,15 +3394,15 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 2
         $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
         $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
-        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'test2.txt')
 
-        # No files to remove
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
     }
 
@@ -2028,16 +3416,16 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 2
         $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'customFolder/test.txt')
         $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
-        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test2.txt')
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'customFolder/test2.txt')
 
-        # No files to remove
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
@@ -2049,18 +3437,18 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
         $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'customFolder/test.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'customFolder/test.txt')
 
         # One file to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be $testTxtFile2
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'customFolder/test2.txt')
     }
 
     It 'Returns the correct files with destinationName' {
@@ -2073,14 +3461,14 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
         $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'renamed.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'renamed.txt')
 
-        # No files to remove
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
@@ -2092,12 +3480,12 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
         $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'dstPath/renamed.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'dstPath/renamed.txt')
     }
 
     It 'Return the correct files with types' {
@@ -2110,15 +3498,15 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
         $filesToInclude[0].sourceFullPath | Should -Be $testPSFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.ps1')
         $filesToInclude[0].type | Should -Be "script"
 
-        # No files to remove
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
 
         $settings = @{
@@ -2130,19 +3518,19 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 1
         $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile2
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test2.txt')
         $filesToInclude[0].type | Should -Be "text"
 
         # One file to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be $testTxtFile
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified' {
@@ -2155,20 +3543,20 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 2
         $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
         $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
-        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'test2.txt')
 
         # One file to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be $testPSFile
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.ps1')
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.ps1')
     }
 
     It 'GetFilesToUpdate with perProject true and empty projects returns no per-project entries' {
@@ -2182,7 +3570,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
 
         # Pass empty projects array
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder -projects @()
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -projects @()
 
         # Behavior: when projects is empty, no per-project entries should be created
         $filesToInclude | Should -BeNullOrEmpty
@@ -2199,15 +3587,15 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # All txt files should be included, no files to exclude
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 2
         $filesToInclude[0].sourceFullPath | Should -Be $testTxtFile
-        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test.txt')
+        $filesToInclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
         $filesToInclude[1].sourceFullPath | Should -Be $testTxtFile2
-        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'test2.txt')
+        $filesToInclude[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'test2.txt')
 
         $filesToExclude | Should -BeNullOrEmpty
     }
@@ -2227,13 +3615,13 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
 
             $projects = @('.', 'ProjectOne')
-            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder -projects $projects
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -projects $projects
 
             $filesToInclude | Should -Not -BeNullOrEmpty
             $filesToInclude.Count | Should -Be 2
 
-            $rootDestination = Join-Path 'baseFolder' 'custom/perProjectFile.algo'
-            $projectDestination = Join-Path 'baseFolder' 'ProjectOne/custom/perProjectFile.algo'
+            $rootDestination = Join-Path $baseFolder 'custom/perProjectFile.algo'
+            $projectDestination = Join-Path $baseFolder 'ProjectOne/custom/perProjectFile.algo'
 
             $filesToInclude.destinationFullPath | Should -Contain $rootDestination
             $filesToInclude.destinationFullPath | Should -Contain $projectDestination
@@ -2274,7 +3662,6 @@ Describe "GetFilesToUpdate (general files to update logic)" {
                 }
             }
 
-            $baseFolder = 'baseFolder'
             $projects = @('ProjectA')
 
             $filesWithoutOriginal, $excludesWithoutOriginal = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $customTemplateFolder -projects $projects
@@ -2301,6 +3688,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             $filesWithOriginal.destinationFullPath | Should -Contain (Join-Path $baseFolder (Join-Path '.github' $CustomTemplateProjectSettingsFileName))
 
             $excludesWithoutOriginal | Should -BeNullOrEmpty
+
             $excludesWithOriginal | Should -BeNullOrEmpty
         }
         finally {
@@ -2323,7 +3711,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # test.txt should not be in filesToInclude
         $includedTestTxt = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
@@ -2344,7 +3732,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # All txt files should be included
         $filesToInclude | Should -Not -BeNullOrEmpty
@@ -2354,6 +3742,28 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         # Exclude list should not contain the non-matching pattern
         $excludedNonExistent = $filesToExclude | Where-Object { $_.sourceFullPath -like "*.xyz" }
         $excludedNonExistent | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate excludes files with different destinations that match both include and exclude patterns' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "test.txt" }, @{ filter = "test.txt"; destinationName = "test.renamed.txt" })
+                filesToExclude = @(@{ filter = "test.txt" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        # test.txt should not be in filesToInclude
+        $filesToInclude | Should -BeNullOrEmpty
+
+        # test.txt should be in filesToExclude two times with different destinations
+        $testTxtFiles = $filesToExclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
+        $testTxtFiles.Count | Should -Be 2
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
+        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.renamed.txt')
     }
 
     It 'GetFilesToUpdate handles overlapping include patterns with different destinations' {
@@ -2369,13 +3779,539 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # Should have two entries for test.txt with different destinations
         $testTxtFiles = $filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") }
         $testTxtFiles.Count | Should -Be 2
-        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder1/test.txt')
-        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder2/test.txt')
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'folder1/test.txt')
+        $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder 'folder2/test.txt')
+    }
+
+    It 'GetFilesToUpdate filesToInclude keeps the first entry when two entries collide on the same destination' {
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = "test.ps1"; destinationName = "conflict.txt" }, @{ filter = "test.txt"; destinationName = "conflict.txt" })
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        # Only one entry should be resolved for the colliding destination
+        $conflict = @($filesToInclude | Where-Object { $_.destinationFullPath -eq (Join-Path $baseFolder "conflict.txt") })
+        $conflict.Count | Should -Be 1
+
+        # The first-listed entry should win over the later entry for the same destination
+        $conflict[0].sourceFullPath | Should -Be $testPSFile
+    }
+
+    It 'GetFilesToUpdate keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = 'test.ps1'; destinationFolder = 'CaseFolder'; destinationName = 'conflict.txt' }
+                    @{ filter = 'test.txt'; destinationFolder = 'casefolder'; destinationName = 'conflict.txt' }
+                )
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeTrue
+    }
+
+    It 'GetFilesToUpdate excludes only the exact-case source path on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
+        $lowerCaseFolder = Join-Path $templateFolder 'casefolder'
+        $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
+        $lowerCaseFile = Join-Path $lowerCaseFolder 'script.ps1'
+        New-Item -ItemType Directory -Path $upperCaseFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path $lowerCaseFolder -Force | Out-Null
+        Set-Content -Path $upperCaseFile -Value '# upper case folder'
+        Set-Content -Path $lowerCaseFile -Value '# lower case folder'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @()
+                customALGoFiles       = @{
+                    filesToInclude = @(
+                        @{ sourceFolder = 'CaseFolder'; filter = 'script.ps1' }
+                        @{ sourceFolder = 'casefolder'; filter = 'script.ps1' }
+                    )
+                    filesToExclude = @(@{ sourceFolder = 'casefolder'; filter = 'script.ps1' })
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.Count | Should -Be 1
+            $filesToInclude[0].sourceFullPath | Should -BeExactly $upperCaseFile
+            $filesToExclude.Count | Should -Be 1
+            $filesToExclude[0].sourceFullPath | Should -BeExactly $lowerCaseFile
+        }
+        finally {
+            Remove-Item -Path $upperCaseFolder -Recurse -Force
+            Remove-Item -Path $lowerCaseFolder -Recurse -Force
+        }
+    }
+
+    It 'GetFilesToUpdate excludes only the exact-case unused file on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
+        $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
+        Set-Content -Path $upperCaseFile -Value '# upper case file'
+        Set-Content -Path $lowerCaseFile -Value '# lower case file'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @('unusedfile.ps1')
+                customALGoFiles       = @{
+                    filesToInclude = @(@{ filter = '*.ps1' })
+                    filesToExclude = @()
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.sourceFullPath -ccontains $upperCaseFile | Should -BeTrue
+            $filesToInclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $upperCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeTrue
+        }
+        finally {
+            Remove-Item -Path $upperCaseFile -Force
+            Remove-Item -Path $lowerCaseFile -Force
+        }
+    }
+
+    It 'GetFilesToUpdate removes case-distinct destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = 'test.ps1'; destinationFolder = 'CaseFolder'; destinationName = 'conflict.txt' }
+                    @{ filter = 'test.txt'; destinationFolder = 'casefolder'; destinationName = 'conflict.txt' }
+                )
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
+        ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeFalse
+    }
+
+    It 'GetFilesToUpdate excludes any case source path on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $upperCaseFolder = Join-Path $templateFolder 'CaseFolder'
+        $upperCaseFile = Join-Path $upperCaseFolder 'script.ps1'
+        New-Item -ItemType Directory -Path $upperCaseFolder -Force | Out-Null
+        Set-Content -Path $upperCaseFile -Value '# upper case folder'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @()
+                customALGoFiles       = @{
+                    filesToInclude = @(
+                        @{ sourceFolder = 'CaseFolder'; filter = 'script.ps1' }
+                        @{ sourceFolder = 'casefolder'; filter = 'script.ps1' }
+                    )
+                    filesToExclude = @(@{ sourceFolder = 'casefolder'; filter = 'script.ps1' })
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.Count | Should -Be 0
+            $filesToExclude.Count | Should -Be 1
+            $filesToExclude[0].sourceFullPath | Should -BeExactly $upperCaseFile
+        }
+        finally {
+            Remove-Item -Path $upperCaseFolder -Recurse -Force
+        }
+    }
+
+    It 'GetFilesToUpdate excludes any case unused file on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
+        $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
+        Set-Content -Path $upperCaseFile -Value '# upper case file'
+
+        try {
+            $settings = @{
+                type                  = 'NotPTE'
+                unusedALGoSystemFiles = @('unusedfile.ps1')
+                customALGoFiles       = @{
+                    filesToInclude = @(@{ filter = '*.ps1' })
+                    filesToExclude = @()
+                }
+            }
+
+            $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+            $filesToInclude.sourceFullPath -ccontains $upperCaseFile | Should -BeFalse
+            $filesToInclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $upperCaseFile | Should -BeTrue
+            $filesToExclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
+        }
+        finally {
+            Remove-Item -Path $upperCaseFile -Force
+        }
+    }
+
+    It 'GetFilesToUpdate filesToInclude includes original template files missing in template' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @(@{ filter = "test.original.txt" })
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+
+        # test.original.txt of original template should be in filesToInclude
+        $testOriginalTemplateTxtFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -eq $testOriginalTemplateTxtFile })
+        $testOriginalTemplateTxtFiles | Should -Not -BeNullOrEmpty
+        $testOriginalTemplateTxtFiles.Count | Should -Be 1
+        $testOriginalTemplateTxtFiles[0].sourceFullPath | Should -Be $testOriginalTemplateTxtFile
+        $testOriginalTemplateTxtFiles[0].originalSourceFullPath | Should -Be $null
+        $testOriginalTemplateTxtFiles[0].destinationFullPath | Should -Be ( Join-Path $baseFolder "test.original.txt" )
+    }
+
+    It 'GetFilesToUpdate filesToExclude excludes original template files missing in template' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @(@{ filter = "test.original.txt" })
+                filesToExclude = @(@{ filter = "test.original.txt" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+
+        # test.original.txt of original template should be in filesToExclude
+        $testOriginalTemplateTxtFiles = @($filesToExclude | Where-Object { $_.sourceFullPath -eq $testOriginalTemplateTxtFile })
+        $testOriginalTemplateTxtFiles | Should -Not -BeNullOrEmpty
+        $testOriginalTemplateTxtFiles.Count | Should -Be 1
+        $testOriginalTemplateTxtFiles[0].sourceFullPath | Should -Be $testOriginalTemplateTxtFile
+        $testOriginalTemplateTxtFiles[0].originalSourceFullPath | Should -Be $null
+        $testOriginalTemplateTxtFiles[0].destinationFullPath | Should -Be ( Join-Path $baseFolder "test.original.txt" )
+    }
+
+    It 'GetFilesToUpdate filesToInclude not including original template files existing in template' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @(@{ filter = "test.txt" })
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+
+        # test.txt of template should be in filesToInclude
+        $testTxtFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") })
+        $testTxtFiles | Should -Not -BeNullOrEmpty
+        $testTxtFiles.Count | Should -Be 1
+        $testTxtFiles[0].sourceFullPath | Should -Be (Join-Path $templateFolder "test.txt")
+        $testTxtFiles[0].originalSourceFullPath | Should -Be ( Join-Path $originalTemplateFolder "test.txt" )
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder "test.txt")
+
+        # test.txt of original template should not be in filesToInclude
+        $filesToInclude.SourceFullPath | Should -Not -Contain ( Join-Path $originalTemplateFolder "test.txt" )
+    }
+
+    It 'GetFilesToUpdate filesToExclude not excluding original template files existing in template' {
+        $settings = @{
+            type                        = "NotPTE"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @(@{ filter = "test.txt" })
+                filesToExclude = @(@{ filter = "test.txt" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+
+        # test.txt of template should be in filesToExclude
+        $testTxtFiles = @($filesToExclude | Where-Object { $_.sourceFullPath -eq (Join-Path $templateFolder "test.txt") })
+        $testTxtFiles | Should -Not -BeNullOrEmpty
+        $testTxtFiles.Count | Should -Be 1
+        $testTxtFiles[0].sourceFullPath | Should -Be (Join-Path $templateFolder "test.txt")
+        $testTxtFiles[0].originalSourceFullPath | Should -Be ( Join-Path $originalTemplateFolder "test.txt" )
+        $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder "test.txt")
+
+        # test.txt of original template should not be in filesToExclude
+        $filesToExclude.SourceFullPath | Should -Not -Contain ( Join-Path $originalTemplateFolder "test.txt" )
+    }
+}
+
+Describe "GetWorkflowContentWithChangesFromSettings" {
+    BeforeAll {
+        $scriptRoot = Join-Path $PSScriptRoot '..\Actions\CheckForUpdates' -Resolve
+        . (Join-Path $scriptRoot 'yamlclass.ps1')
+        . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+    }
+
+    It 'Reads target workflow settings without the update event trigger' {
+        $srcFile = Join-Path $TestDrive 'Sample.yaml'
+        Set-Content -LiteralPath $srcFile -Value 'name: Sample Workflow' -Encoding UTF8
+        Mock ReadSettings { [pscustomobject]@{ 'runs-on' = 'windows-latest'; shell = 'powershell' } }
+
+        GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings @{} -depth 1 | Out-Null
+
+        Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+            $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq 'Sample Workflow' -and
+            $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+            ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+        }
+    }
+}
+
+Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
+    BeforeAll {
+        $actionName = "CheckForUpdates"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
+    }
+
+    It 'Uses current template settings and restores an existing snapshot' {
+        $templateFolder = Join-Path $TestDrive "templateWithCurrentSettings"
+        $baseFolder = Join-Path $TestDrive "baseWithExistingSnapshot"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        $templateSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}'
+        Set-Content -LiteralPath $templateSettingsFile -Value $templateSettingsContent -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+        $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
+
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $settings.customALGoFiles.filesToInclude.Count | Should -Be 1
+        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
+        (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
+    }
+
+    It 'Reads refreshed settings without execution-specific contexts' {
+        $templateFolder = Join-Path $TestDrive 'templateWithContexts'
+        $baseFolder = Join-Path $TestDrive 'baseWithContexts'
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder '.github') -Force | Out-Null
+        Mock ReadSettings { [pscustomobject]@{ templateSha = 'test' } }
+
+        $originalGitHubRepository = $env:GITHUB_REPOSITORY
+        try {
+            $env:GITHUB_REPOSITORY = 'contoso/context-policy-test'
+            ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder | Out-Null
+
+            Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+                $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
+                $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+                ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+            }
+        }
+        finally {
+            $env:GITHUB_REPOSITORY = $originalGitHubRepository
+        }
+    }
+
+    It 'Removes a temporary snapshot when none existed before reading settings' {
+        $templateFolder = Join-Path $TestDrive "templateWithoutSnapshot"
+        $baseFolder = Join-Path $TestDrive "baseWithoutSnapshot"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        Test-Path -LiteralPath $snapshotFile | Should -Be $false
+
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
+        Test-Path -LiteralPath $snapshotFile | Should -Be $false
+    }
+
+    It 'Does not change an existing snapshot when the template has no settings file' {
+        $templateFolder = Join-Path $TestDrive "templateWithoutSettings"
+        $baseFolder = Join-Path $TestDrive "baseWithUnchangedSnapshot"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"existing.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+        $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
+
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "existing.txt"
+        (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
+    }
+
+    It 'Restores an existing snapshot when reading refreshed settings fails' {
+        $templateFolder = Join-Path $TestDrive "templateWithInvalidSettings"
+        $baseFolder = Join-Path $TestDrive "baseWithSnapshotAfterFailure"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{ invalid json' -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
+    }
+
+    It 'Throws and leaves the external target untouched when the base folder ".github" is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateForBaseGithubLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseWithGithubLinkEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForBaseLinkEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $baseFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $externalSnapshotFile = Join-Path $externalGithubFolder $CustomTemplateRepoSettingsFileName
+        $externalSnapshotContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalSnapshotFile -Value $externalSnapshotContent -Encoding UTF8
+
+        New-Item -ItemType SymbolicLink -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
+    }
+
+    It 'Throws and leaves the external target untouched when the snapshot file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateForSnapshotFileLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseWithSnapshotFileLinkEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $externalTargetFile = Join-Path $TestDrive "externalSnapshotTargetFile.json"
+        $externalTargetContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalTargetFile -Value $externalTargetContent -Encoding UTF8
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        New-Item -ItemType SymbolicLink -Path $snapshotFile -Target $externalTargetFile -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
+    }
+
+    It 'Throws and leaves the external target untouched when the template folder ".github" is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateWithGithubLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseForTemplateGithubLinkEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForTemplateLinkEscape"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $externalSettingsFile = Join-Path $externalGithubFolder $RepoSettingsFileName
+        $externalSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"external.txt"}]}}'
+        Set-Content -LiteralPath $externalSettingsFile -Value $externalSettingsContent -Encoding UTF8
+
+        New-Item -ItemType SymbolicLink -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
+    }
+
+    It 'Throws and leaves the external target and the existing snapshot untouched when the template settings file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFolder = Join-Path $TestDrive "templateWithSettingsFileLinkEscape"
+        $baseFolder = Join-Path $TestDrive "baseForTemplateSettingsFileLinkEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+
+        $externalTargetFile = Join-Path $TestDrive "externalTemplateSettingsTargetFile.json"
+        $externalTargetContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalTargetFile -Value $externalTargetContent -Encoding UTF8
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalTargetFile -Force | Out-Null
+
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
+        Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
+    }
+
+    It 'Throws and leaves the external target untouched when the base folder ".github" is a junction redirecting elsewhere' -Skip:(-not $script:isWindowsPlatform) {
+        $templateFolder = Join-Path $TestDrive "templateForBaseGithubJunctionEscape"
+        $baseFolder = Join-Path $TestDrive "baseWithGithubJunctionEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForBaseJunctionEscape"
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $baseFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
+
+        $externalSnapshotFile = Join-Path $externalGithubFolder $CustomTemplateRepoSettingsFileName
+        $externalSnapshotContent = '{"external":"untouched"}'
+        Set-Content -LiteralPath $externalSnapshotFile -Value $externalSnapshotContent -Encoding UTF8
+
+        New-Item -ItemType Junction -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
+    }
+
+    It 'Throws and leaves the external target untouched when the template folder ".github" is a junction redirecting elsewhere' -Skip:(-not $script:isWindowsPlatform) {
+        $templateFolder = Join-Path $TestDrive "templateWithGithubJunctionEscape"
+        $baseFolder = Join-Path $TestDrive "baseForTemplateGithubJunctionEscape"
+        $externalGithubFolder = Join-Path $TestDrive "externalGithubForTemplateJunctionEscape"
+        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
+        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
+
+        $externalSettingsFile = Join-Path $externalGithubFolder $RepoSettingsFileName
+        $externalSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"external.txt"}]}}'
+        Set-Content -LiteralPath $externalSettingsFile -Value $externalSettingsContent -Encoding UTF8
+
+        New-Item -ItemType Junction -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+
+        Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
     }
 }
 
@@ -2390,6 +4326,16 @@ Describe "GetFilesToUpdate (real template)" {
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realAppSourceAppTemplateFolder', Justification = 'False positive.')]
         $realAppSourceAppTemplateFolder = Join-Path $PSScriptRoot "../Templates/AppSource App" -Resolve
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'baseFolder', Justification = 'False positive.')]
+        $baseFolder = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'baseFolder'))
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'powerPlatformFiles', Justification = 'False positive.')]
+        $powerPlatformFiles = @(
+            ".github/workflows/_BuildPowerPlatformSolution.yaml",
+            ".github/workflows/PullPowerPlatformChanges.yaml",
+            ".github/workflows/PushPowerPlatformChanges.yaml"
+        )
     }
 
     It 'Return the correct files to exclude when type is PTE and powerPlatformSolutionFolder is not empty' {
@@ -2403,16 +4349,78 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 25
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[0])
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[1])
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[2])
 
-        # No files to remove
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate defaults filesToInclude takes precedence over repository settings for the same destination' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                # Redirect a different template file onto the destination of the default AL-Go-Settings.json entry
+                filesToInclude = @(@{ filter = "Test Next Major.settings.json"; sourceFolder = ".github"; destinationFolder = ".github"; destinationName = "$RepoSettingsFileName" })
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
+
+        $repoSettingsDestination = Join-Path $baseFolder (Join-Path '.github' $RepoSettingsFileName)
+        $conflict = @($filesToInclude | Where-Object { $_.destinationFullPath -eq $repoSettingsDestination })
+        $conflict.Count | Should -Be 1
+
+        # The default entry should win over the repository settings entry for the same destination
+        $conflict[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder (Join-Path '.github' $RepoSettingsFileName))
+    }
+
+    It 'GetFilesToUpdate defaults filesToExclude combined with repository settings filesToExclude for non-colliding files' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @(@{ filter = "_BuildALGoProject.yaml"; sourceFolder = ".github/workflows" })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
+
+        # The default exclude entries (PowerPlatform files) and the repository settings' own exclude entry are both applied
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[0])
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildALGoProject.yaml")
+        $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildALGoProject.yaml")
+    }
+
+    It 'GetFilesToUpdate defaults filesToExclude and repository settings filesToExclude for the same source file are both applied without duplicates' {
+        # The repository settings entry excludes the exact same file that the default PowerPlatform exclude entries
+        # already exclude (since powerPlatformSolutionFolder is empty). This should not error out or produce a
+        # duplicate entry: the file should end up excluded exactly once.
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @(@{ filter = [System.IO.Path]::GetFileName($powerPlatformFiles[0]); sourceFolder = [System.IO.Path]::GetDirectoryName($powerPlatformFiles[0]).Replace('\', '/') })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
+
+        $ppFileSourcePath = Join-Path $realPTETemplateFolder $powerPlatformFiles[0]
+        @($filesToExclude | Where-Object { $_.sourceFullPath -eq $ppFileSourcePath }).Count | Should -Be 1
+        $filesToInclude.sourceFullPath | Should -Not -Contain $ppFileSourcePath
     }
 
     It 'Return PP files in filesToExclude when type is PTE but powerPlatformSolutionFolder is empty' {
@@ -2426,30 +4434,26 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 22
 
         $filesToInclude | ForEach-Object {
-            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
-            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-            $_.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+            $fileToInclude = $_
+            $powerPlatformFiles | ForEach-Object {
+                 $fileToInclude.sourceFullPath | Should -Not -Be (Join-Path $realPTETemplateFolder $_)
+            }
         }
 
         # All PP files to remove
         $filesToExclude | Should -Not -BeNullOrEmpty
-        $filesToExclude.Count | Should -Be 3
+        $filesToExclude.Count | Should -Be $powerPlatformFiles.Count
 
-        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/_BuildPowerPlatformSolution.yaml")
-
-        $filesToExclude[1].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
-        $filesToExclude[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PushPowerPlatformChanges.yaml")
-
-        $filesToExclude[2].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-        $filesToExclude[2].destinationFullPath | Should -Be (Join-Path 'baseFolder' ".github/workflows/PullPowerPlatformChanges.yaml")
-
+        $powerPlatformFiles | ForEach-Object {
+            $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+            $filesToExclude.destinationFullPath | Should -Contain (Join-Path $baseFolder $_)
+        }
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified' {
@@ -2463,7 +4467,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 24
@@ -2472,7 +4476,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude | Should -Not -BeNullOrEmpty
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/Test Next Major.settings.json')
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/Test Next Major.settings.json')
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
@@ -2486,7 +4490,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 21
@@ -2496,9 +4500,9 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude.Count | Should -Be 4
 
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
+        $powerPlatformFiles | ForEach-Object {
+             $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+        }
     }
 
     It 'Returns the custom template settings files when there is a custom template' {
@@ -2514,7 +4518,7 @@ Describe "GetFilesToUpdate (real template)" {
 
         $customTemplateFolder = $realPTETemplateFolder
         $originalTemplateFolder = $realAppSourceAppTemplateFolder
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
 
         $filesToInclude | Should -Not -BeNullOrEmpty
 
@@ -2525,11 +4529,11 @@ Describe "GetFilesToUpdate (real template)" {
         $repoSettingsFiles.Count | Should -Be 2
 
         $repoSettingsFiles[0].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".github/AL-Go-Settings.json")
-        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-Settings.json')
+        $repoSettingsFiles[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/AL-Go-Settings.json')
         $repoSettingsFiles[0].type | Should -Be 'settings'
 
         $repoSettingsFiles[1].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
-        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
+        $repoSettingsFiles[1].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/AL-Go-TemplateRepoSettings.doNotEdit.json')
         $repoSettingsFiles[1].type | Should -Be ''
 
         # Check project settings files
@@ -2539,15 +4543,72 @@ Describe "GetFilesToUpdate (real template)" {
         $projectSettingsFilesFromCustomTemplate.Count | Should -Be 2
 
         $projectSettingsFilesFromCustomTemplate[0].originalSourceFullPath | Should -Be (Join-Path $originalTemplateFolder ".AL-Go/settings.json")
-        $projectSettingsFilesFromCustomTemplate[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.AL-Go/settings.json')
+        $projectSettingsFilesFromCustomTemplate[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.AL-Go/settings.json')
         $projectSettingsFilesFromCustomTemplate[0].type | Should -Be 'settings'
 
         $projectSettingsFilesFromCustomTemplate[1].originalSourceFullPath | Should -Be $null # Because origin is 'custom template', originalSourceFullPath should be $null
-        $projectSettingsFilesFromCustomTemplate[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' '.github/AL-Go-TemplateProjectSettings.doNotEdit.json')
+        $projectSettingsFilesFromCustomTemplate[1].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/AL-Go-TemplateProjectSettings.doNotEdit.json')
         $projectSettingsFilesFromCustomTemplate[1].type | Should -Be ''
 
-        # No files to exclude
+        # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'Returns the original template PP files in filesToInclude when there is a custom template without them and powerPlatformSolutionFolder is not empty' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = "PowerPlatformSolution"
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        # AppSource App is used as custom template because it has no PP workflows, simulating a custom PTE fork that stripped them out
+        $customTemplateFolder = $realAppSourceAppTemplateFolder
+        $originalTemplateFolder = $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $powerPlatformFiles | ForEach-Object {
+            $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $customTemplateFolder $_)
+            $filesToInclude.sourceFullPath | Should -Contain (Join-Path $originalTemplateFolder $_)
+        }
+
+        # No files to exclude or remove
+        $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'Returns the original template PP files in filesToExclude when there is a custom template without them and powerPlatformSolutionFolder is empty' {
+        $settings = @{
+            type                        = "PTE"
+            powerPlatformSolutionFolder = ""
+            unusedALGoSystemFiles       = @()
+            customALGoFiles             = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        # AppSource App is used as custom template because it has no PP workflows, simulating a custom PTE fork that stripped them out
+        $customTemplateFolder = $realAppSourceAppTemplateFolder
+        $originalTemplateFolder = $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -projects @('.') -templateFolder $customTemplateFolder -originalTemplateFolder $originalTemplateFolder # Indicate custom template
+
+        $filesToInclude | Should -Not -BeNullOrEmpty
+        $powerPlatformFiles | ForEach-Object {
+            $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $customTemplateFolder $_)
+            $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $originalTemplateFolder $_)
+        }
+
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $powerPlatformFiles | ForEach-Object {
+             $filesToExclude.sourceFullPath | Should -Not -Contain (Join-Path $customTemplateFolder $_)
+             $filesToExclude.sourceFullPath | Should -Contain (Join-Path $originalTemplateFolder $_)
+        }
+
+        # No files to remove
     }
 
     It 'GetFilesToUpdate handles AppSource template type correctly' {
@@ -2561,7 +4622,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realAppSourceAppTemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realAppSourceAppTemplateFolder
 
         # PowerPlatform files should be excluded for AppSource App too (same as PTE)
         $filesToInclude | Should -Not -BeNullOrEmpty
@@ -2585,7 +4646,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         # No additional files should be excluded due to unusedALGoSystemFiles
         $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*_BuildPowerPlatformSolution.yaml" -or $_.sourceFullPath -like "*PullPowerPlatformChanges.yaml" -or $_.sourceFullPath -like "*PushPowerPlatformChanges.yaml" }
@@ -2603,7 +4664,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects @('Project1')
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder -projects @('Project1')
 
         # Check that settings files have type = 'settings'
         $repoSettingsFiles = @($filesToInclude | Where-Object { $_.sourceFullPath -like "*$RepoSettingsFileName" -and $_.destinationFullPath -like "*.github*$RepoSettingsFileName" })
@@ -2627,7 +4688,7 @@ Describe "GetFilesToUpdate (real template)" {
         }
 
         $projects = @('ProjectA', 'ProjectB', 'ProjectC')
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder -projects $projects
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder -projects $projects
 
         # Each project should have its own settings file
         $projectASettings = $filesToInclude | Where-Object { $_.destinationFullPath -like "*ProjectA*.AL-Go*" }
@@ -2650,7 +4711,7 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $realPTETemplateFolder
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         # Test Next Major.settings.json should be excluded
         $testNextMajor = $filesToInclude | Where-Object { $_.sourceFullPath -like "*Test Next Major.settings.json" }

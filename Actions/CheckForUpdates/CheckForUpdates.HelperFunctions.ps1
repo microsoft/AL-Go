@@ -532,7 +532,7 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     # Re-read settings and this time include workflow specific settings
-    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' | ConvertTo-HashTable -recurse
+    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 
     # Old Schedule key is deprecated, but still supported
     $oldWorkflowScheduleKey = "$($baseName)Schedule"
@@ -710,7 +710,7 @@ function GetModifiedSettingsContent {
     $srcSettings = Get-ContentLF -Path $srcSettingsFile | ConvertFrom-Json
 
     $dstSettings = $null
-    if(Test-Path -Path $dstSettingsFile -PathType Leaf) {
+    if(Test-Path -LiteralPath $dstSettingsFile -PathType Leaf) {
         $dstSettings = Get-ContentLF -Path $dstSettingsFile | ConvertFrom-Json
     }
 
@@ -772,6 +772,230 @@ function UpdateSettingsFile {
     return $modified
 }
 
+function GetPathStringComparison {
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
+        return [System.StringComparison]::Ordinal
+    }
+    else {
+        return [System.StringComparison]::OrdinalIgnoreCase
+    }
+}
+
+function GetPathStringComparer {
+    if ((GetPathStringComparison) -eq [System.StringComparison]::Ordinal) {
+        return [System.StringComparer]::Ordinal
+    }
+    else {
+        return [System.StringComparer]::OrdinalIgnoreCase
+    }
+}
+
+<#
+.SYNOPSIS
+Resolves a path to an absolute, lexically-canonicalized path (resolving ".." and "." segments).
+.DESCRIPTION
+[System.IO.Path]::GetFullPath() resolves a relative path against [System.Environment]::CurrentDirectory,
+which Set-Location does not reliably keep in sync with PowerShell's own current location - so a bare
+GetFullPath() call can silently resolve against a stale directory after Set-Location. This function instead
+joins a relative $Path against PowerShell's actual current location before canonicalizing, so behavior is
+correct regardless of that .NET/PowerShell CWD desync.
+.PARAMETER Path
+The literal path to resolve. If not rooted, it is considered relative to the current location.
+.PARAMETER AsDirectory
+If set, ensures the returned path ends with a directory separator (e.g. for safe prefix/StartsWith checks).
+.OUTPUTS
+The absolute, lexically-canonicalized path.
+#>
+function Resolve-PathLexically {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [switch] $AsDirectory
+    )
+
+    if (-not [System.IO.Path]::IsPathRooted($Path)) {
+        $Path = Join-Path (Get-Location).Path $Path # resolve relative to the current location
+    }
+
+    $Path = [System.IO.Path]::GetFullPath($Path) # canonicalize the path to an absolute path
+
+    if ($AsDirectory) {
+        $Path = Join-Path $Path '' # ensure the path ends with a directory separator
+    }
+
+    return $Path
+}
+
+<#
+.SYNOPSIS
+Checks whether a path is lexically contained within a root folder, resolving ".." and "." segments.
+.DESCRIPTION
+Verifies that $Path is located under $RootFolder purely by string/segment resolution (via Resolve-PathLexically)
+.PARAMETER Path
+The literal path to check. If not rooted, it is considered relative to the root folder.
+.PARAMETER RootFolder
+The literal root folder that $Path must be contained within. Defaults to the current location if not specified.
+.OUTPUTS
+$true if the path is lexically contained within the root folder, otherwise $false.
+#>
+function Test-PathLexicallyContained {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [string] $RootFolder = (Get-Location).Path
+    )
+
+    $pathComparison = GetPathStringComparison
+
+    $RootFolder = Resolve-PathLexically -Path $RootFolder -AsDirectory
+
+    if (-not [System.IO.Path]::IsPathRooted($Path)) {
+        $Path = Join-Path $RootFolder $Path # resolve relative to the root folder
+    }
+    # AsDirectory here (not just for $RootFolder) makes $Path itself count as contained, not just its descendants
+    $Path = Resolve-PathLexically -Path $Path -AsDirectory
+
+    return $Path.StartsWith($RootFolder, $pathComparison)
+}
+
+<#
+.SYNOPSIS
+Resolves a path to its final physical location, following any symbolic links/junctions along the way.
+.DESCRIPTION
+Walks $Path segment by segment starting from the most specific trusted anchor that lexically contains it,
+resolving any symbolic links or junctions encountered along the way.
+.PARAMETER Path
+The literal path to resolve.
+.PARAMETER AnchorPaths
+An array of trusted anchor paths (folders, or specific files/reparse points) to start resolution from;
+reparse points within these paths are ignored (or they are otherwise known to be free of reparse points).
+The function will start resolution from the most specific entry in this list that lexically contains $Path
+(or that equals $Path exactly).
+.OUTPUTS
+The resolved path (including any nonexistent trailing segments), or $null if a path segment could not be
+inspected or the reparse point chain exceeded the hop limit. The filesystem root is a fallback anchor.
+#>
+function Resolve-PathPhysically {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [string[]] $AnchorPaths = @()
+    )
+
+    $realPath = Resolve-PathLexically -Path $Path # canonicalize the path to an absolute path
+
+    $segments = [System.Collections.Generic.List[string]]::new()
+    $resolveReparsePoints = $true # once an ancestor doesn't exist, no deeper segment can be a reparse point either
+    $hopLimit = 40 # matches the classic OS/.NET max-followed-symlinks limit (guards against cyclic chains)
+    $hopCount = 0
+
+    # Start from the deepest trusted anchor that contains the target path.
+    $anchorPath = @($AnchorPaths) + @([System.IO.Path]::GetPathRoot($realPath)) | # combine user-provided anchor folders with the root of the target path
+        ForEach-Object { Resolve-PathLexically -Path $_ -AsDirectory } | # canonicalize each anchor folder to an absolute path as a directory
+        Sort-Object -Descending | # nested paths sort before their containing prefixes
+        Where-Object { Test-PathLexicallyContained -Path $realPath -RootFolder $_ } | # filter only those anchor folders that lexically contain the target path
+        Select-Object -First 1
+
+    if ($realPath.Length -gt $anchorPath.Length) {
+        $segments.AddRange([string[]] $realPath.Substring($anchorPath.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
+        $realPath = $anchorPath
+    }
+
+    while ($segments.Count -gt 0) {
+        $realPath = Join-Path $realPath $segments[0]
+        $segments.RemoveAt(0)
+
+        if (-not $resolveReparsePoints) {
+            continue
+        }
+
+        try {
+            $item = Get-Item -LiteralPath $realPath -Force -ErrorAction Stop
+        }
+        catch [System.Management.Automation.ItemNotFoundException] {
+            $resolveReparsePoints = $false
+            continue
+        }
+        catch {
+            OutputWarning "Path '$Path' could not be resolved: unable to inspect '$realPath'."
+            return $null
+        }
+
+        if ($null -eq $item) {
+            # Required for PS5.1 as Get-Item may return $null instead of throwing when the item does not exist
+            $resolveReparsePoints = $false
+            continue
+        }
+        if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
+            if ($item -is [System.IO.DirectoryInfo]) {
+                $AnchorPaths += $item.FullName # this segment itself is confirmed not a reparse point
+            }
+            continue
+        }
+
+        if ($hopCount++ -ge $hopLimit) {
+            # Cyclic or pathologically deep chain - fail closed, like the OS would refuse to resolve it too
+            OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'."
+            return $null
+        }
+
+        $realPath = @($item.Target)[0]
+        if (-not [System.IO.Path]::IsPathRooted($realPath)) {
+            $realPath = Join-Path $item.Parent.FullName $realPath
+        }
+        $realPath = Resolve-PathLexically -Path $realPath
+
+        # Recheck from the deepest trusted anchor after following the link target.
+        $anchorPath = @($AnchorPaths) + @([System.IO.Path]::GetPathRoot($realPath)) | # combine user-provided anchor folders with the root of the target path
+            ForEach-Object { Resolve-PathLexically -Path $_ -AsDirectory } | # canonicalize each anchor folder to an absolute path as a directory
+            Sort-Object -Descending | # nested paths sort before their containing prefixes
+            Where-Object { Test-PathLexicallyContained -Path $realPath -RootFolder $_ } | # filter only those anchor folders that lexically contain the target path
+            Select-Object -First 1
+
+        if ($realPath.Length -gt $anchorPath.Length) {
+            # Re-inject every unverified segment of the resolved target so an embedded reparse point (e.g. link1 ->
+            # "link2/sub" where link2 itself escapes the root) gets its own resolve on a later iteration.
+            $segments.InsertRange(0, [string[]] $realPath.Substring($anchorPath.Length).Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
+            $realPath = $anchorPath
+        }
+    }
+
+    return $realPath
+}
+
+<#
+.SYNOPSIS
+Checks whether a path physically resolves to itself, i.e. no reparse point along the way redirects it.
+.DESCRIPTION
+Resolves $Path (see Resolve-PathPhysically) and compares the result to $Path itself.
+.PARAMETER Path
+The literal path expected to be its own final physical location.
+.PARAMETER AnchorPaths
+An array of trusted anchor paths (folders, or specific files/reparse points) to start resolution from;
+reparse points within these paths are ignored (or they are otherwise known to be free of reparse points).
+.OUTPUTS
+$true if $Path resolves to itself (including a nonexistent trailing path), otherwise $false.
+$false also means physical resolution failed.
+#>
+function Test-PathPhysicallyEqual {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [string[]] $AnchorPaths = @()
+    )
+
+    $pathComparer = GetPathStringComparer
+
+    $Path = Resolve-PathLexically -Path $Path
+
+    $realPath = Resolve-PathPhysically -Path $Path -AnchorPaths $AnchorPaths
+    if (-not $realPath) {
+        return $false
+    }
+
+    return $pathComparer.Equals($realPath, $Path)
+}
+
 <#
 .SYNOPSIS
 Resolves file paths based on the provided source folder, destination folder, and file specifications.
@@ -780,6 +1004,7 @@ Resolves file paths based on the provided source folder, destination folder, and
 This function takes a source folder, an optional original source folder, a destination folder, and an array of file specifications. It resolves the full paths for each specified file, considering their origin (template or custom template), type, and whether they are per-project files.
 The function returns an array of hashtables containing the resolved source and destination file paths.
 The function is used to determine which files need to be copied from the template repository to the target repository during the AL-Go update process.
+Both source and destination boundary checks are lexical-only (see Test-PathLexicallyContained, resolving ".."/"." segments) - neither does a filesystem-aware symlink/junction walk here. Physical resolution (see Test-PathPhysicallyEqual/Resolve-PathPhysically) is instead re-checked immediately before each source file is actually read and each destination file is actually written/removed, in CheckForUpdates.ps1: for the destination this is required, since the destination folder is later relocated into a new clone (see CloneIntoNewFolder) before files are written, so a filesystem-based check here would validate the wrong location anyway; for the source there is no such relocation, but checking at the point of use keeps both sides symmetric and covers the file exactly as it will be read.
 sourceFolder: The base folder of the template used to resolve the source file paths.
 originalSourceFolder: The base folder of the original template used to check for original files (can be $null). This is in the case of custom templates, where if the file exists in the original template, it should be used instead of the custom template file.
 destinationFolder: The base folder used to construct the destination file paths. This is typically the root folder of the target repository.
@@ -827,7 +1052,13 @@ function ResolveFilePaths {
         return @()
     }
 
+    $sourceFolder = Resolve-PathLexically -Path $sourceFolder -AsDirectory
+    $destinationFolder = Resolve-PathLexically -Path $destinationFolder -AsDirectory
+
+    $pathComparer = GetPathStringComparer
+
     $fullFilePaths = @()
+    $destinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
     foreach($file in $files) {
         if($file.Keys -notcontains 'sourceFolder') {
             $file.sourceFolder = '' # Default to current folder
@@ -879,8 +1110,8 @@ function ResolveFilePaths {
                 'destinationFullPath' = $null
             }
 
-            # Check if the source file is under the source folder
-            if ($srcFile -notlike "$sourceFolder*") {
+            # Check if the source file is under the source folder (lexical, resolves ".."/".")
+            if (-not (Test-PathLexicallyContained -Path $srcFile -RootFolder $sourceFolder)) {
                 OutputDebug "Skipping source file '$($srcFile)' as it is not under the source folder '$($sourceFolder)'."
                 continue
             }
@@ -889,12 +1120,18 @@ function ResolveFilePaths {
 
             # Try to find the same files in the original template folder if it is specified. Exclude custom template files
             if ($originalSourceFolder -and ($file.origin -ne 'custom template')) {
-                Push-Location $sourceFolder
-                $relativePath = Resolve-Path -Path $srcFile -Relative # resolve the path relative to the current location (template folder)
-                Pop-Location
-                if (Test-Path (Join-Path $originalSourceFolder $relativePath) -PathType Leaf) {
-                    # If the file exists in the original template folder, use that file instead
-                    $fullFilePath.originalSourceFullPath = Join-Path $originalSourceFolder $relativePath -Resolve
+                $relativeSourceFile = $srcFile.Substring($sourceFolder.Length)
+                $originalSourceFile = Join-Path $originalSourceFolder $relativeSourceFile
+                $originalSourceFile = Resolve-PathLexically -Path $originalSourceFile
+                if (Test-Path -LiteralPath $originalSourceFile -PathType Leaf) {
+                    if (Test-PathLexicallyContained -Path $originalSourceFile -RootFolder $originalSourceFolder) {
+                        # If the file exists in the original template folder, use that file instead
+                        $fullFilePath.originalSourceFullPath = $originalSourceFile
+                    }
+                    else {
+                        OutputWarning "Skipping source file '$srcFile' as the original source file '$originalSourceFile' is not under the original source folder '$originalSourceFolder'."
+                        continue
+                    }
                 }
             }
 
@@ -912,13 +1149,42 @@ function ResolveFilePaths {
                         $project = '' # If project is '.', it means the root folder, so we use an empty string
                     }
 
+                    $unresolvedProjectDestinationFolder = Join-Path $destinationFolder $project
+                    $unresolvedProjectDestinationFolder = Join-Path $unresolvedProjectDestinationFolder '' # Ensure unresolved project destination folder has a trailing slash for correct path resolution
+                    $projectDestinationFolder = Resolve-PathLexically -Path $unresolvedProjectDestinationFolder -AsDirectory
+
+                    # Check if the unresolved project destination folder resolves to the same absolute path (e.g. catches ".." and "." segments)
+                    if ($unresolvedProjectDestinationFolder -ne $projectDestinationFolder) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': project destination folder '$unresolvedProjectDestinationFolder' resolves to a different path '$projectDestinationFolder'."
+                        continue
+                    }
+
+                    # Check if the project destination folder is under the base destination folder (lexical, resolves ".."/".")
+                    if (-not (Test-PathLexicallyContained -Path $projectDestinationFolder -RootFolder $destinationFolder)) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': project destination folder '$projectDestinationFolder' is outside the base destination folder '$destinationFolder'."
+                        continue
+                    }
+
+                    $fileDestinationFolder = Join-Path $projectDestinationFolder $file.destinationFolder
+                    $fileDestinationFolder = Resolve-PathLexically -Path $fileDestinationFolder -AsDirectory
+
+                    # Check if the destination folder is under the project destination folder (lexical, resolves ".."/".")
+                    if (-not (Test-PathLexicallyContained -Path $fileDestinationFolder -RootFolder $projectDestinationFolder)) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': destination folder '$fileDestinationFolder' is outside the project destination folder '$projectDestinationFolder'."
+                        continue
+                    }
+
                     $fullProjectFilePath = $fullFilePath.Clone()
+                    $fullProjectFilePath.destinationFullPath = Join-Path $fileDestinationFolder $destinationName
+                    $fullProjectFilePath.destinationFullPath = Resolve-PathLexically -Path $fullProjectFilePath.destinationFullPath
 
-                    $fullProjectFilePath.destinationFullPath = Join-Path $destinationFolder $project
-                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $file.destinationFolder
-                    $fullProjectFilePath.destinationFullPath = Join-Path $fullProjectFilePath.destinationFullPath $destinationName
+                    # Check if the destination file is under the file destination folder (lexical, resolves ".."/".")
+                    if (-not (Test-PathLexicallyContained -Path $fullProjectFilePath.destinationFullPath -RootFolder $fileDestinationFolder)) {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': destination file '$($fullProjectFilePath.destinationFullPath)' is outside the file destination folder '$fileDestinationFolder'."
+                        continue
+                    }
 
-                    if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullProjectFilePath.destinationFullPath) {
+                    if(-not $destinationFullPaths.Add($fullProjectFilePath.destinationFullPath)) {
                         OutputDebug "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
                         continue
                     }
@@ -930,10 +1196,25 @@ function ResolveFilePaths {
                 # Single file entry
                 # Destination full path is the destination base folder + destinationFolder + destinationName
 
-                $fullFilePath.destinationFullPath = Join-Path $destinationFolder $file.destinationFolder
-                $fullFilePath.destinationFullPath = Join-Path $fullFilePath.destinationFullPath $destinationName
+                $fileDestinationFolder = Join-Path $destinationFolder $file.destinationFolder
+                $fileDestinationFolder = Resolve-PathLexically -Path $fileDestinationFolder -AsDirectory
 
-                if($fullFilePaths -and $fullFilePaths.destinationFullPath -contains $fullFilePath.destinationFullPath) {
+                # Check if the destination folder is under the base destination folder (lexical, resolves ".."/".")
+                if (-not (Test-PathLexicallyContained -Path $fileDestinationFolder -RootFolder $destinationFolder)) {
+                    OutputWarning "Skipping file '$srcFile': destination folder '$fileDestinationFolder' is outside the base destination folder '$destinationFolder'."
+                    continue
+                }
+
+                $fullFilePath.destinationFullPath = Join-Path $fileDestinationFolder $destinationName
+                $fullFilePath.destinationFullPath = Resolve-PathLexically -Path $fullFilePath.destinationFullPath
+
+                # Check if the destination file is under the file destination folder (lexical, resolves ".."/".")
+                if (-not (Test-PathLexicallyContained -Path $fullFilePath.destinationFullPath -RootFolder $fileDestinationFolder)) {
+                    OutputWarning "Skipping file '$srcFile': destination file '$($fullFilePath.destinationFullPath)' is outside the file destination folder '$fileDestinationFolder'."
+                    continue
+                }
+
+                if(-not $destinationFullPaths.Add($fullFilePath.destinationFullPath)) {
                     OutputDebug "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
                     continue
                 }
@@ -996,10 +1277,81 @@ function GetDefaultFilesToExclude {
 
 <#
 .SYNOPSIS
+    Reads settings using the current custom template repository settings without changing the workspace.
+.DESCRIPTION
+    Temporarily refreshes the custom template repository settings snapshot, reads the merged settings, and restores
+    the snapshot to its original state. This allows the current template settings to affect the current run while
+    preserving the workspace state for the normal update comparison.
+    Both copy endpoints (the snapshot file under baseFolder and the settings file under templateFolder) are
+    validated to physically resolve to themselves before either is read or written; the function throws if a
+    symlink/junction anywhere along either path would redirect the backup, copy or restore to a different physical location
+.PARAMETER baseFolder
+    The base folder of the repository whose settings are read.
+.PARAMETER templateFolder
+    The folder where the custom template files are located.
+#>
+function ReadSettingsWithCurrentCustomTemplateRepoSettings {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $baseFolder,
+        [Parameter(Mandatory=$true)]
+        [string] $templateFolder
+    )
+
+    $templateFolderRepoSettingsPath = Join-Path $templateFolder $RepoSettingsFile
+    $baseFolderTemplateSettingsPath = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+
+    # Validate both copy endpoints before touching them (even if the leaf file doesn't exist yet): a symlink/junction
+    # anywhere along either path can make it resolve to a different physical location than its literal path
+    if (-not (Test-PathPhysicallyEqual -Path $baseFolderTemplateSettingsPath -AnchorPaths @($baseFolder))) {
+        throw "Cannot read settings: '$baseFolderTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    }
+    if (-not (Test-PathPhysicallyEqual -Path $templateFolderRepoSettingsPath -AnchorPaths @($templateFolder))) {
+        throw "Cannot read settings: '$templateFolderRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    }
+
+    $baseFolderTemplateSettingsBackupPath = $null
+
+    if (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
+        $baseFolderTemplateSettingsBackupPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
+        Copy-Item -LiteralPath $baseFolderTemplateSettingsPath -Destination $baseFolderTemplateSettingsBackupPath -Force
+    }
+
+    try {
+        if (Test-Path -LiteralPath $templateFolderRepoSettingsPath -PathType Leaf) {
+            Copy-Item -LiteralPath $templateFolderRepoSettingsPath -Destination $baseFolderTemplateSettingsPath -Force
+        }
+        # Match the initial read: system-file selection must not depend on the current execution context.
+        return ReadSettings -baseFolder $baseFolder -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+    }
+    finally {
+        if ($baseFolderTemplateSettingsBackupPath) {
+            Copy-Item -LiteralPath $baseFolderTemplateSettingsBackupPath -Destination $baseFolderTemplateSettingsPath -Force
+            Remove-Item -LiteralPath $baseFolderTemplateSettingsBackupPath -Force
+        }
+        elseif (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
+            Remove-Item -LiteralPath $baseFolderTemplateSettingsPath -Force
+        }
+    }
+}
+
+<#
+.SYNOPSIS
     Get the list of files from the template repository to include and exclude based on the provided settings.
 .DESCRIPTION
-    This function gets the list of files to include and exclude based on the provided settings.
-    The unusedALGoSystemFiles setting is also applied to exclude files from the include list and add them to the exclude list.
+    Builds two lists by merging defaults, repository settings, and the original AL-Go template (if given):
+
+    1. filesToInclude: Files to copy from the template or original template to the destination.
+       Built from default files to include and customALGoFiles.filesToInclude in settings, resolved against the template folder and original template folder (if any).
+    2. filesToExclude: Files to skip from copying; if they already exist in the destination they should be deleted.
+       Built from default files to exclude and customALGoFiles.filesToExclude in settings, resolved against the template folder and original template folder (if any).
+
+    Note: when a custom template is in use, the caller is expected to call
+    ReadSettingsWithCurrentCustomTemplateRepoSettings before this function, so that the template's
+    customALGoFiles/unusedALGoSystemFiles are already merged into settings.
+
+    The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
+    filesToExclude with a deprecation warning.
 .PARAMETER settings
     The settings object containing the customALGoFiles configuration.
 .PARAMETER baseFolder
@@ -1007,15 +1359,17 @@ function GetDefaultFilesToExclude {
 .PARAMETER templateFolder
     The folder where the template files are located.
 .PARAMETER originalTemplateFolder
-    The folder where the original template files are located (if any).
-    If originalTemplateFolder is provided, it means that there is a custom template in use and custom template files should be included.
+    The folder where the original AL-Go template files are located (if any).
+    When provided, it signals that a custom template is in use. Both filesToInclude and filesToExclude specs are
+    resolved against this folder in addition to templateFolder; entries not already covered by originalSourceFullPath
+    tracking are appended to propagate upstream template additions and deletions to consumer repositories.
 .PARAMETER projects
     The list of projects in the repository.
     The projects are used to resolve per-project files.
 .OUTPUTS
     An array containing two elements: the list of files to include and the list of files to exclude.
     Files are represented as hashtables with the following keys:
-    - sourceFullPath: The full path to the source file in the template repository.
+    - sourceFullPath: The full path to the source file.
     - originalSourceFullPath: The full path to the original source file in the original template repository (if any).
     - type: The type of the file (e.g., workflow, settings).
     - destinationFullPath: The full path to the destination file in the target repository.
@@ -1032,6 +1386,7 @@ function GetFilesToUpdate {
         $projects = @()
     )
 
+    $hasOriginalTemplate = $null -ne $originalTemplateFolder
     Write-Host "Getting files to update from template folder '$templateFolder', original template folder '$originalTemplateFolder' and base folder '$baseFolder'"
 
     # Send telemetery about customALGoFiles usage
@@ -1042,46 +1397,58 @@ function GetFilesToUpdate {
         Trace-Information -Message "Usage: Custom AL-Go Files (Exclude)"
     }
 
-    $filesToInclude = GetDefaultFilesToInclude -includeCustomTemplateFiles:$($null -ne $originalTemplateFolder)
-    $filesToInclude += $settings.customALGoFiles.filesToInclude
-    $filesToInclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToInclude -projects $projects)
+    $pathComparer = GetPathStringComparer
 
-    $filesToExclude = GetDefaultFilesToExclude -settings $settings
-    $filesToExclude += $settings.customALGoFiles.filesToExclude
-    $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects)
+    # Determine files to include
+    $filesToIncludeUnresolved = GetDefaultFilesToInclude -includeCustomTemplateFiles:$hasOriginalTemplate
+    $filesToIncludeUnresolved += $settings.customALGoFiles.filesToInclude
+    $filesToInclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
+    if ($hasOriginalTemplate) {
+        $filesToInclude += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
+    }
+    # Deduplicate files to include based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder)
+    $filesToIncludeDestinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
+    $filesToInclude = @($filesToInclude | Where-Object { $filesToIncludeDestinationFullPaths.Add($_.destinationFullPath) })
 
-    # Exclude files from filesToExclude that are not in filesToInclude
-    $filesToExclude = @($filesToExclude | Where-Object {
-        $fileToExclude = $_
-        $include = $filesToInclude | Where-Object { $_.sourceFullPath -eq $fileToExclude.sourceFullPath }
-        if(-not $include) {
-            OutputDebug "Excluding file $($fileToExclude.sourceFullPath) from exclude list as it is not in the include list"
-        }
-        return $include
+    # Determine files to exclude
+    $filesToExcludeUnresolved = GetDefaultFilesToExclude -settings $settings
+    $filesToExcludeUnresolved += $settings.customALGoFiles.filesToExclude
+    $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExcludeUnresolved -projects $projects)
+    if ($hasOriginalTemplate) {
+        $filesToExclude += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExcludeUnresolved -projects $projects)
+    }
+    # filesToExclude is not deduplicated by destinationFullPath here.
+    # Its destinationFullPath is never part of the actual output; only sourceFullPath is used below to match against filesToInclude.
+
+    # Map files from filesToExclude to files that are in filesToInclude (based on source)
+    # Settings for filesToExclude only define the sources (sourceFolder and filter) but not the destinations (destinationFolder, destinationName and perProject)
+    $filesToExclude = @($filesToInclude | Where-Object {
+        $fileToInclude = $_
+        return $filesToExclude | Where-Object { $pathComparer.Equals($_.sourceFullPath, $fileToInclude.sourceFullPath) }
     })
 
-    # Exclude files from filesToInclude that are in filesToExclude
+    # Exclude files from filesToInclude that are in filesToExclude (based on source)
     $filesToInclude = @($filesToInclude | Where-Object {
-        $fileToInclude = $_
-        $include = -not ($filesToExclude | Where-Object { $_.sourceFullPath -eq $fileToInclude.sourceFullPath })
-        if(-not $include) {
-            OutputDebug "Excluding file $($fileToInclude.sourceFullPath) from include as it is in the exclude list"
-        }
+        $file = $_
+        $include = -not ($filesToExclude | Where-Object { $pathComparer.Equals($_.sourceFullPath, $file.sourceFullPath) })
+        if (-not $include) { OutputDebug "Excluding source file '$($file.sourceFullPath)' from include list as it is in the exclude list" }
         return $include
     })
 
     # Apply unusedALGoSystemFiles logic
     $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
+    $unusedALGoSystemFileNames = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
+    $unusedALGoSystemFileNames.UnionWith([string[]]$unusedALGoSystemFiles)
 
     # Exclude unusedALGoSystemFiles from $filesToInclude and add them to $filesToExclude
-    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
+    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) }
     if ($unusedFilesToExclude) {
         Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions." -DeprecationTag "unusedALGoSystemFiles"
 
         OutputDebug "The following files are marked as unused and will be removed if they exist:"
         $unusedFilesToExclude | ForEach-Object { OutputDebug "- $($_.destinationFullPath)" }
 
-        $filesToInclude = @($filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) })
+        $filesToInclude = @($filesToInclude | Where-Object { -not $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) })
         $filesToExclude += @($unusedFilesToExclude)
     }
 
