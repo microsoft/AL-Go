@@ -1,6 +1,9 @@
-### GitHub Enterprise host compatibility fixes
+### Experimental: Support for GitHub Enterprise Edition with data residency
 
-Several actions no longer assume the public `github.com`/`api.github.com` hosts, so they work on GitHub Enterprise (including `ghe.com`) organizations. REST calls now use `$ENV:GITHUB_API_URL` instead of a hardcoded `https://api.github.com` (Deploy, GetArtifactsForDeployment, VerifyPRChanges and app dependency probing), app dependency repositories default to `$ENV:GITHUB_SERVER_URL` instead of `https://github.com`, and the WorkflowPostProcess `gh api` call now sets `GH_HOST` so relative API calls target the correct host. When downloading app dependencies (artifacts and releases), the GitHub API URL is now derived from each dependency repository's host (`api.<host>`) instead of always using the current workflow's `$ENV:GITHUB_API_URL`, so dependencies hosted on a different GitHub host (e.g. `github.com` referenced from a `ghe.com` workflow, or vice versa) resolve correctly. Note that repositories using AL-Go for GitHub are supported on GHE, but the AL-Go for GitHub repository itself is not (it must run on github.com).
+AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residency. When you create a GitHub Enterprise with data residency, you can create a number of organizations underneath this enterprise (much like we create organizations on github.com). In each of these organizations, you can create any number of internal or private repositories, you cannot create public repositories. The URL for your repository becomes https://enterprise.ghe.com/organization/repository instead of the normal https://github.com/organization/repository.
+
+> [!NOTE]
+> This feature is in preview / experimental
 
 ### Include agentic workflows when updating system files from AL-Go or indirect templates
 
