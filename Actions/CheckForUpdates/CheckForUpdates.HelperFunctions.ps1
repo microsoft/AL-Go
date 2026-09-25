@@ -862,7 +862,7 @@ function Test-PathLexicallyContained {
 .SYNOPSIS
 Resolves a path to its final physical location, following any symbolic links/junctions along the way.
 .DESCRIPTION
-Walks $Path segment by segment starting from the most specific verified folder that lexically contains it,
+Walks $Path segment by segment starting from the most specific trusted anchor that lexically contains it,
 resolving any symbolic links or junctions encountered along the way.
 .PARAMETER Path
 The literal path to resolve.
@@ -872,8 +872,8 @@ reparse points within these paths are ignored (or they are otherwise known to be
 The function will start resolution from the most specific entry in this list that lexically contains $Path
 (or that equals $Path exactly).
 .OUTPUTS
-The fully resolved physical path, or $null if resolution failed
-(path not lexically contained within any of the anchor paths, or a reparse point chain exceeded the hop limit).
+The resolved path (including any nonexistent trailing segments), or $null if a path segment could not be
+inspected or the reparse point chain exceeded the hop limit. The filesystem root is a fallback anchor.
 #>
 function Resolve-PathPhysically {
     Param(
@@ -889,11 +889,10 @@ function Resolve-PathPhysically {
     $hopLimit = 40 # matches the classic OS/.NET max-followed-symlinks limit (guards against cyclic chains)
     $hopCount = 0
 
-    # Determine the most specific anchor folder that lexically contains the target path. This helps to minimize redundant checks for already verified path segments.
-    # Uses $realPath (already canonicalized/absolute), not the raw $Path, since GetPathRoot/Resolve-PathLexically require a rooted or resolvable path
+    # Start from the deepest trusted anchor that contains the target path.
     $anchorPath = @($AnchorPaths) + @([System.IO.Path]::GetPathRoot($realPath)) | # combine user-provided anchor folders with the root of the target path
         ForEach-Object { Resolve-PathLexically -Path $_ -AsDirectory } | # canonicalize each anchor folder to an absolute path as a directory
-        Sort-Object -Descending | # sort anchor folders by descending length to prioritize the most specific one (longest path first)
+        Sort-Object -Descending | # nested paths sort before their containing prefixes
         Where-Object { Test-PathLexicallyContained -Path $realPath -RootFolder $_ } | # filter only those anchor folders that lexically contain the target path
         Select-Object -First 1
 
@@ -910,10 +909,16 @@ function Resolve-PathPhysically {
             continue
         }
 
-        $item = Get-Item -LiteralPath $realPath -Force -ErrorAction SilentlyContinue
-        if (-not $item) {
+        try {
+            $item = Get-Item -LiteralPath $realPath -Force -ErrorAction Stop
+        }
+        catch [System.Management.Automation.ItemNotFoundException] {
             $resolveReparsePoints = $false
             continue
+        }
+        catch {
+            OutputWarning "Path '$Path' could not be resolved: unable to inspect '$realPath'."
+            return $null
         }
 
         if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
@@ -923,9 +928,9 @@ function Resolve-PathPhysically {
             continue
         }
 
-        if ($hopCount++ -gt $hopLimit) {
+        if ($hopCount++ -ge $hopLimit) {
             # Cyclic or pathologically deep chain - fail closed, like the OS would refuse to resolve it too
-            OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'. Treating as not contained."
+            OutputWarning "Path '$Path' could not be resolved: reparse point chain exceeded $($hopLimit) hops (cyclic or too deep) at '$realPath'."
             return $null
         }
 
@@ -935,10 +940,10 @@ function Resolve-PathPhysically {
         }
         $realPath = Resolve-PathLexically -Path $realPath
 
-        # Determine the most specific anchor folder that lexically contains the target path. This helps to minimize redundant checks for already verified path segments.
+        # Recheck from the deepest trusted anchor after following the link target.
         $anchorPath = @($AnchorPaths) + @([System.IO.Path]::GetPathRoot($realPath)) | # combine user-provided anchor folders with the root of the target path
             ForEach-Object { Resolve-PathLexically -Path $_ -AsDirectory } | # canonicalize each anchor folder to an absolute path as a directory
-            Sort-Object -Descending | # sort anchor folders by descending length to prioritize the most specific one (longest path first)
+            Sort-Object -Descending | # nested paths sort before their containing prefixes
             Where-Object { Test-PathLexicallyContained -Path $realPath -RootFolder $_ } | # filter only those anchor folders that lexically contain the target path
             Select-Object -First 1
 
@@ -964,7 +969,8 @@ The literal path expected to be its own final physical location.
 An array of trusted anchor paths (folders, or specific files/reparse points) to start resolution from;
 reparse points within these paths are ignored (or they are otherwise known to be free of reparse points).
 .OUTPUTS
-$true if $Path resolves to itself, otherwise $false.
+$true if $Path resolves to itself (including a nonexistent trailing path), otherwise $false.
+$false also means physical resolution failed.
 #>
 function Test-PathPhysicallyEqual {
     Param(
@@ -1310,6 +1316,7 @@ function ReadSettingsWithCurrentCustomTemplateRepoSettings {
         if (Test-Path -LiteralPath $templateFolderRepoSettingsPath -PathType Leaf) {
             Copy-Item -LiteralPath $templateFolderRepoSettingsPath -Destination $baseFolderTemplateSettingsPath -Force
         }
+        # Match the initial read: system-file selection must not depend on the current execution context.
         return ReadSettings -baseFolder $baseFolder -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
     }
     finally {

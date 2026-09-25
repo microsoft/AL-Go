@@ -51,7 +51,8 @@ if ($token) {
 # if $update is set to N, CheckForUpdates will only check for updates and output a warning if there are updates available
 # if $downloadLatest is set to true, CheckForUpdates will download the latest version of the template repository, else it will use the templateSha setting in the .github/AL-Go-Settings file
 
-# Get Repo settings as a hashtable (do NOT read any specific project settings, nor any specific workflow, user or branch settings)
+# Get repo settings independent of the build, project, workflow, user, branch, and trigger running this update.
+# Repository-scoped and unconditional settings still apply.
 $repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 $templateSha = $repoSettings.templateSha
 

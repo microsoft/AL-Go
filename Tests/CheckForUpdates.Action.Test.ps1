@@ -71,7 +71,7 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
-Describe "CheckForUpdates Action: physical path guards" {
+Describe "CheckForUpdates Action: runtime behavior" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
@@ -86,6 +86,36 @@ Describe "CheckForUpdates Action: physical path guards" {
 
     AfterAll {
         Remove-Item -Path $rootFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'Reads initial settings without execution-specific contexts' {
+        $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+        $originalGitHubRepository = $env:GITHUB_REPOSITORY
+        try {
+            $env:GITHUB_WORKSPACE = $TestDrive
+            $env:GITHUB_REPOSITORY = 'contoso/context-policy-test'
+
+            Mock DownloadAndImportBcContainerHelper {}
+            Mock ReadSettings { [PSCustomObject]@{ templateSha = 'aaaaaaa'; templateUrl = 'https://github.com/contoso/template@main'; type = 'PTE'; projects = @() } }
+            Mock DownloadTemplateRepository { return $TestDrive }
+            Mock GetSrcFolder { return $TestDrive }
+            Mock IsDirectALGo { return $true }
+            Mock GetProjectsFromRepository { return @('.') }
+            Mock GetFilesToUpdate { Write-Output -NoEnumerate @(); Write-Output -NoEnumerate @() }
+            Mock OutputNotice {}
+
+            . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+            Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+                $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
+                $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+                ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+            }
+        }
+        finally {
+            $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
+            $env:GITHUB_REPOSITORY = $originalGitHubRepository
+        }
     }
 
     It 'CheckForUpdates skips source files that do not physically resolve to themselves within the template folder(s)' -Skip:(-not $script:isWindowsPlatform) {
@@ -2423,6 +2453,17 @@ Describe "Resolve-PathPhysically" {
         Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be ([System.IO.Path]::GetFullPath($path))
     }
 
+    It 'Resolve-PathPhysically fails closed when a path segment cannot be inspected' {
+        $blockedPath = Join-Path $rootFolder 'blocked'
+        $path = Join-Path $blockedPath 'file.txt'
+        Mock Get-Item { throw [System.UnauthorizedAccessException]::new('Access denied') } -ParameterFilter { $LiteralPath -eq $blockedPath }
+        Mock OutputWarning {}
+
+        Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be $null
+        Test-PathPhysicallyEqual -Path $path -AnchorPaths @($rootFolder) | Should -Be $false
+        Should -Invoke OutputWarning -Times 2 -ParameterFilter { $message -like '*unable to inspect*' }
+    }
+
     It 'Resolve-PathPhysically returns a folder anchor unchanged when Path equals the anchor exactly' {
         $folder = Join-Path $rootFolder "exactFolderAnchor"
         New-Item -Path $folder -ItemType Directory -Force | Out-Null
@@ -3731,6 +3772,29 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
         (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
+    }
+
+    It 'Reads refreshed settings without execution-specific contexts' {
+        $templateFolder = Join-Path $TestDrive 'templateWithContexts'
+        $baseFolder = Join-Path $TestDrive 'baseWithContexts'
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder '.github') -Force | Out-Null
+        Mock ReadSettings { [pscustomobject]@{ templateSha = 'test' } }
+
+        $originalGitHubRepository = $env:GITHUB_REPOSITORY
+        try {
+            $env:GITHUB_REPOSITORY = 'contoso/context-policy-test'
+            ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder | Out-Null
+
+            Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+                $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
+                $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+                ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+            }
+        }
+        finally {
+            $env:GITHUB_REPOSITORY = $originalGitHubRepository
+        }
     }
 
     It 'Removes a temporary snapshot when none existed before reading settings' {
