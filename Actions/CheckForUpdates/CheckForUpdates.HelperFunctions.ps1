@@ -710,7 +710,7 @@ function GetModifiedSettingsContent {
     $srcSettings = Get-ContentLF -Path $srcSettingsFile | ConvertFrom-Json
 
     $dstSettings = $null
-    if(Test-Path -Path $dstSettingsFile -PathType Leaf) {
+    if(Test-Path -LiteralPath $dstSettingsFile -PathType Leaf) {
         $dstSettings = Get-ContentLF -Path $dstSettingsFile | ConvertFrom-Json
     }
 
@@ -921,6 +921,11 @@ function Resolve-PathPhysically {
             return $null
         }
 
+        if ($null -eq $item) {
+            # Required for PS5.1 as Get-Item may return $null instead of throwing when the item does not exist
+            $resolveReparsePoints = $false
+            continue
+        }
         if ($item.LinkType -notin @('SymbolicLink', 'Junction') -or -not $item.Target) {
             if ($item -is [System.IO.DirectoryInfo]) {
                 $AnchorPaths += $item.FullName # this segment itself is confirmed not a reparse point

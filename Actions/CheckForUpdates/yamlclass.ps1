@@ -19,7 +19,7 @@ class Yaml {
 
     # Static load function to load a Yaml file into a Yaml class
     static [Yaml] Load([string] $filename) {
-        $fileContent = Get-Content -Path $filename -Encoding UTF8
+        $fileContent = Get-Content -LiteralPath $filename -Encoding UTF8
         return [Yaml]::new($fileContent)
     }
 

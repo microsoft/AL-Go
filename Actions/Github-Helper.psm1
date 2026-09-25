@@ -859,7 +859,7 @@ function Get-ContentLF {
     )
 
     Process {
-        (Get-Content -Path $path -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
+        (Get-Content -LiteralPath $path -Encoding UTF8 -Raw).Replace("`r", "").TrimEnd("`n")
     }
 }
 

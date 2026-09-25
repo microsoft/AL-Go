@@ -80,7 +80,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
         . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
-        $rootFolder = Join-Path $PSScriptRoot "checkForUpdatesGuardTests"
+        $rootFolder = Join-Path $PSScriptRoot "checkForUpdatesRuntimeTests"
         New-Item -Path $rootFolder -ItemType Directory -Force | Out-Null
     }
 
@@ -88,156 +88,451 @@ Describe "CheckForUpdates Action: runtime behavior" {
         Remove-Item -Path $rootFolder -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    It 'Reads initial settings without execution-specific contexts' {
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubWorkspace', Justification = 'False positive.')]
         $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubRepository', Justification = 'False positive.')]
         $originalGitHubRepository = $env:GITHUB_REPOSITORY
-        try {
-            $env:GITHUB_WORKSPACE = $TestDrive
-            $env:GITHUB_REPOSITORY = 'contoso/context-policy-test'
-
-            Mock DownloadAndImportBcContainerHelper {}
-            Mock ReadSettings { [PSCustomObject]@{ templateSha = 'aaaaaaa'; templateUrl = 'https://github.com/contoso/template@main'; type = 'PTE'; projects = @() } }
-            Mock DownloadTemplateRepository { return $TestDrive }
-            Mock GetSrcFolder { return $TestDrive }
-            Mock IsDirectALGo { return $true }
-            Mock GetProjectsFromRepository { return @('.') }
-            Mock GetFilesToUpdate { Write-Output -NoEnumerate @(); Write-Output -NoEnumerate @() }
-            Mock OutputNotice {}
-
-            . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
-
-            Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
-                $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
-                $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
-                ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
-            }
-        }
-        finally {
-            $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
-            $env:GITHUB_REPOSITORY = $originalGitHubRepository
-        }
-    }
-
-    It 'CheckForUpdates skips source files that do not physically resolve to themselves within the template folder(s)' -Skip:(-not $script:isWindowsPlatform) {
-        $testTemplateFolder = Join-Path $rootFolder "srcGuardTemplate"
-        $testExternalFolder = Join-Path $rootFolder "srcGuardExternal"
-        $testWorkspaceFolder = Join-Path $rootFolder "srcGuardWorkspace"
-        $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
-        try {
-            New-Item -Path $testTemplateFolder -ItemType Directory -Force | Out-Null
-            New-Item -Path $testExternalFolder -ItemType Directory -Force | Out-Null
-            New-Item -Path $testWorkspaceFolder -ItemType Directory -Force | Out-Null
-
-            # A legitimate file directly in the template folder
-            $legitFile = Join-Path $testTemplateFolder "legit.txt"
-            Set-Content -LiteralPath $legitFile -Value "legit content"
-
-            # A file reachable only through a junction subfolder that redirects outside the template folder -
-            # the target file doesn't need to exist for the guard to trip, the folder-level redirect is enough
-            New-Item -ItemType Junction -Path (Join-Path $testTemplateFolder "redirectSub") -Target $testExternalFolder -Force | Out-Null
-            $redirectedFile = Join-Path $testTemplateFolder "redirectSub/redirected.txt"
-            Set-Content -LiteralPath $redirectedFile -Value "redirected content"
-
-            $testFilesToInclude = @(
-                @{ sourceFullPath = $legitFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-                @{ sourceFullPath = $redirectedFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
-                @{ sourceFullPath = $legitFile; originalSourceFullPath = $redirectedFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
-            )
-
-            Mock DownloadAndImportBcContainerHelper {}
-            Mock ReadSettings { [PSCustomObject]@{ templateSha = 'aaaaaaa'; templateUrl = 'https://github.com/contoso/template@main'; type = 'PTE'; projects = @() } }
-            Mock DownloadTemplateRepository { return $testTemplateFolder }
-            Mock GetSrcFolder { return $testTemplateFolder }
-            Mock IsDirectALGo { return $true }
-            Mock GetProjectsFromRepository { return @('.') }
-            Mock GetFilesToUpdate { Write-Output -NoEnumerate $testFilesToInclude; Write-Output -NoEnumerate @() }
-            Mock OutputWarning {}
-            Mock OutputNotice {}
-
-            $env:GITHUB_WORKSPACE = $testWorkspaceFolder
-
-            . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
-
-            Should -Invoke OutputWarning -Exactly 2 -ParameterFilter { $message -like "Skipping file*redirected.txt*does not physically resolve*" }
-            $updateFiles.Count | Should -Be 1
-            $updateFiles[0].DstFile | Should -Be "legit.txt"
-        }
-        finally {
-            $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
-            Remove-Item -Path $testTemplateFolder, $testExternalFolder, $testWorkspaceFolder -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating or removing files' -Skip:(-not $script:isWindowsPlatform) {
-        $testTemplateFolder = Join-Path $rootFolder "dstGuardTemplate"
-        $testExternalFolder = Join-Path $rootFolder "dstGuardExternal"
-        $testBaseFolder = Join-Path $rootFolder "dstGuardBase"
-        $testCloneRoot = Join-Path $rootFolder "dstGuardClone"
-        $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalLocation', Justification = 'False positive.')]
         $originalLocation = Get-Location
-        try {
-            New-Item -Path $testTemplateFolder -ItemType Directory -Force | Out-Null
-            New-Item -Path $testExternalFolder -ItemType Directory -Force | Out-Null
-            New-Item -Path $testBaseFolder -ItemType Directory -Force | Out-Null
-            New-Item -Path $testCloneRoot -ItemType Directory -Force | Out-Null
 
-            # Source files in the "template"
-            $legitSrcFile = Join-Path $testTemplateFolder "legit.txt"
-            Set-Content -LiteralPath $legitSrcFile -Value "legit content"
-            $trapSrcFile = Join-Path $testTemplateFolder "trap.txt"
-            Set-Content -LiteralPath $trapSrcFile -Value "trap content"
+        $testRepoName = 'contoso/check-for-updates-runtime-tests'
 
-            # A file already present in the original checkout, slated for removal
-            New-Item -Path (Join-Path $testBaseFolder "redirectSub") -ItemType Directory -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $testBaseFolder "redirectSub/oldfile.txt") -Value "old content"
+        $testTemplateFolder = Join-Path $rootFolder 'template'
+        $testWorkspaceFolder = Join-Path $rootFolder 'workspace'
+        $testCloneRoot = Join-Path $rootFolder 'clone'
 
-            # In the FRESH clone only, "redirectSub" is a junction that redirects outside the clone root -
-            # simulates a reparse point introduced by a newer commit that wasn't present in the original checkout
-            New-Item -ItemType Junction -Path (Join-Path $testCloneRoot "redirectSub") -Target $testExternalFolder -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $testExternalFolder "oldfile.txt") -Value "cloned old content"
-
-            $testFilesToInclude = @(
-                @{ sourceFullPath = $legitSrcFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testBaseFolder "legit.txt") }
-                @{ sourceFullPath = $trapSrcFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testBaseFolder "redirectSub/trap.txt") }
-            )
-            $testFilesToExclude = @(
-                @{ destinationFullPath = (Join-Path $testBaseFolder "redirectSub/oldfile.txt") }
-            )
-
-            Mock DownloadAndImportBcContainerHelper {}
-            Mock ReadSettings { [PSCustomObject]@{ templateSha = 'aaaaaaa'; templateUrl = 'https://github.com/contoso/template@main'; type = 'PTE'; projects = @() } }
-            Mock DownloadTemplateRepository { return $testTemplateFolder }
-            Mock GetSrcFolder { return $testTemplateFolder }
-            Mock IsDirectALGo { return $true }
-            Mock GetProjectsFromRepository { return @('.') }
-            Mock GetFilesToUpdate { Write-Output -NoEnumerate $testFilesToInclude; Write-Output -NoEnumerate $testFilesToExclude }
-            Mock OutputWarning {}
-            Mock OutputNotice {}
-            Mock RunAndCheck { return "deadbeef1234567" }
-            Mock invoke-git {}
-            Mock GetAccessToken { return "fake-token" }
-            Mock gh { '[]' }
-            Mock CloneIntoNewFolder { Set-Location -Path $testCloneRoot; 'https://fake.example.com/repo.git'; 'update-al-go-system-files/branch' }
-            Mock CommitFromNewFolder { return $true }
-            Mock UpdateSettingsFile {}
-
-            $env:GITHUB_WORKSPACE = $testBaseFolder
-            $fakeToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("fake-pat"))
-
-            . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
-
-            $updateFiles.Count | Should -Be 2
-            Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update*trap.txt*" }
-            Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal*oldfile.txt*" }
-
-            # The legitimate update was actually written to the (mocked) clone root; the trapped one was not
-            Test-Path -Path (Join-Path $testCloneRoot "legit.txt") -PathType Leaf | Should -Be $true
+        $testSettings = @{
+            templateSha = 'sha123456789'
+            templateUrl = 'https://github.com/microsoft/AL-Go-PTE@main'
+            type = 'PTE'
+            projects = @()
+            'runs-on' = 'windows-latest'
+            shell = 'powershell'
         }
-        finally {
-            Set-Location -Path $originalLocation
-            $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
-            Remove-Item -Path $testTemplateFolder, $testExternalFolder, $testBaseFolder, $testCloneRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+        $testFilesToInclude = @()
+        $testFilesToExclude = @()
+
+        $fakeToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('fake-pat'))
+
+        Mock DownloadAndImportBcContainerHelper {}
+        Mock ReadSettings { [PSCustomObject]$testSettings }
+        Mock DownloadTemplateRepository { return $testTemplateFolder }
+        Mock GetSrcFolder { return $testTemplateFolder }
+        Mock IsDirectALGo { return $true }
+        Mock GetProjectsFromRepository { return @('.') }
+        Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output $testFilesToExclude -NoEnumerate }
+        Mock OutputWarning {}
+        Mock OutputNotice {}
+        Mock RunAndCheck { return 'sha123456789' }
+        Mock invoke-git {}
+        Mock GetAccessToken { return $fakeToken }
+        Mock gh { '[]' }
+        Mock CloneIntoNewFolder { Set-Location -Path $testCloneRoot; "https://fake.example.com/$testRepoName.git"; 'update-al-go-system-files/branch' }
+        Mock CommitFromNewFolder { return $true }
+        Mock UpdateSettingsFile {}
+
+        New-Item -Path $testTemplateFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $testWorkspaceFolder -ItemType Directory -Force | Out-Null
+        New-Item -Path $testCloneRoot -ItemType Directory -Force | Out-Null
+
+        Set-Location $testWorkspaceFolder
+        $env:GITHUB_WORKSPACE = $testWorkspaceFolder
+        $env:GITHUB_REPOSITORY = $testRepoName
+    }
+
+    AfterEach {
+        Set-Location $originalLocation
+        $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
+        $env:GITHUB_REPOSITORY = $originalGitHubRepository
+
+        if (Test-Path -LiteralPath $testTemplateFolder) {
+            Remove-Item -Path $testTemplateFolder -Recurse -Force
         }
+        if (Test-Path -LiteralPath $testWorkspaceFolder) {
+            Remove-Item -Path $testWorkspaceFolder -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $testCloneRoot) {
+            Remove-Item -Path $testCloneRoot -Recurse -Force
+        }
+    }
+
+    It 'Reads initial settings without execution-specific contexts' {
+        . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update N
+
+        Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+            $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
+            $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+            ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+        }
+    }
+
+    It 'Reads, updates and removes with literal bracketed paths' {
+        $newSource = Join-Path $testTemplateFolder 'New[1].txt'
+        $newDestination = Join-Path $testWorkspaceFolder 'New[1].txt'
+        Set-Content -LiteralPath $newSource -Value 'new content'
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'New1.txt') -Value 'wrong source'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'New1.txt') -Value 'wrong destination'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'New1.txt') -Value 'keep me'
+
+        $changedSource = Join-Path $testTemplateFolder 'Changed[1].txt'
+        $changedDestination = Join-Path $testWorkspaceFolder 'Changed[1].txt'
+        Set-Content -LiteralPath $changedSource -Value 'new content'
+        Set-Content -LiteralPath $changedDestination -Value 'old content'
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'Changed1.txt') -Value 'wrong source'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Changed1.txt') -Value 'wrong destination'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Changed[1].txt') -Value 'old content'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Changed1.txt') -Value 'keep me'
+
+        $unchangedSource = Join-Path $testTemplateFolder 'Same[1].txt'
+        $unchangedDestination = Join-Path $testWorkspaceFolder 'Same[1].txt'
+        Set-Content -LiteralPath $unchangedSource -Value 'same content'
+        Set-Content -LiteralPath $unchangedDestination -Value 'same content'
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'Same1.txt') -Value 'wrong source'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Same1.txt') -Value 'wrong destination'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Same[1].txt') -Value 'same content'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Same1.txt') -Value 'keep me'
+
+        $workflowSource = Join-Path $testTemplateFolder 'Workflow[1].yaml'
+        $workflowOriginalSource = Join-Path $testTemplateFolder 'WorkflowOriginal[1].yaml'
+        $workflowDestination = Join-Path $testWorkspaceFolder 'Workflow[1].yaml'
+        $workflowLines = @('jobs:', '  Build:', '    runs-on: [ windows-latest ]')
+        $workflowTemplateCustomJobLines = @('  CustomJob-Template:', '    runs-on: [ windows-latest ]')
+        $workflowDestinationCustomJobLines = @('  CustomJob-Destination:', '    runs-on: [ windows-latest ]')
+        Set-Content -LiteralPath $workflowSource -Value (@('name: Custom') + $workflowLines + $workflowTemplateCustomJobLines)
+        Set-Content -LiteralPath $workflowOriginalSource -Value (@('name: Original') + $workflowLines)
+        Set-Content -LiteralPath $workflowDestination -Value (@('name: Destination') + $workflowLines + $workflowDestinationCustomJobLines)
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'Workflow1.yaml') -Value (@('name: Wrong custom') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testTemplateFolder 'WorkflowOriginal1.yaml') -Value (@('name: Wrong original') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Workflow1.yaml') -Value (@('name: Wrong destination') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow[1].yaml') -Value (@('name: Old content') + $workflowLines)
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow1.yaml') -Value (@('name: Keep me') + $workflowLines)
+
+        $excludedDestination = Join-Path $testWorkspaceFolder 'Old[1].txt'
+        Set-Content -LiteralPath $excludedDestination -Value 'remove me'
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder 'Old1.txt') -Value 'keep me'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Old[1].txt') -Value 'remove me'
+        Set-Content -LiteralPath (Join-Path $testCloneRoot 'Old1.txt') -Value 'keep me'
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $newSource; originalSourceFullPath = $null; type = ''; destinationFullPath = $newDestination }
+            @{ sourceFullPath = $changedSource; originalSourceFullPath = $null; type = ''; destinationFullPath = $changedDestination }
+            @{ sourceFullPath = $unchangedSource; originalSourceFullPath = $null; type = ''; destinationFullPath = $unchangedDestination }
+            @{ sourceFullPath = $workflowSource; originalSourceFullPath = $workflowOriginalSource; type = 'workflow'; destinationFullPath = (Join-Path $testWorkspaceFolder 'Workflow[1].yaml') }
+        )
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+        $testFilesToExclude = @(
+            @{ destinationFullPath = $excludedDestination }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor'
+
+        $updateFiles.Count | Should -Be 3
+        $updateFiles[0].DstFile | Should -Be 'New[1].txt'
+        $updateFiles[0].content | Should -Be 'new content'
+        $updateFiles[1].DstFile | Should -Be 'Changed[1].txt'
+        $updateFiles[1].content | Should -Be 'new content'
+        $updateFiles[2].DstFile | Should -Be 'Workflow[1].yaml'
+        $updateFiles[2].content | Should -Match '(?s)^name: Original.*CustomJob-Template:.*CustomJob-Destination:'
+        @($removeFiles).Count | Should -Be 1
+        @($removeFiles)[0] | Should -Be (Join-Path '.' 'Old[1].txt')
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'New[1].txt') | Should -Be 'new content'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'New1.txt') | Should -Be 'keep me'
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Changed[1].txt') | Should -Be 'new content'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Changed1.txt') | Should -Be 'keep me'
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Same[1].txt') | Should -Be 'same content'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Same1.txt') | Should -Be 'keep me'
+
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow[1].yaml') -Raw | Should -Match '(?s)^name: Original.*CustomJob-Template:.*CustomJob-Destination:'
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Workflow1.yaml') -Raw | Should -Match '^name: Keep me'
+
+        Test-Path -LiteralPath (Join-Path $testCloneRoot 'Old[1].txt') | Should -BeFalse
+        Get-Content -LiteralPath (Join-Path $testCloneRoot 'Old1.txt') | Should -Be 'keep me'
+    }
+
+    It 'Rejects an external original source on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $invalidSource = Join-Path $testTemplateFolder 'File.txt'
+        $invalidOriginalSource = Join-Path $testTemplateFolder 'file.txt'
+        Set-Content -LiteralPath $invalidSource -Value 'safe content'
+        $external = Join-Path $TestDrive 'file.txt'
+        Set-Content -LiteralPath $external -Value 'external content'
+        New-Item -ItemType SymbolicLink -Path $invalidOriginalSource -Target $external | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $invalidSource; originalSourceFullPath = $invalidOriginalSource; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder 'File.txt') }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*original source*does not physically resolve*' }
+        $updateFiles.Count | Should -Be 0
+    }
+
+    It 'Applies workflow customizations from case-distinct original sources on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $workflowSource = Join-Path $testTemplateFolder 'Workflow.yaml'
+        $workflowOriginalSource = Join-Path $testTemplateFolder 'WORKFLOW.yaml'
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt') -Destination $workflowSource
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'YamlSnippet.txt') -Destination $workflowOriginalSource
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $workflowSource; originalSourceFullPath = $workflowOriginalSource; type = 'workflow'; destinationFullPath = (Join-Path $testWorkspaceFolder 'Workflow.yaml') }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*There are updates for your AL-Go system*' }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be 'Workflow.yaml'
+        $updateFiles[0].content | Should -Match 'CustomJob-MyCustomTemplateJob:'
+    }
+
+    It 'Applies no workflow customizations from case-distinct original sources on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $workflowSource = Join-Path $testTemplateFolder 'Workflow.yaml'
+        $workflowOriginalSource = Join-Path $testTemplateFolder 'WORKFLOW.yaml'
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt') -Destination $workflowSource
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'YamlSnippet.txt') -Destination $workflowOriginalSource
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $workflowSource; originalSourceFullPath = $workflowOriginalSource; type = 'workflow'; destinationFullPath = (Join-Path $testWorkspaceFolder 'Workflow.yaml') }
+        )
+
+        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*There are updates for your AL-Go system*' }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be 'Workflow.yaml'
+        $updateFiles[0].content | Should -Not -Match 'CustomJob-MyCustomTemplateJob:'
+    }
+
+    It 'CheckForUpdates skips source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        # A legitimate file directly in the template folder
+        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+
+        # Create a redirection folder and a junction pointing back to the template folder
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+        New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*redirected.txt': source does not physically resolve*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*': original source '*redirected.txt' does not physically resolve*" }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be "legit.txt"
+    }
+
+    It 'CheckForUpdates skips source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        # A legitimate file directly in the template folder
+        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+
+        # Create a redirection folder and a symbolic link pointing back to the template folder
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*redirected.txt': source does not physically resolve*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*': original source '*redirected.txt' does not physically resolve*" }
+        $updateFiles.Count | Should -Be 1
+        $updateFiles[0].DstFile | Should -Be "legit.txt"
+    }
+
+    It 'CheckForUpdates skips source files with case-distinct original sources that do not physically resolve to themselves using symlinks on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $directTemplateFolder = Join-Path $testTemplateFolder "folder"
+        $directTemplateFile = Join-Path $directTemplateFolder "file.txt"
+        New-Item -ItemType Directory -Path $directTemplateFolder -Force | Out-Null
+        Set-Content -LiteralPath $directTemplateFile -Value "direct content"
+
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "FOLDER"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "file.txt"
+        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+        Set-Content -LiteralPath $redirectedTemplateFile -Value "redirected content"
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $directTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "file.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
+
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -clike "Skipping update for source file '*folder*': original source '*FOLDER*' does not physically resolve*" }
+        $updateFiles.Count | Should -Be 0
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        # A file in the template folder
+        $templateFile = Join-Path $testTemplateFolder "template.txt"
+        Set-Content -LiteralPath $templateFile -Value "template content"
+
+        # A legitimate file directly in the clone folder
+        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+
+        # Create a redirected folder and a symbolic link pointing back to the workspace folder
+        $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
+        New-Item -ItemType Junction -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+
+        # Create a redirected folder and a symbolic link pointing back to the clone folder
+        $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
+        New-Item -ItemType Junction -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $updateFiles.Count | Should -Be 2
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update for source file '*template.txt':*'*redirectedInWorkspace*redirected.txt'*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate update was actually written to the (mocked) clone root; the redirected ones were not
+        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInWorkspace/redirected.txt") -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        # A file in the template folder
+        $templateFile = Join-Path $testTemplateFolder "template.txt"
+        Set-Content -LiteralPath $templateFile -Value "template content"
+
+        # A legitimate file directly in the clone folder
+        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+
+        # Create a redirected folder and a symbolic link pointing back to the workspace folder
+        $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
+        New-Item -ItemType SymbolicLink -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+
+        # Create a redirected folder and a symbolic link pointing back to the clone folder
+        $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
+        New-Item -ItemType SymbolicLink -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $updateFiles.Count | Should -Be 2
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update for source file '*template.txt':*'*redirectedInWorkspace*redirected.txt'*" }
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate update was actually written to the (mocked) clone root; the redirected ones were not
+        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInWorkspace/redirected.txt") -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        $relativeLegitFile = "legit.txt"
+        $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
+        $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+        $relativeRedirectedInCloneFolder = "redirectedInClone"
+        $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+
+        # Create folders, files and junctions in workspace folder
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType Junction -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        # Create folders, files and junctions in clone folder
+        Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
+        New-Item -ItemType Junction -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+        $testFilesToExclude = @(
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $removeFiles.Count | Should -Be 3
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
+        Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
+    }
+
+    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        $relativeLegitFile = "legit.txt"
+        $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
+        $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+        $relativeRedirectedInCloneFolder = "redirectedInClone"
+        $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+
+        # Create folders, files and junctions in workspace folder
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType SymbolicLink -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        # Create folders, files and junctions in clone folder
+        Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
+        New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
+        New-Item -ItemType SymbolicLink -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+        $testFilesToExclude = @(
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
+            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
+        )
+
+        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+
+        $removeFiles.Count | Should -Be 3
+        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
+
+        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
+        Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
+        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
     }
 }
 
@@ -248,6 +543,15 @@ Describe "YamlClass Tests" {
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
 
         Mock Trace-Information {}
+    }
+
+    It 'Loads only the literal YAML name containing brackets' {
+        . (Join-Path $scriptRoot 'yamlclass.ps1')
+        $literalFile = Join-Path $TestDrive 'Workflow[1].yaml'
+        Set-Content -LiteralPath $literalFile -Value 'name: Correct'
+        Set-Content -LiteralPath (Join-Path $TestDrive 'Workflow1.yaml') -Value 'name: Wrong'
+
+        [Yaml]::Load($literalFile).content | Should -Be 'name: Correct'
     }
 
     It 'Test YamlClass' {
@@ -506,6 +810,18 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $modifiedContent.PSObject.Properties.Name.Count | Should -Be 2 # setting1 and $schema
         $modifiedContent."setting1" | Should -Be "value2"
         $modifiedContent."`$schema" | Should -Be "someSchema"
+    }
+
+    It 'GetModifiedSettingsContent reads a literal bracketed destination' {
+        $source = Join-Path $TestDrive 'SettingsSource.json'
+        $destination = Join-Path $TestDrive 'Settings[1].json'
+        Set-Content -LiteralPath $source -Value '{"setting":"source"}'
+        Set-Content -LiteralPath $destination -Value '{"setting":"destination"}'
+        Set-Content -LiteralPath (Join-Path $TestDrive 'Settings1.json') -Value '{"setting":"wrong"}'
+
+        $modifiedContent = GetModifiedSettingsContent -srcSettingsFile $source -dstSettingsFile $destination | ConvertFrom-Json
+
+        $modifiedContent.setting | Should -Be 'destination'
     }
 
     It 'GetModifiedSettingsContent returns correct content when destination file is empty' {

@@ -6,6 +6,27 @@ Describe "GitHub-Helper Tests" {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
     }
 
+    It 'Get-ContentLF reads a literal path containing wildcard characters' {
+        $literalFile = Join-Path $TestDrive 'settings[1].json'
+        $wildcardMatch = Join-Path $TestDrive 'settings1.json'
+        Set-Content -LiteralPath $literalFile -Value "correct content"
+        Set-Content -LiteralPath $wildcardMatch -Value "wrong content"
+
+        Get-ContentLF -path $literalFile | Should -Be "correct content"
+    }
+
+    It 'Set-ContentLF writes to a literal path containing wildcard characters' {
+        $literalFile = Join-Path $TestDrive 'settings[1].json'
+        $wildcardMatch = Join-Path $TestDrive 'settings1.json'
+        Set-Content -LiteralPath $literalFile -Value "unchanged content"
+        Set-Content -LiteralPath $wildcardMatch -Value "unchanged content"
+
+        Set-ContentLF -path $literalFile -content "changed content"
+
+        Get-ContentLF -path $literalFile | Should -Be "changed content"
+        Get-ContentLF -path $wildcardMatch | Should -Be "unchanged content"
+    }
+
     It 'SemVerStrToSemVerObj/SemVerObjToSemVerStr' {
         { SemVerStrToSemVerObj -semVerStr 'not semver' } | Should -Throw
         { SemVerStrToSemVerObj -semVerStr '' } | Should -Throw
