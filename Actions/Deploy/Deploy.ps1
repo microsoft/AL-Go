@@ -213,6 +213,11 @@ else {
 
                 Write-Host "Publishing apps using automation API"
                 Publish-PerTenantExtensionApps @parameters
+
+                if (($deploymentSettings['unpublishOldVersions'] -is [bool]) -and $deploymentSettings['unpublishOldVersions']) {
+                    Write-Host "Unpublishing old app versions"
+                    UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+                }
             }
         }
     }
