@@ -962,6 +962,12 @@ function CheckAppDependencyProbingPaths {
                 $dependency | Add-Member -name "branch" -MemberType NoteProperty -Value "main"
             }
             Write-Host "Dependency to projects '$($dependency.projects)' in $($dependency.Repo)@$($dependency.branch), version $($dependency.version), release status $($dependency.release_status)"
+            $dependencyUri = [uri]$dependency.Repo
+            if ($dependencyUri.Authority -ne $repositoryUri.Authority) {
+                if ($dependency.release_status -eq "latestBuild") {
+                    throw "Cannot use 'latestBuild' for dependency '$($dependency.Repo)', which is hosted on a different enterprise than '$($repositoryUrl)'."
+                }
+            }
             if ($dependency.PsObject.Properties.name -eq "AuthTokenSecret") {
                 Write-Host "Using secret $($dependency.AuthTokenSecret) for access to repository"
                 if ("$env:Secrets" -eq "") {
@@ -973,22 +979,22 @@ function CheckAppDependencyProbingPaths {
             }
             else {
                 $useToken = $null
-                $dependencyUri = [uri]$dependency.Repo
                 if ($dependencyUri.Authority -eq $repositoryUri.Authority) {
+                    # Only use GitHub token if the dependency is hosted on the same enterprise as the repository
                     if ($token) {
                         Write-Host "Using GITHUB_TOKEN for access to repository"
+                        $useToken = $token
                     }
-                    else {
-                        Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
-                        try {
-                            $token = invoke-gh -silent -returnValue auth token
-                        }
-                        catch {
-                            Write-Host "Unable to get token from gh, will attempt to access repository without token. Message: $($_.Exception.Message)"
-                            $token = $null
-                        }
+                }
+                if (-not $useToken) {
+                    Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
+                    try {
+                        # Get an auth token from GitHub CLI for the dependency repository's host
+                        $useToken = invoke-gh -silent -returnValue auth token --hostname $dependencyUri.Host
                     }
-                    $useToken = $token
+                    catch {
+                        Write-Host "Unable to get token from gh, will attempt to access repository without token. Message: $($_.Exception.Message)"
+                    }
                 }
                 $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $useToken
             }
