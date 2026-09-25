@@ -48,6 +48,7 @@ As part of this, the warning comparison now also parses the raw AL compiler outp
 - Issue 2267 - `AppSourceCop.json` is now created for test apps when `enableCodeAnalyzersOnTestApps` is true.
 - Issue 2320 - Deliver to NuGet of release workflow failing with app and test app
 - Issue 2337 - Incremental builds: skipped projects re-publish Default-mode apps into ALL buildMode-specific artifacts
+- Issue 2281 - Publish To AppSource (and other delivery targets) now falls back to the artifacts from the latest build when `current` is specified and the repository doesn't contain any releases - the same fallback as the one already used when deploying to an environment.
 
 ### Valid SARIF URIs for file paths containing spaces
 
