@@ -490,7 +490,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $removeFiles.Count | Should -Be 3
         Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
 
-        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
+        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clone redirected file was not
         Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
         Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
         Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
