@@ -910,11 +910,19 @@ function CheckAppDependencyProbingPaths {
         [hashTable] $settings,
         $token,
         [string] $baseFolder = $ENV:GITHUB_WORKSPACE,
-        [string] $repository = $ENV:GITHUB_REPOSITORY,
+        [string] $repositoryUrl = "",
         [string] $project = '.',
         [string[]] $includeOnlyAppIds
     )
 
+    if (-not $repositoryUrl) {
+        if ($ENV:GITHUB_REPOSITORY -and $ENV:GITHUB_SERVER_URL) {
+            $repositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
+        }
+        else {
+            throw "Repository URL must be provided."
+        }
+    }
     Write-Host "Checking appDependencyProbingPaths"
     $settings = $settings | Copy-HashTable
     if ($settings.appDependencyProbingPaths) {
@@ -926,15 +934,17 @@ function CheckAppDependencyProbingPaths {
                     New-Object -Type PSObject -Property $_
                 }
             })
+        $repositoryUri = [uri]$repositoryUrl
         foreach($dependency in $settings.appDependencyProbingPaths) {
             if (-not ($dependency.PsObject.Properties.name -eq "repo")) {
                 throw "The Setting AppDependencyProbingPaths needs to contain a repo property, pointing to the repository on which your project have a dependency"
             }
             if ($dependency.Repo -eq ".") {
-                $dependency.Repo = "$($ENV:GITHUB_SERVER_URL)/$repository"
+                $dependency.Repo = $repositoryUrl
             }
             elseif ($dependency.Repo -notlike "https://*") {
-                $dependency.Repo = "$($ENV:GITHUB_SERVER_URL)/$($dependency.Repo)"
+                # If the repo is not a full URL, prepend the GitHub server URL from the repository variable (current repo url)
+                $dependency.Repo = "$($repositoryUri.Scheme)://$($repositoryUri.Authority)/$($dependency.Repo)"
             }
             if (-not ($dependency.PsObject.Properties.name -eq "Version")) {
                 $dependency | Add-Member -name "Version" -MemberType NoteProperty -Value "latest"
@@ -962,20 +972,25 @@ function CheckAppDependencyProbingPaths {
                 $dependency.AuthTokenSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$($dependency.AuthTokenSecret)"))
             }
             else {
-                if ($token) {
-                    Write-Host "Using GITHUB_TOKEN for access to repository"
-                }
-                else {
-                    Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
-                    try {
-                        $token = invoke-gh -silent -returnValue auth token
+                $useToken = $null
+                $dependencyUri = [uri]$dependency.Repo
+                if ($dependencyUri.Authority -eq $repositoryUri.Authority) {
+                    if ($token) {
+                        Write-Host "Using GITHUB_TOKEN for access to repository"
                     }
-                    catch {
-                        Write-Host "Unable to get token from gh, will attempt to access repository without token. Message: $($_.Exception.Message)"
-                        $token = $null
+                    else {
+                        Write-Host "No token available, will attempt to invoke gh auth token for access to repository"
+                        try {
+                            $token = invoke-gh -silent -returnValue auth token
+                        }
+                        catch {
+                            Write-Host "Unable to get token from gh, will attempt to access repository without token. Message: $($_.Exception.Message)"
+                            $token = $null
+                        }
                     }
+                    $useToken = $token
                 }
-                $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $token
+                $dependency | Add-Member -name "AuthTokenSecret" -MemberType NoteProperty -Value $useToken
             }
             if (-not ($dependency.PsObject.Properties.name -eq "alwaysIncludeApps")) {
                 $dependency | Add-Member -name "alwaysIncludeApps" -MemberType NoteProperty -Value @()
@@ -988,7 +1003,7 @@ function CheckAppDependencyProbingPaths {
             }
 
             if ($dependency.release_status -eq "include") {
-                if ($dependency.Repo -ne "$($ENV:GITHUB_SERVER_URL)/$repository") {
+                if ($dependency.Repo -ne $repositoryUrl) {
                     OutputWarning "Dependencies with release_status 'include' must be to other projects in the same repository."
                 }
                 else {
@@ -1003,7 +1018,7 @@ function CheckAppDependencyProbingPaths {
                             $thisIncludeOnlyAppIds = @($dependencyIds + $includeOnlyAppIds + $dependency.alwaysIncludeApps)
                             $depSettings = ReadSettings -baseFolder $baseFolder -project $depProject -workflowName "CI/CD"
                             $depSettings = AnalyzeRepo -settings $depSettings -baseFolder $baseFolder -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds -doNotCheckArtifactSetting -doNotIssueWarnings
-                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -repository $repository -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
+                            $depSettings = CheckAppDependencyProbingPaths -settings $depSettings -token $token -baseFolder $baseFolder -repositoryUrl $repositoryUrl -project $depProject -includeOnlyAppIds $thisIncludeOnlyAppIds
 
                             $projectPath = Join-Path $baseFolder $project -Resolve
                             Push-Location $projectPath
@@ -1449,7 +1464,7 @@ function CreateDevEnv {
         [string] $caller = 'local',
         [Parameter(Mandatory = $true)]
         [string] $baseFolder,
-        [string] $repository = "$ENV:GITHUB_REPOSITORY",
+        [string] $repositoryUrl = "",
         [string] $project,
         [string] $userName = $env:Username,
 
@@ -1479,14 +1494,21 @@ function CreateDevEnv {
         throw "Specified parameters doesn't match kind=$kind"
     }
 
-    if ("$repository" -eq "") {
-        Push-Location $baseFolder
-        try {
-            $repoInfo = invoke-gh -silent -returnValue repo view --json "owner,name" | ConvertFrom-Json
-            $repository = "$($repoInfo.owner.login)/$($repoInfo.name)"
+    # Determine the repository URL if not specified
+    if ("$repositoryUrl" -eq "") {
+        if ($ENV:GITHUB_SERVER_URL -and $ENV:GITHUB_REPOSITORY) {
+            $repositoryUrl = "$ENV:GITHUB_SERVER_URL/$ENV:GITHUB_REPOSITORY"
         }
-        finally {
-            Pop-Location
+        else {
+            Push-Location $baseFolder
+            try {
+                # Get the full URL of the repository for dependency resolutions towards .
+                $repoInfo = invoke-gh -silent -returnValue repo view --json "url" | ConvertFrom-Json
+                $repositoryUrl = $repoInfo.url
+            }
+            finally {
+                Pop-Location
+            }
         }
     }
     $projectFolder = Join-Path $baseFolder $project -Resolve
@@ -1620,7 +1642,7 @@ function CreateDevEnv {
             }
         }
         $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project @params
-        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -repository $repository -project $project
+        $settings = CheckAppDependencyProbingPaths -settings $settings -baseFolder $baseFolder -repositoryUrl $repositoryUrl -project $project
 
         if (!$accept_insiderEula -and ($settings.artifact -like 'https://bcinsider*.net/*')) {
             Read-Host 'Press ENTER to accept the Business Central insider EULA (https://go.microsoft.com/fwlink/?linkid=2245051) or break the script to cancel'
