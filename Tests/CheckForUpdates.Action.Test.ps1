@@ -4059,6 +4059,28 @@ Describe "GetFilesToUpdate (general files to update logic)" {
     }
 }
 
+Describe "GetWorkflowContentWithChangesFromSettings" {
+    BeforeAll {
+        $scriptRoot = Join-Path $PSScriptRoot '..\Actions\CheckForUpdates' -Resolve
+        . (Join-Path $scriptRoot 'yamlclass.ps1')
+        . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+    }
+
+    It 'Reads target workflow settings without the update event trigger' {
+        $srcFile = Join-Path $TestDrive 'Sample.yaml'
+        Set-Content -LiteralPath $srcFile -Value 'name: Sample Workflow' -Encoding UTF8
+        Mock ReadSettings { [pscustomobject]@{ 'runs-on' = 'windows-latest'; shell = 'powershell' } }
+
+        GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings @{} -depth 1 | Out-Null
+
+        Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
+            $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq 'Sample Workflow' -and
+            $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
+            ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+        }
+    }
+}
+
 Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
     BeforeAll {
         $actionName = "CheckForUpdates"

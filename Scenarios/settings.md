@@ -189,7 +189,7 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 - **users** settings will be applied for users matching the patterns
 - **triggers** settings will be applied when `GITHUB_EVENT_NAME` matches values (for example `push`, `pull_request`, `schedule`, `workflow_dispatch`)
 
-When updating AL-Go System Files, settings are read without a build mode, project, workflow, user, branch, or trigger context. Conditions on any of those six contexts do not apply to the update, including conditions combined with a repository match. Unconditional settings and conditions matching the repository still apply.
+When updating AL-Go System Files, settings for selecting files are read without a build mode, project, workflow, user, branch, or trigger context. When generating each workflow, settings are read again with that workflow's name, so workflow-specific settings and conditions on that workflow apply. Neither read uses the event that triggered the update. Unconditional settings and conditions matching the repository still apply; conditions on other execution contexts do not apply.
 
 **Note:** You can use `workflowDefaultInputs` within conditional settings to apply workflow input defaults only when certain conditions are met. For example, you could set different default values for specific workflows or branches.
 

@@ -532,7 +532,7 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     # Re-read settings and this time include workflow specific settings
-    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' | ConvertTo-HashTable -recurse
+    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 
     # Old Schedule key is deprecated, but still supported
     $oldWorkflowScheduleKey = "$($baseName)Schedule"
