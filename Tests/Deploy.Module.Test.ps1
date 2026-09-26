@@ -23,6 +23,7 @@ InModuleScope Deploy { # Allows testing of private functions
             $env:GITHUB_WORKSPACE = (Join-Path ([System.IO.Path]::GetTempPath()) "deployModuleTest")
             $env:GITHUB_REPOSITORY = "test/repo"
             $env:GITHUB_REF_NAME = "main"
+            $env:GITHUB_API_URL = "https://api.github.com"
 
             # Mock functions from AL-Go-Helper and Github-Helper
             Mock GetHeaders { return @{ "Authorization" = "Bearer test-token" } }

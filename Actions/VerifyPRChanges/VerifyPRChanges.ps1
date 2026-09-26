@@ -33,7 +33,7 @@ function ValidatePullRequest
     [hashtable] $Headers,
     [int] $MaxAllowedChangedFiles = 3000
 ) {
-    $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId"
+    $url = "$($ENV:GITHUB_API_URL)/repos/$($prBaseRepository)/pulls/$pullRequestId"
     $pullRequestDetails = (Invoke-WebRequest -UseBasicParsing -Headers $Headers -Uri $url).Content | ConvertFrom-Json
 
     # List Pull Request files has a max of 3000 files. https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#list-pull-requests-files
@@ -53,7 +53,7 @@ function ValidatePullRequestFiles
     $hasMoreData = $true
     Write-Host "Files Changed:"
     while ($hasMoreData) {
-        $url = "https://api.github.com/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=$resultsPerPage&page=$pageNumber"
+        $url = "$($ENV:GITHUB_API_URL)/repos/$($prBaseRepository)/pulls/$pullRequestId/files?per_page=$resultsPerPage&page=$pageNumber"
         $changedFiles = (Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url).Content | ConvertFrom-Json
 
         # Finish check if there are no more files to be validated
