@@ -1,9 +1,9 @@
-### Experimental: Support for GitHub Enterprise Edition with data residency
+### Preview: Support for GitHub Enterprise Edition with data residency
 
 AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residency. When you create a GitHub Enterprise with data residency, you can create a number of organizations underneath this enterprise (much like we create organizations on github.com). In each of these organizations, you can create any number of internal or private repositories, you cannot create public repositories. The URL for your repository becomes https://enterprise.ghe.com/organization/repository instead of the normal https://github.com/organization/repository.
 
 > [!NOTE]
-> This feature is in preview / experimental
+> This feature is in preview
 
 ### Include agentic workflows when updating system files from AL-Go or indirect templates
 
