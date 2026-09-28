@@ -1,3 +1,10 @@
+<#
+.SYNOPSIS
+    Fails the deployment if an app in the build artifact has a lower version than the version installed in the target Business Central environment.
+.DESCRIPTION
+    Without this check, deploying an app whose app.json version is lower than the installed version completes successfully (green checkmark).
+    The check runs only when failOnAppVersionDowngrade is enabled globally or in DeployTo<environmentName>.
+#>
 Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
     [string] $token,

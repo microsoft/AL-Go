@@ -821,6 +821,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "When set to true, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment. Only applies to PTE deployments (Scope PTE) and is non-fatal. See https://aka.ms/ALGoSettings#deployto"
+                },
+                "failOnAppVersionDowngrade": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Fail deployment in CI/CD to this environment if an app in the build artifact has a lower version than the version installed in the environment. Overrides the global failOnAppVersionDowngrade setting. See https://aka.ms/ALGoSettings#failOnAppVersionDowngrade"
                 }
             }
         }
