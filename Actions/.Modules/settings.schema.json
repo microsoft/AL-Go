@@ -320,6 +320,11 @@
             "pattern": "^(none|warning|error|newWarning)$",
             "description": "See https://aka.ms/ALGoSettings#failon"
         },
+        "failOnAppVersionDowngrade": {
+            "type": "boolean",
+            "default": false,
+            "description": "Fail deployment in CI/CD if an app in the build artifact has a lower version than the version installed in the environment. Can be overridden per environment in DeployTo<environmentname>. See https://aka.ms/ALGoSettings#failOnAppVersionDowngrade"
+        },
         "treatTestFailuresAsWarnings": {
             "type": "boolean"
         },
