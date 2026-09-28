@@ -1826,11 +1826,16 @@ function CreateDevEnv {
                 $sharedFolder = $baseFolder
             }
 
+            $imageName = ""
+            if ($kind -eq "local") {
+                $imageName = $settings.cacheImageName
+            }
+
             Run-AlPipeline @runAlPipelineParams `
                 -accept_insiderEula:$accept_insiderEula `
                 -vsixFile $settings.vsixFile `
                 -pipelinename $workflowName `
-                -imageName "" `
+                -imageName $imageName `
                 -memoryLimit $settings.memoryLimit `
                 -baseFolder $projectFolder `
                 -sharedFolder $sharedFolder `
