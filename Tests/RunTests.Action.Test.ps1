@@ -171,12 +171,12 @@ Describe "RunTests Action Tests" {
         $ENV:_token | Should -Be $providedToken
     }
 
-    It 'Passes nested settings to AnalyzeRepo as recursive hashtables' {
+    It 'Passes separate test action settings to AnalyzeRepo as recursive hashtables' {
         $ENV:GITHUB_WORKSPACE = $TestDrive
         $ENV:Settings = @{
-            workspaceCompilation = @{
-                enabled = $true
-                options = @(@{ name = 'nested-entry' })
+            useSeparateTestAction = @{
+                enabled  = $true
+                testType = 'IntegrationTest'
             }
         } | ConvertTo-Json -Depth 4
         $ENV:containerName = 'test-container'
@@ -188,9 +188,9 @@ Describe "RunTests Action Tests" {
         Mock AnalyzeRepo {
             param($settings)
             $settings | Should -BeOfType System.Collections.Hashtable
-            $settings.workspaceCompilation | Should -BeOfType System.Collections.Hashtable
-            $settings.workspaceCompilation.options[0] | Should -BeOfType System.Collections.Hashtable
-            $settings.workspaceCompilation.options[0].name | Should -Be 'nested-entry'
+            $settings.useSeparateTestAction | Should -BeOfType System.Collections.Hashtable
+            $settings.useSeparateTestAction.enabled | Should -BeTrue
+            $settings.useSeparateTestAction.testType | Should -Be 'IntegrationTest'
             return @{ testFolders = @() }
         }
         Mock Get-ScriptOverrides { return @{} }

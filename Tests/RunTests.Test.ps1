@@ -325,6 +325,10 @@ Describe 'RunTests.psm1 Tests' {
                 companyName                    = ''
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                useSeparateTestAction           = @{
+                    enabled  = $true
+                    testType = ''
+                }
             }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential -runTestsOverride $override } | Should -Not -Throw
@@ -368,7 +372,10 @@ Describe 'RunTests.psm1 Tests' {
                 companyName                    = ''
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-                testType                       = 'Legacy'
+                useSeparateTestAction           = @{
+                    enabled  = $true
+                    testType = 'Legacy'
+                }
             }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
@@ -778,16 +785,23 @@ Describe 'RunTests.psm1 Tests' {
                 companyName                    = ''
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                useSeparateTestAction           = @{
+                    enabled  = $true
+                    testType = ''
+                }
             }
 
             { Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' -credential $testCredential } | Should -Not -Throw
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly -ParameterFilter {
+                $TestType -eq ''
+            }
             Should -Invoke -ModuleName RunTests Install-AlTool -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Maps the testType setting and other built-in runner parameters' {
+        It 'Maps useSeparateTestAction.testType and other built-in runner parameters' {
             $appId = [Guid]::NewGuid().ToString()
             $script:capturedAlToolParams = $null
             Mock -ModuleName RunTests Invoke-AlToolTestRun {
@@ -823,7 +837,10 @@ Describe 'RunTests.psm1 Tests' {
                 companyName                    = 'CRONUS'
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
-                testType                       = 'IntegrationTest'
+                useSeparateTestAction           = @{
+                    enabled  = $true
+                    testType = 'IntegrationTest'
+                }
             }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential

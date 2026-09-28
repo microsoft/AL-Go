@@ -112,7 +112,10 @@ try {
             Add-PropertiesToJsonFile -path (Join-Path $path ".AL-Go\settings.json") -properties @{
                 "appFolders" = @("My App")
                 "testFolders" = @("My App.Test")
-                "useSeparateTestAction" = $true
+                "useSeparateTestAction" = @{
+                    "enabled"  = $true
+                    "testType" = ""
+                }
             }
 
             @'
