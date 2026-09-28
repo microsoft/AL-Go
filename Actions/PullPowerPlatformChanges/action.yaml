@@ -35,7 +35,7 @@ runs:
   using: composite
   steps:
     - name: Install Power Platform Tools
-      uses: microsoft/powerplatform-actions/actions-install@v1
+      uses: microsoft/powerplatform-actions/actions-install@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
 
     - name: Set Actions Repo and Ref
       shell: ${{ inputs.shell }}
@@ -48,7 +48,7 @@ runs:
         }
 
     - name: Check out AL-Go Actions
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: ${{ env.actionsRepo }}
         ref: ${{ env.actionsRef }}
@@ -76,7 +76,7 @@ runs:
 
     - name: Export Solution (username)
       if: steps.ReadPowerPlatformSettings.outputs.ppUserName != ''
-      uses: microsoft/powerplatform-actions/export-solution@v1
+      uses: microsoft/powerplatform-actions/export-solution@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
       with:
         user-name: ${{ steps.ReadPowerPlatformSettings.outputs.ppUserName }}
         password-secret: ${{ steps.ReadPowerPlatformSettings.outputs.ppPassword }}
@@ -86,7 +86,7 @@ runs:
 
     - name: Export Solution (application ID)
       if: steps.ReadPowerPlatformSettings.outputs.ppApplicationId != ''
-      uses: microsoft/powerplatform-actions/export-solution@v1
+      uses: microsoft/powerplatform-actions/export-solution@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
       with:
         tenant-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppTenantId }}
         app-id: ${{ steps.ReadPowerPlatformSettings.outputs.ppApplicationId }}
@@ -96,7 +96,7 @@ runs:
         solution-output-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
 
     - name: Unpack Solution
-      uses: microsoft/powerplatform-actions/unpack-solution@v1
+      uses: microsoft/powerplatform-actions/unpack-solution@0e44beb5424af932af47250a2568eba4c259e3d8 # v1.10.0
       with:
         solution-file: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}.zip
         solution-folder: ${{ env.clonedRepoPath }}/${{ inputs.solutionFolder }}
