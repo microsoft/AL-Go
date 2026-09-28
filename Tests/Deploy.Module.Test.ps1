@@ -189,6 +189,39 @@ InModuleScope Deploy { # Allows testing of private functions
             }
         }
 
+        Describe "GetDeploymentSettings" {
+            BeforeAll {
+                $script:deploymentEnvironmentsJson = @{
+                    "Sandbox (PROD)" = @{
+                        "EnvironmentName" = "sandbox"
+                        "Projects" = "*"
+                        "excludeAppIds" = @()
+                    }
+                } | ConvertTo-Json -Depth 10 -Compress
+            }
+
+            It 'Returns deployment settings for the environment when no DeployTo setting exists' {
+                $result = GetDeploymentSettings -deploymentEnvironmentsJson $script:deploymentEnvironmentsJson -environmentName "Sandbox (PROD)" -settings @{}
+
+                $result.EnvironmentName | Should -Be "sandbox"
+                $result.Projects | Should -Be "*"
+            }
+
+            It 'Applies DeployTo environment setting overrides and adds new keys' {
+                $settings = @{
+                    "DeployToSandbox" = @{
+                        "Projects" = "ProjectA"
+                        "buildMode" = "Special"
+                    }
+                }
+                $result = GetDeploymentSettings -deploymentEnvironmentsJson $script:deploymentEnvironmentsJson -environmentName "Sandbox (PROD)" -settings $settings
+
+                $result.EnvironmentName | Should -Be "sandbox"
+                $result.Projects | Should -Be "ProjectA"
+                $result.buildMode | Should -Be "Special"
+            }
+        }
+
         Describe "GetAppsAndDependenciesFromArtifacts" {
             BeforeEach {
                 # Create test artifact folder structure

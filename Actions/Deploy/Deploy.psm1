@@ -31,6 +31,62 @@ function GetHeadRefFromPRId {
 
 <#
     .SYNOPSIS
+        Get the deployment settings for an environment, including overrides from the DeployTo<environmentName> setting
+    .PARAMETER deploymentEnvironmentsJson
+        The settings for all Deployment Environments (JSON)
+    .PARAMETER environmentName
+        Name of the environment
+    .PARAMETER settings
+        AL-Go settings, which might contain a DeployTo<environmentName> setting
+#>
+function GetDeploymentSettings {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $deploymentEnvironmentsJson,
+        [Parameter(Mandatory = $true)]
+        [string] $environmentName,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $settings
+    )
+
+    $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $deploymentSettings = $deploymentEnvironments."$environmentName"
+
+    $envName = $environmentName.Split(' ')[0]
+    # Check DeployTo<environmentName> setting (it could have been added in the environment-specific settings)
+    $settingsName = "DeployTo$envName"
+    if ($settings.ContainsKey($settingsName)) {
+        # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+        Write-Host "Setting $settingsName"
+        $deployTo = $settings."$settingsName"
+        $keys = @($deployTo.Keys)
+        foreach($key in $keys) {
+            if ($deploymentSettings.ContainsKey($key)) {
+                if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                    if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
+                        # Support setting runs-on as an array in settings to not break old settings
+                        # See https://github.com/microsoft/AL-Go/issues/1182
+                        $deployTo."$key" = $deployTo."$key" -join ','
+                    }
+                    else {
+                        Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                    }
+                }
+                Write-Host "Property $key = $($deployTo."$key")"
+                $deploymentSettings."$key" = $deployTo."$key"
+            }
+            else {
+                $deploymentSettings += @{
+                    "$key" = $deployTo."$key"
+                }
+            }
+        }
+    }
+    return $deploymentSettings
+}
+
+<#
+    .SYNOPSIS
         Get apps and dependencies from artifacts
     .PARAMETER token
         The GitHub token running the action
