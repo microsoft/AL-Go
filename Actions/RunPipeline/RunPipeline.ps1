@@ -489,7 +489,7 @@ try {
 
     # The separate action needs one local container that remains alive after RunPipeline. Multi-country
     # builds keep normal tests here because Run-AlPipeline creates and tests a container per country.
-    $runTestsInSeparateAction = $settings.useSeparateTestAction -and -not $settings.doNotRunTests -and -not $settings.doNotPublishApps -and @($additionalCountries).Count -eq 0
+    $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and -not $settings.doNotRunTests -and -not $settings.doNotPublishApps -and @($additionalCountries).Count -eq 0
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "runTestsInSeparateAction=$runTestsInSeparateAction"
 
     if ($runTestsInSeparateAction) {
@@ -507,7 +507,7 @@ try {
         Write-Host "::add-mask::$containerCredentialBase64"
         Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerCredential=$containerCredentialBase64"
     }
-    elseif ($settings.useSeparateTestAction -and -not $settings.doNotRunTests) {
+    elseif ($settings.useSeparateTestAction.enabled -and -not $settings.doNotRunTests) {
         Write-Host "::Notice::useSeparateTestAction is enabled, but either additionalCountries is configured or no local build container is created. The separate RunTests action will be skipped."
     }
 

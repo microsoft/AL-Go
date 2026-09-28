@@ -11,6 +11,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 
     BeforeAll {
         . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        $script:bcContainerHelperModulePaths = @(Get-Module BcContainerHelper | ForEach-Object { $_.Path })
+        Get-Module BcContainerHelper | Remove-Module -Force
         $script:stubbedGlobalCommands = @()
         $stubDefinitions = @{
             'ConvertTo-HashTable'               = ${function:ConvertTo-HashTable}
@@ -38,8 +40,9 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             }
         }
         foreach ($commandName in $stubDefinitions.Keys) {
-            if (-not (Test-Path -LiteralPath "Function:\global:$commandName")) {
-                Set-Item -LiteralPath "Function:\global:$commandName" -Value $stubDefinitions[$commandName]
+            $functionPath = "Function:\global:$commandName"
+            if (-not (Test-Path -LiteralPath $functionPath)) {
+                Set-Item -LiteralPath $functionPath -Value $stubDefinitions[$commandName]
                 $script:stubbedGlobalCommands += $commandName
             }
         }
@@ -54,6 +57,9 @@ Describe 'AlToolTestRunner.psm1 Tests' {
     AfterAll {
         foreach ($commandName in $script:stubbedGlobalCommands) {
             Remove-Item "Function:\global:$commandName" -Force -ErrorAction SilentlyContinue
+        }
+        foreach ($modulePath in $script:bcContainerHelperModulePaths) {
+            Import-Module $modulePath -Force -DisableNameChecking
         }
     }
 

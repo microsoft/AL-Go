@@ -286,7 +286,7 @@ function Invoke-AlGoTestRun {
 
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
-        $testType = if ($settings.ContainsKey("testType")) { "$($settings.testType)" } else { "" }
+        $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
 
         $allTestsPassed = $true
         $testRunError = $null

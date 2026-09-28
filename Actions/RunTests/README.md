@@ -2,7 +2,7 @@
 
 Run normal tests (`testFolders`) against the build container kept alive by the RunPipeline action.
 
-Enable this action with the `useSeparateTestAction` setting. It is used when normal tests are enabled and RunPipeline creates one local build container. Builds with `additionalCountries` or without a local build container continue to run normal tests in RunPipeline. BCPT and page scripting tests always remain in RunPipeline.
+Enable this action with `useSeparateTestAction.enabled`. It is used when normal tests are enabled and RunPipeline creates one local build container. Builds with `additionalCountries` or without a local build container continue to run normal tests in RunPipeline. BCPT and page scripting tests always remain in RunPipeline.
 
 The action keeps `TestResults.xml` in the project folder for AnalyzeTests and copies a produced result to `.buildartifacts/TestResults.xml` for artifact upload. It does not create a result artifact when no result is produced. After the run, it refreshes `ContainerEventLog.evtx` in the project folder so failure diagnostics include test-time events.
 
@@ -10,9 +10,9 @@ Compiled apps are selected by matching their app IDs to `testFolders`, which exc
 
 ## Test runner
 
-By default, AlTool runs enabled normal tests for each app through one batch and connection while BcContainerHelper provides app metadata, container configuration, company discovery, and server-side test enumeration. The optional `testType` setting limits enumeration to `UnitTest`, `IntegrationTest`, or `Uncategorized`; blank runs all test types. The action writes JUnit output compatible with AL-Go AnalyzeTests and downstream processing.
+By default, AlTool runs enabled normal tests for each app through one batch and connection while BcContainerHelper provides app metadata, container configuration, company discovery, and server-side test enumeration. The optional `useSeparateTestAction.testType` value limits enumeration to `UnitTest`, `IntegrationTest`, or `Uncategorized`; blank runs all test types. The action writes JUnit output compatible with AL-Go AnalyzeTests and downstream processing.
 
-To use another test runner, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. The override replaces AlTool execution and receives the standard BcContainerHelper test parameters once per test app, including a configured `testType`. Custom overrides may interpret additional values such as `Legacy`.
+To use another test runner, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. The override replaces AlTool execution and receives the standard BcContainerHelper test parameters once per test app, including the configured `testType` parameter. Custom overrides may interpret additional values such as `Legacy`.
 
 ### Known limitations
 
