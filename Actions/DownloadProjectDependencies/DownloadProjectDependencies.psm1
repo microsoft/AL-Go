@@ -299,23 +299,27 @@ function Get-DependenciesFromInstallApps {
             }
             Write-Host "Processing install$($list) entry: $appFile"
 
-            # If the app file is not a URL, resolve local path.
-            if ($appFile -notlike 'http*://*') {
-                $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $DestinationPath
-            } else {
-                # Else, check for secrets in the URL and replace them. Only match on the first occurrence of the pattern ${{ secretName }}
-                $appFileUrl = $appFile
-                $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-                if ($appFile -match $pattern) {
-                    $secretName = $matches[2]
-                    if (-not $secrets.ContainsKey($secretName) -or [string]::IsNullOrEmpty($secrets."$secretName")) {
-                        throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
-                    }
-                    $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
+            # Resolve any secret placeholder first, so classification (URL vs local path) is done against
+            # the resolved value. This supports the case where the entire URL is stored in a secret.
+            # Only match on the first occurrence of the pattern ${{ secretName }}.
+            $cleanAppFile = $appFile
+            $appFileUrl = $appFile
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            if ($appFile -match $pattern) {
+                $secretName = $matches[2]
+                if (-not $secrets.ContainsKey($secretName) -or [string]::IsNullOrEmpty($secrets."$secretName")) {
+                    throw "Setting: install$($list) references unknown secret '$secretName' in: $appFile"
                 }
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
+            }
 
+            # If the resolved app file is not a URL, resolve local path.
+            if ($appFileUrl -notlike 'http*://*') {
+                $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFileUrl -DestinationPath $DestinationPath
+            } else {
                 # Download the file (may return multiple .app files if it's a zip)
-                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -CleanUrl $appFile -DownloadPath $DestinationPath
+                # Pass the unresolved value as CleanUrl so secret values aren't leaked into logs.
+                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -CleanUrl $cleanAppFile -DownloadPath $DestinationPath
 
                 $updatedListOfFiles += $appFiles
             }

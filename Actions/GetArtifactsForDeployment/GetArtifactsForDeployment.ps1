@@ -79,7 +79,7 @@ elseif ($artifactsVersion -like "PR_*") {
     }
     $latestPRBuildId, $lastKnownGoodBuildId = FindLatestPRRun -repository $ENV:GITHUB_REPOSITORY -commitSha $prLatestCommitSha -token $token
     if ($latestPRBuildId -eq 0) {
-        $prLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/pull/$prId"
+        $prLink = "$($ENV:GITHUB_SERVER_URL)/$($ENV:GITHUB_REPOSITORY)/pull/$prId"
         throw "Latest PR build for PR $prId not found, not completed or not successful - Please re-run this workflow when you have a successful build on PR_$prId ($prLink)"
     }
 
@@ -102,7 +102,7 @@ elseif ($artifactsVersion -like "PR_*") {
     }
 
     if ($expiredArtifacts) {
-        $prBuildLink = "https://github.com/$($ENV:GITHUB_REPOSITORY)/actions/runs/$latestPRBuildId"
+        $prBuildLink = "$($ENV:GITHUB_SERVER_URL)/$($ENV:GITHUB_REPOSITORY)/actions/runs/$latestPRBuildId"
         $shortLivedRetentionSettingLink = "https://aka.ms/algosettings#shortLivedArtifactsRetentionDays"
         throw "Build artifacts are expired, please re-run the pull request build ($prBuildLink). Note that you can control the retention days of short-lived artifacts using the AL-Go setting ShortLivedArtifactsRetentionDays. See $shortLivedRetentionSettingLink"
     }

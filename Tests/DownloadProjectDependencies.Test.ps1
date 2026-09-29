@@ -505,6 +505,31 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         $script:capturedUrl | Should -Be "https://example.com/App.app?token=secret-token-value"
     }
 
+    It 'Resolves secret placeholder that contains the entire URL' {
+        $env:Settings = @{
+            installApps = @('${{ mySecret }}')
+            installTestApps = @()
+        } | ConvertTo-Json -Depth 10
+
+        # The secret value is the whole URL
+        $secretValue = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("https://example.com/SecretApp.app"))
+        $env:Secrets = @{
+            mySecret = $secretValue
+        } | ConvertTo-Json -Depth 10
+
+        $script:capturedUrl = $null
+        Mock Invoke-WebRequest {
+            param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $script:capturedUrl = $Uri
+            [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3))
+        } -ModuleName DownloadProjectDependencies
+
+        $result = Get-DependenciesFromInstallApps -DestinationPath $downloadPath
+
+        $script:capturedUrl | Should -Be "https://example.com/SecretApp.app"
+        $result.Apps | Should -HaveCount 1
+    }
+
     It 'Throws error for unknown secret reference' {
         $env:Settings = @{
             installApps = @('https://example.com/App.app?token=${{ unknownSecret }}')
