@@ -190,10 +190,10 @@ jobs:
 "@
 Set-Content -Path $customWorkflowFile -Value $customWorkflowContent
 
-$finalRepoCustomWorkflowContent = $customWorkflowContent
+$expectedCustomWorkflowContent = $customWorkflowContent
 if($linux) {
-    $finalRepoCustomWorkflowContent = $finalRepoCustomWorkflowContent -replace 'windows-latest', 'ubuntu-latest'
-    $finalRepoCustomWorkflowContent = $finalRepoCustomWorkflowContent -replace 'shell: powershell', 'shell: pwsh'
+    $expectedCustomWorkflowContent = $expectedCustomWorkflowContent -replace 'windows-latest', 'ubuntu-latest'
+    $expectedCustomWorkflowContent = $expectedCustomWorkflowContent -replace 'shell: powershell', 'shell: pwsh'
 }
 
 # Add custom files in the template repository
@@ -245,7 +245,7 @@ Pull
 
 # Check that custom workflow file is present
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
-Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $customWorkflowContent.Replace("`r", "").TrimEnd("`n")
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $expectedCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
 
 # Check that default custom file is present
 (Join-Path (Get-Location) $defaultCustomFileName) | Should -Exist
@@ -390,7 +390,7 @@ Get-ContentLF -Path (Join-Path (Get-Location) $CustomTemplateRepoSettingsFile) |
 
 # Check that custom workflow file is present
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
-Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $finalRepoCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $expectedCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
 
 # Check that default custom file is present (in template's filesToInclude)
 (Join-Path (Get-Location) $defaultCustomFileName) | Should -Exist
@@ -434,7 +434,7 @@ Pull
 
 # Check that custom workflow file is present
 (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Exist
-Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $finalRepoCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
+Get-ContentLF -Path (Join-Path (Get-Location) $customWorkflowfileRelativePath) | Should -Be $expectedCustomWorkflowContent.Replace("`r", "").TrimEnd("`n")
 
  # Check that default custom file is NOT present (in repo's filesToExclude and template's filesToInclude)
 (Join-Path (Get-Location) $defaultCustomFileName) | Should -Not -Exist

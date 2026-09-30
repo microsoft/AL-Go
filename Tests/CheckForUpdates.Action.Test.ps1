@@ -2383,7 +2383,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
     }
 
-    It 'ResolveFilePaths avoids duplicate destination entries' {
+    It 'ResolveFilePaths retains duplicate destination candidates' {
         $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
         $files = @(
             @{ "sourceFolder" = "folder"; "filter" = "File1.txt" }
@@ -2393,36 +2393,9 @@ Describe "ResolveFilePaths" {
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
         $fullFilePaths | Should -Not -BeNullOrEmpty
-        $fullFilePaths.Count | Should -Be 1
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
-    }
-
-    It 'ResolveFilePaths keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
-        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
-        $files = @(
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt' }
-        )
-
-        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
-
         $fullFilePaths.Count | Should -Be 2
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeTrue
-    }
-
-    It 'ResolveFilePaths removes case-distinct destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
-        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
-        $files = @(
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt' }
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt' }
-        )
-
-        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
-
-        $fullFilePaths.Count | Should -Be 1
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'casefolder/conflict.txt')) | Should -BeFalse
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "folder/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be $fullFilePaths[0].destinationFullPath
     }
 
     It 'ResolveFilePaths treats dot project as repository root for per-project files' {
@@ -2562,7 +2535,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[1].sourceFullPath | Should -Be (Join-Path $sourceFolder "folder/File3.txt")
     }
 
-    It 'ResolveFilePaths with perProject skips duplicate files across projects' {
+    It 'ResolveFilePaths with perProject retains duplicate destination candidates' {
         $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
         $files = @(
             @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true }
@@ -2571,38 +2544,10 @@ Describe "ResolveFilePaths" {
 
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @("ProjectA"))
 
-        # Should only have one entry per project since both resolve to the same destination
         $fullFilePaths | Should -Not -BeNullOrEmpty
-        $fullFilePaths.Count | Should -Be 1
-        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
-    }
-
-    It 'ResolveFilePaths keeps case-distinct per-project destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
-        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
-        $files = @(
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
-        )
-
-        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('ProjectA'))
-
         $fullFilePaths.Count | Should -Be 2
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/CaseFolder/conflict.txt')) | Should -BeTrue
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeTrue
-    }
-
-    It 'ResolveFilePaths removes case-distinct per-project destination entries on Windows' -Skip:(-not $script:isWindowsPlatform) {
-        $destinationFolder = Join-Path $PSScriptRoot 'destinationFolder'
-        $files = @(
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File1.txt'; 'destinationFolder' = 'CaseFolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
-            @{ 'sourceFolder' = 'folder'; 'filter' = 'File2.log'; 'destinationFolder' = 'casefolder'; 'destinationName' = 'conflict.txt'; 'perProject' = $true }
-        )
-
-        $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @('ProjectA'))
-
-        $fullFilePaths.Count | Should -Be 1
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/CaseFolder/conflict.txt')) | Should -BeTrue
-        ($fullFilePaths.destinationFullPath -ccontains (Join-Path $destinationFolder 'ProjectA/casefolder/conflict.txt')) | Should -BeFalse
+        $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectA/folder/File1.txt")
+        $fullFilePaths[1].destinationFullPath | Should -Be $fullFilePaths[0].destinationFullPath
     }
 
     It 'ResolveFilePaths handles empty sourceFolder value' {
@@ -2637,10 +2582,9 @@ Describe "ResolveFilePaths" {
 
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder)
 
-        # File1.txt should only appear once even though both filters match it
         $fullFilePaths | Should -Not -BeNullOrEmpty
         $file1Matches = @($fullFilePaths | Where-Object { $_.sourceFullPath -eq (Join-Path $sourceFolder "folder/File1.txt") })
-        $file1Matches.Count | Should -Be 1
+        $file1Matches.Count | Should -Be 2
     }
 
     It 'ResolveFilePaths correctly resolves originalSourceFullPath only when file exists in original folder' {
@@ -3903,6 +3847,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
             }
         }
 
+        Mock OutputDebug { }
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
         # Only one entry should be resolved for the colliding destination
@@ -3911,6 +3856,47 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
         # The first-listed entry should win over the later entry for the same destination
         $conflict[0].sourceFullPath | Should -Be $testPSFile
+        Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $message -eq "Skipping duplicate file to include '$testTxtFile': destinationFullPath '$(Join-Path $baseFolder 'conflict.txt')' already included" }
+    }
+
+    It 'GetFilesToUpdate filesToExclude keeps the first entry when two entries collide on the same destination' {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = 'test.ps1'; destinationName = 'conflict.txt' }, @{ filter = 'test.txt'; destinationName = 'conflict.txt' })
+                filesToExclude = @(@{ filter = 'test.ps1' }, @{ filter = 'test.txt' })
+            }
+        }
+
+        Mock OutputDebug { }
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $filesToInclude | Should -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].sourceFullPath | Should -Be $testPSFile
+        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'conflict.txt')
+        Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $message -eq "Skipping duplicate file to exclude '$testTxtFile': destinationFullPath '$(Join-Path $baseFolder 'conflict.txt')' already excluded" }
+    }
+
+    It 'GetFilesToUpdate retains a replacement when the first source for a destination is excluded' {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(@{ filter = 'test.ps1'; destinationName = 'conflict.txt' }, @{ filter = 'test.txt'; destinationName = 'conflict.txt' })
+                filesToExclude = @(@{ filter = 'test.ps1' })
+            }
+        }
+
+        Mock OutputDebug { }
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $conflict = @($filesToInclude | Where-Object { $_.destinationFullPath -eq (Join-Path $baseFolder 'conflict.txt') })
+        $conflict.Count | Should -Be 1
+        $conflict[0].sourceFullPath | Should -Be (Join-Path $templateFolder 'test.txt')
+        @($filesToExclude | Where-Object { $_.destinationFullPath -eq (Join-Path $baseFolder 'conflict.txt') }).Count | Should -Be 0
+        Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $message -eq "Skipping file to exclude '$testPSFile': destinationFullPath '$(Join-Path $baseFolder 'conflict.txt')' included with different source" }
     }
 
     It 'GetFilesToUpdate keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
@@ -4014,6 +4000,47 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
         ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'CaseFolder/conflict.txt')) | Should -BeTrue
         ($filesToInclude.destinationFullPath -ccontains (Join-Path $baseFolder 'casefolder/conflict.txt')) | Should -BeFalse
+    }
+
+    It 'GetFilesToUpdate retains a case-distinct removal when another destination is included on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = 'test.ps1'; destinationFolder = 'CaseFolder'; destinationName = 'conflict.txt' }
+                    @{ filter = 'test.txt'; destinationFolder = 'casefolder'; destinationName = 'conflict.txt' }
+                )
+                filesToExclude = @(@{ filter = 'test.ps1' })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].destinationFullPath | Should -BeExactly (Join-Path $baseFolder 'casefolder/conflict.txt')
+        $filesToExclude.Count | Should -Be 1
+        $filesToExclude[0].destinationFullPath | Should -BeExactly (Join-Path $baseFolder 'CaseFolder/conflict.txt')
+    }
+
+    It 'GetFilesToUpdate suppresses a case-distinct removal when the destination is included on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        $settings = @{
+            type                  = 'NotPTE'
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @(
+                    @{ filter = 'test.ps1'; destinationFolder = 'CaseFolder'; destinationName = 'conflict.txt' }
+                    @{ filter = 'test.txt'; destinationFolder = 'casefolder'; destinationName = 'conflict.txt' }
+                )
+                filesToExclude = @(@{ filter = 'test.ps1' })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
+
+        $filesToInclude.Count | Should -Be 1
+        $filesToInclude[0].destinationFullPath | Should -BeExactly (Join-Path $baseFolder 'casefolder/conflict.txt')
+        $filesToExclude | Should -BeNullOrEmpty
     }
 
     It 'GetFilesToUpdate excludes any case source path on Windows' -Skip:(-not $script:isWindowsPlatform) {

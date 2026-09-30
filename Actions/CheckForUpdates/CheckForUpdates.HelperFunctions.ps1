@@ -1090,10 +1090,7 @@ function ResolveFilePaths {
     $sourceFolder = Resolve-PathLexically -Path $sourceFolder -AsDirectory
     $destinationFolder = Resolve-PathLexically -Path $destinationFolder -AsDirectory
 
-    $pathComparer = GetPathStringComparer
-
     $fullFilePaths = @()
-    $destinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
     foreach($file in $files) {
         if($file.Keys -notcontains 'sourceFolder') {
             $file.sourceFolder = '' # Default to current folder
@@ -1224,10 +1221,6 @@ function ResolveFilePaths {
                         continue
                     }
 
-                    if(-not $destinationFullPaths.Add($fullProjectFilePath.destinationFullPath)) {
-                        OutputDebug "Skipping duplicate per-project file for project '$project': destinationFullPath '$($fullProjectFilePath.destinationFullPath)' already exists"
-                        continue
-                    }
                     OutputDebug "Adding per-project file for project '$project': sourceFullPath '$($fullProjectFilePath.sourceFullPath)', originalSourceFullPath '$($fullProjectFilePath.originalSourceFullPath)', destinationFullPath '$($fullProjectFilePath.destinationFullPath)'"
                     $fullFilePaths += $fullProjectFilePath
                 }
@@ -1254,10 +1247,6 @@ function ResolveFilePaths {
                     continue
                 }
 
-                if(-not $destinationFullPaths.Add($fullFilePath.destinationFullPath)) {
-                    OutputDebug "Skipping duplicate file: destinationFullPath '$($fullFilePath.destinationFullPath)' already exists"
-                    continue
-                }
                 OutputDebug "Adding file: sourceFullPath '$($fullFilePath.sourceFullPath)', originalSourceFullPath '$($fullFilePath.originalSourceFullPath)', destinationFullPath '$($fullFilePath.destinationFullPath)'"
                 $fullFilePaths += $fullFilePath
             }
@@ -1448,9 +1437,6 @@ function GetFilesToUpdate {
     if ($hasOriginalTemplate) {
         $filesToInclude += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToIncludeUnresolved -projects $projects)
     }
-    # Deduplicate files to include based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder)
-    $filesToIncludeDestinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
-    $filesToInclude = @($filesToInclude | Where-Object { $filesToIncludeDestinationFullPaths.Add($_.destinationFullPath) })
 
     # Determine files to exclude
     $filesToExcludeUnresolved = GetDefaultFilesToExclude -settings $settings
@@ -1459,8 +1445,6 @@ function GetFilesToUpdate {
     if ($hasOriginalTemplate) {
         $filesToExclude += @(ResolveFilePaths -sourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExcludeUnresolved -projects $projects)
     }
-    # filesToExclude is not deduplicated by destinationFullPath here.
-    # Its destinationFullPath is never part of the actual output; only sourceFullPath is used below to match against filesToInclude.
 
     # Map files from filesToExclude to files that are in filesToInclude (based on source)
     # Settings for filesToExclude only define the sources (sourceFolder and filter) but not the destinations (destinationFolder, destinationName and perProject)
@@ -1493,6 +1477,28 @@ function GetFilesToUpdate {
         $filesToInclude = @($filesToInclude | Where-Object { -not $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) })
         $filesToExclude += @($unusedFilesToExclude)
     }
+
+    # Deduplicate files to include based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder)
+    $filesToIncludeDestinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
+    $filesToInclude = @($filesToInclude | Where-Object {
+        $include = $filesToIncludeDestinationFullPaths.Add($_.destinationFullPath)
+        if (-not $include) { OutputDebug "Skipping duplicate file to include '$($_.sourceFullPath)': destinationFullPath '$($_.destinationFullPath)' already included" }
+        return $include
+    })
+
+    # Exclude files from filesToExclude that are still included in filesToInclude based on destinationFullPath
+    $filesToExclude = @($filesToExclude | Where-Object {
+        $exclude = -not $filesToIncludeDestinationFullPaths.Contains($_.destinationFullPath)
+        if (-not $exclude) { OutputDebug "Skipping file to exclude '$($_.sourceFullPath)': destinationFullPath '$($_.destinationFullPath)' included with different source" }
+        return $exclude
+    })
+    # Deduplicate files to exclude based on destinationFullPath, keeping the first one (default > settings; template folder > original template folder)
+    $filesToExcludeDestinationFullPaths = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
+    $filesToExclude = @($filesToExclude | Where-Object {
+        $exclude = $filesToExcludeDestinationFullPaths.Add($_.destinationFullPath)
+        if (-not $exclude) { OutputDebug "Skipping duplicate file to exclude '$($_.sourceFullPath)': destinationFullPath '$($_.destinationFullPath)' already excluded" }
+        return $exclude
+    })
 
     # List all files to be included and excluded with their source and destination paths, type and original source path (if any)
     $fileFormatter = { param($file) "  -Source: $($file.sourceFullPath), Destination: $($file.destinationFullPath), Type: $($file.type), Original Source: $($file.originalSourceFullPath)"}
