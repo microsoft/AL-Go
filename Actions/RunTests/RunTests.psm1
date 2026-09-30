@@ -252,6 +252,10 @@ function Invoke-AlGoTestRun {
         Path to a JSON file with the list of installed test apps.
     .PARAMETER runTestsOverride
         Optional scriptblock overriding the built-in AlTool test runner (RunTestsInBcContainer).
+    .PARAMETER alToolPath
+        Full path to the AlTool executable used by the built-in runner.
+    .PARAMETER getAlToolPath
+        Shared resolver used to discover or install AlTool when alToolPath is omitted.
     #>
     Param(
         [hashtable] $settings,
@@ -259,7 +263,9 @@ function Invoke-AlGoTestRun {
         [string] $containerName,
         [System.Management.Automation.PSCredential] $credential,
         [string] $installTestAppsJson = '',
-        [scriptblock] $runTestsOverride = $null
+        [scriptblock] $runTestsOverride = $null,
+        [string] $alToolPath = '',
+        [scriptblock] $getAlToolPath = $null
     )
 
     try {
@@ -280,8 +286,11 @@ function Invoke-AlGoTestRun {
             }
         }
 
-        if (-not $runTestsOverride) {
-            Install-AlTool | Out-Null
+        if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
+            if (-not $getAlToolPath) {
+                throw "The built-in AlTool runner requires an AlTool path or path resolver."
+            }
+            $alToolPath = & $getAlToolPath
         }
 
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
@@ -325,6 +334,7 @@ function Invoke-AlGoTestRun {
                         -Tenant "default" `
                         -TestType $testType `
                         -DisabledTests @($disabledTests) `
+                        -AlToolPath $alToolPath `
                         -JUnitResultFileName $testResultsFile
                 }
 

@@ -19,18 +19,51 @@ Param(
     [string] $previousAppsPath = ''
 )
 
-function New-KeepAliveContainerCredential {
+function New-RunPipelineContainerCredential {
     <#
     .SYNOPSIS
-        Creates a credential for a build container kept alive for the RunTests action.
+        Creates an administrator credential for a RunPipeline build container.
     .DESCRIPTION
-        Returns a random administrator credential so the RunTests action can reconnect to the
-        container after RunPipeline completes.
+        Returns a random administrator credential that RunPipeline passes to Run-AlPipeline.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'A container password must be generated as plain text to build a reusable credential')]
     param()
     $password = "Pass!$([GUID]::NewGuid().ToString())"
     return (New-Object pscredential 'admin', (ConvertTo-SecureString -String $password -AsPlainText -Force))
+}
+
+function Set-RunPipelineContainerCredential {
+    <#
+    .SYNOPSIS
+        Adds a container credential to the Run-AlPipeline parameters.
+    .DESCRIPTION
+        Always adds the credential used to create the build container. When separate test execution
+        is eligible, masks and exports the credential so the later RunTests action can reconnect.
+    .PARAMETER runAlPipelineParams
+        Parameters passed to Run-AlPipeline.
+    .PARAMETER credential
+        Administrator credential used to create the build container.
+    .PARAMETER exportForRunTests
+        Exports the credential to GITHUB_ENV for the separate RunTests action.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $runAlPipelineParams,
+        [Parameter(Mandatory = $true)]
+        [pscredential] $credential,
+        [switch] $exportForRunTests
+    )
+
+    $runAlPipelineParams["credential"] = $credential
+
+    if ($exportForRunTests) {
+        $containerCredentialPassword = $credential.GetNetworkCredential().Password
+        $containerCredentialJson = @{ "username" = $credential.UserName; "password" = $containerCredentialPassword } | ConvertTo-Json -Compress
+        $containerCredentialBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($containerCredentialJson))
+        Write-Host "::add-mask::$containerCredentialPassword"
+        Write-Host "::add-mask::$containerCredentialBase64"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerCredential=$containerCredentialBase64"
+    }
 }
 
 $containerBaseFolder = $null
@@ -492,20 +525,12 @@ try {
     $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and -not $settings.doNotRunTests -and -not $settings.doNotPublishApps -and @($additionalCountries).Count -eq 0
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "runTestsInSeparateAction=$runTestsInSeparateAction"
 
+    $containerCredential = New-RunPipelineContainerCredential
+    Set-RunPipelineContainerCredential -runAlPipelineParams $runAlPipelineParams -credential $containerCredential -exportForRunTests:$runTestsInSeparateAction
+
     if ($runTestsInSeparateAction) {
         Write-Host "useSeparateTestAction is enabled: skipping normal test execution in RunPipeline and keeping the container alive for the RunTests action"
         $runAlPipelineParams["doNotRunTests"] = $true
-
-        # Surface a reusable credential so RunTests can reconnect to the kept-alive container.
-        $containerCredential = New-KeepAliveContainerCredential
-        $runAlPipelineParams["credential"] = $containerCredential
-
-        $containerCredentialPassword = $containerCredential.GetNetworkCredential().Password
-        $containerCredentialJson = @{ "username" = $containerCredential.UserName; "password" = $containerCredentialPassword } | ConvertTo-Json -Compress
-        $containerCredentialBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($containerCredentialJson))
-        Write-Host "::add-mask::$containerCredentialPassword"
-        Write-Host "::add-mask::$containerCredentialBase64"
-        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerCredential=$containerCredentialBase64"
     }
     elseif ($settings.useSeparateTestAction.enabled -and -not $settings.doNotRunTests) {
         Write-Host "::Notice::useSeparateTestAction is enabled, but either additionalCountries is configured or no local build container is created. The separate RunTests action will be skipped."

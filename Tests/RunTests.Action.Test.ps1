@@ -149,6 +149,7 @@ Describe "RunTests Action Tests" {
         )
 
         Mock DownloadAndImportBcContainerHelper {}
+        Mock GetAlToolPath { return 'C:\dotnet-tools\al.exe' }
         Mock AnalyzeRepo { return @{ testFolders = @() } }
         Mock Get-ScriptOverrides {
             return @{
@@ -169,6 +170,7 @@ Describe "RunTests Action Tests" {
 
         (Get-Content -Path $ENV:_runTestsTokenObservationPath -Raw).Trim() | Should -Be $providedToken
         $ENV:_token | Should -Be $providedToken
+        Should -Invoke GetAlToolPath -Times 0 -Exactly
     }
 
     It 'Passes separate test action settings to AnalyzeRepo as recursive hashtables' {
@@ -185,6 +187,7 @@ Describe "RunTests Action Tests" {
         )
 
         Mock DownloadAndImportBcContainerHelper {}
+        Mock GetAlToolPath { return 'C:\dotnet-tools\al.exe' }
         Mock AnalyzeRepo {
             param($settings)
             $settings | Should -BeOfType System.Collections.Hashtable
@@ -199,6 +202,10 @@ Describe "RunTests Action Tests" {
         & $scriptPath
 
         Should -Invoke AnalyzeRepo -Times 1 -Exactly
+        Should -Invoke GetAlToolPath -Times 0 -Exactly
+        Should -Invoke Invoke-AlGoTestRun -Times 1 -Exactly -ParameterFilter {
+            $getAlToolPath -is [scriptblock]
+        }
     }
 
     Context 'RunPipeline wiring' {
