@@ -17,6 +17,8 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
+- Issue 2370 - Retry CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics and URL-encoding query values so discovery URLs render correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
+- Issue 2113 - Fix device-login initialization in Create Online Dev. Environment and Publish To Environment when authentication secrets are unavailable.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
 - Issue 2381 - Dependency artifacts from the current build are not downloaded when the branch name contains glob-special characters (e.g. `,`), silently falling back to baseline artifacts
 
