@@ -1,3 +1,13 @@
+### Enhanced `customALGoFiles` setting
+
+The `customALGoFiles` setting of a custom template was only applied on the next Update (from `AL-Go-TemplateRepoSettings.doNotEdit.json`). Now the up-to-date settings of the custom template are used directly during "Update AL-Go System Files". The template's `filesToInclude` and `filesToExclude` settings are merged with the consumer repo's settings before resolution.
+
+- **`filesToInclude`** now also resolves files from the original AL-Go template. Files present in the official template are propagated even when they are absent from your custom template. When a file exists in both, the official template supplies the base content; for workflow files, customizations from the custom template are reapplied.
+- **`filesToExclude`** now also resolves files from the original AL-Go template (same dual-resolution as `filesToInclude`). Files resolved by `filesToInclude` whose source matches a `filesToExclude` entry are not copied to consumer repos, and existing copies are removed.
+- **`destinationName`** (new property on `filesToInclude`): Allows renaming a file at the destination. When set, the file is written to `<destinationFolder>/<destinationName>` instead of keeping the source filename.
+
+Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
+
 ### Allow pre-release packages as NuGet dependencies
 
 AL-Go now supports including pre-release versions of Business Central app packages from NuGet feeds. To enable this, append `-allowPrerelease` to the `nuGetFeedSelectMode` setting in your project configuration. For example, `LatestMatching-allowPrerelease` will select the latest matching version of the package, including pre-release versions.
