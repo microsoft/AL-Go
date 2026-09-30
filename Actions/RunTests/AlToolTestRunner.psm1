@@ -10,143 +10,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$script:AlToolPackageId = "Microsoft.Dynamics.BusinessCentral.Development.Tools"
-
-<#
-.SYNOPSIS
-    Invokes a native executable and returns its output streams and exit code.
-.DESCRIPTION
-    Keeps stdout separate from native stderr and restores the caller's error preference immediately
-    after invocation. Windows PowerShell 5 stderr can include PowerShell formatting metadata.
-    Command resolution and invocation failures remain terminating.
-.PARAMETER FilePath
-    The native executable name or path.
-.PARAMETER ArgumentList
-    Arguments passed to the native executable.
-.OUTPUTS
-    [pscustomobject] with StandardOutput, StandardError, combined Output, and ExitCode properties.
-#>
-function Invoke-AlNativeCommand {
-    param(
-        [Parameter(Mandatory = $true)][string] $FilePath,
-        [string[]] $ArgumentList = @()
-    )
-
-    $nativeCommand = Get-Command -Name $FilePath -CommandType Application -ErrorAction Stop
-    $standardErrorPath = Join-Path ([System.IO.Path]::GetTempPath()) "altool-stderr-$([Guid]::NewGuid().ToString('N')).txt"
-    $originalErrorActionPreference = $ErrorActionPreference
-    $nativeErrorPreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue
-    $originalNativeErrorPreference = if ($nativeErrorPreference) { $nativeErrorPreference.Value } else { $null }
-    try {
-        try {
-            $ErrorActionPreference = "Continue"
-            if ($nativeErrorPreference) {
-                $PSNativeCommandUseErrorActionPreference = $false
-            }
-            $standardOutput = & $nativeCommand.Source @ArgumentList 2> $standardErrorPath
-            [int] $exitCode = $LASTEXITCODE
-        }
-        finally {
-            $ErrorActionPreference = $originalErrorActionPreference
-            if ($nativeErrorPreference) {
-                $PSNativeCommandUseErrorActionPreference = $originalNativeErrorPreference
-            }
-        }
-
-        [string[]] $standardOutputLines = @($standardOutput | ForEach-Object { "$_" })
-        if (Test-Path -LiteralPath $standardErrorPath) {
-            [string[]] $standardErrorLines = @(Get-Content -LiteralPath $standardErrorPath | ForEach-Object { "$_" })
-        }
-        else {
-            [string[]] $standardErrorLines = @()
-        }
-
-        return [PSCustomObject]@{
-            StandardOutput = $standardOutputLines
-            StandardError  = $standardErrorLines
-            Output         = [string[]] (@($standardOutputLines) + @($standardErrorLines))
-            ExitCode       = $exitCode
-        }
-    }
-    finally {
-        Remove-Item -LiteralPath $standardErrorPath -Force -ErrorAction SilentlyContinue
-    }
-}
-
-<#
-.SYNOPSIS
-    Ensures the `al` CLI is available on PATH, installing the prerelease dotnet global tool.
-.DESCRIPTION
-    Installs the AL developer tools when unavailable. A named mutex prevents concurrent jobs from
-    modifying the shared tool store at the same time.
-.OUTPUTS
-    [string] The resolved `al` version string.
-#>
-function Install-AlTool {
-    param()
-
-    $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
-    if ([string]::IsNullOrWhiteSpace($userProfile)) {
-        throw "Could not resolve the current user's profile directory required for the dotnet global tools path."
-    }
-    $toolsPath = Join-Path (Join-Path $userProfile ".dotnet") "tools"
-    if (($env:PATH -split [System.IO.Path]::PathSeparator) -notcontains $toolsPath) {
-        $env:PATH = "$env:PATH$([System.IO.Path]::PathSeparator)$toolsPath"
-    }
-
-    # Serialize install/update across processes with a named mutex and re-check availability after
-    # acquiring it (another job may have just installed it).
-    $mutex = New-Object System.Threading.Mutex($false, "Global\AL-Go-AlTool-Install")
-    $acquired = $false
-    try {
-        try { $acquired = $mutex.WaitOne([TimeSpan]::FromMinutes(10)) } catch [System.Threading.AbandonedMutexException] { $acquired = $true }
-        if (-not $acquired) {
-            throw "Timed out after 10 minutes waiting to acquire the AlTool installation mutex."
-        }
-
-        $alAvailable = $null -ne (Get-Command al -ErrorAction SilentlyContinue)
-
-        if (-not $alAvailable) {
-            Write-Host "Installing '$script:AlToolPackageId' (prerelease) as a dotnet global tool..."
-            $installResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
-                "tool", "install", $script:AlToolPackageId, "--global", "--prerelease"
-            )
-            $installResult.Output | ForEach-Object { Write-Host $_ }
-            if ($installResult.ExitCode -ne 0) {
-                # A concurrent job may have installed it first; treat as success if `al` now resolves,
-                # otherwise fall back to an update.
-                if ($null -eq (Get-Command al -ErrorAction SilentlyContinue)) {
-                    $updateResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
-                        "tool", "update", $script:AlToolPackageId, "--global", "--prerelease"
-                    )
-                    $updateResult.Output | ForEach-Object { Write-Host $_ }
-                    if ($updateResult.ExitCode -ne 0) {
-                        throw "Failed to install or update '$script:AlToolPackageId'. The fallback dotnet tool update exited with code $($updateResult.ExitCode). Output: $($updateResult.Output -join [Environment]::NewLine)"
-                    }
-                }
-            }
-        }
-    }
-    finally {
-        if ($acquired) { $mutex.ReleaseMutex() }
-        $mutex.Dispose()
-    }
-
-    if (-not (Get-Command al -ErrorAction SilentlyContinue)) {
-        throw "The 'al' CLI is not available after installation. Ensure '$toolsPath' is on PATH and that the runner can reach nuget.org."
-    }
-
-    $versionResult = Invoke-AlNativeCommand -FilePath "al" -ArgumentList @("--version")
-    if ($versionResult.ExitCode -ne 0) {
-        throw "Failed to run 'al --version'. The command exited with code $($versionResult.ExitCode). Output: $($versionResult.Output -join [Environment]::NewLine)"
-    }
-    if ($versionResult.StandardOutput.Count -eq 0) {
-        throw "Failed to run 'al --version'. The command returned no output."
-    }
-    $version = $versionResult.StandardOutput[0]
-    Write-Host "Using al CLI version: $version"
-    return "$version"
-}
+. (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
 
 <#
 .SYNOPSIS
@@ -585,6 +449,7 @@ function New-AlTestGroupsFile {
 #>
 function Invoke-AlRunTestsBatch {
     param(
+        [Parameter(Mandatory = $true)][string] $AlToolPath,
         [Parameter(Mandatory = $true)][object[]] $Codeunits,
         [Parameter(Mandatory = $true)][string] $Company,
         [Parameter(Mandatory = $true)][string] $Tenant,
@@ -606,7 +471,7 @@ function Invoke-AlRunTestsBatch {
         )
 
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        $nativeResult = Invoke-AlNativeCommand -FilePath "al" -ArgumentList $alArgs
+        $nativeResult = Invoke-AlNativeCommand -FilePath $AlToolPath -ArgumentList $alArgs
         $sw.Stop()
 
         $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
@@ -827,6 +692,8 @@ function Add-JUnitTestSuite {
     values are UnitTest, IntegrationTest, and Uncategorized. Blank enumerates all test types.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
+.PARAMETER AlToolPath
+    Full path to the AlTool executable. The shared helper resolves it when omitted.
 .PARAMETER JUnitResultFileName
     Required JUnit file to create or append.
 .OUTPUTS
@@ -842,6 +709,7 @@ function Invoke-AlToolTestRun {
         [string] $Tenant = "default",
         [string] $TestType = "",
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @(),
+        [string] $AlToolPath = "",
         [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName
     )
 
@@ -867,8 +735,8 @@ function Invoke-AlToolTestRun {
             return $true
         }
 
-        if (-not (Get-Command al -ErrorAction SilentlyContinue)) {
-            Install-AlTool | Out-Null
+        if ([string]::IsNullOrWhiteSpace($AlToolPath)) {
+            $AlToolPath = GetAlToolPath
         }
 
         $connection = Get-AlToolConnection -ContainerName $ContainerName
@@ -904,7 +772,7 @@ function Invoke-AlToolTestRun {
             $doc.AppendChild($suites) | Out-Null
         }
 
-        $batch = Invoke-AlRunTestsBatch -Codeunits $codeunits -Company $company `
+        $batch = Invoke-AlRunTestsBatch -AlToolPath $AlToolPath -Codeunits $codeunits -Company $company `
             -Tenant $Tenant -Connection $connection
         $batchResults = $batch.Results
         $allPassed = [bool] $batch.Succeeded
@@ -942,4 +810,4 @@ function Invoke-AlToolTestRun {
     }
 }
 
-Export-ModuleMember -Function Install-AlTool, Invoke-AlToolTestRun
+Export-ModuleMember -Function Invoke-AlToolTestRun

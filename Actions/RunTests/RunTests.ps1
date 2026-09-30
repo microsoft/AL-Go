@@ -91,6 +91,7 @@ $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $pr
 
 # A RunTestsInBcContainer override script, if present, replaces the built-in AlTool test runner.
 $overrideParams = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectPath ".AL-Go") -OverrideScriptNames @("RunTestsInBcContainer")
+$runTestsOverride = $overrideParams['RunTestsInBcContainer']
 
 Invoke-AlGoTestRun `
     -settings $settings `
@@ -98,4 +99,5 @@ Invoke-AlGoTestRun `
     -containerName $containerName `
     -credential $credential `
     -installTestAppsJson $installTestAppsJson `
-    -runTestsOverride $overrideParams['RunTestsInBcContainer']
+    -runTestsOverride $runTestsOverride `
+    -getAlToolPath ${function:GetAlToolPath}
