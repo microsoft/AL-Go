@@ -1,3 +1,11 @@
+### Separate test execution from RunPipeline (PREVIEW)
+
+A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are enabled and the build uses one local container. Builds with `additionalCountries` or without a local build container continue to run normal tests in `RunPipeline`. BCPT and page scripting tests remain in `RunPipeline`.
+
+The action uses AlTool by default, running each app's enabled normal tests in one batch and connection. It honors `disabledTests.json` definitions and the optional `useSeparateTestAction.testType` value. The built-in runner supports `UnitTest`, `IntegrationTest`, and `Uncategorized`, while custom `RunTestsInBcContainer` overrides may interpret other values such as `Legacy`. Test results remain available to AnalyzeTests and are included in the build artifacts when produced. Failure diagnostics include a refreshed container event log with events from the separate test run.
+
+> [!NOTE]
+> The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to execute their tests through BcContainerHelper instead.
 ### New `unpublishOldVersions` setting for deployment
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).

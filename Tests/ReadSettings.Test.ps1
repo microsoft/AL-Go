@@ -280,6 +280,41 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
+        It 'Uses complex defaults for separate test execution' {
+            $defaultSettings = GetDefaultSettings
+
+            $defaultSettings.useSeparateTestAction | Should -BeOfType System.Collections.Specialized.OrderedDictionary
+            $defaultSettings.useSeparateTestAction.enabled | Should -BeFalse
+            $defaultSettings.useSeparateTestAction.testType | Should -Be ''
+            $defaultSettings.Contains('testType') | Should -BeFalse
+
+            $customSettings = [PSCustomObject]@{
+                useSeparateTestAction = [PSCustomObject]@{
+                    testType = 'Legacy'
+                }
+            }
+            MergeCustomObjectIntoOrderedDictionary -dst $defaultSettings -src $customSettings
+            $defaultSettings.useSeparateTestAction.enabled | Should -BeFalse
+            $defaultSettings.useSeparateTestAction.testType | Should -Be 'Legacy'
+        }
+
+        It 'Validates only the complex separate test setting shape' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $schemaObject = $schema | ConvertFrom-Json
+            $schemaObject.properties.PSObject.Properties.Name | Should -Not -Contain 'testType'
+
+            $settings = GetDefaultSettings
+            $settings.useSeparateTestAction.enabled = $true
+            $settings.useSeparateTestAction.testType = 'IntegrationTest'
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema | Should -BeTrue
+
+            $legacySettings = GetDefaultSettings
+            $legacySettings.useSeparateTestAction = $true
+            Test-Json -json (ConvertTo-Json $legacySettings -Depth 99) -schema $schema -ErrorAction SilentlyContinue | Should -BeFalse
+
+            $settings.useSeparateTestAction.Add('unexpected', $true)
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue | Should -BeFalse
+        }
+
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true

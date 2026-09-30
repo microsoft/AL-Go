@@ -344,6 +344,27 @@
         "doNotRunTests": {
             "type": "boolean"
         },
+        "useSeparateTestAction": {
+            "type": "object",
+            "default": {
+                "enabled": false,
+                "testType": ""
+            },
+            "description": "PREVIEW: Configuration for running normal tests in a separate RunTests action. See https://aka.ms/ALGoSettings#useSeparateTestAction",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "When true, normal tests (testFolders) run in a separate RunTests action against the build container kept alive by RunPipeline. Builds with additionalCountries continue to run normal tests inside RunPipeline so every country is tested."
+                },
+                "testType": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Optional test type for the separate RunTests action. The built-in AlTool runner supports UnitTest, IntegrationTest, and Uncategorized; blank runs all test types. Custom RunTestsInBcContainer overrides may interpret other values such as Legacy."
+                }
+            },
+            "additionalProperties": false
+        },
         "doNotRunBcptTests": {
             "type": "boolean"
         },
