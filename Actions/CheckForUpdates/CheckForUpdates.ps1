@@ -117,7 +117,7 @@ $baseFolder = $ENV:GITHUB_WORKSPACE
 
 if ($originalTemplateFolder) {
     # Use current custom template settings for this run without changing the workspace before comparison.
-    $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+    $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
 }
 
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
@@ -142,8 +142,10 @@ if ($projects.Count -gt 1) {
 
 # Prepare the list of template folders to be used for verification
 $templateFolders = @($templateFolder)
+$customTemplateFolder = ''
 if ($originalTemplateFolder) {
     $templateFolders += $originalTemplateFolder
+    $customTemplateFolder = $templateFolder
 }
 
 # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
@@ -184,7 +186,7 @@ foreach($fileToInclude in $filesToInclude) {
     switch ($type) {
         "workflow" {
             # For workflow files, we might need to modify the file based on the settings
-            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth
+            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth -customTemplateFolder $customTemplateFolder
             # Replace static placeholders
             $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
         }

@@ -510,7 +510,8 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth
+        [int] $depth,
+        [string] $customTemplateFolder = ''
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -532,7 +533,12 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     # Re-read settings and this time include workflow specific settings
-    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+    if ($customTemplateFolder) {
+        $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -customTemplateFolder $customTemplateFolder -workflowName $workflowName
+    }
+    else {
+        $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+    }
 
     # Old Schedule key is deprecated, but still supported
     $oldWorkflowScheduleKey = "$($baseName)Schedule"
@@ -1122,7 +1128,12 @@ function ResolveFilePaths {
 
         # All files are relative to the template folder
         OutputDebug "Resolving files for source folder '$($file.sourceFolder)' and filter '$($file.filter)'"
-        $sourceFiles = @(Get-ChildItem -Path (Join-Path $sourceFolder $file.sourceFolder) -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+        $fileSourceFolder = Join-Path $sourceFolder $file.sourceFolder
+        if (-not (Test-PathLexicallyContained -Path $fileSourceFolder -RootFolder $sourceFolder)) {
+            OutputDebug "Skipping source folder '$fileSourceFolder' as it is not under the source folder '$sourceFolder'."
+            continue
+        }
+        $sourceFiles = @(Get-ChildItem -LiteralPath $fileSourceFolder -Filter $file.filter -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
 
         OutputDebug "Found $($sourceFiles.Count) files for filter '$($file.filter)' in folder '$($file.sourceFolder)' (relative to folder '$sourceFolder', origin '$($file.origin)')"
 
@@ -1311,55 +1322,57 @@ function GetDefaultFilesToExclude {
     Temporarily refreshes the custom template repository settings snapshot, reads the merged settings, and restores
     the snapshot to its original state. This allows the current template settings to affect the current run while
     preserving the workspace state for the normal update comparison.
-    Both copy endpoints (the snapshot file under baseFolder and the settings file under templateFolder) are
+    Both copy endpoints (the snapshot file under baseFolder and the settings file under customTemplateFolder) are
     validated to physically resolve to themselves before either is read or written; the function throws if a
     symlink/junction anywhere along either path would redirect the backup, copy or restore to a different physical location
 .PARAMETER baseFolder
-    The base folder of the repository whose settings are read.
-.PARAMETER templateFolder
+    The base folder of the repository whose settings are read. Defaults to GITHUB_WORKSPACE.
+.PARAMETER customTemplateFolder
     The folder where the custom template files are located.
+.PARAMETER workflowName
+    The workflow whose settings should be included, if specified.
 #>
 function ReadSettingsWithCurrentCustomTemplateRepoSettings {
     Param(
+        [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
         [Parameter(Mandatory=$true)]
-        [string] $baseFolder,
-        [Parameter(Mandatory=$true)]
-        [string] $templateFolder
+        [string] $customTemplateFolder,
+        [string] $workflowName = ''
     )
 
-    $templateFolderRepoSettingsPath = Join-Path $templateFolder $RepoSettingsFile
-    $baseFolderTemplateSettingsPath = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+    $customTemplateRepoSettingsPath = Join-Path $customTemplateFolder $RepoSettingsFile
+    $baseFolderCustomTemplateSettingsPath = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
 
     # Validate both copy endpoints before touching them (even if the leaf file doesn't exist yet): a symlink/junction
     # anywhere along either path can make it resolve to a different physical location than its literal path
-    if (-not (Test-PathPhysicallyEqual -Path $baseFolderTemplateSettingsPath -AnchorPaths @($baseFolder))) {
-        throw "Cannot read settings: '$baseFolderTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    if (-not (Test-PathPhysicallyEqual -Path $baseFolderCustomTemplateSettingsPath -AnchorPaths @($baseFolder))) {
+        throw "Cannot read settings: '$baseFolderCustomTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
     }
-    if (-not (Test-PathPhysicallyEqual -Path $templateFolderRepoSettingsPath -AnchorPaths @($templateFolder))) {
-        throw "Cannot read settings: '$templateFolderRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    if (-not (Test-PathPhysicallyEqual -Path $customTemplateRepoSettingsPath -AnchorPaths @($customTemplateFolder))) {
+        throw "Cannot read settings: '$customTemplateRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
     }
 
-    $baseFolderTemplateSettingsBackupPath = $null
+    $baseFolderCustomTemplateSettingsBackupPath = $null
 
-    if (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
-        $baseFolderTemplateSettingsBackupPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
-        Copy-Item -LiteralPath $baseFolderTemplateSettingsPath -Destination $baseFolderTemplateSettingsBackupPath -Force
+    if (Test-Path -LiteralPath $baseFolderCustomTemplateSettingsPath -PathType Leaf) {
+        $baseFolderCustomTemplateSettingsBackupPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
+        Copy-Item -LiteralPath $baseFolderCustomTemplateSettingsPath -Destination $baseFolderCustomTemplateSettingsBackupPath -Force
     }
 
     try {
-        if (Test-Path -LiteralPath $templateFolderRepoSettingsPath -PathType Leaf) {
-            Copy-Item -LiteralPath $templateFolderRepoSettingsPath -Destination $baseFolderTemplateSettingsPath -Force
+        if (Test-Path -LiteralPath $customTemplateRepoSettingsPath -PathType Leaf) {
+            Copy-Item -LiteralPath $customTemplateRepoSettingsPath -Destination $baseFolderCustomTemplateSettingsPath -Force
         }
-        # Match the initial read: system-file selection must not depend on the current execution context.
-        return ReadSettings -baseFolder $baseFolder -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+        # Keep execution-specific contexts empty for both file selection and workflow-specific reads.
+        return ReadSettings -baseFolder $baseFolder -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
     }
     finally {
-        if ($baseFolderTemplateSettingsBackupPath) {
-            Copy-Item -LiteralPath $baseFolderTemplateSettingsBackupPath -Destination $baseFolderTemplateSettingsPath -Force
-            Remove-Item -LiteralPath $baseFolderTemplateSettingsBackupPath -Force
+        if ($baseFolderCustomTemplateSettingsBackupPath) {
+            Copy-Item -LiteralPath $baseFolderCustomTemplateSettingsBackupPath -Destination $baseFolderCustomTemplateSettingsPath -Force
+            Remove-Item -LiteralPath $baseFolderCustomTemplateSettingsBackupPath -Force
         }
-        elseif (Test-Path -LiteralPath $baseFolderTemplateSettingsPath -PathType Leaf) {
-            Remove-Item -LiteralPath $baseFolderTemplateSettingsPath -Force
+        elseif (Test-Path -LiteralPath $baseFolderCustomTemplateSettingsPath -PathType Leaf) {
+            Remove-Item -LiteralPath $baseFolderCustomTemplateSettingsPath -Force
         }
     }
 }

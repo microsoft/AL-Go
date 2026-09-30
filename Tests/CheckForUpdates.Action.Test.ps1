@@ -2194,6 +2194,25 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[4].type | Should -Be "markdown"
     }
 
+    It 'ResolveFilePaths treats brackets in file sourceFolder literally' {
+        $bracketFolder = Join-Path $sourceFolder 'folder[1]'
+        $bracketFile = Join-Path $bracketFolder 'File.txt'
+        $destinationFolder = Join-Path $rootFolder 'destinationFolder'
+        try {
+            New-Item -Path $bracketFolder -ItemType Directory -Force | Out-Null
+            Set-Content -LiteralPath $bracketFile -Value 'literal folder'
+
+            $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -destinationFolder $destinationFolder -files @(@{ sourceFolder = 'folder[1]'; filter = '*.txt' }))
+
+            $fullFilePaths.Count | Should -Be 1
+            $fullFilePaths[0].sourceFullPath | Should -Be $bracketFile
+            $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder 'folder[1]/File.txt')
+        }
+        finally {
+            Remove-Item -LiteralPath $bracketFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'ResolveFilePaths skips source files lexically escaping outside the source folder' {
         $externalFolder = Join-Path $PSScriptRoot "external"
         $externalFile = Join-Path $externalFolder "outside.txt"
@@ -4149,6 +4168,7 @@ Describe "GetWorkflowContentWithChangesFromSettings" {
     BeforeAll {
         $scriptRoot = Join-Path $PSScriptRoot '..\Actions\CheckForUpdates' -Resolve
         . (Join-Path $scriptRoot 'yamlclass.ps1')
+        . (Join-Path -Path $scriptRoot -ChildPath '..\AL-Go-Helper.ps1' -Resolve)
         . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
     }
 
@@ -4163,6 +4183,32 @@ Describe "GetWorkflowContentWithChangesFromSettings" {
             $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq 'Sample Workflow' -and
             $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
             ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
+        }
+    }
+
+    It 'Uses current custom template settings for workflow generation and restores the snapshot' {
+        $baseFolder = Join-Path $TestDrive 'workflowBase'
+        $templateFolder = Join-Path $TestDrive 'workflowTemplate'
+        New-Item -ItemType Directory -Path (Join-Path $baseFolder '.github') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $templateFolder '.github') -Force | Out-Null
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"runs-on":"windows-latest","shell":"powershell"}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $templateFolder $RepoSettingsFile) -Value '{"runs-on":"ubuntu-latest","shell":"pwsh"}' -Encoding UTF8
+        $srcFile = Join-Path $TestDrive 'Sample.yaml'
+        Set-Content -LiteralPath $srcFile -Value @('name: Sample Workflow', 'jobs:', '  Sample:', '    runs-on: [ windows-latest ]', '    steps:', '      - run: echo sample', '        shell: powershell') -Encoding UTF8
+
+        $originalWorkspace = $env:GITHUB_WORKSPACE
+        try {
+            $env:GITHUB_WORKSPACE = $baseFolder
+            $content = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings @{} -depth 1 -customTemplateFolder $templateFolder
+
+            $content | Should -Match 'runs-on: \[ ubuntu-latest \]'
+            $content | Should -Match 'shell: pwsh'
+            Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
+        }
+        finally {
+            $env:GITHUB_WORKSPACE = $originalWorkspace
         }
     }
 }
@@ -4190,7 +4236,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
         $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
 
-        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
 
         $settings.customALGoFiles.filesToInclude.Count | Should -Be 1
         $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
@@ -4208,7 +4254,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $originalGitHubRepository = $env:GITHUB_REPOSITORY
         try {
             $env:GITHUB_REPOSITORY = 'contoso/context-policy-test'
-            ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder | Out-Null
+            ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder | Out-Null
 
             Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
                 $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
@@ -4233,7 +4279,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
         Test-Path -LiteralPath $snapshotFile | Should -Be $false
 
-        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
 
         $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
         Test-Path -LiteralPath $snapshotFile | Should -Be $false
@@ -4250,7 +4296,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
         $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
 
-        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder
+        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
 
         $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "existing.txt"
         (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
@@ -4269,7 +4315,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
@@ -4291,7 +4337,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType SymbolicLink -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
     }
@@ -4312,7 +4358,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
         New-Item -ItemType SymbolicLink -Path $snapshotFile -Target $externalTargetFile -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
     }
@@ -4331,7 +4377,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType SymbolicLink -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
     }
@@ -4353,7 +4399,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
         Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
@@ -4376,7 +4422,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType Junction -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
     }
@@ -4395,7 +4441,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType Junction -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -templateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
 
         Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
     }

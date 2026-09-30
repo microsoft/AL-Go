@@ -235,7 +235,7 @@ In order to instruct AL-Go which files to look for at the template repository, y
 
 `filesToInclude`, as the name suggests, is an array of file configurations that will instruct AL-Go which files to include (create/update). Every item in the array may contain the following properties:
 
-- `sourceFolder`: A path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. `*` characters are not supported. _Example_: `src/scripts`.
+- `sourceFolder`: A literal path to a folder, relative to the template, where to look for files. If not specified the root folder is implied. Wildcards are not supported; characters such as `[` and `]` are treated literally. _Example_: `src/scripts`.
 - `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `*.ps1` or `fileToUpdate.ps1`.
 - `destinationFolder`: A path to a folder, relative to repository that is being updated, where the files should be placed. If not specified, defaults to the same as the source file folder. _Example_: `src/templateScripts`.
 - `perProject`: A boolean that indicates whether the matched files should be propagated for all available AL-Go projects. In that case, `destinationFolder` is relative to the project folder. _Example_: `.AL-Go/scripts`.
@@ -247,7 +247,8 @@ In order to instruct AL-Go which files to look for at the template repository, y
 When using a custom template repository, `filesToInclude` also resolves files from the **original** AL-Go template (i.e. the official [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) template). This means files present in the official AL-Go template that are not overridden by your custom template are still propagated to consumer repositories. When a file exists in both the original template and your custom template, how the file's **content** is resolved depends on the file's type:
 
 - **Workflow files** (`.github/workflows/*.yaml`/`*.yml`): the content is based on the original template's file, with customizations from your custom template's copy (see [Adding custom jobs](#adding-custom-jobs)) re-applied on top.
-- **Settings files** and **all other files** (e.g. PowerShell scripts, `.copy.md`, `.agent.md`): the original template's file content is used as-is; changes made to that same file in your custom template are not applied in this case.
+- **Settings files**: if the destination file already exists, its settings are preserved and only its `$schema` is updated from the original template. If it does not exist, the original template's settings are used. Current custom template repository settings are also read when updating workflows.
+- **All other files** (e.g. PowerShell scripts, `.copy.md`, `.agent.md`): the original template's file content is used as-is; changes made to that same file in your custom template are not applied in this case.
 
 The following table summarizes how `filesToInclude` resolves files when a custom template is in use:
 
