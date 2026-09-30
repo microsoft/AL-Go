@@ -230,6 +230,11 @@ if ($update -ne 'Y') {
     }
 }
 else {
+    if (-not (Test-HasSystemFileChanges -settingsFile (Join-Path $baseFolder $RepoSettingsFile) -templateUrl $templateUrl -updateFiles $updateFiles -removeFiles $removeFiles)) {
+        OutputNotice -message "No updates available for AL-Go for GitHub."
+        return
+    }
+
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit
