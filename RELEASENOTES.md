@@ -1,6 +1,9 @@
 ### New `CheckDowngrade` action
 
 The new `CheckDowngrade` action can fail a workflow when an app artifact has a lower version than the corresponding app installed in a Business Central environment. The check is opt-in through the `failOnAppVersionDowngrade` input. The check is skipped for environments deployed using a custom `.github/DeployTo<EnvironmentType>.ps1` script.
+### Allow pre-release packages as NuGet dependencies
+
+AL-Go now supports including pre-release versions of Business Central app packages from NuGet feeds. To enable this, append `-allowPrerelease` to the `nuGetFeedSelectMode` setting in your project configuration. For example, `LatestMatching-allowPrerelease` will select the latest matching version of the package, including pre-release versions.
 
 ### New `unpublishOldVersions` setting for deployment
 
@@ -21,7 +24,11 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
+- Issue 2358 - Update AL-Go System Files no longer creates a commit or pull request when only the template SHA would change, avoiding unnecessary CI/CD runs.
+- Issue 2370 - Retry CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics and URL-encoding query values so discovery URLs render correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
+- Issue 2113 - Fix device-login initialization in Create Online Dev. Environment and Publish To Environment when authentication secrets are unavailable.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
+- Issue 2381 - Dependency artifacts from the current build are not downloaded when the branch name contains glob-special characters (e.g. `,`), silently falling back to baseline artifacts
 
 ## v9.2
 

@@ -991,7 +991,7 @@ function CheckBuildJobsInWorkflowRun {
     Gets the last successful CICD run ID and SHA for the specified repository and branch.
     Successful CICD runs are those that have a workflow run named ' CI/CD', wasn't cancelled and successfully built all the projects within the last $retention days.
 
-    If no successful CICD run is found, 0 and empty string is returned.
+    If no successful CICD run is found after three attempts, 0 and empty string is returned.
 #>
 function FindLatestSuccessfulCICDRun {
     Param(
@@ -1008,50 +1008,65 @@ function FindLatestSuccessfulCICDRun {
     $headers = GetHeaders -token $token
     $lastSuccessfulCICDRun = $null
     $per_page = 100
-    $page = 1
+    $maxAttempts = 3
 
     Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
     $expired = [DateTime]::UtcNow.AddDays(-$retention).ToString('o')
+    $encodedBranch = [Uri]::EscapeDataString($branch)
+    $encodedCreated = [Uri]::EscapeDataString(">$expired")
 
-    # Get the latest CICD workflow run
-    while($true) {
-        $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$branch&created=>$expired"
-        Write-Host "- $runsURI"
-        $workflowRuns = (InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        $page = 1
+        while($true) {
+            $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
+            Write-Host "- $runsURI"
+            $response = InvokeWebRequest -Headers $headers -Uri $runsURI
+            $workflowRuns = $response.Content | ConvertFrom-Json
+            $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name.Trim() -eq 'CI/CD' })
+            Write-Host "Baseline discovery attempt $attempt/$maxAttempts, page ${page}: $($workflowRuns.workflow_runs.Count) workflow runs, $($CICDRuns.Count) CI/CD runs."
 
-        if($workflowRuns.workflow_runs.Count -eq 0) {
-            # No more workflow runs, breaking out of the loop
-            break
-        }
-
-        $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name.Trim() -eq 'CI/CD' })
-
-        foreach($CICDRun in $CICDRuns) {
-            if($CICDRun.conclusion -eq 'success') {
-                # CICD run is successful
-                $lastSuccessfulCICDRun = $CICDRun
-                break
-            }
-            if ($CICDRun.conclusion -eq 'cancelled') {
-                continue
-            }
-
-            # CICD run is considered successful if all build jobs were successful
-            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository
-
-            if($areBuildJobsSuccessful) {
-                $lastSuccessfulCICDRun = $CICDRun
+            if($workflowRuns.workflow_runs.Count -eq 0) {
+                # No more workflow runs, breaking out of the loop
                 break
             }
 
-            Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
+            foreach($CICDRun in $CICDRuns) {
+                if($CICDRun.conclusion -eq 'success') {
+                    # CICD run is successful
+                    $lastSuccessfulCICDRun = $CICDRun
+                    break
+                }
+                if ($CICDRun.conclusion -eq 'cancelled') {
+                    continue
+                }
+
+                # CICD run is considered successful if all build jobs were successful
+                $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository
+
+                if($areBuildJobsSuccessful) {
+                    $lastSuccessfulCICDRun = $CICDRun
+                    break
+                }
+
+                Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
+            }
+
+            if($lastSuccessfulCICDRun) {
+                break
+            }
+
+            $page += 1
         }
 
-        if($lastSuccessfulCICDRun) {
+        if ($lastSuccessfulCICDRun) {
             break
         }
 
-        $page += 1
+        if ($attempt -lt $maxAttempts) {
+            $delaySeconds = 5 * $attempt
+            Write-Host "No eligible baseline found on attempt $attempt/$maxAttempts. Retrying discovery in $delaySeconds seconds."
+            Start-Sleep -Seconds $delaySeconds
+        }
     }
 
     if($lastSuccessfulCICDRun) {
