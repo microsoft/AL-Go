@@ -1,6 +1,6 @@
 ### New `CheckDowngrade` action
 
-The new `CheckDowngrade` action can fail a workflow when an app artifact has a lower version than the corresponding app installed in a Business Central environment. The check is opt-in through the `failOnAppVersionDowngrade` input.
+The new `CheckDowngrade` action can fail a workflow when an app artifact has a lower version than the corresponding app installed in a Business Central environment. The check is opt-in through the `failOnAppVersionDowngrade` input. The check is skipped for environments deployed using a custom `.github/DeployTo<EnvironmentType>.ps1` script.
 
 ### New `unpublishOldVersions` setting for deployment
 

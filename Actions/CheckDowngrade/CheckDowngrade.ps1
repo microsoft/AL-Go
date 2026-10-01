@@ -4,6 +4,7 @@
 .DESCRIPTION
     Without this check, deploying an app whose app.json version is lower than the installed version completes successfully (green checkmark).
     The check runs only when failOnAppVersionDowngrade is enabled globally or in DeployTo<environmentName>.
+    The check is skipped for environments deployed using a custom .github/DeployTo<EnvironmentType>.ps1 script.
 #>
 Param(
     [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
@@ -30,10 +31,20 @@ if (-not $failOnAppVersionDowngrade) {
     return
 }
 
-DownloadAndImportBcContainerHelper
-
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deploymentSettings = GetDeploymentSettings -deploymentEnvironmentsJson $deploymentEnvironmentsJson -environmentName $environmentName -settings $settings
+
+# Mirror Deploy.ps1: environments handled by a custom DeployTo<EnvironmentType>.ps1 script are not deployed through the built-in SaaS path
+$githubFolder = Join-Path $ENV:GITHUB_WORKSPACE '.github'
+if (Test-Path -Path $githubFolder -PathType Container) {
+    $customScript = Get-ChildItem -Path $githubFolder | Where-Object { $_.Name -eq "DeployTo$($deploymentSettings.EnvironmentType).ps1" }
+    if ($customScript) {
+        OutputNotice -message "Downgrade check skipped for environment '$environmentName' because it is deployed using the custom deployment script $($customScript.Name)."
+        return
+    }
+}
+
+DownloadAndImportBcContainerHelper
 
 $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
@@ -55,7 +66,8 @@ if ($null -eq $bcAuthContext) {
     throw "Authentication failed for environment '$environmentName'."
 }
 
-# Validate exactly the set of apps that the Deploy action will deploy
+# Validate the apps that the Deploy action will deploy, excluding test apps
+$deploymentSettings.includeTestAppsInSandboxEnvironment = $false
 $appsToDeploy, $null = GetAppsAndDependenciesFromArtifacts -token $token -artifactsFolder $artifactsFolder -deploymentSettings $deploymentSettings -artifactsVersion $artifactsVersion
 $appsToDeploy = @($appsToDeploy | Where-Object { $_ })
 

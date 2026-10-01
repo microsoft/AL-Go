@@ -31,6 +31,8 @@ Describe "CheckDowngrade Action Tests" {
     }
 
     BeforeEach {
+        $env:GITHUB_WORKSPACE = Join-Path $TestDrive ([Guid]::NewGuid().ToString())
+        New-Item -Path (Join-Path $env:GITHUB_WORKSPACE '.github') -ItemType Directory -Force | Out-Null
         $env:Secrets = '{"Sandbox-AuthContext":"e30="}'
         $env:Settings = '{}'
         Mock DownloadAndImportBcContainerHelper {}
@@ -59,6 +61,25 @@ Describe "CheckDowngrade Action Tests" {
         CheckDowngrade -environmentName 'Sandbox' -artifactsFolder 'missing' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
 
         Should -Invoke DownloadAndImportBcContainerHelper -Times 0
+    }
+
+    It 'Skips the check when a custom deployment script exists for the environment type' {
+        Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeployToSaaS.ps1') -Value '' -Encoding UTF8
+        $env:Secrets = '{}'
+
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+            Should -Not -Throw
+        Should -Invoke DownloadAndImportBcContainerHelper -Times 0
+        Should -Invoke New-BcAuthContext -Times 0
+        Should -Invoke Get-BcInstalledExtensions -Times 0
+    }
+
+    It 'Runs the check when a custom deployment script exists only for another environment type' {
+        Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeployToOnPrem.ps1') -Value '' -Encoding UTF8
+
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
+
+        Should -Invoke Get-BcInstalledExtensions -Times 1
     }
 
     It 'Fails when an artifact version is lower than the installed version' {
@@ -116,6 +137,20 @@ Describe "CheckDowngrade Action Tests" {
         { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
             Should -Not -Throw
         Should -Invoke Get-AppJsonFromAppFile -Times 0
+    }
+
+    It 'Excludes test apps even when includeTestAppsInSandboxEnvironment is enabled' {
+        $env:Settings = @{
+            "DeployToSandbox" = @{
+                "includeTestAppsInSandboxEnvironment" = $true
+            }
+        } | ConvertTo-Json -Depth 10 -Compress
+
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
+
+        Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 1 -ParameterFilter {
+            $deploymentSettings.includeTestAppsInSandboxEnvironment -eq $false
+        }
     }
 
     It 'Uses resolved DeployTo settings for artifact selection and environment name' {
