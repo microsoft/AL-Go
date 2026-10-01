@@ -60,13 +60,18 @@ foreach ($secretName in "$($envName)-AuthContext", "$($envName)_AuthContext", "A
     }
 }
 if (-not $authContext) {
-    # Mirror Deploy.ps1: CD silently skips environments without AuthContext unless continuousDeployment is set
-    if ($type -eq 'CD' -and -not ($deploymentSettings.ContainsKey('continuousDeployment') -and $deploymentSettings.continuousDeployment)) {
-        OutputNotice -message "Downgrade check skipped for environment '$environmentName' because no Authentication Context was found."
-        return
-    }
-    throw "No Authentication Context found for environment ($environmentName)."
-}
+     if ($env:deviceCode) {
+         $authContext = "{""deviceCode"":""$($env:deviceCode)""}"
+     }
+     # Mirror Deploy.ps1: CD silently skips environments without AuthContext unless continuousDeployment is set
+     elseif ($type -eq 'CD' -and -not ($deploymentSettings.ContainsKey('continuousDeployment') -and $deploymentSettings.continuousDeployment)) {
+         OutputNotice -message "Downgrade check skipped for environment '$environmentName' because no Authentication Context was found."
+         return
+     }
+     else {
+         throw "No Authentication Context found for environment ($environmentName)."
+     }
+ }
 
 $authContextParams = $authContext | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $bcAuthContext = New-BcAuthContext @authContextParams
