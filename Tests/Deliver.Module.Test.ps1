@@ -114,3 +114,112 @@ Describe "Deliver Module - Get-ProjectsInDeliveryOrder Tests" {
         Remove-Item $baseFolder -Force -Recurse -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Deliver Module - Get-ArtifactsForDelivery Tests" {
+    BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+
+        Import-Module (Join-Path $PSScriptRoot "../Actions/Deliver/Deliver.psm1" -Resolve) -DisableNameChecking -Scope Global
+
+        $ENV:GITHUB_API_URL = 'https://api.github.com'
+        $ENV:GITHUB_REPOSITORY = 'myOrg/myRepo'
+    }
+
+    BeforeEach {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'artifactsFolder', Justification = 'False positive.')]
+        $artifactsFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+
+        # Do not unpack/delete anything - the artifacts are never really downloaded in these tests
+        Mock Test-Path { return $true } -ModuleName Deliver
+        Mock Expand-Archive { } -ModuleName Deliver
+        Mock Remove-Item { } -ModuleName Deliver
+        Mock DownloadRelease { return (Join-Path $artifactsFolder 'MyProject-main-Apps-1.0.0.0.zip') } -ModuleName Deliver
+        Mock DownloadArtifact { return (Join-Path $artifactsFolder 'MyProject-main-Apps-1.0.0.0.zip') } -ModuleName Deliver
+        Mock GetArtifacts { return @([PSCustomObject]@{ Name = 'MyProject-main-Apps-1.0.0.0' }) } -ModuleName Deliver
+    }
+
+    It 'does nothing when the artifacts have already been downloaded' {
+        Mock GetReleases { throw 'GetReleases should not be called' } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts '.artifacts' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' | Should -BeExactly 'MyProject'
+
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 0 -Exactly
+        Should -Invoke DownloadRelease -ModuleName Deliver -Times 0 -Exactly
+    }
+
+    It 'downloads artifacts from the current release when releases exist' {
+        Mock GetReleases {
+            return @([PSCustomObject]@{ tag_name = '1.0.0'; prerelease = $false; draft = $false })
+        } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps,Dependencies' -branch 'main' | Should -BeExactly 'MyProject'
+
+        Should -Invoke DownloadRelease -ModuleName Deliver -Times 2 -Exactly
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 0 -Exactly
+    }
+
+    It 'falls back to the latest build artifacts when current is specified and no releases exist' {
+        Mock GetReleases { return @() } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps,Dependencies' -branch 'main' | Should -BeExactly 'MyProject'
+
+        Should -Invoke DownloadRelease -ModuleName Deliver -Times 0 -Exactly
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 2 -Exactly
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 1 -Exactly -ParameterFilter { $version -eq 'latest' -and $mask -eq 'Apps' -and $branch -eq 'main' }
+        Should -Invoke DownloadArtifact -ModuleName Deliver -Times 2 -Exactly
+    }
+
+    It 'throws when prerelease is specified and no releases exist' {
+        Mock GetReleases { return @() } -ModuleName Deliver
+
+        { Get-ArtifactsForDelivery -token 'token' -artifacts 'prerelease' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' } | Should -Throw '*was not found on any release*'
+
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 0 -Exactly
+    }
+
+    It 'throws when releases exist, but none of them match the requested version' {
+        Mock GetReleases {
+            return @([PSCustomObject]@{ tag_name = '1.0.0-beta'; prerelease = $true; draft = $false })
+        } -ModuleName Deliver
+
+        { Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' } | Should -Throw '*Unable to locate current release*'
+
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 0 -Exactly
+    }
+
+    It 'searches for build artifacts when a version number is specified' {
+        Mock GetReleases { throw 'GetReleases should not be called' } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts '1.0.0.0' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' | Should -BeExactly 'MyProject'
+
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 1 -Exactly -ParameterFilter { $version -eq '1.0.0.0' }
+    }
+
+    It 'throws when no Apps artifacts are found' {
+        Mock GetReleases { return @() } -ModuleName Deliver
+        Mock GetArtifacts { return @() } -ModuleName Deliver
+
+        { Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' } | Should -Throw '*Could not find any Apps artifacts*'
+    }
+
+    It 'uses the release asset naming convention for the project when downloading releases' {
+        Mock GetReleases {
+            return @([PSCustomObject]@{ tag_name = '1.0.0'; prerelease = $false; draft = $false })
+        } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'My Project' -atypes 'Apps' -branch 'main' | Should -BeExactly 'My.Project'
+    }
+
+    It 'uses the build artifact naming convention for the project when falling back to the latest build' {
+        Mock GetReleases { return @() } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'My Project' -atypes 'Apps' -branch 'main' | Should -BeExactly 'My Project'
+
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 1 -Exactly -ParameterFilter { $projects -eq 'My Project' }
+    }
+
+    AfterEach {
+        Remove-Item $artifactsFolder -Force -Recurse -ErrorAction SilentlyContinue
+    }
+}
