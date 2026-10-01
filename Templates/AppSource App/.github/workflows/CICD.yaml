@@ -365,6 +365,7 @@ jobs:
           shell: ${{ matrix.shell }}
           environmentName: ${{ matrix.environment }}
           artifactsFolder: '.artifacts'
+          type: 'CD'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
           failOnAppVersionDowngrade: 'true'
 

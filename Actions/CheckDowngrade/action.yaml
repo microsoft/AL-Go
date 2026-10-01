@@ -15,6 +15,10 @@ inputs:
   artifactsFolder:
     description: Path to the downloaded artifacts to validate
     required: true
+  type:
+    description: Type of deployment (CD or Publish)
+    required: false
+    default: 'CD'
   deploymentEnvironmentsJson:
     description: The settings for all Deployment Environments
     required: true
@@ -35,12 +39,13 @@ runs:
         _token: ${{ inputs.token }}
         _environmentName: ${{ inputs.environmentName }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}
+        _type: ${{ inputs.type }}
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         _artifactsVersion: ${{ inputs.artifactsVersion }}
         _failOnAppVersionDowngrade: ${{ inputs.failOnAppVersionDowngrade }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckDowngrade" -Action {
-          ${{ github.action_path }}/CheckDowngrade.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion -failOnAppVersionDowngrade ($ENV:_failOnAppVersionDowngrade -eq 'true')
+          ${{ github.action_path }}/CheckDowngrade.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion -failOnAppVersionDowngrade ($ENV:_failOnAppVersionDowngrade -eq 'true')
         }
 branding:
   icon: terminal

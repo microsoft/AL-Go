@@ -21,6 +21,7 @@ If the repository contains a custom deployment script (`.github/DeployTo<Environ
 | token | | The GitHub token running the action | github.token |
 | environmentName | Yes | Name of environment to validate | |
 | artifactsFolder | Yes | Path to the downloaded artifacts to validate | |
+| type | | Type of deployment (CD or Publish). With CD, environments without an AuthContext secret are skipped unless `continuousDeployment` is set, matching the Deploy action | CD |
 | deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
 | artifactsVersion | | Artifacts version. Used to check if this is a deployment from a PR | |
 | failOnAppVersionDowngrade | | Fail when an artifact app version is lower than the installed version | false |

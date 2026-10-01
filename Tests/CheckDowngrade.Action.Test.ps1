@@ -82,6 +82,34 @@ Describe "CheckDowngrade Action Tests" {
         Should -Invoke Get-BcInstalledExtensions -Times 1
     }
 
+    It 'Skips the check for CD when no AuthContext exists and continuousDeployment is not set' {
+        $env:Secrets = '{}'
+
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+            Should -Not -Throw
+        Should -Invoke New-BcAuthContext -Times 0
+        Should -Invoke Get-BcInstalledExtensions -Times 0
+    }
+
+    It 'Fails for CD when no AuthContext exists and continuousDeployment is set' {
+        $env:Secrets = '{}'
+        $env:Settings = @{
+            "DeployToSandbox" = @{
+                "continuousDeployment" = $true
+            }
+        } | ConvertTo-Json -Depth 10 -Compress
+
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+            Should -Throw "No Authentication Context found*"
+    }
+
+    It 'Fails for Publish when no AuthContext exists' {
+        $env:Secrets = '{}'
+
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -type 'Publish' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+            Should -Throw "No Authentication Context found*"
+    }
+
     It 'Fails when an artifact version is lower than the installed version' {
         Mock Get-BcInstalledExtensions {
             @{

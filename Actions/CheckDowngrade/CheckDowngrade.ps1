@@ -13,6 +13,9 @@ Param(
     [string] $environmentName,
     [Parameter(HelpMessage = "Path to the downloaded artifacts to validate", Mandatory = $true)]
     [string] $artifactsFolder,
+    [Parameter(HelpMessage = "Type of deployment (CD or Publish)", Mandatory = $false)]
+    [ValidateSet('CD','Publish')]
+    [string] $type = "CD",
     [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
     [string] $deploymentEnvironmentsJson,
     [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
@@ -47,16 +50,21 @@ if (Test-Path -Path $githubFolder -PathType Container) {
 DownloadAndImportBcContainerHelper
 
 $envName = $environmentName.Split(' ')[0]
-$secrets = $env:Secrets | ConvertFrom-Json
+$secrets = $env:Secrets | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $authContext = $null
 foreach ($secretName in "$($envName)-AuthContext", "$($envName)_AuthContext", "AuthContext") {
-    if ($secrets."$secretName") {
+    if ($secrets.ContainsKey($secretName) -and $secrets."$secretName") {
         $authContext = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName"))
         Write-Host "::add-mask::$authContext"
         break
     }
 }
 if (-not $authContext) {
+    # Mirror Deploy.ps1: CD silently skips environments without AuthContext unless continuousDeployment is set
+    if ($type -eq 'CD' -and -not ($deploymentSettings.ContainsKey('continuousDeployment') -and $deploymentSettings.continuousDeployment)) {
+        OutputNotice -message "Downgrade check skipped for environment '$environmentName' because no Authentication Context was found."
+        return
+    }
     throw "No Authentication Context found for environment ($environmentName)."
 }
 
