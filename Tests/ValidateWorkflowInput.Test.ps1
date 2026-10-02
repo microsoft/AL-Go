@@ -64,6 +64,7 @@ Describe "ValidateWorkflowInput Action Tests" {
         { Validate-ReleaseType -inputName $inputName -inputValue '' } | Should -Throw
     }
 
+    # Call action
     Context 'Call action with workflowName and inputsJson (reusable workflow)' {
         BeforeEach {
             $env:Settings = (@{ versioningStrategy = 0 } | ConvertTo-Json -Compress)
