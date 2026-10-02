@@ -2,7 +2,7 @@ name: ' Create release'
 run-name: "Create release - Version ${{ inputs.tag }}"
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ inputs.caller && ' Create release' || github.workflow }}
 
 on:
   workflow_dispatch:
@@ -51,6 +51,66 @@ on:
         description: Use GhTokenWorkflow for PR/Commit?
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      caller:
+        description: Name of the calling workflow (use github.workflow as value when calling)
+        type: string
+        required: true
+      buildVersion:
+        description: Build version to promote to release (default is latest)
+        type: string
+        required: false
+        default: 'latest'
+      name:
+        description: Name of this release
+        type: string
+        required: true
+        default: ''
+      tag:
+        description: Tag of this release (needs to be semantic version string https://semver.org, ex. 1.0.0)
+        type: string
+        required: true
+        default: ''
+      releaseType:
+        description: Release, prerelease or draft?
+        type: string
+        default: Release
+      createReleaseBranch:
+        description: Create Release Branch?
+        type: boolean
+        default: false
+      releaseBranchPrefix:
+        description: The prefix for the release branch. Used only if 'Create Release Branch?' is checked.
+        type: string
+        default: release/
+      updateVersionNumber:
+        description: New Version Number in main branch. Use Major.Minor (optionally add .Build for versioningstrategy 3) for absolute change, or +1, +0.1 (or +0.0.1 for versioningstrategy 3) incremental change.
+        type: string
+        required: false
+        default: ''
+      skipUpdatingDependencies:
+        description: Skip updating dependency version numbers in all apps.
+        type: boolean
+        default: false
+      directCommit:
+        description: Direct Commit?
+        type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for PR/Commit?
+        type: boolean
+        default: false
+    outputs:
+      releaseId:
+        description: The id of the created release
+        value: ${{ jobs.CreateRelease.outputs.releaseId }}
+      releaseVersion:
+        description: The version of the created release
+        value: ${{ jobs.CreateRelease.outputs.releaseVersion }}
+      commitish:
+        description: The commit the release was created from
+        value: ${{ jobs.CreateRelease.outputs.commitish }}
 
 permissions:
   actions: read
@@ -63,6 +123,8 @@ defaults:
     shell: powershell
 
 env:
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
+  WorkflowName: ${{ inputs.caller && ' Create release' || github.workflow }}
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
@@ -77,6 +139,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: templateUrl
 
       - name: Read secrets
@@ -111,6 +174,8 @@ jobs:
         uses: microsoft/AL-Go-Actions/DumpWorkflowInfo@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
+          inputsJson: ${{ toJson(inputs) }}
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -126,13 +191,16 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: repoName,type,powerPlatformSolutionFolder
 
       - name: Validate Workflow Input
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ env.WorkflowEventName == 'workflow_dispatch' || env.WorkflowEventName == 'workflow_call' }}
         uses: microsoft/AL-Go-Actions/ValidateWorkflowInput@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
+          inputsJson: ${{ toJson(inputs) }}
 
       - name: Read secrets
         id: ReadSecrets
@@ -141,20 +209,21 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForPush,ghTokenWorkflow'
-          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+          useGhTokenWorkflowForPush: '${{ inputs.useGhTokenWorkflow }}'
 
       - name: Determine Projects
         id: determineProjects
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
 
       - name: Determine artifacts for release
         uses: microsoft/AL-Go-Actions/DetermineArtifactsForRelease@main
         id: determineArtifactsForRelease
         with:
           shell: powershell
-          buildVersion: ${{ github.event.inputs.buildVersion }}
+          buildVersion: ${{ inputs.buildVersion }}
           GITHUB_TOKEN: ${{ github.token }}
           TOKENFORPUSH: ${{ steps.ReadSecrets.outputs.TokenForPush }}
           ProjectsJson: ${{ steps.determineProjects.outputs.ProjectsJson }}
@@ -164,8 +233,8 @@ jobs:
         uses: microsoft/AL-Go-Actions/CreateReleaseNotes@main
         with:
           shell: powershell
-          buildVersion: ${{ github.event.inputs.buildVersion }}
-          tag_name: ${{ github.event.inputs.tag }}
+          buildVersion: ${{ inputs.buildVersion }}
+          tag_name: ${{ inputs.tag }}
           target_commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
 
       - name: Create release
@@ -173,10 +242,10 @@ jobs:
         id: createrelease
         env:
           bodyMD: ${{ steps.createreleasenotes.outputs.releaseNotes }}
-          tag_name: ${{ github.event.inputs.tag }}
-          name: ${{ github.event.inputs.name }}
-          releaseType: ${{ github.event.inputs.releaseType }}
-          prerelease: ${{ github.event.inputs.releaseType == 'Prerelease' }}
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.name }}
+          releaseType: ${{ inputs.releaseType }}
+          prerelease: ${{ inputs.releaseType == 'Prerelease' }}
           commitish: ${{ steps.determineArtifactsForRelease.outputs.commitish }}
         with:
           github-token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
@@ -213,6 +282,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
 
       - name: Read secrets
         id: ReadSecrets
@@ -221,7 +291,7 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'nuGetContext,storageContext,TokenForPush'
-          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+          useGhTokenWorkflowForPush: '${{ inputs.useGhTokenWorkflow }}'
 
       - name: Download artifact
         env:
@@ -269,7 +339,7 @@ jobs:
           type: 'Release'
           projects: ${{ matrix.project }}
           deliveryTarget: 'NuGet'
-          artifacts: ${{ github.event.inputs.buildVersion }}
+          artifacts: ${{ inputs.buildVersion }}
           atypes: 'Apps,TestApps'
 
       - name: Deliver to Storage
@@ -282,12 +352,12 @@ jobs:
           type: 'Release'
           projects: ${{ matrix.project }}
           deliveryTarget: 'Storage'
-          artifacts: ${{ github.event.inputs.buildVersion }}
+          artifacts: ${{ inputs.buildVersion }}
           atypes: 'Apps,TestApps,Dependencies'
 
   CreateReleaseBranch:
     needs: [ CreateRelease, UploadArtifacts ]
-    if: ${{ github.event.inputs.createReleaseBranch=='true' }}
+    if: ${{ inputs.createReleaseBranch }}
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
@@ -297,7 +367,7 @@ jobs:
 
       - name: Create Release Branch
         env:
-          releaseBranchPrefix: ${{ github.event.inputs.releaseBranchPrefix }}
+          releaseBranchPrefix: ${{ inputs.releaseBranchPrefix }}
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $releaseBranch = "$($env:releaseBranchPrefix)" + "${{ needs.CreateRelease.outputs.releaseVersion }}"
@@ -310,7 +380,7 @@ jobs:
 
   UpdateVersionNumber:
     needs: [ CreateRelease, UploadArtifacts ]
-    if: ${{ github.event.inputs.updateVersionNumber!='' }}
+    if: ${{ inputs.updateVersionNumber!='' }}
     runs-on: [ windows-latest ]
     steps:
       - name: Checkout
@@ -320,6 +390,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
 
       - name: Read secrets
         id: ReadSecrets
@@ -328,16 +399,16 @@ jobs:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: 'TokenForPush'
-          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+          useGhTokenWorkflowForPush: '${{ inputs.useGhTokenWorkflow }}'
 
       - name: Update Version Number
         uses: microsoft/AL-Go-Actions/IncrementVersionNumber@main
         with:
           shell: powershell
           token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
-          versionNumber: ${{ github.event.inputs.updateVersionNumber }}
-          skipUpdatingDependencies: ${{ github.event.inputs.skipUpdatingDependencies }}
-          directCommit: ${{ github.event.inputs.directCommit }}
+          versionNumber: ${{ inputs.updateVersionNumber }}
+          skipUpdatingDependencies: ${{ inputs.skipUpdatingDependencies }}
+          directCommit: ${{ inputs.directCommit }}
 
   PostProcess:
     needs: [ CheckForUpdates, CreateRelease, UploadArtifacts, CreateReleaseBranch, UpdateVersionNumber ]
