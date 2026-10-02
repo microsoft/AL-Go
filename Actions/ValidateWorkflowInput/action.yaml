@@ -5,14 +5,25 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  workflowName:
+    description: The name of the workflow for which the inputs are validated (override for reusable workflows)
+    required: false
+    default: ${{ github.workflow }}
+  inputsJson:
+    description: The workflow inputs in compressed JSON format (override for reusable workflows). If not specified, the inputs are read from the GitHub event payload
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      env:
+        _workflowName: ${{ inputs.workflowName }}
+        _inputsJson: ${{ inputs.inputsJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ValidateWorkflowInput" -Action {
-          ${{ github.action_path }}/ValidateWorkflowInput.ps1
+          ${{ github.action_path }}/ValidateWorkflowInput.ps1 -workflowName $ENV:_workflowName -inputsJson $ENV:_inputsJson
         }
 branding:
   icon: terminal
