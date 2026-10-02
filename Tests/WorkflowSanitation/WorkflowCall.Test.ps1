@@ -175,4 +175,18 @@ Describe "AL-Go workflows supporting workflow_call should follow the reusable wo
             }
         }
     }
+
+    It '<template>/<workflow> passes the workflow name to _BuildPowerPlatformSolution' -TestCases $testCases {
+        param($template, $workflow, $path)
+        $lines = Get-Content -Path $path -Encoding UTF8
+        for ($idx = 0; $idx -lt $lines.Count; $idx++) {
+            if ($lines[$idx] -match '^\s*uses:\s+\./\.github/workflows/_BuildPowerPlatformSolution\.yaml') {
+                # The job ends at the next line with an indentation of 2 or less (next job)
+                $end = $idx + 1
+                while ($end -lt $lines.Count -and ($lines[$end].Trim() -eq '' -or $lines[$end] -match '^\s{3,}')) { $end++ }
+                $jobLines = @($lines[$idx..($end - 1)] | ForEach-Object { $_.Trim() })
+                @($jobLines | Where-Object { $_ -match "^workflowName: \$\{\{ inputs\.caller && '[^']*' \|\| github\.workflow \}\}$" }).Count | Should -Be 1 -Because "the job calling _BuildPowerPlatformSolution at line $($idx + 1) should pass workflowName"
+            }
+        }
+    }
 }
