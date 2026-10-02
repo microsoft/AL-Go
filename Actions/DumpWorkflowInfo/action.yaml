@@ -5,14 +5,25 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  workflowEventName:
+    description: The GitHub event name that triggered the workflow (override for reusable workflows)
+    required: false
+    default: ${{ github.event_name }}
+  inputsJson:
+    description: The workflow inputs in compressed JSON format (override for reusable workflows). If not specified, the inputs are read from the GitHub event payload
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      env:
+        _workflowEventName: ${{ inputs.workflowEventName }}
+        _inputsJson: ${{ inputs.inputsJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DumpWorkflowInfo" -Action {
-          ${{ github.action_path }}/DumpWorkflowInfo.ps1
+          ${{ github.action_path }}/DumpWorkflowInfo.ps1 -workflowEventName $ENV:_workflowEventName -inputsJson $ENV:_inputsJson
         }
 branding:
   icon: terminal
