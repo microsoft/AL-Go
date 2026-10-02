@@ -5,21 +5,21 @@
     [string] $inputsJson = ''
 )
 
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+
 Write-Host "Event name: $workflowEventName"
 if ($workflowEventName -in 'workflow_dispatch', 'workflow_call') {
   Write-Host "Inputs:"
   if ($inputsJson) {
     # Inputs are provided explicitly (e.g. when the workflow is called as a reusable workflow, where the event payload belongs to the caller)
-    $inputs = $inputsJson | ConvertFrom-Json
+    $inputs = $inputsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
   }
   else {
-    $inputs = (Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json).inputs
+    $inputs = (Get-Content -Encoding UTF8 -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json | ConvertTo-HashTable -recurse).inputs
   }
   if ($null -ne $inputs) {
-    $inputs.psObject.Properties | Sort-Object { $_.Name } | ForEach-Object {
-      $property = $_.Name
-      $value = $inputs."$property"
-      Write-Host "- $property = '$value'"
+    $inputs.Keys | Sort-Object | ForEach-Object {
+      Write-Host "- $_ = '$($inputs."$_")'"
     }
   }
 }
