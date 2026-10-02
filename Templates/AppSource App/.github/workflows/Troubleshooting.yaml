@@ -7,6 +7,16 @@ on:
         description: Display the name (not the value) of secrets available to the repository
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      caller:
+        description: Name of the calling workflow (use github.workflow as value when calling)
+        type: string
+        required: true
+      displayNameOfSecrets:
+        description: Display the name (not the value) of secrets available to the repository
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -17,6 +27,8 @@ defaults:
     shell: powershell
 
 env:
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
+  WorkflowName: ${{ inputs.caller && 'Troubleshooting' || github.workflow }}
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
@@ -34,4 +46,4 @@ jobs:
         with:
           shell: powershell
           gitHubSecrets: ${{ toJson(secrets) }}
-          displayNameOfSecrets: ${{ github.event.inputs.displayNameOfSecrets }}
+          displayNameOfSecrets: ${{ inputs.displayNameOfSecrets }}
