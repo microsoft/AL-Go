@@ -111,7 +111,13 @@ Describe "AL-Go workflows supporting workflow_call should follow the reusable wo
             $callInput.type | Should -Be $expectedType -Because "type of input $inputName"
             $callInput.description | Should -Be $dispatchInput.description -Because "description of input $inputName"
             $callInput.required | Should -Be $dispatchInput.required -Because "required of input $inputName"
-            $callInput.default | Should -Be $dispatchInput.default -Because "default of input $inputName"
+            if ($callInput.required -eq 'true') {
+                # The default value of a required workflow_call input is never used (and flagged by actionlint)
+                $callInput.default | Should -BeNullOrEmpty -Because "required input $inputName should not have a default value"
+            }
+            else {
+                $callInput.default | Should -Be $dispatchInput.default -Because "default of input $inputName"
+            }
         }
     }
 
