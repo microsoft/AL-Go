@@ -2,6 +2,12 @@ name: ' CI/CD'
 
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      caller:
+        description: Name of the calling workflow (use github.workflow as value when calling)
+        type: string
+        required: true
   push:
     paths-ignore:
       - '**.md'
@@ -22,6 +28,8 @@ permissions:
   packages: read
 
 env:
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
+  WorkflowName: ${{ inputs.caller && ' CI/CD' || github.workflow }}
   workflowDepth: 1
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
@@ -54,6 +62,8 @@ jobs:
         uses: microsoft/AL-Go-Actions/DumpWorkflowInfo@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
+          inputsJson: ${{ toJson(inputs) }}
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,6 +81,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: type,powerPlatformSolutionFolder,useGitSubmodules,trackALAlertsInGitHub
 
       - name: Set AL Code Analysis Var output
@@ -106,6 +117,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
           maxBuildDepth: ${{ env.workflowDepth }}
 
       - name: Determine PowerPlatform Solution Folder
@@ -161,6 +173,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: templateUrl
 
       - name: Read secrets
@@ -205,6 +218,7 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
       needsContext:  ${{ toJson(needs) }}
+      workflowName: ${{ inputs.caller && ' CI/CD' || github.workflow }}
 
   CodeAnalysisUpload:
     needs: [ Initialization, Build ]
@@ -267,6 +281,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
 
       - name: Determine ArtifactUrl
         id: determineArtifactUrl
@@ -325,6 +340,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: ${{ matrix.shell }}
+          workflowName: ${{ env.WorkflowName }}
           get: type,powerPlatformSolutionFolder
 
       - name: EnvName
@@ -389,6 +405,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
 
       - name: Read secrets
         id: ReadSecrets
