@@ -127,6 +127,87 @@ It is recommended to prefix your workflows with `my`, `our`, your name or your o
 > [!CAUTION]
 > This workflow gets triggered when the CI/CD workflow has completed. Note that the name of the CI/CD workflow currently is prefixed with a space, this space will very likely be removed in the future, which is why we specify both names in this example. Obviously this workflow would break if we decide to rename the CI/CD workflow to something different.
 
+### Calling AL-Go workflows from your own workflows
+
+Most AL-Go workflows can be called as [reusable workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows) (`workflow_call`) from your own custom workflows. This allows you to orchestrate AL-Go workflows, for example to create a release, publish it and increment the version number in one run, with approval gates in between. The orchestration logic lives in your own workflow, AL-Go only exposes the building blocks.
+
+The following workflows can be called: CI/CD, Create Release, Create Online Dev. Environment, Deploy Reference Documentation, Increment Version Number, Publish To AppSource (AppSource apps), Publish To Environment, Pull Power Platform changes and Push Power Platform changes (Per Tenant Extensions), Test Current, Test Next Minor, Test Next Major, Troubleshooting and Update AL-Go System Files.
+
+The Pull Request Handler and the Create App, Create Test App, Create Performance Test App and Add existing app or test app workflows cannot be called. The Pull Request Handler depends on the pull request event, and the others are one-time scaffolding operations.
+
+When calling an AL-Go workflow:
+
+- Specify `caller: ${{ github.workflow }}` as input. The input is required and tells the called workflow that it is running as a reusable workflow.
+- All other inputs are the same as the inputs of the workflow when triggered manually (`workflow_dispatch`), with the same defaults.
+- Specify `secrets: inherit`. AL-Go reads the secrets it needs dynamically.
+- Grant the permissions of the called workflow in the calling job. A called workflow can only use the permissions of the calling job (or less). Check the `permissions` of the called workflow file (both the workflow level and the job level permissions).
+- Workflow specific settings (like `.github/Test Next Major.settings.json`) and conditional settings with `workflows` still apply to the called workflow.
+- Create Release exposes the outputs `releaseId`, `releaseVersion` and `commitish`.
+
+Example:
+
+```yaml
+name: 'My Release'
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of this release (ex. 1.0.0)
+        required: true
+
+permissions:
+  actions: read
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  CreateRelease:
+    uses: ./.github/workflows/CreateRelease.yaml
+    secrets: inherit
+    with:
+      caller: ${{ github.workflow }}
+      name: v${{ inputs.tag }}
+      tag: ${{ inputs.tag }}
+      releaseType: Release
+
+  PublishToAppSource:
+    needs: [ CreateRelease ]
+    uses: ./.github/workflows/PublishToAppSource.yaml
+    secrets: inherit
+    with:
+      caller: ${{ github.workflow }}
+      appVersion: current
+
+  Approval:
+    needs: [ CreateRelease, PublishToAppSource ]
+    runs-on: [ ubuntu-latest ]
+    # Add required reviewers to this environment to require approval before continuing
+    environment: IncrementVersionNumber
+    steps:
+      - run: echo "Release ${{ needs.CreateRelease.outputs.releaseVersion }} approved"
+
+  IncrementVersionNumber:
+    needs: [ CreateRelease, Approval ]
+    uses: ./.github/workflows/IncrementVersionNumber.yaml
+    secrets: inherit
+    with:
+      caller: ${{ github.workflow }}
+      versionNumber: '+0.1'
+      directCommit: true
+```
+
+> [!NOTE]
+> In a called workflow, the GitHub context (`github.workflow`, `github.event_name`, `github.run_id`, `github.run_number` etc.) belongs to the calling workflow. AL-Go handles this for inputs, workflow specific settings and input validation, but be aware of the following:
+>
+> - Telemetry, the workflow name used by Run-AlPipeline and the `triggers` condition of [conditional settings](settings.md#conditional-settings) use the name and the event of the calling workflow.
+> - Build numbers based on the run number (`appBuild`/`appRevision`) use the run number of the calling workflow.
+> - The Finalize step of the called workflow includes the jobs of the calling workflow when determining the conclusion.
+> - If you use `${{ github.workflow }}` in [workflowConcurrency](settings.md#workflowConcurrency) for a workflow you call, the concurrency group will be the name of the calling workflow. If the calling workflow uses the same concurrency group, the called workflow can never start (GitHub will cancel it). Use a fixed name in the concurrency group of workflows you call.
+> - A called CI/CD workflow always builds all projects (incremental builds are not used). Runs of the calling workflow are not named CI/CD, so they are not used as a baseline for incremental builds, and not found when looking for the `latest` build (for example by Create Release).
+> - Jobs that download build artifacts from the current run (for example Deploy, Deliver and Deploy Reference Documentation in CI/CD) download the artifacts of the entire run of the calling workflow. Call at most one build workflow (CI/CD, Test Current, Test Next Minor or Test Next Major) per run of your workflow.
+
 ### Adding custom scripts
 
 You can add custom powershell scripts under the .github folder for repository scoped scripts or in the .AL-Go folder for project scoped scripts. Specially named scripts in the .AL-Go folder can override standard functionality in AL-Go for GitHub workflows. A list of these script overrides can be found [here](https://aka.ms/algosettings#scriptoverrides). Scripts under the .github folder can be used in custom workflows instead of using inline scripts inside the workflow.
