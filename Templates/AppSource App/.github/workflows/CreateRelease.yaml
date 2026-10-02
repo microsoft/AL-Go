@@ -66,12 +66,10 @@ on:
         description: Name of this release
         type: string
         required: true
-        default: ''
       tag:
         description: Tag of this release (needs to be semantic version string https://semver.org, ex. 1.0.0)
         type: string
         required: true
-        default: ''
       releaseType:
         description: Release, prerelease or draft?
         type: string
