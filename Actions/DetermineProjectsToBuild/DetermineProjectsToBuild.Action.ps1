@@ -4,7 +4,9 @@
     [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
     [int] $maxBuildDepth = 0,
     [Parameter(HelpMessage = "The GitHub token to use to fetch the modified files", Mandatory = $true)]
-    [string] $token
+    [string] $token,
+    [Parameter(HelpMessage = "The GitHub event name that triggered the workflow (override for reusable workflows)", Mandatory = $false)]
+    [string] $workflowEventName = "$ENV:GITHUB_EVENT_NAME"
 )
 
 #region Action: Setup
@@ -22,8 +24,9 @@ if ($ENV:GITHUB_EVENT_NAME -eq 'pull_request') {
 }
 
 #region Action: Determine projects to build
-Write-Host "$($ENV:GITHUB_EVENT_NAME) on $targetBranch"
-$buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $ENV:GITHUB_EVENT_NAME -settings $settings
+Write-Host "$workflowEventName on $targetBranch"
+# When called as a reusable workflow (workflow_call), there is no incrementalBuilds setting for the event, meaning that all projects are built
+$buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName $workflowEventName -settings $settings
 
 $modifiedFiles = @()
 $baselineWorkflowRunId = 0 #default to 0, which means no baseline workflow run ID is set
@@ -79,7 +82,7 @@ $buildOrderJson = ConvertTo-Json $buildOrder -Depth 99 -Compress
 
 $additionalDataForTelemetry = [System.Collections.Generic.Dictionary[[System.String], [System.String]]]::new()
 $additionalDataForTelemetry.Add("Mode", $settings.incrementalBuilds.Mode)
-$additionalDataForTelemetry.Add("Event", $ENV:GITHUB_EVENT_NAME)
+$additionalDataForTelemetry.Add("Event", $workflowEventName)
 $additionalDataForTelemetry.Add("Projects", $allProjects.Count)
 $additionalDataForTelemetry.Add("ModifiedProjects", $modifiedProjects.Count)
 $additionalDataForTelemetry.Add("ProjectsToBuild", $projectsToBuild.Count)
