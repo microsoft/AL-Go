@@ -1,6 +1,6 @@
 ### New `CheckDowngrade` action
 
-The new `CheckDowngrade` action can fail a workflow when an app artifact has a lower version than the corresponding app installed in a Business Central environment. The check is opt-in through the [`failOnAppVersionDowngrade`](https://aka.ms/algosettings#failOnAppVersionDowngrade) setting, which can be set in repository/project settings or per environment in `DeployTo<environmentName>`. When enabled, the CI/CD workflow runs the check before deploying to the environment. The check is skipped for environments deployed using a custom `.github/DeployTo<EnvironmentType>.ps1` script.
+The new `CheckDowngrade` action can fail a workflow when an app artifact has a lower version than the corresponding app installed in a Business Central environment. The check is opt-in through the [`failOnAppVersionDowngrade`](https://aka.ms/algosettings#failOnAppVersionDowngrade) setting, which can be set in repository settings or per environment in `DeployTo<environmentName>`. When enabled, the CI/CD workflow runs the check before deploying to the environment. The check is skipped for environments deployed using a custom `.github/DeployTo<EnvironmentType>.ps1` script.
 
 ### Allow pre-release packages as NuGet dependencies
 
