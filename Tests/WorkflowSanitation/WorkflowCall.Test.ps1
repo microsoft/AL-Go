@@ -121,6 +121,10 @@ Describe "AL-Go workflows supporting workflow_call should follow the reusable wo
         $workflowName = $yaml.GetProperty('name:').Trim("'").Trim('"')
         $yaml.GetProperty('env:/WorkflowEventName:') | Should -Be "`${{ inputs.caller && 'workflow_call' || github.event_name }}"
         $yaml.GetProperty('env:/WorkflowName:') | Should -Be "`${{ inputs.caller && '$workflowName' || github.workflow }}"
+        # The env context isn't available everywhere (e.g. concurrency or with: of reusable workflow jobs), where the workflow name is repeated
+        foreach($match in ([regex]::Matches(($yaml.content -join "`n"), "inputs\.caller && '([^']*)' \|\| github\.workflow"))) {
+            $match.Groups[1].Value | Should -Be $workflowName -Because "the name of the workflow is used when called"
+        }
     }
 
     It '<template>/<workflow> does not use the event payload or the event name of the caller' -TestCases $testCases {
@@ -154,6 +158,20 @@ Describe "AL-Go workflows supporting workflow_call should follow the reusable wo
                 foreach($expected in $expectedWith."$actionName") {
                     $step.content | Should -Contain $expected -Because "the $actionName step at line $($step.line) should pass $expected"
                 }
+            }
+        }
+    }
+
+    It '<template>/<workflow> passes the workflow name to _BuildALGoProject' -TestCases $testCases {
+        param($template, $workflow, $path)
+        $lines = Get-Content -Path $path -Encoding UTF8
+        for ($idx = 0; $idx -lt $lines.Count; $idx++) {
+            if ($lines[$idx] -match '^\s*uses:\s+\./\.github/workflows/_BuildALGoProject\.yaml') {
+                # The job ends at the next line with an indentation of 2 or less (next job)
+                $end = $idx + 1
+                while ($end -lt $lines.Count -and ($lines[$end].Trim() -eq '' -or $lines[$end] -match '^\s{3,}')) { $end++ }
+                $jobLines = @($lines[$idx..($end - 1)] | ForEach-Object { $_.Trim() })
+                @($jobLines | Where-Object { $_ -match "^workflowName: \$\{\{ inputs\.caller && '[^']*' \|\| github\.workflow \}\}$" }).Count | Should -Be 1 -Because "the job calling _BuildALGoProject at line $($idx + 1) should pass workflowName"
             }
         }
     }

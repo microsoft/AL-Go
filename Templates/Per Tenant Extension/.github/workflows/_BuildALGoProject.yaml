@@ -77,6 +77,11 @@ on:
         description: JSON formatted needs context
         type: string
         default: '{}'
+      workflowName:
+        description: Name of the calling AL-Go workflow, used for reading workflow specific settings (default is github.workflow)
+        required: false
+        default: ''
+        type: string
 
 permissions:
   actions: read
@@ -109,6 +114,7 @@ jobs:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
           buildMode: ${{ inputs.buildMode }}
+          workflowName: ${{ inputs.workflowName || github.workflow }}
           get: useCompilerFolder,workspaceCompilation,keyVaultCodesignCertificateName,doNotSignApps,doNotRunTests,doNotRunBcptTests,doNotRunpageScriptingTests,artifact,generateDependencyArtifact,trustedSigning,useGitSubmodules,trackALAlertsInGitHub,skipUpgrade
 
       - name: Run Build Initialize hook

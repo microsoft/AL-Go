@@ -2,6 +2,12 @@ name: ' Test Current'
 
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      caller:
+        description: Name of the calling workflow (use github.workflow as value when calling)
+        type: string
+        required: true
 
 permissions:
   actions: read
@@ -14,6 +20,8 @@ defaults:
     shell: powershell
 
 env:
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
+  WorkflowName: ${{ inputs.caller && ' Test Current' || github.workflow }}
   workflowDepth: 1
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
@@ -34,6 +42,8 @@ jobs:
         uses: microsoft/AL-Go-Actions/DumpWorkflowInfo@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
+          inputsJson: ${{ toJson(inputs) }}
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,6 +61,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: useGitSubmodules,shortLivedArtifactsRetentionDays
 
       - name: Read submodules token
@@ -81,6 +92,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/DetermineProjectsToBuild@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
           maxBuildDepth: ${{ env.workflowDepth }}
 
   Build:
@@ -104,6 +116,7 @@ jobs:
       artifactsRetentionDays: ${{ fromJson(needs.Initialization.outputs.artifactsRetentionDays) }}
       artifactsNameSuffix: 'Current'
       needsContext:  ${{ toJson(needs) }}
+      workflowName: ${{ inputs.caller && ' Test Current' || github.workflow }}
 
   PostProcess:
     needs: [ Initialization, Build ]
