@@ -167,13 +167,21 @@ Describe "CheckDowngrade Action Tests" {
         Should -Invoke Get-AppJsonFromAppFile -Times 0
     }
 
-    It 'Excludes test apps even when includeTestAppsInSandboxEnvironment is enabled' {
+    It 'Includes test apps when includeTestAppsInSandboxEnvironment is enabled' {
         $env:Settings = @{
             "DeployToSandbox" = @{
                 "includeTestAppsInSandboxEnvironment" = $true
             }
         } | ConvertTo-Json -Depth 10 -Compress
 
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
+
+        Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 1 -ParameterFilter {
+            $deploymentSettings.includeTestAppsInSandboxEnvironment -eq $true
+        }
+    }
+
+    It 'Excludes test apps when includeTestAppsInSandboxEnvironment is disabled' {
         CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
 
         Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 1 -ParameterFilter {

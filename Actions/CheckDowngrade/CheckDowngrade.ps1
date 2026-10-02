@@ -79,8 +79,7 @@ if ($null -eq $bcAuthContext) {
     throw "Authentication failed for environment '$environmentName'."
 }
 
-# Validate the apps that the Deploy action will deploy, excluding test apps
-$deploymentSettings.includeTestAppsInSandboxEnvironment = $false
+# Validate the apps that the Deploy action will deploy (including test apps when includeTestAppsInSandboxEnvironment is enabled)
 $appsToDeploy, $null = GetAppsAndDependenciesFromArtifacts -token $token -artifactsFolder $artifactsFolder -deploymentSettings $deploymentSettings -artifactsVersion $artifactsVersion
 $appsToDeploy = @($appsToDeploy | Where-Object { $_ })
 

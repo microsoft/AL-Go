@@ -1,6 +1,6 @@
 # Check downgrade
 
-Checks whether the apps that the [Deploy](../Deploy/README.md) action will deploy to a Business Central environment have lower versions than the corresponding installed apps. The apps are selected using the same logic and resolved environment settings (`DeployTo<environment>`, including `Projects`, `excludeAppIds` and `buildMode`) as the Deploy action. Test apps and dependencies are never checked, even when `includeTestAppsInSandboxEnvironment` is enabled.
+Checks whether the apps that the [Deploy](../Deploy/README.md) action will deploy to a Business Central environment have lower versions than the corresponding installed apps. The apps are selected using the same logic and resolved environment settings (`DeployTo<environment>`, including `Projects`, `excludeAppIds` and `buildMode`) as the Deploy action. Test apps are checked when `includeTestAppsInSandboxEnvironment` is enabled. Dependencies are not checked.
 
 If the repository contains a custom deployment script (`.github/DeployTo<EnvironmentType>.ps1`) for the environment type, the check is skipped, since the environment is not deployed using the built-in deployment.
 
