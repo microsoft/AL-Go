@@ -356,6 +356,33 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
+      - name: Determine Downgrade Policy
+        id: DowngradePolicy
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+          $envName = '${{ steps.envName.outputs.envName }}'
+          $settings = $env:Settings | ConvertFrom-Json
+          $effectiveSetting = [bool]$settings.failOnAppVersionDowngrade
+          $deployTo = $settings.PSObject.Properties["DeployTo$envName"]
+          if ($deployTo -and $deployTo.Value -and $deployTo.Value.PSObject.Properties['failOnAppVersionDowngrade']) {
+            $effectiveSetting = [bool]$deployTo.Value.failOnAppVersionDowngrade
+          }
+          Write-Host "Effective failOnAppVersionDowngrade for ${envName}: $effectiveSetting"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "failOnAppVersionDowngrade=$($effectiveSetting.ToString().ToLowerInvariant())"
+
+      - name: Validate App Versions Before Deploy
+        if: steps.DowngradePolicy.outputs.failOnAppVersionDowngrade == 'true'
+        uses: microsoft/AL-Go-Actions/CheckDowngrade@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: ${{ matrix.shell }}
+          environmentName: ${{ matrix.environment }}
+          artifactsFolder: '.artifacts'
+          type: 'CD'
+          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+          failOnAppVersionDowngrade: 'true'
+
       - name: Deploy to Business Central
         id: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main

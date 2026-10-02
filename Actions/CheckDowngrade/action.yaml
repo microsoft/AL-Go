@@ -1,0 +1,52 @@
+name: Check Downgrade
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  token:
+    description: The GitHub token running the action
+    required: false
+    default: ${{ github.token }}
+  environmentName:
+    description: Name of environment to validate
+    required: true
+  artifactsFolder:
+    description: Path to the downloaded artifacts to validate
+    required: true
+  type:
+    description: Type of deployment (CD or Publish)
+    required: false
+    default: 'CD'
+  deploymentEnvironmentsJson:
+    description: The settings for all Deployment Environments
+    required: true
+  artifactsVersion:
+    description: Artifacts version. Used to check if this is a deployment from a PR
+    required: false
+    default: ''
+  failOnAppVersionDowngrade:
+    description: Fail when an artifact app version is lower than the installed version
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _token: ${{ inputs.token }}
+        _environmentName: ${{ inputs.environmentName }}
+        _artifactsFolder: ${{ inputs.artifactsFolder }}
+        _type: ${{ inputs.type }}
+        _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
+        _artifactsVersion: ${{ inputs.artifactsVersion }}
+        _failOnAppVersionDowngrade: ${{ inputs.failOnAppVersionDowngrade }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckDowngrade" -Action {
+          ${{ github.action_path }}/CheckDowngrade.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion -failOnAppVersionDowngrade ($ENV:_failOnAppVersionDowngrade -eq 'true')
+        }
+branding:
+  icon: terminal
+  color: blue
