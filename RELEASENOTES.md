@@ -26,7 +26,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 - Issue 2113 - Fix device-login initialization in Create Online Dev. Environment and Publish To Environment when authentication secrets are unavailable.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
 - Issue 2381 - Dependency artifacts from the current build are not downloaded when the branch name contains glob-special characters (e.g. `,`), silently falling back to baseline artifacts
-- Issue 2389 - fix URLs for self-hosted AL-Go
+- Issue 2389 - URLs in localdevenv and the settings schema are wrong when running a self-hosted AL-Go from a fork
 
 ## v9.2
 
