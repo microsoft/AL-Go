@@ -16,6 +16,7 @@ none
 | :-- | :-: | :-- | :-- |
 | shell | | The shell (powershell or pwsh) in which the PowerShell script in this action should run | powershell |
 | maxBuildDepth | | Specifies the maximum build depth suppored by the workflow running the action | 0 |
+| workflowEventName | | The GitHub event name that triggered the workflow. Used to determine whether incremental builds apply (see `incrementalBuilds`). *(override for reusable workflows, where github.event_name is the event of the calling workflow; `workflow_call` always builds all projects)* | github.event_name |
 
 ## OUTPUT
 
