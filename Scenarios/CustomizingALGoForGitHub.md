@@ -205,7 +205,7 @@ jobs:
 > - Build numbers based on the run number (`appBuild`/`appRevision`) use the run number of the calling workflow.
 > - The Finalize step of the called workflow includes the jobs of the calling workflow when determining the conclusion.
 > - If you use `${{ github.workflow }}` in [workflowConcurrency](settings.md#workflowConcurrency) for a workflow you call, the concurrency group will be the name of the calling workflow. If the calling workflow uses the same concurrency group, the called workflow can never start (GitHub will cancel it). Use a fixed name in the concurrency group of workflows you call.
-> - A called CI/CD workflow always builds all projects (incremental builds are not used). Runs of the calling workflow are not named CI/CD, so they are not used as a baseline for incremental builds, and not found when looking for the `latest` build (for example by Create Release).
+> - A called CI/CD workflow always builds all projects (incremental builds are not used). Runs of the calling workflow are not named CI/CD, so they are not used as a baseline for incremental builds, and not found when other workflows or repositories look for the latest successful CI/CD build (for example Publish To Environment with `latest`, or dependencies on this repository using `latestBuild`). Create Release with `buildVersion: latest` is not affected.
 > - Jobs that download build artifacts from the current run (for example Deploy, Deliver and Deploy Reference Documentation in CI/CD) download the artifacts of the entire run of the calling workflow. Call at most one build workflow (CI/CD, Test Current, Test Next Minor or Test Next Major) per run of your workflow.
 
 ### Adding custom scripts
