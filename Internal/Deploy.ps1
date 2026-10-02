@@ -206,7 +206,7 @@ try {
 
                 # Replace URL's to actions repository first if we are deploying to a preview branch
                 # When deploying to a release branch, these URLs are replaced by the following code
-                if ($config.branch -eq 'preview') {
+                if ($config.branch -eq 'preview' -or $config.githubOwner -ne 'microsoft') {
                     $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
                     $replace = "`${1}https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`${2}"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
