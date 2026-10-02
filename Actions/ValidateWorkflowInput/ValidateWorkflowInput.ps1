@@ -19,6 +19,7 @@ if (-not (Test-Path -Path $ValidateWorkflowScript)) {
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 if ($inputsJson) {
   # Inputs are provided explicitly (e.g. when the workflow is called as a reusable workflow, where the event payload belongs to the caller)
+  # Not converted to a hashtable: the Validate-<workflow>.ps1 scripts expect the inputs in the same format as the event payload (PSCustomObject)
   $eventPath = [PSCustomObject]@{ "inputs" = ($inputsJson | ConvertFrom-Json) }
 }
 else {
