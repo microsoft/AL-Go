@@ -4,6 +4,10 @@ When incremental builds are enabled, the set of modified files used to decide wh
 
 When a usable baseline is available, the pull request's merge-base diff determines whether any build is needed. If the pull request modifies neither a project nor a full-build pattern, nothing is built. Otherwise, project selection, full-build decisions and artifact reuse continue to use the last successful build as the baseline. This ensures changes to dependencies, settings and other build inputs since that build still invalidate affected artifacts. Without a usable baseline, the existing full-build fallback is unchanged.
 
+### Allow pre-release packages as NuGet dependencies
+
+AL-Go now supports including pre-release versions of Business Central app packages from NuGet feeds. To enable this, append `-allowPrerelease` to the `nuGetFeedSelectMode` setting in your project configuration. For example, `LatestMatching-allowPrerelease` will select the latest matching version of the package, including pre-release versions.
+
 ### New `unpublishOldVersions` setting for deployment
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
@@ -27,6 +31,7 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 - Issue 2370 - Retry CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics and URL-encoding query values so discovery URLs render correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
 - Issue 2113 - Fix device-login initialization in Create Online Dev. Environment and Publish To Environment when authentication secrets are unavailable.
 - Issue 2375 - Project/App folder with umlaut breaks incremental build check
+- Issue 2381 - Dependency artifacts from the current build are not downloaded when the branch name contains glob-special characters (e.g. `,`), silently falling back to baseline artifacts
 
 ## v9.2
 
