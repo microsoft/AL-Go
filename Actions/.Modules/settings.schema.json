@@ -740,7 +740,7 @@
                 "type": "string"
             },
             "default": [],
-            "description": "An array of top-level setting names that are protected from non-protected lower-priority overrides. If the same setting is marked as protected in both source and destination, the source value is allowed to override. See https://aka.ms/ALGoSettings#protectedSettings"
+            "description": "An array of settings that are protected from non-protected lower-priority overrides. If the same setting is marked as protected in both source and destination, the source value is allowed to override. See https://aka.ms/ALGoSettings#protectedSettings"
         },
         "reportSuppressedDiagnostics": {
             "type": "boolean",

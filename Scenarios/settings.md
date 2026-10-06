@@ -392,7 +392,7 @@ When reading settings for buildMode `ValidateUS`, the conditional setting from t
 
 Even though the project specifies `country: "w1"`, the conditional setting from the organization level marked the country as protected for the `ValidateUS` buildMode and the project value is not marked protected, so the conditional value takes precedence.
 
-> _**Note**_: `protectedSettings` is an array of setting names that should be protected from non-protected overrides from lower priority settings. If the same setting is marked as protected at both levels, the source (lower-priority) value is allowed to override the destination value. Only top-level setting names can be marked as protected; nested properties within complex objects cannot be individually marked as protected. Array settings marked as protected are still merged with lower-priority arrays. `overwriteSettings` can force replacement for protected settings only when the source also marks that same setting as protected.
+> _**Note**_: `protectedSettings` is an array of setting names that should be protected from non-protected overrides from lower priority settings. If the same setting is marked as protected at both levels, the source (lower-priority) value is allowed to override the destination value. Nested properties can be protected within object settings whose schema permits `protectedSettings`. `overwriteSettings` can force replacement for protected settings only when the source also marks that same setting as protected.
 
 <a id="customdelivery"></a>
 

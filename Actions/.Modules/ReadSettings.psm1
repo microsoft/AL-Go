@@ -17,18 +17,47 @@ function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
         [PSCustomObject] $src,
-        [string[]] $srcProtectedSettings = @(),
-        [string[]] $dstProtectedSettings = @()
+        [string] $context = 'settings'
     )
+
+    # Determine the effective list of protected settings from the destination object, excluding any that are also present in the source object's protected settings.
+    $effectiveProtectedSettings = @()
+    if ($dst.Contains("protectedSettings")) {
+        OutputDebug "Destination protected settings: $($dst.protectedSettings -join ', ')"
+        # Initialize the effective list of protected settings with the ones from the destination object.
+        $effectiveProtectedSettings = @($dst.protectedSettings)
+
+        if ($src.PSObject.Properties.Name -contains "protectedSettings") {
+            OutputDebug "Source protected settings: $($src.protectedSettings -join ', ')"
+            # Remove any protected settings from the effective list that are also present in the source object's protected settings.
+            $effectiveProtectedSettings = @($effectiveProtectedSettings | Where-Object { @($src.protectedSettings) -notcontains $_ })
+        }
+        # Remove duplicates and ensure "protectedSettings" itself is not included as it is needed to accumulate the protected settings.
+        $effectiveProtectedSettings = @($effectiveProtectedSettings | Select-Object -Unique | Where-Object { $_ -ne "protectedSettings" })
+
+        OutputDebug "Effective Protected settings: $($effectiveProtectedSettings -join ', ')"
+    }
+
+    # Initialize a list to keep track of protected settings that are skipped during the merge process.
+    $skippedProtectedSettings = [System.Collections.Generic.List[string]]::new()
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
     if ($src.PSObject.Properties.Name -contains "overwriteSettings") {
         $src.overwriteSettings | ForEach-Object {
             $prop = $_
-            if ($dstProtectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
-                OutputDebug "Ignoring overwriteSettings for '$prop' because it is protected in higher priority settings and not marked protected in source"
+
+            # Skip the property if it is "protectedSettings" as it should never be overwritten
+            if ($prop -eq "protectedSettings") {
+                OutputDebug "Skipping overwrite of setting $prop"
                 return
             }
+
+            # Skip the property if it is in the list of effective protected settings
+            if ($effectiveProtectedSettings -contains $prop) {
+                OutputDebug "Skipping overwrite of protected setting $prop"
+                return
+            }
+
             if ($dst.Contains($prop) -and $src.PSObject.Properties.Name -contains $prop) {
                 # Remove the property from the destination object only if it also exists in the source object. The property will be re-added with the new value later on.
                 OutputDebug "Overwriting setting $prop"
@@ -45,6 +74,15 @@ function MergeCustomObjectIntoOrderedDictionary {
 
         # Skip overwriteSettings property as it's only used for configuration, not actual settings
         if ($prop -eq "overwriteSettings") {
+            OutputDebug "Skipping initialization of setting $prop"
+            return
+        }
+
+        # Skip the property if it is in the list of effective protected settings
+        if ($effectiveProtectedSettings -contains $prop) {
+            OutputDebug "Skipping initialization of protected setting $prop"
+            # Add the property to the list of skipped protected settings
+            $skippedProtectedSettings.Add($prop)
             return
         }
 
@@ -68,7 +106,7 @@ function MergeCustomObjectIntoOrderedDictionary {
     # If the property exists in the source object, but is of a different type, throw an error
     # If the property exists in the source object:
     # If the property is an Object, call this function recursively to merge values
-    # If the property is an Object[], merge the arrays (even if protected - arrays always merge)
+    # If the property is an Object[], merge the arrays
     # If the property is a simple type, replace the value in the destination object with the value from the source object
     @($dst.Keys) | ForEach-Object {
         $prop = $_
@@ -78,14 +116,14 @@ function MergeCustomObjectIntoOrderedDictionary {
             $dstPropType = $dstProp.GetType().Name
             $srcPropType = $srcProp.GetType().Name
 
-            # For non-array properties: skip if this setting is marked as protected from higher priority source,
-            # unless the lower-priority source also marks this property as protected.
-            if ($dstProtectedSettings -contains $prop -and $srcPropType -ne "Object[]" -and $srcProtectedSettings -notcontains $prop) {
-                OutputDebug "Skipping protected setting '$prop' marked from higher priority source (non-array type)"
+            # Skip merging if the property is in the list of skipped protected settings
+            if ($skippedProtectedSettings -contains $prop) {
+                OutputDebug "Skipping merge of protected setting $prop"
                 return
             }
+
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
-                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
+                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp -context "$context > property $prop"
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
@@ -116,6 +154,11 @@ function MergeCustomObjectIntoOrderedDictionary {
                 }
             }
         }
+    }
+
+    # Output a notice if any protected settings were skipped during the merge process
+    if ($skippedProtectedSettings.Count -gt 0) {
+        OutputNotice "Skipped protected settings while applying ${context}: $($skippedProtectedSettings -join ', ')"
     }
 }
 
@@ -496,19 +539,12 @@ function ReadSettings {
         }
     }
 
-    $currentProtectedSettings = @()
     foreach ($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
             OutputDebug "Applying settings from $($settingsObject.Source) ($($settingsObject.Type))"
-            $srcProtectedSettings = @()
-            if ($settingsJson.PSObject.Properties.Name -contains "protectedSettings") {
-                $srcProtectedSettings = @($settingsJson.protectedSettings)
-            }
-            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -srcProtectedSettings $srcProtectedSettings -dstProtectedSettings $currentProtectedSettings
-            if ($settingsJson.PSObject.Properties.Name -contains "protectedSettings") {
-                $currentProtectedSettings = @($currentProtectedSettings + $srcProtectedSettings | Select-Object -Unique)
-            }
+            $context = "settings $($settingsObject.Source) ($($settingsObject.Type))"
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -context $context
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                 foreach ($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
@@ -529,15 +565,9 @@ function ReadSettings {
                             }
                         }
                         if ($conditionMet) {
-                            OutputDebug "Applying conditional settings for $($conditions -join ", ")"
-                            $srcProtectedSettings = @()
-                            if ($conditionalSetting.settings.PSObject.Properties.Name -contains "protectedSettings") {
-                                $srcProtectedSettings = @($conditionalSetting.settings.protectedSettings)
-                            }
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -srcProtectedSettings $srcProtectedSettings -dstProtectedSettings $currentProtectedSettings
-                            if ($conditionalSetting.settings.PSObject.Properties.Name -contains "protectedSettings") {
-                                $currentProtectedSettings = @($currentProtectedSettings + $srcProtectedSettings | Select-Object -Unique)
-                            }
+                            OutputDebug "Applying conditional settings for $($conditions -join ', ')"
+                            $conditionalContext = "$context > conditional settings for $($conditions -join ', ')"
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -context $conditionalContext
                         }
                     }
                 }

@@ -544,6 +544,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'protectedSettings from higher priority source prevents overwrite from lower priority' {
             Mock Write-Host { }
             Mock Out-Host { }
+            Mock OutputNotice { }
 
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -568,6 +569,10 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.country | Should -Be 'de'   # Repo protected value wins
             $settings.protectedSettings | Should -Contain 'country'
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -match '^Skipped protected settings while applying settings .*Project.*settings\.json \(File\): country$'
+            }
+            Should -Invoke OutputNotice -Times 1 -Exactly
 
             # Clean up
             Pop-Location
@@ -577,6 +582,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'Multiple protectedSettings are respected' {
             Mock Write-Host { }
             Mock Out-Host { }
+            Mock OutputNotice { }
 
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -609,6 +615,11 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.keyVaultName | Should -Be 'orgVault'
             $settings.protectedSettings | Should -Contain 'country'
             $settings.protectedSettings | Should -Contain 'keyVaultName'
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -match '^Skipped protected settings while applying settings .*Project.*settings\.json \(File\): (country, keyVaultName|keyVaultName, country)$' -and
+                $message -notmatch 'projectVault|orgVault'
+            }
+            Should -Invoke OutputNotice -Times 1 -Exactly
 
             # Clean up
             Pop-Location
@@ -618,6 +629,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'Lower-priority protected settings can override higher-priority protected settings' {
             Mock Write-Host { }
             Mock Out-Host { }
+            Mock OutputNotice { }
 
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -648,6 +660,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # an protected setting from a higher-priority source.
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.country | Should -Be 'ch'   # Source protected overrides destination protected
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -match '^Skipped protected settings while applying settings \.github.*\(File\): country$'
+            }
 
             $ENV:ALGoOrgSettings = ''
 
@@ -656,42 +671,80 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Remove-Item -Path $tempName -Recurse -Force
         }
 
-        It 'protectedSettings marked arrays are still merged with lower priority arrays' {
-            Mock Write-Host { }
-            Mock Out-Host { }
+        It 'Does not log a skip when the source also protects the setting' {
+            Mock OutputNotice { }
 
-            Push-Location
-            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-            $githubFolder = Join-Path $tempName ".github"
-            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+            $dst = [ordered]@{ protectedSettings = @('country'); country = 'de' }
+            $src = [PSCustomObject]@{ protectedSettings = @('country'); country = 'ch' }
 
-            New-Item $githubFolder -ItemType Directory | Out-Null
-            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test'
 
-            # Repo settings: mark additionalCountries as protected with specific values
-            @{
-                "protectedSettings"   = @("additionalCountries")
-                "additionalCountries" = @("de", "at")
-            } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+            $dst.country | Should -Be 'ch'
+            Should -Invoke OutputNotice -Times 0 -Exactly
+        }
 
-            # Project settings: try to add more countries
-            @{
-                "additionalCountries" = @("ch", "be")
-            } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+        It 'Logs the property path when a nested protected setting is skipped' {
+            Mock OutputNotice { }
 
-            $ENV:ALGoOrgSettings = ''
-            $ENV:ALGoRepoSettings = ''
+            $dst = [ordered]@{
+                custom = [ordered]@{ protectedSettings = @('country'); country = 'de' }
+            }
+            $src = [PSCustomObject]@{
+                custom = [PSCustomObject]@{ country = 'ch' }
+            }
 
-            # Protected array settings are still merged with lower priority arrays (exception: if overwriteSettings is used)
-            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # Org + Project values merged
-            $settings.protectedSettings | Should -Contain "additionalCountries"
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test'
 
-            # Clean up
-            Pop-Location
-            Remove-Item -Path $tempName -Recurse -Force
+            $dst.custom.country | Should -Be 'de'
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -eq 'Skipped protected settings while applying settings Test > property custom: country'
+            }
+            Should -Invoke OutputNotice -Times 1 -Exactly
+        }
+
+        It 'Does not merge a protected array without overwriteSettings' {
+            Mock OutputNotice { }
+
+            $dst = [ordered]@{ protectedSettings = @('additionalCountries'); additionalCountries = @('de', 'at') }
+            $src = [PSCustomObject]@{ additionalCountries = @('ch', 'be') }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test'
+
+            $dst.additionalCountries | Should -Be @('de', 'at')
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -eq 'Skipped protected settings while applying settings Test: additionalCountries'
+            }
+        }
+
+        It 'Does not overwrite the protectedSettings list through overwriteSettings' {
+            $dst = [ordered]@{ protectedSettings = @('country'); country = 'de' }
+            $src = [PSCustomObject]@{
+                overwriteSettings = @('protectedSettings')
+                protectedSettings = @('keyVaultName')
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src
+
+            $dst.protectedSettings | Should -Be @('country', 'keyVaultName')
+            $dst.country | Should -Be 'de'
+        }
+
+        It 'Does not let protectedSettings protect itself from merging' {
+            Mock OutputNotice { }
+
+            $dst = [ordered]@{ protectedSettings = @('protectedSettings', 'country'); country = 'de' }
+            $src = [PSCustomObject]@{
+                protectedSettings = @('keyVaultName')
+                country = 'ch'
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test'
+
+            $dst.protectedSettings | Should -Be @('protectedSettings', 'country', 'keyVaultName')
+            $dst.country | Should -Be 'de'
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -eq 'Skipped protected settings while applying settings Test: country'
+            }
         }
 
         It 'protectedSettings are not overridden by overwriteSettings unless source also marks them protected' {
@@ -723,9 +776,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
 
-            # overwriteSettings should be ignored because source does not mark the setting as protected.
+            # Neither overwriteSettings nor the source array should change the protected setting.
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")
+            $settings.additionalCountries | Should -Be @("de", "at")
 
             # Clean up
             Pop-Location
@@ -763,42 +816,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
             $settings.additionalCountries | Should -Be @("ch", "be")
 
-            Pop-Location
-            Remove-Item -Path $tempName -Recurse -Force
-        }
-
-        It 'Non-protected array settings are merged normally (baseline)' {
-            Mock Write-Host { }
-            Mock Out-Host { }
-
-            Push-Location
-            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
-            $githubFolder = Join-Path $tempName ".github"
-            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
-
-            New-Item $githubFolder -ItemType Directory | Out-Null
-            New-Item $projectALGoFolder -ItemType Directory | Out-Null
-
-            # Repo settings: additionalCountries WITHOUT marking as protected
-            @{
-                "additionalCountries" = @("de", "at")
-            } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
-
-            # Project settings: add more countries
-            @{
-                "additionalCountries" = @("ch", "be")
-            } | ConvertTo-Json -Depth 99 |
-            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
-
-            $ENV:ALGoOrgSettings = ''
-            $ENV:ALGoRepoSettings = ''
-
-            # Without protected marking, arrays should be merged
-            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
-            $settings.additionalCountries | Should -Be @("de", "at", "ch", "be")   # All values merged
-
-            # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
         }
@@ -844,6 +861,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'ConditionalSetting with protectedSettings at repo level overrides project setting for specific buildMode' {
             Mock Write-Host { }
             Mock Out-Host { }
+            Mock OutputNotice { }
 
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
@@ -880,16 +898,39 @@ InModuleScope ReadSettings { # Allows testing of private functions
             # When reading for buildMode "Default", project country "w1" should be used
             $settingsDefault = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'Default' -userName ''
             $settingsDefault.country | Should -Be 'w1'   # No org conditional applies for "Default"
+            Should -Invoke OutputNotice -Times 0 -Exactly
 
             # When reading for buildMode "ValidateUS", repo conditional with protected marking should override project
             $settingsValidateUS = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName ''
             $settingsValidateUS.country | Should -Be 'us'   # Repo conditional protected setting wins
             $settingsValidateUS.buildModes | Should -Contain 'ValidateUS'
             $settingsValidateUS.protectedSettings | Should -Contain 'country'
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -match '^Skipped protected settings while applying settings .*Project.*settings\.json \(File\): country$'
+            }
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Logs the conditions when a protected setting is skipped by conditional settings' {
+            Mock OutputNotice { }
+
+            $orgSettings = @{ protectedSettings = @('country'); country = 'de' } | ConvertTo-Json -Depth 99
+            $repoSettings = @{
+                ConditionalSettings = @(
+                    @{ buildModes = @('ValidateUS'); settings = @{ country = 'ch' } }
+                )
+            } | ConvertTo-Json -Depth 99
+
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName '' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue $repoSettings
+
+            $settings.country | Should -Be 'de'
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
+                $message -eq 'Skipped protected settings while applying settings ALGoRepoSettings (Variable) > conditional settings for buildModes: ValidateUS: country'
+            }
+            Should -Invoke OutputNotice -Times 1 -Exactly
         }
 
         It 'protectedSettings are merged correctly' {
