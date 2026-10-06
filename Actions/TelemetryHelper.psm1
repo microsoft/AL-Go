@@ -187,6 +187,7 @@ function Trace-Information() {
         $Message = "AL-Go action ran: $ActionName"
     }
 
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ActionName' -Value $ActionName
     AddTelemetryEvent -Message $Message -Severity 'Information' -Data $AdditionalData
 }
 
@@ -258,6 +259,7 @@ function Trace-Exception() {
     if (-not $Message) {
         $Message = "AL-Go action failed: $ActionName"
     }
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ActionName' -Value $ActionName
     AddTelemetryEvent -Message $Message -Severity 'Error' -Data $AdditionalData
 }
 

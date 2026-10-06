@@ -150,6 +150,8 @@ Additional Dimensions:
 | Dimension | Description |
 |-----------|-------------|
 | ActionDuration | The duration of the action |
+| ActionName | The name of the AL-Go action |
+| ActionConclusion | `Success` when the action wrapper completes successfully |
 
 ### AL-Go action failed
 
@@ -162,6 +164,10 @@ Additional Dimensions:
 | Dimension | Description |
 |-----------|-------------|
 | ErrorMessage | The error message thrown |
+| ActionName | The name of the AL-Go action |
+| ActionConclusion | `Failure` when the action wrapper catches a terminating error |
+
+`ActionName` is included when telemetry is logged with an action name. `ActionConclusion` is emitted by the action wrapper, not by individual exception logging calls: a handled error can produce an error event without failing the action. To count failed action executions, filter on `ActionConclusion == "Failure"`. Message-only events, such as workflow summaries and test results, do not automatically receive these action dimensions. Both dimensions are included in Microsoft and partner telemetry, subject to the existing telemetry settings.
 
 ### AL-Go workflow ran
 
