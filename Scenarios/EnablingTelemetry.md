@@ -133,6 +133,12 @@ AL-Go logs four different types of telemetry events: AL-Go action ran/failed and
 | RunNumber | The Run Number |
 | RunAttempt | The attempt number |
 | Repository | The repository Id |
+| RepositoryIsFork | `true` or `false`, from the workflow event's `repository.fork`; `Unknown` if unavailable |
+| GitHubHostingType | `GitHub.com`, `GHEC` (Enterprise Cloud with data residency on `*.ghe.com`), or `GHES` (other GitHub server hosts), based on `GITHUB_SERVER_URL`; `Unknown` if missing or invalid |
+
+`RepositoryIsFork` describes the repository running the workflow, not the source repository of an incoming pull request. A repository created from an AL-Go template is not a fork unless GitHub marks it as one.
+
+These two dimensions are included in both Microsoft and partner telemetry, subject to the existing telemetry settings. The hosting classification does not send the server hostname or URL. `GitHub.com` includes Enterprise Cloud customers hosted on github.com; the hostname cannot distinguish their subscription plan. Missing or invalid metadata produces a warning and an `Unknown` value without preventing the event from being logged.
 
 ### AL-Go action ran
 
