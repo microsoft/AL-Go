@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Builds and publishes the E2E test, upgrade, and scenario matrices.
+#>
 Param(
     [Parameter(HelpMessage = "Maximum parallel jobs", Mandatory = $true)]
     [int] $maxParallel,
