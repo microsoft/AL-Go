@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Generates and publishes a temporary repository name for an E2E test.
+#>
 Param(
     [Parameter(HelpMessage = "GitHub owner for test repositories", Mandatory = $false)]
     [string] $githubOwner = ''
