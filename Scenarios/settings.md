@@ -34,6 +34,8 @@ When running a workflow or a local script, the settings are applied by reading s
 
 ## Basic Project settings
 
+Workspace compilation supports both native AL tool executables and framework-dependent `altool.dll` packages. When no native executable is available, AL-Go runs the DLL using `dotnet` from the runner's PATH. The runner must have the .NET and ASP.NET Core runtimes required by the package's `altool.runtimeconfig.json` (for example, both version 10.0 for a .NET 10 compiler).
+
 | Name | Description | Default value |
 | :-- | :-- | :-- |
 | <a id="country"></a>country | Specifies which country this app is built against. | us |

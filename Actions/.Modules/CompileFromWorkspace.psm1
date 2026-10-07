@@ -185,13 +185,12 @@ function Get-BuildMetadata {
     Gets the path to the AL compiler tool (altool).
     .DESCRIPTION
     Returns the full path to the AL compiler tool located in the specified compiler folder.
-    Newer AL Language extensions place altool in a platform-specific subfolder (win32/linux),
-    while framework-dependent / marketplace-packaged extensions place it directly under
-    compiler/extension/bin. Both layouts are supported.
+    Supports native executables and framework-dependent DLLs in platform-specific
+    subfolders (win32/linux) or directly under compiler/extension/bin.
     .PARAMETER CompilerFolder
     The folder where the AL compiler tool is located.
     .OUTPUTS
-    The full path to the AL compiler tool.
+    The full path to the AL compiler executable or DLL. Use Invoke-ALTool to run it.
 #>
 function Get-ALTool {
     param(
@@ -199,7 +198,7 @@ function Get-ALTool {
         [string] $CompilerFolder
     )
 
-    if ($script:alTool -and (Test-Path $script:alTool)) {
+    if ($script:alTool -and (Test-Path -LiteralPath $script:alTool -PathType Leaf)) {
         return $script:alTool
     }
 
@@ -211,16 +210,46 @@ function Get-ALTool {
         $alExe = Join-Path $binFolder "win32/altool.exe"
     }
 
-    # Fall back to the flat bin folder used by framework-dependent / marketplace VSIX layouts
-    if (-not (Test-Path $alExe)) {
-        $alExe = Join-Path $binFolder (Split-Path $alExe -Leaf)
+    $candidates = @(
+        $alExe
+        (Join-Path $binFolder (Split-Path $alExe -Leaf))
+        (Join-Path (Split-Path $alExe -Parent) "altool.dll")
+        (Join-Path $binFolder "altool.dll")
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            $script:alTool = $candidate
+            return $script:alTool
+        }
     }
 
-    if (-not (Test-Path $alExe)) {
-        throw "Could not find AL tool in the compiler folder: $CompilerFolder"
+    throw "Could not find AL tool in the compiler folder: $CompilerFolder"
+}
+
+<#
+.SYNOPSIS
+    Runs a native or framework-dependent AL tool and checks its exit code.
+.PARAMETER ALToolPath
+    Path to the AL tool executable or DLL.
+.PARAMETER Arguments
+    Arguments passed to the AL tool.
+.OUTPUTS
+    The output from the AL tool.
+#>
+function Invoke-ALTool {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ALToolPath,
+        [string[]] $Arguments = @()
+    )
+
+    $command = $ALToolPath
+    if ([System.IO.Path]::GetExtension($ALToolPath) -eq '.dll') {
+        $command = (Get-Command dotnet -CommandType Application -ErrorAction Stop).Source
+        $Arguments = @($ALToolPath) + $Arguments
     }
-    $script:alTool = $alExe
-    return $script:alTool
+
+    RunAndCheck $command @Arguments
 }
 
 <#
@@ -457,7 +486,7 @@ function Copy-CompiledAppsToOutput {
     Probes 'altool workspace compile --help' and checks whether the specified option name appears in the output.
     Used to remain compatible with compiler versions that predate newly introduced options.
     .PARAMETER ALToolPath
-    Path to the AL tool executable (altool).
+    Path to the AL tool executable or DLL.
     .PARAMETER Option
     The option name to look for (without leading dashes), e.g. 'errorlogdirectory'.
     .OUTPUTS
@@ -472,14 +501,7 @@ function Test-ALToolWorkspaceCompileSupportsOption {
     )
 
     try {
-        $compileHelp = & $ALToolPath workspace compile --help 2>&1 | Out-String
-        # A native executable does not throw merely because it exits non-zero, so the exit code must be
-        # checked explicitly. If the probe failed, treat the option as unsupported so the caller takes the
-        # promised warn-and-skip fallback instead of parsing error/usage output as a positive match.
-        if ($LASTEXITCODE -ne 0) {
-            OutputDebug -message "Probing altool workspace compile --help for option '$Option' returned exit code $LASTEXITCODE; treating the option as unsupported."
-            return $false
-        }
+        $compileHelp = Invoke-ALTool -ALToolPath $ALToolPath -Arguments @('workspace', 'compile', '--help') 2>&1 | Out-String
         return ($compileHelp -match [regex]::Escape($Option))
     } catch {
         OutputDebug -message "Failed to probe altool workspace compile --help for option '$Option': $_"
@@ -665,7 +687,7 @@ function CompileAppsInWorkspace {
 
         # Temporarily set console encoding to UTF-8 to handle special characters in output
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-        RunAndCheck $ALToolPath @arguments | Out-Host
+        Invoke-ALTool -ALToolPath $ALToolPath -Arguments $arguments | Out-Host
 
         OutputColor -message "Compilation completed successfully." -Color Green
     } catch {
@@ -884,7 +906,7 @@ function Get-AssemblyProbingPaths {
 .PARAMETER WorkspaceFile
     The path where the workspace file will be created.
 .PARAMETER AltoolPath
-    The full path to the AL compiler tool (al.exe or al).
+    The full path to the AL tool executable or DLL.
 #>
 function New-WorkspaceFromFolders {
     param(
@@ -899,7 +921,7 @@ function New-WorkspaceFromFolders {
     )
     $arguments = @("workspace", "create", $WorkspaceFile) + $Folders
     OutputColor "Executing: $AltoolPath $($arguments -join ' ')" -Color Green
-    RunAndCheck $AltoolPath @arguments | Out-Null
+    Invoke-ALTool -ALToolPath $AltoolPath -Arguments $arguments | Out-Null
 
     OutputDebug "Workspace created at $WorkspaceFile"
 }
@@ -1079,7 +1101,7 @@ function New-AppSourceCopJson {
     $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
     foreach ($appFile in $BaselineApps) {
         try {
-            $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $appInfo = Invoke-ALTool -ALToolPath $alToolPath -Arguments @('GetPackageManifest', $appFile) | ConvertFrom-Json | ConvertTo-HashTable -recurse
             $baselineAppVersions[$appInfo.Id] = $appInfo.Version.ToString()
         }
         catch {
