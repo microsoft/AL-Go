@@ -165,6 +165,7 @@ function GetDefaultSettings
         "features"                                      = @()
         "trackALAlertsInGitHub"                         = $false
         "failOn"                                        = "error"
+        "failOnAppVersionDowngrade"                     = $false
         "treatTestFailuresAsWarnings"                   = $false
         "rulesetFile"                                   = ""
         "enableExternalRulesets"                        = $false
