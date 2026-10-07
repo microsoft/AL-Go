@@ -1,3 +1,9 @@
+### Incremental builds on pull requests no longer over-build due to baseline drift
+
+When incremental builds are enabled, the set of modified files used to decide whether a full build is required (`fullBuildPatterns`) and whether any project/app needs building was diffed against the last successful build of the target branch. On a busy branch, commits merged after that baseline build were attributed to the pull request, so an unrelated change (for example under a `fullBuildPatterns` path) could escalate a pull request that changed no AL code into a full build.
+
+When a usable baseline is available, the pull request's merge-base diff determines whether any build is needed. If the pull request modifies neither a project nor a full-build pattern, nothing is built. Otherwise, project selection, full-build decisions and artifact reuse continue to use the last successful build as the baseline. This ensures changes to dependencies, settings and other build inputs since that build still invalidate affected artifacts. Without a usable baseline, the existing full-build fallback is unchanged.
+
 ### Allow pre-release packages as NuGet dependencies
 
 AL-Go now supports including pre-release versions of Business Central app packages from NuGet feeds. To enable this, append `-allowPrerelease` to the `nuGetFeedSelectMode` setting in your project configuration. For example, `LatestMatching-allowPrerelease` will select the latest matching version of the package, including pre-release versions.

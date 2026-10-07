@@ -150,9 +150,9 @@ try {
     if ((-not $settings.workspaceCompilation.enabled) -and $baselineWorkflowSHA -and $baselineWorkflowRunId -ne '0' -and $settings.incrementalBuilds.mode -eq 'modifiedApps') {
         # Incremental builds are enabled and we are only building modified apps
         try {
-            $modifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
-            OutputMessageAndArray -message "Modified files" -arrayOfStrings $modifiedFiles
-            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $modifiedFiles
+            $baselineModifiedFiles = @(Get-ModifiedFiles -baselineSHA $baselineWorkflowSHA)
+            OutputMessageAndArray -message "Modified files (since baseline build)" -arrayOfStrings $baselineModifiedFiles
+            $buildAll = Get-BuildAllApps -baseFolder $baseFolder -project $project -modifiedFiles $baselineModifiedFiles
         }
         catch {
             OutputNotice -message "Failed to calculate modified files since $baselineWorkflowSHA, building all apps"
@@ -167,7 +167,7 @@ try {
                 -baseFolder $baseFolder `
                 -project $project `
                 -baselineWorkflowRunId $baselineWorkflowRunId `
-                -modifiedFiles $modifiedFiles `
+                -modifiedFiles $baselineModifiedFiles `
                 -buildArtifactFolder $buildArtifactFolder `
                 -buildMode $buildMode `
                 -projectPath $projectPath
