@@ -109,8 +109,8 @@ try {
     }
 
     if ($config.branch -eq 'preview' -or $config.githubOwner -ne 'microsoft') {
-        # When deploying to preview, we are NOT going to deploy to a branch in the AL-Go-Actions repository
-        # Instead, we are going to have AL-Go-PTE and AL-Go-AppSource point directly to the SHA in AL-Go
+        # Preview and fork deployments do not deploy a separate AL-Go-Actions branch.
+        # Instead, AL-Go-PTE and AL-Go-AppSource point directly to the source SHA in AL-Go.
         $dstOwnerAndRepo += @{
             "actionsRepo" = "$srcOwnerAndRepo/Actions@$srcSHA"
         }
@@ -204,9 +204,9 @@ try {
                     $useBranch = $branch
                 }
 
-                # Replace URL's to actions repository first if we are deploying to a preview branch
-                # When deploying to a release branch, these URLs are replaced by the following code
-                if ($config.branch -eq 'preview') {
+                # Preview and fork deployments use the source SHA because they do not deploy an AL-Go-Actions branch.
+                # For Microsoft release deployments, the following replacement points URLs to the deployed branch.
+                if ($config.branch -eq 'preview' -or $config.githubOwner -ne 'microsoft') {
                     $regex = "^(.*)https:\/\/raw\.githubusercontent\.com\/microsoft\/AL-Go-Actions\/$originalBranch(.*)$"
                     $replace = "`${1}https://raw.githubusercontent.com/$srcOwnerAndRepo/$($srcSHA)/Actions`${2}"
                     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
