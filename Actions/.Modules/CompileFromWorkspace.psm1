@@ -245,7 +245,7 @@ function Invoke-ALTool {
 
     $command = $ALToolPath
     if ([System.IO.Path]::GetExtension($ALToolPath) -eq '.dll') {
-        $command = (Get-Command dotnet -CommandType Application -ErrorAction Stop).Source
+        $command = 'dotnet'
         $Arguments = @($ALToolPath) + $Arguments
     }
 

@@ -947,7 +947,10 @@ exit 0
             InModuleScope CompileFromWorkspace -Parameters @{ HostPath = $script:fakeToolHost; Kind = $Kind; Root = $TestDrive } {
                 param($HostPath, $Kind, $Root)
                 $script:hostPath = $HostPath
-                Mock Get-Command { return @{ Source = $script:hostPath } } -ParameterFilter { $Name -eq 'dotnet' }
+                Mock dotnet {
+                    & $script:hostPath @args
+                    $global:LASTEXITCODE = $LASTEXITCODE
+                }
                 $tool = if ($Kind -eq 'managed') { Join-Path $Root 'Compiler with spaces/altool.dll' } else { $HostPath }
                 $arguments = @('workspace', 'create', 'Workspace with spaces.code-workspace', 'App with spaces')
 
@@ -969,7 +972,10 @@ exit 0
             InModuleScope CompileFromWorkspace -Parameters @{ HostPath = $script:fakeToolHost; Kind = $Kind } {
                 param($HostPath, $Kind)
                 $script:hostPath = $HostPath
-                Mock Get-Command { return @{ Source = $script:hostPath } } -ParameterFilter { $Name -eq 'dotnet' }
+                Mock dotnet {
+                    & $script:hostPath @args
+                    $global:LASTEXITCODE = $LASTEXITCODE
+                }
                 $tool = if ($Kind -eq 'managed') { 'altool.dll' } else { $HostPath }
 
                 { Invoke-ALTool -ALToolPath $tool -Arguments @('--fail') } | Should -Throw '*failed with exit code 7*'
@@ -978,11 +984,40 @@ exit 0
 
         It 'Fails explicitly when dotnet is unavailable' {
             InModuleScope CompileFromWorkspace {
-                Mock Get-Command { throw 'dotnet is unavailable' } -ParameterFilter { $Name -eq 'dotnet' }
-                Mock RunAndCheck {}
+                $originalPath = $env:PATH
+                $originalExitCode = $global:LASTEXITCODE
+                try {
+                    $env:PATH = ''
+                    $global:LASTEXITCODE = 0
+                    { Invoke-ALTool -ALToolPath 'altool.dll' } | Should -Throw '*dotnet*not recognized*'
+                }
+                finally {
+                    $env:PATH = $originalPath
+                    $global:LASTEXITCODE = $originalExitCode
+                }
+            }
+        }
 
-                { Invoke-ALTool -ALToolPath 'altool.dll' } | Should -Throw '*dotnet is unavailable*'
-                Should -Invoke RunAndCheck -Times 0 -Exactly
+        It 'Passes bare dotnet without enumerating executable matches' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-Command {
+                    return @(
+                        @{ Source = '/usr/bin/dotnet' }
+                        @{ Source = '/bin/dotnet' }
+                    )
+                } -ParameterFilter { $Name -eq 'dotnet' }
+                Mock RunAndCheck { $script:capturedArguments = @($args) }
+
+                Invoke-ALTool -ALToolPath 'Compiler with spaces/altool.dll' -Arguments @('workspace', 'create', 'Workspace with spaces.code-workspace')
+
+                $script:capturedArguments.Count | Should -Be 5
+                $script:capturedArguments[0] | Should -BeOfType ([string])
+                $script:capturedArguments[0] | Should -BeExactly 'dotnet'
+                $script:capturedArguments[1] | Should -BeExactly 'Compiler with spaces/altool.dll'
+                $script:capturedArguments[2] | Should -BeExactly 'workspace'
+                $script:capturedArguments[3] | Should -BeExactly 'create'
+                $script:capturedArguments[4] | Should -BeExactly 'Workspace with spaces.code-workspace'
+                Should -Invoke Get-Command -Times 0 -Exactly -ParameterFilter { $Name -eq 'dotnet' }
             }
         }
 
@@ -1002,7 +1037,6 @@ exit 0
                 $baselineApp = Join-Path $Root 'Baseline App.app'
                 $errorLogDir = Join-Path $Root 'Error Logs'
                 $script:toolCalls = @()
-                Mock Get-Command { return @{ Source = 'dotnet' } } -ParameterFilter { $Name -eq 'dotnet' }
                 Mock RunAndCheck {
                     $script:toolCalls += ,@($args)
                     if ($args -contains 'GetPackageManifest') {
