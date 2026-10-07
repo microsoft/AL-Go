@@ -1,6 +1,8 @@
 # PostProcess action
 
-Finalize a workflow
+Finalize a workflow by recording telemetry about its conclusion, duration, and AL-Go configuration.
+
+This action is telemetry-only. Failures are visible in the logs but do not fail the workflow. Actual build and test failures are still enforced by the workflow's status checks.
 
 ## INPUT
 
