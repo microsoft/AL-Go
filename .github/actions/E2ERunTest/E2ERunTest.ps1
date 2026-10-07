@@ -46,10 +46,14 @@ try {
             'algoauthapp' = $algoAuthApp
             'template' = $template
             'appSourceApp' = $appSource
-            'release' = $release
-            'contentPath' = $contentPath
         }
 
+        if ($release) {
+            $params['release'] = $release
+        }
+        if ($contentPath) {
+            $params['contentPath'] = $contentPath
+        }
         if ($private) {
             $params['private'] = $true
         }
