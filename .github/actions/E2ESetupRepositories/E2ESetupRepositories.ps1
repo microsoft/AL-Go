@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Initializes repositories for E2E tests.
+#>
 Param(
     [Parameter(HelpMessage = "GitHub owner for test repositories", Mandatory = $true)]
     [string] $githubOwner,

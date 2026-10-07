@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Runs an E2E test or upgrade test.
+#>
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "Test type (test or upgrade)", Mandatory = $false)]

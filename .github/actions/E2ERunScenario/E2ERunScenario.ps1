@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Runs an E2E scenario.
+#>
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "Scenario name", Mandatory = $true)]

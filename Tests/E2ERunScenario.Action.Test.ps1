@@ -5,7 +5,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 Describe "E2ERunScenario Action Tests" {
     BeforeAll {
         $actionName = "E2ERunScenario"
-        $scriptRoot = Join-Path $PSScriptRoot "..\.github\actions\$actionName" -Resolve
+        $scriptRoot = Join-Path $PSScriptRoot "../.github/actions/$actionName" -Resolve
         $scriptName = "$actionName.ps1"
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
         $scriptPath = Join-Path $scriptRoot $scriptName

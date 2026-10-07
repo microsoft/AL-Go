@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Calculates parameters for an E2E test matrix entry.
+#>
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "GitHub owner for test repositories", Mandatory = $true)]

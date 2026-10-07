@@ -1,3 +1,7 @@
+<#
+.SYNOPSIS
+Validates E2E secrets and calculates workflow outputs.
+#>
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '', Justification = 'GitHub Secrets are transferred as plain text')]
 Param(
     [Parameter(HelpMessage = "GitHub owner (defaults to current repository owner)", Mandatory = $false)]

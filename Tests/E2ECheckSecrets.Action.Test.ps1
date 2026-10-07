@@ -5,7 +5,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 Describe "E2ECheckSecrets Action Tests" {
     BeforeAll {
         $actionName = "E2ECheckSecrets"
-        $scriptRoot = Join-Path $PSScriptRoot "..\.github\actions\$actionName" -Resolve
+        $scriptRoot = Join-Path $PSScriptRoot "../.github/actions/$actionName" -Resolve
         $scriptName = "$actionName.ps1"
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
