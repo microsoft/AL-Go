@@ -17,43 +17,39 @@ function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
         [PSCustomObject] $src,
-        [string] $context = 'settings'
+        [string] $context = 'settings',
+        [hashtable] $metadata = @{}
     )
 
-    # Determine the effective list of protected settings from the destination object, excluding any that are also present in the source object's protected settings.
-    $effectiveProtectedSettings = @()
-    if ($dst.Contains("protectedSettings")) {
-        OutputDebug "Destination protected settings: $($dst.protectedSettings -join ', ')"
-        # Initialize the effective list of protected settings with the ones from the destination object.
-        $effectiveProtectedSettings = @($dst.protectedSettings)
+    OutputDebug "Applying $context"
 
-        if ($src.PSObject.Properties.Name -contains "protectedSettings") {
-            OutputDebug "Source protected settings: $($src.protectedSettings -join ', ')"
-            # Remove any protected settings from the effective list that are also present in the source object's protected settings.
-            $effectiveProtectedSettings = @($effectiveProtectedSettings | Where-Object { @($src.protectedSettings) -notcontains $_ })
-        }
-        # Remove duplicates and ensure "protectedSettings" itself is not included as it is needed to accumulate the protected settings.
-        $effectiveProtectedSettings = @($effectiveProtectedSettings | Select-Object -Unique | Where-Object { $_ -ne "protectedSettings" })
-
-        OutputDebug "Effective Protected settings: $($effectiveProtectedSettings -join ', ')"
+    # Ensure that the metadata object has a 'properties' section
+    if (-not $metadata.ContainsKey('properties')) {
+        $metadata.properties = @{}
     }
 
-    # Initialize a list to keep track of protected settings that are skipped during the merge process.
-    $skippedProtectedSettings = [System.Collections.Generic.List[string]]::new()
+    # Extract the list of protected settings from the metadata
+    $protectedSettings = @($metadata.properties.GetEnumerator() |
+        Where-Object { $_.Value.ContainsKey("protected") -and $_.Value.protected } |
+        Select-Object -ExpandProperty Key)
+
+    # Extract the list of protected settings from the source object
+    $srcProtectedSettings = @()
+    if ($src.PSObject.Properties.Name -contains 'protectedSettings') {
+        $srcProtectedSettings = @($src.protectedSettings)
+    }
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
     if ($src.PSObject.Properties.Name -contains "overwriteSettings") {
         $src.overwriteSettings | ForEach-Object {
             $prop = $_
 
-            # Skip the property if it is "protectedSettings" as it should never be overwritten
-            if ($prop -eq "protectedSettings") {
-                OutputDebug "Skipping overwrite of setting $prop"
+            if ($_ -in @('overwriteSettings', 'protectedSettings')) {
+                OutputDebug "Skipping overwrite of metadata setting $prop"
                 return
             }
 
-            # Skip the property if it is in the list of effective protected settings
-            if ($effectiveProtectedSettings -contains $prop) {
+            if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
                 OutputDebug "Skipping overwrite of protected setting $prop"
                 return
             }
@@ -62,6 +58,7 @@ function MergeCustomObjectIntoOrderedDictionary {
                 # Remove the property from the destination object only if it also exists in the source object. The property will be re-added with the new value later on.
                 OutputDebug "Overwriting setting $prop"
                 $dst.Remove($prop)
+                $metadata.properties.Remove($prop)
             }
         }
     }
@@ -72,17 +69,15 @@ function MergeCustomObjectIntoOrderedDictionary {
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
 
-        # Skip overwriteSettings property as it's only used for configuration, not actual settings
-        if ($prop -eq "overwriteSettings") {
-            OutputDebug "Skipping initialization of setting $prop"
+        if ($prop -in @('overwriteSettings', 'protectedSettings')) {
+            OutputDebug "Skipping initialization of metadata setting $prop"
             return
         }
 
-        # Skip the property if it is in the list of effective protected settings
-        if ($effectiveProtectedSettings -contains $prop) {
+        if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
             OutputDebug "Skipping initialization of protected setting $prop"
-            # Add the property to the list of skipped protected settings
-            $skippedProtectedSettings.Add($prop)
+            $protectedBy = if ($metadata.properties[$prop].ContainsKey('sources') -and $metadata.properties[$prop].sources.Count -gt 0) { $metadata.properties[$prop].sources[-1] } else { 'unknown' }
+            OutputNotice "Skipped protected setting $prop from ${context}: protected by $protectedBy"
             return
         }
 
@@ -99,6 +94,29 @@ function MergeCustomObjectIntoOrderedDictionary {
                 $dst.Add("$prop", $srcProp)
             }
         }
+
+        # Initialize metadata for the property if it does not already exist
+        if (-not $metadata.properties.Contains($prop)) {
+            $metadata.properties[$prop] = @{}
+        }
+
+        # Initialize the sources array for the property metadata if it does not already exist
+        if (-not $metadata.properties[$prop].ContainsKey("sources")) {
+            $metadata.properties[$prop].sources = @()
+        }
+
+        # Update the sources array for the property metadata based on the type of the source property
+        if ($srcPropType -eq 'PSCustomObject' -or $srcProp -is [Object[]]) {
+            $metadata.properties[$prop].sources += $context
+        }
+        else {
+            $metadata.properties[$prop].sources = @($context)
+        }
+
+        # Mark the property as protected in the metadata if it is part of the source protected settings
+        if ($srcProtectedSettings -contains $prop) {
+            $metadata.properties[$prop].protected = $true
+        }
     }
 
     # Loop through all properties in the destination object
@@ -110,20 +128,20 @@ function MergeCustomObjectIntoOrderedDictionary {
     # If the property is a simple type, replace the value in the destination object with the value from the source object
     @($dst.Keys) | ForEach-Object {
         $prop = $_
+
         if ($src.PSObject.Properties.Name -eq $prop) {
             $dstProp = $dst."$prop"
             $srcProp = $src."$prop"
             $dstPropType = $dstProp.GetType().Name
             $srcPropType = $srcProp.GetType().Name
 
-            # Skip merging if the property is in the list of skipped protected settings
-            if ($skippedProtectedSettings -contains $prop) {
+            if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
                 OutputDebug "Skipping merge of protected setting $prop"
                 return
             }
 
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
-                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp -context "$context > property $prop"
+                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp -context "$context > $prop" -metadata $metadata.properties[$prop]
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
@@ -154,11 +172,6 @@ function MergeCustomObjectIntoOrderedDictionary {
                 }
             }
         }
-    }
-
-    # Output a notice if any protected settings were skipped during the merge process
-    if ($skippedProtectedSettings.Count -gt 0) {
-        OutputNotice "Skipped protected settings while applying ${context}: $($skippedProtectedSettings -join ', ')"
     }
 }
 
@@ -318,17 +331,17 @@ function GetDefaultSettings
             "filesToExclude" = @()
         }
         "postponeProjectInBuildOrder"                   = $false
-        "protectedSettings"                             = @()
     }
 }
 
 
 <#
     .SYNOPSIS
-        Read settings from the settings files and merge them into an ordered dictionary, with optional custom settings override.
+        Read settings from the settings files and merge them into an ordered dictionary.
     .DESCRIPTION
         This function reads settings from various files and merges them into an ordered dictionary.
-        The settings are read from the following files (in order of precedence):
+        Settings are applied in the following order. Later sources normally take precedence, except when an earlier
+        source protects a setting and the later source does not also mark that setting as protected:
         - ALGoOrgSettings (github Variable)                    = Organization settings variable
         - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
         - .github/AL-Go-Settings.json                          = Repository Settings file
@@ -339,7 +352,7 @@ function GetDefaultSettings
         - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
         - <project>/.AL-Go/<userName>.settings.json            = User settings file
         - ALGoEnvSettings (github Variable)                    = Deployment Environment settings variable
-        - customSettings parameter (JSON string)               = Custom settings with highest precedence
+        - customSettings parameter (JSON string)               = Custom settings applied last
     .PARAMETER baseFolder
         The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
     .PARAMETER repoName
@@ -365,7 +378,7 @@ function GetDefaultSettings
     .PARAMETER environmentName
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
     .PARAMETER customSettings
-        JSON formatted string that will be applied last to override any other settings. These settings have the highest precedence.
+        JSON formatted string applied last, subject to the same protected-settings rules as all other sources.
 #>
 function ReadSettings {
     param(
@@ -539,12 +552,13 @@ function ReadSettings {
         }
     }
 
+    $metadata = @{}
+
     foreach ($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
-            OutputDebug "Applying settings from $($settingsObject.Source) ($($settingsObject.Type))"
             $context = "settings $($settingsObject.Source) ($($settingsObject.Type))"
-            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -context $context
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -context $context -metadata $metadata
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                 foreach ($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
@@ -565,9 +579,8 @@ function ReadSettings {
                             }
                         }
                         if ($conditionMet) {
-                            OutputDebug "Applying conditional settings for $($conditions -join ', ')"
                             $conditionalContext = "$context > conditional settings for $($conditions -join ', ')"
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -context $conditionalContext
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -context $conditionalContext -metadata $metadata
                         }
                     }
                 }
@@ -576,6 +589,11 @@ function ReadSettings {
         else {
             OutputDebug "No settings found in $($settingsObject.Source) ($($settingsObject.Type))"
         }
+    }
+
+    # Ensure that the metadata object has a 'properties' section
+    if (-not $metadata.ContainsKey('properties')) {
+        $metadata.properties = @{}
     }
 
     # runs-on is used for all jobs except for the build job (basically all jobs which doesn't need a container)
@@ -598,6 +616,9 @@ function ReadSettings {
             OutputDebug "Setting shell to powershell for non-ubuntu"
             $settings.shell = "powershell"
         }
+
+        # Record the source of the shell setting in the metadata
+        $metadata.properties.shell = @{ sources = @('derived from runs-on') }
     }
     if ($settings.githubRunner -eq "") {
         if ($settings."runs-on" -like "*ubuntu-*") {
@@ -608,10 +629,16 @@ function ReadSettings {
             OutputDebug "Setting gitHubRunner to runs-on value: $($settings."runs-on")"
             $settings.githubRunner = $settings."runs-on"
         }
+
+        # Record the source of the gitHubRunner setting in the metadata
+        $metadata.properties.githubRunner = @{ sources = @('derived from runs-on') }
     }
     if ($settings.githubRunnerShell -eq "") {
         OutputDebug "Setting gitHubRunnerShell to shell value: $($settings.shell)"
         $settings.githubRunnerShell = $settings.shell
+
+        # Record the source of the gitHubRunnerShell setting in the metadata
+        $metadata.properties.githubRunnerShell = @{ sources = @('derived from shell') }
     }
 
     # Check that gitHubRunnerShell and Shell is valid
@@ -625,19 +652,40 @@ function ReadSettings {
     if (($settings.githubRunner -like "*ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
         OutputDebug "Switching shell to pwsh for ubuntu"
         $settings.githubRunnerShell = "pwsh"
+
+        # Record the source of the gitHubRunnerShell setting in the metadata
+        $metadata.properties.githubRunnerShell = @{ sources = @('derived from githubRunner') }
     }
 
     if($settings.projectName -eq '') {
         OutputDebug "Setting projectName to default value: $project"
         $settings.projectName = $project # Default to project path as project name
+
+        # Record the source of the projectName setting in the metadata
+        $metadata.properties.projectName = @{ sources = @('derived from project') }
     }
 
     # Interpret zero or negative parallelism as the max number of processors
     if ($settings.workspaceCompilation.parallelism -le 0) {
         $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
+
+        # Record the source of the parallelism setting in the metadata at the top level if it doesn't exist yet
+        if (-not $metadata.properties.ContainsKey("workspaceCompilation")) {
+            $metadata.properties.workspaceCompilation = @{ sources = @('derived from processor count') }
+        }
+        # Ensure that the properties dictionary exists within the workspaceCompilation metadata
+        if (-not $metadata.properties.workspaceCompilation.ContainsKey("properties")) {
+            $metadata.properties.workspaceCompilation.properties = @{}
+        }
+        # Record the source of the parallelism setting in the metadata
+        $metadata.properties.workspaceCompilation.properties.parallelism = @{ sources = @('derived from processor count') }
     }
 
     $settings | ValidateSettings
+
+    OutputGroupStart "Settings sources"
+    OutputSettingsMetadata -settings $settings -metadata $metadata
+    OutputGroupEnd
 
     $settings
 }
@@ -670,6 +718,30 @@ function ValidateSettings {
         }
         if ($result) {
             OutputWarning "Settings are not valid. Error: $result"
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+    Writes the source and protection status of each resolved setting without exposing setting values.
+#>
+function OutputSettingsMetadata {
+    Param(
+        [System.Collections.IDictionary] $settings,
+        [hashtable] $metadata,
+        [string] $prefix = ''
+    )
+
+    foreach ($prop in $settings.Keys) {
+        $path = if ($prefix) { "$prefix.$prop" } else { $prop }
+        $propertyMetadata = if ($metadata -and $metadata.ContainsKey('properties')) { $metadata.properties[$prop] } else { $null }
+        $sources = if ($propertyMetadata -and $propertyMetadata.sources.Count -gt 0) { $propertyMetadata.sources -join ', ' } else { 'defaults' }
+        $isProtected = [bool]($propertyMetadata -and $propertyMetadata.ContainsKey('protected') -and $propertyMetadata.protected)
+        Write-Host "${path}: $sources (protected: $isProtected)"
+
+        if ($settings[$prop] -is [System.Collections.IDictionary]) {
+            OutputSettingsMetadata -settings $settings[$prop] -metadata $propertyMetadata -prefix $path
         }
     }
 }

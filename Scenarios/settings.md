@@ -319,9 +319,9 @@ then, after merging, the result settings object will contain the following value
 
 ## Protected settings <a id="protectedSettings"></a>
 
-By default, AL-Go follows a standard settings hierarchy where settings from higher priority levels (closer to deployment) override settings from lower priority levels. However, you can mark specific settings as **protected** to protect them from being overridden by lower priority settings using the `protectedSettings` array.
+AL-Go applies settings in the [order listed above](#where-are-the-settings-located); later sources normally have higher precedence. Add a setting name to the optional `protectedSettings` array to retain its value when a later source does not also mark it as protected. As with `overwriteSettings`, the source must also supply a value for the named setting; a name without a value has no effect. A skipped override produces a notice with the setting name, the attempted source and nested context, and the source that established protection, without printing the value.
 
-When a setting is marked as protected at a higher level in the hierarchy, it cannot be overridden by non-protected values from lower priority levels. If a lower-priority source also marks the same setting as protected, then the lower-priority value is allowed to override.
+After resolving settings, AL-Go writes a grouped list of setting paths and their sources to the normal workflow log without printing setting values. Scalar settings show their latest accepted source; arrays and objects list the sources applied to them, including sources that repeat an existing array value. Nested object properties have their own source entries. An accepted `overwriteSettings` replacement starts a new source list; skipped overrides do not change it. Unchanged settings are attributed to defaults, and computed settings identify their derivation.
 
 _Example_:
 Say, `ALGoOrgSettings` (organization level) contains the following values:
@@ -334,7 +334,7 @@ Say, `ALGoOrgSettings` (organization level) contains the following values:
 }
 ```
 
-and `.AL-Go\settings.json` (project level, lower priority) contains the following values:
+and `.AL-Go\settings.json` (project level, applied later) contains the following values:
 
 ```json
 {
@@ -347,7 +347,6 @@ then, after merging, the result settings object will contain the following value
 
 ```json
 {
-    "protectedSettings": ["country", "keyVaultName"],
     "country": "de",
     "keyVaultName": "OrgVault"
 }
@@ -392,7 +391,7 @@ When reading settings for buildMode `ValidateUS`, the conditional setting from t
 
 Even though the project specifies `country: "w1"`, the conditional setting from the organization level marked the country as protected for the `ValidateUS` buildMode and the project value is not marked protected, so the conditional value takes precedence.
 
-> _**Note**_: `protectedSettings` is an array of setting names that should be protected from non-protected overrides from lower priority settings. If the same setting is marked as protected at both levels, the source (lower-priority) value is allowed to override the destination value. Nested properties can be protected within object settings whose schema permits `protectedSettings`. `overwriteSettings` can force replacement for protected settings only when the source also marks that same setting as protected.
+> _**Note**_: `protectedSettings` is optional and defaults to an empty array. It controls merging and is not included among the resolved setting fields. Within `deliverToAppSource`, `alDoc`, and `commitOptions`, a nested `protectedSettings` array protects properties of that object; protecting the parent setting at the top level is separate. A later source can replace the entire parent object with top-level `overwriteSettings`, discarding its nested protections unless the parent itself is protected. `overwriteSettings` can replace a protected setting only when the later source also marks that setting as protected.
 
 <a id="customdelivery"></a>
 

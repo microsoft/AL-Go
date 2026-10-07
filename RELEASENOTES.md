@@ -1,6 +1,6 @@
 ### Protected settings
 
-A new `protectedSettings` setting allows you to protect specific settings from being overridden by lower-priority sources in the settings hierarchy. When a setting is marked as protected at a higher priority level, it cannot be overridden by non-protected settings from lower priority sources.
+A new optional `protectedSettings` array allows an earlier settings source to retain selected values when a later source does not also mark them as protected. Later sources normally have higher precedence; protection is an exception to that rule.
 
 ```json
 {
@@ -12,10 +12,16 @@ A new `protectedSettings` setting allows you to protect specific settings from b
 
 **Behavior:**
 
-- Settings marked as protected in organization or repository settings cannot be overridden by non-protected values from project, workflow, user, or environment settings
-- If a lower-priority source also marks the same setting as protected, the lower-priority value is allowed to override
-- The `overwriteSettings` mechanism can replace a protected setting only when the source also marks that same setting as protected
-- `ConditionalSettings` respect protectedSettings markings, allowing you to enforce conditional protected settings based on buildMode, branch, trigger, or user
+- Settings protected by an earlier source cannot be overridden by a later source unless it also protects the same setting
+- This includes `customSettings`: despite being applied last, it cannot override a protected value unless it also protects that setting
+- A source must supply the named setting's value for its `protectedSettings` entry to take effect
+- The `overwriteSettings` mechanism can replace a protected setting only when the later source also marks that setting as protected
+- `ConditionalSettings` respect protection based on buildMode, branch, trigger, or user
+- Nested `protectedSettings` arrays can protect properties within `deliverToAppSource`, `alDoc`, and `commitOptions`
+- Replacing an unprotected parent object with top-level `overwriteSettings` discards its nested protections
+- Skipped overrides produce one notice per setting, naming the setting and the source contexts without revealing values
+- The normal workflow log includes a grouped, value-free source list for resolved settings, including nested properties and merged arrays
+- `protectedSettings` defaults to an empty array as input metadata and is not included in the resolved settings
 
 **Example with ConditionalSettings:**
 
