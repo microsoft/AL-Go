@@ -47,13 +47,16 @@ function GetActionScript {
 <#
 .SYNOPSIS
 Test the yaml structure of an action
+.PARAMETER ContinueOnError
+Require the action's run step to be non-blocking.
 #>
 function YamlTest {
     Param(
         [string] $scriptRoot,
         [string] $actionName,
         [string] $actionScript,
-        $outputs = @{}
+        $outputs = @{},
+        [switch] $ContinueOnError
     )
 
     $emptyActionScript = "function emptyAction {`n[CmdletBinding()]`nParam()`n}`n"
@@ -126,6 +129,9 @@ function YamlTest {
     $yaml.AppendLine("  steps:") | Out-Null
     $yaml.AppendLine("    - name: run") | Out-Null
     $yaml.AppendLine('      shell: ${{ inputs.shell }}') | Out-Null
+    if ($ContinueOnError) {
+        $yaml.AppendLine("      continue-on-error: true") | Out-Null
+    }
     if ($outputs -and $outputs.Count -gt 0) {
         $yaml.AppendLine("      id: $($actionname.ToLowerInvariant())") | Out-Null
     }
