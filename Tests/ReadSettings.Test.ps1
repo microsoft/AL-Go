@@ -7,6 +7,16 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $schema = Get-Content -Path (Join-Path $PSScriptRoot '../Actions/.Modules/settings.schema.json') -Raw
         }
 
+        BeforeEach {
+            $originalOrgSettings = $ENV:ALGoOrgSettings
+            $originalRepoSettings = $ENV:ALGoRepoSettings
+        }
+
+        AfterEach {
+            $ENV:ALGoOrgSettings = $originalOrgSettings
+            $ENV:ALGoRepoSettings = $originalRepoSettings
+        }
+
         It 'Outputs setting sources and protection status without values' {
             Mock Write-Host { }
 
@@ -558,8 +568,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.workflowDefaultInputs[2].name | Should -Be 'input2'
             $settings.workflowDefaultInputs[2].value | Should -Be 'value3'
 
-            $ENV:ALGoRepoSettings = ''
-
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
@@ -686,8 +694,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter {
                 $message -match '^Skipped protected setting country from settings \.github.*\(File\): protected by settings ALGoOrgSettings \(Variable\)$'
             }
-
-            $ENV:ALGoOrgSettings = ''
 
             # Clean up
             Pop-Location
@@ -1252,8 +1258,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Mock Write-Host { }
             Mock Out-Host { }
 
-            $originalOrgSettings = $ENV:ALGoOrgSettings
-            $originalRepoSettings = $ENV:ALGoRepoSettings
             Push-Location
             $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
             $githubFolder = Join-Path $tempName ".github"
@@ -1308,8 +1312,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             }
             finally {
-                $ENV:ALGoOrgSettings = $originalOrgSettings
-                $ENV:ALGoRepoSettings = $originalRepoSettings
                 Pop-Location
                 Remove-Item -Path $tempName -Recurse -Force
             }
