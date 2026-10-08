@@ -976,7 +976,7 @@ function Resolve-PathPhysically {
 
         $realPath = @($item.Target)[0]
         if (-not [System.IO.Path]::IsPathRooted($realPath)) {
-            $realPath = Join-Path $item.Parent.FullName $realPath
+            $realPath = Join-Path ([System.IO.Path]::GetDirectoryName($item.FullName)) $realPath
         }
         $realPath = Resolve-PathLexically -Path $realPath
 

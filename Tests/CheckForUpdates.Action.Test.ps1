@@ -2891,6 +2891,52 @@ Describe "Resolve-PathPhysically" {
         }
     }
 
+    It 'Resolve-PathPhysically resolves a single relative file symlink to its real target' -Skip:(-not $script:hasSymlinkCapability) {
+        $targetFile = Join-Path $rootFolder 'relativeFileTarget.txt'
+        $linkedFile = Join-Path $rootFolder 'relativeFileLink.txt'
+        try {
+            Set-Content -LiteralPath $targetFile -Value 'target content'
+            Push-Location $rootFolder
+            try {
+                New-Item -ItemType SymbolicLink -Path $linkedFile -Target 'relativeFileTarget.txt' -Force | Out-Null
+            }
+            finally {
+                Pop-Location
+            }
+
+            [System.IO.Path]::IsPathRooted(@((Get-Item -LiteralPath $linkedFile -Force).Target)[0]) | Should -Be $false
+            Resolve-PathPhysically -Path $linkedFile -AnchorPaths @($rootFolder) | Should -Be $targetFile
+            Test-PathPhysicallyEqual -Path $linkedFile -AnchorPaths @($rootFolder) | Should -Be $false
+        }
+        finally {
+            Remove-Item -LiteralPath $linkedFile -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $targetFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'Resolve-PathPhysically resolves a single relative folder symlink to its real target' -Skip:(-not $script:hasSymlinkCapability) {
+        $realTargetFolder = Join-Path $rootFolder 'relativeFolderTarget'
+        $linkedFolder = Join-Path $rootFolder 'relativeFolderLink'
+        $path = Join-Path $linkedFolder 'file.txt'
+        try {
+            New-Item -Path $realTargetFolder -ItemType Directory -Force | Out-Null
+            Push-Location $rootFolder
+            try {
+                New-Item -ItemType SymbolicLink -Path $linkedFolder -Target 'relativeFolderTarget' -Force | Out-Null
+            }
+            finally {
+                Pop-Location
+            }
+
+            [System.IO.Path]::IsPathRooted(@((Get-Item -LiteralPath $linkedFolder -Force).Target)[0]) | Should -Be $false
+            Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $realTargetFolder 'file.txt')
+        }
+        finally {
+            Remove-Item -LiteralPath $linkedFolder -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $realTargetFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'Resolve-PathPhysically resolves a chain of two symlinks (link1 -> link2 -> real folder) to its real target' -Skip:(-not $script:hasSymlinkCapability) {
         $realFolder = Join-Path $rootFolder "chainSymRealTarget"
         $link2 = Join-Path $rootFolder "chainSymLink2"
