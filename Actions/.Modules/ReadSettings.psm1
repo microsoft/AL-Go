@@ -184,7 +184,8 @@ function MergeCustomObjectIntoOrderedDictionary {
 function GetDefaultSettings
 (
     [string] $repoName
-) {
+)
+{
     return [ordered]@{
         "type"                                          = "PTE"
         "unusedALGoSystemFiles"                         = @()
@@ -255,10 +256,10 @@ function GetDefaultSettings
         "configPackages"                                = @()
         "appSourceCopMandatoryAffixes"                  = @()
         "deliverToAppSource"                            = [ordered]@{
-            "mainAppFolder"       = ""
-            "productId"           = ""
-            "includeDependencies" = @()
-            "continuousDelivery"  = $false
+            "mainAppFolder"                             = ""
+            "productId"                                 = ""
+            "includeDependencies"                       = @()
+            "continuousDelivery"                        = $false
         }
         "obsoleteTagMinAllowedMajorMinor"               = ""
         "memoryLimit"                                   = ""
@@ -276,11 +277,11 @@ function GetDefaultSettings
         "cacheKeepDays"                                 = 3
         "alwaysBuildAllProjects"                        = $false
         "incrementalBuilds"                             = [ordered]@{
-            "onPush"         = $false
-            "onPull_Request" = $true
-            "onSchedule"     = $false
-            "retentionDays"  = 30
-            "mode"           = "modifiedApps" # modifiedProjects, modifiedApps
+            "onPush"                                    = $false
+            "onPull_Request"                            = $true
+            "onSchedule"                                = $false
+            "retentionDays"                             = 30
+            "mode"                                      = "modifiedApps" # modifiedProjects, modifiedApps
         }
         "microsoftTelemetryConnectionString"            = "InstrumentationKey=cd2cc63e-0f37-4968-b99a-532411a314b8;IngestionEndpoint=https://northeurope-2.in.applicationinsights.azure.com/"
         "partnerTelemetryConnectionString"              = ""
@@ -289,43 +290,43 @@ function GetDefaultSettings
         "buildModes"                                    = @()
         "useCompilerFolder"                             = $false
         "workspaceCompilation"                          = [ordered]@{
-            "enabled"     = $false
-            "parallelism" = 1
+            "enabled"                                   = $false
+            "parallelism"                               = 1
         }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{
-            "DurationWarning"         = 10
-            "DurationError"           = 25
-            "NumberOfSqlStmtsWarning" = 5
-            "NumberOfSqlStmtsError"   = 10
+            "DurationWarning"                           = 10
+            "DurationError"                             = 25
+            "NumberOfSqlStmtsWarning"                   = 5
+            "NumberOfSqlStmtsError"                     = 10
         }
         "fullBuildPatterns"                             = @()
         "excludeEnvironments"                           = @()
         "alDoc"                                         = [ordered]@{
-            "continuousDeployment" = $false
-            "deployToGitHubPages"  = $true
-            "maxReleases"          = 3
-            "groupByProject"       = $true
-            "includeProjects"      = @()
-            "excludeProjects"      = @()
-            "header"               = "Documentation for {REPOSITORY} {VERSION}"
-            "footer"               = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
-            "defaultIndexMD"       = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
-            "defaultReleaseMD"     = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "continuousDeployment"                      = $false
+            "deployToGitHubPages"                        = $true
+            "maxReleases"                                = 3
+            "groupByProject"                             = $true
+            "includeProjects"                            = @()
+            "excludeProjects"                            = @()
+            "header"                                     = "Documentation for {REPOSITORY} {VERSION}"
+            "footer"                                     = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
+            "defaultIndexMD"                             = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "defaultReleaseMD"                           = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
         "trustMicrosoftNuGetFeeds"                      = $true
         "nuGetFeedSelectMode"                           = "LatestMatching"
         "commitOptions"                                 = [ordered]@{
-            "messageSuffix"          = ""
-            "pullRequestAutoMerge"   = $false
-            "pullRequestMergeMethod" = "squash"
-            "pullRequestLabels"      = @()
-            "createPullRequest"      = $true
+            "messageSuffix"                             = ""
+            "pullRequestAutoMerge"                      = $false
+            "pullRequestMergeMethod"                    = "squash"
+            "pullRequestLabels"                         = @()
+            "createPullRequest"                         = $true
         }
         "trustedSigning"                                = [ordered]@{
-            "Endpoint"           = ""
-            "Account"            = ""
-            "CertificateProfile" = ""
+            "Endpoint"                                  = ""
+            "Account"                                   = ""
+            "CertificateProfile"                        = ""
         }
         "useGitSubmodules"                              = "false"
         "gitSubmodulesTokenSecretName"                  = "gitSubmodulesToken"
@@ -333,8 +334,8 @@ function GetDefaultSettings
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
         "customALGoFiles"                               = [ordered]@{
-            "filesToInclude" = @()
-            "filesToExclude" = @()
+            "filesToInclude"                            = @()
+            "filesToExclude"                            = @()
         }
         "postponeProjectInBuildOrder"                   = $false
     }
@@ -343,7 +344,7 @@ function GetDefaultSettings
 
 <#
     .SYNOPSIS
-        Read settings from the settings files and merge them into an ordered dictionary.
+        Read settings from the settings files and merge them into an ordered dictionary, with optional custom settings.
     .DESCRIPTION
         This function reads settings from various files and merges them into an ordered dictionary.
         Settings are applied in the following order. Later sources normally take precedence, except when an earlier
@@ -389,7 +390,7 @@ function GetDefaultSettings
         Optional hashtable populated with setting sources, protection status, and skipped sources.
 #>
 function ReadSettings {
-    param(
+    Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
         [string] $repoName = "$ENV:GITHUB_REPOSITORY",
         [string] $project = '.',
@@ -412,7 +413,7 @@ function ReadSettings {
     }
 
     function GetSettingsObject {
-        param(
+        Param(
             [string] $path
         )
 
@@ -431,15 +432,13 @@ function ReadSettings {
     }
 
     function InitializeDefaultSettingsMetadata {
-        param(
+        Param(
             [System.Collections.IDictionary] $settings,
             [hashtable] $metadata
         )
 
         $metadata.properties = @{}
-        @($settings.Keys) | ForEach-Object {
-            $prop = $_
-
+        foreach ($prop in $settings.Keys) {
             $metadata.properties[$prop] = @{ sources = @('default') }
 
             if ($settings[$prop] -is [System.Collections.IDictionary]) {
@@ -467,8 +466,8 @@ function ReadSettings {
     if ($orgSettingsVariableValue) {
         $orgSettingsVariableObject = $orgSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @{
-            "Source"   = "ALGoOrgSettings"
-            "Type"     = "Variable"
+            "Source" = "ALGoOrgSettings"
+            "Type" = "Variable"
             "Settings" = $orgSettingsVariableObject
         }
     }
@@ -476,16 +475,16 @@ function ReadSettings {
     # Read settings from the custom template repository settings file
     $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
     $settingsObjects += @{
-        "Source"   = "$CustomTemplateRepoSettingsFile"
-        "Type"     = "File"
+        "Source" = "$CustomTemplateRepoSettingsFile"
+        "Type" = "File"
         "Settings" = $customTemplateRepoSettingsObject
     }
 
     # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
     $settingsObjects += @{
-        "Source"   = "$RepoSettingsFile"
-        "Type"     = "File"
+        "Source" = "$RepoSettingsFile"
+        "Type" = "File"
         "Settings" = $repoSettingsObject
     }
 
@@ -493,8 +492,8 @@ function ReadSettings {
     if ($repoSettingsVariableValue) {
         $repoSettingsVariableObject = $repoSettingsVariableValue | ConvertFrom-Json
         $settingsObjects += @{
-            "Source"   = "ALGoRepoSettings"
-            "Type"     = "Variable"
+            "Source" = "ALGoRepoSettings"
+            "Type" = "Variable"
             "Settings" = $repoSettingsVariableObject
         }
     }
@@ -502,8 +501,8 @@ function ReadSettings {
     if ($project) {
         $customTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateProjectSettingsFile)
         $settingsObjects += @{
-            "Source"   = "$CustomTemplateProjectSettingsFile"
-            "Type"     = "File"
+            "Source" = "$CustomTemplateProjectSettingsFile"
+            "Type" = "File"
             "Settings" = $customTemplateProjectSettingsObject
         }
 
@@ -511,8 +510,8 @@ function ReadSettings {
         $projectFolder = Join-Path $baseFolder $project -Resolve
         $projectSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder $ALGoSettingsFile)
         $settingsObjects += @{
-            "Source"   = "$(Join-Path $project $ALGoSettingsFile)"
-            "Type"     = "File"
+            "Source" = "$(Join-Path $project $ALGoSettingsFile)"
+            "Type" = "File"
             "Settings" = $projectSettingsObject
         }
     }
@@ -521,8 +520,8 @@ function ReadSettings {
         # Read settings from workflow settings file
         $workflowSettingsObject = GetSettingsObject -Path (Join-Path $githubFolder "$workflowName.settings.json")
         $settingsObjects += @{
-            "Source"   = "$(Join-Path ".github" "$workflowName.settings.json")"
-            "Type"     = "File"
+            "Source" = "$(Join-Path ".github" "$workflowName.settings.json")"
+            "Type" = "File"
             "Settings" = $workflowSettingsObject
         }
 
@@ -530,16 +529,16 @@ function ReadSettings {
             # Read settings from project workflow settings file
             $projectWorkflowSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$workflowName.settings.json")
             $settingsObjects += @{
-                "Source"   = "$(Join-Path $project "$ALGoFolderName/$workflowName.settings.json")"
-                "Type"     = "File"
+                "Source" = "$(Join-Path $project "$ALGoFolderName/$workflowName.settings.json")"
+                "Type" = "File"
                 "Settings" = $projectWorkflowSettingsObject
             }
 
             # Read settings from user settings file
             $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @{
-                "Source"   = "$(Join-Path $project "$ALGoFolderName/$userName.settings.json")"
-                "Type"     = "File"
+                "Source" = "$(Join-Path $project "$ALGoFolderName/$userName.settings.json")"
+                "Type" = "File"
                 "Settings" = $userSettingsObject
             }
         }
