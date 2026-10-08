@@ -1,44 +1,10 @@
+### Settings sources in workflow logs
+
+The ReadSettings action now writes a **Settings sources** group to the workflow log for all resolved settings, including nested properties. It shows which defaults, files, and variables contributed to each setting without printing values in the group. Merged arrays and objects can list multiple sources; computed values retain their earlier source followed by their derivation. An accepted `overwriteSettings` replacement starts a new source list. See [Settings sources in workflow logs](Scenarios/settings.md#settings-sources).
+
 ### Protected settings
 
-A new optional `protectedSettings` array allows an earlier settings source to retain selected values when a later source does not also mark them as protected. Later sources normally have higher precedence; protection is an exception to that rule.
-
-```json
-{
-  "protectedSettings": ["country", "keyVaultName"],
-  "country": "de",
-  "keyVaultName": "orgVault"
-}
-```
-
-**Behavior:**
-
-- Settings protected by an earlier source cannot be overridden by a later source unless it also protects the same setting
-- This includes `customSettings`: despite being applied last, it cannot override a protected value unless it also protects that setting
-- A source must supply the named setting's value for its `protectedSettings` entry to take effect
-- The `overwriteSettings` mechanism can replace a protected setting only when the later source also marks that setting as protected
-- `ConditionalSettings` respect protection based on buildMode, branch, trigger, or user
-- Nested `protectedSettings` arrays can protect properties within `deliverToAppSource`, `alDoc`, and `commitOptions`
-- Replacing an unprotected parent object with top-level `overwriteSettings` discards its nested protections
-- Skipped overrides produce one notice per setting, naming the setting and the source contexts without revealing values
-- The normal workflow log includes a grouped, value-free source list for resolved settings, including nested properties and merged arrays
-- Source lists retain `default` when a default array or object is extended, and clear it when `overwriteSettings` replaces that value
-- `protectedSettings` defaults to an empty array as input metadata and is not included in the resolved settings
-
-**Example with ConditionalSettings:**
-
-```json
-{
-  "ConditionalSettings": [
-    {
-      "buildModes": ["Validate"],
-      "settings": {
-        "protectedSettings": ["country"],
-        "country": "us"
-      }
-    }
-  ]
-}
-```
+The optional `protectedSettings` array lets a settings source retain a value when a later source attempts to change it. For example, `{"protectedSettings":["country"],"country":"de"}` keeps `country` at `de` unless the later source also supplies and protects `country`. `overwriteSettings` alone does not bypass protection. This also applies to `customSettings` and to matching `ConditionalSettings`; nested properties can be protected within their parent object. The ReadSettings action reports each skipped override in a notice naming the sources, not the value. See [Protected settings](Scenarios/settings.md#protectedSettings) for examples and nested-object behavior.
 
 ### AL-Go Telemetry Enhancements
 

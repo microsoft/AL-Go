@@ -8,7 +8,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
 
         BeforeEach {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalOrgSettings', Justification = 'False positive.')]
             $originalOrgSettings = $ENV:ALGoOrgSettings
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalRepoSettings', Justification = 'False positive.')]
             $originalRepoSettings = $ENV:ALGoRepoSettings
         }
 
@@ -362,7 +364,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting5 | Should -Be 'value5'      # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'overwriteSettings property resets settings from destination object (complex types: arrays)' {
@@ -385,7 +387,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
 
             # Now use overwriteSettings to overwrite the complex setting
             $dst = [ordered]@{
@@ -406,7 +408,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'overwriteSettings property resets settings from destination object (complex types: objects)' {
@@ -469,7 +471,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting6 | Should -Be 'value6'                     # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'overwriteSettings property does not reset a setting if it does not exist in the source object' {
@@ -488,7 +490,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting2 | Should -Be @('value2.0', 'value2.1')                           # Unchanged
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
@@ -724,9 +726,28 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata
             $settings.country | Should -Be 'us'
-            $metadata.properties.ContainsKey('country') | Should -BeFalse
+            $metadata.properties.country.sources | Should -Be @('default')
             Should -Invoke OutputGroupStart -Times 0 -Exactly
             Should -Invoke OutputGroupEnd -Times 0 -Exactly
+        }
+
+        It 'Initializes metadata for every default setting, including nested settings' {
+            $metadata = @{}
+            ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata | Out-Null
+
+            $pending = [System.Collections.Stack]::new()
+            $pending.Push(@{ settings = (GetDefaultSettings -repoName 'repo'); metadata = $metadata })
+            while ($pending.Count -gt 0) {
+                $current = $pending.Pop()
+                foreach ($prop in $current.settings.Keys) {
+                    $current.metadata.properties.ContainsKey($prop) | Should -BeTrue
+                    $propertyMetadata = $current.metadata.properties[$prop]
+                    $propertyMetadata.sources[0] | Should -Be 'default'
+                    if ($current.settings[$prop] -is [System.Collections.IDictionary]) {
+                        $pending.Push(@{ settings = $current.settings[$prop]; metadata = $propertyMetadata })
+                    }
+                }
+            }
         }
 
         It 'Records accepted and derived sources in metadata' {
@@ -736,9 +757,28 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.additionalCountries | Should -Be @('de', 'at')
             $metadata.properties.additionalCountries.sources | Should -Be @('default', 'settings ALGoOrgSettings (Variable)', 'settings CustomSettings (Parameter)')
             $metadata.properties.workspaceCompilation.sources | Should -Be @('default', 'settings ALGoOrgSettings (Variable)')
-            $metadata.properties.workspaceCompilation.properties.parallelism.sources | Should -Be @('derived from processor count')
-            $metadata.properties.shell.sources | Should -Be @('derived from runs-on')
-            $metadata.properties.ContainsKey('country') | Should -BeFalse
+            $metadata.properties.workspaceCompilation.properties.parallelism.sources | Should -Be @('settings ALGoOrgSettings (Variable) > workspaceCompilation', 'derived from processor count')
+            $metadata.properties.shell.sources | Should -Be @('default', 'derived from runs-on')
+            $metadata.properties.githubRunner.sources | Should -Be @('default', 'derived from runs-on')
+            $metadata.properties.githubRunnerShell.sources | Should -Be @('default', 'derived from shell')
+            $metadata.properties.projectName.sources | Should -Be @('default', 'derived from project')
+            $metadata.properties.country.sources | Should -Be @('default')
+            $metadata.properties.alDoc.properties.includeProjects.sources | Should -Be @('default')
+        }
+
+        It 'Retains protection and source history when resolving derived settings' {
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '{"protectedSettings":["shell","githubRunnerShell","workspaceCompilation"],"runs-on":"ubuntu-latest","shell":"","githubRunner":"ubuntu-latest","githubRunnerShell":"powershell","workspaceCompilation":{"parallelism":0}}' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata
+
+            $settings.shell | Should -Be 'pwsh'
+            $settings.githubRunnerShell | Should -Be 'pwsh'
+            $settings.workspaceCompilation.parallelism | Should -BeGreaterThan 0
+            $metadata.properties.shell.protected | Should -BeTrue
+            $metadata.properties.shell.sources | Should -Be @('settings ALGoOrgSettings (Variable)', 'derived from runs-on')
+            $metadata.properties.githubRunnerShell.protected | Should -BeTrue
+            $metadata.properties.githubRunnerShell.sources | Should -Be @('settings ALGoOrgSettings (Variable)', 'derived from githubRunner')
+            $metadata.properties.workspaceCompilation.protected | Should -BeTrue
+            $metadata.properties.workspaceCompilation.properties.parallelism.sources | Should -Be @('settings ALGoOrgSettings (Variable) > workspaceCompilation', 'derived from processor count')
         }
 
         It 'Keeps default sources for extensions and clears them for accepted overwrites' {
@@ -747,7 +787,11 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 projects = @('default-project')
                 nested = [ordered]@{ items = @('default-item') }
             }
-            $metadata = @{}
+            $metadata = @{ properties = @{
+                country = @{ sources = @('default') }
+                projects = @{ sources = @('default') }
+                nested = @{ sources = @('default'); properties = @{ items = @{ sources = @('default') } } }
+            } }
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
                 country = 'de'
@@ -820,6 +864,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $dst.custom.country | Should -Be 'de'
             $dst.custom.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.custom.sources | Should -Be @('settings Organization', 'settings Project')
             $metadata.properties.custom.properties.country.protected | Should -BeTrue
             $metadata.properties.custom.properties.country.sources | Should -Be @('settings Organization > custom')
             $metadata.properties.custom.properties.country.sourcesSkipped.Count | Should -Be 1
@@ -912,7 +957,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $dst.alDoc.includeProjects | Should -Be @('org', 'repo')
             $metadata.properties.alDoc.properties.includeProjects.protected | Should -BeTrue
-            $metadata.properties.alDoc.properties.includeProjects.sources | Should -Be @('default', 'settings Repository > alDoc')
+            $metadata.properties.alDoc.properties.includeProjects.sources | Should -Be @('settings Repository > alDoc')
             $metadata.properties.alDoc.properties.includeProjects.sourcesSkipped.Count | Should -Be 1
 
             MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
@@ -1379,7 +1424,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
     }
 
     Describe 'OutputSettingsSources' {
-        It 'Prints effective sources, defaults, and nested protection without values' {
+        It 'Prints effective sources, unknowns, and nested protection without values' {
             Mock Write-Host { }
 
             $settings = [ordered]@{
@@ -1399,7 +1444,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             OutputSettingsSources -settings $settings -metadata $metadata
 
             Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'country: Organization (protected)' }
-            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'type: default' }
+            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'type: unknown' }
             Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'projects: default, Repository, Project' }
             Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'nested: default, Repository' }
             Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'nested.key: default, Project (protected)' }

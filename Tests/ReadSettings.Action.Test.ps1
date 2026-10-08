@@ -61,8 +61,11 @@ Describe "ReadSettings Action Tests" {
             $groupStart.Count | Should -Be 1
             $groupEnd.Count | Should -Be 1
             $output.IndexOf($notice) | Should -BeLessThan $groupStart[0].Index
-            $output.IndexOf('country: settings ALGoOrgSettings (Variable) (protected)') | Should -BeGreaterThan $groupStart[0].Index
             $groupEnd[0].Index | Should -BeGreaterThan $groupStart[0].Index
+            $sourcesGroup = $output.Substring($groupStart[0].Index, $groupEnd[0].Index - $groupStart[0].Index)
+            $sourcesGroup | Should -Match '(?m)^country: settings ALGoOrgSettings \(Variable\) \(protected\)\r?$'
+            $sourcesGroup | Should -Match '(?m)^shell: default, derived from runs-on\r?$'
+            $sourcesGroup | Should -Match '(?m)^alDoc\.includeProjects: default\r?$'
         }
         finally {
             foreach ($name in $originalEnvironment.Keys) {

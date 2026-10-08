@@ -89,8 +89,7 @@ function MergeCustomObjectIntoOrderedDictionary {
 
         $srcProp = $src."$prop"
         $srcPropType = $srcProp.GetType().Name
-        $dstPropExists = $dst.Contains($prop)
-        if (-not $dstPropExists) {
+        if (-not $dst.Contains($prop)) {
             if ($srcPropType -eq "PSCustomObject") {
                 $dst.Add("$prop", [ordered]@{})
             }
@@ -105,10 +104,6 @@ function MergeCustomObjectIntoOrderedDictionary {
         # Initialize metadata for the property if it does not already exist
         if (-not $metadata.properties.Contains($prop)) {
             $metadata.properties[$prop] = @{}
-            # Initialize the sources array for the property metadata with 'default' if the property already exists in the destination object
-            if ($dstPropExists) {
-                $metadata.properties[$prop].sources = @('default')
-            }
         }
 
         # Initialize the sources array for the property metadata if it does not already exist
@@ -411,8 +406,6 @@ function ReadSettings {
         [hashtable] $metadata = @{}
     )
 
-    $metadata.Clear()
-
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
         $branchName = $env:GITHUB_BASE_REF
@@ -437,12 +430,34 @@ function ReadSettings {
         return $null
     }
 
+    function InitializeDefaultSettingsMetadata {
+        param(
+            [System.Collections.IDictionary] $settings,
+            [hashtable] $metadata
+        )
+
+        $metadata.properties = @{}
+        @($settings.Keys) | ForEach-Object {
+            $prop = $_
+
+            $metadata.properties[$prop] = @{ sources = @('default') }
+
+            if ($settings[$prop] -is [System.Collections.IDictionary]) {
+                InitializeDefaultSettingsMetadata -settings $settings[$prop] -metadata $metadata.properties[$prop]
+            }
+        }
+    }
+
     $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
     $githubFolder = Join-Path $baseFolder ".github"
     $workflowName = SanitizeWorkflowName -workflowName $workflowName
 
     # Start with default settings
     $settings = GetDefaultSettings -repoName $repoName
+
+    # Clear existing metadata before initializing default settings metadata
+    $metadata.Clear()
+    InitializeDefaultSettingsMetadata -settings $settings -metadata $metadata
 
     # Read settings from files and merge them into the settings object
 
@@ -605,11 +620,6 @@ function ReadSettings {
         }
     }
 
-    # Ensure that the metadata object has a 'properties' section
-    if (-not $metadata.ContainsKey('properties')) {
-        $metadata.properties = @{}
-    }
-
     # runs-on is used for all jobs except for the build job (basically all jobs which doesn't need a container)
     # gitHubRunner is used for the build job (or basically all jobs that needs a container)
     #
@@ -632,7 +642,7 @@ function ReadSettings {
         }
 
         # Record the source of the shell setting in the metadata
-        $metadata.properties.shell = @{ sources = @('derived from runs-on') }
+        $metadata.properties.shell.sources += 'derived from runs-on'
     }
     if ($settings.githubRunner -eq "") {
         if ($settings."runs-on" -like "*ubuntu-*") {
@@ -645,14 +655,14 @@ function ReadSettings {
         }
 
         # Record the source of the gitHubRunner setting in the metadata
-        $metadata.properties.githubRunner = @{ sources = @('derived from runs-on') }
+        $metadata.properties.githubRunner.sources += 'derived from runs-on'
     }
     if ($settings.githubRunnerShell -eq "") {
         OutputDebug "Setting gitHubRunnerShell to shell value: $($settings.shell)"
         $settings.githubRunnerShell = $settings.shell
 
         # Record the source of the gitHubRunnerShell setting in the metadata
-        $metadata.properties.githubRunnerShell = @{ sources = @('derived from shell') }
+        $metadata.properties.githubRunnerShell.sources += 'derived from shell'
     }
 
     # Check that gitHubRunnerShell and Shell is valid
@@ -668,7 +678,7 @@ function ReadSettings {
         $settings.githubRunnerShell = "pwsh"
 
         # Record the source of the gitHubRunnerShell setting in the metadata
-        $metadata.properties.githubRunnerShell = @{ sources = @('derived from githubRunner') }
+        $metadata.properties.githubRunnerShell.sources += 'derived from githubRunner'
     }
 
     if($settings.projectName -eq '') {
@@ -676,23 +686,15 @@ function ReadSettings {
         $settings.projectName = $project # Default to project path as project name
 
         # Record the source of the projectName setting in the metadata
-        $metadata.properties.projectName = @{ sources = @('derived from project') }
+        $metadata.properties.projectName.sources += 'derived from project'
     }
 
     # Interpret zero or negative parallelism as the max number of processors
     if ($settings.workspaceCompilation.parallelism -le 0) {
         $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
 
-        # Record the source of the parallelism setting in the metadata at the top level if it doesn't exist yet
-        if (-not $metadata.properties.ContainsKey("workspaceCompilation")) {
-            $metadata.properties.workspaceCompilation = @{ sources = @('derived from processor count') }
-        }
-        # Ensure that the properties dictionary exists within the workspaceCompilation metadata
-        if (-not $metadata.properties.workspaceCompilation.ContainsKey("properties")) {
-            $metadata.properties.workspaceCompilation.properties = @{}
-        }
-        # Record the source of the parallelism setting in the metadata
-        $metadata.properties.workspaceCompilation.properties.parallelism = @{ sources = @('derived from processor count') }
+        # Record the source of the workspaceCompilation.parallelism setting in the metadata
+        $metadata.properties.workspaceCompilation.properties.parallelism.sources += 'derived from processor count'
     }
 
     $settings | ValidateSettings
@@ -746,7 +748,7 @@ function OutputSettingsSources {
     foreach ($prop in $settings.Keys) {
         $path = if ($prefix) { "$prefix.$prop" } else { $prop }
         $propertyMetadata = if ($metadata -and $metadata.ContainsKey('properties')) { $metadata.properties[$prop] } else { $null }
-        $sources = if ($propertyMetadata -and $propertyMetadata.sources.Count -gt 0) { $propertyMetadata.sources -join ', ' } else { 'default' }
+        $sources = if ($propertyMetadata -and $propertyMetadata.sources.Count -gt 0) { $propertyMetadata.sources -join ', ' } else { 'unknown' }
         $isProtected = [bool]($propertyMetadata -and $propertyMetadata.ContainsKey('protected') -and $propertyMetadata.protected)
         Write-Host "${path}: $sources$(if ($isProtected) { ' (protected)' })"
 
