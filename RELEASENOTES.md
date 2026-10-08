@@ -21,6 +21,7 @@ A new optional `protectedSettings` array allows an earlier settings source to re
 - Replacing an unprotected parent object with top-level `overwriteSettings` discards its nested protections
 - Skipped overrides produce one notice per setting, naming the setting and the source contexts without revealing values
 - The normal workflow log includes a grouped, value-free source list for resolved settings, including nested properties and merged arrays
+- Source lists retain `default` when a default array or object is extended, and clear it when `overwriteSettings` replaces that value
 - `protectedSettings` defaults to an empty array as input metadata and is not included in the resolved settings
 
 **Example with ConditionalSettings:**

@@ -76,14 +76,21 @@ function MergeCustomObjectIntoOrderedDictionary {
 
         if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
             OutputDebug "Skipping initialization of protected setting $prop"
+
+            # Initialize the sourcesSkipped array for the property metadata if it does not already exist
+            if (-not $metadata.properties[$prop].ContainsKey('sourcesSkipped')) {
+                $metadata.properties[$prop].sourcesSkipped = @()
+            }
+            # Add the current source and reason to the sourcesSkipped array for the property metadata
             $protectedBy = if ($metadata.properties[$prop].ContainsKey('sources') -and $metadata.properties[$prop].sources.Count -gt 0) { $metadata.properties[$prop].sources[-1] } else { 'unknown' }
-            OutputNotice "Skipped protected setting $prop from ${context}: protected by $protectedBy"
+            $metadata.properties[$prop].sourcesSkipped += @{ source = $context; reason = "protected by $protectedBy" }
             return
         }
 
         $srcProp = $src."$prop"
         $srcPropType = $srcProp.GetType().Name
-        if (-not $dst.Contains($prop)) {
+        $dstPropExists = $dst.Contains($prop)
+        if (-not $dstPropExists) {
             if ($srcPropType -eq "PSCustomObject") {
                 $dst.Add("$prop", [ordered]@{})
             }
@@ -98,6 +105,10 @@ function MergeCustomObjectIntoOrderedDictionary {
         # Initialize metadata for the property if it does not already exist
         if (-not $metadata.properties.Contains($prop)) {
             $metadata.properties[$prop] = @{}
+            # Initialize the sources array for the property metadata with 'default' if the property already exists in the destination object
+            if ($dstPropExists) {
+                $metadata.properties[$prop].sources = @('default')
+            }
         }
 
         # Initialize the sources array for the property metadata if it does not already exist
@@ -379,6 +390,8 @@ function GetDefaultSettings
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
     .PARAMETER customSettings
         JSON formatted string applied last, subject to the same protected-settings rules as all other sources.
+    .PARAMETER metadata
+        Optional hashtable populated with setting sources, protection status, and skipped sources.
 #>
 function ReadSettings {
     param(
@@ -394,8 +407,11 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
         [string] $environmentName = "$ENV:ALGoEnvName",
-        [string] $customSettings = ""
+        [string] $customSettings = "",
+        [hashtable] $metadata = @{}
     )
+
+    $metadata.Clear()
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
@@ -552,8 +568,6 @@ function ReadSettings {
         }
     }
 
-    $metadata = @{}
-
     foreach ($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
@@ -683,10 +697,6 @@ function ReadSettings {
 
     $settings | ValidateSettings
 
-    OutputGroupStart "Settings sources"
-    OutputSettingsMetadata -settings $settings -metadata $metadata
-    OutputGroupEnd
-
     $settings
 }
 
@@ -726,7 +736,7 @@ function ValidateSettings {
     .SYNOPSIS
     Writes the source and protection status of each resolved setting without exposing setting values.
 #>
-function OutputSettingsMetadata {
+function OutputSettingsSources {
     Param(
         [System.Collections.IDictionary] $settings,
         [hashtable] $metadata,
@@ -736,12 +746,37 @@ function OutputSettingsMetadata {
     foreach ($prop in $settings.Keys) {
         $path = if ($prefix) { "$prefix.$prop" } else { $prop }
         $propertyMetadata = if ($metadata -and $metadata.ContainsKey('properties')) { $metadata.properties[$prop] } else { $null }
-        $sources = if ($propertyMetadata -and $propertyMetadata.sources.Count -gt 0) { $propertyMetadata.sources -join ', ' } else { 'defaults' }
+        $sources = if ($propertyMetadata -and $propertyMetadata.sources.Count -gt 0) { $propertyMetadata.sources -join ', ' } else { 'default' }
         $isProtected = [bool]($propertyMetadata -and $propertyMetadata.ContainsKey('protected') -and $propertyMetadata.protected)
-        Write-Host "${path}: $sources (protected: $isProtected)"
+        Write-Host "${path}: $sources$(if ($isProtected) { ' (protected)' })"
 
         if ($settings[$prop] -is [System.Collections.IDictionary]) {
-            OutputSettingsMetadata -settings $settings[$prop] -metadata $propertyMetadata -prefix $path
+            OutputSettingsSources -settings $settings[$prop] -metadata $propertyMetadata -prefix $path
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+        Writes notices for skipped setting sources without exposing setting values.
+#>
+function OutputSettingsNotices {
+    Param(
+        [System.Collections.IDictionary] $settings,
+        [hashtable] $metadata,
+        [string] $prefix = ''
+    )
+
+    foreach ($prop in $settings.Keys) {
+        $path = if ($prefix) { "$prefix.$prop" } else { $prop }
+        $propertyMetadata = if ($metadata -and $metadata.ContainsKey('properties')) { $metadata.properties[$prop] } else { $null }
+        if ($propertyMetadata -and $propertyMetadata.ContainsKey('sourcesSkipped')) {
+            foreach ($skipped in $propertyMetadata.sourcesSkipped) {
+                OutputNotice "Skipped setting ${path} from $($skipped.source): $($skipped.reason)"
+            }
+        }
+        if ($settings[$prop] -is [System.Collections.IDictionary]) {
+            OutputSettingsNotices -settings $settings[$prop] -metadata $propertyMetadata -prefix $path
         }
     }
 }
@@ -761,5 +796,5 @@ function SanitizeWorkflowName {
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
-Export-ModuleMember -Function ReadSettings
+Export-ModuleMember -Function ReadSettings, OutputSettingsSources, OutputSettingsNotices
 Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile, RepoSettingsFileName, ALGoSettingsFileName, CustomTemplateRepoSettingsFileName, CustomTemplateProjectSettingsFileName
