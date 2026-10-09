@@ -1,5 +1,7 @@
 ### Issues
 
+- Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
+
 - Issue 2387 - Deployment environment discovery now paginates GitHub API results, so Publish To Environment and CI/CD can discover environments beyond the first 30 and read their branch policies.
 
 ## v10.0
