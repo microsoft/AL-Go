@@ -16,17 +16,49 @@ $CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectS
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
         [System.Collections.Specialized.OrderedDictionary] $dst,
-        [PSCustomObject] $src
+        [PSCustomObject] $src,
+        [string] $context = 'settings',
+        [hashtable] $metadata = @{}
     )
+
+    OutputDebug "Applying $context"
+
+    # Ensure that the metadata object has a 'properties' section
+    if (-not $metadata.ContainsKey('properties')) {
+        $metadata.properties = @{}
+    }
+
+    # Extract the list of protected settings from the metadata
+    $protectedSettings = @($metadata.properties.GetEnumerator() |
+        Where-Object { $_.Value.ContainsKey("protected") -and $_.Value.protected } |
+        Select-Object -ExpandProperty Key)
+
+    # Extract the list of protected settings from the source object
+    $srcProtectedSettings = @()
+    if ($src.PSObject.Properties.Name -contains 'protectedSettings') {
+        $srcProtectedSettings = @($src.protectedSettings)
+    }
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
     if ($src.PSObject.Properties.Name -contains "overwriteSettings") {
         $src.overwriteSettings | ForEach-Object {
             $prop = $_
+
+            if ($_ -in @('overwriteSettings', 'protectedSettings')) {
+                OutputDebug "Skipping overwrite of metadata setting $prop"
+                return
+            }
+
+            if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
+                OutputDebug "Skipping overwrite of protected setting $prop"
+                return
+            }
+
             if ($dst.Contains($prop) -and $src.PSObject.Properties.Name -contains $prop) {
                 # Remove the property from the destination object only if it also exists in the source object. The property will be re-added with the new value later on.
                 OutputDebug "Overwriting setting $prop"
                 $dst.Remove($prop)
+                $metadata.properties.Remove($prop)
             }
         }
     }
@@ -37,8 +69,21 @@ function MergeCustomObjectIntoOrderedDictionary {
     $src.PSObject.Properties.GetEnumerator() | ForEach-Object {
         $prop = $_.Name
 
-        # Skip overwriteSettings property as it's only used to remove settings from the destination object and is specific to the source object
-        if ($prop -eq "overwriteSettings") {
+        if ($prop -in @('overwriteSettings', 'protectedSettings')) {
+            OutputDebug "Skipping initialization of metadata setting $prop"
+            return
+        }
+
+        if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
+            OutputDebug "Skipping initialization of protected setting $prop"
+
+            # Initialize the sourcesSkipped array for the property metadata if it does not already exist
+            if (-not $metadata.properties[$prop].ContainsKey('sourcesSkipped')) {
+                $metadata.properties[$prop].sourcesSkipped = @()
+            }
+            # Add the current source and reason to the sourcesSkipped array for the property metadata
+            $protectedBy = if ($metadata.properties[$prop].ContainsKey('sources') -and $metadata.properties[$prop].sources.Count -gt 0) { $metadata.properties[$prop].sources[-1] } else { 'unknown' }
+            $metadata.properties[$prop].sourcesSkipped += @{ source = $context; reason = "protected by $protectedBy" }
             return
         }
 
@@ -55,6 +100,29 @@ function MergeCustomObjectIntoOrderedDictionary {
                 $dst.Add("$prop", $srcProp)
             }
         }
+
+        # Initialize metadata for the property if it does not already exist
+        if (-not $metadata.properties.Contains($prop)) {
+            $metadata.properties[$prop] = @{}
+        }
+
+        # Initialize the sources array for the property metadata if it does not already exist
+        if (-not $metadata.properties[$prop].ContainsKey("sources")) {
+            $metadata.properties[$prop].sources = @()
+        }
+
+        # Update the sources array for the property metadata based on the type of the source property
+        if ($srcPropType -eq 'PSCustomObject' -or $srcProp -is [Object[]]) {
+            $metadata.properties[$prop].sources += $context
+        }
+        else {
+            $metadata.properties[$prop].sources = @($context)
+        }
+
+        # Mark the property as protected in the metadata if it is part of the source protected settings
+        if ($srcProtectedSettings -contains $prop) {
+            $metadata.properties[$prop].protected = $true
+        }
     }
 
     # Loop through all properties in the destination object
@@ -66,13 +134,20 @@ function MergeCustomObjectIntoOrderedDictionary {
     # If the property is a simple type, replace the value in the destination object with the value from the source object
     @($dst.Keys) | ForEach-Object {
         $prop = $_
+
         if ($src.PSObject.Properties.Name -eq $prop) {
             $dstProp = $dst."$prop"
             $srcProp = $src."$prop"
             $dstPropType = $dstProp.GetType().Name
             $srcPropType = $srcProp.GetType().Name
+
+            if ($protectedSettings -contains $prop -and $srcProtectedSettings -notcontains $prop) {
+                OutputDebug "Skipping merge of protected setting $prop"
+                return
+            }
+
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
-                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp
+                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp -context "$context > $prop" -metadata $metadata.properties[$prop]
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
@@ -229,15 +304,15 @@ function GetDefaultSettings
         "excludeEnvironments"                           = @()
         "alDoc"                                         = [ordered]@{
             "continuousDeployment"                      = $false
-            "deployToGitHubPages"                       = $true
-            "maxReleases"                               = 3
-            "groupByProject"                            = $true
-            "includeProjects"                           = @()
-            "excludeProjects"                           = @()
-            "header"                                    = "Documentation for {REPOSITORY} {VERSION}"
-            "footer"                                    = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
-            "defaultIndexMD"                            = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
-            "defaultReleaseMD"                          = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "deployToGitHubPages"                        = $true
+            "maxReleases"                                = 3
+            "groupByProject"                             = $true
+            "includeProjects"                            = @()
+            "excludeProjects"                            = @()
+            "header"                                     = "Documentation for {REPOSITORY} {VERSION}"
+            "footer"                                     = "Documentation for <a href=""https://github.com/{REPOSITORY}"">{REPOSITORY}</a> made with <a href=""https://aka.ms/AL-Go"">AL-Go for GitHub</a>, <a href=""https://go.microsoft.com/fwlink/?linkid=2247728"">ALDoc</a> and <a href=""https://dotnet.github.io/docfx"">DocFx</a>"
+            "defaultIndexMD"                             = "## Reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultIndexMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
+            "defaultReleaseMD"                           = "## Release reference documentation\n\nThis is the generated reference documentation for [{REPOSITORY}](https://github.com/{REPOSITORY}).\n\nYou can use the navigation bar at the top and the table of contents to the left to navigate your documentation.\n\nYou can change this content by creating/editing the **{INDEXTEMPLATERELATIVEPATH}** file in your repository or use the alDoc:defaultReleaseMD setting in your repository settings file (.github/AL-Go-Settings.json)\n\n{RELEASENOTES}"
         }
         "trustMicrosoftNuGetFeeds"                      = $true
         "nuGetFeedSelectMode"                           = "LatestMatching"
@@ -258,21 +333,22 @@ function GetDefaultSettings
         "shortLivedArtifactsRetentionDays"              = 1  # 0 means use GitHub default
         "reportSuppressedDiagnostics"                   = $false
         "workflowDefaultInputs"                         = @()
-        "customALGoFiles" = [ordered]@{
+        "customALGoFiles"                               = [ordered]@{
             "filesToInclude"                            = @()
             "filesToExclude"                            = @()
         }
-        "postponeProjectInBuildOrder"                  = $false
+        "postponeProjectInBuildOrder"                   = $false
     }
 }
 
 
 <#
     .SYNOPSIS
-        Read settings from the settings files and merge them into an ordered dictionary, with optional custom settings override.
+        Read settings from the settings files and merge them into an ordered dictionary, with optional custom settings.
     .DESCRIPTION
         This function reads settings from various files and merges them into an ordered dictionary.
-        The settings are read from the following files (in order of precedence):
+        Settings are applied in the following order. Later sources normally take precedence, except when an earlier
+        source protects a setting and the later source does not also mark that setting as protected:
         - ALGoOrgSettings (github Variable)                    = Organization settings variable
         - .github/AL-Go-TemplateRepoSettings.doNotEdit.json    = Repository settings from custom template
         - .github/AL-Go-Settings.json                          = Repository Settings file
@@ -283,7 +359,7 @@ function GetDefaultSettings
         - <project>/.AL-Go/<workflowName>.settings.json        = Project workflow settings file
         - <project>/.AL-Go/<userName>.settings.json            = User settings file
         - ALGoEnvSettings (github Variable)                    = Deployment Environment settings variable
-        - customSettings parameter (JSON string)               = Custom settings with highest precedence
+        - customSettings parameter (JSON string)               = Custom settings applied last
     .PARAMETER baseFolder
         The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
     .PARAMETER repoName
@@ -309,7 +385,9 @@ function GetDefaultSettings
     .PARAMETER environmentName
         The value of the environment name, based on the workflow context. Default is $ENV:ALGoEnvName.
     .PARAMETER customSettings
-        JSON formatted string that will be applied last to override any other settings. These settings have the highest precedence.
+        JSON formatted string applied last, subject to the same protected-settings rules as all other sources.
+    .PARAMETER metadata
+        Optional hashtable populated with setting sources, protection status, and skipped sources.
 #>
 function ReadSettings {
     Param(
@@ -325,7 +403,8 @@ function ReadSettings {
         [string] $repoSettingsVariableValue = "$ENV:ALGoRepoSettings",
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
         [string] $environmentName = "$ENV:ALGoEnvName",
-        [string] $customSettings = ""
+        [string] $customSettings = "",
+        [hashtable] $metadata = @{}
     )
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
@@ -352,12 +431,32 @@ function ReadSettings {
         return $null
     }
 
+    function InitializeDefaultSettingsMetadata {
+        Param(
+            [System.Collections.IDictionary] $settings,
+            [hashtable] $metadata
+        )
+
+        $metadata.properties = @{}
+        foreach ($prop in $settings.Keys) {
+            $metadata.properties[$prop] = @{ sources = @('default') }
+
+            if ($settings[$prop] -is [System.Collections.IDictionary]) {
+                InitializeDefaultSettingsMetadata -settings $settings[$prop] -metadata $metadata.properties[$prop]
+            }
+        }
+    }
+
     $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
     $githubFolder = Join-Path $baseFolder ".github"
     $workflowName = SanitizeWorkflowName -workflowName $workflowName
 
     # Start with default settings
     $settings = GetDefaultSettings -repoName $repoName
+
+    # Clear existing metadata before initializing default settings metadata
+    $metadata.Clear()
+    InitializeDefaultSettingsMetadata -settings $settings -metadata $metadata
 
     # Read settings from files and merge them into the settings object
 
@@ -436,7 +535,7 @@ function ReadSettings {
             }
 
             # Read settings from user settings file
-           $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
+            $userSettingsObject = GetSettingsObject -Path (Join-Path $projectFolder "$ALGoFolderName/$userName.settings.json")
             $settingsObjects += @{
                 "Source" = "$(Join-Path $project "$ALGoFolderName/$userName.settings.json")"
                 "Type" = "File"
@@ -462,8 +561,8 @@ function ReadSettings {
             }
         }
         $settingsObjects += @{
-            "Source" = "ALGoEnvSettings for $environmentName"
-            "Type" = "Variable"
+            "Source"   = "ALGoEnvSettings for $environmentName"
+            "Type"     = "Variable"
             "Settings" = $environmentVariableObject
         }
     }
@@ -477,19 +576,19 @@ function ReadSettings {
             throw "Failed to parse customSettings JSON: $($_.Exception.Message)"
         }
         $settingsObjects += @{
-            "Source" = "CustomSettings"
-            "Type" = "Parameter"
+            "Source"   = "CustomSettings"
+            "Type"     = "Parameter"
             "Settings" = $customSettingsObject
         }
     }
 
-    foreach($settingsObject in $settingsObjects) {
+    foreach ($settingsObject in $settingsObjects) {
         $settingsJson = $settingsObject.Settings
         if ($settingsJson) {
-            OutputDebug "Applying settings from $($settingsObject.Source) ($($settingsObject.Type))"
-            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson
+            $context = "settings $($settingsObject.Source) ($($settingsObject.Type))"
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $settingsJson -context $context -metadata $metadata
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
-                foreach($conditionalSetting in $settingsJson.ConditionalSettings) {
+                foreach ($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
                         $conditionMet = $true
                         $conditions = @()
@@ -499,7 +598,7 @@ function ReadSettings {
                             if ($conditionMet -and $conditionalSetting.PSObject.Properties.Name -eq $propName) {
 
                                 # If the property name is workflows then we should sanitize the workflow name in the same way we sanitize the $workflowName variable
-                                if($propName -eq "workflows") {
+                                if ($propName -eq "workflows") {
                                     $conditionalSetting."$propName" = $conditionalSetting."$propName" | ForEach-Object { SanitizeWorkflowName -workflowName $_ }
                                 }
 
@@ -508,8 +607,8 @@ function ReadSettings {
                             }
                         }
                         if ($conditionMet) {
-                            OutputDebug "Applying conditional settings for $($conditions -join ", ")"
-                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings
+                            $conditionalContext = "$context > conditional settings for $($conditions -join ', ')"
+                            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $conditionalSetting.settings -context $conditionalContext -metadata $metadata
                         }
                     }
                 }
@@ -540,6 +639,9 @@ function ReadSettings {
             OutputDebug "Setting shell to powershell for non-ubuntu"
             $settings.shell = "powershell"
         }
+
+        # Record the source of the shell setting in the metadata
+        $metadata.properties.shell.sources += 'derived from runs-on'
     }
     if ($settings.githubRunner -eq "") {
         if ($settings."runs-on" -like "*ubuntu-*") {
@@ -550,10 +652,16 @@ function ReadSettings {
             OutputDebug "Setting gitHubRunner to runs-on value: $($settings."runs-on")"
             $settings.githubRunner = $settings."runs-on"
         }
+
+        # Record the source of the gitHubRunner setting in the metadata
+        $metadata.properties.githubRunner.sources += 'derived from runs-on'
     }
     if ($settings.githubRunnerShell -eq "") {
         OutputDebug "Setting gitHubRunnerShell to shell value: $($settings.shell)"
         $settings.githubRunnerShell = $settings.shell
+
+        # Record the source of the gitHubRunnerShell setting in the metadata
+        $metadata.properties.githubRunnerShell.sources += 'derived from shell'
     }
 
     # Check that gitHubRunnerShell and Shell is valid
@@ -567,16 +675,25 @@ function ReadSettings {
     if (($settings.githubRunner -like "*ubuntu-*") -and ($settings.githubRunnerShell -eq "powershell")) {
         OutputDebug "Switching shell to pwsh for ubuntu"
         $settings.githubRunnerShell = "pwsh"
+
+        # Record the source of the gitHubRunnerShell setting in the metadata
+        $metadata.properties.githubRunnerShell.sources += 'derived from githubRunner'
     }
 
     if($settings.projectName -eq '') {
         OutputDebug "Setting projectName to default value: $project"
         $settings.projectName = $project # Default to project path as project name
+
+        # Record the source of the projectName setting in the metadata
+        $metadata.properties.projectName.sources += 'derived from project'
     }
 
     # Interpret zero or negative parallelism as the max number of processors
     if ($settings.workspaceCompilation.parallelism -le 0) {
         $settings.workspaceCompilation.parallelism = [System.Environment]::ProcessorCount
+
+        # Record the source of the workspaceCompilation.parallelism setting in the metadata
+        $metadata.properties.workspaceCompilation.properties.parallelism.sources += 'derived from processor count'
     }
 
     $settings | ValidateSettings
@@ -618,6 +735,55 @@ function ValidateSettings {
 
 <#
     .SYNOPSIS
+    Writes the source and protection status of each resolved setting without exposing setting values.
+#>
+function OutputSettingsSources {
+    Param(
+        [System.Collections.IDictionary] $settings,
+        [hashtable] $metadata,
+        [string] $prefix = ''
+    )
+
+    foreach ($prop in $settings.Keys) {
+        $path = if ($prefix) { "$prefix.$prop" } else { $prop }
+        $propertyMetadata = if ($metadata -and $metadata.ContainsKey('properties')) { $metadata.properties[$prop] } else { $null }
+        $sources = if ($propertyMetadata -and $propertyMetadata.sources.Count -gt 0) { $propertyMetadata.sources -join ', ' } else { 'unknown' }
+        $isProtected = [bool]($propertyMetadata -and $propertyMetadata.ContainsKey('protected') -and $propertyMetadata.protected)
+        Write-Host "${path}: $sources$(if ($isProtected) { ' (protected)' })"
+
+        if ($settings[$prop] -is [System.Collections.IDictionary]) {
+            OutputSettingsSources -settings $settings[$prop] -metadata $propertyMetadata -prefix $path
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+        Writes notices for skipped setting sources without exposing setting values.
+#>
+function OutputSettingsNotices {
+    Param(
+        [System.Collections.IDictionary] $settings,
+        [hashtable] $metadata,
+        [string] $prefix = ''
+    )
+
+    foreach ($prop in $settings.Keys) {
+        $path = if ($prefix) { "$prefix.$prop" } else { $prop }
+        $propertyMetadata = if ($metadata -and $metadata.ContainsKey('properties')) { $metadata.properties[$prop] } else { $null }
+        if ($propertyMetadata -and $propertyMetadata.ContainsKey('sourcesSkipped')) {
+            foreach ($skipped in $propertyMetadata.sourcesSkipped) {
+                OutputNotice "Skipped setting ${path} from $($skipped.source): $($skipped.reason)"
+            }
+        }
+        if ($settings[$prop] -is [System.Collections.IDictionary]) {
+            OutputSettingsNotices -settings $settings[$prop] -metadata $propertyMetadata -prefix $path
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
         Sanitize a workflow name by removing invalid file name characters.
     .PARAMETER workflowName
         The workflow name to sanitize.
@@ -631,5 +797,5 @@ function SanitizeWorkflowName {
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
-Export-ModuleMember -Function ReadSettings
+Export-ModuleMember -Function ReadSettings, OutputSettingsSources, OutputSettingsNotices
 Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile, RepoSettingsFileName, ALGoSettingsFileName, CustomTemplateRepoSettingsFileName, CustomTemplateProjectSettingsFileName

@@ -250,6 +250,18 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="reportsuppresseddiagnostics"></a>reportSuppressedDiagnostics | If this setting is set to true, the AL compiler will report diagnostics which are suppressed in the code using the pragma `#pragma warning disable <id>`. This can be useful if you want to ensure that no warnings are suppressed in your code. | false |
 | <a id="customALGoFiles"></a>customALGoFiles | An object to configure custom AL-Go files, that will be updated during "Update AL-Go System Files" workflow. The object can contain properties `filesToInclude` and `filesToExclude`. Read more at [Customizing AL-Go](CustomizingALGoForGitHub.md#Using-custom-template-files). | `{ "filesToInclude": [], "filesToExclude": [] }`
 
+## Settings sources in workflow logs <a id="settings-sources"></a>
+
+The ReadSettings action writes a **Settings sources** group to the workflow log. It lists the path and source of every resolved setting, including nested properties, without printing their values in that group. This helps explain which settings files, variables, or defaults contributed to a result. Calling `ReadSettings` directly does not write this group.
+
+- A scalar lists its latest accepted source; an unchanged setting lists `default`.
+- An array lists the sources applied to it, even if a source only repeated an existing value. Extending a default array retains `default`.
+- An object lists sources that supplied the object, even the source changed no nested properties. Each nested property has its own source entry. Extending a default object retains `default`.
+- Replacing an array or object with [overwriteSettings](#overwriteSettings) starts a new source list, including for an object's properties.
+- A computed setting retains its earlier source followed by the derivation, for example `shell: default, derived from runs-on`.
+- A [protected setting](#protectedSettings) has ` (protected)` appended to its source entry.
+- If source metadata is unavailable, the group shows `unknown`.
+
 ## Overwrite settings <a id="overwriteSettings"></a>
 
 By default, AL-Go merges settings from various places (see [settings levels](#where-are-the-settings-located)).
@@ -316,6 +328,99 @@ then, after merging, the result settings object will contain the following value
 ```
 
 > _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value.
+
+## Protected settings <a id="protectedSettings"></a>
+
+Settings are applied in the [order listed above](#where-are-the-settings-located); later sources normally take precedence. To prevent a later source from changing a setting, list its name in `protectedSettings` **alongside its value** in the earlier source.
+
+_Example_:
+Say, `ALGoOrgSettings` contains the following values:
+
+```json
+{
+    "protectedSettings": ["country", "keyVaultName"],
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+and `.github/AL-Go-Settings.json` contains the following values:
+
+```json
+{
+    "country": "us",
+    "keyVaultName": "ProjectVault"
+}
+```
+
+then, after merging, the result settings object will contain the following values:
+
+```json
+{
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+Skipped overrides do not change the protected settings' sources in the workflow log.
+
+Protection only takes effect when the source provides the setting's value; listing a name alone does nothing. A later source can change a protected setting only if it also lists that setting in its own `protectedSettings` and supplies a value. `overwriteSettings` alone cannot bypass protection. These rules also apply to `customSettings`, even though it is applied last.
+
+> _**Note**_: `protectedSettings` is optional (effectively empty when omitted). It controls settings merging and is not included in the resolved settings.
+
+Protection applies at the level where it is declared. To protect `alDoc.includeProjects`, place `protectedSettings` inside `alDoc`:
+
+```json
+{
+    "alDoc": {
+        "protectedSettings": ["includeProjects"],
+        "includeProjects": ["Core"]
+    }
+}
+```
+
+The same pattern applies within `deliverToAppSource` and `commitOptions`. Protecting `alDoc` itself at the top level is separate; if the parent is not protected, a later top-level `overwriteSettings` can replace the whole object and discard its nested protections.
+
+When a value is skipped, the ReadSettings action writes one notice per attempted override, naming the setting path, attempted source, and protecting source without including the value. For example: `Skipped setting country from settings ALGoRepoSettings (Variable): protected by settings ALGoOrgSettings (Variable)`. Direct calls to `ReadSettings` do not write these notices.
+
+Protection also works inside matching `ConditionalSettings`.
+
+_Example_:
+Say, `ALGoOrgSettings` contains the following values to protect `country` only for the `ValidateUS` build mode:
+
+```json
+{
+    "ConditionalSettings": [
+        {
+            "buildModes": ["ValidateUS"],
+            "settings": {
+                "protectedSettings": ["country"],
+                "country": "us"
+            }
+        }
+    ]
+}
+```
+
+and `.AL-Go/settings.json` contains the following values:
+
+```json
+{
+    "country": "w1",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+then, after merging for build mode `ValidateUS`, the result settings object will contain the following values:
+
+```json
+{
+    "country": "us",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+For other build modes, the project value applies.
 
 <a id="customdelivery"></a>
 
