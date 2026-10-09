@@ -854,12 +854,13 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 $expected = Join-Path $binFolder $toolRelative
                 New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
                 Set-Content -Path $expected -Value 'tool'
+                Set-Content -Path (Join-Path $binFolder 'altool.dll') -Value 'managed tool'
 
                 Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
             }
         }
 
-        It 'Falls back to the flat bin folder for framework-dependent / marketplace VSIX layouts' {
+        It 'Prefers the flat native executable over a framework-dependent DLL' {
             $cf = Join-Path $TestDrive 'altool-flat'
             InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
                 param($CompilerFolder)
@@ -869,6 +870,43 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 $expected = Join-Path $binFolder $toolRelative
                 New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
                 Set-Content -Path $expected -Value 'tool'
+                Set-Content -Path (Join-Path $binFolder 'altool.dll') -Value 'managed tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Finds a framework-dependent DLL in the <Layout> layout without a native executable' -TestCases @(
+            @{ Layout = 'flat' }
+            @{ Layout = 'platform' }
+        ) {
+            param($Layout)
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = (Join-Path $TestDrive "altool-dll-$Layout"); Layout = $Layout } {
+                param($CompilerFolder, $Layout)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder 'compiler/extension/bin'
+                if ($Layout -eq 'platform') {
+                    $platform = if ($IsLinux) { 'linux' } else { 'win32' }
+                    $binFolder = Join-Path $binFolder $platform
+                }
+                New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
+                $expected = Join-Path $binFolder 'altool.dll'
+                Set-Content -Path $expected -Value 'managed tool'
+
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
+            }
+        }
+
+        It 'Supports a flat package containing a managed DLL and only a Windows apphost' {
+            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = (Join-Path $TestDrive 'altool-windows-apphost') } {
+                param($CompilerFolder)
+                $script:alTool = $null
+                $binFolder = Join-Path $CompilerFolder 'compiler/extension/bin'
+                New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
+                Set-Content -Path (Join-Path $binFolder 'altool.dll') -Value 'managed tool'
+                Set-Content -Path (Join-Path $binFolder 'altool.exe') -Value 'Windows apphost'
+                $expected = Join-Path $binFolder $(if ($IsLinux) { 'altool.dll' } else { 'altool.exe' })
 
                 Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
             }
@@ -882,6 +920,160 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 New-Item -Path (Join-Path $CompilerFolder "compiler/extension/bin") -ItemType Directory -Force | Out-Null
 
                 { Get-ALTool -CompilerFolder $CompilerFolder } | Should -Throw "*Could not find AL tool in the compiler folder*"
+            }
+        }
+    }
+
+    Describe 'Invoke-ALTool' {
+        BeforeAll {
+            $script:fakeToolHost = Join-Path $TestDrive 'AL tool host.ps1'
+            Set-Content -Path $script:fakeToolHost -Encoding UTF8 -Value @'
+# RunAndCheck passes an array to the command; emulate native argument expansion.
+$toolArguments = @($args | ForEach-Object { $_ })
+if ($toolArguments -contains '--fail') {
+    Write-Output 'Tool failed'
+    exit 7
+}
+ConvertTo-Json -InputObject $toolArguments -Compress
+exit 0
+'@
+        }
+
+        It 'Preserves arguments and stdout for a <Kind> tool' -TestCases @(
+            @{ Kind = 'native' }
+            @{ Kind = 'managed' }
+        ) {
+            param($Kind)
+            InModuleScope CompileFromWorkspace -Parameters @{ HostPath = $script:fakeToolHost; Kind = $Kind; Root = $TestDrive } {
+                param($HostPath, $Kind, $Root)
+                $script:hostPath = $HostPath
+                Mock dotnet {
+                    & $script:hostPath @args
+                    $global:LASTEXITCODE = $LASTEXITCODE
+                }
+                $tool = if ($Kind -eq 'managed') { Join-Path $Root 'Compiler with spaces/altool.dll' } else { $HostPath }
+                $arguments = @('workspace', 'create', 'Workspace with spaces.code-workspace', 'App with spaces')
+
+                $output = Invoke-ALTool -ALToolPath $tool -Arguments $arguments | ConvertFrom-Json
+
+                $expected = if ($Kind -eq 'managed') { @($tool) + $arguments } else { $arguments }
+                $output.Count | Should -Be $expected.Count
+                for ($i = 0; $i -lt $expected.Count; $i++) {
+                    $output[$i] | Should -BeExactly $expected[$i]
+                }
+            }
+        }
+
+        It 'Propagates a nonzero exit code from a <Kind> tool' -TestCases @(
+            @{ Kind = 'native' }
+            @{ Kind = 'managed' }
+        ) {
+            param($Kind)
+            InModuleScope CompileFromWorkspace -Parameters @{ HostPath = $script:fakeToolHost; Kind = $Kind } {
+                param($HostPath, $Kind)
+                $script:hostPath = $HostPath
+                Mock dotnet {
+                    & $script:hostPath @args
+                    $global:LASTEXITCODE = $LASTEXITCODE
+                }
+                $tool = if ($Kind -eq 'managed') { 'altool.dll' } else { $HostPath }
+
+                { Invoke-ALTool -ALToolPath $tool -Arguments @('--fail') } | Should -Throw '*failed with exit code 7*'
+            }
+        }
+
+        It 'Fails explicitly when dotnet is unavailable' {
+            InModuleScope CompileFromWorkspace {
+                $originalPath = $env:PATH
+                $originalExitCode = $global:LASTEXITCODE
+                try {
+                    $env:PATH = ''
+                    $global:LASTEXITCODE = 0
+                    { Invoke-ALTool -ALToolPath 'altool.dll' } | Should -Throw '*dotnet*not recognized*'
+                }
+                finally {
+                    $env:PATH = $originalPath
+                    $global:LASTEXITCODE = $originalExitCode
+                }
+            }
+        }
+
+        It 'Passes bare dotnet without enumerating executable matches' {
+            InModuleScope CompileFromWorkspace {
+                Mock Get-Command {
+                    return @(
+                        @{ Source = '/usr/bin/dotnet' }
+                        @{ Source = '/bin/dotnet' }
+                    )
+                } -ParameterFilter { $Name -eq 'dotnet' }
+                Mock RunAndCheck { $script:capturedArguments = @($args) }
+
+                Invoke-ALTool -ALToolPath 'Compiler with spaces/altool.dll' -Arguments @('workspace', 'create', 'Workspace with spaces.code-workspace')
+
+                $script:capturedArguments.Count | Should -Be 5
+                $script:capturedArguments[0] | Should -BeOfType ([string])
+                $script:capturedArguments[0] | Should -BeExactly 'dotnet'
+                $script:capturedArguments[1] | Should -BeExactly 'Compiler with spaces/altool.dll'
+                $script:capturedArguments[2] | Should -BeExactly 'workspace'
+                $script:capturedArguments[3] | Should -BeExactly 'create'
+                $script:capturedArguments[4] | Should -BeExactly 'Workspace with spaces.code-workspace'
+                Should -Invoke Get-Command -Times 0 -Exactly -ParameterFilter { $Name -eq 'dotnet' }
+            }
+        }
+
+        It 'Uses dotnet for manifest extraction, workspace creation, option probing and compilation' {
+            InModuleScope CompileFromWorkspace -Parameters @{ Root = (Join-Path $TestDrive 'managed workspace') } {
+                param($Root)
+                $script:alTool = $null
+                $binFolder = Join-Path $Root 'compiler/extension/bin'
+                New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
+                $tool = Join-Path $binFolder 'altool.dll'
+                Set-Content -Path $tool -Value 'managed tool'
+                $appFolder = Join-Path $Root 'My App'
+                New-Item -Path $appFolder -ItemType Directory -Force | Out-Null
+                Set-Content -Path (Join-Path $appFolder 'app.json') -Value '{"id":"my-app"}' -Encoding UTF8
+                $workspaceFile = Join-Path $Root 'Test Workspace.code-workspace'
+                Set-Content -Path $workspaceFile -Value '{}'
+                $baselineApp = Join-Path $Root 'Baseline App.app'
+                $errorLogDir = Join-Path $Root 'Error Logs'
+                $script:toolCalls = @()
+                Mock RunAndCheck {
+                    $script:toolCalls += ,@($args)
+                    if ($args -contains 'GetPackageManifest') {
+                        return '{"Id":"my-app","Version":"1.0.0.0"}'
+                    }
+                    if ($args -contains '--help') {
+                        return '--errorlogdirectory'
+                    }
+                }
+                Mock Copy-CompiledAppsToOutput { return @() }
+
+                New-AppSourceCopJson -CompilerFolder $Root -AppFolders @($appFolder) -BaselineApps @($baselineApp) -Settings @{
+                    appSourceCopMandatoryAffixes = @()
+                    obsoleteTagMinAllowedMajorMinor = ''
+                }
+                $resolvedTool = Get-ALTool -CompilerFolder $Root
+                New-WorkspaceFromFolders -Folders @($appFolder) -WorkspaceFile $workspaceFile -AltoolPath $resolvedTool
+                CompileAppsInWorkspace -ALToolPath $resolvedTool -WorkspaceFile $workspaceFile -MaxCpuCount 1 -OutFolder $Root -PackageCachePath $Root -ErrorLogDirectory $errorLogDir
+
+                $script:toolCalls.Count | Should -Be 4
+                foreach ($call in $script:toolCalls) {
+                    $call[0] | Should -Be 'dotnet'
+                    $call[1] | Should -BeExactly $tool
+                }
+                $script:toolCalls[0][2] | Should -Be 'GetPackageManifest'
+                $script:toolCalls[0][3] | Should -BeExactly $baselineApp
+                $script:toolCalls[1][2] | Should -Be 'workspace'
+                $script:toolCalls[1][3] | Should -Be 'create'
+                $script:toolCalls[1][4] | Should -BeExactly $workspaceFile
+                $script:toolCalls[1][5] | Should -BeExactly $appFolder
+                $script:toolCalls[2][4] | Should -Be '--help'
+                $script:toolCalls[3][2] | Should -Be 'workspace'
+                $script:toolCalls[3][3] | Should -Be 'compile'
+                $script:toolCalls[3] | Should -Contain '--errorlogdirectory'
+                $script:toolCalls[3] | Should -Contain $errorLogDir
+                $appSourceCop = Get-Content (Join-Path $appFolder 'AppSourceCop.json') -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+                $appSourceCop.version | Should -Be '1.0.0.0'
             }
         }
     }
@@ -1369,7 +1561,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
     Describe 'Test-ALToolWorkspaceCompileSupportsOption' {
         BeforeAll {
-            # The probe invokes '& $ALToolPath workspace compile --help'. We stand in a fake altool as a
+            # The probe invokes the AL tool's workspace compile --help command. We stand in a fake altool as a
             # .ps1 script (invoked via the call operator on both PS5 and PS7) whose output and exit code we
             # control per test, so the real help-matching and exit-code handling are exercised - not mocked.
             $script:fakeAltool = Join-Path $TestDrive "fake-altool.ps1"
