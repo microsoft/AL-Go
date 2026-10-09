@@ -173,6 +173,57 @@ Describe "AnalyzeTests Action Tests" {
         $output | Should -BeOfType 'hashtable'
     }
 
+    It 'Test page scripting summary under strict mode with <passed> passed, <failed> failed and <skipped> skipped tests' -TestCases @(
+        @{ passed = 9; failed = 2; skipped = 0 }
+        @{ passed = 1; failed = 1; skipped = 1 }
+        @{ passed = 2; failed = 0; skipped = 0 }
+        @{ passed = 0; failed = 2; skipped = 0 }
+    ) {
+        Param($passed, $failed, $skipped)
+
+        Set-StrictMode -Version 2.0
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        Mock Trace-Information {}
+        $testcases = @(
+            for ($i = 1; $i -le $passed; $i++) {
+                "<testcase name='Passed$i.yml' time='1' />"
+            }
+            for ($i = 1; $i -le $failed; $i++) {
+                "<testcase name='Failed$i.yml' time='1'><failure message='Replay error $i'><![CDATA[Stack trace $i]]></failure></testcase>"
+            }
+            for ($i = 1; $i -le $skipped; $i++) {
+                "<testcase name='Skipped$i.yml' time='1'><skipped /></testcase>"
+            }
+        ) -join "`n"
+        $totalTests = $passed + $failed + $skipped
+        $testResultsFile = Join-Path $TestDrive 'PageScriptingTestResults.xml'
+        @"
+<testsuites tests="$totalTests" failures="$failed" skipped="$skipped" time="$totalTests">
+  <testsuite name="TestProject" tests="$totalTests" failures="$failed" skipped="$skipped" time="$totalTests">
+    $testcases
+  </testsuite>
+</testsuites>
+"@ | Set-Content -Path $testResultsFile -Encoding UTF8
+
+        $output = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project 'TestProject'
+        $output.SummaryMD | Should -Match "\|TestProject\|$totalTests\|"
+        if ($passed -gt 0) { $output.SummaryMD | Should -Match "\|$passed :heavy_check_mark:\|" }
+        if ($failed -gt 0) { $output.SummaryMD | Should -Match "\|$failed :x:\|" }
+        if ($skipped -gt 0) { $output.SummaryMD | Should -Match "\|$skipped :question:\|" }
+        $output.FailuresMD | Should -Not -Match 'Passed\d+\.yml|Skipped\d+\.yml'
+        for ($i = 1; $i -le $failed; $i++) {
+            $output.FailuresMD | Should -Match "Failed$i\.yml, Failure"
+            $output.FailuresMD | Should -Match "Replay error $i"
+            $output.FailuresMD | Should -Match "Stack trace $i"
+        }
+        if ($failed -eq 0) {
+            $output.FailuresMD | Should -Be '<i>No test failures</i>'
+        }
+        else {
+            $output.FailuresSummaryMD | Should -Be "<i>$failed failing tests, download test results to see details</i>"
+        }
+    }
+
     AfterAll {
         Remove-Item -Path $bcptFilename -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine1 -Force -ErrorAction SilentlyContinue
