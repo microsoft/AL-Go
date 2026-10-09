@@ -242,7 +242,9 @@ In order to instruct AL-Go which files to look for at the template repository, y
 - `destinationName`: The filename to use at the destination. If specified, overrides the source filename, allowing the file to be renamed when copied. Should be used together with a `filter` that matches a single file. _Example_: `customScript.ps1`.
 
 > [!NOTE]
-> `filesToInclude` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Please pay attention, when changing the file configurations: there might be template files that were previously propagated to your repositories. In case these files are no longer matched via `filesToInclude`, AL-Go for GitHub will ignore them and you might have to remove them manually.
+> `filesToInclude` is used to define all the template files that will be used by AL-Go for GitHub. If a template file is not matched, it will be ignored. Files propagated by an earlier configuration are not automatically removed when they are no longer matched. For example, changing `destinationName` creates or updates the new filename but leaves the old filename in the consumer repository; remove the old file manually if it is no longer needed.
+
+If multiple include rules target the same destination file, only the first eligible source is used. Default AL-Go file rules take precedence over `customALGoFiles.filesToInclude` rules; within those rules, custom template files take precedence over original template files. A later rule with the same destination does not override the earlier one, including when `destinationName` creates the collision.
 
 When using a custom template repository, `filesToInclude` also resolves files from the **original** AL-Go template (i.e. the official [AL-Go-PTE](https://github.com/microsoft/AL-Go-PTE) or [AL-Go-AppSource](https://github.com/microsoft/AL-Go-AppSource) template). This means files present in the official AL-Go template that are not overridden by your custom template are still propagated to consumer repositories. When a file exists in both the original template and your custom template, how the file's **content** is resolved depends on the file's type:
 
@@ -265,19 +267,21 @@ The following table summarizes how `filesToInclude` resolves files when a custom
 - `filter`: A string to use for filtering in the specified source path. It can contain `*` and `?` wildcards. _Example_: `notRelevantScript.ps1` or `*-internal.ps1`
 
 > [!NOTE] `filesToExclude` is an array of file configurations already included in `filesToInclude`. These files are specifically marked to be excluded from the update process.
-> This mechanism allows for fine-grained control over which files are propagated to the end repository and which should be explicitly removed, ensuring that unwanted files are not carried forward during updates.
+> Exclusions match source files, not destination filenames. If another included source targets the same destination, it is updated from that source instead of being removed. Exclusion rules can only match files still present in the custom or original template; removing a file from both templates does not make an existing consumer copy eligible for automatic removal.
 
 > [!TIP]
-> When using a custom template repository, you can use `filesToExclude` in the custom template's settings to prevent files from the original AL-Go template from being propagated to consumer repos. For example, if the original template includes a workflow you don't want in your consumer repos, adding it to `filesToExclude` in your custom template's settings will remove it during the next update.
+> When using a custom template repository, you can use `filesToExclude` in the custom template's settings to prevent files from the original AL-Go template from being propagated to consumer repos. For example, if the original template includes a workflow you don't want in your consumer repos, adding it to `filesToExclude` in your custom template's settings will remove it during the next update, provided no other included source targets the same destination.
 
 The following table summarizes how AL-Go for GitHub manages file updates and exclusions when using custom template files. Say, there is a file (e.g. `file.ps1`) in the template repository.
 
 | File is present in end repo | File is matched by `filesToInclude` | File is matched by `filesToExclude` | Result |
 |---|---|---|---|
 | Yes/No | Yes | No | The file is **updated/created** in the end repo |
-| Yes | Yes | Yes | The file is **removed** from the end repo, as it's matched for exclusion |
+| Yes | Yes | Yes | The file is **removed** from the end repo if no other included source targets the same destination; otherwise that source updates it |
 | Yes | No | Yes | The file is **_not_** removed as it was not matched as update |
 | No | Yes/No | Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
+
+For safety, updates and removals skip source or destination paths that resolve through a symlink or junction to a different physical path. The workflow emits a warning for each skipped file; use paths without such redirects for files managed by Update AL-Go System Files.
 
 ### Examples of using custom template files
 
