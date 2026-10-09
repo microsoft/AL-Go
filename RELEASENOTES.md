@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2387 - Deployment environment discovery now paginates GitHub API results, so Publish To Environment and CI/CD can discover environments beyond the first 30 and read their branch policies.
+
 ## v10.0
 
 ### AL-Go Telemetry Enhancements
