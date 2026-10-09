@@ -1,3 +1,7 @@
+## Issues
+
+- Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
+
 ## v10.0
 
 ### AL-Go Telemetry Enhancements
@@ -29,7 +33,6 @@ To retain the previous behavior, set `cacheImageName` to an empty string in .AL-
 
 ### Issues
 
-- Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
 - Workflow finalization telemetry failures, including GitHub API errors, no longer fail an otherwise successful workflow.
 - Issue 2358 - Update AL-Go System Files no longer creates a commit or pull request when only the template SHA would change, avoiding unnecessary CI/CD runs.
 - Issue 2370 - Retry CI/CD baseline discovery when no eligible run is returned, logging result counts for diagnostics and URL-encoding query values so discovery URLs render correctly in logs. The existing full-build fallback is preserved when no baseline is found after retries.
