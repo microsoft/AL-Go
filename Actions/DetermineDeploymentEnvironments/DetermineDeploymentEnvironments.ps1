@@ -27,13 +27,24 @@ function IsGitHubPagesAvailable() {
 function GetGitHubEnvironments() {
     OutputDebugFunctionCall
     $headers = GetHeaders -token $env:GITHUB_TOKEN
-    $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments"
-    OutputDebug "Url: $url"
+    $perPage = 100
+    $page = 1
+    $ghEnvironments = @()
     try {
         Write-Host "Requesting environments from GitHub"
-        $ghEnvironments = @(((InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json).environments)
+        do {
+            $url = "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/environments?per_page=$perPage&page=$page"
+            OutputDebug "Url: $url"
+            $response = (InvokeWebRequest -Headers $headers -Uri $url).Content | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $pageEnvironments = @($response.environments)
+            $ghEnvironments += $pageEnvironments
+            $page++
+        } while ($pageEnvironments.Count -eq $perPage)
     }
     catch {
+        if ($page -gt 1) {
+            throw
+        }
         $ghEnvironments = @()
         Write-Host "Failed to get environments from GitHub API - Environments are not supported in this repository"
     }
