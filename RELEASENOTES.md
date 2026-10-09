@@ -1,3 +1,11 @@
+## v10.0
+
+### AL-Go Telemetry Enhancements
+
+AL-Go now includes `RepositoryIsFork` and `GitHubHostingType` in Microsoft and partner telemetry. These identify whether the workflow repository is a fork and whether it runs on GitHub.com, GitHub Enterprise Cloud with data residency (`*.ghe.com`), or GitHub Enterprise Server. GitHub.com includes Enterprise Cloud customers hosted there; this classification does not identify subscription plans or send server hostnames. Unavailable metadata is reported as `Unknown`.
+
+Action telemetry now includes structured `ActionName` and `ActionConclusion` dimensions. The action wrapper reports `Success` or `Failure`, allowing consumers to group action outcomes without parsing message text. Handled error events do not independently mark the action as failed.
+
 ### Allow pre-release packages as NuGet dependencies
 
 AL-Go now supports including pre-release versions of Business Central app packages from NuGet feeds. To enable this, append `-allowPrerelease` to the `nuGetFeedSelectMode` setting in your project configuration. For example, `LatestMatching-allowPrerelease` will select the latest matching version of the package, including pre-release versions.
