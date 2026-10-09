@@ -1,4 +1,4 @@
-## Issues
+### Issues
 
 - Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
 
