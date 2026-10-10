@@ -15,6 +15,17 @@ Action telemetry now includes structured `ActionName` and `ActionConclusion` dim
 ### Allow pre-release packages as NuGet dependencies
 
 AL-Go now supports including pre-release versions of Business Central app packages from NuGet feeds. To enable this, append `-allowPrerelease` to the `nuGetFeedSelectMode` setting in your project configuration. For example, `LatestMatching-allowPrerelease` will select the latest matching version of the package, including pre-release versions.
+### Call AL-Go workflows from your own workflows (`workflow_call`)
+
+Most AL-Go workflows can now be called as reusable workflows (`workflow_call`), allowing you to orchestrate AL-Go workflows from your own custom workflows, for example creating a release, publishing it to AppSource and incrementing the version number in one run, with approval gates in between (see [discussion 2187](https://github.com/microsoft/AL-Go/discussions/2187)).
+
+The following workflows can be called: CI/CD, Create Release, Create Online Dev. Environment, Deploy Reference Documentation, Increment Version Number, Publish To AppSource, Publish To Environment, Pull Power Platform changes, Push Power Platform changes, Test Current, Test Next Minor, Test Next Major and Troubleshooting (Update AL-Go System Files could already be called). The Pull Request Handler and the Create App, Create Test App, Create Performance Test App and Add existing app or test app workflows cannot be called.
+
+When calling an AL-Go workflow, specify `caller: ${{ github.workflow }}` (required) and `secrets: inherit`, and grant the permissions of the called workflow in the calling job. All other inputs are the same as when running the workflow manually. Create Release exposes the outputs `releaseId`, `releaseVersion` and `commitish`. A called CI/CD workflow always builds all projects.
+
+To support this, the `ValidateWorkflowInput` action has new `workflowName` and `inputsJson` inputs, the `DumpWorkflowInfo` action has new `workflowEventName` and `inputsJson` inputs and the `DetermineProjectsToBuild` action has a new `workflowEventName` input. Create Release now also validates the `releaseType` input, which can be specified freely when the workflow is called.
+
+Read more, including known limitations, [here](https://github.com/microsoft/AL-Go/blob/main/Scenarios/CustomizingALGoForGitHub.md#calling-al-go-workflows-from-your-own-workflows).
 
 ### New `unpublishOldVersions` setting for deployment
 

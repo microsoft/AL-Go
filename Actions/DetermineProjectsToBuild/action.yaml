@@ -10,6 +10,10 @@ inputs:
     description: Specifies the maximum build depth suppored by the workflow running the action
     required: false
     default: '0'
+  workflowEventName:
+    description: The GitHub event name that triggered the workflow (override for reusable workflows)
+    required: false
+    default: ${{ github.event_name }}
 outputs:
   ProjectsJson:
     description: An array of AL-Go projects in compressed JSON format
@@ -40,9 +44,10 @@ runs:
       id: determineProjectsToBuild
       env:
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
+        _workflowEventName: ${{ inputs.workflowEventName }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {
-          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth
+          ${{ github.action_path }}/DetermineProjectsToBuild.Action.ps1 -baseFolder ${{ github.workspace }} -token ${{ github.token }} -maxBuildDepth $env:_maxBuildDepth -workflowEventName $env:_workflowEventName
         }
 branding:
   icon: terminal

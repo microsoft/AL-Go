@@ -55,6 +55,7 @@ defaults:
 
 env:
   WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
+  WorkflowName: ${{ inputs.caller && ' Update AL-Go System Files' || github.workflow }}
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
@@ -74,6 +75,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: templateUrl
 
       - name: Get Workflow Multi-Run Branches
@@ -111,6 +113,8 @@ jobs:
         uses: microsoft/AL-Go-Actions/DumpWorkflowInfo@main
         with:
           shell: powershell
+          workflowEventName: ${{ env.WorkflowEventName }}
+          inputsJson: ${{ toJson(inputs) }}
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -127,6 +131,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: commitOptions
 
       - name: Read secrets

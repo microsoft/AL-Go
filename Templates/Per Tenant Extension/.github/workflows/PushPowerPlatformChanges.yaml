@@ -9,6 +9,20 @@ on:
       solutionFolder:
         description: Folder name of the Power Platform solution (leave empty to use AL-Go setting)
         required: false
+  workflow_call:
+    inputs:
+      caller:
+        description: Name of the calling workflow (use github.workflow as value when calling)
+        type: string
+        required: true
+      environment:
+        description: Environment to push changes to
+        type: string
+        required: true
+      solutionFolder:
+        description: Folder name of the Power Platform solution (leave empty to use AL-Go setting)
+        type: string
+        required: false
 
 permissions:
   actions: read
@@ -18,6 +32,12 @@ permissions:
 defaults:
   run:
     shell: powershell
+
+env:
+  WorkflowEventName: ${{ inputs.caller && 'workflow_call' || github.event_name }}
+  WorkflowName: ${{ inputs.caller && ' Push Power Platform changes' || github.workflow }}
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
 
 jobs:
   PushChanges:
@@ -46,6 +66,7 @@ jobs:
         uses: microsoft/AL-Go-Actions/ReadSettings@main
         with:
           shell: powershell
+          workflowName: ${{ env.WorkflowName }}
           get: powerPlatformSolutionFolder
 
       - name: Read secrets
