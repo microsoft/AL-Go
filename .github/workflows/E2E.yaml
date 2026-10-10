@@ -40,7 +40,7 @@ on:
         default: 'preview'
 
 env:
-  TestUpgradesFromVersion: 'v5.0'
+  TestUpgradesFromVersion: 'v8.0'
 
 defaults:
   run:
