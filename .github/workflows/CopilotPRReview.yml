@@ -49,6 +49,11 @@ on:
         type: string
         required: false
         default: main
+      engine_repo:
+        description: AL-Go repository containing the engine scripts. Override only for pre-merge validation.
+        type: string
+        required: false
+        default: microsoft/AL-Go
       config_path:
         description: Path to the consumer's bcquality.config.yaml, relative to the target repo root. Empty uses the engine default baseline.
         type: string
@@ -178,7 +183,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  ENGINE_REPO: microsoft/AL-Go
+  ENGINE_REPO: ${{ inputs.engine_repo }}
 
 jobs:
   resolve:
