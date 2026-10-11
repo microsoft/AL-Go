@@ -10,9 +10,9 @@ inputs:
     required: false
     default: microsoft/BCQuality
   marketplaceRef:
-    description: Immutable BCQuality marketplace tag, or a branch for prototype testing
+    description: Immutable BCQuality marketplace tag
     required: false
-    default: main
+    default: v1.7
   expectedPluginVersion:
     description: Expected version from the BCQuality marketplace entry
     required: false

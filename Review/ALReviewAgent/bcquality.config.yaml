@@ -18,10 +18,8 @@ bcquality:
   repo: https://github.com/microsoft/BCQuality
 
   # Copilot marketplace registration supports branches and tags, not raw
-  # commit SHAs. Production must pin an immutable BCQuality release tag.
-  # Prototype default. Replace with the next immutable release tag before the
-  # AL-Go feature is merged for production use.
-  ref: main
+  # commit SHAs. Production pins an immutable BCQuality content release.
+  ref: v1.7
 
   # Version declared by the plugin entry in the pinned marketplace release.
   plugin-version: "0.2.0"

@@ -13,7 +13,7 @@ runners.
   id: bcquality
   uses: microsoft/AL-Go-Actions/SetupBCQuality@main
   with:
-    marketplaceRef: main # Prototype only; pin the next immutable release tag for production.
+    marketplaceRef: v1.7
     expectedPluginVersion: 0.2.0
     enabledLayers: microsoft
 

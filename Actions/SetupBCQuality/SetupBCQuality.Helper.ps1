@@ -3,7 +3,7 @@
 Installs and physically filters the BCQuality Copilot plugin.
 
 .DESCRIPTION
-Registers a BCQuality marketplace tag or prototype branch, installs the BCQuality
+Registers an immutable BCQuality marketplace tag, installs the BCQuality
 plugin into Copilot's default plugin directory, removes content excluded by
 the requested layer and allow/deny policy, and regenerates the knowledge
 index. The action intentionally supports only ephemeral GitHub-hosted runners
@@ -12,7 +12,7 @@ because it mutates the default installed plugin in place.
 [CmdletBinding()]
 param(
     [string] $marketplace = 'microsoft/BCQuality',
-    [string] $marketplaceRef = 'main',
+    [string] $marketplaceRef = 'v1.7',
     [string] $expectedPluginVersion = '0.2.0',
     [string] $enabledLayers = 'microsoft',
     [string] $disabledSkills = '',

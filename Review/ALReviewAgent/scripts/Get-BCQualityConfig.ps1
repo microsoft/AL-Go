@@ -117,7 +117,7 @@ if (-not $cfg['bcquality'].ContainsKey('repo')) {
     $cfg['bcquality']['repo'] = 'https://github.com/microsoft/BCQuality'
 }
 if (-not $cfg['bcquality'].ContainsKey('ref')) {
-    $cfg['bcquality']['ref'] = 'main'
+    $cfg['bcquality']['ref'] = 'v1.7'
 }
 if (-not $cfg['bcquality'].ContainsKey('plugin-version')) {
     $cfg['bcquality']['plugin-version'] = '0.2.0'
