@@ -2005,6 +2005,26 @@ jobs:
     uses: contoso/AL-Go/Actions@dev
 "@
     }
+
+    It "Replaces the reusable review workflow and matching engine ref" {
+        $srcContent = [ref]@"
+jobs:
+  Review:
+    uses: microsoft/AL-Go/.github/workflows/CopilotPRReview.yml@main
+    with:
+      engine_ref: main
+"@
+
+        ReplaceOwnerRepoAndBranch -srcContent $srcContent -templateOwner 'contoso' -templateBranch 'prototype/review'
+
+        $srcContent.Value | Should -Be @"
+jobs:
+  Review:
+    uses: contoso/AL-Go/.github/workflows/CopilotPRReview.yml@prototype/review
+    with:
+      engine_ref: prototype/review
+"@
+    }
 }
 
 Describe "IsDirectALGo" {

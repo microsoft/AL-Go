@@ -63,6 +63,8 @@ Describe "GitHub event payload should not be used in code" {
 Describe "Copilot code review workflows" {
     BeforeAll {
         $workflowFolder = Join-Path $PSScriptRoot '..\..\Templates\Per Tenant Extension\.github\workflows' -Resolve
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reusableWorkflow', Justification = 'False positive across Pester scopes.')]
+        $reusableWorkflow = Get-Content -Path (Join-Path $PSScriptRoot '..\..\.github\workflows\CopilotPRReview.yml' -Resolve) -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'intakeWorkflow', Justification = 'False positive across Pester scopes.')]
         $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
@@ -77,9 +79,18 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
     }
 
-    It 'Uses the latest BC-ALAgents reviewer release' {
-        $runnerWorkflow | Should -Match ([regex]::Escape('uses: microsoft/BC-ALAgents/.github/workflows/review.yml@latest'))
-        $runnerWorkflow | Should -Match 'engine_ref:\s+latest'
+    It 'Uses the AL-Go-owned reusable reviewer workflow' {
+        $runnerWorkflow | Should -Match ([regex]::Escape('uses: microsoft/AL-Go/.github/workflows/CopilotPRReview.yml@main'))
+        $runnerWorkflow | Should -Match 'engine_ref:\s+main'
+        $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
+    }
+
+    It 'Uses the installed BCQuality plugin in the reusable workflow' {
+        $reusableWorkflow | Should -Match ([regex]::Escape('uses: ./engine/Actions/SetupBCQuality'))
+        $reusableWorkflow | Should -Match 'BCQUALITY_ROOT:\s+\$\{\{\s+steps\.bcquality\.outputs\.pluginRoot\s+\}\}'
+        $reusableWorkflow | Should -Match 'BCQUALITY_SHA:\s+\$\{\{\s+steps\.bcquality\.outputs\.sourceCommit\s+\}\}'
+        $reusableWorkflow | Should -Match 'BCQUALITY_CONSUME:\s+plugin'
+        $reusableWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
     It 'Grants only the permissions required by each security boundary' {
@@ -88,6 +99,8 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
+        $reusableWorkflow | Should -Match "(?ms)review:.*?permissions:\s+contents: read\s+pull-requests: read.*?copilot-requests: write"
+        $reusableWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+contents: read\s+issues: write\s+pull-requests: write"
     }
 
     It 'Revalidates pull request eligibility before invoking the reviewer' {

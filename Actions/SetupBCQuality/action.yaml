@@ -1,0 +1,81 @@
+name: Setup BCQuality
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  marketplace:
+    description: GitHub owner/repository containing the BCQuality marketplace
+    required: false
+    default: microsoft/BCQuality
+  marketplaceRef:
+    description: Immutable BCQuality marketplace tag, or a branch for prototype testing
+    required: false
+    default: main
+  expectedPluginVersion:
+    description: Expected version from the BCQuality marketplace entry
+    required: false
+    default: 0.2.0
+  enabledLayers:
+    description: Comma-separated BCQuality layers to retain
+    required: false
+    default: microsoft
+  disabledSkills:
+    description: Comma-separated repo-relative skill paths to remove
+    required: false
+    default: ''
+  knowledgeAllow:
+    description: Comma-separated knowledge globs to retain; empty retains all enabled-layer knowledge
+    required: false
+    default: ''
+  knowledgeDeny:
+    description: Comma-separated knowledge globs to remove
+    required: false
+    default: ''
+outputs:
+  pluginRoot:
+    description: Path to the installed and filtered BCQuality plugin
+    value: ${{ steps.setupbcquality.outputs.pluginRoot }}
+  pluginVersion:
+    description: Resolved BCQuality plugin version
+    value: ${{ steps.setupbcquality.outputs.pluginVersion }}
+  marketplaceRef:
+    description: Marketplace ref used to install BCQuality
+    value: ${{ steps.setupbcquality.outputs.marketplaceRef }}
+  sourceHash:
+    description: Source hash recorded by Copilot CLI for the installed plugin
+    value: ${{ steps.setupbcquality.outputs.sourceHash }}
+  sourceCommit:
+    description: Git commit resolved from the installed marketplace tag or branch
+    value: ${{ steps.setupbcquality.outputs.sourceCommit }}
+  contentHash:
+    description: Deterministic SHA-256 of the filtered plugin contents
+    value: ${{ steps.setupbcquality.outputs.contentHash }}
+  filterReport:
+    description: Path to the BCQuality filter report
+    value: ${{ steps.setupbcquality.outputs.filterReport }}
+  knowledgeIndex:
+    description: Path to the regenerated BCQuality knowledge index
+    value: ${{ steps.setupbcquality.outputs.knowledgeIndex }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: setupbcquality
+      env:
+        _marketplace: ${{ inputs.marketplace }}
+        _marketplaceRef: ${{ inputs.marketplaceRef }}
+        _expectedPluginVersion: ${{ inputs.expectedPluginVersion }}
+        _enabledLayers: ${{ inputs.enabledLayers }}
+        _disabledSkills: ${{ inputs.disabledSkills }}
+        _knowledgeAllow: ${{ inputs.knowledgeAllow }}
+        _knowledgeDeny: ${{ inputs.knowledgeDeny }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetupBCQuality" -Action {
+          ${{ github.action_path }}/SetupBCQuality.ps1 -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny
+        }
+branding:
+  icon: terminal
+  color: blue

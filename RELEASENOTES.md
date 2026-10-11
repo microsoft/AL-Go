@@ -21,7 +21,7 @@ AL-Go now supports including pre-release versions of Business Central app packag
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
 ### Copilot code review for AL pull requests
 
-AL-Go repositories can now opt in to AI-powered review of AL pull request changes by setting `enableCopilotCodeReview` to `true` in `.github/AL-Go-Settings.json`. The new Copilot PR Review workflows use the public [BC-ALAgents](https://github.com/microsoft/BC-ALAgents) reviewer and its BCQuality knowledge base to post findings as pull request comments. Copilot CLI requests are billed to the GitHub organization and require the corresponding organization policy and workflow permissions.
+AL-Go repositories can now opt in to AI-powered review of AL pull request changes by setting `enableCopilotCodeReview` to `true` in `.github/AL-Go-Settings.json`. The new Copilot PR Review workflows use AL-Go's reusable review engine and install the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin to post findings as pull request comments. Copilot CLI requests are billed to the GitHub organization and require the corresponding organization policy and workflow permissions.
 
 ### Expanded AL-Go telemetry dashboard
 

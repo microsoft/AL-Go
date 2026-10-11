@@ -190,19 +190,19 @@ function TestActionsReferences {
     $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
     $gitHubActionPattern = "^actions/*"
     $gitHubCodeQLActionPattern = "^github/codeql-action/*"
-    $bcALAgentsWorkflowPattern = "^microsoft/BC-ALAgents/\.github/workflows/review\.yml$"
+    $alGoReviewWorkflowPattern = "^microsoft/AL-Go/\.github/workflows/CopilotPRReview\.yml$"
 
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
         $version = $_.Groups[2].Value.Trim()
 
-        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern|$bcALAgentsWorkflowPattern)"
+        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern|$alGoReviewWorkflowPattern)"
 
         if($origin -match $alGoActionPattern) {
             $version | Should -Match "main"
         }
-        elseif($origin -match $bcALAgentsWorkflowPattern) {
-            $version | Should -Be "latest"
+        elseif($origin -match $alGoReviewWorkflowPattern) {
+            $version | Should -Be "main"
         }
     }
 }
@@ -225,14 +225,14 @@ function TestWorkflowReferences {
     $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
 
     $localWorkflowsPattern = '^./.github/workflows/*'
-    $bcALAgentsWorkflowPattern = '^microsoft/BC-ALAgents/\.github/workflows/review\.yml$'
+    $alGoReviewWorkflowPattern = '^microsoft/AL-Go/\.github/workflows/CopilotPRReview\.yml$'
 
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
         $workflowVersion = $_.Groups[2].Value.Trim()
-        $workflowPath | Should -Match "($localWorkflowsPattern|$bcALAgentsWorkflowPattern)"
-        if($workflowPath -match $bcALAgentsWorkflowPattern) {
-            $workflowVersion | Should -Be "latest"
+        $workflowPath | Should -Match "($localWorkflowsPattern|$alGoReviewWorkflowPattern)"
+        if($workflowPath -match $alGoReviewWorkflowPattern) {
+            $workflowVersion | Should -Be "main"
         }
     }
 }

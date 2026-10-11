@@ -159,10 +159,10 @@ jobs:
       pull-requests: write
       issues: write
       copilot-requests: write
-    uses: microsoft/BC-ALAgents/.github/workflows/review.yml@latest
+    uses: microsoft/AL-Go/.github/workflows/CopilotPRReview.yml@main
     with:
       pr_number: ${{ needs.Settings.outputs.prNumber }}
       head_sha: ${{ needs.Settings.outputs.headSha }}
       base_ref: ${{ needs.Settings.outputs.baseRef }}
       target_repo: ${{ github.repository }}
-      engine_ref: latest
+      engine_ref: main

@@ -646,11 +646,12 @@ function ReplaceOwnerRepoAndBranch {
 
     $lines = $srcContent.Value.Split("`n")
 
-    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
+    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE, microsoft/AL-Go-AppSource and microsoft/AL-Go
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
+        "reviewEngineRepo" = "microsoft/AL-Go"
     }
     # Original branch is always main
     $originalBranch = "main"
@@ -660,6 +661,7 @@ function ReplaceOwnerRepoAndBranch {
         "actionsRepo" = "AL-Go/Actions"
         "perTenantExtensionRepo" = "AL-Go"
         "appSourceAppRepo" = "AL-Go"
+        "reviewEngineRepo" = "AL-Go"
     }
 
     # Replace URL's to actions repository first
@@ -668,11 +670,12 @@ function ReplaceOwnerRepoAndBranch {
     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
 
     # Replace the owner and repo names in the workflow
-    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo","reviewEngineRepo" | ForEach-Object {
         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
         $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
     }
+    $lines = $lines | ForEach-Object { $_ -replace '^(\s+engine_ref:\s+)main\s*$', "`${1}$templateBranch" }
     $srcContent.Value = $lines -join "`n"
 }
 

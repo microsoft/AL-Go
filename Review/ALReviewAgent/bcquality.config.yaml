@@ -1,0 +1,67 @@
+# BCQuality plugin policy used by AL-Go's Copilot PR reviewer.
+#
+# Single source of truth for which BCQuality content this repository
+# consumes. Every value below can be overridden at workflow runtime via
+# the matching Actions variable; see scripts/Get-BCQualityConfig.ps1 for
+# the override map.
+#
+# This Microsoft-owned repo defaults to the `microsoft` layer only.
+# Partners forking the orchestrator typically only need to change
+# `bcquality.repo` (and optionally enable additional layers) — everything
+# else is inherited.
+
+bcquality:
+  # HTTPS URL of the trusted BCQuality marketplace repository.
+  #
+  # SECURITY: its plugin content is read by the agent before it sees the PR
+  # diff. Point `repo` only at a trusted marketplace.
+  repo: https://github.com/microsoft/BCQuality
+
+  # Copilot marketplace registration supports branches and tags, not raw
+  # commit SHAs. Production must pin an immutable BCQuality release tag.
+  # Prototype default. Replace with the next immutable release tag before the
+  # AL-Go feature is merged for production use.
+  ref: main
+
+  # Version declared by the plugin entry in the pinned marketplace release.
+  plugin-version: "0.2.0"
+
+  # BCQuality content version this engine is pinned to, as major.minor. Its
+  # MINOR is Z in the engine's X.Y.Z version. BCQuality's minor is a monotonic
+  # counter that only ever increments — it never resets, even across a major
+  # bump — so Z is always unique. BCQuality bumps its minor ~monthly; set this
+  # together with `ref` above when moving to a new release.
+  version: "1.6"
+
+# Which BCQuality layers an agent may consume during this review.
+# Allowed values: microsoft, community, custom.
+# This Microsoft repo defaults to microsoft only — community and custom
+# rules MUST NOT influence Microsoft code reviews unless explicitly enabled.
+enabled-layers:
+  - microsoft
+
+# Repo-relative paths (within BCQuality) of action skills to exclude.
+# Example: 'microsoft/skills/review/al-style-review.md'
+disabled-skills: []
+
+# Per-article filtering for knowledge files. Globs are matched against
+# repo-relative paths inside the installed BCQuality plugin (forward slashes).
+# Evaluation order:
+#   1. If `allow` is non-empty, only files matching `allow` survive.
+#   2. Files matching `deny` are then removed.
+#   3. Files outside `enabled-layers` are always removed.
+# The filter operates on the installed plugin before the agent runs, so the
+# filter is deterministic and visible in workflow artifacts.
+knowledge:
+  allow:
+    - 'microsoft/knowledge/**'
+  deny: []
+
+# Dimensions passed verbatim to BCQuality's entry.md as `task-context`.
+# See https://github.com/microsoft/BCQuality/blob/main/skills/entry.md for
+# the schema. Each list may be `[all]` to mean "unconstrained".
+task-context:
+  technologies: [al]
+  countries: [w1]
+  application-area: [all]
+  bc-version: [all]

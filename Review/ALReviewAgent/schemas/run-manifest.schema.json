@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AL-Go deterministic review run manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "started_at",
+    "completed_at",
+    "failure_reason",
+    "engine",
+    "bcquality",
+    "configuration",
+    "plan",
+    "processes"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "enum": ["running", "completed", "partial", "failed"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "failure_reason": { "type": ["string", "null"] },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit", "agent_version"],
+      "properties": {
+        "repository": { "const": "microsoft/AL-Go" },
+        "commit": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{40}$" },
+        "agent_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "bcquality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "source_snapshot"],
+      "properties": {
+        "commit": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{40}$" },
+        "source_snapshot": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$" }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "copilot_cli_version",
+        "root_model",
+        "leaf_model",
+        "leaf_execution",
+        "max_leaf_concurrency",
+        "cli_timeout_minutes",
+        "minimum_severity",
+        "agent_minimum_severity",
+        "review_source"
+      ],
+      "properties": {
+        "copilot_cli_version": { "type": "string", "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*))?$" },
+        "root_model": { "type": "string", "minLength": 1 },
+        "leaf_model": { "type": "string", "minLength": 1 },
+        "leaf_execution": { "enum": ["serial", "parallel"] },
+        "max_leaf_concurrency": { "type": "integer", "minimum": 1 },
+        "cli_timeout_minutes": { "type": "integer", "minimum": 0 },
+        "minimum_severity": { "enum": ["Critical", "High", "Medium", "Low"] },
+        "agent_minimum_severity": { "enum": ["Critical", "High", "Medium", "Low"] },
+        "review_source": { "enum": ["pr", "local"] }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill_id", "leaf_count", "leaf_ids"],
+      "properties": {
+        "skill_id": { "const": "al-code-review" },
+        "leaf_count": { "type": "integer", "minimum": 1 },
+        "leaf_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "ordinal",
+          "skill_id",
+          "requested_model",
+          "observed_models",
+          "status",
+          "started_at",
+          "completed_at",
+          "duration_seconds",
+          "exit_code",
+          "report_path",
+          "failure_reason",
+          "metrics"
+        ],
+        "properties": {
+          "role": { "enum": ["leaf", "root"] },
+          "ordinal": { "type": "integer", "minimum": 1 },
+          "skill_id": { "type": "string", "minLength": 1 },
+          "requested_model": { "type": "string", "minLength": 1 },
+          "observed_models": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "status": { "enum": ["completed", "failed"] },
+          "started_at": { "type": "string", "format": "date-time" },
+          "completed_at": { "type": "string", "format": "date-time" },
+          "duration_seconds": { "type": "number", "minimum": 0 },
+          "exit_code": { "type": ["integer", "null"] },
+          "report_path": { "type": ["string", "null"], "pattern": "^[^\\\\]+$" },
+          "failure_reason": { "type": ["string", "null"] },
+          "metrics": { "type": ["object", "null"] },
+          "normalization": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["raw_report_path", "raw_report_sha256", "changes"],
+            "properties": {
+              "raw_report_path": { "type": "string", "minLength": 1, "pattern": "^[^\\\\]+$" },
+              "raw_report_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "changes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind", "finding_index", "original_id", "canonical_id"],
+                      "properties": {
+                        "kind": { "const": "finding-id" },
+                        "finding_index": { "type": "integer", "minimum": 0 },
+                        "original_id": { "type": "string", "minLength": 1 },
+                        "canonical_id": { "type": "string", "minLength": 1 }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind", "finding_index", "file", "line", "original_range"],
+                      "properties": {
+                        "kind": { "const": "location-range" },
+                        "finding_index": { "type": "integer", "minimum": 0 },
+                        "file": { "type": "string", "minLength": 1 },
+                        "line": { "type": "integer", "minimum": 1 },
+                        "original_range": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["start-line", "end-line"],
+                          "properties": {
+                            "start-line": { "type": "integer", "minimum": 1 },
+                            "end-line": { "type": "integer", "minimum": 1 }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "allOf": [{
+          "if": { "required": ["normalization"] },
+          "then": { "properties": { "role": { "const": "leaf" }, "status": { "const": "completed" } } }
+        }]
+      }
+    }
+  }
+}
