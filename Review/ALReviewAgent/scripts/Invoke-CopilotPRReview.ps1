@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Orchestrates a Copilot CLI review of a pull request against the
     BCQuality knowledge base and posts structured findings as inline PR

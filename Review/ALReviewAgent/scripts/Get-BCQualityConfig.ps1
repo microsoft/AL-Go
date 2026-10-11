@@ -123,7 +123,7 @@ if (-not $cfg['bcquality'].ContainsKey('plugin-version')) {
     $cfg['bcquality']['plugin-version'] = '0.2.0'
 }
 if (-not $cfg['bcquality'].ContainsKey('version')) {
-    $cfg['bcquality']['version'] = '1.6'
+    $cfg['bcquality']['version'] = '1.7'
 }
 
 $cfg['enabled-layers']  = Ensure-List ($cfg['enabled-layers']  ?? @('microsoft'))

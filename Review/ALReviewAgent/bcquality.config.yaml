@@ -29,7 +29,7 @@ bcquality:
   # counter that only ever increments — it never resets, even across a major
   # bump — so Z is always unique. BCQuality bumps its minor ~monthly; set this
   # together with `ref` above when moving to a new release.
-  version: "1.6"
+  version: "1.7"
 
 # Which BCQuality layers an agent may consume during this review.
 # Allowed values: microsoft, community, custom.
