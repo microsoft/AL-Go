@@ -706,6 +706,100 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
     }
 }
 
+Describe "DownloadProjectDependencies - Write-DependencyFileWarnings Tests" {
+    BeforeEach {
+        Mock OutputWarning {} -ModuleName DownloadProjectDependencies
+    }
+
+    It 'Accepts empty and null dependency lists' {
+        { Write-DependencyFileWarnings -Dependencies @() } | Should -Not -Throw
+        { Write-DependencyFileWarnings -Dependencies $null } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 0 -Exactly
+    }
+
+    It 'Accepts literal filenames and preserves test app markers' {
+        $appFile = Join-Path $TestDrive "Publisher, LLC_App [1]_1.0.0.0.app"
+        Set-Content -LiteralPath $appFile -Value "app" -Encoding UTF8
+        $dependencies = @($appFile, "($appFile)")
+
+        { Write-DependencyFileWarnings -Dependencies $dependencies } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 0 -Exactly
+
+        $dependencies | Should -HaveCount 2
+        $dependencies[0] | Should -Be $appFile
+        $dependencies[1] | Should -Be "($appFile)"
+    }
+
+    It 'Reports the complete missing path for <name>' -TestCases @(
+        @{ name = 'regular apps'; isTestApp = $false }
+        @{ name = 'test apps'; isTestApp = $true }
+    ) {
+        param($isTestApp)
+        $appFile = Join-Path $TestDrive "Publisher, LLC_Missing_1.0.0.0.app"
+        $dependency = $appFile
+        if ($isTestApp) { $dependency = "($appFile)" }
+
+        { Write-DependencyFileWarnings -Dependencies @($dependency) } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $appFile"
+        }
+    }
+
+    It 'Warns for directories' {
+        { Write-DependencyFileWarnings -Dependencies @("$TestDrive") } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $TestDrive"
+        }
+    }
+
+    It 'Does not resolve missing literal paths as wildcard patterns' {
+        Set-Content -LiteralPath (Join-Path $TestDrive "App1.app") -Value "app" -Encoding UTF8
+        $appFile = Join-Path $TestDrive "App?.app"
+
+        { Write-DependencyFileWarnings -Dependencies @($appFile) } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $appFile"
+        }
+    }
+
+    It 'Warns for empty dependency entries' {
+        { Write-DependencyFileWarnings -Dependencies @('') } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: "
+        }
+    }
+
+    It 'Warns on path check errors and continues checking remaining dependencies' {
+        $firstPath = Join-Path $TestDrive "Publisher, LLC_Inaccessible.app"
+        $secondPath = Join-Path $TestDrive "Missing.app"
+        Mock Test-Path { throw "Access denied" } -ModuleName DownloadProjectDependencies -ParameterFilter {
+            $LiteralPath -eq $firstPath
+        }
+
+        { Write-DependencyFileWarnings -Dependencies @($firstPath, $secondPath) } | Should -Not -Throw
+
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Unable to check dependency file '$firstPath': Access denied"
+        }
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $secondPath"
+        }
+    }
+
+    It 'Continues after missing files without changing the dependency list' {
+        $firstPath = Join-Path $TestDrive "Publisher, LLC_Missing.app"
+        $secondPath = Join-Path $TestDrive "MissingTest.app"
+        $dependencies = @($firstPath, "($secondPath)")
+
+        { Write-DependencyFileWarnings -Dependencies $dependencies } | Should -Not -Throw
+
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 2 -Exactly
+        $dependencies | Should -HaveCount 2
+        $dependencies[0] | Should -Be $firstPath
+        $dependencies[1] | Should -Be "($secondPath)"
+    }
+}
+
 Describe "DownloadProjectDependencies - Resolve-DependencyFiles Tests" {
     BeforeEach {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFolder', Justification = 'False positive.')]
