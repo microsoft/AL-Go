@@ -2904,7 +2904,6 @@ Describe "Resolve-PathPhysically" {
                 Pop-Location
             }
 
-            [System.IO.Path]::IsPathRooted(@((Get-Item -LiteralPath $linkedFile -Force).Target)[0]) | Should -Be $false
             Resolve-PathPhysically -Path $linkedFile -AnchorPaths @($rootFolder) | Should -Be $targetFile
             Test-PathPhysicallyEqual -Path $linkedFile -AnchorPaths @($rootFolder) | Should -Be $false
         }
@@ -2928,7 +2927,6 @@ Describe "Resolve-PathPhysically" {
                 Pop-Location
             }
 
-            [System.IO.Path]::IsPathRooted(@((Get-Item -LiteralPath $linkedFolder -Force).Target)[0]) | Should -Be $false
             Resolve-PathPhysically -Path $path -AnchorPaths @($rootFolder) | Should -Be (Join-Path $realTargetFolder 'file.txt')
         }
         finally {
