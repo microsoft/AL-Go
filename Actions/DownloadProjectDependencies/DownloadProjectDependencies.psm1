@@ -450,7 +450,7 @@ function Write-DependencyFileWarnings {
             }
         }
         catch {
-            OutputWarning -message "Unable to check dependency file '$dependency': $($_.Exception.Message)"
+            OutputWarning -message "Unable to check dependency file '$filePath': $($_.Exception.Message)"
         }
     }
 }
