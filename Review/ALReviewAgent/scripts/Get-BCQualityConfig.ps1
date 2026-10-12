@@ -88,7 +88,7 @@ function ConvertTo-Mutable {
     return $Value
 }
 
-function Ensure-List {
+function ConvertTo-ObjectList {
     param([object] $Value)
     if ($null -eq $Value) { return [System.Collections.Generic.List[object]]::new() }
     if ($Value -is [System.Collections.Generic.List[object]]) { return $Value }
@@ -126,14 +126,14 @@ if (-not $cfg['bcquality'].ContainsKey('version')) {
     $cfg['bcquality']['version'] = '1.7'
 }
 
-$cfg['enabled-layers']  = Ensure-List ($cfg['enabled-layers']  ?? @('microsoft'))
-$cfg['disabled-skills'] = Ensure-List ($cfg['disabled-skills'] ?? @())
+$cfg['enabled-layers']  = ConvertTo-ObjectList ($cfg['enabled-layers']  ?? @('microsoft'))
+$cfg['disabled-skills'] = ConvertTo-ObjectList ($cfg['disabled-skills'] ?? @())
 
 if (-not $cfg.ContainsKey('knowledge') -or -not ($cfg['knowledge'] -is [hashtable])) {
     $cfg['knowledge'] = @{}
 }
-$cfg['knowledge']['allow'] = Ensure-List ($cfg['knowledge']['allow'] ?? @())
-$cfg['knowledge']['deny']  = Ensure-List ($cfg['knowledge']['deny']  ?? @())
+$cfg['knowledge']['allow'] = ConvertTo-ObjectList ($cfg['knowledge']['allow'] ?? @())
+$cfg['knowledge']['deny']  = ConvertTo-ObjectList ($cfg['knowledge']['deny']  ?? @())
 
 if (-not $cfg.ContainsKey('task-context') -or -not ($cfg['task-context'] -is [hashtable])) {
     $cfg['task-context'] = @{}
@@ -147,28 +147,28 @@ $refOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_REF')
 if ($refOverride) { $cfg['bcquality']['ref'] = $refOverride.Trim() }
 
 $layersOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_ENABLED_LAYERS')
-if ($layersOverride) { $cfg['enabled-layers'] = Ensure-List (Split-CsvOverride $layersOverride) }
+if ($layersOverride) { $cfg['enabled-layers'] = ConvertTo-ObjectList (Split-CsvOverride $layersOverride) }
 
 $skillsOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_DISABLED_SKILLS')
-if ($skillsOverride) { $cfg['disabled-skills'] = Ensure-List (Split-CsvOverride $skillsOverride) }
+if ($skillsOverride) { $cfg['disabled-skills'] = ConvertTo-ObjectList (Split-CsvOverride $skillsOverride) }
 
 $allowOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_KNOWLEDGE_ALLOW')
-if ($allowOverride) { $cfg['knowledge']['allow'] = Ensure-List (Split-CsvOverride $allowOverride) }
+if ($allowOverride) { $cfg['knowledge']['allow'] = ConvertTo-ObjectList (Split-CsvOverride $allowOverride) }
 
 $denyOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_KNOWLEDGE_DENY')
-if ($denyOverride) { $cfg['knowledge']['deny'] = Ensure-List (Split-CsvOverride $denyOverride) }
+if ($denyOverride) { $cfg['knowledge']['deny'] = ConvertTo-ObjectList (Split-CsvOverride $denyOverride) }
 
 $technologiesOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_TECHNOLOGIES')
-if ($technologiesOverride) { $cfg['task-context']['technologies'] = Ensure-List (Split-CsvOverride $technologiesOverride) }
+if ($technologiesOverride) { $cfg['task-context']['technologies'] = ConvertTo-ObjectList (Split-CsvOverride $technologiesOverride) }
 
 $countriesOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_COUNTRIES')
-if ($countriesOverride) { $cfg['task-context']['countries'] = Ensure-List (Split-CsvOverride $countriesOverride) }
+if ($countriesOverride) { $cfg['task-context']['countries'] = ConvertTo-ObjectList (Split-CsvOverride $countriesOverride) }
 
 $applicationAreaOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_APPLICATION_AREA')
-if ($applicationAreaOverride) { $cfg['task-context']['application-area'] = Ensure-List (Split-CsvOverride $applicationAreaOverride) }
+if ($applicationAreaOverride) { $cfg['task-context']['application-area'] = ConvertTo-ObjectList (Split-CsvOverride $applicationAreaOverride) }
 
 $bcVersionOverride = [System.Environment]::GetEnvironmentVariable('BCQUALITY_BC_VERSION')
-if ($bcVersionOverride) { $cfg['task-context']['bc-version'] = Ensure-List (Split-CsvOverride $bcVersionOverride) }
+if ($bcVersionOverride) { $cfg['task-context']['bc-version'] = ConvertTo-ObjectList (Split-CsvOverride $bcVersionOverride) }
 
 # Validate enabled-layers against the known layer set; reject typos early.
 $knownLayers = @('microsoft', 'community', 'custom')

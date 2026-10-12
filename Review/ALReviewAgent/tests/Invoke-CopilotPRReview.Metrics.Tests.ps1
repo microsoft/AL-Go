@@ -358,6 +358,9 @@ Describe 'Copilot metrics artifact lifecycle' {
         $script:removeAttempts = 0
         Mock Remove-Item {
             param($LiteralPath, $Force, $ErrorAction)
+            if (-not $Force -or $ErrorAction -ne 'Stop') {
+                throw 'Remove-CopilotOtelFile must force deletion and stop on errors.'
+            }
             $script:removeAttempts++
             if ($script:removeAttempts -eq 1) { throw 'file is still locked' }
             [System.IO.File]::Delete($LiteralPath)
@@ -381,6 +384,7 @@ Describe 'Copilot metrics artifact lifecycle' {
         }
         $fakeProcess | Add-Member -MemberType ScriptMethod -Name Kill -Value {
             param([bool] $EntireProcessTree)
+            if (-not $EntireProcessTree) { throw 'Expected the complete process tree to be terminated.' }
             $this.Events.Add('kill')
         }
         $fakeProcess | Add-Member -MemberType ScriptMethod -Name WaitForExit -Value {

@@ -7,7 +7,7 @@ $errorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; Set-S
 Describe 'SetupBCQuality action' {
     BeforeAll {
         $scriptRoot = Join-Path $PSScriptRoot '../Actions/SetupBCQuality' -Resolve
-        $setupScriptPath = Join-Path $scriptRoot 'SetupBCQuality.Helper.ps1'
+        $script:setupScriptPath = Join-Path $scriptRoot 'SetupBCQuality.Helper.ps1'
 
         function New-TestBCQualityPlugin {
             param([string] $Root)
@@ -72,7 +72,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
     }
 
     It 'Retains only the enabled layer and regenerates the index' {
-        & $setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft
+        & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft
 
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/microsoft.md') | Should -BeTrue
         Test-Path (Join-Path $pluginRoot 'community/knowledge/domain/community.md') | Should -BeFalse
@@ -94,7 +94,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         Set-Content -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.md') -Value '# keep' -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.bad.al') -Value 'bad' -Encoding UTF8
 
-        & $setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft `
+        & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft `
             -knowledgeAllow 'microsoft/knowledge/domain/*.md' -knowledgeDeny 'microsoft/knowledge/domain/keep.md'
 
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/microsoft.md') | Should -BeTrue
@@ -103,7 +103,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
     }
 
     It 'Removes an explicitly disabled skill' {
-        & $setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft `
+        & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft `
             -disabledSkills 'microsoft/skills/review/microsoft.md'
 
         Test-Path (Join-Path $pluginRoot 'microsoft/skills/review/microsoft.md') | Should -BeFalse
@@ -112,18 +112,18 @@ param([string] $BCQualityRoot, [string] $IndexPath)
 
     It 'Fails closed outside a GitHub-hosted runner' {
         {
-            & $setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment self-hosted
+            & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment self-hosted
         } | Should -Throw '*only ephemeral GitHub-hosted runners*'
     }
 
     It 'Rejects unsafe disabled-skill paths and raw commit refs' {
         {
-            & $setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted `
+            & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted `
                 -disabledSkills 'microsoft/skills/../../skills/entry.md'
         } | Should -Throw '*must be a repo-relative markdown path*'
 
         {
-            & $setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted `
+            & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted `
                 -marketplaceRef '0123456789012345678901234567890123456789'
         } | Should -Throw '*branches and tags, not raw commit SHAs*'
     }
