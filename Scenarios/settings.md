@@ -28,6 +28,9 @@ When running a workflow or a local script, the settings are applied by reading s
 
 1. `.AL-Go/<workflow>.settings.json` is the **workflow-specific settings file** for a **specific project**.
 
+> [!NOTE]
+> When an AL-Go workflow is [called from another workflow](CustomizingALGoForGitHub.md#calling-al-go-workflows-from-your-own-workflows), the workflow-specific settings files of the called workflow are used (not the settings files of the calling workflow).
+
 1. `.AL-Go/<username>.settings.json` is the **user-specific settings file**. This option is rarely used, but if you have special settings, which should only be used for one specific user (potentially in the local scripts), these settings can be added to a settings file with the name of the user followed by `.settings.json`.
 
 <a id="basic"></a>
@@ -148,7 +151,7 @@ The following settings are only allowed in workflow specific settings files or i
 | Name | Description |
 | :-- | :-- |
 | <a id="workflowSchedule"></a>workflowSchedule | The value should be a structure with a property named `cron`, containing a valid crontab, which is the CRON schedule for when the specified workflow should run. Default is no scheduled runs, only manual triggers. Build your crontab string here: [https://crontab.guru](https://crontab.guru). You need to run the Update AL-Go System Files workflow for the schedule to take effect.<br/> The structure can also contain `includeBranches`, an array of branches to support when running the workflow on multiple branches. Currently, only "Update AL-Go System Files" is supported to run on multiple branches. **Note:** If you configure a WorkflowSchedule for the CI/CD workflow, AL-Go will stop triggering CICDs on push unless you have also added CICDPushBranches to your settings.<br/>**Note also:** If you define a schedule for Update AL-Go System Files, it uses direct Commit instead of creating a PR. |
-| <a id="workflowConcurrency"></a>workflowConcurrency | A setting to control concurrency of workflows. Like with the `WorkflowSchedule` setting, this setting should be applied in workflow specific settings files or conditional settings. By default, all workflows allows for concurrency, except for the Create Release workflow. If you are using incremental builds in CI/CD it is also recommented to set WorkflowConcurrency to:<br/>`[ "group: ${{ github.workflow }}-${{ github.ref }}", "cancel-in-progress: true" ]`<br />in order to cancel prior incremental builds on the same branch.<br />Read more about workflow concurrency [here](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs).
+| <a id="workflowConcurrency"></a>workflowConcurrency | A setting to control concurrency of workflows. Like with the `WorkflowSchedule` setting, this setting should be applied in workflow specific settings files or conditional settings. By default, all workflows allows for concurrency, except for the Create Release workflow. If you are using incremental builds in CI/CD it is also recommented to set WorkflowConcurrency to:<br/>`[ "group: ${{ github.workflow }}-${{ github.ref }}", "cancel-in-progress: true" ]`<br />in order to cancel prior incremental builds on the same branch.<br />**Note:** When a workflow is [called from another workflow](CustomizingALGoForGitHub.md#calling-al-go-workflows-from-your-own-workflows), `${{ github.workflow }}` is the name of the calling workflow. Use a fixed name in the concurrency group of workflows, which you call from other workflows.<br />Read more about workflow concurrency [here](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs).
 
 ## AppSource specific advanced settings
 
@@ -187,7 +190,7 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 - **branches** settings will be applied to branches matching the patterns
 - **workflows** settings will be applied to workflows matching the patterns
 - **users** settings will be applied for users matching the patterns
-- **triggers** settings will be applied when `GITHUB_EVENT_NAME` matches values (for example `push`, `pull_request`, `schedule`, `workflow_dispatch`)
+- **triggers** settings will be applied when `GITHUB_EVENT_NAME` matches values (for example `push`, `pull_request`, `schedule`, `workflow_dispatch`). When an AL-Go workflow is called from another workflow, this is the event that triggered the calling workflow
 
 **Note:** You can use `workflowDefaultInputs` within conditional settings to apply workflow input defaults only when certain conditions are met. For example, you could set different default values for specific workflows or branches.
 

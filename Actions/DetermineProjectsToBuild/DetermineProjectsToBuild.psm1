@@ -255,6 +255,7 @@ function Get-ProjectsToBuild {
     - property incrementalBuilds.onPull_Request is set to false for pull_request and pull_request_target events
     - property incrementalBuilds.onPush is set to false for push events
     - property incrementalBuilds.onSchedule is set to false for schedule events
+    - the event has no corresponding incrementalBuilds property (e.g. workflow_dispatch or workflow_call)
     Skipped projects are published if:
     - The event is not a pull_request or pull_request_target event
 #>

@@ -1215,6 +1215,38 @@ Describe "Get-BuildAllProjects" {
     }
 }
 
+Describe "Get-BuildAllProjectsBasedOnEventAndSettings" {
+    BeforeAll {
+        Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking -Force
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'settings', Justification = 'False positive.')]
+        $settings = @{ incrementalBuilds = @{ onPush = $true; onPull_Request = $true; onSchedule = $true } } | ConvertTo-Json -Depth 99 | ConvertFrom-Json
+    }
+
+    It 'uses incremental builds for push when onPush is enabled' {
+        $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName 'push' -settings $settings
+        $buildAllProjects | Should -Be $false
+        $publishSkippedProjects | Should -Be $true
+    }
+
+    It 'uses incremental builds for pull_request when onPull_Request is enabled and does not publish skipped projects' {
+        $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName 'pull_request' -settings $settings
+        $buildAllProjects | Should -Be $false
+        $publishSkippedProjects | Should -Be $false
+    }
+
+    It 'builds all projects for workflow_dispatch' {
+        $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName 'workflow_dispatch' -settings $settings
+        $buildAllProjects | Should -Be $true
+        $publishSkippedProjects | Should -Be $true
+    }
+
+    It 'builds all projects for workflow_call (reusable workflow)' {
+        $buildAllProjects, $publishSkippedProjects = Get-BuildAllProjectsBasedOnEventAndSettings -ghEventName 'workflow_call' -settings $settings
+        $buildAllProjects | Should -Be $true
+        $publishSkippedProjects | Should -Be $true
+    }
+}
+
 Describe "ConvertTo-RepoRelativePath" {
     BeforeAll {
         Import-Module (Join-Path $PSScriptRoot "../Actions/DetermineProjectsToBuild/DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking -Force
