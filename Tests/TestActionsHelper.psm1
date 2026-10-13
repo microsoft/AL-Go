@@ -222,7 +222,6 @@ function TestWorkflowReferences {
     $localWorkflowsPattern = '^./.github/workflows/*'
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
-        $workflowVersion = $_.Groups[2].Value.Trim()
         $workflowPath | Should -Match $localWorkflowsPattern
     }
 }

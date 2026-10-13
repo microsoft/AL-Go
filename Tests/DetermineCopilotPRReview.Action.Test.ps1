@@ -8,6 +8,7 @@ Set-StrictMode -Version 2.0
 Describe 'DetermineCopilotPRReview action' {
     BeforeAll {
         $scriptRoot = Join-Path $PSScriptRoot '../Actions/DetermineCopilotPRReview' -Resolve
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'Used by Pester test scopes.')]
         $scriptPath = Join-Path $scriptRoot 'DetermineCopilotPRReview.ps1'
         $script:headSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     }
