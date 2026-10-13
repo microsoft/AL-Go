@@ -4,9 +4,8 @@ Installs the BCQuality marketplace plugin, physically filters its installed
 content to the requested policy, and regenerates its knowledge index before an
 AL-Go feature invokes Copilot.
 
-The action mutates Copilot's default installed-plugin directory and therefore
-supports only ephemeral GitHub-hosted runners. It fails closed on self-hosted
-runners.
+The action changes the local Copilot plugin installation, so it runs only on
+temporary GitHub-hosted runners. It does not run on self-hosted runners.
 
 ```yaml
 - name: Setup BCQuality
