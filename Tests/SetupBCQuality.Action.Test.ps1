@@ -7,7 +7,8 @@ $errorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; Set-S
 Describe 'SetupBCQuality action' {
     BeforeAll {
         $scriptRoot = Join-Path $PSScriptRoot '../Actions/SetupBCQuality' -Resolve
-        $script:setupScriptPath = Join-Path $scriptRoot 'SetupBCQuality.Helper.ps1'
+        $script:setupScriptPath = Join-Path $scriptRoot 'SetupBCQuality.ps1'
+        Import-Module (Join-Path $scriptRoot 'SetupBCQuality.psm1') -Force
 
         function New-TestBCQualityPlugin {
             param([string] $Root)
@@ -55,6 +56,14 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
         $pluginRoot = Join-Path $TestDrive 'bcquality'
         New-TestBCQualityPlugin -Root $pluginRoot
+        $env:SETUP_BCQUALITY_PLUGIN_ROOT = $pluginRoot
+        $env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT = 'github-hosted'
+    }
+
+    AfterEach {
+        Remove-Item Env:SETUP_BCQUALITY_PLUGIN_ROOT -ErrorAction SilentlyContinue
+        Remove-Item Env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT -ErrorAction SilentlyContinue
+        Remove-Item Env:SETUP_BCQUALITY_COPILOT_HOME -ErrorAction SilentlyContinue
     }
 
     It 'Matches the standard action wrapper and output contract' {
@@ -72,7 +81,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
     }
 
     It 'Retains only the enabled layer and regenerates the index' {
-        & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft
+        & $script:setupScriptPath -enabledLayers microsoft
 
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/microsoft.md') | Should -BeTrue
         Test-Path (Join-Path $pluginRoot 'community/knowledge/domain/community.md') | Should -BeFalse
@@ -94,7 +103,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         Set-Content -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.md') -Value '# keep' -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.bad.al') -Value 'bad' -Encoding UTF8
 
-        & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft `
+        & $script:setupScriptPath -enabledLayers microsoft `
             -knowledgeAllow 'microsoft/knowledge/domain/*.md' -knowledgeDeny 'microsoft/knowledge/domain/keep.md'
 
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/microsoft.md') | Should -BeTrue
@@ -103,7 +112,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
     }
 
     It 'Removes an explicitly disabled skill' {
-        & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted -enabledLayers microsoft `
+        & $script:setupScriptPath -enabledLayers microsoft `
             -disabledSkills 'microsoft/skills/review/microsoft.md'
 
         Test-Path (Join-Path $pluginRoot 'microsoft/skills/review/microsoft.md') | Should -BeFalse
@@ -112,19 +121,18 @@ param([string] $BCQualityRoot, [string] $IndexPath)
 
     It 'Fails closed outside a GitHub-hosted runner' {
         {
-            & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment self-hosted
+            $env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT = 'self-hosted'
+            & $script:setupScriptPath
         } | Should -Throw '*only ephemeral GitHub-hosted runners*'
     }
 
     It 'Rejects unsafe disabled-skill paths and raw commit refs' {
         {
-            & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted `
-                -disabledSkills 'microsoft/skills/../../skills/entry.md'
+            & $script:setupScriptPath -disabledSkills 'microsoft/skills/../../skills/entry.md'
         } | Should -Throw '*must be a repo-relative markdown path*'
 
         {
-            & $script:setupScriptPath -pluginRoot $pluginRoot -runnerEnvironment github-hosted `
-                -marketplaceRef '0123456789012345678901234567890123456789'
+            & $script:setupScriptPath -marketplaceRef '0123456789012345678901234567890123456789'
         } | Should -Throw '*branches and tags, not raw commit SHAs*'
     }
 }
