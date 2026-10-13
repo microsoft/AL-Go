@@ -190,14 +190,19 @@ function TestActionsReferences {
     $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
     $gitHubActionPattern = "^actions/*"
     $gitHubCodeQLActionPattern = "^github/codeql-action/*"
+    $alGoReviewWorkflowPattern = "^microsoft/AL-Go/\.github/workflows/CopilotPRReview\.yml$"
+
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
         $version = $_.Groups[2].Value.Trim()
 
-        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern)"
+        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern|$alGoReviewWorkflowPattern)"
 
         if($origin -match $alGoActionPattern) {
             $version | Should -Match "main"
+        }
+        elseif($origin -match $alGoReviewWorkflowPattern) {
+            $version | Should -Be "main"
         }
     }
 }
@@ -220,9 +225,15 @@ function TestWorkflowReferences {
     $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
 
     $localWorkflowsPattern = '^./.github/workflows/*'
+    $alGoReviewWorkflowPattern = '^microsoft/AL-Go/\.github/workflows/CopilotPRReview\.yml$'
+
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
-        $workflowPath | Should -Match $localWorkflowsPattern
+        $workflowVersion = $_.Groups[2].Value.Trim()
+        $workflowPath | Should -Match "($localWorkflowsPattern|$alGoReviewWorkflowPattern)"
+        if($workflowPath -match $alGoReviewWorkflowPattern) {
+            $workflowVersion | Should -Be "main"
+        }
     }
 }
 

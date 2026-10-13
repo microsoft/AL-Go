@@ -26,8 +26,3 @@ runners.
 
 `marketplaceRef` should be an immutable BCQuality release tag. Branch refs are
 supported only for prototype testing because they can move between runs.
-
-For a private marketplace repository, pass a token with read access through
-the `token` input. Authentication is provided to Git and Copilot only through
-temporary process-scoped Git configuration and is not persisted in a checkout
-or artifact.

@@ -9,7 +9,7 @@
     knowledge live in BCQuality (https://github.com/microsoft/BCQuality, or
     a partner fork). The consuming repo owns its policy config
     (bcquality.config.yaml), passed in via BCQUALITY_CONFIG_PATH; when unset
-    the engine's default baseline (Actions/ALReviewAgent/bcquality.config.yaml) is used.
+    the engine's default baseline (Review/ALReviewAgent/bcquality.config.yaml) is used.
     The runner workflow installs BCQuality as a Copilot plugin, filters that
     ephemeral installation, and hands this script the resulting
     BCQUALITY_ROOT path.
@@ -88,13 +88,7 @@ $GithubToken      = $env:GITHUB_TOKEN
 $CopilotToken     = $env:GH_TOKEN
 $CopilotGithubToken = $env:COPILOT_GITHUB_TOKEN
 $Repository       = $env:GITHUB_REPOSITORY
-$ReviewEngineRoot = Split-Path -Parent $PSScriptRoot
-$EngineRoot       = if ($env:ALGO_REVIEW_ENGINE_ROOT) {
-    [System.IO.Path]::GetFullPath($env:ALGO_REVIEW_ENGINE_ROOT)
-}
-else {
-    Split-Path -Parent (Split-Path -Parent $ReviewEngineRoot)
-}
+$EngineRoot       = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 # GitHub host. Actions sets GITHUB_SERVER_URL / GITHUB_API_URL on every runner,
 # including GitHub Enterprise Cloud with data residency (*.ghe.com) and GHES,
 # so honouring them keeps the review host-neutral. Defaults keep local runs on
@@ -111,24 +105,6 @@ $BCQualityRoot    = $env:BCQUALITY_ROOT
 # saved agent output). 'all' preserves the original single-process behaviour
 # for local development.
 $ReviewPhase      = (($env:REVIEW_PHASE ?? 'all') + '').Trim().ToLowerInvariant()
-
-function Get-ReviewEngineRoot {
-    $configuredRoot = Get-Variable -Name ReviewEngineRoot -Scope Script -ErrorAction SilentlyContinue
-    if ($configuredRoot -and (Test-Path -LiteralPath $configuredRoot.Value -PathType Container)) {
-        return $configuredRoot.Value
-    }
-
-    foreach ($candidate in @(
-        (Join-Path $EngineRoot 'Actions/ALReviewAgent'),
-        (Join-Path $EngineRoot 'ALReviewAgent')
-    )) {
-        if (Test-Path -LiteralPath $candidate -PathType Container) {
-            return $candidate
-        }
-    }
-    throw "Could not locate the AL review action content beneath '$EngineRoot'."
-}
-
 function Resolve-BCQualityCommit {
     param(
         [Parameter(Mandatory)][string] $Root,
@@ -464,7 +440,7 @@ function Get-CopilotExecutableVersion {
 function Get-CopilotCliCompatibility {
     param([Parameter(Mandatory)][string] $Version)
 
-    $policyPath = Join-Path (Get-ReviewEngineRoot) 'copilot-cli-compatibility.psd1'
+    $policyPath = Join-Path $EngineRoot 'Review/ALReviewAgent/copilot-cli-compatibility.psd1'
     if (-not (Test-Path -LiteralPath $policyPath -PathType Leaf)) {
         throw "Copilot CLI compatibility policy is missing: $policyPath"
     }
@@ -2330,7 +2306,7 @@ function Save-ReviewRunManifest {
     }
 
     $manifestJson = $manifest | ConvertTo-Json -Depth 20
-    $manifestSchemaPath = Join-Path (Get-ReviewEngineRoot) 'schemas/run-manifest.schema.json'
+    $manifestSchemaPath = Join-Path $EngineRoot 'Review/ALReviewAgent/schemas/run-manifest.schema.json'
     if (-not ($manifestJson | Test-Json -SchemaFile $manifestSchemaPath -ErrorAction Stop)) {
         throw 'Generated review run manifest does not conform to its schema.'
     }
@@ -2705,7 +2681,7 @@ function New-FindingsReportRoleSchemas {
     $sourceId = [string]$shared['$id']
     $leaf = & $readShared
     foreach ($field in $rootOnlyFields) { $leaf['properties'].Remove($field) }
-    $leaf['$id'] = 'https://github.com/microsoft/AL-Go/Actions/ALReviewAgent/findings-report.leaf.schema.json'
+    $leaf['$id'] = 'https://github.com/microsoft/AL-Go/Review/ALReviewAgent/findings-report.leaf.schema.json'
     $leaf['title'] = 'BCQuality findings report (review leaf role)'
     $leaf['$comment'] = "Derived by AL-Go from $sourceId. Leaf reports cannot contain the super-skill-only fields sub-results or skipped-sub-skills."
     $boundedLocation = $null
@@ -2775,7 +2751,7 @@ function New-FindingsReportRoleSchemas {
     }
 
     $root = & $readShared
-    $root['$id'] = 'https://github.com/microsoft/AL-Go/Actions/ALReviewAgent/findings-report.root.schema.json'
+    $root['$id'] = 'https://github.com/microsoft/AL-Go/Review/ALReviewAgent/findings-report.root.schema.json'
     $root['title'] = 'BCQuality findings report (review root role)'
     $root['$comment'] = "Derived by AL-Go from $sourceId. The root report requires sub-results, and each entry must satisfy the leaf contract in definitions.$leafDefinitionName."
     $root['required'] = [object[]](@($root['required']) + 'sub-results')
@@ -4331,7 +4307,7 @@ function Resolve-AgentReleaseVersion {
 }
 
 function Resolve-AgentVersion {
-    param([string] $EngineRoot = $script:EngineRoot)
+    param([string] $EngineRoot = (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))))
 
     if ($AgentSemVerRaw) {
         if ($AgentSemVerRaw -notmatch '^\d+\.\d+\.\d+$') {
@@ -4370,26 +4346,12 @@ function Resolve-AgentVersion {
         return "$engineMajor.$engineMinor.$contentMinor"
     }
 
-    $versionMetadataPath = Join-Path (Get-ReviewEngineRoot) 'engine-version.json'
-    if (Test-Path -LiteralPath $versionMetadataPath -PathType Leaf) {
-        $versionMetadata = Get-Content -LiteralPath $versionMetadataPath -Raw | ConvertFrom-Json -ErrorAction Stop
-        if ([string] $versionMetadata.majorMinor -notmatch '^(\d+)\.(\d+)$') {
-            throw "AL review action engine-version.json majorMinor must use X.Y format. Got: '$($versionMetadata.majorMinor)'"
-        }
-        $cfg = Get-BCQualityConfigCached
-        $bcQualityVersion = [string]$cfg['bcquality']['version']
-        if ($bcQualityVersion -notmatch '^\d+\.(\d+)$') {
-            throw "bcquality.version must use major.minor format to derive the AL review action version. Got: '$bcQualityVersion'"
-        }
-        return "$($versionMetadata.majorMinor).$($Matches[1])"
-    }
-
     $manifestVersion = Get-PluginManifestVersion -EngineRoot $EngineRoot
     if ($manifestVersion) {
         return $manifestVersion
     }
 
-    throw 'Could not determine engine version: no X.Y.Z tag on HEAD, no reachable AL-Go vX.Y release tag, no action engine-version.json, and no version in .github/plugin/plugin.json. Set COPILOT_REVIEW_AGENT_VERSION for an unreleased commit.'
+    throw 'Could not determine engine version: no X.Y.Z tag on HEAD, no reachable AL-Go vX.Y release tag, and no version in .github/plugin/plugin.json. Set COPILOT_REVIEW_AGENT_VERSION for an unreleased commit.'
 }
 
 function Get-PluginManifestVersion {

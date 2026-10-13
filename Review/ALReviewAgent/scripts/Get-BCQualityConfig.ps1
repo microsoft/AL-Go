@@ -34,7 +34,7 @@
     Path to bcquality.config.yaml. When omitted, falls back to the
     BCQUALITY_CONFIG_PATH environment variable, then to the engine default
     baseline (a sibling of this script's parent directory,
-    Actions/ALReviewAgent/bcquality.config.yaml).
+    Review/ALReviewAgent/bcquality.config.yaml).
 #>
 [CmdletBinding()]
 param(
