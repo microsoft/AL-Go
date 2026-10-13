@@ -24,6 +24,25 @@ runners.
   run: ./Run-Feature.ps1
 ```
 
+The installed plugin is available only to later steps in the same job. A
+different job or workflow receives a new runner and must run the action again:
+
+```yaml
+jobs:
+  another-agent:
+    runs-on: windows-latest
+    steps:
+      - name: Setup BCQuality
+        id: bcquality
+        uses: microsoft/AL-Go-Actions/SetupBCQuality@main
+
+      - name: Run another BCQuality-backed agent
+        shell: pwsh
+        env:
+          BCQUALITY_PLUGIN_ROOT: ${{ steps.bcquality.outputs.pluginRoot }}
+        run: ./Run-AnotherAgent.ps1
+```
+
 `marketplaceRef` should be an immutable BCQuality release tag. Branch refs are
 supported only for prototype testing because they can move between runs.
 
