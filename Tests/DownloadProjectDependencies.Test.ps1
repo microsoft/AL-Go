@@ -654,6 +654,48 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
         }
     }
 
+    It 'Escapes commas in branch name so brace expansion is not split (issue #2381)' {
+        $ENV:GITHUB_HEAD_REF = 'users/dev/123-Add-A,-B,-C'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-users_dev_123-Add-A\,-B\,-C-*Apps-*,Base-users_dev_123-Add-A\,-B\,-C-*Dependencies-*,Base-users_dev_123-Add-A\,-B\,-C-*BuildOutput-*}'
+        }
+    }
+
+    It 'Escapes instead of wildcarding, so a look-alike branch such as A-B is not matched' {
+        $ENV:GITHUB_HEAD_REF = 'A,B'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result.Contains('?') | Should -BeFalse
+            $result | Should -BeLike '*Base-A\,B-*'
+        }
+    }
+
+    It 'Escapes brace and extglob characters in branch name' {
+        $ENV:GITHUB_HEAD_REF = 'feat/x+(y)@(z)!(w){a}#1'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-feat_x\+\(y\)\@\(z\)\!\(w\)\{a\}\#1-*Apps-*,Base-feat_x\+\(y\)\@\(z\)\!\(w\)\{a\}\#1-*Dependencies-*,Base-feat_x\+\(y\)\@\(z\)\!\(w\)\{a\}\#1-*BuildOutput-*}'
+        }
+    }
+
+    It 'Keeps only the separator commas unescaped when branch name contains commas' {
+        $ENV:GITHUB_HEAD_REF = 'a,b,c'
+        $projectDependencies = @{ "App" = @("Base", "Common") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            # 2 deps x 3 entries = 6 entries = 5 separator commas
+            [regex]::Matches($result, '(?<!\\),').Count | Should -Be 5
+        }
+    }
+
     It 'Returns null when project is not in the dependencies map even if other projects exist' {
         $projectDependencies = @{ "Other" = @("Base") }
         InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {

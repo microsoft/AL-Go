@@ -420,7 +420,8 @@ function Invoke-AlNativeCommand {
         [string[]] $ArgumentList = @()
     )
 
-    $nativeCommand = Get-Command -Name $FilePath -CommandType Application -ErrorAction Stop
+    $nativeCommand = Get-Command -Name $FilePath -CommandType Application -ErrorAction Stop |
+        Select-Object -First 1
     $standardErrorPath = Join-Path ([System.IO.Path]::GetTempPath()) "altool-stderr-$([Guid]::NewGuid().ToString('N')).txt"
     $originalErrorActionPreference = $ErrorActionPreference
     $nativeErrorPreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue

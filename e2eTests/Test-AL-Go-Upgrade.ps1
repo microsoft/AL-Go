@@ -25,7 +25,7 @@ Write-Host -ForegroundColor Yellow @'
 #                                                   | |     __/ |
 #                                                   |_|    |___/
 #
-# This scenario runs for every previously released version of GitHub Go - both for PTEs and AppSource Apps
+# This scenario runs for every previously released version at or above the configured TestUpgradesFromVersion cutoff - both for PTEs and AppSource Apps
 # The scenario tests that we do not break existing CI/CD workflows and that existing repositories can upgrade to newest version
 #
 # - Login
