@@ -289,10 +289,30 @@
             "type": "boolean",
             "description": "Enable code analyzers on test apps. See https://aka.ms/ALGoSettings#enablecodeanalyzersonTestapps"
         },
-        "enableCopilotCodeReview": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable Copilot code review for AL pull requests. This repository-level setting is applied by Update AL-Go System Files. See https://aka.ms/ALGoSettings#enableCopilotCodeReview"
+        "CodeReviewAgent": {
+            "type": "object",
+            "description": "Configures Copilot code review for AL pull requests. This repository-level setting is applied by Update AL-Go System Files. See https://aka.ms/ALGoSettings#CodeReviewAgent",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable Copilot code review workflows."
+                },
+                "model": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Copilot model used for final self-review and consolidation."
+                },
+                "leafModel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Copilot model used for isolated review leaf processes."
+                }
+            },
+            "required": [
+                "enabled",
+                "model",
+                "leafModel"
+            ]
         },
         "customCodeCops": {
             "type": "array",

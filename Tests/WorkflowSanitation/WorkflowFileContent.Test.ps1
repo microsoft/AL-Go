@@ -69,28 +69,36 @@ Describe "Copilot code review workflows" {
         $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
         $runnerWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'templateReusableWorkflow', Justification = 'False positive across Pester scopes.')]
+        $templateReusableWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yml') -Encoding UTF8 -Raw
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'eligibilityAction', Justification = 'False positive across Pester scopes.')]
+        $eligibilityAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\DetermineCopilotPRReview\DetermineCopilotPRReview.ps1' -Resolve) -Encoding UTF8 -Raw
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reviewAction', Justification = 'False positive across Pester scopes.')]
+        $reviewAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\ALReviewAgent\action.yaml' -Resolve) -Encoding UTF8 -Raw
     }
 
     It 'Reads the repository-level opt-in setting from trusted content' {
         $runnerWorkflow | Should -Match 'name:\s+Checkout trusted settings'
-        $runnerWorkflow | Should -Match 'get:\s+enableCopilotCodeReview'
+        $runnerWorkflow | Should -Match 'get:\s+CodeReviewAgent'
         $runnerWorkflow | Should -Match "project:\s+''"
         $runnerWorkflow | Should -Match "workflowName:\s+''"
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
+        $runnerWorkflow | Should -Match 'uses:\s+microsoft/AL-Go-Actions/DetermineCopilotPRReview@main'
     }
 
-    It 'Uses the AL-Go-owned reusable reviewer workflow' {
-        $runnerWorkflow | Should -Match ([regex]::Escape('uses: microsoft/AL-Go/.github/workflows/CopilotPRReview.yml@main'))
-        $runnerWorkflow | Should -Match 'engine_ref:\s+main'
+    It 'Ships and calls the local reusable reviewer workflow' {
+        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./.github/workflows/CopilotPRReview.yml'))
+        $templateReusableWorkflow | Should -Be $reusableWorkflow
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
-    It 'Uses the installed BCQuality plugin in the reusable workflow' {
-        $reusableWorkflow | Should -Match ([regex]::Escape('uses: ./engine/Actions/SetupBCQuality'))
-        $reusableWorkflow | Should -Match 'BCQUALITY_ROOT:\s+\$\{\{\s+steps\.bcquality\.outputs\.pluginRoot\s+\}\}'
-        $reusableWorkflow | Should -Match 'BCQUALITY_SHA:\s+\$\{\{\s+steps\.bcquality\.outputs\.sourceCommit\s+\}\}'
-        $reusableWorkflow | Should -Match 'BCQUALITY_CONSUME:\s+plugin'
+    It 'Uses the AL-Go review action in the reusable workflow' {
+        $reusableWorkflow | Should -Match 'uses:\s+microsoft/AL-Go-Actions/ALReviewAgent@main'
+        $reusableWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.bcqualityToken \|\| github\.token\s+\}\}'
+        $reusableWorkflow | Should -Not -Match 'Checkout engine scripts'
         $reusableWorkflow | Should -Not -Match 'BC-ALAgents'
+        $reviewAction | Should -Match ([regex]::Escape('${{ github.action_path }}/../SetupBCQuality/SetupBCQuality.ps1'))
+        $reviewAction | Should -Not -Match 'uses:\s+microsoft/AL-Go-Actions/SetupBCQuality@'
     }
 
     It 'Grants only the permissions required by each security boundary' {
@@ -99,21 +107,19 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
-        $reusableWorkflow | Should -Match "(?ms)review:.*?permissions:\s+contents: read\s+pull-requests: read.*?copilot-requests: write"
-        $reusableWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+contents: read\s+issues: write\s+pull-requests: write"
+        $reusableWorkflow | Should -Match "(?ms)review:.*?permissions:\s+actions: read\s+contents: read\s+pull-requests: read.*?copilot-requests: write"
+        $reusableWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+actions: read\s+contents: read\s+issues: write\s+pull-requests: write"
     }
 
     It 'Revalidates pull request eligibility before invoking the reviewer' {
-        $runnerWorkflow | Should -Match ([regex]::Escape("pullRequest.user.login -ne 'business-central-bot[bot]'"))
-        $runnerWorkflow | Should -Match ([regex]::Escape('-not $pullRequest.draft'))
-        $runnerWorkflow | Should -Match ([regex]::Escape('$pullRequest.head.sha -eq $env:WORKFLOW_HEAD_SHA'))
-        $runnerWorkflow | Should -Match ([regex]::Escape('$env:WORKFLOW_HEAD_OWNER -and $env:WORKFLOW_HEAD_BRANCH'))
-        $runnerWorkflow | Should -Match ([regex]::Escape('Where-Object { $_.head.sha -eq $env:WORKFLOW_HEAD_SHA }'))
-        $runnerWorkflow | Should -Match ([regex]::Escape('$matchingCandidates.Count -eq 1'))
-        $runnerWorkflow | Should -Match ([regex]::Escape('$pullRequest.state -eq ''open'''))
-        $runnerWorkflow | Should -Match ([regex]::Escape('$baseBranchAllowed'))
-        $runnerWorkflow | Should -Match ([regex]::Escape("[^/]*"))
-        $runnerWorkflow | Should -Not -Match ([regex]::Escape('[System.Management.Automation.WildcardPattern]'))
+        $eligibilityAction | Should -Match ([regex]::Escape("[string] `$pullRequest.user.type -ne 'Bot'"))
+        $eligibilityAction | Should -Match ([regex]::Escape('-not [bool] $pullRequest.draft'))
+        $eligibilityAction | Should -Match ([regex]::Escape('$headSha -eq $workflowHeadSha'))
+        $eligibilityAction | Should -Match ([regex]::Escape('$workflowHeadOwner -and $workflowHeadBranch'))
+        $eligibilityAction | Should -Match ([regex]::Escape('Where-Object { $_.head.sha -eq $workflowHeadSha }'))
+        $eligibilityAction | Should -Match ([regex]::Escape('$matchingCandidates.Count -eq 1'))
+        $eligibilityAction | Should -Match ([regex]::Escape('$pullRequest.state -eq ''open'''))
+        $eligibilityAction | Should -Not -Match 'baseBranchAllowed'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Match 'pr_number:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
         $runnerWorkflow | Should -Match 'head_sha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'

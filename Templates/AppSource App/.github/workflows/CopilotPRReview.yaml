@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   Intake:
-    if: github.event.pull_request.draft == false && github.event.pull_request.user.login != 'business-central-bot[bot]'
+    if: github.event.pull_request.draft == false && github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
     steps:
       - name: Start trusted review runner

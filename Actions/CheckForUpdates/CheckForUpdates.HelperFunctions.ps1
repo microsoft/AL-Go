@@ -147,12 +147,9 @@ function ModifyCopilotPRReviewWorkflow {
         $CICDPullRequestBranches = $defaultCICDPullRequestBranches
     }
 
-    $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
-    if ($baseName -eq 'CopilotPRReview') {
+    if ($baseName -eq 'CopilotPRReview' -and $yaml.Get('on:/pull_request:/branches:')) {
+        $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
         $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
-    }
-    else {
-        $yaml.Replace("env:/ALLOWED_BASE_BRANCHES:", "ALLOWED_BASE_BRANCHES: '$($branchesJson.Replace("'", "''"))'")
     }
 }
 
@@ -661,7 +658,6 @@ function ReplaceOwnerRepoAndBranch {
         "actionsRepo" = "AL-Go/Actions"
         "perTenantExtensionRepo" = "AL-Go"
         "appSourceAppRepo" = "AL-Go"
-        "reviewEngineRepo" = "AL-Go"
     }
 
     # Replace URL's to actions repository first
@@ -670,12 +666,11 @@ function ReplaceOwnerRepoAndBranch {
     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
 
     # Replace the owner and repo names in the workflow
-    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo","reviewEngineRepo" | ForEach-Object {
+    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
         $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
     }
-    $lines = $lines | ForEach-Object { $_ -replace '^(\s+engine_ref:\s+)main\s*$', "`${1}$templateBranch" }
     $srcContent.Value = $lines -join "`n"
 }
 
@@ -1050,10 +1045,15 @@ function GetDefaultFilesToExclude {
         )
     }
 
-    if ($settings.Keys -notcontains 'enableCopilotCodeReview' -or !$settings['enableCopilotCodeReview']) {
+    if (
+        $settings.Keys -notcontains 'CodeReviewAgent' -or
+        !$settings['CodeReviewAgent'] -or
+        !$settings['CodeReviewAgent']['enabled']
+    ) {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yml' }
         )
     }
 

@@ -1,0 +1,244 @@
+name: AL Review Agent
+author: Microsoft Corporation
+description: Generates or publishes BCQuality-backed Copilot pull request review findings
+inputs:
+  phase:
+    description: Review phase (generate or post)
+    required: true
+  shell:
+    description: Shell in which you want to run the action
+    required: false
+    default: pwsh
+  token:
+    description: GitHub token used by the requested review phase
+    required: false
+    default: ${{ github.token }}
+  bcqualityToken:
+    description: Token used to read a private BCQuality marketplace repository
+    required: false
+    default: ${{ github.token }}
+  bcqualitySha:
+    description: Resolved BCQuality commit SHA from the generate phase
+    required: false
+    default: ''
+  repository:
+    description: Repository containing the pull request
+    required: false
+    default: ${{ github.repository }}
+  workspace:
+    description: Trusted target repository checkout
+    required: true
+  outputDirectory:
+    description: Review artifact directory
+    required: true
+  pullRequestNumber:
+    description: Pull request number
+    required: true
+  headSha:
+    description: Pull request head SHA
+    required: true
+  baseRef:
+    description: Pull request base branch
+    required: true
+  configPath:
+    description: Optional BCQuality configuration file
+    required: false
+    default: ''
+  bcqualityRepo:
+    required: false
+    default: ''
+  bcqualityRef:
+    required: false
+    default: ''
+  enabledLayers:
+    required: false
+    default: ''
+  disabledSkills:
+    required: false
+    default: ''
+  knowledgeAllow:
+    required: false
+    default: ''
+  knowledgeDeny:
+    required: false
+    default: ''
+  technologies:
+    required: false
+    default: ''
+  countries:
+    required: false
+    default: ''
+  applicationArea:
+    required: false
+    default: ''
+  bcVersion:
+    required: false
+    default: ''
+  model:
+    required: false
+    default: gpt-5.6-sol
+  leafModel:
+    required: false
+    default: gpt-5.6-luna
+  copilotCliVersion:
+    required: false
+    default: '1.0.88'
+  leafExecution:
+    required: false
+    default: serial
+  maxLeafConcurrency:
+    required: false
+    default: '4'
+  minimumSeverity:
+    required: false
+    default: Medium
+  agentMinimumSeverity:
+    required: false
+    default: ''
+  maxFindingsPerDomain:
+    required: false
+    default: '25'
+  postSummary:
+    required: false
+    default: 'false'
+  failOnParseError:
+    required: false
+    default: 'true'
+  embedDiff:
+    required: false
+    default: 'false'
+  cliTimeoutMinutes:
+    required: false
+    default: '30'
+  agentLabel:
+    required: false
+    default: copilot-pr-review
+  agentVersion:
+    required: false
+    default: ''
+  agentReleaseDate:
+    required: false
+    default: ''
+  agentReleaseVersion:
+    required: false
+    default: ''
+outputs:
+  bcqualitySha:
+    description: Resolved BCQuality commit SHA
+    value: ${{ steps.bcquality.outputs.sourceCommit }}
+  filterReport:
+    description: Path to the BCQuality filter report
+    value: ${{ steps.bcquality.outputs.filterReport }}
+runs:
+  using: composite
+  steps:
+    - name: Validate phase
+      shell: ${{ inputs.shell }}
+      env:
+        _phase: ${{ inputs.phase }}
+      run: |
+        if ($env:_phase -notin @('generate', 'post')) {
+          throw "phase must be generate or post; received '$env:_phase'."
+        }
+
+    - name: Setup Node.js
+      if: inputs.phase == 'generate'
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: 24
+
+    - name: Install Copilot CLI
+      if: inputs.phase == 'generate'
+      id: copilot-cli
+      shell: ${{ inputs.shell }}
+      env:
+        _version: ${{ inputs.copilotCliVersion }}
+      run: ${{ github.action_path }}/scripts/Install-CopilotCli.ps1 -Version $env:_version
+
+    - name: Install powershell-yaml
+      shell: ${{ inputs.shell }}
+      run: |
+        if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
+          Install-Module powershell-yaml -Scope CurrentUser -Force -AllowClobber
+        }
+
+    - name: Resolve BCQuality policy
+      if: inputs.phase == 'generate'
+      id: bcquality-policy
+      shell: ${{ inputs.shell }}
+      env:
+        BCQUALITY_CONFIG_PATH: ${{ inputs.configPath }}
+        BCQUALITY_REPO: ${{ inputs.bcqualityRepo }}
+        BCQUALITY_REF: ${{ inputs.bcqualityRef }}
+        BCQUALITY_ENABLED_LAYERS: ${{ inputs.enabledLayers }}
+        BCQUALITY_DISABLED_SKILLS: ${{ inputs.disabledSkills }}
+        BCQUALITY_KNOWLEDGE_ALLOW: ${{ inputs.knowledgeAllow }}
+        BCQUALITY_KNOWLEDGE_DENY: ${{ inputs.knowledgeDeny }}
+        BCQUALITY_TECHNOLOGIES: ${{ inputs.technologies }}
+        BCQUALITY_COUNTRIES: ${{ inputs.countries }}
+        BCQUALITY_APPLICATION_AREA: ${{ inputs.applicationArea }}
+        BCQUALITY_BC_VERSION: ${{ inputs.bcVersion }}
+      run: ${{ github.action_path }}/scripts/Resolve-BCQualityPolicy.ps1
+
+    - name: Install and filter BCQuality plugin
+      if: inputs.phase == 'generate'
+      id: bcquality
+      shell: ${{ inputs.shell }}
+      env:
+        _marketplace: ${{ steps.bcquality-policy.outputs.marketplace }}
+        _marketplaceRef: ${{ steps.bcquality-policy.outputs.marketplaceRef }}
+        _expectedPluginVersion: ${{ steps.bcquality-policy.outputs.pluginVersion }}
+        _enabledLayers: ${{ steps.bcquality-policy.outputs.enabledLayers }}
+        _disabledSkills: ${{ steps.bcquality-policy.outputs.disabledSkills }}
+        _knowledgeAllow: ${{ steps.bcquality-policy.outputs.knowledgeAllow }}
+        _knowledgeDeny: ${{ steps.bcquality-policy.outputs.knowledgeDeny }}
+        _token: ${{ inputs.bcqualityToken }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetupBCQuality" -Action {
+          ${{ github.action_path }}/../SetupBCQuality/SetupBCQuality.ps1 -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny -token $ENV:_token
+        }
+
+    - name: Run AL review agent
+      shell: ${{ inputs.shell }}
+      env:
+        REVIEW_PHASE: ${{ inputs.phase }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GH_TOKEN: ${{ inputs.token }}
+        GITHUB_REPOSITORY: ${{ inputs.repository }}
+        REVIEW_WORKSPACE: ${{ inputs.workspace }}
+        REVIEW_OUTPUT_DIR: ${{ inputs.outputDirectory }}
+        PR_NUMBER: ${{ inputs.pullRequestNumber }}
+        PR_HEAD_SHA: ${{ inputs.headSha }}
+        BASE_BRANCH: ${{ inputs.baseRef }}
+        BCQUALITY_ROOT: ${{ steps.bcquality.outputs.pluginRoot }}
+        BCQUALITY_SHA: ${{ inputs.phase == 'generate' && steps.bcquality.outputs.sourceCommit || inputs.bcqualitySha }}
+        BCQUALITY_CONFIG_PATH: ${{ inputs.configPath }}
+        BCQUALITY_REPO: ${{ inputs.bcqualityRepo }}
+        BCQUALITY_REF: ${{ inputs.bcqualityRef }}
+        BCQUALITY_ENABLED_LAYERS: ${{ inputs.enabledLayers }}
+        BCQUALITY_DISABLED_SKILLS: ${{ inputs.disabledSkills }}
+        BCQUALITY_KNOWLEDGE_ALLOW: ${{ inputs.knowledgeAllow }}
+        BCQUALITY_KNOWLEDGE_DENY: ${{ inputs.knowledgeDeny }}
+        BCQUALITY_TECHNOLOGIES: ${{ inputs.technologies }}
+        BCQUALITY_COUNTRIES: ${{ inputs.countries }}
+        BCQUALITY_APPLICATION_AREA: ${{ inputs.applicationArea }}
+        BCQUALITY_BC_VERSION: ${{ inputs.bcVersion }}
+        COPILOT_MODEL: ${{ inputs.model }}
+        COPILOT_REVIEW_CLI_VERSION: ${{ steps.copilot-cli.outputs.version }}
+        BCQUALITY_CONSUME: plugin
+        COPILOT_REVIEW_LEAF_MODEL: ${{ inputs.leafModel }}
+        COPILOT_REVIEW_LEAF_EXECUTION: ${{ inputs.leafExecution }}
+        COPILOT_REVIEW_MAX_LEAF_CONCURRENCY: ${{ inputs.maxLeafConcurrency }}
+        MINIMUM_SEVERITY: ${{ inputs.minimumSeverity }}
+        AGENT_MINIMUM_SEVERITY: ${{ inputs.agentMinimumSeverity || inputs.minimumSeverity }}
+        MAX_FINDINGS_PER_DOMAIN: ${{ inputs.maxFindingsPerDomain }}
+        COPILOT_REVIEW_POST_SUMMARY: ${{ inputs.postSummary }}
+        COPILOT_REVIEW_FAIL_ON_PARSE_ERROR: ${{ inputs.failOnParseError }}
+        COPILOT_REVIEW_EMBED_DIFF: ${{ inputs.embedDiff }}
+        COPILOT_REVIEW_CLI_TIMEOUT_MINUTES: ${{ inputs.cliTimeoutMinutes }}
+        COPILOT_REVIEW_AGENT_LABEL: ${{ inputs.agentLabel }}
+        COPILOT_REVIEW_AGENT_VERSION: ${{ inputs.agentVersion }}
+        COPILOT_REVIEW_AGENT_RELEASE_DATE: ${{ inputs.agentReleaseDate }}
+        COPILOT_REVIEW_AGENT_RELEASE_VERSION: ${{ inputs.agentReleaseVersion }}
+        ALGO_REVIEW_ENGINE_ROOT: ${{ github.action_path }}/..
+      run: ${{ github.action_path }}/scripts/Invoke-CopilotPRReview.ps1
