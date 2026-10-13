@@ -70,7 +70,7 @@ Describe "Copilot code review workflows" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
         $runnerWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'templateReusableWorkflow', Justification = 'False positive across Pester scopes.')]
-        $templateReusableWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yml') -Encoding UTF8 -Raw
+        $templateReusableWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewReusable.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'eligibilityAction', Justification = 'False positive across Pester scopes.')]
         $eligibilityAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\DetermineCopilotPRReview\DetermineCopilotPRReview.ps1' -Resolve) -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reviewAction', Justification = 'False positive across Pester scopes.')]
@@ -87,7 +87,7 @@ Describe "Copilot code review workflows" {
     }
 
     It 'Ships and calls the local reusable reviewer workflow' {
-        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./.github/workflows/CopilotPRReview.yml'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./.github/workflows/CopilotPRReviewReusable.yaml'))
         $templateReusableWorkflow | Should -Be $reusableWorkflow
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }

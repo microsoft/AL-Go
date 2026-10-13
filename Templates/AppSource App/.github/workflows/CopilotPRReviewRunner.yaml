@@ -65,7 +65,7 @@ jobs:
       pull-requests: write
       issues: write
       copilot-requests: write
-    uses: ./.github/workflows/CopilotPRReview.yml
+    uses: ./.github/workflows/CopilotPRReviewReusable.yaml
     secrets: inherit
     with:
       pr_number: ${{ needs.Settings.outputs.prNumber }}
