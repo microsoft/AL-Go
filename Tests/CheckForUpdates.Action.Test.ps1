@@ -2503,7 +2503,9 @@ Describe "GetFilesToUpdate (real template)" {
         $settings = @{
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
-            enableCopilotCodeReview     = $true
+            CodeReviewAgent            = @{
+                enabled = $true
+            }
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
                 filesToInclude = @()
@@ -2652,7 +2654,9 @@ Describe "GetFilesToUpdate (real template)" {
         $settings = @{
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
-            enableCopilotCodeReview     = $true
+            CodeReviewAgent            = @{
+                enabled = $true
+            }
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
                 filesToInclude = @()

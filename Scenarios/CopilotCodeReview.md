@@ -18,11 +18,17 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 ```json
 {
-  "enableCopilotCodeReview": true
+  "CodeReviewAgent": {
+    "enabled": true,
+    "model": "gpt-5.6-sol",
+    "leafModel": "gpt-5.6-luna"
+  }
 }
 ```
 
 Run the **Update AL-Go System Files** workflow to add the `CopilotPRReview.yaml` and `CopilotPRReviewRunner.yaml` workflows. Subsequent eligible pull requests targeting a branch configured in `CICDPullRequestBranches` will be reviewed automatically.
+
+`model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. The values shown above are the defaults, so you can omit them when you only need to enable the reviewer.
 
 The setting must be enabled at repository level. Project settings do not enable or disable the reviewer.
 
@@ -37,7 +43,7 @@ The reusable workflow supports ephemeral GitHub-hosted runners. It runs the mode
 
 ## Disable the reviewer
 
-Set `enableCopilotCodeReview` to `false` and run **Update AL-Go System Files**. The reviewer workflows are removed from the repository.
+Set `CodeReviewAgent.enabled` to `false` and run **Update AL-Go System Files**. The reviewer workflows are removed from the repository.
 
 ______________________________________________________________________
 

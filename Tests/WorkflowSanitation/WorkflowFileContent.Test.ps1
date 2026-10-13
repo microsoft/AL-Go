@@ -73,10 +73,14 @@ Describe "Copilot code review workflows" {
 
     It 'Reads the repository-level opt-in setting from trusted content' {
         $runnerWorkflow | Should -Match 'name:\s+Checkout trusted settings'
-        $runnerWorkflow | Should -Match 'get:\s+enableCopilotCodeReview'
+        $runnerWorkflow | Should -Match 'get:\s+CodeReviewAgent'
         $runnerWorkflow | Should -Match "project:\s+''"
         $runnerWorkflow | Should -Match "workflowName:\s+''"
+        $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.output\.outputs\.model\s+\}\}'
+        $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.output\.outputs\.leafModel\s+\}\}'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
+        $runnerWorkflow | Should -Match 'copilot_model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
+        $runnerWorkflow | Should -Match 'copilot_leaf_model:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
     }
 
     It 'Uses the AL-Go-owned reusable reviewer workflow' {

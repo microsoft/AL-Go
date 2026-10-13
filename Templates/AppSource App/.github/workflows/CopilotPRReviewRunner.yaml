@@ -26,6 +26,8 @@ jobs:
       pull-requests: read
     outputs:
       enabled: ${{ steps.output.outputs.enabled }}
+      model: ${{ steps.output.outputs.model }}
+      leafModel: ${{ steps.output.outputs.leafModel }}
       eligible: ${{ steps.pullRequest.outputs.eligible }}
       prNumber: ${{ steps.pullRequest.outputs.prNumber }}
       headSha: ${{ steps.pullRequest.outputs.headSha }}
@@ -42,11 +44,15 @@ jobs:
           shell: pwsh
           project: ''
           workflowName: ''
-          get: enableCopilotCodeReview
+          get: CodeReviewAgent
 
       - name: Set output
         id: output
-        run: Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "enabled=$($env:enableCopilotCodeReview.ToLowerInvariant())"
+        run: |
+          $codeReviewAgent = $env:CodeReviewAgent | ConvertFrom-Json
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "enabled=$($codeReviewAgent.enabled.ToString().ToLowerInvariant())"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "model=$($codeReviewAgent.model)"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "leafModel=$($codeReviewAgent.leafModel)"
 
       - name: Validate pull request
         id: pullRequest
@@ -166,3 +172,5 @@ jobs:
       base_ref: ${{ needs.Settings.outputs.baseRef }}
       target_repo: ${{ github.repository }}
       engine_ref: main
+      copilot_model: ${{ needs.Settings.outputs.model }}
+      copilot_leaf_model: ${{ needs.Settings.outputs.leafModel }}

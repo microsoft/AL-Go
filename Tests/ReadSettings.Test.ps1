@@ -281,7 +281,25 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
 
         It 'Disables Copilot code review by default' {
-            (GetDefaultSettings).enableCopilotCodeReview | Should -Be $false
+            $codeReviewAgent = (GetDefaultSettings).CodeReviewAgent
+            $codeReviewAgent.enabled | Should -Be $false
+            $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
+            $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
+        }
+
+        It 'Preserves default Copilot models when only enabled is overridden' {
+            $settings = GetDefaultSettings
+            $override = [PSCustomObject]@{
+                CodeReviewAgent = [PSCustomObject]@{
+                    enabled = $true
+                }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
+
+            $settings.CodeReviewAgent.enabled | Should -Be $true
+            $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
+            $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
         }
 
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {

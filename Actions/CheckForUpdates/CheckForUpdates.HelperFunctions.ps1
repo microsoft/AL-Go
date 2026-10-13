@@ -1050,7 +1050,7 @@ function GetDefaultFilesToExclude {
         )
     }
 
-    if ($settings.Keys -notcontains 'enableCopilotCodeReview' -or !$settings['enableCopilotCodeReview']) {
+    if ($settings.Keys -notcontains 'CodeReviewAgent' -or !$settings['CodeReviewAgent']['enabled']) {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }

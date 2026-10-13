@@ -160,7 +160,11 @@ function GetDefaultSettings
         "enableCodeCop"                                 = $false
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
-        "enableCopilotCodeReview"                       = $false
+        "CodeReviewAgent"                               = [ordered]@{
+            "enabled"   = $false
+            "model"     = "gpt-5.6-sol"
+            "leafModel" = "gpt-5.6-luna"
+        }
         "customCodeCops"                                = @()
         "preprocessorSymbols"                           = @()
         "features"                                      = @()
