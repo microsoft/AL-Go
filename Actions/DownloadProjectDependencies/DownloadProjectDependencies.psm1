@@ -341,6 +341,9 @@ function Get-DependenciesFromInstallApps {
     '*BuildOutput' is included to ensure the pattern matches multiple artifacts, preventing download-artifact
     v8 from flattening a single artifact directly into the destination path (which breaks the subdirectory
     structure that GetDependencies expects).
+
+    Glob-special characters in the branch name (e.g. ',' which would split the brace expansion)
+    are backslash-escaped, so they match literally.
     .PARAMETER Project
     The name of the current AL-Go project.
     .PARAMETER ProjectDependencies
@@ -365,7 +368,8 @@ function Get-DependencyArtifactPattern {
         return $null
     }
 
-    $branchName = Get-CurrentBranchName
+    # Characters that are legal in Git branch names but special to minimatch
+    $branchName = (Get-CurrentBranchName) -replace '([{},!+@()#\]])', '\$1'
 
     # Build brace-expansion entries per dependency project.
     # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.

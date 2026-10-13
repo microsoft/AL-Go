@@ -737,6 +737,35 @@ function GetModifiedSettingsContent {
     return $dstSettings | ConvertTo-JsonLF
 }
 
+<#
+.SYNOPSIS
+Determines whether a system-files update has changes beyond advancing an existing template SHA.
+.PARAMETER settingsFile
+The repository settings file containing the last applied template URL and SHA.
+.PARAMETER templateUrl
+The template URL selected for this update.
+.PARAMETER updateFiles
+The files to add or update.
+.PARAMETER removeFiles
+The files to remove.
+#>
+function Test-HasSystemFileChanges {
+    Param(
+        [string] $settingsFile,
+        [string] $templateUrl,
+        [array] $updateFiles,
+        [array] $removeFiles
+    )
+
+    if (-not $updateFiles -and -not $removeFiles -and (Test-Path -Path $settingsFile -PathType Leaf)) {
+        $currentSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        if ($currentSettings['templateUrl'] -ceq $templateUrl -and $currentSettings['templateSha']) {
+            return $false
+        }
+    }
+    return $true
+}
+
 function UpdateSettingsFile {
     Param(
         [string] $settingsFile,

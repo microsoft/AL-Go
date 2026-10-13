@@ -31,6 +31,108 @@ Describe "CheckForUpdates Action Tests" {
             $_.Trim() | Should -Be 'runs-on: windows-latest' -Because "Expected 'runs-on: windows-latest', in order to hardcode runner to windows-latest, but got $_"
         }
     }
+
+    It 'Create Release runs update checks independently but waits for them before finalizing in <template>' -TestCases @(
+        @{ template = 'AppSource App' }
+        @{ template = 'Per Tenant Extension' }
+    ) {
+        Param($template)
+
+        . (Join-Path $scriptRoot "yamlclass.ps1")
+        $yaml = [Yaml]::Load((Join-Path $scriptRoot "..\..\Templates\$template\.github\workflows\CreateRelease.yaml"))
+
+        $yaml.Get('jobs:/CheckForUpdates:/steps:/- name: Check for updates to AL-Go system files') | Should -Not -BeNullOrEmpty
+        $yaml.Get('jobs:/CheckForUpdates:/needs:') | Should -BeNullOrEmpty
+        ($yaml.Get('jobs:/CreateRelease:/needs:').content -join '') | Should -Be 'needs: [ ]'
+        ($yaml.Get('jobs:/PostProcess:/needs:').content -join '') | Should -Match '\bCheckForUpdates\b'
+        ($yaml.Get('jobs:/PostProcess:/if:').content -join '') | Should -Be 'if: always()'
+    }
+}
+
+Describe "Test-HasSystemFileChanges" {
+    BeforeAll {
+        $scriptRoot = Join-Path (Join-Path $PSScriptRoot '..') 'Actions'
+        . (Join-Path $scriptRoot 'AL-Go-Helper.ps1')
+        $scriptRoot = Join-Path $scriptRoot 'CheckForUpdates'
+        . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+    }
+
+    BeforeEach {
+        $settingsFile = Join-Path $TestDrive 'AL-Go-Settings.json'
+        $templateUrl = 'https://github.com/contoso/AL-Go@main'
+        $settings = @{
+            templateUrl = $templateUrl
+            templateSha = 'old-sha'
+        }
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'parameters', Justification = 'Splatted into Test-HasSystemFileChanges in the It blocks.')]
+        $parameters = @{
+            settingsFile = $settingsFile
+            templateUrl = $templateUrl
+            updateFiles = @()
+            removeFiles = @()
+        }
+    }
+
+    It 'Identifies a SHA-only update without modifying the settings file' {
+        $originalContent = [System.IO.File]::ReadAllBytes($settingsFile)
+        Test-HasSystemFileChanges @parameters | Should -BeFalse
+
+        [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($settingsFile)) | Should -Be ([System.Convert]::ToBase64String($originalContent))
+    }
+
+    It 'Does not skip updates when <change> are pending' -TestCases @(
+        @{ change = 'file updates'; updateFiles = @(@{ DstFile = 'script.ps1'; content = 'new content' }); removeFiles = @() }
+        @{ change = 'file removals'; updateFiles = @(); removeFiles = @('obsolete.ps1') }
+        @{ change = 'settings updates'; updateFiles = @(@{ DstFile = '.github/AL-Go-Settings.json'; content = '{"doNotPerformUpgrade":true}' }); removeFiles = @() }
+    ) {
+        Param($change, $updateFiles, $removeFiles)
+
+        $parameters.updateFiles = $updateFiles
+        $parameters.removeFiles = $removeFiles
+        Test-HasSystemFileChanges @parameters | Should -BeTrue -Because "$change must still be applied"
+    }
+
+    It 'Does not skip a template URL or branch change' -TestCases @(
+        @{ newTemplateUrl = 'https://github.com/other/AL-Go@main' }
+        @{ newTemplateUrl = 'https://github.com/contoso/AL-Go@preview' }
+    ) {
+        Param($newTemplateUrl)
+
+        $parameters.templateUrl = $newTemplateUrl
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Does not skip initialization when <missingMetadata> is missing' -TestCases @(
+        @{ missingMetadata = 'templateUrl' }
+        @{ missingMetadata = 'templateSha' }
+    ) {
+        Param($missingMetadata)
+
+        $settings.Remove($missingMetadata)
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Does not skip initialization when the repository settings file is missing' {
+        Remove-Item $settingsFile
+
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Does not skip initialization when the recorded SHA is empty' {
+        $settings.templateSha = ''
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Reports invalid settings instead of treating them as a no-op' {
+        Set-Content $settingsFile -Value '{invalid json' -Encoding UTF8
+
+        { Test-HasSystemFileChanges @parameters } | Should -Throw
+    }
 }
 
 Describe "YamlClass Tests" {
@@ -210,6 +312,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path -Path $scriptRoot -ChildPath "yamlclass.ps1")
         Import-Module (Join-Path $scriptRoot "..\Github-Helper.psm1") -DisableNameChecking -Force
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'tmpSrcFile', Justification = 'False positive.')]
@@ -226,6 +329,63 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         if (Test-Path $tmpDstFile) {
             Remove-Item -Path $tmpDstFile -Force
         }
+    }
+
+    It 'ModifyRunsOnAndShell updates runs-on and shell in all workflow jobs' {
+        $yaml = [Yaml]::new(@(
+            "jobs:",
+            "  CheckForUpdates:",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Read settings",
+            "        with:",
+            "          shell: powershell",
+            "  CreateRelease:",
+            "    runs-on: [ windows-latest ]",
+            "    steps:",
+            "      - name: Create release",
+            "        with:",
+            "          shell: powershell"
+        ))
+        $repoSettings = @{
+            "runs-on" = "self-hosted, custom-label"
+            "shell" = "pwsh"
+        }
+
+        ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings
+
+        ($yaml.Get('jobs:/CheckForUpdates:/runs-on').content -join '') | Should -Be 'runs-on: [ self-hosted, custom-label ]'
+        ($yaml.Get('jobs:/CheckForUpdates:/steps:/- name: Read settings/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
+        ($yaml.Get('jobs:/CreateRelease:/runs-on').content -join '') | Should -Be 'runs-on: [ self-hosted, custom-label ]'
+        ($yaml.Get('jobs:/CreateRelease:/steps:/- name: Create release/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
+    }
+
+    It 'ModifyRunsOnAndShell rejects powershell with ubuntu-latest' {
+        $yaml = [Yaml]::new(@(
+            "jobs:",
+            "  test:",
+            "    runs-on: [ windows-latest ]"
+        ))
+        $repoSettings = @{
+            "runs-on" = "ubuntu-latest"
+            "shell" = "powershell"
+        }
+
+        { ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings } | Should -Throw '*The shell cannot be set to powershell when runs-on is ubuntu-latest*'
+    }
+
+    It 'ModifyRunsOnAndShell rejects unsupported shells' {
+        $yaml = [Yaml]::new(@(
+            "jobs:",
+            "  test:",
+            "    runs-on: [ windows-latest ]"
+        ))
+        $repoSettings = @{
+            "runs-on" = "windows-latest"
+            "shell" = "bash"
+        }
+
+        { ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings } | Should -Throw '*The shell can only be set to powershell or pwsh*'
     }
 
     It 'GetModifiedSettingsContent returns correct content when destination file is not empty' {
