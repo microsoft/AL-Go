@@ -508,6 +508,29 @@
             ($result.Output -join "`n") | Should -Match 'native-stderr'
         }
 
+        It 'Invokes only the first application when command resolution returns multiple candidates' {
+            $script:firstNativeCandidate = (Get-Process -Id $PID).Path
+            $script:secondNativeCandidate = Join-Path $TestDrive 'must-not-run'
+            Mock Get-Command {
+                return @(
+                    [PSCustomObject]@{ Source = $script:firstNativeCandidate }
+                    [PSCustomObject]@{ Source = $script:secondNativeCandidate }
+                )
+            } -ParameterFilter { $Name -eq 'multiple-native-candidates' }
+            $childScript = "[Console]::Out.WriteLine('first-candidate'); exit 0"
+            $encodedChildScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
+
+            $result = Invoke-AlNativeCommand -FilePath 'multiple-native-candidates' -ArgumentList @(
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $encodedChildScript
+            )
+
+            $result.ExitCode | Should -Be 0
+            $result.StandardOutput | Should -Be @('first-candidate')
+            Should -Invoke Get-Command -Times 1 -Exactly -ParameterFilter {
+                $Name -eq 'multiple-native-candidates'
+            }
+        }
+
         It 'Does not swallow command-not-found errors' {
             { Invoke-AlNativeCommand -FilePath 'al-go-command-that-does-not-exist' } |
                 Should -Throw

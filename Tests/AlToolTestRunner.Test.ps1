@@ -789,6 +789,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 Credential          = $script:testRunCredential
                 ExtensionId         = [Guid]::NewGuid().ToString()
                 AppName             = 'Test App'
+                AlToolPath          = Join-Path $TestDrive 'al'
                 JUnitResultFileName = Join-Path $TestDrive 'TestResults.xml'
             }
             $script:testRunCodeunit = [PSCustomObject]@{
@@ -829,6 +830,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
         }
 
         It 'Resolves AlTool through the shared helper when a direct call omits the path' {
+            $null = $script:testRunParameters.Remove('AlToolPath')
             Mock -ModuleName AlToolTestRunner GetAlToolPath {
                 return 'C:\dotnet-tools\al.exe'
             }

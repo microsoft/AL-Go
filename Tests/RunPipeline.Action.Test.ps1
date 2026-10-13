@@ -158,10 +158,12 @@ Describe "RunPipeline Action Tests" {
             [object]::ReferenceEquals($runAlPipelineParams.credential, $containerCredential) | Should -BeTrue
 
             if ($Expected) {
-                $exportedCredential = Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 |
-                    Where-Object { $_ -like 'containerCredential=*' }
+                $exportedCredential = @(
+                    Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 |
+                        Where-Object { $_ -like 'containerCredential=*' }
+                )
                 $exportedCredential.Count | Should -Be 1
-                $containerCredentialBase64 = $exportedCredential.Substring('containerCredential='.Length)
+                $containerCredentialBase64 = $exportedCredential[0].Substring('containerCredential='.Length)
                 $exportedCredentialJson = [System.Text.Encoding]::UTF8.GetString(
                     [System.Convert]::FromBase64String($containerCredentialBase64)
                 ) | ConvertFrom-Json
