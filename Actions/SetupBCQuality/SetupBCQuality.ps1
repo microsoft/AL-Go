@@ -25,7 +25,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version 2.0
-Import-Module (Join-Path $PSScriptRoot 'SetupBCQuality.psm1') -Force
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'SetupBCQuality.psm1' -Resolve) -Force -DisableNameChecking
 
 $runnerEnvironment = if ($env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT) { $env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT } else { $env:RUNNER_ENVIRONMENT }
 $pluginRoot = $env:SETUP_BCQUALITY_PLUGIN_ROOT
