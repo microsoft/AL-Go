@@ -187,6 +187,60 @@ function Get-FilteredContentHash {
 
 <#
 .SYNOPSIS
+Runs child processes with temporary GitHub HTTP authentication.
+
+.DESCRIPTION
+The token is exposed only through process-scoped Git configuration environment
+variables for non-default marketplaces. The previous values are restored before
+the function returns.
+
+.PARAMETER Repository
+The GitHub marketplace repository in owner/repository form.
+
+.PARAMETER Token
+The GitHub token to use for HTTPS Git operations.
+
+.PARAMETER ScriptBlock
+The child-process operations that require authentication.
+
+.OUTPUTS
+The output produced by the script block.
+#>
+function Invoke-WithGitHubToken {
+    param(
+        [Parameter(Mandatory)]
+        [string] $Repository,
+        [string] $Token,
+        [Parameter(Mandatory)]
+        [scriptblock] $ScriptBlock
+    )
+
+    if ($Repository -ieq 'microsoft/BCQuality' -or [string]::IsNullOrWhiteSpace($Token)) {
+        return & $ScriptBlock
+    }
+
+    $variableNames = @('GIT_CONFIG_COUNT', 'GIT_CONFIG_KEY_0', 'GIT_CONFIG_VALUE_0')
+    $previous = @{}
+    foreach ($name in $variableNames) {
+        $previous[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+    }
+
+    $credentials = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$Token"))
+    try {
+        $env:GIT_CONFIG_COUNT = '1'
+        $env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
+        $env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $credentials"
+        return & $ScriptBlock
+    }
+    finally {
+        foreach ($name in $variableNames) {
+            [Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process')
+        }
+    }
+}
+
+<#
+.SYNOPSIS
 Resolves a GitHub marketplace branch or tag to a commit SHA.
 
 .PARAMETER Repository
@@ -228,4 +282,4 @@ function Resolve-MarketplaceCommit {
     throw "BCQuality marketplace ref '$Repository#$Ref' did not resolve to a branch or tag."
 }
 
-Export-ModuleMember -Function ConvertFrom-CsvSetting, Test-GlobMatch, Get-RelativePluginPath, Resolve-SafePluginPath, Read-CopilotConfig, Get-FilteredContentHash, Resolve-MarketplaceCommit
+Export-ModuleMember -Function ConvertFrom-CsvSetting, Test-GlobMatch, Get-RelativePluginPath, Resolve-SafePluginPath, Read-CopilotConfig, Get-FilteredContentHash, Invoke-WithGitHubToken, Resolve-MarketplaceCommit

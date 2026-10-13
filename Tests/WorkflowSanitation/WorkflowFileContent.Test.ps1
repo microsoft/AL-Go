@@ -81,6 +81,7 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
         $runnerWorkflow | Should -Match 'copilot_model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'copilot_leaf_model:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcquality_token:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
     }
 
     It 'Uses the AL-Go-owned reusable reviewer workflow' {
@@ -91,6 +92,7 @@ Describe "Copilot code review workflows" {
 
     It 'Uses the installed BCQuality plugin in the reusable workflow' {
         $reusableWorkflow | Should -Match ([regex]::Escape('uses: ./engine/Actions/SetupBCQuality'))
+        $reusableWorkflow | Should -Match ([regex]::Escape("token: `${{ steps.bcquality-policy.outputs.marketplace != 'microsoft/BCQuality' && secrets.bcquality_token || '' }}"))
         $reusableWorkflow | Should -Match 'BCQUALITY_ROOT:\s+\$\{\{\s+steps\.bcquality\.outputs\.pluginRoot\s+\}\}'
         $reusableWorkflow | Should -Match 'BCQUALITY_SHA:\s+\$\{\{\s+steps\.bcquality\.outputs\.sourceCommit\s+\}\}'
         $reusableWorkflow | Should -Match 'BCQUALITY_CONSUME:\s+plugin'

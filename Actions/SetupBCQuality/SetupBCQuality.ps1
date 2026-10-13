@@ -17,7 +17,9 @@ param(
     [Parameter(HelpMessage = "Comma-separated knowledge globs to retain; empty retains all enabled-layer knowledge")]
     [string] $knowledgeAllow = '',
     [Parameter(HelpMessage = "Comma-separated knowledge globs to remove")]
-    [string] $knowledgeDeny = ''
+    [string] $knowledgeDeny = '',
+    [Parameter(HelpMessage = "GitHub token with read access to a private marketplace repository")]
+    [string] $token = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -72,14 +74,18 @@ $sourceHash = ''
 $sourceCommit = ''
 $pluginVersion = $expectedPluginVersion
 if (-not $pluginRoot) {
-    $sourceCommit = Resolve-MarketplaceCommit -Repository $marketplace -Ref $marketplaceRef
-
-    & copilot plugin marketplace add "$marketplace#$marketplaceRef"
+    $sourceCommit = Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
+        Resolve-MarketplaceCommit -Repository $marketplace -Ref $marketplaceRef
+    }
+    Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
+        & copilot plugin marketplace add "$marketplace#$marketplaceRef"
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to register BCQuality marketplace $marketplace#$marketplaceRef."
     }
-
-    & copilot plugin install 'bcquality@bcquality'
+    Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
+        & copilot plugin install 'bcquality@bcquality'
+    }
     if ($LASTEXITCODE -ne 0) {
         throw 'Failed to install the BCQuality plugin.'
     }

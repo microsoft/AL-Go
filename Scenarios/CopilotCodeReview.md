@@ -10,7 +10,9 @@ Before enabling the reviewer:
 1. Ensure the organization Actions policy allows reusable workflows from `microsoft/AL-Go`.
 1. Ensure the organization and repository Actions policies allow the workflow's `GITHUB_TOKEN` to request `pull-requests: write` and `issues: write`.
 
-Reviews consume organization AI credits. No personal access token or additional repository secret is required.
+Reviews consume organization AI credits. No personal access token or additional repository secret is required when using the public BCQuality marketplace.
+
+If the review policy points to a private BCQuality marketplace repository, add a `BCQUALITY_TOKEN` repository secret containing a token with read access to that repository. The trusted runner passes it only to non-default marketplace installation; the default `microsoft/BCQuality` marketplace always uses unauthenticated access. The token is not available to pull request code or the model execution step.
 
 ## Enable the reviewer
 

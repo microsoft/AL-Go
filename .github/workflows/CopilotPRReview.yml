@@ -173,6 +173,10 @@ on:
         type: string
         required: false
         default: ''
+    secrets:
+      bcquality_token:
+        description: Token with read access to a private BCQuality marketplace repository.
+        required: false
     outputs:
       pr_number:
         description: Resolved pull request number.
@@ -398,6 +402,7 @@ jobs:
           disabledSkills: ${{ steps.bcquality-policy.outputs.disabledSkills }}
           knowledgeAllow: ${{ steps.bcquality-policy.outputs.knowledgeAllow }}
           knowledgeDeny: ${{ steps.bcquality-policy.outputs.knowledgeDeny }}
+          token: ${{ steps.bcquality-policy.outputs.marketplace != 'microsoft/BCQuality' && secrets.bcquality_token || '' }}
 
       - name: Run Copilot PR review (generate findings)
         env:

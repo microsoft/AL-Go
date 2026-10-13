@@ -33,6 +33,10 @@ inputs:
     description: Comma-separated knowledge globs to remove
     required: false
     default: ''
+  token:
+    description: GitHub token with read access to a private marketplace repository
+    required: false
+    default: ''
 outputs:
   pluginRoot:
     description: Path to the installed and filtered BCQuality plugin
@@ -72,9 +76,10 @@ runs:
         _disabledSkills: ${{ inputs.disabledSkills }}
         _knowledgeAllow: ${{ inputs.knowledgeAllow }}
         _knowledgeDeny: ${{ inputs.knowledgeDeny }}
+        _token: ${{ inputs.token }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetupBCQuality" -Action {
-          ${{ github.action_path }}/SetupBCQuality.ps1 -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny
+          ${{ github.action_path }}/SetupBCQuality.ps1 -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny -token $ENV:_token
         }
 branding:
   icon: terminal

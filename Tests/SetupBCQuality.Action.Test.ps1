@@ -135,4 +135,64 @@ param([string] $BCQualityRoot, [string] $IndexPath)
             & $script:setupScriptPath -marketplaceRef '0123456789012345678901234567890123456789'
         } | Should -Throw '*branches and tags, not raw commit SHAs*'
     }
+
+    It 'Scopes private marketplace authentication to child processes' {
+        $previousCount = $env:GIT_CONFIG_COUNT
+        $previousKey = $env:GIT_CONFIG_KEY_0
+        $previousValue = $env:GIT_CONFIG_VALUE_0
+        try {
+            $env:GIT_CONFIG_COUNT = '2'
+            $env:GIT_CONFIG_KEY_0 = 'existing.key'
+            $env:GIT_CONFIG_VALUE_0 = 'existing-value'
+
+            $observed = Invoke-WithGitHubToken -Repository 'contoso/BCQuality' -Token 'test-token' -ScriptBlock {
+                [pscustomobject]@{
+                    Count = $env:GIT_CONFIG_COUNT
+                    Key = $env:GIT_CONFIG_KEY_0
+                    Value = $env:GIT_CONFIG_VALUE_0
+                }
+            }
+
+            $observed.Count | Should -Be '1'
+            $observed.Key | Should -Be 'http.https://github.com/.extraheader'
+            $observed.Value | Should -Match '^AUTHORIZATION: basic '
+            $observed.Value | Should -Not -Match 'test-token'
+            $env:GIT_CONFIG_COUNT | Should -Be '2'
+            $env:GIT_CONFIG_KEY_0 | Should -Be 'existing.key'
+            $env:GIT_CONFIG_VALUE_0 | Should -Be 'existing-value'
+        }
+        finally {
+            $env:GIT_CONFIG_COUNT = $previousCount
+            $env:GIT_CONFIG_KEY_0 = $previousKey
+            $env:GIT_CONFIG_VALUE_0 = $previousValue
+        }
+    }
+
+    It 'Does not authenticate the default public marketplace' {
+        $previousCount = $env:GIT_CONFIG_COUNT
+        $previousKey = $env:GIT_CONFIG_KEY_0
+        $previousValue = $env:GIT_CONFIG_VALUE_0
+        try {
+            $env:GIT_CONFIG_COUNT = '2'
+            $env:GIT_CONFIG_KEY_0 = 'existing.key'
+            $env:GIT_CONFIG_VALUE_0 = 'existing-value'
+
+            $observed = Invoke-WithGitHubToken -Repository 'Microsoft/BCQuality' -Token 'test-token' -ScriptBlock {
+                [pscustomobject]@{
+                    Count = $env:GIT_CONFIG_COUNT
+                    Key = $env:GIT_CONFIG_KEY_0
+                    Value = $env:GIT_CONFIG_VALUE_0
+                }
+            }
+
+            $observed.Count | Should -Be '2'
+            $observed.Key | Should -Be 'existing.key'
+            $observed.Value | Should -Be 'existing-value'
+        }
+        finally {
+            $env:GIT_CONFIG_COUNT = $previousCount
+            $env:GIT_CONFIG_KEY_0 = $previousKey
+            $env:GIT_CONFIG_VALUE_0 = $previousValue
+        }
+    }
 }

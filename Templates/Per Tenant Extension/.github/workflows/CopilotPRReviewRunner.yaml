@@ -166,6 +166,8 @@ jobs:
       issues: write
       copilot-requests: write
     uses: microsoft/AL-Go/.github/workflows/CopilotPRReview.yml@main
+    secrets:
+      bcquality_token: ${{ secrets.BCQUALITY_TOKEN }}
     with:
       pr_number: ${{ needs.Settings.outputs.prNumber }}
       head_sha: ${{ needs.Settings.outputs.headSha }}
