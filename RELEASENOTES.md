@@ -6,6 +6,7 @@ The action uses AlTool by default, running each app's enabled normal tests in on
 
 > [!NOTE]
 > The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to execute their tests through BcContainerHelper instead.
+
 ### Issues
 
 - Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
