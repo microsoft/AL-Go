@@ -78,7 +78,7 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSUseDeclaredVarsMoreThanAssignments',
     '',
-    Justification = 'Private helper scripts consume these configuration values through the shared script scope.'
+    Justification = 'Internal helper scripts consume these configuration values through the shared script scope.'
 )]
 param()
 
@@ -273,7 +273,7 @@ $script:CopilotExecutable = $null
 $script:ObservedCopilotCliVersion = $null
 $script:CopilotCliCompatibility = $null
 
-# Load private helpers into this script scope. These remain dot-sourced until
+# Load internal helpers into this script scope. These remain dot-sourced until
 # their shared state is replaced with explicit context objects.
 $ReviewHelperScripts = @(
     'LoggingAndValidation.ps1'
@@ -289,7 +289,7 @@ $ReviewHelperScripts = @(
     'Artifacts.ps1'
 )
 foreach ($reviewHelperScript in $ReviewHelperScripts) {
-    . (Join-Path (Join-Path $PSScriptRoot 'private') $reviewHelperScript)
+    . (Join-Path $PSScriptRoot $reviewHelperScript)
 }
 
 $ReviewGitContext = [pscustomobject]@{

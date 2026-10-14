@@ -7,15 +7,13 @@ param()
 
 BeforeAll {
     $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
-    $privateScriptRoot = Join-Path (Split-Path -Parent $scriptPath) 'private'
-    $reviewScriptPaths = @($scriptPath)
-    if (Test-Path -LiteralPath $privateScriptRoot -PathType Container) {
-        $reviewScriptPaths += @(
-            Get-ChildItem -LiteralPath $privateScriptRoot -Filter '*.ps1' -File |
-                Sort-Object Name |
-                Select-Object -ExpandProperty FullName
-        )
-    }
+    $scriptRoot = Split-Path -Parent $scriptPath
+    $reviewScriptPaths = @($scriptPath) + @(
+        Get-ChildItem -LiteralPath $scriptRoot -Filter '*.ps1' -File |
+            Where-Object FullName -ne $scriptPath |
+            Sort-Object Name |
+            Select-Object -ExpandProperty FullName
+    )
     $script:ReviewSourceText = @(
         $reviewScriptPaths | ForEach-Object {
             Get-Content -LiteralPath $_ -Raw
