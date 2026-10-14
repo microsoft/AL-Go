@@ -63,8 +63,6 @@ Describe "GitHub event payload should not be used in code" {
 Describe "Copilot code review workflows" {
     BeforeAll {
         $workflowFolder = Join-Path $PSScriptRoot '..\..\Templates\Per Tenant Extension\.github\workflows' -Resolve
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reusableWorkflow', Justification = 'False positive across Pester scopes.')]
-        $reusableWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'intakeWorkflow', Justification = 'False positive across Pester scopes.')]
         $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
@@ -80,14 +78,18 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.output\.outputs\.leafModel\s+\}\}'
         $runnerWorkflow | Should -Match '\$codeReviewAgent\.excludedOwners'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
-        $runnerWorkflow | Should -Match 'copilot_model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
-        $runnerWorkflow | Should -Match 'copilot_leaf_model:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcquality_token:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
+        $runnerWorkflow | Should -Match 'COPILOT_MODEL:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
+        $runnerWorkflow | Should -Match 'COPILOT_REVIEW_LEAF_MODEL:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'secrets\.BCQUALITY_TOKEN'
     }
 
-    It 'Uses the local reusable reviewer workflow' {
-        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./.github/workflows/CopilotPRReview.yml'))
-        $runnerWorkflow | Should -Match 'engine_ref:\s+main'
+    It 'Contains the trusted review engine without a third workflow' {
+        $runnerWorkflow | Should -Match '(?m)^  resolve:'
+        $runnerWorkflow | Should -Match '(?m)^  review:'
+        $runnerWorkflow | Should -Match '(?m)^  publish:'
+        $runnerWorkflow | Should -Match 'ENGINE_REPO:\s+microsoft/AL-Go'
+        $runnerWorkflow | Should -Match 'ENGINE_REF:\s+main'
+        Test-Path (Join-Path $workflowFolder 'CopilotPRReview.yml') | Should -BeFalse
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
@@ -95,16 +97,16 @@ Describe "Copilot code review workflows" {
         $appSourceWorkflowFolder = Join-Path $PSScriptRoot '..\..\Templates\AppSource App\.github\workflows' -Resolve
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $intakeWorkflow
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw | Should -BeExactly $runnerWorkflow
-        Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yml') -Encoding UTF8 -Raw | Should -BeExactly $reusableWorkflow
+        Test-Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yml') | Should -BeFalse
     }
 
-    It 'Uses the installed BCQuality plugin in the reusable workflow' {
-        $reusableWorkflow | Should -Match ([regex]::Escape('uses: ./engine/Actions/SetupBCQuality'))
-        $reusableWorkflow | Should -Match ([regex]::Escape("token: `${{ steps.bcquality-policy.outputs.marketplace != 'microsoft/BCQuality' && secrets.bcquality_token || '' }}"))
-        $reusableWorkflow | Should -Match 'BCQUALITY_ROOT:\s+\$\{\{\s+steps\.bcquality\.outputs\.pluginRoot\s+\}\}'
-        $reusableWorkflow | Should -Match 'BCQUALITY_SHA:\s+\$\{\{\s+steps\.bcquality\.outputs\.sourceCommit\s+\}\}'
-        $reusableWorkflow | Should -Match 'BCQUALITY_CONSUME:\s+plugin'
-        $reusableWorkflow | Should -Not -Match 'BC-ALAgents'
+    It 'Uses the installed BCQuality plugin in the trusted runner' {
+        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./engine/Actions/SetupBCQuality'))
+        $runnerWorkflow | Should -Match ([regex]::Escape("token: `${{ steps.bcquality-policy.outputs.marketplace != 'microsoft/BCQuality' && secrets.BCQUALITY_TOKEN || '' }}"))
+        $runnerWorkflow | Should -Match 'BCQUALITY_ROOT:\s+\$\{\{\s+steps\.bcquality\.outputs\.pluginRoot\s+\}\}'
+        $runnerWorkflow | Should -Match 'BCQUALITY_SHA:\s+\$\{\{\s+steps\.bcquality\.outputs\.sourceCommit\s+\}\}'
+        $runnerWorkflow | Should -Match 'BCQUALITY_CONSUME:\s+plugin'
+        $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
     It 'Grants only the permissions required by each security boundary' {
@@ -113,8 +115,8 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
-        $reusableWorkflow | Should -Match "(?ms)review:.*?permissions:\s+contents: read\s+pull-requests: read.*?copilot-requests: write"
-        $reusableWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+contents: read\s+issues: write\s+pull-requests: write"
+        $runnerWorkflow | Should -Match "(?ms)review:.*?permissions:\s+contents: read\s+pull-requests: read.*?copilot-requests: write"
+        $runnerWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+contents: read\s+issues: write\s+pull-requests: write"
     }
 
     It 'Transfers pull request metadata and applies trusted eligibility settings' {
@@ -125,11 +127,11 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match ([regex]::Escape('$owner -notin $excludedOwners'))
         $runnerWorkflow | Should -Not -Match 'business-central-bot'
         $runnerWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
-        $runnerWorkflow | Should -Not -Match 'Invoke-RestMethod'
+        $runnerWorkflow | Should -Match 'Invoke-RestMethod'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
-        $runnerWorkflow | Should -Match 'pr_number:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
-        $runnerWorkflow | Should -Match 'head_sha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
-        $reusableWorkflow | Should -Match 'Supplied PR head SHA does not match the triggering workflow run'
-        $reusableWorkflow | Should -Match 'Pull request is no longer eligible for review'
+        $runnerWorkflow | Should -Match 'PR_NUMBER:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
+        $runnerWorkflow | Should -Match 'PR_HEAD_SHA:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
+        $runnerWorkflow | Should -Match 'Pull request head SHA does not match the triggering workflow run'
+        $runnerWorkflow | Should -Match 'Pull request is no longer eligible for review'
     }
 }

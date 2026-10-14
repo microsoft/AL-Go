@@ -41,9 +41,9 @@ The setting must be enabled at repository level. Project settings do not enable 
 The integration uses two workflows:
 
 1. **Copilot PR Review** runs without write permissions and uploads the pull request event metadata.
-1. **Copilot PR Review Runner** runs from the trusted base branch, downloads that metadata, applies the trusted repository settings, and calls the local reusable review workflow.
+1. **Copilot PR Review Runner** runs from the trusted base branch, downloads that metadata, applies the trusted repository settings, validates the pull request, generates findings, and publishes them.
 
-The reusable workflow revalidates the pull request through GitHub before reviewing it. It supports ephemeral GitHub-hosted runners, runs the model in a read-only job, and installs BCQuality into Copilot's default plugin directory for that disposable runner. A separate job receives permission to publish the generated findings. This prevents untrusted pull request code from running in a job that can modify the pull request.
+The trusted runner supports ephemeral GitHub-hosted runners, runs the model in a read-only job, and installs BCQuality into Copilot's default plugin directory for that disposable runner. A separate job receives permission to publish the generated findings. This prevents untrusted pull request code from running in a job that can modify the pull request.
 
 ## Disable the reviewer
 

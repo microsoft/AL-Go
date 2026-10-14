@@ -566,10 +566,8 @@ function GetWorkflowContentWithChangesFromSettings {
         # <--- REPLACE WITH ERROR AFTER October 1st 2025
     }
 
-    $isReusableWorkflow = $baseName -like '_*' -or $null -ne $yaml.Get('on:/workflow_call:')
-
-    # Any workflow (except for the PullRequestHandler and reusable workflows) can have concurrency and schedule defined
-    if ($baseName -ne "PullRequestHandler" -and !$isReusableWorkflow) {
+    # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have concurrency and schedule defined
+    if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
         # Add Schedule and Concurrency settings to the workflow
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
             if ($repoSettings."$workflowScheduleKey" -isnot [hashtable] -or $repoSettings."$workflowScheduleKey".Keys -notcontains 'cron' -or $repoSettings."$workflowScheduleKey".cron -isnot [string]) {
@@ -642,12 +640,11 @@ function ReplaceOwnerRepoAndBranch {
 
     $lines = $srcContent.Value.Split("`n")
 
-    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE, microsoft/AL-Go-AppSource and microsoft/AL-Go
+    # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
-        "reviewEngineRepo" = "microsoft/AL-Go"
     }
     # Original branch is always main
     $originalBranch = "main"
@@ -657,7 +654,6 @@ function ReplaceOwnerRepoAndBranch {
         "actionsRepo" = "AL-Go/Actions"
         "perTenantExtensionRepo" = "AL-Go"
         "appSourceAppRepo" = "AL-Go"
-        "reviewEngineRepo" = "AL-Go"
     }
 
     # Replace URL's to actions repository first
@@ -666,12 +662,13 @@ function ReplaceOwnerRepoAndBranch {
     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
 
     # Replace the owner and repo names in the workflow
-    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo","reviewEngineRepo" | ForEach-Object {
+    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
         $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
     }
-    $lines = $lines | ForEach-Object { $_ -replace '^(\s+engine_ref:\s+)main\s*$', "`${1}$templateBranch" }
+    $lines = $lines | ForEach-Object { $_ -replace '^(\s+ENGINE_REPO:\s+)microsoft/AL-Go[ \t]*(\r?)$', "`${1}$templateOwner/AL-Go`${2}" }
+    $lines = $lines | ForEach-Object { $_ -replace '^(\s+ENGINE_REF:\s+)main[ \t]*(\r?)$', "`${1}$templateBranch`${2}" }
     $srcContent.Value = $lines -join "`n"
 }
 
@@ -1050,7 +1047,6 @@ function GetDefaultFilesToExclude {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
-            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yml' }
         )
     }
 
