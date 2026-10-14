@@ -1907,21 +1907,25 @@ Describe 'Deterministic leaf orchestration contract' {
         $manifest.processes[0].report_path | Should -Be 'leaf-results/01-security/_review-report.json'
     }
 
-    It 'records the repository that supplied the review action' {
+    It 'records the repository and commit that supplied the review action' {
         $script:ReviewPlanIds = @('al-security-review')
         $ReviewSource = 'pr'
-        $originalActionRepository = $env:GITHUB_ACTION_REPOSITORY
+        $originalEngineRepository = $env:COPILOT_REVIEW_ENGINE_REPOSITORY
+        $originalEngineCommit = $env:COPILOT_REVIEW_ENGINE_COMMIT
         try {
-            $env:GITHUB_ACTION_REPOSITORY = 'contoso/AL-Go'
+            $env:COPILOT_REVIEW_ENGINE_REPOSITORY = 'contoso/AL-Go'
+            $env:COPILOT_REVIEW_ENGINE_COMMIT = '0123456789abcdef0123456789abcdef01234567'
 
             Save-ReviewRunManifest -Status completed
 
             $manifest = Get-Content -LiteralPath (Join-Path $ReviewOutputDir '_run-manifest.json') -Raw |
                 ConvertFrom-Json
             $manifest.engine.repository | Should -Be 'contoso/AL-Go'
+            $manifest.engine.commit | Should -Be '0123456789abcdef0123456789abcdef01234567'
         }
         finally {
-            $env:GITHUB_ACTION_REPOSITORY = $originalActionRepository
+            $env:COPILOT_REVIEW_ENGINE_REPOSITORY = $originalEngineRepository
+            $env:COPILOT_REVIEW_ENGINE_COMMIT = $originalEngineCommit
         }
     }
 

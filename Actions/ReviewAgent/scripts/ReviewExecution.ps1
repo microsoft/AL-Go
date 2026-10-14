@@ -343,9 +343,18 @@ function Save-ReviewRunManifest {
     if ($Status -ne 'running') {
         $script:ReviewRunCompletedAt = [DateTime]::UtcNow
     }
-    $engineSha = (& git -C $EngineRoot rev-parse HEAD 2>$null | Select-Object -First 1)
-    if ($engineSha) { $engineSha = $engineSha.Trim() }
-    $engineRepository = ([string]$env:GITHUB_ACTION_REPOSITORY).Trim()
+    $engineSha = ([string]$env:COPILOT_REVIEW_ENGINE_COMMIT).Trim()
+    if ($engineSha -and $engineSha -notmatch '\A[a-fA-F0-9]{40}\z') {
+        throw "COPILOT_REVIEW_ENGINE_COMMIT must be a full 40-character commit SHA; received '$engineSha'."
+    }
+    if (-not $engineSha) {
+        $engineSha = (& git -C $EngineRoot rev-parse HEAD 2>$null | Select-Object -First 1)
+        if ($engineSha) { $engineSha = $engineSha.Trim() }
+    }
+    $engineRepository = ([string]$env:COPILOT_REVIEW_ENGINE_REPOSITORY).Trim()
+    if (-not $engineRepository) {
+        $engineRepository = ([string]$env:GITHUB_ACTION_REPOSITORY).Trim()
+    }
     if ($engineRepository -and $engineRepository -notmatch '\A[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}\z') {
         throw "GITHUB_ACTION_REPOSITORY must use owner/repository format; received '$engineRepository'."
     }

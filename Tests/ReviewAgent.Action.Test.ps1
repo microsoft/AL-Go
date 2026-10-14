@@ -31,7 +31,12 @@ Describe 'ReviewAgent action' {
 
     It 'Matches the standard action wrapper and output contract' {
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName 'ReviewAgent.ps1'
-        YamlTest -scriptRoot $scriptRoot -actionName 'ReviewAgent' -actionScript $actionScript -DefaultShell pwsh -outputs ([ordered]@{
+        $yamlTestRoot = Join-Path $TestDrive 'review-agent-standard-contract'
+        New-Item -ItemType Directory -Path $yamlTestRoot | Out-Null
+        Get-Content -LiteralPath (Join-Path $scriptRoot 'action.yaml') |
+            Where-Object { $_ -notmatch 'COPILOT_REVIEW_ENGINE_(?:REPOSITORY|COMMIT):' } |
+            Set-Content -LiteralPath (Join-Path $yamlTestRoot 'action.yaml')
+        YamlTest -scriptRoot $yamlTestRoot -actionName 'ReviewAgent' -actionScript $actionScript -DefaultShell pwsh -outputs ([ordered]@{
             eligible = 'Whether the pull request is eligible for review'
             model = 'Model used for final review consolidation'
             leafModel = 'Model used for isolated leaf reviews'
@@ -40,6 +45,12 @@ Describe 'ReviewAgent action' {
             baseRef = 'Validated pull request base branch'
             bcqualitySettingsJson = 'Validated BCQuality settings as compressed JSON'
         })
+    }
+
+    It 'Forwards the immutable action source identity to review diagnostics' {
+        $actionYaml = Get-Content -LiteralPath (Join-Path $scriptRoot 'action.yaml') -Raw
+        $actionYaml | Should -Match 'COPILOT_REVIEW_ENGINE_REPOSITORY:\s+\$\{\{\s+github\.action_repository\s+\}\}'
+        $actionYaml | Should -Match 'COPILOT_REVIEW_ENGINE_COMMIT:\s+\$\{\{\s+github\.action_ref\s+\}\}'
     }
 
     It 'Resolves and validates eligible pull request context' {

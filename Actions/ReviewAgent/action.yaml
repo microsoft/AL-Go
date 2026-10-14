@@ -118,6 +118,8 @@ runs:
         _bcqualityRoot: ${{ inputs.bcqualityRoot }}
         _copilotCliVersion: ${{ inputs.copilotCliVersion }}
         _agentVersion: ${{ inputs.agentVersion }}
+        COPILOT_REVIEW_ENGINE_REPOSITORY: ${{ github.action_repository }}
+        COPILOT_REVIEW_ENGINE_COMMIT: ${{ github.action_ref }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReviewAgent" -Action {
           ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -codeReviewSettingsJson $ENV:_codeReviewSettingsJson -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion -agentVersion $ENV:_agentVersion
