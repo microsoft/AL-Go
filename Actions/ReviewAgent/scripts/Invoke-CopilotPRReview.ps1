@@ -285,6 +285,19 @@ foreach ($reviewHelperScript in $ReviewHelperScripts) {
     . (Join-Path (Join-Path $PSScriptRoot 'private') $reviewHelperScript)
 }
 
+$ReviewGitContext = [pscustomobject]@{
+    TrustedWorkspace   = $TrustedWorkspace
+    AnalysisWorkspace  = $AnalysisWorkspace
+    ReviewDataRoot     = $ReviewDataRoot
+    AgentWorkDir       = $AgentWorkDir
+    ReviewDiffFileName = $ReviewDiffFileName
+    ReviewPathSpec     = $ReviewPathSpec
+    DiffRange          = $DiffRange
+    BaseBranch         = $BaseBranch
+    PrNumber           = $PrNumber
+    PrHeadSha          = $PrHeadSha
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -356,11 +369,11 @@ if ($ReviewSource -eq 'local') {
     Write-Host "Local review: using provided worktree at $AnalysisWorkspace (base $DiffBaseRef); skipping PR fetch."
 }
 else {
-    New-PrAnalysisWorktree
+    New-PrAnalysisWorktree -Context $ReviewGitContext
 }
 
 Write-Host "Fetching changed files via git diff ($DiffRange)"
-$changedFileNames = @(Get-GitChangedFiles)
+$changedFileNames = @(Get-GitChangedFiles -Context $ReviewGitContext)
 Write-Host "Found $($changedFileNames.Count) changed file(s)"
 # The changed-file manifest and object index are inputs to the Copilot CLI /
 # leaf sub-skills and are written into BCQUALITY_ROOT, which is only set in the
@@ -368,8 +381,8 @@ Write-Host "Found $($changedFileNames.Count) changed file(s)"
 # in post to avoid Join-Path binding against a null $BCQualityRoot.
 if ($ReviewPhase -ne 'post') {
     $null = New-Item -ItemType Directory -Path $AgentWorkDir -Force
-    New-ReviewDataProjection
-    Save-ReviewDiff
+    New-ReviewDataProjection -Context $ReviewGitContext
+    Save-ReviewDiff -Context $ReviewGitContext
     $changedFilesManifest = Join-Path $AgentWorkDir '_review-changed-files.txt'
     Set-Content -LiteralPath $changedFilesManifest -Value $changedFileNames -Encoding UTF8
     Write-LogPhaseDetail "Changed-file manifest written to $changedFilesManifest"
@@ -415,7 +428,7 @@ foreach ($filename in $changedFileNames) {
 $lineMaps = @{}
 if ($ReviewPhase -ne 'generate') {
     foreach ($filename in $changedFileNames) {
-        $patch = Get-GitFilePatch -FilePath $filename
+        $patch = Get-GitFilePatch -Context $ReviewGitContext -FilePath $filename
         if ($patch) { $lineMaps[$filename] = Build-LineMap -Patch $patch }
     }
 }

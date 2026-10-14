@@ -2024,7 +2024,9 @@ Describe 'BCQuality version ownership' {
 
 Describe 'PR head SHA binding' {
     BeforeEach {
-        $TrustedWorkspace = 'C:\trusted-workspace'
+        $gitContext = [pscustomobject]@{
+            TrustedWorkspace = 'C:\trusted-workspace'
+        }
     }
 
     It 'accepts the fetched PR head only when it matches the validated event SHA' {
@@ -2034,6 +2036,7 @@ Describe 'PR head SHA binding' {
         }
 
         Get-ValidatedPrHeadCommit `
+            -Context $gitContext `
             -RemoteRef 'refs/remotes/origin/pr/42' `
             -ExpectedHeadSha $expected |
             Should -BeExactly $expected
@@ -2048,6 +2051,7 @@ Describe 'PR head SHA binding' {
 
         {
             Get-ValidatedPrHeadCommit `
+                -Context $gitContext `
                 -RemoteRef 'refs/remotes/origin/pr/42' `
                 -ExpectedHeadSha $expected
         } | Should -Throw "*does not match validated PR_HEAD_SHA '$expected'*"
@@ -2058,6 +2062,7 @@ Describe 'PR head SHA binding' {
 
         {
             Get-ValidatedPrHeadCommit `
+                -Context $gitContext `
                 -RemoteRef 'refs/remotes/origin/pr/42' `
                 -ExpectedHeadSha 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         } | Should -Throw "*did not resolve to a full commit SHA*"
@@ -2439,6 +2444,10 @@ Describe 'Sanitized review data projection' {
     BeforeEach {
         $AnalysisWorkspace = Join-Path $TestDrive 'untrusted-repository'
         $ReviewDataRoot = Join-Path $TestDrive 'review-data'
+        $gitContext = [pscustomobject]@{
+            AnalysisWorkspace = $AnalysisWorkspace
+            ReviewDataRoot = $ReviewDataRoot
+        }
         New-Item -ItemType Directory -Path (Join-Path $AnalysisWorkspace '.github/skills/hostile') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $AnalysisWorkspace '.agents/skills/hostile') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $AnalysisWorkspace 'src') -Force | Out-Null
@@ -2454,7 +2463,7 @@ Describe 'Sanitized review data projection' {
     }
 
     It 'exports reviewable code without loading repository-owned trusted configuration' {
-        New-ReviewDataProjection
+        New-ReviewDataProjection -Context $gitContext
 
         Test-Path -LiteralPath (Join-Path $ReviewDataRoot 'src/code.al') | Should -BeTrue
         Test-Path -LiteralPath (Join-Path $ReviewDataRoot '.github/skills') | Should -BeFalse
@@ -2469,7 +2478,7 @@ Describe 'Sanitized review data projection' {
         & git -C $AnalysisWorkspace add .gitattributes
         & git -C $AnalysisWorkspace commit -qm 'add hostile export-ignore'
 
-        New-ReviewDataProjection
+        New-ReviewDataProjection -Context $gitContext
 
         $committedContent = [Text.Encoding]::UTF8.GetString(
             (Invoke-GitCommandBytes -Arguments @(
@@ -2489,7 +2498,7 @@ Describe 'Sanitized review data projection' {
         & git -C $AnalysisWorkspace add .gitattributes src/substituted.txt
         & git -C $AnalysisWorkspace commit -qm 'add hostile export-subst'
 
-        New-ReviewDataProjection
+        New-ReviewDataProjection -Context $gitContext
 
         Get-Content -LiteralPath (Join-Path $ReviewDataRoot 'src/substituted.txt') -Raw |
             Should -BeExactly $substitutionMarker
@@ -2958,7 +2967,11 @@ Describe 'Deterministic findings consumer acceptance' {
             Set-Content -LiteralPath (Join-Path $AnalysisWorkspace $path) -Value 'final line'
         }
         $null = Invoke-GitCommand -Arguments (@('-C', $AnalysisWorkspace, 'add', '--') + $paths)
-        $changed = @(Get-GitChangedFiles)
+        $changed = @(Get-GitChangedFiles -Context ([pscustomobject]@{
+            AnalysisWorkspace = $AnalysisWorkspace
+            DiffRange = $DiffRange
+            ReviewPathSpec = $ReviewPathSpec
+        }))
         $changed | Should -Be $paths
         $captured = New-FindingsConsumerContext -SourceRoot $AnalysisWorkspace -SourcePaths $changed -KnowledgeRoot $BCQualityRoot
         foreach ($path in $paths) {
