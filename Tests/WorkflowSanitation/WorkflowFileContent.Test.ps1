@@ -67,46 +67,38 @@ Describe "Copilot code review workflows" {
         $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
         $runnerWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reusableWorkflow', Justification = 'False positive across Pester scopes.')]
-        $reusableWorkflow = Get-Content -Path (Join-Path $workflowFolder '_CopilotPRReview.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reviewAction', Justification = 'False positive across Pester scopes.')]
         $reviewAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\CopilotPRReview\CopilotPRReview.ps1' -Resolve) -Encoding UTF8 -Raw
     }
 
     It 'Reads the repository-level opt-in setting from trusted content' {
-        $reusableWorkflow | Should -Match 'name:\s+Checkout trusted settings'
-        $reusableWorkflow | Should -Match 'get:\s+CodeReviewAgent'
-        $reusableWorkflow | Should -Match "project:\s+''"
-        $reusableWorkflow | Should -Match "workflowName:\s+''"
-        $reusableWorkflow | Should -Match 'settingsJson:\s+\$\{\{\s+env\.CodeReviewAgent\s+\}\}'
-        $reusableWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
-        $reusableWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'name:\s+Checkout trusted settings'
+        $runnerWorkflow | Should -Match 'get:\s+CodeReviewAgent'
+        $runnerWorkflow | Should -Match "project:\s+''"
+        $runnerWorkflow | Should -Match "workflowName:\s+''"
+        $runnerWorkflow | Should -Match 'settingsJson:\s+\$\{\{\s+env\.CodeReviewAgent\s+\}\}'
+        $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
+        $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
         $reviewAction | Should -Match '\$settings\.excludedOwners'
-        $reusableWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
-        $reusableWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
-        $reusableWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
-        $reusableWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
+        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
+        $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
+        $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
     }
 
-    It 'Delegates the runner to the local reusable workflow' {
-        $runnerWorkflow | Should -Match 'uses:\s+\./\.github/workflows/_CopilotPRReview\.yaml'
-        $runnerWorkflow | Should -Match 'secrets:\s+BCQUALITY_TOKEN:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
-        $runnerWorkflow | Should -Not -Match 'secrets:\s+inherit'
-        $reusableWorkflow | Should -Match "(?ms)workflow_call:.*?secrets:\s+BCQUALITY_TOKEN:.*?required:\s+true"
+    It 'Uses the review action without a third workflow' {
+        $runnerWorkflow | Should -Match '(?m)^  review:'
+        $runnerWorkflow | Should -Match '(?m)^  publish:'
+        ([regex]::Matches($runnerWorkflow, 'uses:\s+microsoft/AL-Go-Actions/CopilotPRReview@main')).Count | Should -Be 4
         $runnerWorkflow | Should -Not -Match '(?m)^\s+run:\s*\|'
-        $reusableWorkflow | Should -Match '(?m)^  review:'
-        $reusableWorkflow | Should -Match '(?m)^  publish:'
-        ([regex]::Matches($reusableWorkflow, 'uses:\s+microsoft/AL-Go-Actions/CopilotPRReview@main')).Count | Should -Be 4
-        $reusableWorkflow | Should -Not -Match '(?m)^\s+run:\s*\|'
         Test-Path (Join-Path $workflowFolder 'CopilotPRReview.yml') | Should -BeFalse
-        $reusableWorkflow | Should -Not -Match 'BC-ALAgents'
+        $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
     It 'Keeps both template workflow sets identical' {
         $appSourceWorkflowFolder = Join-Path $PSScriptRoot '..\..\Templates\AppSource App\.github\workflows' -Resolve
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $intakeWorkflow
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw | Should -BeExactly $runnerWorkflow
-        Get-Content -Path (Join-Path $appSourceWorkflowFolder '_CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $reusableWorkflow
         Test-Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yml') | Should -BeFalse
     }
 
@@ -116,38 +108,35 @@ Describe "Copilot code review workflows" {
         $reviewAction | Should -Match '\$env:BCQUALITY_ROOT = \$bcqualityRoot'
         $reviewAction | Should -Match '\$env:BCQUALITY_SHA = \$bcqualitySha'
         $reviewAction | Should -Match "\$env:BCQUALITY_CONSUME = 'plugin'"
-        $reusableWorkflow | Should -Match "(?ms)phase:\s+prepare.*?bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}.*?phase:\s+generate"
-        $reusableWorkflow | Should -Not -Match "(?ms)phase:\s+generate.*?bcqualityToken:"
-        $reusableWorkflow | Should -Not -Match 'BC-ALAgents'
+        $runnerWorkflow | Should -Match "(?ms)phase:\s+prepare.*?bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}.*?phase:\s+generate"
+        $runnerWorkflow | Should -Not -Match "(?ms)phase:\s+generate.*?bcqualityToken:"
+        $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
     It 'Grants only the permissions required by each security boundary' {
         $intakeWorkflow | Should -Match "(?ms)permissions:\s+contents: read\s+jobs:"
-        $runnerWorkflow | Should -Match "(?ms)permissions:\s+actions: read\s+contents: read\s+issues: write\s+pull-requests: write\s+copilot-requests: write"
-        $reusableWorkflow | Should -Match "(?ms)Settings:.*?permissions:\s+actions: read\s+contents: read"
+        $runnerWorkflow | Should -Match "(?ms)Settings:.*?permissions:\s+actions: read\s+contents: read"
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
-        $reusableWorkflow | Should -Match "(?ms)review:.*?permissions:\s+contents: read\s+pull-requests: read\s+copilot-requests: write"
-        $reusableWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+contents: read\s+issues: write\s+pull-requests: write"
+        $runnerWorkflow | Should -Match "(?ms)review:.*?permissions:\s+contents: read\s+pull-requests: read\s+copilot-requests: write"
+        $runnerWorkflow | Should -Match "(?ms)publish:.*?permissions:\s+contents: read\s+issues: write\s+pull-requests: write"
     }
 
     It 'Transfers pull request metadata and applies trusted eligibility settings' {
         $intakeWorkflow | Should -Match 'name:\s+copilot-pr-review-metadata'
         $intakeWorkflow | Should -Match 'path:\s+\$\{\{\s+github\.event_path\s+\}\}'
-        $runnerWorkflow | Should -Match 'workflowRunId:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}'
-        $runnerWorkflow | Should -Match 'workflowHeadSha:\s+\$\{\{\s+github\.event\.workflow_run\.head_sha\s+\}\}'
-        $reusableWorkflow | Should -Match 'name:\s+copilot-pr-review-metadata'
-        $reusableWorkflow | Should -Match 'run-id:\s+\$\{\{\s+inputs\.workflowRunId\s+\}\}'
-        $reusableWorkflow | Should -Match "(?ms)phase:\s+context.*?repository:\s+\$\{\{\s+github\.repository\s+\}\}"
+        $runnerWorkflow | Should -Match 'name:\s+copilot-pr-review-metadata'
+        $runnerWorkflow | Should -Match 'run-id:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}'
+        $runnerWorkflow | Should -Match "(?ms)phase:\s+context.*?repository:\s+\$\{\{\s+github\.repository\s+\}\}"
         $reviewAction | Should -Match ([regex]::Escape('$owner -notin $excludedOwners'))
-        $reusableWorkflow | Should -Not -Match 'business-central-bot'
-        $reusableWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
-        $reusableWorkflow | Should -Not -Match 'Invoke-RestMethod'
+        $runnerWorkflow | Should -Not -Match 'business-central-bot'
+        $runnerWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
+        $runnerWorkflow | Should -Not -Match 'Invoke-RestMethod'
         $reviewAction | Should -Match 'Invoke-RestMethod'
-        $reusableWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
-        $reusableWorkflow | Should -Match 'prNumber:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
-        $reusableWorkflow | Should -Match 'prHeadSha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
+        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
+        $runnerWorkflow | Should -Match 'prNumber:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
+        $runnerWorkflow | Should -Match 'prHeadSha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
         $reviewAction | Should -Match 'Pull request head SHA does not match the triggering workflow run'
         $reviewAction | Should -Match 'Pull request is no longer eligible for review'
     }
