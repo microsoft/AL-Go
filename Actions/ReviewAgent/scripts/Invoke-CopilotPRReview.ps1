@@ -9,7 +9,7 @@
     knowledge live in BCQuality (https://github.com/microsoft/BCQuality, or
     a partner fork). The consuming repo owns its policy config
     (bcquality.config.yaml), passed in via BCQUALITY_CONFIG_PATH; when unset
-    the action's default baseline (Actions/CopilotPRReview/bcquality.config.yaml) is used.
+    the action's default baseline (Actions/ReviewAgent/bcquality.config.yaml) is used.
     The runner workflow installs BCQuality as a Copilot plugin, filters that
     ephemeral installation, and hands this script the resulting
     BCQUALITY_ROOT path.
@@ -2688,7 +2688,7 @@ function New-FindingsReportRoleSchemas {
     $sourceId = [string]$shared['$id']
     $leaf = & $readShared
     foreach ($field in $rootOnlyFields) { $leaf['properties'].Remove($field) }
-    $leaf['$id'] = 'https://github.com/microsoft/AL-Go/Actions/CopilotPRReview/findings-report.leaf.schema.json'
+    $leaf['$id'] = 'https://github.com/microsoft/AL-Go/Actions/ReviewAgent/findings-report.leaf.schema.json'
     $leaf['title'] = 'BCQuality findings report (review leaf role)'
     $leaf['$comment'] = "Derived by AL-Go from $sourceId. Leaf reports cannot contain the super-skill-only fields sub-results or skipped-sub-skills."
     $boundedLocation = $null
@@ -2758,7 +2758,7 @@ function New-FindingsReportRoleSchemas {
     }
 
     $root = & $readShared
-    $root['$id'] = 'https://github.com/microsoft/AL-Go/Actions/CopilotPRReview/findings-report.root.schema.json'
+    $root['$id'] = 'https://github.com/microsoft/AL-Go/Actions/ReviewAgent/findings-report.root.schema.json'
     $root['title'] = 'BCQuality findings report (review root role)'
     $root['$comment'] = "Derived by AL-Go from $sourceId. The root report requires sub-results, and each entry must satisfy the leaf contract in definitions.$leafDefinitionName."
     $root['required'] = [object[]](@($root['required']) + 'sub-results')

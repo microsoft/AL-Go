@@ -68,7 +68,7 @@ Describe "Copilot code review workflows" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
         $runnerWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reviewAction', Justification = 'False positive across Pester scopes.')]
-        $reviewAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\CopilotPRReview\CopilotPRReview.ps1' -Resolve) -Encoding UTF8 -Raw
+        $reviewAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\ReviewAgent\ReviewAgent.ps1' -Resolve) -Encoding UTF8 -Raw
     }
 
     It 'Reads the repository-level opt-in setting from trusted content' {
@@ -90,7 +90,7 @@ Describe "Copilot code review workflows" {
     It 'Uses the review action without a third workflow' {
         $runnerWorkflow | Should -Match '(?m)^  review:'
         $runnerWorkflow | Should -Match '(?m)^  publish:'
-        ([regex]::Matches($runnerWorkflow, 'uses:\s+microsoft/AL-Go-Actions/CopilotPRReview@main')).Count | Should -Be 4
+        ([regex]::Matches($runnerWorkflow, 'uses:\s+microsoft/AL-Go-Actions/ReviewAgent@main')).Count | Should -Be 4
         $runnerWorkflow | Should -Not -Match '(?m)^\s+run:\s*\|'
         Test-Path (Join-Path $workflowFolder 'CopilotPRReview.yml') | Should -BeFalse
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'

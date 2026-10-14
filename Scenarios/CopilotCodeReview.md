@@ -1,6 +1,6 @@
 # Enable Copilot code review for AL pull requests
 
-AL-Go can review AL changes and post findings as pull request comments. The AL-Go-owned `CopilotPRReview` action installs the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin, filters its skills and knowledge to the configured policy, and runs when a non-draft pull request targeting a branch in `CICDPullRequestBranches` is opened, reopened, synchronized, or marked ready for review. The default target branch is `main`.
+AL-Go can review AL changes and post findings as pull request comments. The AL-Go-owned `ReviewAgent` action installs the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin, filters its skills and knowledge to the configured policy, and runs when a non-draft pull request targeting a branch in `CICDPullRequestBranches` is opened, reopened, synchronized, or marked ready for review. The default target branch is `main`.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ The integration uses two workflows:
 1. **Copilot PR Review** runs without write permissions and uploads the pull request event metadata.
 1. **Copilot PR Review Runner** runs from the trusted base branch, downloads that metadata, applies the trusted repository settings, validates the pull request, generates findings, and publishes them.
 
-The trusted runner supports ephemeral GitHub-hosted runners and delegates its implementation to the AL-Go `CopilotPRReview` action. It prepares BCQuality in a secret-scoped step, runs the model in a separate read-only step, and publishes the generated findings from a separate job. This prevents the model and untrusted pull request code from receiving the private marketplace token or permission to modify the pull request.
+The trusted runner supports ephemeral GitHub-hosted runners and delegates its implementation to the AL-Go `ReviewAgent` action. It prepares BCQuality in a secret-scoped step, runs the model in a separate read-only step, and publishes the generated findings from a separate job. This prevents the model and untrusted pull request code from receiving the private marketplace token or permission to modify the pull request.
 
 ## Disable the reviewer
 

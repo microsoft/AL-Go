@@ -4,10 +4,10 @@ param()
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1') -Force -DisableNameChecking
 $errorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; Set-StrictMode -Version 2.0
 
-Describe 'CopilotPRReview action' {
+Describe 'ReviewAgent action' {
     BeforeAll {
-        $scriptRoot = Join-Path $PSScriptRoot '../Actions/CopilotPRReview' -Resolve
-        $script:actionScriptPath = Join-Path $scriptRoot 'CopilotPRReview.ps1'
+        $scriptRoot = Join-Path $PSScriptRoot '../Actions/ReviewAgent' -Resolve
+        $script:actionScriptPath = Join-Path $scriptRoot 'ReviewAgent.ps1'
         $script:originalGitHubOutput = $env:GITHUB_OUTPUT
     }
 
@@ -16,8 +16,8 @@ Describe 'CopilotPRReview action' {
     }
 
     It 'Matches the standard action wrapper and output contract' {
-        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName 'CopilotPRReview.ps1'
-        YamlTest -scriptRoot $scriptRoot -actionName 'CopilotPRReview' -actionScript $actionScript -DefaultShell pwsh -outputs ([ordered]@{
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName 'ReviewAgent.ps1'
+        YamlTest -scriptRoot $scriptRoot -actionName 'ReviewAgent' -actionScript $actionScript -DefaultShell pwsh -outputs ([ordered]@{
             eligible = 'Whether the pull request is eligible for review'
             model = 'Model used for final review consolidation'
             leafModel = 'Model used for isolated leaf reviews'
