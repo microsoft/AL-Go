@@ -19,6 +19,14 @@ The template repositories to use as starting point are:
 
 Try out the [AL-Go workshop](https://aka.ms/algoworkshop) for an in-depth workshop on AL-Go for GitHub functionality or examine the below usage scenarios, which explains how to get started and how to perform the most common tasks.
 
+## AI-powered AL review
+
+AL-Go provides the trusted GitHub workflow orchestration for Copilot code
+review. The AL-specific review skills, guidance, and product knowledge are
+provided by [BCQuality](https://github.com/microsoft/BCQuality). Keeping that
+knowledge in BCQuality allows it to evolve independently from the AL-Go
+workflows that install the plugin, run the review, and publish findings.
+
 ## Usage scenarios
 
 1. [Create a new per-tenant extension (like AL-Go) and start developing in VS Code](Scenarios/GetStarted.md)
