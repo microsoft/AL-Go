@@ -19,7 +19,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  Settings:
+  prepare:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -68,8 +68,8 @@ jobs:
           workflowHeadSha: ${{ github.event.workflow_run.head_sha }}
 
   review:
-    needs: Settings
-    if: needs.Settings.outputs.eligible == 'true'
+    needs: prepare
+    if: needs.prepare.outputs.eligible == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -80,7 +80,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ github.repository }}
-          ref: ${{ needs.Settings.outputs.baseRef }}
+          ref: ${{ needs.prepare.outputs.baseRef }}
           path: trusted
           fetch-depth: 0
           token: ${{ github.token }}
@@ -99,8 +99,8 @@ jobs:
         with:
           shell: pwsh
           phase: prepare
-          bcqualityMarketplaceRepo: ${{ needs.Settings.outputs.bcqualityMarketplaceRepo }}
-          bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
+          bcqualityMarketplaceRepo: ${{ needs.prepare.outputs.bcqualityMarketplaceRepo }}
+          bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
           bcqualityToken: ${{ secrets.BCQUALITY_TOKEN }}
 
       - name: Run Copilot PR review
@@ -110,22 +110,22 @@ jobs:
           phase: generate
           token: ${{ github.token }}
           repository: ${{ github.repository }}
-          prNumber: ${{ needs.Settings.outputs.prNumber }}
-          prHeadSha: ${{ needs.Settings.outputs.headSha }}
-          baseRef: ${{ needs.Settings.outputs.baseRef }}
-          model: ${{ needs.Settings.outputs.model }}
-          leafModel: ${{ needs.Settings.outputs.leafModel }}
+          prNumber: ${{ needs.prepare.outputs.prNumber }}
+          prHeadSha: ${{ needs.prepare.outputs.headSha }}
+          baseRef: ${{ needs.prepare.outputs.baseRef }}
+          model: ${{ needs.prepare.outputs.model }}
+          leafModel: ${{ needs.prepare.outputs.leafModel }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
           bcqualityRoot: ${{ steps.setup.outputs.bcqualityRoot }}
-          bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
+          bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
           copilotCliVersion: ${{ steps.setup.outputs.copilotCliVersion }}
 
       - name: Upload review output
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: copilot-pr-review-output-${{ needs.Settings.outputs.prNumber }}
+          name: copilot-pr-review-output-${{ needs.prepare.outputs.prNumber }}
           path: ${{ github.workspace }}/review-output
           if-no-files-found: warn
 
@@ -133,12 +133,12 @@ jobs:
         if: always() && steps.setup.outputs.filterReport != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: bcquality-filter-report-${{ needs.Settings.outputs.prNumber }}
+          name: bcquality-filter-report-${{ needs.prepare.outputs.prNumber }}
           path: ${{ steps.setup.outputs.filterReport }}
           if-no-files-found: warn
 
   publish:
-    needs: [Settings, review]
+    needs: [prepare, review]
     if: needs.review.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -150,7 +150,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ github.repository }}
-          ref: ${{ needs.Settings.outputs.baseRef }}
+          ref: ${{ needs.prepare.outputs.baseRef }}
           path: trusted
           fetch-depth: 0
           token: ${{ github.token }}
@@ -161,7 +161,7 @@ jobs:
       - name: Download review output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: copilot-pr-review-output-${{ needs.Settings.outputs.prNumber }}
+          name: copilot-pr-review-output-${{ needs.prepare.outputs.prNumber }}
           path: ${{ github.workspace }}/review-output
 
       - name: Publish Copilot PR review
@@ -171,17 +171,17 @@ jobs:
           phase: post
           token: ${{ github.token }}
           repository: ${{ github.repository }}
-          prNumber: ${{ needs.Settings.outputs.prNumber }}
-          prHeadSha: ${{ needs.Settings.outputs.headSha }}
-          baseRef: ${{ needs.Settings.outputs.baseRef }}
+          prNumber: ${{ needs.prepare.outputs.prNumber }}
+          prHeadSha: ${{ needs.prepare.outputs.headSha }}
+          baseRef: ${{ needs.prepare.outputs.baseRef }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
-          bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
+          bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
 
       - name: Upload published review artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: copilot-pr-review-final-${{ needs.Settings.outputs.prNumber }}
+          name: copilot-pr-review-final-${{ needs.prepare.outputs.prNumber }}
           path: ${{ github.workspace }}/review-output
           if-no-files-found: warn

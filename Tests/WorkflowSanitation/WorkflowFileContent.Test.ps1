@@ -82,12 +82,12 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityVersion\s+\}\}'
         $reviewAction | Should -Match '\$settings\.excludedOwners'
-        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
-        $runnerWorkflow | Should -Not -Match 'needs\.Settings\.outputs\.enabled'
-        $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
-        $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityVersion\s+\}\}'
+        $runnerWorkflow | Should -Match "needs\.prepare\.outputs\.eligible == 'true'"
+        $runnerWorkflow | Should -Not -Match 'needs\.prepare\.outputs\.enabled'
+        $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.prepare\.outputs\.model\s+\}\}'
+        $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.prepare\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualityVersion\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
     }
 
@@ -124,10 +124,10 @@ Describe "Copilot code review workflows" {
     }
 
     It 'Grants only the permissions required by each security boundary' {
-        $settingsJob = [regex]::Match($runnerWorkflow, '(?ms)^  Settings:.*?(?=^  review:)').Value
+        $prepareJob = [regex]::Match($runnerWorkflow, '(?ms)^  prepare:.*?(?=^  review:)').Value
         $intakeWorkflow | Should -Match "(?ms)permissions:\s+contents: read\s+jobs:"
-        $runnerWorkflow | Should -Match "(?ms)Settings:.*?permissions:\s+actions: read\s+contents: read"
-        $settingsJob | Should -Not -Match 'pull-requests:\s+read'
+        $runnerWorkflow | Should -Match "(?ms)prepare:.*?permissions:\s+actions: read\s+contents: read"
+        $prepareJob | Should -Not -Match 'pull-requests:\s+read'
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
@@ -146,9 +146,9 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
         $runnerWorkflow | Should -Not -Match 'Invoke-RestMethod'
         $reviewAction | Should -Not -Match 'Invoke-RestMethod'
-        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
-        $runnerWorkflow | Should -Match 'prNumber:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
-        $runnerWorkflow | Should -Match 'prHeadSha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
+        $runnerWorkflow | Should -Match "needs\.prepare\.outputs\.eligible == 'true'"
+        $runnerWorkflow | Should -Match 'prNumber:\s+\$\{\{\s+needs\.prepare\.outputs\.prNumber\s+\}\}'
+        $runnerWorkflow | Should -Match 'prHeadSha:\s+\$\{\{\s+needs\.prepare\.outputs\.headSha\s+\}\}'
         $reviewAction | Should -Match 'Pull request head SHA does not match the triggering workflow run'
     }
 }
