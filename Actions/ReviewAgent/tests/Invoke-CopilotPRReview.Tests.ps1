@@ -50,7 +50,7 @@ BeforeAll {
     $AgentLabel = 'copilot-pr-review'
     $ReviewIteration = 2
     $AgentCommentDocUrl = 'https://example.test/review'
-    $BCQualitySha = ''
+    $BCQualityVersion = '1.7'
     $script:BCQualityWebRepoUrl = 'https://github.com/microsoft/BCQuality'
 }
 
@@ -894,7 +894,7 @@ Describe 'Deterministic leaf orchestration contract' {
         $MinimumSeverity = 'Low'
         $AgentMinimumSeverity = 'Low'
         $ReviewSource = 'local'
-        $BCQualitySha = 'b74967bc5b7a454eae19d6a1250199afd869f064'
+        $BCQualityVersion = '1.7'
         $AgentVersion = '1.0.0'
         $ReportFileName = '_review-report.json'
         $AgentWorkDir = $BCQualityRoot
@@ -1913,7 +1913,7 @@ Describe 'Deterministic leaf orchestration contract' {
             Should -Be 0
         $manifest.configuration.root_model | Should -Be 'claude-sonnet-5'
         $manifest.configuration.leaf_execution | Should -Be 'serial'
-        $manifest.bcquality.commit | Should -Be $BCQualitySha
+        $manifest.bcquality.version | Should -Be $BCQualityVersion
         $manifest.plan.leaf_ids | Should -Be @('al-security-review')
         $manifest.processes[0].requested_model | Should -Be 'gpt-5.4'
         $manifest.processes[0].report_path | Should -Be 'leaf-results/01-security/_review-report.json'
@@ -1963,60 +1963,16 @@ Describe 'Copilot sub-agent delegation guard' {
     }
 }
 
-Describe 'BCQuality revision ownership' {
-    It 'derives the commit from the checkout and only treats an input SHA as an assertion' {
-        $root = Join-Path $TestDrive 'bcquality-revision'
-        New-Item -ItemType Directory -Path $root -Force | Out-Null
-        & git -C $root init -q
-        & git -C $root config user.email 'test@example.com'
-        & git -C $root config user.name 'Test'
-        Set-Content -LiteralPath (Join-Path $root 'entry.md') -Value '# test'
-        & git -C $root add entry.md
-        & git -C $root commit -q -m 'test'
-        $expected = (& git -C $root rev-parse HEAD).Trim()
-
-        Resolve-BCQualityCommit -Root $root | Should -Be $expected
-        Resolve-BCQualityCommit -Root $root -ExpectedCommit $expected | Should -Be $expected
-        { Resolve-BCQualityCommit -Root $root -ExpectedCommit ('f' * 40) } |
-            Should -Throw "*does not match expected commit*"
+Describe 'BCQuality version ownership' {
+    It 'uses the configured major.minor version in every phase' {
+        Resolve-BCQualityVersion -Version '1.7' | Should -Be '1.7'
+        Resolve-BCQualityVersion -Version ' 2.0 ' | Should -Be '2.0'
     }
 
-    It 'derives the commit from the installed plugin filter report' {
-        $root = Join-Path $TestDrive 'bcquality-plugin'
-        New-Item -ItemType Directory -Path $root -Force | Out-Null
-        $expected = 'b' * 40
-        @{ sourceCommit = $expected } | ConvertTo-Json |
-            Set-Content -LiteralPath (Join-Path $root '_filter-report.json') -Encoding UTF8
-
-        Resolve-BCQualityCommit -Root $root | Should -Be $expected
-        Resolve-BCQualityCommit -Root $root -ExpectedCommit $expected | Should -Be $expected
-        { Resolve-BCQualityCommit -Root $root -ExpectedCommit ('f' * 40) } |
-            Should -Throw "*does not match expected commit*"
+    It 'rejects missing or invalid versions' -ForEach @('', 'v1.7', '1.7.0', 'main') {
+        { Resolve-BCQualityVersion -Version $_ } |
+            Should -Throw '*BCQUALITY_VERSION must use major.minor format*'
     }
-
-    It 'uses the workflow-provided provenance in post without resolving a checkout' {
-        $postSha = 'a' * 40
-
-        $resolved = Resolve-BCQualityCommitForPhase `
-            -Phase 'post' `
-            -Root (Join-Path $TestDrive 'no-bcquality-checkout') `
-            -ExpectedCommit $postSha
-
-        $resolved | Should -Be $postSha
-    }
-
-    It 'requires a generation SHA in post' {
-        {
-            Resolve-BCQualityCommitForPhase -Phase 'post' -Root '' -ExpectedCommit ''
-        } | Should -Throw '*BCQUALITY_SHA must contain the resolved 40-character lowercase commit SHA from the generate phase*'
-    }
-
-    It 'requires a lowercase resolved generation SHA in post' {
-        {
-            Resolve-BCQualityCommitForPhase -Phase 'post' -Root '' -ExpectedCommit ('A' * 40)
-        } | Should -Throw '*BCQUALITY_SHA must contain the resolved 40-character lowercase commit SHA from the generate phase*'
-    }
-
 }
 
 Describe 'AL-Go review engine version' {
@@ -2188,13 +2144,10 @@ Describe 'Local review authentication' {
         $PrNumber = 1
         $PrHeadSha = 'abc123'
         $BCQualityRoot = $null
-        $BCQualitySha = Resolve-BCQualityCommitForPhase `
-            -Phase $ReviewPhase `
-            -Root $BCQualityRoot `
-            -ExpectedCommit ('b' * 40)
+        $BCQualityVersion = Resolve-BCQualityVersion -Version '1.7'
 
         { Assert-Config } | Should -Not -Throw
-        $BCQualitySha | Should -Be ('b' * 40)
+        $BCQualityVersion | Should -Be '1.7'
     }
 
     It 'publishes generated findings after post validation without a BCQuality checkout' {
@@ -2204,10 +2157,7 @@ Describe 'Local review authentication' {
         $PrNumber = 1
         $PrHeadSha = 'abc123'
         $BCQualityRoot = $null
-        $BCQualitySha = Resolve-BCQualityCommitForPhase `
-            -Phase $ReviewPhase `
-            -Root $BCQualityRoot `
-            -ExpectedCommit ('c' * 40)
+        $BCQualityVersion = Resolve-BCQualityVersion -Version '1.7'
         Mock Post-Findings {
             [pscustomobject]@{ inline = $Findings.Count; fallback = 0 }
         }

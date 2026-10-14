@@ -26,7 +26,6 @@ Describe 'ReviewAgent action' {
             baseRef = 'Validated pull request base branch'
             bcqualityRepo = 'Trusted BCQuality marketplace repository'
             bcqualityVersion = 'Configured BCQuality content version'
-            bcqualitySha = 'Resolved BCQuality marketplace commit'
             bcqualityRoot = 'Path to the installed and filtered BCQuality plugin'
             filterReport = 'Path to the BCQuality filter report'
             copilotCliVersion = 'Installed Copilot CLI version'

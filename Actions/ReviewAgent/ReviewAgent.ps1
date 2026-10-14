@@ -37,8 +37,6 @@ param(
     [string] $bcqualityRepo = 'https://github.com/microsoft/BCQuality',
     [Parameter(HelpMessage = "BCQuality content version")]
     [string] $bcqualityVersion = '1.7',
-    [Parameter(HelpMessage = "Resolved BCQuality commit from the prepare phase")]
-    [string] $bcqualitySha = '',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
     [string] $bcqualityRoot = '',
     [Parameter(HelpMessage = "Compatibility-validated Copilot CLI version")]
@@ -201,12 +199,11 @@ function Invoke-PreparePhase {
     $configuration.bcquality.ref = "v$bcqualityVersion"
     $configuration.bcquality.version = $bcqualityVersion
     $setup = Invoke-SetupBCQuality -Configuration $configuration
-    if (-not $setup.pluginRoot -or -not $setup.sourceCommit) {
-        throw 'SetupBCQuality did not return the plugin root and source commit.'
+    if (-not $setup.pluginRoot) {
+        throw 'SetupBCQuality did not return the plugin root.'
     }
 
     Write-ReviewOutput -Name bcqualityRoot -Value $setup.pluginRoot
-    Write-ReviewOutput -Name bcqualitySha -Value $setup.sourceCommit
     Write-ReviewOutput -Name filterReport -Value $setup.filterReport
 }
 
@@ -214,8 +211,8 @@ function Invoke-GeneratePhase {
     if ([string]::IsNullOrWhiteSpace($bcqualityRoot) -or -not (Test-Path -LiteralPath $bcqualityRoot -PathType Container)) {
         throw "The prepared BCQuality plugin was not found at '$bcqualityRoot'."
     }
-    if ($bcqualitySha -notmatch '\A[0-9a-f]{40}\z') {
-        throw 'bcqualitySha must be the resolved 40-character commit from the prepare phase.'
+    if ($bcqualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
+        throw "bcqualityVersion must use major.minor format; received '$bcqualityVersion'."
     }
 
     Enable-PowerShellYaml
@@ -223,7 +220,7 @@ function Invoke-GeneratePhase {
     $env:REVIEW_PHASE = 'generate'
     $env:GH_TOKEN = $token
     $env:BCQUALITY_ROOT = $bcqualityRoot
-    $env:BCQUALITY_SHA = $bcqualitySha
+    $env:BCQUALITY_VERSION = $bcqualityVersion
     $env:BCQUALITY_CONSUME = 'plugin'
     $env:COPILOT_MODEL = $model
     $env:COPILOT_REVIEW_CLI_VERSION = $copilotCliVersion
@@ -240,7 +237,7 @@ function Invoke-PostPhase {
     Enable-PowerShellYaml
     Initialize-ReviewEnvironment
     $env:REVIEW_PHASE = 'post'
-    $env:BCQUALITY_SHA = $bcqualitySha
+    $env:BCQUALITY_VERSION = $bcqualityVersion
     $env:COPILOT_REVIEW_POST_SUMMARY = 'false'
 
     & (Join-Path $PSScriptRoot 'scripts\Invoke-CopilotPRReview.ps1')

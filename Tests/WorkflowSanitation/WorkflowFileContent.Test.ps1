@@ -108,15 +108,18 @@ Describe "Copilot code review workflows" {
     }
 
     It 'Uses the installed BCQuality plugin through the review action' {
+        $runnerWorkflow | Should -Match '(?ms)name:\s+Setup Copilot CLI and BCQuality\s+id:\s+setup.*?phase:\s+prepare'
         $reviewAction | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1'"))
         $reviewAction | Should -Match "\`$setupToken = if \(\`$marketplace -eq 'microsoft/BCQuality'\)"
         $reviewAction | Should -Match '\$configuration\.bcquality\.repo = \$bcqualityRepo'
         $reviewAction | Should -Match '\$configuration\.bcquality\.ref = "v\$bcqualityVersion"'
         $reviewAction | Should -Match '\$env:BCQUALITY_ROOT = \$bcqualityRoot'
-        $reviewAction | Should -Match '\$env:BCQUALITY_SHA = \$bcqualitySha'
+        $reviewAction | Should -Match '\$env:BCQUALITY_VERSION = \$bcqualityVersion'
         $reviewAction | Should -Match "\$env:BCQUALITY_CONSUME = 'plugin'"
         $runnerWorkflow | Should -Match "(?ms)phase:\s+prepare.*?bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}.*?phase:\s+generate"
         $runnerWorkflow | Should -Not -Match "(?ms)phase:\s+generate.*?bcqualityToken:"
+        $runnerWorkflow | Should -Not -Match 'bcqualitySha|bcquality_sha'
+        $runnerWorkflow | Should -Not -Match '(?ms)^  review:.*?^    outputs:'
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 

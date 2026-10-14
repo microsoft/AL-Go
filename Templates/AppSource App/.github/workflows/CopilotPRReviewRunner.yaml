@@ -75,8 +75,6 @@ jobs:
       contents: read
       pull-requests: read
       copilot-requests: write
-    outputs:
-      bcquality_sha: ${{ steps.prepare.outputs.bcqualitySha }}
     steps:
       - name: Checkout trusted target base
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -95,8 +93,8 @@ jobs:
         with:
           node-version: 24
 
-      - name: Prepare Copilot PR review
-        id: prepare
+      - name: Setup Copilot CLI and BCQuality
+        id: setup
         uses: microsoft/AL-Go-Actions/ReviewAgent@main
         with:
           shell: pwsh
@@ -119,9 +117,9 @@ jobs:
           leafModel: ${{ needs.Settings.outputs.leafModel }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
-          bcqualityRoot: ${{ steps.prepare.outputs.bcqualityRoot }}
-          bcqualitySha: ${{ steps.prepare.outputs.bcqualitySha }}
-          copilotCliVersion: ${{ steps.prepare.outputs.copilotCliVersion }}
+          bcqualityRoot: ${{ steps.setup.outputs.bcqualityRoot }}
+          bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
+          copilotCliVersion: ${{ steps.setup.outputs.copilotCliVersion }}
 
       - name: Upload review output
         if: always()
@@ -132,11 +130,11 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload BCQuality filter report
-        if: always() && steps.prepare.outputs.filterReport != ''
+        if: always() && steps.setup.outputs.filterReport != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bcquality-filter-report-${{ needs.Settings.outputs.prNumber }}
-          path: ${{ steps.prepare.outputs.filterReport }}
+          path: ${{ steps.setup.outputs.filterReport }}
           if-no-files-found: warn
 
   publish:
@@ -178,7 +176,7 @@ jobs:
           baseRef: ${{ needs.Settings.outputs.baseRef }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
-          bcqualitySha: ${{ needs.review.outputs.bcquality_sha }}
+          bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
 
       - name: Upload published review artifacts
         if: always()

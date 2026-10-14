@@ -34,9 +34,9 @@
     "bcquality": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["commit", "source_snapshot"],
+      "required": ["version", "source_snapshot"],
       "properties": {
-        "commit": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{40}$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
         "source_snapshot": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$" }
       }
     },

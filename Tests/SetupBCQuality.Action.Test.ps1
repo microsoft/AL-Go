@@ -73,7 +73,6 @@ param([string] $BCQualityRoot, [string] $IndexPath)
             pluginVersion = 'Resolved BCQuality plugin version'
             marketplaceRef = 'Marketplace ref used to install BCQuality'
             sourceHash = 'Source hash recorded by Copilot CLI for the installed plugin'
-            sourceCommit = 'Git commit resolved from the installed marketplace tag or branch'
             contentHash = 'Deterministic SHA-256 of the filtered plugin contents'
             filterReport = 'Path to the BCQuality filter report'
             knowledgeIndex = 'Path to the regenerated BCQuality knowledge index'

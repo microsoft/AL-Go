@@ -42,11 +42,9 @@
         PR_NUMBER          - pull request number
         PR_HEAD_SHA        - head commit SHA of the pull request
         BCQUALITY_ROOT     - path to the filtered BCQuality plugin (all/generate)
-        BCQUALITY_SHA      - marketplace tag's resolved BCQuality commit (required for post)
+        BCQUALITY_VERSION  - configured BCQuality major.minor content version
 
     Optional environment variables:
-        BCQUALITY_SHA                        - optional expected BCQuality SHA for all/generate;
-                                               required resolved SHA from generate for post
         REVIEW_WORKSPACE                     - trusted base checkout path (default: GITHUB_WORKSPACE)
         REVIEW_OUTPUT_DIR                    - artifact output folder
         REVIEW_TARGET_WORKSPACE              - detached PR-head worktree path
@@ -112,54 +110,17 @@ $BCQualityRoot    = $env:BCQUALITY_ROOT
 # saved agent output). 'all' preserves the original single-process behaviour
 # for local development.
 $ReviewPhase      = (($env:REVIEW_PHASE ?? 'all') + '').Trim().ToLowerInvariant()
-function Resolve-BCQualityCommit {
-    param(
-        [Parameter(Mandatory)][string] $Root,
-        [string] $ExpectedCommit
-    )
+function Resolve-BCQualityVersion {
+    param([string] $Version)
 
-    $filterReportPath = Join-Path $Root '_filter-report.json'
-    if (Test-Path -LiteralPath $filterReportPath -PathType Leaf) {
-        $filterReport = Get-Content -LiteralPath $filterReportPath -Raw | ConvertFrom-Json
-        $resolvedCommit = ([string]$filterReport.sourceCommit).Trim()
-        if ($resolvedCommit -notmatch '\A[0-9a-f]{40}\z') {
-            throw "BCQuality plugin filter report does not contain a valid source commit: $filterReportPath"
-        }
+    $resolvedVersion = ($Version + '').Trim()
+    if ($resolvedVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
+        throw "BCQUALITY_VERSION must use major.minor format; received '$resolvedVersion'."
     }
-    else {
-        $resolvedCommit = (& git -C $Root rev-parse HEAD 2>$null | Select-Object -First 1)
-        if ($resolvedCommit) { $resolvedCommit = $resolvedCommit.Trim() }
-        if ($resolvedCommit -notmatch '\A[0-9a-f]{40}\z') {
-            throw "Could not resolve the BCQuality commit from plugin '$Root'."
-        }
-    }
-    if ($ExpectedCommit -and $ExpectedCommit -ne $resolvedCommit) {
-        throw "BCQuality plugin commit '$resolvedCommit' does not match expected commit '$ExpectedCommit'."
-    }
-    return $resolvedCommit
+    return $resolvedVersion
 }
 
-function Resolve-BCQualityCommitForPhase {
-    param(
-        [string] $Phase,
-        [string] $Root,
-        [string] $ExpectedCommit
-    )
-
-    if ($Phase -eq 'post') {
-        if ($ExpectedCommit -cnotmatch '\A[0-9a-f]{40}\z') {
-            throw 'BCQUALITY_SHA must contain the resolved 40-character lowercase commit SHA from the generate phase when REVIEW_PHASE=post.'
-        }
-        return $ExpectedCommit
-    }
-
-    return Resolve-BCQualityCommit -Root $Root -ExpectedCommit $ExpectedCommit
-}
-
-$BCQualitySha = Resolve-BCQualityCommitForPhase `
-    -Phase $ReviewPhase `
-    -Root $BCQualityRoot `
-    -ExpectedCommit (($env:BCQUALITY_SHA ?? '').Trim())
+$BCQualityVersion = Resolve-BCQualityVersion -Version $env:BCQUALITY_VERSION
 # BCQuality is trusted reviewer knowledge, not a model-writable workspace. Mount
 # it as a plugin and keep every generated artifact in the per-run output tree.
 $BCQualityConsume = (($env:BCQUALITY_CONSUME ?? 'plugin') + '').Trim().ToLowerInvariant()
@@ -2290,7 +2251,7 @@ function Save-ReviewRunManifest {
             agent_version = $AgentVersion
         }
         bcquality = [pscustomobject][ordered]@{
-            commit = if ($BCQualitySha) { $BCQualitySha } else { $null }
+            version = $BCQualityVersion
             source_snapshot = if ($script:ReviewPlanSourceSnapshot) { $script:ReviewPlanSourceSnapshot } else { $null }
         }
         configuration = [pscustomobject][ordered]@{
@@ -4493,7 +4454,7 @@ function Build-ReferenceLink {
     param([object] $Reference)
     $repoUrl = Get-BCQualityRepoUrl
     if (-not $repoUrl) { return ([string]$Reference.path) }
-    $ref = if ($Reference.sha) { $Reference.sha } elseif ($BCQualitySha) { $BCQualitySha } else { 'main' }
+    $ref = "v$BCQualityVersion"
     $path = ([string]$Reference.path).TrimStart('/')
     $url = "$repoUrl/blob/$ref/$path"
     return "[$path]($url)"
@@ -4910,7 +4871,7 @@ function Build-SummaryBody {
     }
 
     $repoUrl = Get-BCQualityRepoUrl
-    $refForLinks = if ($BCQualitySha) { $BCQualitySha } else { 'main' }
+    $refForLinks = "v$BCQualityVersion"
     if ($repoUrl) {
         $lines.Add('') | Out-Null
         $lines.Add("Knowledge source: [$repoUrl@$refForLinks]($repoUrl/tree/$refForLinks)") | Out-Null
@@ -5192,7 +5153,7 @@ function Save-ReviewArtifacts {
         prNumber      = $PrNumber
         baseBranch    = $BaseBranch
         headSha       = $PrHeadSha
-        bcqualitySha  = $BCQualitySha
+        bcqualityVersion = $BCQualityVersion
         agentLabel    = $AgentLabel
         agentVersion  = $AgentVersion
         outcome       = $Report.Outcome
@@ -5268,8 +5229,7 @@ if ($script:ObservedCopilotCliVersion) {
 }
 Write-LogPhaseDetail "Agent:     $AgentLabel v$AgentVersion"
 Write-LogPhaseDetail "Severity:  knowledge≥$MinimumSeverity, agent≥$AgentMinimumSeverity (max $MaxFindings findings/domain)"
-$bcqRef = if ($BCQualitySha) { $BCQualitySha } else { '(unresolved ref)' }
-Write-LogPhaseDetail "BCQuality: $BCQualityRoot @ $bcqRef"
+Write-LogPhaseDetail "BCQuality: $BCQualityRoot @ v$BCQualityVersion"
 Write-Host ''
 
 # Clear stale per-run artifacts from the installed BCQuality plugin BEFORE the

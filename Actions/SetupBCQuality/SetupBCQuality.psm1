@@ -239,47 +239,4 @@ function Invoke-WithGitHubToken {
     }
 }
 
-<#
-.SYNOPSIS
-Resolves a GitHub marketplace branch or tag to a commit SHA.
-
-.PARAMETER Repository
-The GitHub repository in owner/repository form.
-
-.PARAMETER Ref
-The branch or tag to resolve.
-
-.OUTPUTS
-The resolved 40-character commit SHA.
-#>
-function Resolve-MarketplaceCommit {
-    param(
-        [string] $Repository,
-        [string] $Ref
-    )
-
-    $remoteUrl = "https://github.com/$Repository.git"
-    $lines = @(& git ls-remote $remoteUrl "refs/tags/$Ref" "refs/tags/$Ref^{}" "refs/heads/$Ref")
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to resolve BCQuality marketplace ref '$Repository#$Ref'."
-    }
-
-    $resolved = @{}
-    foreach ($line in $lines) {
-        if ($line -match '^([0-9a-f]{40})\s+(.+)$') {
-            $resolved[$Matches[2]] = $Matches[1]
-        }
-    }
-    if ($resolved.ContainsKey("refs/tags/$Ref^{}")) {
-        return $resolved["refs/tags/$Ref^{}"]
-    }
-    if ($resolved.ContainsKey("refs/tags/$Ref")) {
-        return $resolved["refs/tags/$Ref"]
-    }
-    if ($resolved.ContainsKey("refs/heads/$Ref")) {
-        return $resolved["refs/heads/$Ref"]
-    }
-    throw "BCQuality marketplace ref '$Repository#$Ref' did not resolve to a branch or tag."
-}
-
-Export-ModuleMember -Function ConvertFrom-CsvSetting, Test-GlobMatch, Get-RelativePluginPath, Resolve-SafePluginPath, Read-CopilotConfig, Get-FilteredContentHash, Invoke-WithGitHubToken, Resolve-MarketplaceCommit
+Export-ModuleMember -Function ConvertFrom-CsvSetting, Test-GlobMatch, Get-RelativePluginPath, Resolve-SafePluginPath, Read-CopilotConfig, Get-FilteredContentHash, Invoke-WithGitHubToken

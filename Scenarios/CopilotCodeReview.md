@@ -34,7 +34,7 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CICDPullRequestBranches` will be reviewed automatically.
 
-`model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `bcqualityRepo` identifies the trusted public, forked, or private GitHub marketplace repository, and `bcqualityVersion` selects the BCQuality content version. The prepare phase installs the corresponding `v<major>.<minor>` release tag and resolves it to an exact commit SHA used internally by the remaining review phases. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
+`model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `bcqualityRepo` identifies the trusted public, forked, or private GitHub marketplace repository, and `bcqualityVersion` selects the BCQuality content version. An early runner step installs the corresponding `v<major>.<minor>` release tag, and the remaining review phases use that configured version. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
 
 The setting must be enabled at repository level. Project settings do not enable or disable the reviewer.
 

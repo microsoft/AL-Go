@@ -50,9 +50,6 @@ outputs:
   sourceHash:
     description: Source hash recorded by Copilot CLI for the installed plugin
     value: ${{ steps.setupbcquality.outputs.sourceHash }}
-  sourceCommit:
-    description: Git commit resolved from the installed marketplace tag or branch
-    value: ${{ steps.setupbcquality.outputs.sourceCommit }}
   contentHash:
     description: Deterministic SHA-256 of the filtered plugin contents
     value: ${{ steps.setupbcquality.outputs.contentHash }}

@@ -71,12 +71,8 @@ if (-not $copilotHome) {
 }
 
 $sourceHash = ''
-$sourceCommit = ''
 $pluginVersion = $expectedPluginVersion
 if (-not $pluginRoot) {
-    $sourceCommit = Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
-        Resolve-MarketplaceCommit -Repository $marketplace -Ref $marketplaceRef
-    }
     Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
         & copilot plugin marketplace add "$marketplace#$marketplaceRef"
     }
@@ -210,7 +206,6 @@ $filterReport = Join-Path $pluginRoot '_filter-report.json'
     marketplaceRef = $marketplaceRef
     pluginVersion = $pluginVersion
     sourceHash = $sourceHash
-    sourceCommit = $sourceCommit
     contentHash = $contentHash
     enabledLayers = $layers
     disabledSkills = $disabledSkillPaths
@@ -228,7 +223,6 @@ if ($env:GITHUB_OUTPUT) {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "pluginVersion=$pluginVersion"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "marketplaceRef=$marketplaceRef"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "sourceHash=$sourceHash"
-    Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "sourceCommit=$sourceCommit"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "contentHash=$contentHash"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "filterReport=$filterReport"
     Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "knowledgeIndex=$knowledgeIndex"
