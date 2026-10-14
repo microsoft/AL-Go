@@ -26,7 +26,10 @@
       "additionalProperties": false,
       "required": ["repository", "commit", "agent_version"],
       "properties": {
-        "repository": { "const": "microsoft/AL-Go" },
+        "repository": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}$"
+        },
         "commit": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{40}$" },
         "agent_version": { "type": "string", "minLength": 1 }
       }

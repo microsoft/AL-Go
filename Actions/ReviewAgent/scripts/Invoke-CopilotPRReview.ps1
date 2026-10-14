@@ -2238,6 +2238,13 @@ function Save-ReviewRunManifest {
     }
     $engineSha = (& git -C $EngineRoot rev-parse HEAD 2>$null | Select-Object -First 1)
     if ($engineSha) { $engineSha = $engineSha.Trim() }
+    $engineRepository = ([string]$env:GITHUB_ACTION_REPOSITORY).Trim()
+    if ($engineRepository -and $engineRepository -notmatch '\A[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}\z') {
+        throw "GITHUB_ACTION_REPOSITORY must use owner/repository format; received '$engineRepository'."
+    }
+    if (-not $engineRepository -and $ReviewSource -ne 'local') {
+        throw 'GITHUB_ACTION_REPOSITORY is required for pull request reviews.'
+    }
     $orderedProcesses = @($script:ReviewProcessTelemetry | Sort-Object ordinal, role)
     $manifest = [pscustomobject][ordered]@{
         schema_version = 1
@@ -2246,7 +2253,7 @@ function Save-ReviewRunManifest {
         completed_at = if ($null -ne $script:ReviewRunCompletedAt) { $script:ReviewRunCompletedAt.ToString('o') } else { $null }
         failure_reason = if ($FailureReason) { $FailureReason } else { $null }
         engine = [pscustomobject][ordered]@{
-            repository = 'microsoft/AL-Go'
+            repository = if ($engineRepository) { $engineRepository } else { $null }
             commit = $engineSha
             agent_version = $AgentVersion
         }

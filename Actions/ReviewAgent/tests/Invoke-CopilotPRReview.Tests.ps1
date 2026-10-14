@@ -1913,10 +1913,44 @@ Describe 'Deterministic leaf orchestration contract' {
             Should -Be 0
         $manifest.configuration.root_model | Should -Be 'claude-sonnet-5'
         $manifest.configuration.leaf_execution | Should -Be 'serial'
+        $manifest.engine.repository | Should -BeNullOrEmpty
         $manifest.bcquality.version | Should -Be $BCQualityVersion
         $manifest.plan.leaf_ids | Should -Be @('al-security-review')
         $manifest.processes[0].requested_model | Should -Be 'gpt-5.4'
         $manifest.processes[0].report_path | Should -Be 'leaf-results/01-security/_review-report.json'
+    }
+
+    It 'records the repository that supplied the review action' {
+        $script:ReviewPlanIds = @('al-security-review')
+        $ReviewSource = 'pr'
+        $originalActionRepository = $env:GITHUB_ACTION_REPOSITORY
+        try {
+            $env:GITHUB_ACTION_REPOSITORY = 'contoso/AL-Go'
+
+            Save-ReviewRunManifest -Status completed
+
+            $manifest = Get-Content -LiteralPath (Join-Path $ReviewOutputDir '_run-manifest.json') -Raw |
+                ConvertFrom-Json
+            $manifest.engine.repository | Should -Be 'contoso/AL-Go'
+        }
+        finally {
+            $env:GITHUB_ACTION_REPOSITORY = $originalActionRepository
+        }
+    }
+
+    It 'requires the action repository for pull request reviews' {
+        $script:ReviewPlanIds = @('al-security-review')
+        $ReviewSource = 'pr'
+        $originalActionRepository = $env:GITHUB_ACTION_REPOSITORY
+        try {
+            $env:GITHUB_ACTION_REPOSITORY = $null
+
+            { Save-ReviewRunManifest -Status completed } |
+                Should -Throw '*GITHUB_ACTION_REPOSITORY is required for pull request reviews*'
+        }
+        finally {
+            $env:GITHUB_ACTION_REPOSITORY = $originalActionRepository
+        }
     }
 }
 
