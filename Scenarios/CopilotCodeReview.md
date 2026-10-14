@@ -42,9 +42,6 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
       ],
       "applicationArea": [
         "all"
-      ],
-      "bcVersion": [
-        "all"
       ]
     }
   },

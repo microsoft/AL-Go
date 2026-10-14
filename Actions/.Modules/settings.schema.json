@@ -371,17 +371,13 @@
                         },
                         "applicationArea": {
                             "$ref": "#/$defs/bcQualityTaskContextDimension"
-                        },
-                        "bcVersion": {
-                            "$ref": "#/$defs/bcQualityTaskContextDimension"
                         }
                     },
                     "additionalProperties": false,
                     "required": [
                         "technologies",
                         "countries",
-                        "applicationArea",
-                        "bcVersion"
+                        "applicationArea"
                     ]
                 }
             },

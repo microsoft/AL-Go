@@ -174,7 +174,6 @@ function GetDefaultSettings
                 "technologies"   = @("al")
                 "countries"      = @("w1")
                 "applicationArea" = @("all")
-                "bcVersion"      = @("all")
             }
         }
         "CodeReviewAgent"                               = [ordered]@{

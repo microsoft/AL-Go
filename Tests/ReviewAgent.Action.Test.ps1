@@ -20,7 +20,6 @@ Describe 'ReviewAgent action' {
                 technologies = @('al')
                 countries = @('w1')
                 applicationArea = @('all')
-                bcVersion = @('all')
             }
         }
         $script:bcqualitySettingsJson = $script:bcqualitySettings | ConvertTo-Json -Compress -Depth 10

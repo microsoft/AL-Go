@@ -1349,7 +1349,6 @@ function Build-TaskContext {
         technologies       = 'technologies'
         countries          = 'countries'
         applicationArea    = 'application-area'
-        bcVersion          = 'bc-version'
     }
     foreach ($settingName in $dimensions.Keys) {
         if ($taskContext.ContainsKey($settingName) -and $null -ne $taskContext[$settingName]) {

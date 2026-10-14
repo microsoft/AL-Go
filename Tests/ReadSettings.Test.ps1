@@ -297,7 +297,6 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings.BCQuality.taskContext.technologies | Should -Be @('al')
             $defaultSettings.BCQuality.taskContext.countries | Should -Be @('w1')
             $defaultSettings.BCQuality.taskContext.applicationArea | Should -Be @('all')
-            $defaultSettings.BCQuality.taskContext.bcVersion | Should -Be @('all')
         }
 
         It 'Preserves default Copilot models when only enabled is overridden' {
@@ -341,6 +340,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'Rejects unknown BCQuality settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $settings = GetDefaultSettings
             $settings.BCQuality['marketplaceRepository'] = 'https://github.com/microsoft/BCQuality'
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
+        It 'Rejects the removed BCQuality bcVersion task-context setting' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $settings = GetDefaultSettings
+            $settings.BCQuality.taskContext['bcVersion'] = @('26')
 
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
                 Should -BeFalse

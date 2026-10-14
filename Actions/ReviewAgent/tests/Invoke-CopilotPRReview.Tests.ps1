@@ -2022,7 +2022,6 @@ Describe 'BCQuality settings ownership' {
                 technologies = @('al')
                 countries = @('w1')
                 applicationArea = @('all')
-                bcVersion = @('26.0')
             }
         } | ConvertTo-Json -Compress -Depth 10
         $script:BCQualitySettingsCache = $null
@@ -2041,7 +2040,7 @@ Describe 'BCQuality settings ownership' {
         $context.technologies | Should -Be @('al')
         $context.countries | Should -Be @('w1')
         $context['application-area'] | Should -Be @('all')
-        $context['bc-version'] | Should -Be @('26.0')
+        $context.Contains('bc-version') | Should -BeFalse
     }
 }
 
