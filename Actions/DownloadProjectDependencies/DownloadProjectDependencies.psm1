@@ -428,4 +428,31 @@ function Resolve-DependencyFiles {
     })
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles
+<#
+    .SYNOPSIS
+    Warns when resolved dependency paths do not refer to existing files.
+    .PARAMETER Dependencies
+    Resolved dependency paths, optionally wrapped in parentheses to mark test apps.
+#>
+function Write-DependencyFileWarnings {
+    Param(
+        [string[]] $Dependencies = @()
+    )
+
+    foreach ($dependency in $Dependencies) {
+        try {
+            $filePath = "$dependency"
+            if ($filePath.StartsWith('(') -and $filePath.EndsWith(')')) {
+                $filePath = $filePath.Substring(1, $filePath.Length - 2)
+            }
+            if ([string]::IsNullOrWhiteSpace($filePath) -or !(Test-Path -LiteralPath $filePath -PathType Leaf -ErrorAction Stop)) {
+                OutputWarning -message "Dependency file not found: $filePath"
+            }
+        }
+        catch {
+            OutputWarning -message "Unable to check dependency file '$filePath': $($_.Exception.Message)"
+        }
+    }
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles, Write-DependencyFileWarnings
