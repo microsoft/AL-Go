@@ -643,7 +643,6 @@ function ReplaceOwnerRepoAndBranch {
     # The Original Owner and Repo in the AL-Go repository are microsoft/AL-Go-Actions, microsoft/AL-Go-PTE and microsoft/AL-Go-AppSource
     $originalOwnerAndRepo = @{
         "actionsRepo" = "microsoft/AL-Go-Actions"
-        "localActionsRepo" = "microsoft/AL-Go/Actions"
         "perTenantExtensionRepo" = "microsoft/AL-Go-PTE"
         "appSourceAppRepo" = "microsoft/AL-Go-AppSource"
     }
@@ -653,7 +652,6 @@ function ReplaceOwnerRepoAndBranch {
     # Modify the file to use repository names based on whether or not we are using the direct AL-Go repo
     $templateRepos = @{
         "actionsRepo" = "AL-Go/Actions"
-        "localActionsRepo" = "AL-Go/Actions"
         "perTenantExtensionRepo" = "AL-Go"
         "appSourceAppRepo" = "AL-Go"
     }
@@ -664,7 +662,7 @@ function ReplaceOwnerRepoAndBranch {
     $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
 
     # Replace the owner and repo names in the workflow
-    "localActionsRepo","actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
+    "actionsRepo","perTenantExtensionRepo","appSourceAppRepo" | ForEach-Object {
         $regex = "^(.*)$($originalOwnerAndRepo."$_")(.*)$originalBranch(.*)$"
         $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }

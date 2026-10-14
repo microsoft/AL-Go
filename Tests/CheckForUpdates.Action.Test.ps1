@@ -2006,19 +2006,6 @@ jobs:
 "@
     }
 
-    It "Replaces the Copilot review action reference" {
-        $srcContent = [ref]@"
-steps:
-  - uses: microsoft/AL-Go/Actions/CopilotPRReview@main
-"@
-
-        ReplaceOwnerRepoAndBranch -srcContent $srcContent -templateOwner 'contoso' -templateBranch 'prototype/review'
-
-        $srcContent.Value | Should -Be @"
-steps:
-  - uses: contoso/AL-Go/Actions/CopilotPRReview@prototype/review
-"@
-    }
 }
 
 Describe "IsDirectALGo" {

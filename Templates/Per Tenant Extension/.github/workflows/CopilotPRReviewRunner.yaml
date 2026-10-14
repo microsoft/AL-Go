@@ -59,7 +59,7 @@ jobs:
 
       - name: Resolve review context
         id: context
-        uses: microsoft/AL-Go/Actions/CopilotPRReview@main
+        uses: ./Actions/CopilotPRReview
         with:
           shell: pwsh
           phase: context
@@ -99,14 +99,14 @@ jobs:
 
       - name: Prepare Copilot PR review
         id: prepare
-        uses: microsoft/AL-Go/Actions/CopilotPRReview@main
+        uses: ./Actions/CopilotPRReview
         with:
           shell: pwsh
           phase: prepare
           bcqualityToken: ${{ secrets.BCQUALITY_TOKEN }}
 
       - name: Run Copilot PR review
-        uses: microsoft/AL-Go/Actions/CopilotPRReview@main
+        uses: ./Actions/CopilotPRReview
         with:
           shell: pwsh
           phase: generate
@@ -167,7 +167,7 @@ jobs:
           path: ${{ github.workspace }}/review-output
 
       - name: Publish Copilot PR review
-        uses: microsoft/AL-Go/Actions/CopilotPRReview@main
+        uses: ./Actions/CopilotPRReview
         with:
           shell: pwsh
           phase: post
