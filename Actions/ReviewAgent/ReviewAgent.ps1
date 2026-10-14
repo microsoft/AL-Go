@@ -56,13 +56,43 @@ function Write-ReviewOutput {
     }
 }
 
+function ConvertTo-ReviewHashtable {
+    param([AllowNull()][object] $InputObject)
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $result = [ordered]@{}
+        foreach ($key in $InputObject.Keys) {
+            $result[$key] = ConvertTo-ReviewHashtable -InputObject $InputObject[$key]
+        }
+        return $result
+    }
+    if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
+        $result = [ordered]@{}
+        foreach ($property in $InputObject.PSObject.Properties) {
+            $result[$property.Name] = ConvertTo-ReviewHashtable -InputObject $property.Value
+        }
+        return $result
+    }
+    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+        return ,@($InputObject | ForEach-Object {
+            ConvertTo-ReviewHashtable -InputObject $_
+        })
+    }
+    return $InputObject
+}
+
 function Get-BCQualitySettings {
     if ([string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
         throw 'bcqualitySettingsJson is required.'
     }
 
     try {
-        $settings = $bcqualitySettingsJson | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+        $settings = ConvertTo-ReviewHashtable -InputObject (
+            $bcqualitySettingsJson | ConvertFrom-Json -ErrorAction Stop
+        )
     }
     catch {
         throw "bcqualitySettingsJson is invalid: $($_.Exception.Message)"
