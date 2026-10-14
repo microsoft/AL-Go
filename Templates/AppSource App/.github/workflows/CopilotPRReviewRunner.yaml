@@ -19,7 +19,8 @@ jobs:
       pull-requests: write
       copilot-requests: write
     uses: ./.github/workflows/_CopilotPRReview.yaml
-    secrets: inherit
+    secrets:
+      BCQUALITY_TOKEN: ${{ secrets.BCQUALITY_TOKEN }}
     with:
       workflowRunId: ${{ github.event.workflow_run.id }}
       workflowHeadSha: ${{ github.event.workflow_run.head_sha }}

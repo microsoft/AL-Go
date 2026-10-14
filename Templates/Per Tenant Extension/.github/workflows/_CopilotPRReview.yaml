@@ -11,6 +11,10 @@ on:
         description: Head SHA reported by the completed intake workflow
         required: true
         type: string
+    secrets:
+      BCQUALITY_TOKEN:
+        description: Token used to install the private BCQuality marketplace plugin
+        required: true
 
 defaults:
   run:

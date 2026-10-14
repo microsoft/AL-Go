@@ -90,7 +90,9 @@ Describe "Copilot code review workflows" {
 
     It 'Delegates the runner to the local reusable workflow' {
         $runnerWorkflow | Should -Match 'uses:\s+\./\.github/workflows/_CopilotPRReview\.yaml'
-        $runnerWorkflow | Should -Match 'secrets:\s+inherit'
+        $runnerWorkflow | Should -Match 'secrets:\s+BCQUALITY_TOKEN:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
+        $runnerWorkflow | Should -Not -Match 'secrets:\s+inherit'
+        $reusableWorkflow | Should -Match "(?ms)workflow_call:.*?secrets:\s+BCQUALITY_TOKEN:.*?required:\s+true"
         $runnerWorkflow | Should -Not -Match '(?m)^\s+run:\s*\|'
         $reusableWorkflow | Should -Match '(?m)^  review:'
         $reusableWorkflow | Should -Match '(?m)^  publish:'
