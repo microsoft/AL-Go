@@ -90,7 +90,7 @@ function Invoke-ContextPhase {
             Authorization = "Bearer $token"
             'User-Agent' = 'al-go-copilot-review'
         }
-        $apiUrl = (($env:GITHUB_API_URL ?? 'https://api.github.com') + '').TrimEnd('/')
+        $apiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL.TrimEnd('/') } else { 'https://api.github.com' }
         $pullRequest = Invoke-RestMethod -Uri "$apiUrl/repos/$repository/pulls/$number" -Headers $headers -Method GET
 
         if ($pullRequest.head.sha -ne $headSha -or $pullRequest.head.sha -ne $workflowHeadSha) {

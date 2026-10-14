@@ -8,6 +8,13 @@ Describe 'CopilotPRReview action' {
     BeforeAll {
         $scriptRoot = Join-Path $PSScriptRoot '../Actions/CopilotPRReview' -Resolve
         $script:actionScriptPath = Join-Path $scriptRoot 'CopilotPRReview.ps1'
+        $script:originalGitHubOutput = $env:GITHUB_OUTPUT
+        $script:originalGitHubApiUrl = $env:GITHUB_API_URL
+    }
+
+    AfterAll {
+        $env:GITHUB_OUTPUT = $script:originalGitHubOutput
+        $env:GITHUB_API_URL = $script:originalGitHubApiUrl
     }
 
     It 'Matches the standard action wrapper and output contract' {
