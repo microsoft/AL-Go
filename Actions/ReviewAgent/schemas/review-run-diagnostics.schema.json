@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AL-Go deterministic review run manifest",
+  "title": "AL-Go deterministic review run diagnostics",
   "type": "object",
   "additionalProperties": false,
   "required": [

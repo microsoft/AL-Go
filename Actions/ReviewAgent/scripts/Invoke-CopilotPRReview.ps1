@@ -2280,7 +2280,7 @@ function Save-ReviewRunManifest {
     }
 
     $manifestJson = $manifest | ConvertTo-Json -Depth 20
-    $manifestSchemaPath = Join-Path $ReviewRoot 'schemas/run-manifest.schema.json'
+    $manifestSchemaPath = Join-Path $ReviewRoot 'schemas/review-run-diagnostics.schema.json'
     if (-not ($manifestJson | Test-Json -SchemaFile $manifestSchemaPath -ErrorAction Stop)) {
         throw 'Generated review run manifest does not conform to its schema.'
     }
