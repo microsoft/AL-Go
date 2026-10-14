@@ -17,6 +17,7 @@ env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
   COPILOT_CLI_VERSION: 1.0.88
+  REVIEW_AGENT_VERSION: 10.0.7
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -126,6 +127,7 @@ jobs:
           bcqualityRoot: ${{ steps.setup.outputs.pluginRoot }}
           bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
           copilotCliVersion: ${{ env.COPILOT_CLI_VERSION }}
+          agentVersion: ${{ env.REVIEW_AGENT_VERSION }}
 
       - name: Upload review output
         if: always()
@@ -183,6 +185,7 @@ jobs:
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
           bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
+          agentVersion: ${{ env.REVIEW_AGENT_VERSION }}
 
       - name: Upload published review artifacts
         if: always()

@@ -92,6 +92,9 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match '(?m)^  COPILOT_CLI_VERSION:\s+1\.0\.88\r?$'
         ([regex]::Matches($runnerWorkflow, 'copilotCliVersion:\s+\$\{\{\s+env\.COPILOT_CLI_VERSION\s+\}\}')).Count |
             Should -Be 2
+        $runnerWorkflow | Should -Match '(?m)^  REVIEW_AGENT_VERSION:\s+10\.0\.7\r?$'
+        ([regex]::Matches($runnerWorkflow, 'agentVersion:\s+\$\{\{\s+env\.REVIEW_AGENT_VERSION\s+\}\}')).Count |
+            Should -Be 2
     }
 
     It 'Uses the review action without a third workflow' {

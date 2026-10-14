@@ -129,4 +129,14 @@ Describe 'ReviewAgent action' {
                 -workflowHeadSha 'abc123'
         } | Should -Throw 'bcqualitySettingsJson is required.'
     }
+
+    It 'Requires an explicit semantic agent version for executable review phases' {
+        {
+            & $script:actionScriptPath `
+                -phase post `
+                -bcqualitySettingsJson $script:bcqualitySettingsJson `
+                -reviewWorkspace $TestDrive `
+                -reviewOutputDir $TestDrive
+        } | Should -Throw "agentVersion must be an exact X.Y.Z semantic version*"
+    }
 }

@@ -68,6 +68,10 @@ inputs:
     description: Exact Copilot CLI version to install and run
     required: false
     default: ''
+  agentVersion:
+    description: Exact semantic version recorded in review comments and diagnostics
+    required: false
+    default: ''
 outputs:
   eligible:
     description: Whether the pull request is eligible for review
@@ -113,9 +117,10 @@ runs:
         _reviewOutputDir: ${{ inputs.reviewOutputDir }}
         _bcqualityRoot: ${{ inputs.bcqualityRoot }}
         _copilotCliVersion: ${{ inputs.copilotCliVersion }}
+        _agentVersion: ${{ inputs.agentVersion }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReviewAgent" -Action {
-          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -codeReviewSettingsJson $ENV:_codeReviewSettingsJson -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion
+          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -codeReviewSettingsJson $ENV:_codeReviewSettingsJson -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion -agentVersion $ENV:_agentVersion
         }
 branding:
   icon: terminal

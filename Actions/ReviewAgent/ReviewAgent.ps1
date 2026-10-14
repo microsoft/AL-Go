@@ -36,7 +36,9 @@ param(
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
     [string] $bcqualityRoot = '',
     [Parameter(HelpMessage = "Exact Copilot CLI version to install and run")]
-    [string] $copilotCliVersion = ''
+    [string] $copilotCliVersion = '',
+    [Parameter(HelpMessage = "Exact semantic version recorded in review comments and diagnostics")]
+    [string] $agentVersion = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -153,6 +155,10 @@ function Assert-CopilotCliVersion {
 }
 
 function Initialize-ReviewEnvironment {
+    if ($agentVersion -notmatch '\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z') {
+        throw "agentVersion must be an exact X.Y.Z semantic version; received '$agentVersion'."
+    }
+
     $env:GITHUB_TOKEN = $token
     $env:GITHUB_REPOSITORY = $repository
     $env:REVIEW_WORKSPACE = $reviewWorkspace
@@ -165,7 +171,7 @@ function Initialize-ReviewEnvironment {
     $env:MAX_FINDINGS_PER_DOMAIN = '25'
     $env:COPILOT_REVIEW_FAIL_ON_PARSE_ERROR = 'true'
     $env:COPILOT_REVIEW_AGENT_LABEL = 'copilot-pr-review'
-    $env:COPILOT_REVIEW_AGENT_VERSION = ''
+    $env:COPILOT_REVIEW_AGENT_VERSION = $agentVersion
     $env:COPILOT_REVIEW_AGENT_RELEASE_DATE = ''
     $env:COPILOT_REVIEW_AGENT_RELEASE_VERSION = ''
 }
