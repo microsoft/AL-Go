@@ -33,7 +33,7 @@ jobs:
       headSha: ${{ steps.context.outputs.headSha }}
       baseRef: ${{ steps.context.outputs.baseRef }}
       bcqualityRepo: ${{ steps.context.outputs.bcqualityRepo }}
-      bcqualityRef: ${{ steps.context.outputs.bcqualityRef }}
+      bcqualityVersion: ${{ steps.context.outputs.bcqualityVersion }}
     steps:
       - name: Checkout trusted settings
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,7 +102,7 @@ jobs:
           shell: pwsh
           phase: prepare
           bcqualityRepo: ${{ needs.Settings.outputs.bcqualityRepo }}
-          bcqualityRef: ${{ needs.Settings.outputs.bcqualityRef }}
+          bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
           bcqualityToken: ${{ secrets.BCQUALITY_TOKEN }}
 
       - name: Run Copilot PR review

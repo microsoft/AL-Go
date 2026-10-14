@@ -321,10 +321,10 @@
                     "pattern": "^https://github\\.com/[^/]+/[^/]+/?$",
                     "description": "Trusted public or private GitHub repository containing the BCQuality marketplace."
                 },
-                "bcqualityRef": {
+                "bcqualityVersion": {
                     "type": "string",
-                    "minLength": 1,
-                    "description": "Immutable BCQuality marketplace tag, or a branch for prototype testing. Raw commit SHAs are not supported by Copilot CLI marketplace registration."
+                    "pattern": "^[0-9]+\\.[0-9]+$",
+                    "description": "BCQuality content version. ReviewAgent installs the corresponding immutable v-prefixed marketplace tag."
                 }
             },
             "required": [
@@ -333,7 +333,7 @@
                 "leafModel",
                 "excludedOwners",
                 "bcqualityRepo",
-                "bcqualityRef"
+                "bcqualityVersion"
             ]
         },
         "customCodeCops": {
