@@ -1,4 +1,4 @@
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSUseDeclaredVarsMoreThanAssignments',
     '',
     Justification = 'The imported functions resolve these test fixtures through PowerShell dynamic scope.'
@@ -23,6 +23,11 @@ BeforeAll {
                 Select-Object -ExpandProperty FullName
         )
     }
+    $script:ReviewSourceText = @(
+        $script:ReviewScriptPaths | ForEach-Object {
+            Get-Content -LiteralPath $_ -Raw
+        }
+    ) -join [Environment]::NewLine
     $EngineRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $scriptPath)))
     $ReviewRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
     $script:ReviewFunctionAsts = @()
@@ -2329,7 +2334,7 @@ Describe 'Local review authentication' {
     }
 
     It 'launches the child Copilot process without a visible console window' {
-        $source = Get-Content -LiteralPath $scriptPath -Raw
+        $source = $script:ReviewSourceText
         $source | Should -Match '\$startInfo\.CreateNoWindow\s*=\s*\$true'
         $source | Should -Match 'Get-Command copilot\.exe'
         $source | Should -Match '\$startInfo\.FileName\s*=\s*\$script:CopilotExecutable'
@@ -2422,7 +2427,7 @@ Describe 'Test-GitHubEnterpriseHost' {
     }
 
     It 'derives the API base and git credential host from the Actions server variables' {
-        $source = Get-Content -LiteralPath $scriptPath -Raw
+        $source = $script:ReviewSourceText
         $source | Should -Not -Match 'https://api\.github\.com/repos'
         $source | Should -Not -Match "http\.https://github\.com/\.extraheader"
         $source | Should -Match '\$BaseUrl\s*=\s*"\$GitHubApiUrl/repos/\$Repository"'
@@ -2493,7 +2498,7 @@ Describe 'Sanitized review data projection' {
 
 Describe 'Review output path isolation' {
     It 'canonicalizes REVIEW_OUTPUT_DIR before deriving the Copilot working directory' {
-        $source = Get-Content -LiteralPath $scriptPath -Raw
+        $source = $script:ReviewSourceText
 
         $source | Should -Match '\$ReviewOutputDir\s*=\s*\[IO\.Path\]::GetFullPath\(\$ReviewOutputDirRaw\)'
         $source.IndexOf('$ReviewOutputDir  = [IO.Path]::GetFullPath($ReviewOutputDirRaw)') |

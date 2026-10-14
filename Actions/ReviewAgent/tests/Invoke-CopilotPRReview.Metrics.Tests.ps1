@@ -16,6 +16,11 @@ BeforeAll {
                 Select-Object -ExpandProperty FullName
         )
     }
+    $script:ReviewSourceText = @(
+        $reviewScriptPaths | ForEach-Object {
+            Get-Content -LiteralPath $_ -Raw
+        }
+    ) -join [Environment]::NewLine
 
     $wantedFunctions = @(
         'Get-ObjectPropertyValue',
@@ -567,7 +572,7 @@ Describe 'Copilot metrics artifact lifecycle' {
 
 Describe 'Copilot OTel wiring' {
     It 'enables the file exporter without parsing transcript prose' {
-        $source = Get-Content -LiteralPath $scriptPath -Raw
+        $source = $script:ReviewSourceText
 
         $source | Should -Match "COPILOT_OTEL_EXPORTER_TYPE'\]\s*=\s*'file'"
         $source | Should -Match "COPILOT_OTEL_FILE_EXPORTER_PATH"
