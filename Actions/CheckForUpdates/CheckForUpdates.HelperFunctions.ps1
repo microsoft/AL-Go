@@ -1045,6 +1045,7 @@ function GetDefaultFilesToExclude {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_CopilotPRReview.yaml' }
         )
     }
 

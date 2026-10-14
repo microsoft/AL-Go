@@ -38,12 +38,12 @@ The setting must be enabled at repository level. Project settings do not enable 
 
 ## How the workflows protect pull requests
 
-The integration uses two workflows:
+The integration uses two entry-point workflows and one local reusable workflow:
 
 1. **Copilot PR Review** runs without write permissions and uploads the pull request event metadata.
-1. **Copilot PR Review Runner** runs from the trusted base branch, downloads that metadata, applies the trusted repository settings, validates the pull request, generates findings, and publishes them.
+1. **Copilot PR Review Runner** runs from the trusted base branch and delegates to the local `_CopilotPRReview.yaml` reusable workflow, which downloads the metadata, applies trusted repository settings, validates the pull request, generates findings, and publishes them.
 
-The trusted runner supports ephemeral GitHub-hosted runners and delegates its implementation to the AL-Go `CopilotPRReview` action. It prepares BCQuality in a secret-scoped step, runs the model in a separate read-only step, and publishes the generated findings from a separate job. This prevents the model and untrusted pull request code from receiving the private marketplace token or permission to modify the pull request.
+The trusted runner follows the standard AL-Go local reusable-workflow pattern (`uses: ./.github/workflows/_CopilotPRReview.yaml`). The reusable workflow delegates its implementation to the AL-Go `CopilotPRReview` action, prepares BCQuality in a secret-scoped step, runs the model in a separate read-only step, and publishes the generated findings from a separate job. This prevents the model and untrusted pull request code from receiving the private marketplace token or permission to modify the pull request.
 
 ## Disable the reviewer
 
