@@ -9,7 +9,7 @@
     knowledge live in BCQuality (https://github.com/microsoft/BCQuality, or
     a partner fork). The consuming repo owns its policy config
     (bcquality.config.yaml), passed in via BCQUALITY_CONFIG_PATH; when unset
-    the engine's default baseline (Review/ALReviewAgent/bcquality.config.yaml) is used.
+    the action's default baseline (Actions/CopilotPRReview/bcquality.config.yaml) is used.
     The runner workflow installs BCQuality as a Copilot plugin, filters that
     ephemeral installation, and hands this script the resulting
     BCQUALITY_ROOT path.
@@ -88,7 +88,14 @@ $GithubToken      = $env:GITHUB_TOKEN
 $CopilotToken     = $env:GH_TOKEN
 $CopilotGithubToken = $env:COPILOT_GITHUB_TOKEN
 $Repository       = $env:GITHUB_REPOSITORY
-$EngineRoot       = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+$ReviewRoot       = Split-Path -Parent $PSScriptRoot
+$ActionsRoot      = Split-Path -Parent $ReviewRoot
+$EngineRoot       = if ((Split-Path -Leaf $ActionsRoot) -eq 'Actions') {
+    Split-Path -Parent $ActionsRoot
+}
+else {
+    $ActionsRoot
+}
 # GitHub host. Actions sets GITHUB_SERVER_URL / GITHUB_API_URL on every runner,
 # including GitHub Enterprise Cloud with data residency (*.ghe.com) and GHES,
 # so honouring them keeps the review host-neutral. Defaults keep local runs on
@@ -440,7 +447,7 @@ function Get-CopilotExecutableVersion {
 function Get-CopilotCliCompatibility {
     param([Parameter(Mandatory)][string] $Version)
 
-    $policyPath = Join-Path $EngineRoot 'Review/ALReviewAgent/copilot-cli-compatibility.psd1'
+    $policyPath = Join-Path $ReviewRoot 'copilot-cli-compatibility.psd1'
     if (-not (Test-Path -LiteralPath $policyPath -PathType Leaf)) {
         throw "Copilot CLI compatibility policy is missing: $policyPath"
     }
@@ -2306,7 +2313,7 @@ function Save-ReviewRunManifest {
     }
 
     $manifestJson = $manifest | ConvertTo-Json -Depth 20
-    $manifestSchemaPath = Join-Path $EngineRoot 'Review/ALReviewAgent/schemas/run-manifest.schema.json'
+    $manifestSchemaPath = Join-Path $ReviewRoot 'schemas/run-manifest.schema.json'
     if (-not ($manifestJson | Test-Json -SchemaFile $manifestSchemaPath -ErrorAction Stop)) {
         throw 'Generated review run manifest does not conform to its schema.'
     }
@@ -2681,7 +2688,7 @@ function New-FindingsReportRoleSchemas {
     $sourceId = [string]$shared['$id']
     $leaf = & $readShared
     foreach ($field in $rootOnlyFields) { $leaf['properties'].Remove($field) }
-    $leaf['$id'] = 'https://github.com/microsoft/AL-Go/Review/ALReviewAgent/findings-report.leaf.schema.json'
+    $leaf['$id'] = 'https://github.com/microsoft/AL-Go/Actions/CopilotPRReview/findings-report.leaf.schema.json'
     $leaf['title'] = 'BCQuality findings report (review leaf role)'
     $leaf['$comment'] = "Derived by AL-Go from $sourceId. Leaf reports cannot contain the super-skill-only fields sub-results or skipped-sub-skills."
     $boundedLocation = $null
@@ -2751,7 +2758,7 @@ function New-FindingsReportRoleSchemas {
     }
 
     $root = & $readShared
-    $root['$id'] = 'https://github.com/microsoft/AL-Go/Review/ALReviewAgent/findings-report.root.schema.json'
+    $root['$id'] = 'https://github.com/microsoft/AL-Go/Actions/CopilotPRReview/findings-report.root.schema.json'
     $root['title'] = 'BCQuality findings report (review root role)'
     $root['$comment'] = "Derived by AL-Go from $sourceId. The root report requires sub-results, and each entry must satisfy the leaf contract in definitions.$leafDefinitionName."
     $root['required'] = [object[]](@($root['required']) + 'sub-results')

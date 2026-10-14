@@ -15,6 +15,7 @@ param(
 BeforeAll {
     $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
     $EngineRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $scriptPath)))
+    $ReviewRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -1662,7 +1663,7 @@ Describe 'Deterministic leaf orchestration contract' {
             $prompt | Should -Match ([regex]::Escape(($result.ReportPath -replace '\\', '/')))
             $prompt | Should -Not -Match '_review-report.raw.json'
             $manifest.processes[0].normalization.changes = @()
-            ($manifest | ConvertTo-Json -Depth 40 | Test-Json -SchemaFile (Join-Path $EngineRoot 'Review/ALReviewAgent/schemas/run-manifest.schema.json') -ErrorAction SilentlyContinue) | Should -BeFalse
+            ($manifest | ConvertTo-Json -Depth 40 | Test-Json -SchemaFile (Join-Path $ReviewRoot 'schemas/run-manifest.schema.json') -ErrorAction SilentlyContinue) | Should -BeFalse
         } else {
             $manifest.processes[0].status | Should -Be 'failed'
             $manifest.processes[0].failure_reason | Should -Match 'findings\[3\]\.location.range.end-line'

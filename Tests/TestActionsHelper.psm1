@@ -49,6 +49,9 @@ function GetActionScript {
 Test the yaml structure of an action
 .PARAMETER ContinueOnError
 Require the action's run step to be non-blocking.
+
+.PARAMETER DefaultShell
+Expected default shell for the action.
 #>
 function YamlTest {
     Param(
@@ -56,6 +59,8 @@ function YamlTest {
         [string] $actionName,
         [string] $actionScript,
         $outputs = @{},
+        [ValidateSet('powershell', 'pwsh')]
+        [string] $DefaultShell = 'powershell',
         [switch] $ContinueOnError
     )
 
@@ -74,7 +79,7 @@ function YamlTest {
     $yaml.AppendLine("  shell:") | Out-Null
     $yaml.AppendLine("    description: Shell in which you want to run the action (powershell or pwsh)") | Out-Null
     $yaml.AppendLine("    required: false") | Out-Null
-    $yaml.AppendLine("    default: powershell") | Out-Null
+    $yaml.AppendLine("    default: $DefaultShell") | Out-Null
     $parameterString = ""
     $warningLines = @()
     $envLines = [System.Text.StringBuilder]::new()
@@ -190,19 +195,14 @@ function TestActionsReferences {
     $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
     $gitHubActionPattern = "^actions/*"
     $gitHubCodeQLActionPattern = "^github/codeql-action/*"
-    $alGoReviewWorkflowPattern = "^microsoft/AL-Go/\.github/workflows/CopilotPRReview\.yml$"
-
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
         $version = $_.Groups[2].Value.Trim()
 
-        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern|$alGoReviewWorkflowPattern)"
+        $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern)"
 
         if($origin -match $alGoActionPattern) {
             $version | Should -Match "main"
-        }
-        elseif($origin -match $alGoReviewWorkflowPattern) {
-            $version | Should -Be "main"
         }
     }
 }
@@ -225,15 +225,9 @@ function TestWorkflowReferences {
     $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
 
     $localWorkflowsPattern = '^./.github/workflows/*'
-    $alGoReviewWorkflowPattern = '^microsoft/AL-Go/\.github/workflows/CopilotPRReview\.yml$'
-
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
-        $workflowVersion = $_.Groups[2].Value.Trim()
-        $workflowPath | Should -Match "($localWorkflowsPattern|$alGoReviewWorkflowPattern)"
-        if($workflowPath -match $alGoReviewWorkflowPattern) {
-            $workflowVersion | Should -Be "main"
-        }
+        $workflowPath | Should -Match $localWorkflowsPattern
     }
 }
 

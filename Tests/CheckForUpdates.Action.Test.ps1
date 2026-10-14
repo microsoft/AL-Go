@@ -2006,19 +2006,17 @@ jobs:
 "@
     }
 
-    It "Replaces the inlined review engine repository and ref" {
+    It "Replaces the Copilot review action reference" {
         $srcContent = [ref]@"
-env:
-  ENGINE_REPO: microsoft/AL-Go
-  ENGINE_REF: main
+steps:
+  - uses: microsoft/AL-Go-Actions/CopilotPRReview@main
 "@
 
         ReplaceOwnerRepoAndBranch -srcContent $srcContent -templateOwner 'contoso' -templateBranch 'prototype/review'
 
         $srcContent.Value | Should -Be @"
-env:
-  ENGINE_REPO: contoso/AL-Go
-  ENGINE_REF: prototype/review
+steps:
+  - uses: contoso/AL-Go/Actions/CopilotPRReview@prototype/review
 "@
     }
 }

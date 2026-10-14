@@ -667,8 +667,6 @@ function ReplaceOwnerRepoAndBranch {
         $replace = "`${1}$($templateOwner)/$($templateRepos."$_")`${2}$($templateBranch)`${3}"
         $lines = $lines | ForEach-Object { $_ -replace $regex, $replace }
     }
-    $lines = $lines | ForEach-Object { $_ -replace '^(\s+ENGINE_REPO:\s+)microsoft/AL-Go[ \t]*(\r?)$', "`${1}$templateOwner/AL-Go`${2}" }
-    $lines = $lines | ForEach-Object { $_ -replace '^(\s+ENGINE_REF:\s+)main[ \t]*(\r?)$', "`${1}$templateBranch`${2}" }
     $srcContent.Value = $lines -join "`n"
 }
 

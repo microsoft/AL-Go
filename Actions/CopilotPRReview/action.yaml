@@ -1,0 +1,139 @@
+name: Copilot PR Review
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: pwsh
+  phase:
+    description: Review phase to run (context, prepare, generate, or post)
+    required: true
+  settingsJson:
+    description: CodeReviewAgent settings as compressed JSON
+    required: false
+    default: ''
+  metadataPath:
+    description: Path to the pull request event metadata
+    required: false
+    default: ''
+  workflowHeadSha:
+    description: Head SHA reported by the completed intake workflow
+    required: false
+    default: ''
+  token:
+    description: GitHub token used for pull request access
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: GitHub owner/repository being reviewed
+    required: false
+    default: ${{ github.repository }}
+  prNumber:
+    description: Pull request number
+    required: false
+    default: ''
+  prHeadSha:
+    description: Pull request head SHA
+    required: false
+    default: ''
+  baseRef:
+    description: Pull request base branch
+    required: false
+    default: main
+  model:
+    description: Model used for final review consolidation
+    required: false
+    default: ''
+  leafModel:
+    description: Model used for isolated leaf reviews
+    required: false
+    default: ''
+  reviewWorkspace:
+    description: Trusted base-branch checkout used by the reviewer
+    required: false
+    default: ''
+  reviewOutputDir:
+    description: Directory used for generated review artifacts
+    required: false
+    default: ''
+  bcqualityToken:
+    description: Token with read access to a private BCQuality marketplace
+    required: false
+    default: ''
+  bcqualitySha:
+    description: Resolved BCQuality commit from the prepare phase
+    required: false
+    default: ''
+  bcqualityRoot:
+    description: Path to the installed and filtered BCQuality plugin
+    required: false
+    default: ''
+  copilotCliVersion:
+    description: Compatibility-validated Copilot CLI version
+    required: false
+    default: 1.0.88
+outputs:
+  enabled:
+    description: Whether Copilot review is enabled
+    value: ${{ steps.copilotprreview.outputs.enabled }}
+  eligible:
+    description: Whether the pull request is eligible for review
+    value: ${{ steps.copilotprreview.outputs.eligible }}
+  model:
+    description: Model used for final review consolidation
+    value: ${{ steps.copilotprreview.outputs.model }}
+  leafModel:
+    description: Model used for isolated leaf reviews
+    value: ${{ steps.copilotprreview.outputs.leafModel }}
+  prNumber:
+    description: Validated pull request number
+    value: ${{ steps.copilotprreview.outputs.prNumber }}
+  headSha:
+    description: Validated pull request head SHA
+    value: ${{ steps.copilotprreview.outputs.headSha }}
+  baseRef:
+    description: Validated pull request base branch
+    value: ${{ steps.copilotprreview.outputs.baseRef }}
+  bcqualitySha:
+    description: Resolved BCQuality marketplace commit
+    value: ${{ steps.copilotprreview.outputs.bcqualitySha }}
+  bcqualityRoot:
+    description: Path to the installed and filtered BCQuality plugin
+    value: ${{ steps.copilotprreview.outputs.bcqualityRoot }}
+  filterReport:
+    description: Path to the BCQuality filter report
+    value: ${{ steps.copilotprreview.outputs.filterReport }}
+  copilotCliVersion:
+    description: Installed Copilot CLI version
+    value: ${{ steps.copilotprreview.outputs.copilotCliVersion }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: copilotprreview
+      env:
+        _phase: ${{ inputs.phase }}
+        _settingsJson: ${{ inputs.settingsJson }}
+        _metadataPath: ${{ inputs.metadataPath }}
+        _workflowHeadSha: ${{ inputs.workflowHeadSha }}
+        _token: ${{ inputs.token }}
+        _repository: ${{ inputs.repository }}
+        _prNumber: ${{ inputs.prNumber }}
+        _prHeadSha: ${{ inputs.prHeadSha }}
+        _baseRef: ${{ inputs.baseRef }}
+        _model: ${{ inputs.model }}
+        _leafModel: ${{ inputs.leafModel }}
+        _reviewWorkspace: ${{ inputs.reviewWorkspace }}
+        _reviewOutputDir: ${{ inputs.reviewOutputDir }}
+        _bcqualityToken: ${{ inputs.bcqualityToken }}
+        _bcqualitySha: ${{ inputs.bcqualitySha }}
+        _bcqualityRoot: ${{ inputs.bcqualityRoot }}
+        _copilotCliVersion: ${{ inputs.copilotCliVersion }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CopilotPRReview" -Action {
+          ${{ github.action_path }}/CopilotPRReview.ps1 -phase $ENV:_phase -settingsJson $ENV:_settingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityToken $ENV:_bcqualityToken -bcqualitySha $ENV:_bcqualitySha -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion
+        }
+branding:
+  icon: terminal
+  color: blue
