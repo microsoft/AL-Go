@@ -1001,9 +1001,9 @@ Describe 'Deterministic leaf orchestration contract' {
         } | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $BCQualityRoot '_skill-index.json')
 
-        $script:BCQualityConfigCache = @{
-            'enabled-layers' = @('microsoft')
-            'disabled-skills' = @()
+        $script:BCQualitySettingsCache = @{
+            enabledLayers = @('microsoft')
+            disabledSkills = @()
         }
         $script:TestLeafReports = @{}
         $script:TestLeafMetrics = [pscustomobject]@{
@@ -1047,7 +1047,7 @@ Describe 'Deterministic leaf orchestration contract' {
     }
 
     It 'removes configured disabled leaves without reordering the remainder' {
-        $script:BCQualityConfigCache['disabled-skills'] = @(
+        $script:BCQualitySettingsCache.disabledSkills = @(
             'microsoft/skills/review/al-security-review.md'
         )
 
@@ -2006,6 +2006,42 @@ Describe 'BCQuality version ownership' {
     It 'rejects missing or invalid versions' -ForEach @('', 'v1.7', '1.7.0', 'main') {
         { Resolve-BCQualityVersion -Version $_ } |
             Should -Throw '*BCQUALITY_VERSION must use major.minor format*'
+    }
+}
+
+Describe 'BCQuality settings ownership' {
+    BeforeEach {
+        $env:BCQUALITY_SETTINGS_JSON = @{
+            marketplaceRepo = 'https://github.com/microsoft/BCQuality'
+            version = '1.7'
+            pluginVersion = '0.2.0'
+            enabledLayers = @('microsoft')
+            disabledSkills = @('microsoft/skills/review/al-style-review.md')
+            knowledge = @{ allow = @('microsoft/knowledge/**'); deny = @() }
+            taskContext = @{
+                technologies = @('al')
+                countries = @('w1')
+                applicationArea = @('all')
+                bcVersion = @('26.0')
+            }
+        } | ConvertTo-Json -Compress -Depth 10
+        $script:BCQualitySettingsCache = $null
+    }
+
+    AfterEach {
+        Remove-Item Env:BCQUALITY_SETTINGS_JSON -ErrorAction SilentlyContinue
+        $script:BCQualitySettingsCache = $null
+    }
+
+    It 'builds task context directly from AL-Go settings' {
+        $context = Build-TaskContext
+
+        $context['enabled-layers'] | Should -Be @('microsoft')
+        $context['disabled-skills'] | Should -Be @('microsoft/skills/review/al-style-review.md')
+        $context.technologies | Should -Be @('al')
+        $context.countries | Should -Be @('w1')
+        $context['application-area'] | Should -Be @('all')
+        $context['bc-version'] | Should -Be @('26.0')
     }
 }
 

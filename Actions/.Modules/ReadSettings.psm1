@@ -163,6 +163,19 @@ function GetDefaultSettings
         "BCQuality"                                     = [ordered]@{
             "marketplaceRepo" = "https://github.com/microsoft/BCQuality"
             "version"         = "1.7"
+            "pluginVersion"   = "0.2.0"
+            "enabledLayers"   = @("microsoft")
+            "disabledSkills"  = @()
+            "knowledge"       = [ordered]@{
+                "allow" = @("microsoft/knowledge/**")
+                "deny"  = @()
+            }
+            "taskContext"     = [ordered]@{
+                "technologies"   = @("al")
+                "countries"      = @("w1")
+                "applicationArea" = @("all")
+                "bcVersion"      = @("all")
+            }
         }
         "CodeReviewAgent"                               = [ordered]@{
             "enabled"        = $false

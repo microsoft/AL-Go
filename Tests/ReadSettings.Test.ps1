@@ -289,6 +289,15 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $defaultSettings.BCQuality.version | Should -Be '1.7'
+            $defaultSettings.BCQuality.pluginVersion | Should -Be '0.2.0'
+            $defaultSettings.BCQuality.enabledLayers | Should -Be @('microsoft')
+            $defaultSettings.BCQuality.disabledSkills | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.knowledge.allow | Should -Be @('microsoft/knowledge/**')
+            $defaultSettings.BCQuality.knowledge.deny | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.taskContext.technologies | Should -Be @('al')
+            $defaultSettings.BCQuality.taskContext.countries | Should -Be @('w1')
+            $defaultSettings.BCQuality.taskContext.applicationArea | Should -Be @('all')
+            $defaultSettings.BCQuality.taskContext.bcVersion | Should -Be @('all')
         }
 
         It 'Preserves default Copilot models when only enabled is overridden' {
@@ -307,6 +316,26 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
             $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $settings.BCQuality.version | Should -Be '1.7'
+            $settings.BCQuality.enabledLayers | Should -Be @('microsoft')
+            $settings.BCQuality.taskContext.technologies | Should -Be @('al')
+        }
+
+        It 'Preserves BCQuality policy defaults when only the marketplace is overridden' {
+            $settings = GetDefaultSettings
+            $override = [PSCustomObject]@{
+                BCQuality = [PSCustomObject]@{
+                    marketplaceRepo = 'https://github.com/contoso/BCQuality'
+                }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
+
+            $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
+            $settings.BCQuality.version | Should -Be '1.7'
+            $settings.BCQuality.pluginVersion | Should -Be '0.2.0'
+            $settings.BCQuality.enabledLayers | Should -Be @('microsoft')
+            $settings.BCQuality.knowledge.allow | Should -Be @('microsoft/knowledge/**')
+            $settings.BCQuality.taskContext.technologies | Should -Be @('al')
         }
 
         It 'Rejects unknown BCQuality settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
@@ -327,6 +356,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $settings = GetDefaultSettings
             $settings.BCQuality.marketplaceRepo = $MarketplaceRepo
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
+        It 'Rejects unknown BCQuality layers' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $settings = GetDefaultSettings
+            $settings.BCQuality.enabledLayers = @('partner')
 
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
                 Should -BeFalse

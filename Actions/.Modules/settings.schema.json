@@ -303,12 +303,97 @@
                     "type": "string",
                     "pattern": "^[0-9]+\\.[0-9]+$",
                     "description": "BCQuality content version installed from the corresponding v-prefixed marketplace tag."
+                },
+                "pluginVersion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Expected plugin version declared by the BCQuality marketplace entry."
+                },
+                "enabledLayers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "microsoft",
+                            "community",
+                            "custom"
+                        ]
+                    },
+                    "description": "BCQuality content layers retained for agent execution."
+                },
+                "disabledSkills": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": "Repository-relative BCQuality skill paths removed before agent execution."
+                },
+                "knowledge": {
+                    "type": "object",
+                    "properties": {
+                        "allow": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "description": "Knowledge globs retained within enabled layers; an empty list retains all enabled-layer knowledge."
+                        },
+                        "deny": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "description": "Knowledge globs removed after the allow filter is applied."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "allow",
+                        "deny"
+                    ]
+                },
+                "taskContext": {
+                    "type": "object",
+                    "properties": {
+                        "technologies": {
+                            "$ref": "#/$defs/bcQualityTaskContextDimension"
+                        },
+                        "countries": {
+                            "$ref": "#/$defs/bcQualityTaskContextDimension"
+                        },
+                        "applicationArea": {
+                            "$ref": "#/$defs/bcQualityTaskContextDimension"
+                        },
+                        "bcVersion": {
+                            "$ref": "#/$defs/bcQualityTaskContextDimension"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "technologies",
+                        "countries",
+                        "applicationArea",
+                        "bcVersion"
+                    ]
                 }
             },
             "additionalProperties": false,
             "required": [
                 "marketplaceRepo",
-                "version"
+                "version",
+                "pluginVersion",
+                "enabledLayers",
+                "disabledSkills",
+                "knowledge",
+                "taskContext"
             ]
         },
         "CodeReviewAgent": {
@@ -862,6 +947,17 @@
                 "required": ["name", "value"]
             },
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
+        }
+    },
+    "$defs": {
+        "bcQualityTaskContextDimension": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+                "type": "string",
+                "minLength": 1
+            }
         }
     },
     "patternProperties": {

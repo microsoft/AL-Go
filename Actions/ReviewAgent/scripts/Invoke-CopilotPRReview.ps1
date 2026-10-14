@@ -7,8 +7,8 @@
 .DESCRIPTION
     Boundary contract: this script is orchestration only. All skills and
     knowledge live in BCQuality (https://github.com/microsoft/BCQuality, or
-    a partner fork). SetupBCQuality owns the tracked plugin filtering and
-    task-context policy in Actions/SetupBCQuality/bcquality.config.yaml.
+    a partner fork). AL-Go's BCQuality setting controls plugin filtering and
+    task context.
     The runner workflow installs BCQuality as a Copilot plugin, filters that
     ephemeral installation, and hands this script the resulting
     BCQUALITY_ROOT path.
@@ -1317,35 +1317,43 @@ function Test-GlobMatch {
 # ---------------------------------------------------------------------------
 # BCQuality task-context (passed verbatim to entry.md)
 # ---------------------------------------------------------------------------
-$script:BCQualityConfigCache = $null
-function Get-BCQualityConfigCached {
-    # Resolve the BCQuality policy once per process because task-context
-    # construction can request it multiple times.
-    if ($null -eq $script:BCQualityConfigCache) {
-        $configScript = Join-Path $PSScriptRoot '..\..\SetupBCQuality\Get-BCQualityConfig.ps1'
-        if (-not (Test-Path $configScript)) {
-            throw "Get-BCQualityConfig.ps1 not found at $configScript"
+$script:BCQualitySettingsCache = $null
+function Get-BCQualitySettingsCached {
+    if ($null -eq $script:BCQualitySettingsCache) {
+        if ([string]::IsNullOrWhiteSpace($env:BCQUALITY_SETTINGS_JSON)) {
+            throw 'BCQUALITY_SETTINGS_JSON is required.'
         }
-        $script:BCQualityConfigCache = & $configScript
+        try {
+            $script:BCQualitySettingsCache = $env:BCQUALITY_SETTINGS_JSON |
+                ConvertFrom-Json -AsHashtable -ErrorAction Stop
+        }
+        catch {
+            throw "BCQUALITY_SETTINGS_JSON is invalid: $($_.Exception.Message)"
+        }
     }
-    return $script:BCQualityConfigCache
+    return $script:BCQualitySettingsCache
 }
 
 function Build-TaskContext {
-    $cfg = Get-BCQualityConfigCached
+    $settings = Get-BCQualitySettingsCached
 
-    $taskCtx = $cfg['task-context']
+    $taskContext = $settings.taskContext
     $context = [ordered]@{
         goal               = 'review pull request'
         'inputs-available' = @('pr-diff', 'file-path', 'repository')
-        'enabled-layers'   = @($cfg['enabled-layers'])
-        'disabled-skills'  = @($cfg['disabled-skills'])
+        'enabled-layers'   = @($settings.enabledLayers)
+        'disabled-skills'  = @($settings.disabledSkills)
     }
 
-    foreach ($dim in @('technologies', 'countries', 'application-area', 'bc-version')) {
-        if ($taskCtx -is [hashtable] -and $taskCtx.ContainsKey($dim) -and $null -ne $taskCtx[$dim]) {
-            $val = $taskCtx[$dim]
-            $context[$dim] = if ($val -is [System.Collections.IList] -and -not ($val -is [string])) { @($val) } else { @($val) }
+    $dimensions = [ordered]@{
+        technologies       = 'technologies'
+        countries          = 'countries'
+        applicationArea    = 'application-area'
+        bcVersion          = 'bc-version'
+    }
+    foreach ($settingName in $dimensions.Keys) {
+        if ($taskContext.ContainsKey($settingName) -and $null -ne $taskContext[$settingName]) {
+            $context[$dimensions[$settingName]] = @($taskContext[$settingName])
         }
     }
 
@@ -2334,9 +2342,9 @@ function Get-ReviewLeafPlan {
         throw "BCQuality skill index must contain exactly one '$SkillId' action skill; found $($superSkill.Count)."
     }
 
-    $cfg = Get-BCQualityConfigCached
-    $disabled = @($cfg['disabled-skills'] | ForEach-Object { (($_ + '') -replace '\\', '/').Trim() } | Where-Object { $_ })
-    $enabledLayers = @($cfg['enabled-layers'])
+    $settings = Get-BCQualitySettingsCached
+    $disabled = @($settings.disabledSkills | ForEach-Object { (($_ + '') -replace '\\', '/').Trim() } | Where-Object { $_ })
+    $enabledLayers = @($settings.enabledLayers)
     $plan = [System.Collections.Generic.List[object]]::new()
     $ordinal = 0
     foreach ($path in @($superSkill[0].subSkills)) {

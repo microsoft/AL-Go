@@ -32,8 +32,7 @@ jobs:
       prNumber: ${{ steps.context.outputs.prNumber }}
       headSha: ${{ steps.context.outputs.headSha }}
       baseRef: ${{ steps.context.outputs.baseRef }}
-      bcqualityMarketplaceRepo: ${{ steps.context.outputs.bcqualityMarketplaceRepo }}
-      bcqualityVersion: ${{ steps.context.outputs.bcqualityVersion }}
+      bcqualitySettingsJson: ${{ steps.context.outputs.bcqualitySettingsJson }}
     steps:
       - name: Checkout trusted settings
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -100,8 +99,7 @@ jobs:
         with:
           shell: pwsh
           phase: prepare
-          bcqualityMarketplaceRepo: ${{ needs.prepare.outputs.bcqualityMarketplaceRepo }}
-          bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
+          bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
           bcqualityToken: ${{ secrets.BCQUALITY_TOKEN }}
 
       - name: Run Copilot PR review
@@ -119,8 +117,7 @@ jobs:
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
           bcqualityRoot: ${{ steps.setup.outputs.bcqualityRoot }}
-          bcqualityMarketplaceRepo: ${{ needs.prepare.outputs.bcqualityMarketplaceRepo }}
-          bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
+          bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
           copilotCliVersion: ${{ steps.setup.outputs.copilotCliVersion }}
 
       - name: Upload review output
@@ -178,8 +175,7 @@ jobs:
           baseRef: ${{ needs.prepare.outputs.baseRef }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
-          bcqualityMarketplaceRepo: ${{ needs.prepare.outputs.bcqualityMarketplaceRepo }}
-          bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
+          bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
 
       - name: Upload published review artifacts
         if: always()

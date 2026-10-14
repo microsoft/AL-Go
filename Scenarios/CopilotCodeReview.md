@@ -21,7 +21,32 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 {
   "BCQuality": {
     "marketplaceRepo": "https://github.com/microsoft/BCQuality",
-    "version": "1.7"
+    "version": "1.7",
+    "pluginVersion": "0.2.0",
+    "enabledLayers": [
+      "microsoft"
+    ],
+    "disabledSkills": [],
+    "knowledge": {
+      "allow": [
+        "microsoft/knowledge/**"
+      ],
+      "deny": []
+    },
+    "taskContext": {
+      "technologies": [
+        "al"
+      ],
+      "countries": [
+        "w1"
+      ],
+      "applicationArea": [
+        "all"
+      ],
+      "bcVersion": [
+        "all"
+      ]
+    }
   },
   "CodeReviewAgent": {
     "enabled": true,
@@ -36,7 +61,7 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CICDPullRequestBranches` will be reviewed automatically.
 
-`BCQuality.marketplaceRepo` identifies the trusted public, forked, or private GitHub repository hosting the BCQuality marketplace, and `BCQuality.version` selects the content version installed from the corresponding `v<major>.<minor>` tag. `CodeReviewAgent.model` controls final self-review and consolidation, while `CodeReviewAgent.leafModel` controls the isolated review processes. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
+`BCQuality.marketplaceRepo`, `version`, and `pluginVersion` select and validate the plugin installation. `enabledLayers`, `disabledSkills`, and `knowledge` control the content retained for the review. `taskContext` supplies BCQuality's technology, country, application-area, and Business Central version dimensions. `CodeReviewAgent.model` controls final self-review and consolidation, while `CodeReviewAgent.leafModel` controls the isolated review processes. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
 
 Both settings are populated by default. `CodeReviewAgent` must be enabled at repository level; project settings do not enable or disable the reviewer.
 

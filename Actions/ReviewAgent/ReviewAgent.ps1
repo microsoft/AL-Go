@@ -35,10 +35,6 @@ param(
     [string] $reviewOutputDir = '',
     [Parameter(HelpMessage = "Token with read access to a private BCQuality marketplace")]
     [string] $bcqualityToken = '',
-    [Parameter(HelpMessage = "GitHub repository URL containing the BCQuality marketplace")]
-    [string] $bcqualityMarketplaceRepo = 'https://github.com/microsoft/BCQuality',
-    [Parameter(HelpMessage = "BCQuality content version")]
-    [string] $bcqualityVersion = '1.7',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
     [string] $bcqualityRoot = '',
     [Parameter(HelpMessage = "Compatibility-validated Copilot CLI version")]
@@ -60,25 +56,47 @@ function Write-ReviewOutput {
     }
 }
 
-function Enable-PowerShellYaml {
-    if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
-        Install-Module powershell-yaml -Scope CurrentUser -Force -AllowClobber
+function Get-BCQualitySettings {
+    if ([string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
+        throw 'bcqualitySettingsJson is required.'
     }
+
+    try {
+        $settings = $bcqualitySettingsJson | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+    }
+    catch {
+        throw "bcqualitySettingsJson is invalid: $($_.Exception.Message)"
+    }
+
+    if (-not ($settings -is [System.Collections.IDictionary])) {
+        throw 'bcqualitySettingsJson must contain a JSON object.'
+    }
+    if ([string]::IsNullOrWhiteSpace([string] $settings.marketplaceRepo) -or
+        [string]$settings.version -notmatch '\A[0-9]+\.[0-9]+\z' -or
+        [string]::IsNullOrWhiteSpace([string] $settings.pluginVersion)) {
+        throw 'BCQuality.marketplaceRepo, BCQuality.pluginVersion, and a major.minor BCQuality.version are required.'
+    }
+    if (@($settings.enabledLayers).Count -eq 0) {
+        throw 'BCQuality.enabledLayers must contain at least one layer.'
+    }
+    if (-not ($settings.knowledge -is [System.Collections.IDictionary]) -or
+        -not ($settings.taskContext -is [System.Collections.IDictionary])) {
+        throw 'BCQuality.knowledge and BCQuality.taskContext are required.'
+    }
+
+    return $settings
 }
 
 function Invoke-ContextPhase {
     if ([string]::IsNullOrWhiteSpace($codeReviewSettingsJson)) {
         throw 'codeReviewSettingsJson is required for the context phase.'
     }
-    if ([string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
-        throw 'bcqualitySettingsJson is required for the context phase.'
-    }
     if ([string]::IsNullOrWhiteSpace($metadataPath) -or -not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
         throw "Pull request metadata was not found at '$metadataPath'."
     }
 
     $settings = $codeReviewSettingsJson | ConvertFrom-Json
-    $bcqualitySettings = $bcqualitySettingsJson | ConvertFrom-Json
+    $bcqualitySettings = Get-BCQualitySettings
     $metadata = Get-Content -LiteralPath $metadataPath -Encoding UTF8 -Raw | ConvertFrom-Json
     $owner = [string] $metadata.pull_request.user.login
     $excludedOwners = @($settings.excludedOwners)
@@ -86,14 +104,9 @@ function Invoke-ContextPhase {
     $number = [string] $metadata.pull_request.number
     $headSha = [string] $metadata.pull_request.head.sha
     $targetBranch = [string] $metadata.pull_request.base.ref
-    $resolvedBCQualityMarketplaceRepo = [string] $bcqualitySettings.marketplaceRepo
-    $resolvedBCQualityVersion = [string] $bcqualitySettings.version
 
     if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha) {
         throw 'Pull request head SHA does not match the triggering workflow run.'
-    }
-    if ([string]::IsNullOrWhiteSpace($resolvedBCQualityMarketplaceRepo) -or $resolvedBCQualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
-        throw 'BCQuality.marketplaceRepo and a major.minor BCQuality.version are required.'
     }
 
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
@@ -102,8 +115,7 @@ function Invoke-ContextPhase {
     Write-ReviewOutput -Name prNumber -Value $number
     Write-ReviewOutput -Name headSha -Value $headSha
     Write-ReviewOutput -Name baseRef -Value $targetBranch
-    Write-ReviewOutput -Name bcqualityMarketplaceRepo -Value $resolvedBCQualityMarketplaceRepo
-    Write-ReviewOutput -Name bcqualityVersion -Value $resolvedBCQualityVersion
+    Write-ReviewOutput -Name bcqualitySettingsJson -Value ($bcqualitySettings | ConvertTo-Json -Compress -Depth 10)
 }
 
 function Assert-CopilotCliVersion {
@@ -119,20 +131,18 @@ function Assert-CopilotCliVersion {
 
 function Invoke-SetupBCQuality {
     param(
-        [Parameter(Mandatory)] $Configuration
+        [Parameter(Mandatory)] $Settings
     )
 
-    $repoUri = [Uri] $bcqualityMarketplaceRepo
+    $marketplaceRepo = [string] $Settings.marketplaceRepo
+    $version = [string] $Settings.version
+    $repoUri = [Uri] $marketplaceRepo
     if ($repoUri.Host -ne 'github.com') {
-        throw "BCQuality marketplace must be hosted on github.com; received '$bcqualityMarketplaceRepo'."
+        throw "BCQuality marketplace must be hosted on github.com; received '$marketplaceRepo'."
     }
     $marketplace = $repoUri.AbsolutePath.Trim('/')
     if ($marketplace -notmatch '^[^/]+/[^/]+$') {
-        throw "BCQuality marketplace URL must identify one owner/repository; received '$bcqualityMarketplaceRepo'."
-    }
-    $pluginVersion = [string] $Configuration['plugin-version']
-    if (-not $pluginVersion) {
-        throw 'plugin-version is required for plugin identity validation.'
+        throw "BCQuality marketplace URL must identify one owner/repository; received '$marketplaceRepo'."
     }
 
     $setupOutput = [System.IO.Path]::GetTempFileName()
@@ -142,12 +152,12 @@ function Invoke-SetupBCQuality {
         $setupToken = if ($marketplace -eq 'microsoft/BCQuality') { '' } else { $bcqualityToken }
         & (Join-Path $PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1') `
             -marketplace $marketplace `
-            -marketplaceRef "v$bcqualityVersion" `
-            -expectedPluginVersion $pluginVersion `
-            -enabledLayers (@($Configuration['enabled-layers']) -join ',') `
-            -disabledSkills (@($Configuration['disabled-skills']) -join ',') `
-            -knowledgeAllow (@($Configuration.knowledge.allow) -join ',') `
-            -knowledgeDeny (@($Configuration.knowledge.deny) -join ',') `
+            -marketplaceRef "v$version" `
+            -expectedPluginVersion ([string] $Settings.pluginVersion) `
+            -enabledLayers (@($Settings.enabledLayers) -join ',') `
+            -disabledSkills (@($Settings.disabledSkills) -join ',') `
+            -knowledgeAllow (@($Settings.knowledge.allow) -join ',') `
+            -knowledgeDeny (@($Settings.knowledge.deny) -join ',') `
             -token $setupToken
 
         $outputs = @{}
@@ -184,6 +194,7 @@ function Initialize-ReviewEnvironment {
 }
 
 function Invoke-PreparePhase {
+    $bcqualitySettings = Get-BCQualitySettings
     Assert-CopilotCliVersion
     Write-ReviewOutput -Name copilotCliVersion -Value $copilotCliVersion
 
@@ -196,12 +207,7 @@ function Invoke-PreparePhase {
         throw 'Failed to execute GitHub Copilot CLI after installation.'
     }
 
-    Enable-PowerShellYaml
-    $configuration = & (Join-Path $PSScriptRoot '..\SetupBCQuality\Get-BCQualityConfig.ps1')
-    if ($bcqualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
-        throw "bcqualityVersion must use major.minor format; received '$bcqualityVersion'."
-    }
-    $setup = Invoke-SetupBCQuality -Configuration $configuration
+    $setup = Invoke-SetupBCQuality -Settings $bcqualitySettings
     if (-not $setup.pluginRoot) {
         throw 'SetupBCQuality did not return the plugin root.'
     }
@@ -211,20 +217,18 @@ function Invoke-PreparePhase {
 }
 
 function Invoke-GeneratePhase {
+    $bcqualitySettings = Get-BCQualitySettings
     if ([string]::IsNullOrWhiteSpace($bcqualityRoot) -or -not (Test-Path -LiteralPath $bcqualityRoot -PathType Container)) {
         throw "The prepared BCQuality plugin was not found at '$bcqualityRoot'."
     }
-    if ($bcqualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
-        throw "bcqualityVersion must use major.minor format; received '$bcqualityVersion'."
-    }
 
-    Enable-PowerShellYaml
     Initialize-ReviewEnvironment
     $env:REVIEW_PHASE = 'generate'
     $env:GH_TOKEN = $token
     $env:BCQUALITY_ROOT = $bcqualityRoot
-    $env:BCQUALITY_REPO = $bcqualityMarketplaceRepo
-    $env:BCQUALITY_VERSION = $bcqualityVersion
+    $env:BCQUALITY_REPO = [string] $bcqualitySettings.marketplaceRepo
+    $env:BCQUALITY_VERSION = [string] $bcqualitySettings.version
+    $env:BCQUALITY_SETTINGS_JSON = ($bcqualitySettings | ConvertTo-Json -Compress -Depth 10)
     $env:BCQUALITY_CONSUME = 'plugin'
     $env:COPILOT_MODEL = $model
     $env:COPILOT_REVIEW_CLI_VERSION = $copilotCliVersion
@@ -238,11 +242,12 @@ function Invoke-GeneratePhase {
 }
 
 function Invoke-PostPhase {
-    Enable-PowerShellYaml
+    $bcqualitySettings = Get-BCQualitySettings
     Initialize-ReviewEnvironment
     $env:REVIEW_PHASE = 'post'
-    $env:BCQUALITY_REPO = $bcqualityMarketplaceRepo
-    $env:BCQUALITY_VERSION = $bcqualityVersion
+    $env:BCQUALITY_REPO = [string] $bcqualitySettings.marketplaceRepo
+    $env:BCQUALITY_VERSION = [string] $bcqualitySettings.version
+    $env:BCQUALITY_SETTINGS_JSON = ($bcqualitySettings | ConvertTo-Json -Compress -Depth 10)
     $env:COPILOT_REVIEW_POST_SUMMARY = 'false'
 
     & (Join-Path $PSScriptRoot 'scripts\Invoke-CopilotPRReview.ps1')

@@ -79,13 +79,9 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         })
     }
 
-    It 'Owns the tracked BCQuality filtering policy' {
-        $configuration = & (Join-Path $scriptRoot 'Get-BCQualityConfig.ps1')
-
-        $configuration['plugin-version'] | Should -Be '0.2.0'
-        @($configuration['enabled-layers']) | Should -Be @('microsoft')
-        @($configuration['knowledge']['allow']) | Should -Be @('microsoft/knowledge/**')
-        $configuration.ContainsKey('bcquality') | Should -BeFalse
+    It 'Does not ship a separate BCQuality policy file' {
+        Test-Path (Join-Path $scriptRoot 'bcquality.config.yaml') | Should -BeFalse
+        Test-Path (Join-Path $scriptRoot 'Get-BCQualityConfig.ps1') | Should -BeFalse
     }
 
     It 'Retains only the enabled layer and regenerates the index' {

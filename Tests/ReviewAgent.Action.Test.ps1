@@ -9,6 +9,21 @@ Describe 'ReviewAgent action' {
         $scriptRoot = Join-Path $PSScriptRoot '../Actions/ReviewAgent' -Resolve
         $script:actionScriptPath = Join-Path $scriptRoot 'ReviewAgent.ps1'
         $script:originalGitHubOutput = $env:GITHUB_OUTPUT
+        $script:bcqualitySettings = @{
+            marketplaceRepo = 'https://github.com/microsoft/BCQuality'
+            version = '1.7'
+            pluginVersion = '0.2.0'
+            enabledLayers = @('microsoft')
+            disabledSkills = @()
+            knowledge = @{ allow = @('microsoft/knowledge/**'); deny = @() }
+            taskContext = @{
+                technologies = @('al')
+                countries = @('w1')
+                applicationArea = @('all')
+                bcVersion = @('all')
+            }
+        }
+        $script:bcqualitySettingsJson = $script:bcqualitySettings | ConvertTo-Json -Compress -Depth 10
     }
 
     AfterAll {
@@ -24,8 +39,7 @@ Describe 'ReviewAgent action' {
             prNumber = 'Validated pull request number'
             headSha = 'Validated pull request head SHA'
             baseRef = 'Validated pull request base branch'
-            bcqualityMarketplaceRepo = 'Trusted BCQuality marketplace repository'
-            bcqualityVersion = 'Configured BCQuality content version'
+            bcqualitySettingsJson = 'Validated BCQuality settings as compressed JSON'
             bcqualityRoot = 'Path to the installed and filtered BCQuality plugin'
             filterReport = 'Path to the BCQuality filter report'
             copilotCliVersion = 'Installed Copilot CLI version'
@@ -46,10 +60,14 @@ Describe 'ReviewAgent action' {
 
         $env:GITHUB_OUTPUT = Join-Path $TestDrive 'output.txt'
 
+        $customBCQualitySettings = $script:bcqualitySettings.Clone()
+        $customBCQualitySettings.marketplaceRepo = 'https://github.com/contoso/BCQuality'
+        $customBCQualitySettings.version = '2.0'
+
         & $script:actionScriptPath `
             -phase context `
             -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
-            -bcqualitySettingsJson '{"marketplaceRepo":"https://github.com/contoso/BCQuality","version":"2.0"}' `
+            -bcqualitySettingsJson ($customBCQualitySettings | ConvertTo-Json -Compress -Depth 10) `
             -metadataPath $metadataPath `
             -workflowHeadSha 'abc123'
 
@@ -67,8 +85,10 @@ Describe 'ReviewAgent action' {
         $outputs.prNumber | Should -Be '42'
         $outputs.headSha | Should -Be 'abc123'
         $outputs.baseRef | Should -Be 'main'
-        $outputs.bcqualityMarketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
-        $outputs.bcqualityVersion | Should -Be '2.0'
+        $resolvedBCQualitySettings = $outputs.bcqualitySettingsJson | ConvertFrom-Json
+        $resolvedBCQualitySettings.marketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
+        $resolvedBCQualitySettings.version | Should -Be '2.0'
+        $resolvedBCQualitySettings.enabledLayers | Should -Be 'microsoft'
     }
 
     It 'Rejects metadata that does not match the triggering workflow run' {
@@ -87,7 +107,7 @@ Describe 'ReviewAgent action' {
             & $script:actionScriptPath `
                 -phase context `
                 -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
-                -bcqualitySettingsJson '{"marketplaceRepo":"https://github.com/microsoft/BCQuality","version":"1.7"}' `
+                -bcqualitySettingsJson $script:bcqualitySettingsJson `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'workflow-run-sha'
         } | Should -Throw 'Pull request head SHA does not match the triggering workflow run.'
@@ -111,6 +131,6 @@ Describe 'ReviewAgent action' {
                 -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'abc123'
-        } | Should -Throw 'bcqualitySettingsJson is required for the context phase.'
+        } | Should -Throw 'bcqualitySettingsJson is required.'
     }
 }

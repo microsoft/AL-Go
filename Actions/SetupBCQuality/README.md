@@ -45,10 +45,10 @@ jobs:
 `marketplaceRef` should be a BCQuality release tag. Branch refs are supported
 only for prototype testing because they can move between runs.
 
-The tracked `bcquality.config.yaml` beside the action defines AL-Go's internal
-plugin filtering and task-context policy. Repository consumers select the
-marketplace location and content version through the top-level `BCQuality`
-setting rather than modifying that policy.
+AL-Go's `ReviewAgent` maps the top-level `BCQuality` setting to these action
+inputs. Marketplace selection, plugin identity, layer and skill filtering,
+knowledge filtering, and task context therefore share one repository settings
+surface; this action does not load a separate policy file.
 
 For a private marketplace repository, pass a token with read access through
 the `token` input. Authentication is applied only to the Git and Copilot CLI

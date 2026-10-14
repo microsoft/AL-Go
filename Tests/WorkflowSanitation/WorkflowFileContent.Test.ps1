@@ -80,15 +80,14 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'bcqualitySettingsJson:\s+\$\{\{\s+env\.BCQuality\s+\}\}'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityVersion\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualitySettingsJson:\s+\$\{\{\s+steps\.context\.outputs\.bcqualitySettingsJson\s+\}\}'
         $reviewAction | Should -Match '\$settings\.excludedOwners'
         $runnerWorkflow | Should -Match "needs\.prepare\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Not -Match 'needs\.prepare\.outputs\.enabled'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.prepare\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.prepare\.outputs\.leafModel\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualityVersion\s+\}\}'
+        ([regex]::Matches($runnerWorkflow, 'bcqualitySettingsJson:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualitySettingsJson\s+\}\}')).Count |
+            Should -Be 3
         $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
     }
 
@@ -112,10 +111,16 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match '(?ms)name:\s+Setup Copilot CLI and BCQuality\s+id:\s+setup.*?phase:\s+prepare'
         $reviewAction | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1'"))
         $reviewAction | Should -Match "\`$setupToken = if \(\`$marketplace -eq 'microsoft/BCQuality'\)"
-        $reviewAction | Should -Match "-marketplaceRef `"v\`$bcqualityVersion`""
+        $reviewAction | Should -Match '-marketplaceRef "v\$version"'
+        $reviewAction | Should -Match '-expectedPluginVersion \(\[string\] \$Settings\.pluginVersion\)'
+        $reviewAction | Should -Match '-enabledLayers \(@\(\$Settings\.enabledLayers\) -join '',''\)'
+        $reviewAction | Should -Match '-disabledSkills \(@\(\$Settings\.disabledSkills\) -join '',''\)'
+        $reviewAction | Should -Match '-knowledgeAllow \(@\(\$Settings\.knowledge\.allow\) -join '',''\)'
+        $reviewAction | Should -Match '-knowledgeDeny \(@\(\$Settings\.knowledge\.deny\) -join '',''\)'
         $reviewAction | Should -Match '\$env:BCQUALITY_ROOT = \$bcqualityRoot'
-        $reviewAction | Should -Match '\$env:BCQUALITY_REPO = \$bcqualityMarketplaceRepo'
-        $reviewAction | Should -Match '\$env:BCQUALITY_VERSION = \$bcqualityVersion'
+        $reviewAction | Should -Match '\$env:BCQUALITY_REPO = \[string\] \$bcqualitySettings\.marketplaceRepo'
+        $reviewAction | Should -Match '\$env:BCQUALITY_VERSION = \[string\] \$bcqualitySettings\.version'
+        $reviewAction | Should -Match '\$env:BCQUALITY_SETTINGS_JSON = \(\$bcqualitySettings'
         $reviewAction | Should -Match "\$env:BCQUALITY_CONSUME = 'plugin'"
         $runnerWorkflow | Should -Match "(?ms)phase:\s+prepare.*?bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}.*?phase:\s+generate"
         $runnerWorkflow | Should -Not -Match "(?ms)phase:\s+generate.*?bcqualityToken:"
