@@ -75,6 +75,13 @@
         COPILOT_REVIEW_CLI_TIMEOUT_MINUTES   – Copilot CLI timeout in minutes (default: 30)
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments',
+    '',
+    Justification = 'Private helper scripts consume these configuration values through the shared script scope.'
+)]
+param()
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
