@@ -73,9 +73,6 @@ inputs:
     required: false
     default: 1.0.88
 outputs:
-  enabled:
-    description: Whether Copilot review is enabled
-    value: ${{ steps.copilotprreview.outputs.enabled }}
   eligible:
     description: Whether the pull request is eligible for review
     value: ${{ steps.copilotprreview.outputs.eligible }}

@@ -20,14 +20,12 @@ env:
 
 jobs:
   Settings:
-    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
-      pull-requests: read
     outputs:
-      enabled: ${{ steps.context.outputs.enabled }}
       model: ${{ steps.context.outputs.model }}
       leafModel: ${{ steps.context.outputs.leafModel }}
       eligible: ${{ steps.context.outputs.eligible }}
@@ -66,12 +64,10 @@ jobs:
           settingsJson: ${{ env.CodeReviewAgent }}
           metadataPath: .copilot-pr-review-metadata/event.json
           workflowHeadSha: ${{ github.event.workflow_run.head_sha }}
-          token: ${{ github.token }}
-          repository: ${{ github.repository }}
 
   review:
     needs: Settings
-    if: needs.Settings.outputs.enabled == 'true' && needs.Settings.outputs.eligible == 'true'
+    if: needs.Settings.outputs.eligible == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -74,41 +74,15 @@ function Invoke-ContextPhase {
     $metadata = Get-Content -LiteralPath $metadataPath -Encoding UTF8 -Raw | ConvertFrom-Json
     $owner = [string] $metadata.pull_request.user.login
     $excludedOwners = @($settings.excludedOwners)
-    $enabled = [bool] $settings.enabled
-    $eligible = $enabled -and -not $metadata.pull_request.draft -and $owner -notin $excludedOwners
+    $eligible = -not $metadata.pull_request.draft -and $owner -notin $excludedOwners
     $number = [string] $metadata.pull_request.number
     $headSha = [string] $metadata.pull_request.head.sha
     $targetBranch = [string] $metadata.pull_request.base.ref
 
-    if ($eligible) {
-        if ([string]::IsNullOrWhiteSpace($token) -or [string]::IsNullOrWhiteSpace($repository)) {
-            throw 'token and repository are required to validate an eligible pull request.'
-        }
-
-        $headers = @{
-            Accept = 'application/vnd.github+json'
-            Authorization = "Bearer $token"
-            'User-Agent' = 'al-go-copilot-review'
-        }
-        $apiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL.TrimEnd('/') } else { 'https://api.github.com' }
-        $pullRequest = Invoke-RestMethod -Uri "$apiUrl/repos/$repository/pulls/$number" -Headers $headers -Method GET
-
-        if ($pullRequest.head.sha -ne $headSha -or $pullRequest.head.sha -ne $workflowHeadSha) {
-            throw 'Pull request head SHA does not match the triggering workflow run.'
-        }
-        if ($pullRequest.base.ref -ne $targetBranch) {
-            throw 'Pull request base branch does not match the intake metadata.'
-        }
-        if ($pullRequest.state -ne 'open' -or $pullRequest.draft) {
-            throw 'Pull request is no longer eligible for review.'
-        }
-
-        $number = [string] $pullRequest.number
-        $headSha = [string] $pullRequest.head.sha
-        $targetBranch = [string] $pullRequest.base.ref
+    if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha) {
+        throw 'Pull request head SHA does not match the triggering workflow run.'
     }
 
-    Write-ReviewOutput -Name enabled -Value $enabled.ToString().ToLowerInvariant()
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
     Write-ReviewOutput -Name model -Value ([string] $settings.model)
     Write-ReviewOutput -Name leafModel -Value ([string] $settings.leafModel)

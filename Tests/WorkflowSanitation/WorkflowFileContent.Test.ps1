@@ -80,7 +80,8 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
         $reviewAction | Should -Match '\$settings\.excludedOwners'
-        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.enabled == 'true'"
+        $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
+        $runnerWorkflow | Should -Not -Match 'needs\.Settings\.outputs\.enabled'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
@@ -114,8 +115,10 @@ Describe "Copilot code review workflows" {
     }
 
     It 'Grants only the permissions required by each security boundary' {
+        $settingsJob = [regex]::Match($runnerWorkflow, '(?ms)^  Settings:.*?(?=^  review:)').Value
         $intakeWorkflow | Should -Match "(?ms)permissions:\s+contents: read\s+jobs:"
         $runnerWorkflow | Should -Match "(?ms)Settings:.*?permissions:\s+actions: read\s+contents: read"
+        $settingsJob | Should -Not -Match 'pull-requests:\s+read'
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
@@ -128,16 +131,15 @@ Describe "Copilot code review workflows" {
         $intakeWorkflow | Should -Match 'path:\s+\$\{\{\s+github\.event_path\s+\}\}'
         $runnerWorkflow | Should -Match 'name:\s+copilot-pr-review-metadata'
         $runnerWorkflow | Should -Match 'run-id:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}'
-        $runnerWorkflow | Should -Match "(?ms)phase:\s+context.*?repository:\s+\$\{\{\s+github\.repository\s+\}\}"
+        $runnerWorkflow | Should -Match "workflowHeadSha:\s+\$\{\{\s+github\.event\.workflow_run\.head_sha\s+\}\}"
         $reviewAction | Should -Match ([regex]::Escape('$owner -notin $excludedOwners'))
         $runnerWorkflow | Should -Not -Match 'business-central-bot'
         $runnerWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
         $runnerWorkflow | Should -Not -Match 'Invoke-RestMethod'
-        $reviewAction | Should -Match 'Invoke-RestMethod'
+        $reviewAction | Should -Not -Match 'Invoke-RestMethod'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Match 'prNumber:\s+\$\{\{\s+needs\.Settings\.outputs\.prNumber\s+\}\}'
         $runnerWorkflow | Should -Match 'prHeadSha:\s+\$\{\{\s+needs\.Settings\.outputs\.headSha\s+\}\}'
         $reviewAction | Should -Match 'Pull request head SHA does not match the triggering workflow run'
-        $reviewAction | Should -Match 'Pull request is no longer eligible for review'
     }
 }
