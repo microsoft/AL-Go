@@ -14,22 +14,35 @@ param(
 
 BeforeAll {
     $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
+    $privateScriptRoot = Join-Path (Split-Path -Parent $scriptPath) 'private'
+    $script:ReviewScriptPaths = @($scriptPath)
+    if (Test-Path -LiteralPath $privateScriptRoot -PathType Container) {
+        $script:ReviewScriptPaths += @(
+            Get-ChildItem -LiteralPath $privateScriptRoot -Filter '*.ps1' -File |
+                Sort-Object Name |
+                Select-Object -ExpandProperty FullName
+        )
+    }
     $EngineRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $scriptPath)))
     $ReviewRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
-    $tokens = $null
-    $parseErrors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-        $scriptPath,
-        [ref]$tokens,
-        [ref]$parseErrors
-    )
-    if ($parseErrors.Count -gt 0) {
-        throw ($parseErrors | ForEach-Object Message | Out-String)
+    $script:ReviewFunctionAsts = @()
+    foreach ($reviewScriptPath in $script:ReviewScriptPaths) {
+        $tokens = $null
+        $parseErrors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            $reviewScriptPath,
+            [ref]$tokens,
+            [ref]$parseErrors
+        )
+        if ($parseErrors.Count -gt 0) {
+            throw "$reviewScriptPath`n$($parseErrors | ForEach-Object Message | Out-String)"
+        }
+        $script:ReviewFunctionAsts += @($ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
+        }, $true))
     }
-    $ast.FindAll({
-        param($node)
-        $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
-    }, $true) | ForEach-Object {
+    $script:ReviewFunctionAsts | ForEach-Object {
         $functionDefinition = [scriptblock]::Create($_.Extent.Text)
         . $functionDefinition
     }
@@ -1956,12 +1969,7 @@ Describe 'Deterministic leaf orchestration contract' {
 
 Describe 'Copilot sub-agent delegation guard' {
     It 'applies the guard to every leaf and root Copilot invocation' {
-        $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
-        $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$null)
-        $functions = @($scriptAst.FindAll({
-            param($node)
-            $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
-        }, $true))
+        $functions = @($script:ReviewFunctionAsts)
 
         foreach ($name in @('Get-LeafCopilotArguments', 'Invoke-CopilotCli')) {
             $function = $functions | Where-Object Name -eq $name

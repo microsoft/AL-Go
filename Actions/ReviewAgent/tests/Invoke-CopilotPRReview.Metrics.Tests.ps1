@@ -7,15 +7,14 @@ param()
 
 BeforeAll {
     $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
-    $tokens = $null
-    $parseErrors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-        $scriptPath,
-        [ref]$tokens,
-        [ref]$parseErrors
-    )
-    if ($parseErrors.Count -gt 0) {
-        throw ($parseErrors | ForEach-Object Message | Out-String)
+    $privateScriptRoot = Join-Path (Split-Path -Parent $scriptPath) 'private'
+    $reviewScriptPaths = @($scriptPath)
+    if (Test-Path -LiteralPath $privateScriptRoot -PathType Container) {
+        $reviewScriptPaths += @(
+            Get-ChildItem -LiteralPath $privateScriptRoot -Filter '*.ps1' -File |
+                Sort-Object Name |
+                Select-Object -ExpandProperty FullName
+        )
     }
 
     $wantedFunctions = @(
@@ -35,12 +34,24 @@ BeforeAll {
         'Complete-CopilotProcess',
         'Clear-CopilotMetricsArtifacts'
     )
-    $ast.FindAll({
-        param($node)
-        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
-            $wantedFunctions -contains $node.Name
-    }, $true) | ForEach-Object {
-        . ([scriptblock]::Create($_.Extent.Text))
+    foreach ($reviewScriptPath in $reviewScriptPaths) {
+        $tokens = $null
+        $parseErrors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            $reviewScriptPath,
+            [ref]$tokens,
+            [ref]$parseErrors
+        )
+        if ($parseErrors.Count -gt 0) {
+            throw "$reviewScriptPath`n$($parseErrors | ForEach-Object Message | Out-String)"
+        }
+        $ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                $wantedFunctions -contains $node.Name
+        }, $true) | ForEach-Object {
+            . ([scriptblock]::Create($_.Extent.Text))
+        }
     }
 
     function New-ChatSpan {
