@@ -315,7 +315,7 @@
                     },
                     "description": "GitHub login names whose pull requests are excluded from Copilot code review."
                 },
-                "bcqualityRepo": {
+                "bcqualityMarketplaceRepo": {
                     "type": "string",
                     "format": "uri",
                     "pattern": "^https://github\\.com/[^/]+/[^/]+/?$",
@@ -332,7 +332,7 @@
                 "model",
                 "leafModel",
                 "excludedOwners",
-                "bcqualityRepo",
+                "bcqualityMarketplaceRepo",
                 "bcqualityVersion"
             ]
         },

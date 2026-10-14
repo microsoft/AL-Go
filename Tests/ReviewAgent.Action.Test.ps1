@@ -24,7 +24,7 @@ Describe 'ReviewAgent action' {
             prNumber = 'Validated pull request number'
             headSha = 'Validated pull request head SHA'
             baseRef = 'Validated pull request base branch'
-            bcqualityRepo = 'Trusted BCQuality marketplace repository'
+            bcqualityMarketplaceRepo = 'Trusted BCQuality marketplace repository'
             bcqualityVersion = 'Configured BCQuality content version'
             bcqualityRoot = 'Path to the installed and filtered BCQuality plugin'
             filterReport = 'Path to the BCQuality filter report'
@@ -48,7 +48,7 @@ Describe 'ReviewAgent action' {
 
         & $script:actionScriptPath `
             -phase context `
-            -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityRepo":"https://github.com/contoso/BCQuality","bcqualityVersion":"2.0"}' `
+            -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityMarketplaceRepo":"https://github.com/contoso/BCQuality","bcqualityVersion":"2.0"}' `
             -metadataPath $metadataPath `
             -workflowHeadSha 'abc123'
 
@@ -66,7 +66,7 @@ Describe 'ReviewAgent action' {
         $outputs.prNumber | Should -Be '42'
         $outputs.headSha | Should -Be 'abc123'
         $outputs.baseRef | Should -Be 'main'
-        $outputs.bcqualityRepo | Should -Be 'https://github.com/contoso/BCQuality'
+        $outputs.bcqualityMarketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
         $outputs.bcqualityVersion | Should -Be '2.0'
     }
 
@@ -85,7 +85,7 @@ Describe 'ReviewAgent action' {
         {
             & $script:actionScriptPath `
                 -phase context `
-                -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityRepo":"https://github.com/microsoft/BCQuality","bcqualityVersion":"1.7"}' `
+                -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityMarketplaceRepo":"https://github.com/microsoft/BCQuality","bcqualityVersion":"1.7"}' `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'workflow-run-sha'
         } | Should -Throw 'Pull request head SHA does not match the triggering workflow run.'

@@ -34,7 +34,7 @@ param(
     [Parameter(HelpMessage = "Token with read access to a private BCQuality marketplace")]
     [string] $bcqualityToken = '',
     [Parameter(HelpMessage = "GitHub repository URL containing the BCQuality marketplace")]
-    [string] $bcqualityRepo = 'https://github.com/microsoft/BCQuality',
+    [string] $bcqualityMarketplaceRepo = 'https://github.com/microsoft/BCQuality',
     [Parameter(HelpMessage = "BCQuality content version")]
     [string] $bcqualityVersion = '1.7',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
@@ -80,14 +80,14 @@ function Invoke-ContextPhase {
     $number = [string] $metadata.pull_request.number
     $headSha = [string] $metadata.pull_request.head.sha
     $targetBranch = [string] $metadata.pull_request.base.ref
-    $resolvedBCQualityRepo = [string] $settings.bcqualityRepo
+    $resolvedBCQualityMarketplaceRepo = [string] $settings.bcqualityMarketplaceRepo
     $resolvedBCQualityVersion = [string] $settings.bcqualityVersion
 
     if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha) {
         throw 'Pull request head SHA does not match the triggering workflow run.'
     }
-    if ([string]::IsNullOrWhiteSpace($resolvedBCQualityRepo) -or $resolvedBCQualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
-        throw 'CodeReviewAgent.bcqualityRepo and a major.minor CodeReviewAgent.bcqualityVersion are required.'
+    if ([string]::IsNullOrWhiteSpace($resolvedBCQualityMarketplaceRepo) -or $resolvedBCQualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
+        throw 'CodeReviewAgent.bcqualityMarketplaceRepo and a major.minor CodeReviewAgent.bcqualityVersion are required.'
     }
 
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
@@ -96,7 +96,7 @@ function Invoke-ContextPhase {
     Write-ReviewOutput -Name prNumber -Value $number
     Write-ReviewOutput -Name headSha -Value $headSha
     Write-ReviewOutput -Name baseRef -Value $targetBranch
-    Write-ReviewOutput -Name bcqualityRepo -Value $resolvedBCQualityRepo
+    Write-ReviewOutput -Name bcqualityMarketplaceRepo -Value $resolvedBCQualityMarketplaceRepo
     Write-ReviewOutput -Name bcqualityVersion -Value $resolvedBCQualityVersion
 }
 
@@ -195,7 +195,7 @@ function Invoke-PreparePhase {
     if ($bcqualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
         throw "bcqualityVersion must use major.minor format; received '$bcqualityVersion'."
     }
-    $configuration.bcquality.repo = $bcqualityRepo
+    $configuration.bcquality.repo = $bcqualityMarketplaceRepo
     $configuration.bcquality.ref = "v$bcqualityVersion"
     $configuration.bcquality.version = $bcqualityVersion
     $setup = Invoke-SetupBCQuality -Configuration $configuration

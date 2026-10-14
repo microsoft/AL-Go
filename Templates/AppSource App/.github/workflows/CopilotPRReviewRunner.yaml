@@ -32,7 +32,7 @@ jobs:
       prNumber: ${{ steps.context.outputs.prNumber }}
       headSha: ${{ steps.context.outputs.headSha }}
       baseRef: ${{ steps.context.outputs.baseRef }}
-      bcqualityRepo: ${{ steps.context.outputs.bcqualityRepo }}
+      bcqualityMarketplaceRepo: ${{ steps.context.outputs.bcqualityMarketplaceRepo }}
       bcqualityVersion: ${{ steps.context.outputs.bcqualityVersion }}
     steps:
       - name: Checkout trusted settings
@@ -99,7 +99,7 @@ jobs:
         with:
           shell: pwsh
           phase: prepare
-          bcqualityRepo: ${{ needs.Settings.outputs.bcqualityRepo }}
+          bcqualityMarketplaceRepo: ${{ needs.Settings.outputs.bcqualityMarketplaceRepo }}
           bcqualityVersion: ${{ needs.Settings.outputs.bcqualityVersion }}
           bcqualityToken: ${{ secrets.BCQUALITY_TOKEN }}
 

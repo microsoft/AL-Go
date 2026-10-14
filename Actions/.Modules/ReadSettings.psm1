@@ -161,12 +161,12 @@ function GetDefaultSettings
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
         "CodeReviewAgent"                               = [ordered]@{
-            "enabled"          = $false
-            "model"            = "gpt-5.6-sol"
-            "leafModel"        = "gpt-5.6-luna"
-            "excludedOwners"   = @()
-            "bcqualityRepo"     = "https://github.com/microsoft/BCQuality"
-            "bcqualityVersion" = "1.7"
+            "enabled"                  = $false
+            "model"                    = "gpt-5.6-sol"
+            "leafModel"                = "gpt-5.6-luna"
+            "excludedOwners"           = @()
+            "bcqualityMarketplaceRepo" = "https://github.com/microsoft/BCQuality"
+            "bcqualityVersion"         = "1.7"
         }
         "customCodeCops"                                = @()
         "preprocessorSymbols"                           = @()

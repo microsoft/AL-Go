@@ -23,7 +23,7 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
     "enabled": true,
     "model": "gpt-5.6-sol",
     "leafModel": "gpt-5.6-luna",
-    "bcqualityRepo": "https://github.com/microsoft/BCQuality",
+    "bcqualityMarketplaceRepo": "https://github.com/microsoft/BCQuality",
     "bcqualityVersion": "1.7",
     "excludedOwners": [
       "dependabot[bot]"
@@ -34,7 +34,7 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CICDPullRequestBranches` will be reviewed automatically.
 
-`model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `bcqualityRepo` identifies the trusted public, forked, or private GitHub marketplace repository, and `bcqualityVersion` selects the BCQuality content version. An early runner step installs the corresponding `v<major>.<minor>` release tag, and the remaining review phases use that configured version. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
+`model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `bcqualityMarketplaceRepo` identifies the trusted public, forked, or private GitHub repository hosting the BCQuality marketplace, and `bcqualityVersion` selects the BCQuality content version. An early runner step installs the corresponding `v<major>.<minor>` release tag, and the remaining review phases use that configured version. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
 
 The setting must be enabled at repository level. Project settings do not enable or disable the reviewer.
 

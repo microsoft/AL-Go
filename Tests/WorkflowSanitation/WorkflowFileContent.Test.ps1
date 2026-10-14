@@ -79,14 +79,14 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'settingsJson:\s+\$\{\{\s+env\.CodeReviewAgent\s+\}\}'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityRepo:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityRepo\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityVersion\s+\}\}'
         $reviewAction | Should -Match '\$settings\.excludedOwners'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Not -Match 'needs\.Settings\.outputs\.enabled'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
-        $runnerWorkflow | Should -Match 'bcqualityRepo:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityRepo\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityVersion:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityVersion\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
     }
@@ -111,7 +111,7 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match '(?ms)name:\s+Setup Copilot CLI and BCQuality\s+id:\s+setup.*?phase:\s+prepare'
         $reviewAction | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1'"))
         $reviewAction | Should -Match "\`$setupToken = if \(\`$marketplace -eq 'microsoft/BCQuality'\)"
-        $reviewAction | Should -Match '\$configuration\.bcquality\.repo = \$bcqualityRepo'
+        $reviewAction | Should -Match '\$configuration\.bcquality\.repo = \$bcqualityMarketplaceRepo'
         $reviewAction | Should -Match '\$configuration\.bcquality\.ref = "v\$bcqualityVersion"'
         $reviewAction | Should -Match '\$env:BCQUALITY_ROOT = \$bcqualityRoot'
         $reviewAction | Should -Match '\$env:BCQUALITY_VERSION = \$bcqualityVersion'

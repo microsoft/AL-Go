@@ -286,7 +286,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
-            $codeReviewAgent.bcqualityRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $codeReviewAgent.bcqualityMarketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $codeReviewAgent.bcqualityVersion | Should -Be '1.7'
         }
 
@@ -304,7 +304,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
-            $settings.CodeReviewAgent.bcqualityRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $settings.CodeReviewAgent.bcqualityMarketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $settings.CodeReviewAgent.bcqualityVersion | Should -Be '1.7'
         }
 
