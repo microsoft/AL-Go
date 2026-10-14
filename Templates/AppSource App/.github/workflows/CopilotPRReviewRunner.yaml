@@ -94,15 +94,20 @@ jobs:
         with:
           node-version: 24
 
-      - name: Setup Copilot CLI and BCQuality
-        id: setup
+      - name: Setup Copilot CLI
         uses: microsoft/AL-Go-Actions/ReviewAgent@main
         with:
           shell: pwsh
           phase: prepare
-          bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
-          bcqualityToken: ${{ secrets.BCQUALITY_TOKEN }}
           copilotCliVersion: ${{ env.COPILOT_CLI_VERSION }}
+
+      - name: Setup BCQuality
+        id: setup
+        uses: microsoft/AL-Go-Actions/SetupBCQuality@main
+        with:
+          shell: pwsh
+          bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
+          token: ${{ secrets.BCQUALITY_TOKEN }}
 
       - name: Run Copilot PR review
         uses: microsoft/AL-Go-Actions/ReviewAgent@main
@@ -118,7 +123,7 @@ jobs:
           leafModel: ${{ needs.prepare.outputs.leafModel }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
-          bcqualityRoot: ${{ steps.setup.outputs.bcqualityRoot }}
+          bcqualityRoot: ${{ steps.setup.outputs.pluginRoot }}
           bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
           copilotCliVersion: ${{ env.COPILOT_CLI_VERSION }}
 

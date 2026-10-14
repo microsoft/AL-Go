@@ -39,8 +39,6 @@ Describe 'ReviewAgent action' {
             headSha = 'Validated pull request head SHA'
             baseRef = 'Validated pull request base branch'
             bcqualitySettingsJson = 'Validated BCQuality settings as compressed JSON'
-            bcqualityRoot = 'Path to the installed and filtered BCQuality plugin'
-            filterReport = 'Path to the BCQuality filter report'
         })
     }
 

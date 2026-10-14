@@ -46,9 +46,10 @@ jobs:
 only for prototype testing because they can move between runs.
 
 AL-Go's `ReviewAgent` maps the top-level `BCQuality` setting to these action
-inputs. Marketplace selection, plugin identity, layer and skill filtering,
+inputs through `bcqualitySettingsJson`. Marketplace selection, plugin identity, layer and skill filtering,
 knowledge filtering, and task context therefore share one repository settings
-surface; this action does not load a separate policy file.
+surface. The runner invokes this action directly and passes its `pluginRoot`
+output to `ReviewAgent`; the review action does not install BCQuality.
 
 For a private marketplace repository, pass a token with read access through
 the `token` input. Authentication is applied only to the Git and Copilot CLI

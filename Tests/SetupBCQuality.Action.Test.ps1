@@ -84,6 +84,30 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         Test-Path (Join-Path $scriptRoot 'Get-BCQualityConfig.ps1') | Should -BeFalse
     }
 
+    It 'Maps validated BCQuality settings into setup inputs' {
+        $settingsJson = @{
+            marketplaceRepo = 'https://github.com/contoso/BCQuality'
+            version = '2.0'
+            pluginVersion = '0.3.0'
+            enabledLayers = @('microsoft')
+            disabledSkills = @('microsoft/skills/review/microsoft.md')
+            knowledge = @{
+                allow = @('microsoft/knowledge/**')
+                deny = @()
+            }
+        } | ConvertTo-Json -Compress -Depth 5
+
+        & $script:setupScriptPath -bcqualitySettingsJson $settingsJson
+
+        $report = Get-Content (Join-Path $pluginRoot '_filter-report.json') -Raw | ConvertFrom-Json
+        $report.marketplace | Should -Be 'contoso/BCQuality'
+        $report.marketplaceRef | Should -Be 'v2.0'
+        $report.pluginVersion | Should -Be '0.3.0'
+        $report.enabledLayers | Should -Be 'microsoft'
+        $report.disabledSkills | Should -Be 'microsoft/skills/review/microsoft.md'
+        $report.knowledgeAllow | Should -Be 'microsoft/knowledge/**'
+    }
+
     It 'Retains only the enabled layer and regenerates the index' {
         & $script:setupScriptPath -enabledLayers microsoft
 

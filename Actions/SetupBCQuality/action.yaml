@@ -5,6 +5,10 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+  bcqualitySettingsJson:
+    description: Validated BCQuality settings as compressed JSON
+    required: false
+    default: ''
   marketplace:
     description: GitHub owner/repository containing the BCQuality marketplace
     required: false
@@ -66,6 +70,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: setupbcquality
       env:
+        _bcqualitySettingsJson: ${{ inputs.bcqualitySettingsJson }}
         _marketplace: ${{ inputs.marketplace }}
         _marketplaceRef: ${{ inputs.marketplaceRef }}
         _expectedPluginVersion: ${{ inputs.expectedPluginVersion }}
@@ -76,7 +81,7 @@ runs:
         _token: ${{ inputs.token }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetupBCQuality" -Action {
-          ${{ github.action_path }}/SetupBCQuality.ps1 -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny -token $ENV:_token
+          ${{ github.action_path }}/SetupBCQuality.ps1 -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny -token $ENV:_token
         }
 branding:
   icon: terminal

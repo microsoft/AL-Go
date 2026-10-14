@@ -33,8 +33,6 @@ param(
     [string] $reviewWorkspace = '',
     [Parameter(HelpMessage = "Directory used for generated review artifacts")]
     [string] $reviewOutputDir = '',
-    [Parameter(HelpMessage = "Token with read access to a private BCQuality marketplace")]
-    [string] $bcqualityToken = '',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
     [string] $bcqualityRoot = '',
     [Parameter(HelpMessage = "Exact Copilot CLI version to install and run")]
@@ -154,52 +152,6 @@ function Assert-CopilotCliVersion {
     }
 }
 
-function Invoke-SetupBCQuality {
-    param(
-        [Parameter(Mandatory)] $Settings
-    )
-
-    $marketplaceRepo = [string] $Settings.marketplaceRepo
-    $version = [string] $Settings.version
-    $repoUri = [Uri] $marketplaceRepo
-    if ($repoUri.Host -ne 'github.com') {
-        throw "BCQuality marketplace must be hosted on github.com; received '$marketplaceRepo'."
-    }
-    $marketplace = $repoUri.AbsolutePath.Trim('/')
-    if ($marketplace -notmatch '^[^/]+/[^/]+$') {
-        throw "BCQuality marketplace URL must identify one owner/repository; received '$marketplaceRepo'."
-    }
-
-    $setupOutput = [System.IO.Path]::GetTempFileName()
-    $originalOutput = $env:GITHUB_OUTPUT
-    try {
-        $env:GITHUB_OUTPUT = $setupOutput
-        $setupToken = if ($marketplace -eq 'microsoft/BCQuality') { '' } else { $bcqualityToken }
-        & (Join-Path $PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1') `
-            -marketplace $marketplace `
-            -marketplaceRef "v$version" `
-            -expectedPluginVersion ([string] $Settings.pluginVersion) `
-            -enabledLayers (@($Settings.enabledLayers) -join ',') `
-            -disabledSkills (@($Settings.disabledSkills) -join ',') `
-            -knowledgeAllow (@($Settings.knowledge.allow) -join ',') `
-            -knowledgeDeny (@($Settings.knowledge.deny) -join ',') `
-            -token $setupToken
-
-        $outputs = @{}
-        Get-Content -LiteralPath $setupOutput -Encoding UTF8 | ForEach-Object {
-            $pair = $_ -split '=', 2
-            if ($pair.Count -eq 2) {
-                $outputs[$pair[0]] = $pair[1]
-            }
-        }
-        return $outputs
-    }
-    finally {
-        $env:GITHUB_OUTPUT = $originalOutput
-        Remove-Item -LiteralPath $setupOutput -Force -ErrorAction SilentlyContinue
-    }
-}
-
 function Initialize-ReviewEnvironment {
     $env:GITHUB_TOKEN = $token
     $env:GITHUB_REPOSITORY = $repository
@@ -219,7 +171,6 @@ function Initialize-ReviewEnvironment {
 }
 
 function Invoke-PreparePhase {
-    $bcqualitySettings = Get-BCQualitySettings
     Assert-CopilotCliVersion
 
     & npm install --global "@github/copilot@$copilotCliVersion"
@@ -230,14 +181,6 @@ function Invoke-PreparePhase {
     if ($LASTEXITCODE -ne 0) {
         throw 'Failed to execute GitHub Copilot CLI after installation.'
     }
-
-    $setup = Invoke-SetupBCQuality -Settings $bcqualitySettings
-    if (-not $setup.pluginRoot) {
-        throw 'SetupBCQuality did not return the plugin root.'
-    }
-
-    Write-ReviewOutput -Name bcqualityRoot -Value $setup.pluginRoot
-    Write-ReviewOutput -Name filterReport -Value $setup.filterReport
 }
 
 function Invoke-GeneratePhase {

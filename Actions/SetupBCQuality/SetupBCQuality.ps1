@@ -4,6 +4,8 @@ Installs and physically filters the BCQuality Copilot plugin.
 #>
 [CmdletBinding()]
 param(
+    [Parameter(HelpMessage = "Validated BCQuality settings as compressed JSON")]
+    [string] $bcqualitySettingsJson = '',
     [Parameter(HelpMessage = "GitHub owner/repository containing the BCQuality marketplace")]
     [string] $marketplace = 'microsoft/BCQuality',
     [Parameter(HelpMessage = "BCQuality marketplace release tag")]
@@ -26,6 +28,36 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version 2.0
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'SetupBCQuality.psm1' -Resolve) -Force -DisableNameChecking
+
+if (-not [string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
+    try {
+        $settings = $bcqualitySettingsJson | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        throw "bcqualitySettingsJson must contain valid JSON: $($_.Exception.Message)"
+    }
+
+    $marketplaceRepo = [string] $settings.marketplaceRepo
+    $repoUri = $null
+    if (
+        -not [Uri]::TryCreate($marketplaceRepo, [UriKind]::Absolute, [ref] $repoUri) -or
+        $repoUri.Scheme -ne 'https' -or
+        $repoUri.Host -ne 'github.com'
+    ) {
+        throw "BCQuality marketplace must be an HTTPS github.com repository URL; received '$marketplaceRepo'."
+    }
+    $marketplace = $repoUri.AbsolutePath.Trim('/')
+    if ($marketplace -notmatch '^[^/]+/[^/]+$') {
+        throw "BCQuality marketplace URL must identify one owner/repository; received '$marketplaceRepo'."
+    }
+
+    $marketplaceRef = "v$([string] $settings.version)"
+    $expectedPluginVersion = [string] $settings.pluginVersion
+    $enabledLayers = @($settings.enabledLayers) -join ','
+    $disabledSkills = @($settings.disabledSkills) -join ','
+    $knowledgeAllow = @($settings.knowledge.allow) -join ','
+    $knowledgeDeny = @($settings.knowledge.deny) -join ','
+}
 
 $runnerEnvironment = if ($env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT) { $env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT } else { $env:RUNNER_ENVIRONMENT }
 $pluginRoot = $env:SETUP_BCQUALITY_PLUGIN_ROOT
