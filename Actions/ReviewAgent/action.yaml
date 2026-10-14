@@ -69,9 +69,9 @@ inputs:
     required: false
     default: ''
   copilotCliVersion:
-    description: Compatibility-validated Copilot CLI version
+    description: Exact Copilot CLI version to install and run
     required: false
-    default: 1.0.88
+    default: ''
 outputs:
   eligible:
     description: Whether the pull request is eligible for review
@@ -100,9 +100,6 @@ outputs:
   filterReport:
     description: Path to the BCQuality filter report
     value: ${{ steps.reviewagent.outputs.filterReport }}
-  copilotCliVersion:
-    description: Installed Copilot CLI version
-    value: ${{ steps.reviewagent.outputs.copilotCliVersion }}
 runs:
   using: composite
   steps:

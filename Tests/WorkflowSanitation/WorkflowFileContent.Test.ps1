@@ -89,6 +89,9 @@ Describe "Copilot code review workflows" {
         ([regex]::Matches($runnerWorkflow, 'bcqualitySettingsJson:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualitySettingsJson\s+\}\}')).Count |
             Should -Be 3
         $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
+        $runnerWorkflow | Should -Match '(?m)^  COPILOT_CLI_VERSION:\s+1\.0\.88\r?$'
+        ([regex]::Matches($runnerWorkflow, 'copilotCliVersion:\s+\$\{\{\s+env\.COPILOT_CLI_VERSION\s+\}\}')).Count |
+            Should -Be 2
     }
 
     It 'Uses the review action without a third workflow' {

@@ -924,10 +924,6 @@ Describe 'Deterministic leaf orchestration contract' {
         $script:ReviewProcessTelemetry = [System.Collections.Generic.List[object]]::new()
         $script:ReviewRunCompletedAt = $null
         $script:ObservedCopilotCliVersion = '1.0.83'
-        $script:CopilotCliCompatibility = [pscustomobject]@{
-            version = '1.0.83'
-            otel_cli_version = 'required'
-        }
         New-Item -ItemType Directory -Path (Join-Path $BCQualityRoot 'microsoft/skills/review') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $BCQualityRoot 'skills') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $BCQualityRoot 'schemas') -Force | Out-Null
@@ -1828,24 +1824,7 @@ Describe 'Deterministic leaf orchestration contract' {
             Should -Throw "*expected startup-probed Copilot CLI '1.0.83'*"
     }
 
-    It 'requires OTel CLI version for the 1.0.83 compatibility policy' {
-        $metrics = [pscustomobject]@{
-            models = @('gpt-5.4')
-            usage_complete = $true
-            malformed_records = 0
-            cli_version = $null
-        }
-
-        { Assert-CopilotInvocationMetrics -Metrics $metrics -RequestedModel 'gpt-5.4' -InvocationLabel 'leaf' } |
-            Should -Throw "*expected startup-probed Copilot CLI '1.0.83'; telemetry reported '(none)'*"
-    }
-
-    It 'accepts absent OTel CLI version only for the 1.0.88 compatibility policy' {
-        $script:ObservedCopilotCliVersion = '1.0.88'
-        $script:CopilotCliCompatibility = [pscustomobject]@{
-            version = '1.0.88'
-            otel_cli_version = 'optional'
-        }
+    It 'accepts absent OTel CLI version after the executable pin is verified at startup' {
         $metrics = [pscustomobject]@{
             models = @('gpt-5.4')
             usage_complete = $true
@@ -1857,12 +1836,8 @@ Describe 'Deterministic leaf orchestration contract' {
             Should -Not -Throw
     }
 
-    It 'accepts a matching OTel CLI version for the 1.0.88 compatibility policy' {
+    It 'accepts a matching OTel CLI version when telemetry reports one' {
         $script:ObservedCopilotCliVersion = '1.0.88'
-        $script:CopilotCliCompatibility = [pscustomobject]@{
-            version = '1.0.88'
-            otel_cli_version = 'optional'
-        }
         $metrics = [pscustomobject]@{
             models = @('gpt-5.4')
             usage_complete = $true
@@ -1874,12 +1849,8 @@ Describe 'Deterministic leaf orchestration contract' {
             Should -Not -Throw
     }
 
-    It 'rejects a mismatched OTel CLI version for the 1.0.88 compatibility policy' {
+    It 'rejects a mismatched OTel CLI version when telemetry reports one' {
         $script:ObservedCopilotCliVersion = '1.0.88'
-        $script:CopilotCliCompatibility = [pscustomobject]@{
-            version = '1.0.88'
-            otel_cli_version = 'optional'
-        }
         $metrics = [pscustomobject]@{
             models = @('gpt-5.4')
             usage_complete = $true
@@ -2177,7 +2148,6 @@ Describe 'Local review authentication' {
         $LeafModel = 'gpt-5.4'
         $script:CopilotExecutable = $null
         $script:ObservedCopilotCliVersion = $null
-        $script:CopilotCliCompatibility = $null
 
         Mock Get-Command {
             [pscustomobject]@{ Name = 'Test-Json' }
@@ -2200,7 +2170,6 @@ Describe 'Local review authentication' {
 
         $script:CopilotExecutable | Should -Be 'C:\tools\copilot.exe'
         $script:ObservedCopilotCliVersion | Should -Be '1.0.83'
-        $script:CopilotCliCompatibility.otel_cli_version | Should -Be 'required'
         Should -Invoke Resolve-CopilotExecutable -Times 1 -Exactly
         Should -Invoke Invoke-CopilotVersionProbe -Times 1 -Exactly -ParameterFilter {
             $Executable -eq 'C:\tools\copilot.exe'
@@ -2218,7 +2187,7 @@ Describe 'Local review authentication' {
         Get-CopilotExecutableVersion -Executable 'C:\tools\copilot.exe' | Should -Be '1.0.89-1'
     }
 
-    It 'fails during preflight before an agent process for an unsupported CLI version' {
+    It 'accepts a different exact CLI pin when the runner installs that version' {
         $CopilotCliVersion = '1.0.89'
         Mock Invoke-CopilotVersionProbe {
             @(
@@ -2226,10 +2195,9 @@ Describe 'Local review authentication' {
                 "Run 'copilot update' to check for updates."
             )
         }
-        Mock Start-LeafCopilotProcess {}
 
-        { Assert-Config } | Should -Throw "*has not been compatibility-validated*"
-        Should -Invoke Start-LeafCopilotProcess -Times 0 -Exactly
+        { Assert-Config } | Should -Not -Throw
+        $script:ObservedCopilotCliVersion | Should -Be '1.0.89'
     }
 
     It 'fails early when the requested CLI pin differs from the startup probe' {

@@ -271,7 +271,6 @@ $script:ReviewPlanSourceSnapshot = ''
 $script:ReviewRunCompletedAt = $null
 $script:CopilotExecutable = $null
 $script:ObservedCopilotCliVersion = $null
-$script:CopilotCliCompatibility = $null
 
 # Load internal helpers into this script scope. These remain dot-sourced until
 # their shared state is replaced with explicit context objects.
@@ -346,7 +345,7 @@ $modelDisplay = if ($CopilotModel) {
 Write-LogPhaseDetail "Model:     $modelDisplay"
 Write-LogPhaseDetail "Leaves:    $LeafModel ($LeafExecution, max concurrency $MaxLeafConcurrency)"
 if ($script:ObservedCopilotCliVersion) {
-    Write-LogPhaseDetail "Copilot CLI: requested $CopilotCliVersion; startup-probed $script:ObservedCopilotCliVersion ($($script:CopilotCliCompatibility.otel_cli_version) OTel CLI version)"
+    Write-LogPhaseDetail "Copilot CLI: requested $CopilotCliVersion; startup-probed $script:ObservedCopilotCliVersion"
 }
 Write-LogPhaseDetail "Agent:     $AgentLabel v$AgentVersion"
 Write-LogPhaseDetail "Severity:  knowledge≥$MinimumSeverity, agent≥$AgentMinimumSeverity (max $MaxFindings findings/domain)"

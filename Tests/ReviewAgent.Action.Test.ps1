@@ -41,7 +41,6 @@ Describe 'ReviewAgent action' {
             bcqualitySettingsJson = 'Validated BCQuality settings as compressed JSON'
             bcqualityRoot = 'Path to the installed and filtered BCQuality plugin'
             filterReport = 'Path to the BCQuality filter report'
-            copilotCliVersion = 'Installed Copilot CLI version'
         })
     }
 

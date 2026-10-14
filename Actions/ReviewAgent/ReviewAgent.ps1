@@ -37,8 +37,8 @@ param(
     [string] $bcqualityToken = '',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
     [string] $bcqualityRoot = '',
-    [Parameter(HelpMessage = "Compatibility-validated Copilot CLI version")]
-    [string] $copilotCliVersion = '1.0.88'
+    [Parameter(HelpMessage = "Exact Copilot CLI version to install and run")]
+    [string] $copilotCliVersion = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -152,11 +152,6 @@ function Assert-CopilotCliVersion {
     if ($copilotCliVersion -notmatch '\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*))?\z') {
         throw "copilotCliVersion must be an exact semantic version; received '$copilotCliVersion'."
     }
-
-    $policy = Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot 'copilot-cli-compatibility.psd1') -ErrorAction Stop
-    if ($policy.schema_version -ne 1 -or -not $policy.supported_versions.ContainsKey($copilotCliVersion)) {
-        throw "Copilot CLI version '$copilotCliVersion' has not been compatibility-validated by the action policy."
-    }
 }
 
 function Invoke-SetupBCQuality {
@@ -226,7 +221,6 @@ function Initialize-ReviewEnvironment {
 function Invoke-PreparePhase {
     $bcqualitySettings = Get-BCQualitySettings
     Assert-CopilotCliVersion
-    Write-ReviewOutput -Name copilotCliVersion -Value $copilotCliVersion
 
     & npm install --global "@github/copilot@$copilotCliVersion"
     if ($LASTEXITCODE -ne 0) {

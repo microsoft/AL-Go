@@ -321,10 +321,9 @@ function Assert-CopilotInvocationMetrics {
     }
     if (
         -not $script:ObservedCopilotCliVersion -or
-        -not $script:CopilotCliCompatibility -or
-        $script:CopilotCliCompatibility.otel_cli_version -notin @('required', 'optional')
+        -not (Test-CopilotCliVersionFormat -Version $script:ObservedCopilotCliVersion)
     ) {
-        throw "$InvocationLabel cannot validate Copilot CLI telemetry because startup compatibility validation did not complete."
+        throw "$InvocationLabel cannot validate Copilot CLI telemetry because startup runtime validation did not complete."
     }
 
     $reportedVersion = ([string]$Metrics.cli_version).Trim()
@@ -332,9 +331,6 @@ function Assert-CopilotInvocationMetrics {
         if ($reportedVersion -cne $script:ObservedCopilotCliVersion) {
             throw "$InvocationLabel expected startup-probed Copilot CLI '$script:ObservedCopilotCliVersion'; telemetry reported '$reportedVersion'."
         }
-    }
-    elseif ($script:CopilotCliCompatibility.otel_cli_version -eq 'required') {
-        throw "$InvocationLabel expected startup-probed Copilot CLI '$script:ObservedCopilotCliVersion'; telemetry reported '(none)'."
     }
 }
 

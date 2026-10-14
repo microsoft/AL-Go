@@ -92,7 +92,7 @@ function Resolve-CopilotExecutable {
             Select-Object -First 1
     }
     if (-not $copilotCommand -or -not $copilotCommand.Source) {
-        throw 'Copilot CLI not found in PATH. Install an exact compatibility-validated @github/copilot release before running this script.'
+        throw 'Copilot CLI not found in PATH. Install the exact @github/copilot release selected by the runner workflow before running this script.'
     }
 
     return [string]$copilotCommand.Source
@@ -136,52 +136,7 @@ function Get-CopilotExecutableVersion {
     return $bannerVersions[0]
 }
 
-function Get-CopilotCliCompatibility {
-    param([Parameter(Mandatory)][string] $Version)
-
-    $policyPath = Join-Path $ReviewRoot 'copilot-cli-compatibility.psd1'
-    if (-not (Test-Path -LiteralPath $policyPath -PathType Leaf)) {
-        throw "Copilot CLI compatibility policy is missing: $policyPath"
-    }
-
-    try {
-        $policy = Import-PowerShellDataFile -Path $policyPath -ErrorAction Stop
-    }
-    catch {
-        throw "Could not load Copilot CLI compatibility policy '$policyPath': $($_.Exception.Message)"
-    }
-
-    if (
-        $policy -isnot [hashtable] -or
-        -not $policy.ContainsKey('schema_version') -or
-        $policy.schema_version -ne 1 -or
-        -not $policy.ContainsKey('supported_versions') -or
-        $policy.supported_versions -isnot [hashtable]
-    ) {
-        throw "Copilot CLI compatibility policy '$policyPath' has an unsupported schema."
-    }
-
-    $versionPolicy = $policy.supported_versions[$Version]
-    if ($versionPolicy -isnot [hashtable]) {
-        $supportedVersions = @($policy.supported_versions.Keys | Sort-Object)
-        throw "Copilot CLI version '$Version' has not been compatibility-validated. Supported exact versions: $($supportedVersions -join ', '). Run a non-production compatibility canary and add an explicit policy entry before using a new release."
-    }
-    if (-not $versionPolicy.ContainsKey('otel_cli_version')) {
-        throw "Copilot CLI compatibility policy for '$Version' is missing OTel CLI-version behavior."
-    }
-
-    $otelBehavior = [string]$versionPolicy.otel_cli_version
-    if ($otelBehavior -notin @('required', 'optional')) {
-        throw "Copilot CLI compatibility policy for '$Version' has unsupported OTel CLI-version behavior '$otelBehavior'."
-    }
-
-    return [pscustomobject][ordered]@{
-        version = $Version
-        otel_cli_version = $otelBehavior
-    }
-}
-
-function Initialize-CopilotCliCompatibility {
+function Initialize-CopilotCliRuntime {
     $executable = Resolve-CopilotExecutable
     $observedVersion = Get-CopilotExecutableVersion -Executable $executable
     $script:CopilotExecutable = $executable
@@ -189,9 +144,6 @@ function Initialize-CopilotCliCompatibility {
     if ($CopilotCliVersion -cne $observedVersion) {
         throw "COPILOT_REVIEW_CLI_VERSION '$CopilotCliVersion' does not match startup-probed Copilot CLI version '$observedVersion' from '$executable'."
     }
-
-    $compatibility = Get-CopilotCliCompatibility -Version $observedVersion
-    $script:CopilotCliCompatibility = $compatibility
 }
 
 function Assert-Config {
@@ -266,7 +218,7 @@ function Assert-Config {
         if (-not (Test-Path -LiteralPath $findingsSchema -PathType Leaf)) {
             throw "Installed BCQuality plugin is missing the findings-report schema: $findingsSchema. BCQuality commit b74967bc5b7a454eae19d6a1250199afd869f064 or a newer ref is required (introduced by microsoft/BCQuality#182)."
         }
-        Initialize-CopilotCliCompatibility
+        Initialize-CopilotCliRuntime
         if ($CopilotCliTimeoutMinutes -lt 0) {
             throw "COPILOT_REVIEW_CLI_TIMEOUT_MINUTES must be 0 (unlimited) or a positive integer. Actual: $CopilotCliTimeoutMinutes"
         }
