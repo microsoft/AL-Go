@@ -2009,6 +2009,48 @@ Describe 'BCQuality version ownership' {
     }
 }
 
+Describe 'PR head SHA binding' {
+    BeforeEach {
+        $TrustedWorkspace = 'C:\trusted-workspace'
+    }
+
+    It 'accepts the fetched PR head only when it matches the validated event SHA' {
+        $expected = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        Mock Invoke-GitCommand { @($expected.ToUpperInvariant()) } -ParameterFilter {
+            $Arguments -join ' ' -eq '-C C:\trusted-workspace rev-parse --verify refs/remotes/origin/pr/42^{commit}'
+        }
+
+        Get-ValidatedPrHeadCommit `
+            -RemoteRef 'refs/remotes/origin/pr/42' `
+            -ExpectedHeadSha $expected |
+            Should -BeExactly $expected
+
+        Should -Invoke Invoke-GitCommand -Times 1 -Exactly
+    }
+
+    It 'fails closed when the pull request head changed after intake' {
+        $expected = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        $fetched = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+        Mock Invoke-GitCommand { @($fetched) }
+
+        {
+            Get-ValidatedPrHeadCommit `
+                -RemoteRef 'refs/remotes/origin/pr/42' `
+                -ExpectedHeadSha $expected
+        } | Should -Throw "*does not match validated PR_HEAD_SHA '$expected'*"
+    }
+
+    It 'rejects a non-commit result from the fetched PR ref' {
+        Mock Invoke-GitCommand { @('refs/remotes/origin/pr/42') }
+
+        {
+            Get-ValidatedPrHeadCommit `
+                -RemoteRef 'refs/remotes/origin/pr/42' `
+                -ExpectedHeadSha 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        } | Should -Throw "*did not resolve to a full commit SHA*"
+    }
+}
+
 Describe 'BCQuality settings ownership' {
     BeforeEach {
         $env:BCQUALITY_SETTINGS_JSON = @{
@@ -2213,9 +2255,18 @@ Describe 'Local review authentication' {
     It 'still requires GH_TOKEN for PR generation' {
         $ReviewSource = 'pr'
         $PrNumber = 1
-        $PrHeadSha = 'abc123'
+        $PrHeadSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 
         { Assert-Config } | Should -Throw '*GH_TOKEN is required*'
+    }
+
+    It 'requires a full commit SHA for PR reviews' {
+        $ReviewSource = 'pr'
+        $CopilotToken = 'generate-token'
+        $PrNumber = 1
+        $PrHeadSha = 'abc123'
+
+        { Assert-Config } | Should -Throw "*PR_HEAD_SHA must be a full 40-character commit SHA*"
     }
 
     It 'rejects a model working directory inside the repository under review' {
@@ -2229,7 +2280,7 @@ Describe 'Local review authentication' {
         $ReviewSource = 'pr'
         $GithubToken = 'post-token'
         $PrNumber = 1
-        $PrHeadSha = 'abc123'
+        $PrHeadSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         $BCQualityRoot = $null
         $BCQualityVersion = Resolve-BCQualityVersion -Version '1.7'
 
@@ -2242,7 +2293,7 @@ Describe 'Local review authentication' {
         $ReviewSource = 'pr'
         $GithubToken = 'post-token'
         $PrNumber = 1
-        $PrHeadSha = 'abc123'
+        $PrHeadSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         $BCQualityRoot = $null
         $BCQualityVersion = Resolve-BCQualityVersion -Version '1.7'
         Mock Post-Findings {
@@ -2618,7 +2669,7 @@ Describe 'Save-ReviewArtifacts' {
         $Repository = 'microsoft/BCApps'
         $PrNumber = 1
         $BaseBranch = 'main'
-        $PrHeadSha = 'abc123'
+        $PrHeadSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         $report = [pscustomobject]@{
             Outcome = 'completed'
             OutcomeReason = ''

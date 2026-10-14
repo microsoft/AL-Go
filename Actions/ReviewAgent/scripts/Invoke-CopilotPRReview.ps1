@@ -482,6 +482,9 @@ function Assert-Config {
     else {
         if ($PrNumber -eq 0) { throw 'PR_NUMBER is required' }
         if (-not $PrHeadSha) { throw 'PR_HEAD_SHA is required' }
+        if ($PrHeadSha -notmatch '\A[a-fA-F0-9]{40}\z') {
+            throw "PR_HEAD_SHA must be a full 40-character commit SHA; received '$PrHeadSha'."
+        }
     }
     if ($BaseBranch -notmatch '^[A-Za-z0-9._/-]+$') {
         throw "BASE_BRANCH contains unexpected characters: '$BaseBranch'. Expected a git ref name matching ^[A-Za-z0-9._/-]+`$."
@@ -988,6 +991,36 @@ function Get-CopilotSecurityArguments {
     )
 }
 
+function Get-ValidatedPrHeadCommit {
+    param(
+        [Parameter(Mandatory)][string] $RemoteRef,
+        [Parameter(Mandatory)][string] $ExpectedHeadSha
+    )
+
+    if ($ExpectedHeadSha -notmatch '\A[a-fA-F0-9]{40}\z') {
+        throw "Expected PR head must be a full 40-character commit SHA; received '$ExpectedHeadSha'."
+    }
+
+    $resolvedHead = @(
+        Invoke-GitCommand -Arguments @(
+            '-C',
+            $TrustedWorkspace,
+            'rev-parse',
+            '--verify',
+            "$RemoteRef^{commit}"
+        )
+    ) | Select-Object -First 1
+    $resolvedHead = ([string]$resolvedHead).Trim()
+    if ($resolvedHead -notmatch '\A[a-fA-F0-9]{40}\z') {
+        throw "Fetched PR head '$RemoteRef' did not resolve to a full commit SHA."
+    }
+    if (-not $resolvedHead.Equals($ExpectedHeadSha, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Fetched PR head '$resolvedHead' does not match validated PR_HEAD_SHA '$ExpectedHeadSha'. The pull request changed after this review started."
+    }
+
+    return $resolvedHead.ToLowerInvariant()
+}
+
 function Checkout-PrBranch {
     Write-Host "Fetching base branch origin/$BaseBranch"
     $null = Invoke-GitCommandAuthenticated -Arguments @('-C', $TrustedWorkspace, 'fetch', 'origin', $BaseBranch, '--no-tags')
@@ -995,7 +1028,8 @@ function Checkout-PrBranch {
     $prRef = "refs/pull/$PrNumber/head"
     $remoteRef = "refs/remotes/origin/pr/$PrNumber"
     Write-Host "Fetching PR head $prRef"
-    $null = Invoke-GitCommandAuthenticated -Arguments @('-C', $TrustedWorkspace, 'fetch', 'origin', "$prRef`:$remoteRef", '--no-tags')
+    $null = Invoke-GitCommandAuthenticated -Arguments @('-C', $TrustedWorkspace, 'fetch', 'origin', "+$prRef`:$remoteRef", '--no-tags')
+    $validatedHead = Get-ValidatedPrHeadCommit -RemoteRef $remoteRef -ExpectedHeadSha $PrHeadSha
 
     $analysisParent = Split-Path -Parent $AnalysisWorkspace
     if (-not (Test-Path $analysisParent)) {
@@ -1008,7 +1042,7 @@ function Checkout-PrBranch {
     }
 
     Write-Host "Checking out PR head into detached analysis worktree ($AnalysisWorkspace)"
-    $null = Invoke-GitCommand -Arguments @('-C', $TrustedWorkspace, 'worktree', 'add', '--detach', '--force', $AnalysisWorkspace, $remoteRef)
+    $null = Invoke-GitCommand -Arguments @('-C', $TrustedWorkspace, 'worktree', 'add', '--detach', '--force', $AnalysisWorkspace, $validatedHead)
 }
 
 # ---------------------------------------------------------------------------
