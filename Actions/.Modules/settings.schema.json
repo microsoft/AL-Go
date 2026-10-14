@@ -318,15 +318,16 @@
                 "bcqualityMarketplaceRepo": {
                     "type": "string",
                     "format": "uri",
-                    "pattern": "^https://github\\.com/[^/]+/[^/]+/?$",
+                    "pattern": "^https://github\\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/(?![^/?#]+\\.git/?$)[A-Za-z0-9._-]{1,100}/?$",
                     "description": "Trusted public or private GitHub repository containing the BCQuality marketplace."
                 },
                 "bcqualityVersion": {
                     "type": "string",
                     "pattern": "^[0-9]+\\.[0-9]+$",
-                    "description": "BCQuality content version. ReviewAgent installs the corresponding immutable v-prefixed marketplace tag."
+                    "description": "BCQuality content version. ReviewAgent installs the corresponding v-prefixed marketplace tag."
                 }
             },
+            "additionalProperties": false,
             "required": [
                 "enabled",
                 "model",

@@ -308,6 +308,29 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.CodeReviewAgent.bcqualityVersion | Should -Be '1.7'
         }
 
+        It 'Rejects unknown Copilot code review settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $settings = GetDefaultSettings
+            $settings.CodeReviewAgent['bcqualityMarketplaceRepository'] = 'https://github.com/microsoft/BCQuality'
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
+        It 'Rejects malformed BCQuality marketplace repository URLs' -Skip:($PSVersionTable.PSVersion.Major -lt 7) -TestCases @(
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality.git' }
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality?ref=main' }
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality#main' }
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality/skills' }
+        ) {
+            param($MarketplaceRepo)
+
+            $settings = GetDefaultSettings
+            $settings.CodeReviewAgent.bcqualityMarketplaceRepo = $MarketplaceRepo
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
