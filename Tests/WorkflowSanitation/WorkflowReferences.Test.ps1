@@ -2,10 +2,6 @@
 Import-Module (Join-Path $PSScriptRoot '../TestActionsHelper.psm1')
 
 Describe "All AL-Go workflows should reference actions from approved repositories" {
-    It 'Reusable Copilot review workflow references actions from approved repositories' {
-        TestActionsReferences -YamlPath (Join-Path $PSScriptRoot '..\..\.github\workflows\CopilotPRReview.yml' -Resolve)
-    }
-
     It 'All PTE workflows reference actions from approved repositories' {
         (Join-Path $PSScriptRoot "..\..\Templates\Per Tenant Extension\.github\workflows\" -Resolve) | GetWorkflowsInPath | ForEach-Object {
             TestActionsReferences -YamlPath $_.FullName

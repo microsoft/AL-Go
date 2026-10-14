@@ -2519,7 +2519,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude.Count | Should -Be 28
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml")
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReviewRunner.yaml")
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_CopilotPRReview.yaml")
+        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yml")
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildPowerPlatformSolution.yaml")
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PullPowerPlatformChanges.yaml")
         $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
@@ -2586,7 +2586,7 @@ Describe "GetFilesToUpdate (real template)" {
 
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReviewRunner.yaml")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_CopilotPRReview.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yml")
 
     }
 
@@ -2612,7 +2612,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReviewRunner.yaml")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_CopilotPRReview.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yml")
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
@@ -2641,7 +2641,7 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/PushPowerPlatformChanges.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReviewRunner.yaml")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_CopilotPRReview.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yml")
     }
 
     It 'Returns the custom template settings files when there is a custom template' {
@@ -2713,10 +2713,10 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/CopilotPRReview.yaml")
         $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/CopilotPRReviewRunner.yaml")
-        $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/_CopilotPRReview.yaml")
+        $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/CopilotPRReview.yml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/CopilotPRReview.yaml")
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/CopilotPRReviewRunner.yaml")
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/_CopilotPRReview.yaml")
+        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realAppSourceAppTemplateFolder ".github/workflows/CopilotPRReview.yml")
 
         $ppFiles = $filesToInclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
         $ppFiles | Should -BeNullOrEmpty

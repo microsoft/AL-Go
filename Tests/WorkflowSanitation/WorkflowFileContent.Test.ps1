@@ -64,7 +64,7 @@ Describe "Copilot code review workflows" {
     BeforeAll {
         $workflowFolder = Join-Path $PSScriptRoot '..\..\Templates\Per Tenant Extension\.github\workflows' -Resolve
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'reusableWorkflow', Justification = 'False positive across Pester scopes.')]
-        $reusableWorkflow = Get-Content -Path (Join-Path $workflowFolder '_CopilotPRReview.yaml') -Encoding UTF8 -Raw
+        $reusableWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'intakeWorkflow', Justification = 'False positive across Pester scopes.')]
         $intakeWorkflow = Get-Content -Path (Join-Path $workflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'runnerWorkflow', Justification = 'False positive across Pester scopes.')]
@@ -86,7 +86,7 @@ Describe "Copilot code review workflows" {
     }
 
     It 'Uses the local reusable reviewer workflow' {
-        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./.github/workflows/_CopilotPRReview.yaml'))
+        $runnerWorkflow | Should -Match ([regex]::Escape('uses: ./.github/workflows/CopilotPRReview.yml'))
         $runnerWorkflow | Should -Match 'engine_ref:\s+main'
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
@@ -95,7 +95,7 @@ Describe "Copilot code review workflows" {
         $appSourceWorkflowFolder = Join-Path $PSScriptRoot '..\..\Templates\AppSource App\.github\workflows' -Resolve
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $intakeWorkflow
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReviewRunner.yaml') -Encoding UTF8 -Raw | Should -BeExactly $runnerWorkflow
-        Get-Content -Path (Join-Path $appSourceWorkflowFolder '_CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $reusableWorkflow
+        Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yml') -Encoding UTF8 -Raw | Should -BeExactly $reusableWorkflow
     }
 
     It 'Uses the installed BCQuality plugin in the reusable workflow' {

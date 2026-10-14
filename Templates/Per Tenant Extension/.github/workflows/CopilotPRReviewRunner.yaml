@@ -81,7 +81,7 @@ jobs:
       pull-requests: write
       issues: write
       copilot-requests: write
-    uses: ./.github/workflows/_CopilotPRReview.yaml
+    uses: ./.github/workflows/CopilotPRReview.yml
     secrets:
       bcquality_token: ${{ secrets.BCQUALITY_TOKEN }}
     with:

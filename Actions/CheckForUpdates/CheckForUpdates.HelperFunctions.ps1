@@ -566,8 +566,10 @@ function GetWorkflowContentWithChangesFromSettings {
         # <--- REPLACE WITH ERROR AFTER October 1st 2025
     }
 
-    # Any workflow (except for the PullRequestHandler and reusable workflows (_*)) can have concurrency and schedule defined
-    if ($baseName -ne "PullRequestHandler" -and $baseName -notlike '_*') {
+    $isReusableWorkflow = $baseName -like '_*' -or $null -ne $yaml.Get('on:/workflow_call:')
+
+    # Any workflow (except for the PullRequestHandler and reusable workflows) can have concurrency and schedule defined
+    if ($baseName -ne "PullRequestHandler" -and !$isReusableWorkflow) {
         # Add Schedule and Concurrency settings to the workflow
         if ($repoSettings.Keys -contains $workflowScheduleKey) {
             if ($repoSettings."$workflowScheduleKey" -isnot [hashtable] -or $repoSettings."$workflowScheduleKey".Keys -notcontains 'cron' -or $repoSettings."$workflowScheduleKey".cron -isnot [string]) {
@@ -590,7 +592,7 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ($baseName -eq "CopilotPRReview") {
+    if ([System.IO.Path]::GetFileName($srcFile) -eq "CopilotPRReview.yaml") {
         ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
@@ -1048,7 +1050,7 @@ function GetDefaultFilesToExclude {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
-            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_CopilotPRReview.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yml' }
         )
     }
 
