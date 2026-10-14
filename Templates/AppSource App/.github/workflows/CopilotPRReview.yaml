@@ -18,8 +18,11 @@ permissions:
 
 jobs:
   Intake:
-    if: github.event.pull_request.draft == false && github.event.pull_request.user.login != 'business-central-bot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Start trusted review runner
-        run: Write-Host "::Notice::The Copilot PR Review Runner will validate this pull request and start the review."
+      - name: Upload pull request metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: copilot-pr-review-metadata
+          path: ${{ github.event_path }}
+          retention-days: 1

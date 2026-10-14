@@ -22,7 +22,7 @@ The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions
 
 ### Copilot code review for AL pull requests
 
-AL-Go repositories can now opt in to AI-powered review of AL pull request changes by enabling `CodeReviewAgent` in `.github/AL-Go-Settings.json`. The setting also controls the models used for leaf reviews and final consolidation. The new Copilot PR Review workflows use AL-Go's reusable review engine and install the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin to post findings as pull request comments. Copilot CLI requests are billed to the GitHub organization and require the corresponding organization policy and workflow permissions.
+AL-Go repositories can now opt in to AI-powered review of AL pull request changes by enabling `CodeReviewAgent` in `.github/AL-Go-Settings.json`. The setting controls the models used for leaf reviews and final consolidation and can exclude pull requests from configured GitHub owners. The new Copilot PR Review workflows use AL-Go's reusable review engine and install the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin to post findings as pull request comments. Copilot CLI requests are billed to the GitHub organization and require the corresponding organization policy and workflow permissions.
 
 ### Expanded AL-Go telemetry dashboard
 

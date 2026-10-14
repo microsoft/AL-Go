@@ -136,8 +136,7 @@ function ModifyPullRequestHandlerWorkflow {
 function ModifyCopilotPRReviewWorkflow {
     Param(
         [Yaml] $yaml,
-        [hashtable] $repoSettings,
-        [string] $baseName
+        [hashtable] $repoSettings
     )
 
     if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
@@ -148,12 +147,7 @@ function ModifyCopilotPRReviewWorkflow {
     }
 
     $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
-    if ($baseName -eq 'CopilotPRReview') {
-        $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
-    }
-    else {
-        $yaml.Replace("env:/ALLOWED_BASE_BRANCHES:", "ALLOWED_BASE_BRANCHES: '$($branchesJson.Replace("'", "''"))'")
-    }
+    $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
 }
 
 function ModifyRunsOnAndShell {
@@ -596,8 +590,8 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ($baseName -in @("CopilotPRReview", "CopilotPRReviewRunner")) {
-        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings -baseName $baseName
+    if ($baseName -eq "CopilotPRReview") {
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
     $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
@@ -1054,6 +1048,7 @@ function GetDefaultFilesToExclude {
         $filesToExclude += @(
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_CopilotPRReview.yaml' }
         )
     }
 

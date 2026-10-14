@@ -306,12 +306,21 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Copilot model used for isolated review leaf processes."
+                },
+                "excludedOwners": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": "GitHub login names whose pull requests are excluded from Copilot code review."
                 }
             },
             "required": [
                 "enabled",
                 "model",
-                "leafModel"
+                "leafModel",
+                "excludedOwners"
             ]
         },
         "customCodeCops": {
