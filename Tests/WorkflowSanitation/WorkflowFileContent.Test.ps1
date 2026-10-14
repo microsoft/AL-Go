@@ -89,7 +89,7 @@ Describe "Copilot code review workflows" {
     It 'Uses the review action without a third workflow' {
         $runnerWorkflow | Should -Match '(?m)^  review:'
         $runnerWorkflow | Should -Match '(?m)^  publish:'
-        ([regex]::Matches($runnerWorkflow, 'uses:\s+microsoft/AL-Go-Actions/CopilotPRReview@main')).Count | Should -Be 4
+        ([regex]::Matches($runnerWorkflow, 'uses:\s+microsoft/AL-Go/Actions/CopilotPRReview@main')).Count | Should -Be 4
         $runnerWorkflow | Should -Not -Match '(?m)^\s+run:\s*\|'
         Test-Path (Join-Path $workflowFolder 'CopilotPRReview.yml') | Should -BeFalse
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
