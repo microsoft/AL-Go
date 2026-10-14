@@ -24,6 +24,8 @@ Describe 'ReviewAgent action' {
             prNumber = 'Validated pull request number'
             headSha = 'Validated pull request head SHA'
             baseRef = 'Validated pull request base branch'
+            bcqualityRepo = 'Trusted BCQuality marketplace repository'
+            bcqualityRef = 'Configured BCQuality marketplace tag or branch'
             bcqualitySha = 'Resolved BCQuality marketplace commit'
             bcqualityRoot = 'Path to the installed and filtered BCQuality plugin'
             filterReport = 'Path to the BCQuality filter report'
@@ -47,7 +49,7 @@ Describe 'ReviewAgent action' {
 
         & $script:actionScriptPath `
             -phase context `
-            -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+            -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityRepo":"https://github.com/contoso/BCQuality","bcqualityRef":"v2.0"}' `
             -metadataPath $metadataPath `
             -workflowHeadSha 'abc123'
 
@@ -65,6 +67,8 @@ Describe 'ReviewAgent action' {
         $outputs.prNumber | Should -Be '42'
         $outputs.headSha | Should -Be 'abc123'
         $outputs.baseRef | Should -Be 'main'
+        $outputs.bcqualityRepo | Should -Be 'https://github.com/contoso/BCQuality'
+        $outputs.bcqualityRef | Should -Be 'v2.0'
     }
 
     It 'Rejects metadata that does not match the triggering workflow run' {
@@ -82,7 +86,7 @@ Describe 'ReviewAgent action' {
         {
             & $script:actionScriptPath `
                 -phase context `
-                -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+                -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityRepo":"https://github.com/microsoft/BCQuality","bcqualityRef":"v1.7"}' `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'workflow-run-sha'
         } | Should -Throw 'Pull request head SHA does not match the triggering workflow run.'

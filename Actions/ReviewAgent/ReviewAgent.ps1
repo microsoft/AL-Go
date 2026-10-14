@@ -33,6 +33,10 @@ param(
     [string] $reviewOutputDir = '',
     [Parameter(HelpMessage = "Token with read access to a private BCQuality marketplace")]
     [string] $bcqualityToken = '',
+    [Parameter(HelpMessage = "GitHub repository URL containing the BCQuality marketplace")]
+    [string] $bcqualityRepo = 'https://github.com/microsoft/BCQuality',
+    [Parameter(HelpMessage = "BCQuality marketplace tag or branch")]
+    [string] $bcqualityRef = 'v1.7',
     [Parameter(HelpMessage = "Resolved BCQuality commit from the prepare phase")]
     [string] $bcqualitySha = '',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
@@ -78,9 +82,14 @@ function Invoke-ContextPhase {
     $number = [string] $metadata.pull_request.number
     $headSha = [string] $metadata.pull_request.head.sha
     $targetBranch = [string] $metadata.pull_request.base.ref
+    $resolvedBCQualityRepo = [string] $settings.bcqualityRepo
+    $resolvedBCQualityRef = [string] $settings.bcqualityRef
 
     if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha) {
         throw 'Pull request head SHA does not match the triggering workflow run.'
+    }
+    if ([string]::IsNullOrWhiteSpace($resolvedBCQualityRepo) -or [string]::IsNullOrWhiteSpace($resolvedBCQualityRef)) {
+        throw 'CodeReviewAgent.bcqualityRepo and CodeReviewAgent.bcqualityRef are required.'
     }
 
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
@@ -89,6 +98,8 @@ function Invoke-ContextPhase {
     Write-ReviewOutput -Name prNumber -Value $number
     Write-ReviewOutput -Name headSha -Value $headSha
     Write-ReviewOutput -Name baseRef -Value $targetBranch
+    Write-ReviewOutput -Name bcqualityRepo -Value $resolvedBCQualityRepo
+    Write-ReviewOutput -Name bcqualityRef -Value $resolvedBCQualityRef
 }
 
 function Assert-CopilotCliVersion {
@@ -183,6 +194,8 @@ function Invoke-PreparePhase {
 
     Enable-PowerShellYaml
     $configuration = & (Join-Path $PSScriptRoot 'scripts\Get-BCQualityConfig.ps1')
+    $configuration.bcquality.repo = $bcqualityRepo
+    $configuration.bcquality.ref = $bcqualityRef
     $setup = Invoke-SetupBCQuality -Configuration $configuration
     if (-not $setup.pluginRoot -or -not $setup.sourceCommit) {
         throw 'SetupBCQuality did not return the plugin root and source commit.'

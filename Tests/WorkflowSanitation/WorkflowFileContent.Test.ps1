@@ -79,11 +79,15 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'settingsJson:\s+\$\{\{\s+env\.CodeReviewAgent\s+\}\}'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityRepo:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityRepo\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityRef:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityRef\s+\}\}'
         $reviewAction | Should -Match '\$settings\.excludedOwners'
         $runnerWorkflow | Should -Match "needs\.Settings\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Not -Match 'needs\.Settings\.outputs\.enabled'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.Settings\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+needs\.Settings\.outputs\.leafModel\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityRepo:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityRepo\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualityRef:\s+\$\{\{\s+needs\.Settings\.outputs\.bcqualityRef\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
     }
 
@@ -106,6 +110,8 @@ Describe "Copilot code review workflows" {
     It 'Uses the installed BCQuality plugin through the review action' {
         $reviewAction | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1'"))
         $reviewAction | Should -Match "\`$setupToken = if \(\`$marketplace -eq 'microsoft/BCQuality'\)"
+        $reviewAction | Should -Match '\$configuration\.bcquality\.repo = \$bcqualityRepo'
+        $reviewAction | Should -Match '\$configuration\.bcquality\.ref = \$bcqualityRef'
         $reviewAction | Should -Match '\$env:BCQUALITY_ROOT = \$bcqualityRoot'
         $reviewAction | Should -Match '\$env:BCQUALITY_SHA = \$bcqualitySha'
         $reviewAction | Should -Match "\$env:BCQUALITY_CONSUME = 'plugin'"

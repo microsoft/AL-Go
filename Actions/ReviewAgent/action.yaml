@@ -60,6 +60,14 @@ inputs:
     description: Token with read access to a private BCQuality marketplace
     required: false
     default: ''
+  bcqualityRepo:
+    description: GitHub repository URL containing the BCQuality marketplace
+    required: false
+    default: https://github.com/microsoft/BCQuality
+  bcqualityRef:
+    description: BCQuality marketplace tag or branch
+    required: false
+    default: v1.7
   bcqualitySha:
     description: Resolved BCQuality commit from the prepare phase
     required: false
@@ -91,6 +99,12 @@ outputs:
   baseRef:
     description: Validated pull request base branch
     value: ${{ steps.reviewagent.outputs.baseRef }}
+  bcqualityRepo:
+    description: Trusted BCQuality marketplace repository
+    value: ${{ steps.reviewagent.outputs.bcqualityRepo }}
+  bcqualityRef:
+    description: Configured BCQuality marketplace tag or branch
+    value: ${{ steps.reviewagent.outputs.bcqualityRef }}
   bcqualitySha:
     description: Resolved BCQuality marketplace commit
     value: ${{ steps.reviewagent.outputs.bcqualitySha }}
@@ -124,12 +138,14 @@ runs:
         _reviewWorkspace: ${{ inputs.reviewWorkspace }}
         _reviewOutputDir: ${{ inputs.reviewOutputDir }}
         _bcqualityToken: ${{ inputs.bcqualityToken }}
+        _bcqualityRepo: ${{ inputs.bcqualityRepo }}
+        _bcqualityRef: ${{ inputs.bcqualityRef }}
         _bcqualitySha: ${{ inputs.bcqualitySha }}
         _bcqualityRoot: ${{ inputs.bcqualityRoot }}
         _copilotCliVersion: ${{ inputs.copilotCliVersion }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReviewAgent" -Action {
-          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -settingsJson $ENV:_settingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityToken $ENV:_bcqualityToken -bcqualitySha $ENV:_bcqualitySha -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion
+          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -settingsJson $ENV:_settingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityToken $ENV:_bcqualityToken -bcqualityRepo $ENV:_bcqualityRepo -bcqualityRef $ENV:_bcqualityRef -bcqualitySha $ENV:_bcqualitySha -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion
         }
 branding:
   icon: terminal

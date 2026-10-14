@@ -286,6 +286,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
+            $codeReviewAgent.bcqualityRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $codeReviewAgent.bcqualityRef | Should -Be 'v1.7'
         }
 
         It 'Preserves default Copilot models when only enabled is overridden' {
@@ -302,6 +304,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
+            $settings.CodeReviewAgent.bcqualityRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $settings.CodeReviewAgent.bcqualityRef | Should -Be 'v1.7'
         }
 
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {

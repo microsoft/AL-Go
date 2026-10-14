@@ -165,6 +165,8 @@ function GetDefaultSettings
             "model"          = "gpt-5.6-sol"
             "leafModel"      = "gpt-5.6-luna"
             "excludedOwners" = @()
+            "bcqualityRepo"   = "https://github.com/microsoft/BCQuality"
+            "bcqualityRef"    = "v1.7"
         }
         "customCodeCops"                                = @()
         "preprocessorSymbols"                           = @()

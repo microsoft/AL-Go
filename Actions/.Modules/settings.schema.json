@@ -314,13 +314,26 @@
                         "minLength": 1
                     },
                     "description": "GitHub login names whose pull requests are excluded from Copilot code review."
+                },
+                "bcqualityRepo": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://github\\.com/[^/]+/[^/]+/?$",
+                    "description": "Trusted public or private GitHub repository containing the BCQuality marketplace."
+                },
+                "bcqualityRef": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Immutable BCQuality marketplace tag, or a branch for prototype testing. Raw commit SHAs are not supported by Copilot CLI marketplace registration."
                 }
             },
             "required": [
                 "enabled",
                 "model",
                 "leafModel",
-                "excludedOwners"
+                "excludedOwners",
+                "bcqualityRepo",
+                "bcqualityRef"
             ]
         },
         "customCodeCops": {
