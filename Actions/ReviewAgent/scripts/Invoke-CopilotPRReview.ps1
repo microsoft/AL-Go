@@ -1021,7 +1021,7 @@ function Get-ValidatedPrHeadCommit {
     return $resolvedHead.ToLowerInvariant()
 }
 
-function Checkout-PrBranch {
+function New-PrAnalysisWorktree {
     Write-Host "Fetching base branch origin/$BaseBranch"
     $null = Invoke-GitCommandAuthenticated -Arguments @('-C', $TrustedWorkspace, 'fetch', 'origin', $BaseBranch, '--no-tags')
 
@@ -3657,7 +3657,7 @@ function Repair-ShellEscapedQuotes {
     return $Text.Replace("'\''", "'")
 }
 
-function Parse-BCQualityReport {
+function ConvertFrom-BCQualityReport {
     <#
     Parses Copilot CLI output into a findings-report. Returns a PSCustomObject:
       Outcome      : completed | not-applicable | no-knowledge | partial | failed
@@ -4723,7 +4723,7 @@ function Test-NearDuplicateLocation {
 # ---------------------------------------------------------------------------
 # Post findings
 # ---------------------------------------------------------------------------
-function Post-Findings {
+function Publish-Findings {
     param([string] $Domain, [object[]] $Findings, [hashtable] $LineMaps, [hashtable] $ChangedFileSet)
 
     $postedInline = 0
@@ -4853,7 +4853,7 @@ function Post-Findings {
 # ---------------------------------------------------------------------------
 # Summary comment upsert
 # ---------------------------------------------------------------------------
-function Load-FilterReport {
+function Import-FilterReport {
     # The post phase has no BCQuality plugin; it reads the report the generate
     # phase copied into the review-output artifact.
     $candidates = [System.Collections.Generic.List[string]]::new()
@@ -4986,7 +4986,7 @@ function Build-SummaryBody {
     return $lines -join "`n"
 }
 
-function Upsert-SummaryComment {
+function Set-SummaryComment {
     param([string] $Body)
 
     $existing = $null
@@ -5057,7 +5057,7 @@ function Publish-FindingsByDomain {
     foreach ($domain in (Get-OrdinalSortedKey -Dictionary $findingsByDomain)) {
         $domainFindings = @($findingsByDomain[$domain])
         Write-Host "Posting $($domainFindings.Count) $domain finding(s)…"
-        $posted = Post-Findings -Domain $domain -Findings $domainFindings `
+        $posted = Publish-Findings -Domain $domain -Findings $domainFindings `
             -LineMaps $LineMaps -ChangedFileSet $ChangedFileSet
         $agentCount = @($domainFindings | Where-Object { $_.isAgentFinding }).Count
         $backedCount = $domainFindings.Count - $agentCount
@@ -5225,7 +5225,7 @@ $AgentVersion        = Resolve-AgentVersion
 # Resolving the iteration reads existing PR comments, for which the generate
 # phase holds no token; only the posting phases need it.
 $ReviewIteration     = if ($ReviewPhase -eq 'generate' -or $ReviewSource -eq 'local') { 0 } else { Resolve-ReviewIteration }
-$script:FilterReport = Load-FilterReport
+$script:FilterReport = Import-FilterReport
 
 # --- Configuration banner ---------------------------------------------------
 Write-Host ''
@@ -5285,7 +5285,7 @@ if ($ReviewSource -eq 'local') {
     Write-Host "Local review: using provided worktree at $AnalysisWorkspace (base $DiffBaseRef); skipping PR fetch."
 }
 else {
-    Checkout-PrBranch
+    New-PrAnalysisWorktree
 }
 
 Write-Host "Fetching changed files via git diff ($DiffRange)"
@@ -5515,7 +5515,7 @@ if ($ReviewPhase -ne 'post') {
 
 # --- Phase 3: Parse & filter ------------------------------------------------
 Write-LogGroup 'Parse & filter'
-$report = Parse-BCQualityReport -Output $output
+$report = ConvertFrom-BCQualityReport -Output $output
 Write-Host "Outcome: $($report.Outcome). Findings parsed: $($report.Findings.Count)"
 if ($report.OutcomeReason) { Write-LogPhaseDetail "Reason: $($report.OutcomeReason)" }
 Write-FindingsBreakdown -Findings $report.Findings
@@ -5577,7 +5577,7 @@ $summaryBody = Build-SummaryBody `
     -FilterReport $script:FilterReport
 
 if ($PostSummaryComment) {
-    Upsert-SummaryComment -Body $summaryBody
+    Set-SummaryComment -Body $summaryBody
 } else {
     Write-Host 'Summary comment disabled (COPILOT_REVIEW_POST_SUMMARY not set); posting inline findings only.'
 }

@@ -88,7 +88,7 @@ Describe 'Resolve-FindingLocation' {
 
     It 'marks an exact anchor as not inferred and stays StrictMode-safe' {
         # Regression: the exact-match branch used to return the raw Build-LineMap
-        # entry, which has no 'inferred' key. Post-Findings reads
+        # entry, which has no 'inferred' key. Publish-Findings reads
         # [bool]($location.inferred ?? $false) with member syntax, and under
         # Set-StrictMode -Version Latest a missing property throws before ?? runs
         # (unlike hashtable indexing). Pester does not enable StrictMode, so assert
@@ -496,7 +496,7 @@ Describe 'Agent domain normalization' {
             })
         } | ConvertTo-Json -Depth 8
 
-        $finding = (Parse-BCQualityReport -Output $json).Findings[0]
+        $finding = (ConvertFrom-BCQualityReport -Output $json).Findings[0]
         $finding.isAgentFinding | Should -BeTrue
         $finding.domain | Should -Be 'Security'
     }
@@ -514,7 +514,7 @@ Describe 'Agent domain normalization' {
             })
         } | ConvertTo-Json -Depth 8
 
-        (Parse-BCQualityReport -Output $json).Findings[0].domain | Should -Be 'Agent'
+        (ConvertFrom-BCQualityReport -Output $json).Findings[0].domain | Should -Be 'Agent'
     }
 
     It 'preserves the exact Agent label on a cross-cutting producer finding' {
@@ -531,7 +531,7 @@ Describe 'Agent domain normalization' {
             })
         } | ConvertTo-Json -Depth 8
 
-        $finding = (Parse-BCQualityReport -Output $json).Findings[0]
+        $finding = (ConvertFrom-BCQualityReport -Output $json).Findings[0]
         $finding.isAgentFinding | Should -BeTrue
         $finding.domain | Should -BeExactly 'Agent'
     }
@@ -694,7 +694,7 @@ Describe 'Domain grouping and caps' {
                 findings = @($rawFindings)
             } | ConvertTo-Json -Depth 8
 
-            $findings = (Parse-BCQualityReport -Output $json).Findings
+            $findings = (ConvertFrom-BCQualityReport -Output $json).Findings
             $findings.Count | Should -Be $labels.Count
             foreach ($label in $labels) {
                 $domainFindings = @($findings | Where-Object {
@@ -716,7 +716,7 @@ Describe 'Domain grouping and caps' {
         $findings = @($labels | ForEach-Object {
             [pscustomobject]@{ domain = $_; isAgentFinding = $false }
         })
-        Mock Post-Findings {
+        Mock Publish-Findings {
             [pscustomobject]@{ inline = $Findings.Count; fallback = 0 }
         }
 
@@ -725,7 +725,7 @@ Describe 'Domain grouping and caps' {
         foreach ($label in $labels) {
             $summary.ContainsKey($label) | Should -BeTrue
             $summary[$label].findings | Should -Be 1
-            Should -Invoke Post-Findings -Times 1 -ParameterFilter {
+            Should -Invoke Publish-Findings -Times 1 -ParameterFilter {
                 [System.StringComparer]::Ordinal.Equals($Domain, $label)
             }
         }
@@ -1506,7 +1506,7 @@ Describe 'Deterministic leaf orchestration contract' {
             'skipped-sub-skills' = @()
         } | ConvertTo-Json -Depth 20
 
-        $parsed = Parse-BCQualityReport -Output $report
+        $parsed = ConvertFrom-BCQualityReport -Output $report
 
         $parsed.FailedSubSkills.Count | Should -Be 1
         $parsed.FailedSubSkills[0].id | Should -Be 'al-style-review'
@@ -2296,7 +2296,7 @@ Describe 'Local review authentication' {
         $PrHeadSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         $BCQualityRoot = $null
         $BCQualityVersion = Resolve-BCQualityVersion -Version '1.7'
-        Mock Post-Findings {
+        Mock Publish-Findings {
             [pscustomobject]@{ inline = $Findings.Count; fallback = 0 }
         }
 
@@ -2307,7 +2307,7 @@ Describe 'Local review authentication' {
             -ChangedFileSet @{}
 
         $summary['Style'].inline | Should -Be 1
-        Should -Invoke Post-Findings -Times 1 -Exactly
+        Should -Invoke Publish-Findings -Times 1 -Exactly
     }
 
     It 'continues requiring BCQUALITY_ROOT for all and generate' -ForEach @('all', 'generate') {
