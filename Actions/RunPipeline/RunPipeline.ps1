@@ -489,8 +489,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $install.apps `
-        -installTestApps $install.testApps `
+        -installApps ([string[]] $install.apps) `
+        -installTestApps ([string[]] $install.testApps) `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
