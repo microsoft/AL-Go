@@ -10,7 +10,7 @@ inputs:
     required: false
     default: microsoft/BCQuality
   marketplaceRef:
-    description: Immutable BCQuality marketplace tag
+    description: BCQuality marketplace release tag
     required: false
     default: v1.7
   expectedPluginVersion:

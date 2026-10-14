@@ -6,7 +6,7 @@ Installs and physically filters the BCQuality Copilot plugin.
 param(
     [Parameter(HelpMessage = "GitHub owner/repository containing the BCQuality marketplace")]
     [string] $marketplace = 'microsoft/BCQuality',
-    [Parameter(HelpMessage = "Immutable BCQuality marketplace tag")]
+    [Parameter(HelpMessage = "BCQuality marketplace release tag")]
     [string] $marketplaceRef = 'v1.7',
     [Parameter(HelpMessage = "Expected version from the BCQuality marketplace entry")]
     [string] $expectedPluginVersion = '0.2.0',
@@ -39,10 +39,10 @@ if ([string]::IsNullOrWhiteSpace($marketplace) -or $marketplace -notmatch '^[^/\
     throw "marketplace must use the GitHub owner/repository form. Received '$marketplace'."
 }
 if ([string]::IsNullOrWhiteSpace($marketplaceRef)) {
-    throw 'marketplaceRef must be a non-empty immutable tag, or a branch for prototype testing.'
+    throw 'marketplaceRef must be a non-empty release tag, or a branch for prototype testing.'
 }
 if ($marketplaceRef -match '^[0-9a-fA-F]{40}$') {
-    throw 'Copilot CLI marketplace refs support branches and tags, not raw commit SHAs. Use an immutable BCQuality release tag.'
+    throw 'Copilot CLI marketplace refs support branches and tags, not raw commit SHAs. Use a BCQuality release tag.'
 }
 if ([string]::IsNullOrWhiteSpace($expectedPluginVersion)) {
     throw 'expectedPluginVersion must be specified.'

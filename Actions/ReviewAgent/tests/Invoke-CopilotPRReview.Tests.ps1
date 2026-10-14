@@ -2009,6 +2009,24 @@ Describe 'BCQuality version ownership' {
     }
 }
 
+Describe 'BCQuality reference links' {
+    BeforeEach {
+        $env:BCQUALITY_REPO = 'https://github.com/example/PrivateQuality.git/'
+        $BCQualityVersion = '2.3'
+        $script:BCQualityWebRepoUrl = $null
+    }
+
+    AfterEach {
+        Remove-Item Env:BCQUALITY_REPO -ErrorAction SilentlyContinue
+        $script:BCQualityWebRepoUrl = 'https://github.com/microsoft/BCQuality'
+    }
+
+    It 'uses the configured marketplace repository and content version' {
+        Build-ReferenceLink -Reference ([pscustomobject]@{ path = 'knowledge/article.md' }) |
+            Should -Be '[knowledge/article.md](https://github.com/example/PrivateQuality/blob/v2.3/knowledge/article.md)'
+    }
+}
+
 Describe 'AL-Go review engine version' {
     It 'combines the nearest AL-Go release with the BCQuality content minor' {
         $root = Join-Path $TestDrive 'versioned-engine'
@@ -2026,7 +2044,7 @@ Describe 'AL-Go review engine version' {
         $AgentSemVerRaw = ''
         $AgentDateRaw = ''
         $AgentVersionRaw = ''
-        Mock Get-BCQualityConfigCached { @{ bcquality = @{ version = '1.9' } } }
+        $BCQualityVersion = '1.9'
 
         Resolve-AgentVersion -EngineRoot $root | Should -Be '3.2.9'
     }

@@ -289,6 +289,28 @@
             "type": "boolean",
             "description": "Enable code analyzers on test apps. See https://aka.ms/ALGoSettings#enablecodeanalyzersonTestapps"
         },
+        "BCQuality": {
+            "type": "object",
+            "description": "Configures the trusted BCQuality marketplace consumed by AL-Go agents. See https://aka.ms/ALGoSettings#BCQuality",
+            "properties": {
+                "marketplaceRepo": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://github\\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/(?![^/?#]+\\.git/?$)[A-Za-z0-9._-]{1,100}/?$",
+                    "description": "Trusted public or private GitHub repository containing the BCQuality marketplace."
+                },
+                "version": {
+                    "type": "string",
+                    "pattern": "^[0-9]+\\.[0-9]+$",
+                    "description": "BCQuality content version installed from the corresponding v-prefixed marketplace tag."
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "marketplaceRepo",
+                "version"
+            ]
+        },
         "CodeReviewAgent": {
             "type": "object",
             "description": "Configures Copilot code review for AL pull requests. This repository-level setting is applied by Update AL-Go System Files. See https://aka.ms/ALGoSettings#CodeReviewAgent",
@@ -314,17 +336,6 @@
                         "minLength": 1
                     },
                     "description": "GitHub login names whose pull requests are excluded from Copilot code review."
-                },
-                "bcqualityMarketplaceRepo": {
-                    "type": "string",
-                    "format": "uri",
-                    "pattern": "^https://github\\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/(?![^/?#]+\\.git/?$)[A-Za-z0-9._-]{1,100}/?$",
-                    "description": "Trusted public or private GitHub repository containing the BCQuality marketplace."
-                },
-                "bcqualityVersion": {
-                    "type": "string",
-                    "pattern": "^[0-9]+\\.[0-9]+$",
-                    "description": "BCQuality content version. ReviewAgent installs the corresponding v-prefixed marketplace tag."
                 }
             },
             "additionalProperties": false,
@@ -332,9 +343,7 @@
                 "enabled",
                 "model",
                 "leafModel",
-                "excludedOwners",
-                "bcqualityMarketplaceRepo",
-                "bcqualityVersion"
+                "excludedOwners"
             ]
         },
         "customCodeCops": {

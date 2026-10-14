@@ -8,8 +8,12 @@ inputs:
   phase:
     description: Review phase to run (context, prepare, generate, or post)
     required: true
-  settingsJson:
+  codeReviewSettingsJson:
     description: CodeReviewAgent settings as compressed JSON
+    required: false
+    default: ''
+  bcqualitySettingsJson:
+    description: BCQuality settings as compressed JSON
     required: false
     default: ''
   metadataPath:
@@ -118,7 +122,8 @@ runs:
       id: reviewagent
       env:
         _phase: ${{ inputs.phase }}
-        _settingsJson: ${{ inputs.settingsJson }}
+        _codeReviewSettingsJson: ${{ inputs.codeReviewSettingsJson }}
+        _bcqualitySettingsJson: ${{ inputs.bcqualitySettingsJson }}
         _metadataPath: ${{ inputs.metadataPath }}
         _workflowHeadSha: ${{ inputs.workflowHeadSha }}
         _token: ${{ inputs.token }}
@@ -137,7 +142,7 @@ runs:
         _copilotCliVersion: ${{ inputs.copilotCliVersion }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReviewAgent" -Action {
-          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -settingsJson $ENV:_settingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityToken $ENV:_bcqualityToken -bcqualityMarketplaceRepo $ENV:_bcqualityMarketplaceRepo -bcqualityVersion $ENV:_bcqualityVersion -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion
+          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -codeReviewSettingsJson $ENV:_codeReviewSettingsJson -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityToken $ENV:_bcqualityToken -bcqualityMarketplaceRepo $ENV:_bcqualityMarketplaceRepo -bcqualityVersion $ENV:_bcqualityVersion -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion
         }
 branding:
   icon: terminal

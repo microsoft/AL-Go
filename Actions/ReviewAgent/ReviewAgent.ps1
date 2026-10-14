@@ -8,7 +8,9 @@ param(
     [Parameter(Mandatory, HelpMessage = "Review phase to run (context, prepare, generate, or post)")]
     [string] $phase,
     [Parameter(HelpMessage = "CodeReviewAgent settings as compressed JSON")]
-    [string] $settingsJson = '',
+    [string] $codeReviewSettingsJson = '',
+    [Parameter(HelpMessage = "BCQuality settings as compressed JSON")]
+    [string] $bcqualitySettingsJson = '',
     [Parameter(HelpMessage = "Path to the pull request event metadata")]
     [string] $metadataPath = '',
     [Parameter(HelpMessage = "Head SHA reported by the completed intake workflow")]
@@ -65,14 +67,18 @@ function Enable-PowerShellYaml {
 }
 
 function Invoke-ContextPhase {
-    if ([string]::IsNullOrWhiteSpace($settingsJson)) {
-        throw 'settingsJson is required for the context phase.'
+    if ([string]::IsNullOrWhiteSpace($codeReviewSettingsJson)) {
+        throw 'codeReviewSettingsJson is required for the context phase.'
+    }
+    if ([string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
+        throw 'bcqualitySettingsJson is required for the context phase.'
     }
     if ([string]::IsNullOrWhiteSpace($metadataPath) -or -not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
         throw "Pull request metadata was not found at '$metadataPath'."
     }
 
-    $settings = $settingsJson | ConvertFrom-Json
+    $settings = $codeReviewSettingsJson | ConvertFrom-Json
+    $bcqualitySettings = $bcqualitySettingsJson | ConvertFrom-Json
     $metadata = Get-Content -LiteralPath $metadataPath -Encoding UTF8 -Raw | ConvertFrom-Json
     $owner = [string] $metadata.pull_request.user.login
     $excludedOwners = @($settings.excludedOwners)
@@ -80,14 +86,14 @@ function Invoke-ContextPhase {
     $number = [string] $metadata.pull_request.number
     $headSha = [string] $metadata.pull_request.head.sha
     $targetBranch = [string] $metadata.pull_request.base.ref
-    $resolvedBCQualityMarketplaceRepo = [string] $settings.bcqualityMarketplaceRepo
-    $resolvedBCQualityVersion = [string] $settings.bcqualityVersion
+    $resolvedBCQualityMarketplaceRepo = [string] $bcqualitySettings.marketplaceRepo
+    $resolvedBCQualityVersion = [string] $bcqualitySettings.version
 
     if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha) {
         throw 'Pull request head SHA does not match the triggering workflow run.'
     }
     if ([string]::IsNullOrWhiteSpace($resolvedBCQualityMarketplaceRepo) -or $resolvedBCQualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
-        throw 'CodeReviewAgent.bcqualityMarketplaceRepo and a major.minor CodeReviewAgent.bcqualityVersion are required.'
+        throw 'BCQuality.marketplaceRepo and a major.minor BCQuality.version are required.'
     }
 
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
@@ -116,17 +122,17 @@ function Invoke-SetupBCQuality {
         [Parameter(Mandatory)] $Configuration
     )
 
-    $repoUri = [Uri] $Configuration.bcquality.repo
+    $repoUri = [Uri] $bcqualityMarketplaceRepo
     if ($repoUri.Host -ne 'github.com') {
-        throw "BCQuality marketplace must be hosted on github.com; received '$($Configuration.bcquality.repo)'."
+        throw "BCQuality marketplace must be hosted on github.com; received '$bcqualityMarketplaceRepo'."
     }
     $marketplace = $repoUri.AbsolutePath.Trim('/')
     if ($marketplace -notmatch '^[^/]+/[^/]+$') {
-        throw "BCQuality marketplace URL must identify one owner/repository; received '$($Configuration.bcquality.repo)'."
+        throw "BCQuality marketplace URL must identify one owner/repository; received '$bcqualityMarketplaceRepo'."
     }
-    $pluginVersion = [string] $Configuration.bcquality['plugin-version']
+    $pluginVersion = [string] $Configuration['plugin-version']
     if (-not $pluginVersion) {
-        throw 'bcquality.plugin-version is required for plugin identity validation.'
+        throw 'plugin-version is required for plugin identity validation.'
     }
 
     $setupOutput = [System.IO.Path]::GetTempFileName()
@@ -136,7 +142,7 @@ function Invoke-SetupBCQuality {
         $setupToken = if ($marketplace -eq 'microsoft/BCQuality') { '' } else { $bcqualityToken }
         & (Join-Path $PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1') `
             -marketplace $marketplace `
-            -marketplaceRef ([string] $Configuration.bcquality.ref) `
+            -marketplaceRef "v$bcqualityVersion" `
             -expectedPluginVersion $pluginVersion `
             -enabledLayers (@($Configuration['enabled-layers']) -join ',') `
             -disabledSkills (@($Configuration['disabled-skills']) -join ',') `
@@ -191,13 +197,10 @@ function Invoke-PreparePhase {
     }
 
     Enable-PowerShellYaml
-    $configuration = & (Join-Path $PSScriptRoot 'scripts\Get-BCQualityConfig.ps1')
+    $configuration = & (Join-Path $PSScriptRoot '..\SetupBCQuality\Get-BCQualityConfig.ps1')
     if ($bcqualityVersion -notmatch '\A[0-9]+\.[0-9]+\z') {
         throw "bcqualityVersion must use major.minor format; received '$bcqualityVersion'."
     }
-    $configuration.bcquality.repo = $bcqualityMarketplaceRepo
-    $configuration.bcquality.ref = "v$bcqualityVersion"
-    $configuration.bcquality.version = $bcqualityVersion
     $setup = Invoke-SetupBCQuality -Configuration $configuration
     if (-not $setup.pluginRoot) {
         throw 'SetupBCQuality did not return the plugin root.'
@@ -220,6 +223,7 @@ function Invoke-GeneratePhase {
     $env:REVIEW_PHASE = 'generate'
     $env:GH_TOKEN = $token
     $env:BCQUALITY_ROOT = $bcqualityRoot
+    $env:BCQUALITY_REPO = $bcqualityMarketplaceRepo
     $env:BCQUALITY_VERSION = $bcqualityVersion
     $env:BCQUALITY_CONSUME = 'plugin'
     $env:COPILOT_MODEL = $model
@@ -237,6 +241,7 @@ function Invoke-PostPhase {
     Enable-PowerShellYaml
     Initialize-ReviewEnvironment
     $env:REVIEW_PHASE = 'post'
+    $env:BCQUALITY_REPO = $bcqualityMarketplaceRepo
     $env:BCQUALITY_VERSION = $bcqualityVersion
     $env:COPILOT_REVIEW_POST_SUMMARY = 'false'
 

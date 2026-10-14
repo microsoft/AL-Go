@@ -1,35 +1,13 @@
-# BCQuality plugin policy used by AL-Go's Copilot PR reviewer.
+# BCQuality plugin policy used by AL-Go agents.
 #
-# Single source of truth for which BCQuality content this repository
-# consumes. Every value below can be overridden at workflow runtime via
-# the matching Actions variable; see scripts/Get-BCQualityConfig.ps1 for
-# the override map.
+# This tracked policy controls which parts of an installed BCQuality plugin
+# are retained. Marketplace location and content version are repository
+# settings and are intentionally not duplicated here.
 #
 # This Microsoft-owned repo defaults to the `microsoft` layer only.
-# Partners forking the orchestrator typically only need to change
-# `bcquality.repo` (and optionally enable additional layers) — everything
-# else is inherited.
 
-bcquality:
-  # HTTPS URL of the trusted BCQuality marketplace repository.
-  #
-  # SECURITY: its plugin content is read by the agent before it sees the PR
-  # diff. Point `repo` only at a trusted marketplace.
-  repo: https://github.com/microsoft/BCQuality
-
-  # Copilot marketplace registration supports branches and tags, not raw
-  # commit SHAs. Production pins an immutable BCQuality content release.
-  ref: v1.7
-
-  # Version declared by the plugin entry in the pinned marketplace release.
-  plugin-version: "0.2.0"
-
-  # BCQuality content version this engine is pinned to, as major.minor. Its
-  # MINOR is Z in the engine's X.Y.Z version. BCQuality's minor is a monotonic
-  # counter that only ever increments — it never resets, even across a major
-  # bump — so Z is always unique. BCQuality bumps its minor ~monthly; set this
-  # together with `ref` above when moving to a new release.
-  version: "1.7"
+# Version declared by the BCQuality plugin marketplace entry.
+plugin-version: "0.2.0"
 
 # Which BCQuality layers an agent may consume during this review.
 # Allowed values: microsoft, community, custom.

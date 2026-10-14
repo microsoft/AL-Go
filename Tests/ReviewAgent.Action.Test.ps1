@@ -48,7 +48,8 @@ Describe 'ReviewAgent action' {
 
         & $script:actionScriptPath `
             -phase context `
-            -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityMarketplaceRepo":"https://github.com/contoso/BCQuality","bcqualityVersion":"2.0"}' `
+            -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+            -bcqualitySettingsJson '{"marketplaceRepo":"https://github.com/contoso/BCQuality","version":"2.0"}' `
             -metadataPath $metadataPath `
             -workflowHeadSha 'abc123'
 
@@ -85,9 +86,31 @@ Describe 'ReviewAgent action' {
         {
             & $script:actionScriptPath `
                 -phase context `
-                -settingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[],"bcqualityMarketplaceRepo":"https://github.com/microsoft/BCQuality","bcqualityVersion":"1.7"}' `
+                -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+                -bcqualitySettingsJson '{"marketplaceRepo":"https://github.com/microsoft/BCQuality","version":"1.7"}' `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'workflow-run-sha'
         } | Should -Throw 'Pull request head SHA does not match the triggering workflow run.'
+    }
+
+    It 'Requires BCQuality settings when resolving review context' {
+        $metadataPath = Join-Path $TestDrive 'missing-bcquality-event.json'
+        @{
+            pull_request = @{
+                number = 42
+                draft = $false
+                user = @{ login = 'contributor' }
+                head = @{ sha = 'abc123' }
+                base = @{ ref = 'main' }
+            }
+        } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+
+        {
+            & $script:actionScriptPath `
+                -phase context `
+                -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+                -metadataPath $metadataPath `
+                -workflowHeadSha 'abc123'
+        } | Should -Throw 'bcqualitySettingsJson is required for the context phase.'
     }
 }

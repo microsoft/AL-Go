@@ -42,8 +42,13 @@ jobs:
         run: ./Run-AnotherAgent.ps1
 ```
 
-`marketplaceRef` should be an immutable BCQuality release tag. Branch refs are
-supported only for prototype testing because they can move between runs.
+`marketplaceRef` should be a BCQuality release tag. Branch refs are supported
+only for prototype testing because they can move between runs.
+
+The tracked `bcquality.config.yaml` beside the action defines AL-Go's internal
+plugin filtering and task-context policy. Repository consumers select the
+marketplace location and content version through the top-level `BCQuality`
+setting rather than modifying that policy.
 
 For a private marketplace repository, pass a token with read access through
 the `token` input. Authentication is applied only to the Git and Copilot CLI

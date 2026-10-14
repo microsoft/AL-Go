@@ -11,7 +11,7 @@ Before enabling the reviewer:
 
 Reviews consume organization AI credits. No personal access token or additional repository secret is required when using the public BCQuality marketplace.
 
-If the review policy points to a private BCQuality marketplace repository, add a `BCQUALITY_TOKEN` repository secret containing a token with read access to that repository. The trusted runner passes it only to non-default marketplace installation; the default `microsoft/BCQuality` marketplace always uses unauthenticated access. The token is not available to pull request code or the model execution step.
+If the `BCQuality` setting points to a private marketplace repository, add a `BCQUALITY_TOKEN` repository secret containing a token with read access to that repository. The trusted runner passes it only to non-default marketplace installation; the default `microsoft/BCQuality` marketplace always uses unauthenticated access. The token is not available to pull request code or the model execution step.
 
 ## Enable the reviewer
 
@@ -19,12 +19,14 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 ```json
 {
+  "BCQuality": {
+    "marketplaceRepo": "https://github.com/microsoft/BCQuality",
+    "version": "1.7"
+  },
   "CodeReviewAgent": {
     "enabled": true,
     "model": "gpt-5.6-sol",
     "leafModel": "gpt-5.6-luna",
-    "bcqualityMarketplaceRepo": "https://github.com/microsoft/BCQuality",
-    "bcqualityVersion": "1.7",
     "excludedOwners": [
       "dependabot[bot]"
     ]
@@ -34,9 +36,9 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CICDPullRequestBranches` will be reviewed automatically.
 
-`model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `bcqualityMarketplaceRepo` identifies the trusted public, forked, or private GitHub repository hosting the BCQuality marketplace, and `bcqualityVersion` selects the BCQuality content version. An early runner step installs the corresponding `v<major>.<minor>` release tag, and the remaining review phases use that configured version. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
+`BCQuality.marketplaceRepo` identifies the trusted public, forked, or private GitHub repository hosting the BCQuality marketplace, and `BCQuality.version` selects the content version installed from the corresponding `v<major>.<minor>` tag. `CodeReviewAgent.model` controls final self-review and consolidation, while `CodeReviewAgent.leafModel` controls the isolated review processes. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
 
-The setting must be enabled at repository level. Project settings do not enable or disable the reviewer.
+Both settings are populated by default. `CodeReviewAgent` must be enabled at repository level; project settings do not enable or disable the reviewer.
 
 ## How the workflows protect pull requests
 

@@ -55,7 +55,7 @@ jobs:
           shell: pwsh
           project: ''
           workflowName: ''
-          get: CodeReviewAgent
+          get: CodeReviewAgent,BCQuality
 
       - name: Resolve review context
         id: context
@@ -63,7 +63,8 @@ jobs:
         with:
           shell: pwsh
           phase: context
-          settingsJson: ${{ env.CodeReviewAgent }}
+          codeReviewSettingsJson: ${{ env.CodeReviewAgent }}
+          bcqualitySettingsJson: ${{ env.BCQuality }}
           metadataPath: .copilot-pr-review-metadata/event.json
           workflowHeadSha: ${{ github.event.workflow_run.head_sha }}
 
@@ -118,6 +119,7 @@ jobs:
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
           bcqualityRoot: ${{ steps.setup.outputs.bcqualityRoot }}
+          bcqualityMarketplaceRepo: ${{ needs.prepare.outputs.bcqualityMarketplaceRepo }}
           bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
           copilotCliVersion: ${{ steps.setup.outputs.copilotCliVersion }}
 
@@ -176,6 +178,7 @@ jobs:
           baseRef: ${{ needs.prepare.outputs.baseRef }}
           reviewWorkspace: ${{ github.workspace }}/trusted
           reviewOutputDir: ${{ github.workspace }}/review-output
+          bcqualityMarketplaceRepo: ${{ needs.prepare.outputs.bcqualityMarketplaceRepo }}
           bcqualityVersion: ${{ needs.prepare.outputs.bcqualityVersion }}
 
       - name: Upload published review artifacts

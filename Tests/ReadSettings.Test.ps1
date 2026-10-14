@@ -281,13 +281,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
 
         It 'Disables Copilot code review by default' {
-            $codeReviewAgent = (GetDefaultSettings).CodeReviewAgent
+            $defaultSettings = GetDefaultSettings
+            $codeReviewAgent = $defaultSettings.CodeReviewAgent
             $codeReviewAgent.enabled | Should -Be $false
             $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
-            $codeReviewAgent.bcqualityMarketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
-            $codeReviewAgent.bcqualityVersion | Should -Be '1.7'
+            $defaultSettings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $defaultSettings.BCQuality.version | Should -Be '1.7'
         }
 
         It 'Preserves default Copilot models when only enabled is overridden' {
@@ -304,13 +305,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
-            $settings.CodeReviewAgent.bcqualityMarketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
-            $settings.CodeReviewAgent.bcqualityVersion | Should -Be '1.7'
+            $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $settings.BCQuality.version | Should -Be '1.7'
         }
 
-        It 'Rejects unknown Copilot code review settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+        It 'Rejects unknown BCQuality settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $settings = GetDefaultSettings
-            $settings.CodeReviewAgent['bcqualityMarketplaceRepository'] = 'https://github.com/microsoft/BCQuality'
+            $settings.BCQuality['marketplaceRepository'] = 'https://github.com/microsoft/BCQuality'
 
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
                 Should -BeFalse
@@ -325,7 +326,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             param($MarketplaceRepo)
 
             $settings = GetDefaultSettings
-            $settings.CodeReviewAgent.bcqualityMarketplaceRepo = $MarketplaceRepo
+            $settings.BCQuality.marketplaceRepo = $MarketplaceRepo
 
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
                 Should -BeFalse

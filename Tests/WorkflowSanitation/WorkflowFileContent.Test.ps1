@@ -73,10 +73,11 @@ Describe "Copilot code review workflows" {
 
     It 'Reads the repository-level opt-in setting from trusted content' {
         $runnerWorkflow | Should -Match 'name:\s+Checkout trusted settings'
-        $runnerWorkflow | Should -Match 'get:\s+CodeReviewAgent'
+        $runnerWorkflow | Should -Match 'get:\s+CodeReviewAgent,BCQuality'
         $runnerWorkflow | Should -Match "project:\s+''"
         $runnerWorkflow | Should -Match "workflowName:\s+''"
-        $runnerWorkflow | Should -Match 'settingsJson:\s+\$\{\{\s+env\.CodeReviewAgent\s+\}\}'
+        $runnerWorkflow | Should -Match 'codeReviewSettingsJson:\s+\$\{\{\s+env\.CodeReviewAgent\s+\}\}'
+        $runnerWorkflow | Should -Match 'bcqualitySettingsJson:\s+\$\{\{\s+env\.BCQuality\s+\}\}'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualityMarketplaceRepo:\s+\$\{\{\s+steps\.context\.outputs\.bcqualityMarketplaceRepo\s+\}\}'
@@ -111,9 +112,9 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match '(?ms)name:\s+Setup Copilot CLI and BCQuality\s+id:\s+setup.*?phase:\s+prepare'
         $reviewAction | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '..\SetupBCQuality\SetupBCQuality.ps1'"))
         $reviewAction | Should -Match "\`$setupToken = if \(\`$marketplace -eq 'microsoft/BCQuality'\)"
-        $reviewAction | Should -Match '\$configuration\.bcquality\.repo = \$bcqualityMarketplaceRepo'
-        $reviewAction | Should -Match '\$configuration\.bcquality\.ref = "v\$bcqualityVersion"'
+        $reviewAction | Should -Match "-marketplaceRef `"v\`$bcqualityVersion`""
         $reviewAction | Should -Match '\$env:BCQUALITY_ROOT = \$bcqualityRoot'
+        $reviewAction | Should -Match '\$env:BCQUALITY_REPO = \$bcqualityMarketplaceRepo'
         $reviewAction | Should -Match '\$env:BCQUALITY_VERSION = \$bcqualityVersion'
         $reviewAction | Should -Match "\$env:BCQUALITY_CONSUME = 'plugin'"
         $runnerWorkflow | Should -Match "(?ms)phase:\s+prepare.*?bcqualityToken:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}.*?phase:\s+generate"

@@ -7,9 +7,8 @@
 .DESCRIPTION
     Boundary contract: this script is orchestration only. All skills and
     knowledge live in BCQuality (https://github.com/microsoft/BCQuality, or
-    a partner fork). The consuming repo owns its policy config
-    (bcquality.config.yaml), passed in via BCQUALITY_CONFIG_PATH; when unset
-    the action's default baseline (Actions/ReviewAgent/bcquality.config.yaml) is used.
+    a partner fork). SetupBCQuality owns the tracked plugin filtering and
+    task-context policy in Actions/SetupBCQuality/bcquality.config.yaml.
     The runner workflow installs BCQuality as a Copilot plugin, filters that
     ephemeral installation, and hands this script the resulting
     BCQUALITY_ROOT path.
@@ -514,7 +513,7 @@ function Assert-Config {
             throw "BCQUALITY_ROOT does not exist: $BCQualityRoot"
         }
         if (-not (Test-Path (Join-Path $BCQualityRoot 'skills/entry.md'))) {
-            throw "BCQuality plugin at $BCQualityRoot is missing skills/entry.md; check bcquality.config.yaml (repo and ref)."
+            throw "BCQuality plugin at $BCQualityRoot is missing skills/entry.md; check the configured marketplace and version."
         }
         if (-not $CopilotModel) {
             throw 'COPILOT_MODEL is required for deterministic root consolidation.'
@@ -1320,21 +1319,14 @@ function Test-GlobMatch {
 # ---------------------------------------------------------------------------
 $script:BCQualityConfigCache = $null
 function Get-BCQualityConfigCached {
-    # Resolve the BCQuality config once per process. Build-TaskContext and
-    # Get-BCQualityRepoUrl both need it; re-running the script each time would
-    # re-read the YAML and re-apply env overrides, which can diverge silently
-    # if the environment changes between calls.
+    # Resolve the BCQuality policy once per process because task-context
+    # construction can request it multiple times.
     if ($null -eq $script:BCQualityConfigCache) {
-        # The config resolver ships beside this orchestrator in the engine repo.
-        $configScript = Join-Path $PSScriptRoot 'Get-BCQualityConfig.ps1'
+        $configScript = Join-Path $PSScriptRoot '..\..\SetupBCQuality\Get-BCQualityConfig.ps1'
         if (-not (Test-Path $configScript)) {
             throw "Get-BCQualityConfig.ps1 not found at $configScript"
         }
-        # The policy config (bcquality.config.yaml) lives in the *consuming*
-        # repo, not the engine. The workflow points BCQUALITY_CONFIG_PATH at it;
-        # when unset, Get-BCQualityConfig.ps1 falls back to the engine default.
-        $configPath = ($env:BCQUALITY_CONFIG_PATH ?? '').Trim()
-        $script:BCQualityConfigCache = if ($configPath) { & $configScript -ConfigPath $configPath } else { & $configScript }
+        $script:BCQualityConfigCache = & $configScript
     }
     return $script:BCQualityConfigCache
 }
@@ -4312,10 +4304,9 @@ function Resolve-AgentVersion {
     if ($LASTEXITCODE -eq 0 -and $releaseTagOutput.Count -gt 0 -and [string]$releaseTagOutput[0] -match '^v(\d+)\.(\d+)$') {
         $engineMajor = $Matches[1]
         $engineMinor = $Matches[2]
-        $cfg = Get-BCQualityConfigCached
-        $bcQualityVersion = [string]$cfg['bcquality']['version']
+        $bcQualityVersion = $BCQualityVersion
         if ($bcQualityVersion -notmatch '^\d+\.(\d+)$') {
-            throw "bcquality.version must use major.minor format to derive the AL-Go review engine version. Got: '$bcQualityVersion'"
+            throw "BCQUALITY_VERSION must use major.minor format to derive the AL-Go review engine version. Got: '$bcQualityVersion'"
         }
         $contentMinor = $Matches[1]
         return "$engineMajor.$engineMinor.$contentMinor"
@@ -4440,18 +4431,9 @@ function Resolve-ReviewIteration {
 
 function Get-BCQualityRepoUrl {
     if (-not $script:BCQualityWebRepoUrl) {
-        $script:BCQualityWebRepoUrl = $null
-        try {
-            $cfg = Get-BCQualityConfigCached
-            $repo = [string]$cfg.bcquality.repo
-            if ($repo) {
-                $script:BCQualityWebRepoUrl = $repo.TrimEnd('/')
-                if ($script:BCQualityWebRepoUrl.EndsWith('.git')) {
-                    $script:BCQualityWebRepoUrl = $script:BCQualityWebRepoUrl.Substring(0, $script:BCQualityWebRepoUrl.Length - 4)
-                }
-            }
-        } catch {
-            Write-Warning "Could not resolve BCQuality repo URL for references: $($_.Exception.Message)"
+        $script:BCQualityWebRepoUrl = ([string]$env:BCQUALITY_REPO).TrimEnd('/')
+        if ($script:BCQualityWebRepoUrl.EndsWith('.git')) {
+            $script:BCQualityWebRepoUrl = $script:BCQualityWebRepoUrl.Substring(0, $script:BCQualityWebRepoUrl.Length - 4)
         }
     }
     return $script:BCQualityWebRepoUrl
