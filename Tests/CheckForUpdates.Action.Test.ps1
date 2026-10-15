@@ -168,6 +168,155 @@ Describe "CheckForUpdates Action: runtime behavior" {
         }
     }
 
+    Context 'Template repository settings redirects' {
+        BeforeEach {
+            Mock IsDirectALGo { return $false }
+            $externalFolder = Join-Path $TestDrive 'externalTemplateSettings'
+            New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
+            $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
+            Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+            $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+            $templateSettingsFile = Join-Path $testTemplateFolder $RepoSettingsFile
+        }
+
+        AfterEach {
+            $settingsItem = Get-Item -LiteralPath $templateSettingsFile -Force -ErrorAction SilentlyContinue
+            if ($settingsItem -and $settingsItem.LinkType) {
+                Remove-Item -LiteralPath $templateSettingsFile -Force
+            }
+
+            $githubFolder = Join-Path $testTemplateFolder '.github'
+            $githubItem = Get-Item -LiteralPath $githubFolder -Force -ErrorAction SilentlyContinue
+            if ($githubItem -and $githubItem.LinkType -in @('Junction', 'SymbolicLink')) {
+                [System.IO.Directory]::Delete($githubFolder)
+            }
+        }
+
+        It 'Rejects template repository settings redirected through a junction' -Skip:(-not $script:isWindowsPlatform) {
+            $githubFolder = Join-Path $testTemplateFolder '.github'
+            New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Cannot read template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+
+            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+            Should -Invoke GetFilesToUpdate -Exactly 0
+            Should -Invoke CloneIntoNewFolder -Exactly 0
+        }
+
+        It 'Rejects template repository settings redirected through a folder symlink' -Skip:(-not $script:hasSymlinkCapability) {
+            $githubFolder = Join-Path $testTemplateFolder '.github'
+            New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Cannot read template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+
+            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+            Should -Invoke GetFilesToUpdate -Exactly 0
+            Should -Invoke CloneIntoNewFolder -Exactly 0
+        }
+
+        It 'Rejects template repository settings redirected through a file symlink' -Skip:(-not $script:hasSymlinkCapability) {
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalSettingsFile -Force | Out-Null
+
+            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Cannot read template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+
+            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+            Should -Invoke GetFilesToUpdate -Exactly 0
+            Should -Invoke CloneIntoNewFolder -Exactly 0
+        }
+    }
+
+    Context 'Clone repository settings redirects' {
+        BeforeEach {
+            Mock Test-HasSystemFileChanges { return $true }
+            $templateFile = Join-Path $testTemplateFolder 'pendingUpdate.txt'
+            $workspaceFile = Join-Path $testWorkspaceFolder 'pendingUpdate.txt'
+            $cloneFile = Join-Path $testCloneRoot 'pendingUpdate.txt'
+            $workspaceRemovalFile = Join-Path $testWorkspaceFolder 'pendingRemoval.txt'
+            $cloneRemovalFile = Join-Path $testCloneRoot 'pendingRemoval.txt'
+            Set-Content -LiteralPath $templateFile -Value 'new content' -Encoding UTF8
+            Set-Content -LiteralPath $workspaceFile -Value 'old content' -Encoding UTF8
+            Set-Content -LiteralPath $cloneFile -Value 'old content' -Encoding UTF8
+            Set-Content -LiteralPath $workspaceRemovalFile -Value 'keep me' -Encoding UTF8
+            Set-Content -LiteralPath $cloneRemovalFile -Value 'keep me' -Encoding UTF8
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = $workspaceFile }
+            )
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+            $testFilesToExclude = @(@{ destinationFullPath = $workspaceRemovalFile })
+
+            $externalFolder = Join-Path $TestDrive 'externalCloneSettings'
+            New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
+            $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
+            Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+            $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+            $cloneSettingsFile = Join-Path $testCloneRoot $RepoSettingsFile
+        }
+
+        AfterEach {
+            $settingsItem = Get-Item -LiteralPath $cloneSettingsFile -Force -ErrorAction SilentlyContinue
+            if ($settingsItem -and $settingsItem.LinkType) {
+                Remove-Item -LiteralPath $cloneSettingsFile -Force
+            }
+
+            $githubFolder = Join-Path $testCloneRoot '.github'
+            $githubItem = Get-Item -LiteralPath $githubFolder -Force -ErrorAction SilentlyContinue
+            if ($githubItem -and $githubItem.LinkType -in @('Junction', 'SymbolicLink')) {
+                [System.IO.Directory]::Delete($githubFolder)
+            }
+        }
+
+        It 'Rejects clone repository settings redirected through a junction before applying changes' -Skip:(-not $script:isWindowsPlatform) {
+            $githubFolder = Join-Path $testCloneRoot '.github'
+            New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+            { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
+                Should -Throw -ExpectedMessage "*Cannot update repository settings: '$cloneSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect.*"
+
+            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+            Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
+            Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
+            Should -Invoke CloneIntoNewFolder -Exactly 1
+            Should -Invoke UpdateSettingsFile -Exactly 0
+            Should -Invoke CommitFromNewFolder -Exactly 0
+        }
+
+        It 'Rejects clone repository settings redirected through a folder symlink before applying changes' -Skip:(-not $script:hasSymlinkCapability) {
+            $githubFolder = Join-Path $testCloneRoot '.github'
+            New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+            { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
+                Should -Throw -ExpectedMessage "*Cannot update repository settings: '$cloneSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect.*"
+
+            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+            Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
+            Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
+            Should -Invoke CloneIntoNewFolder -Exactly 1
+            Should -Invoke UpdateSettingsFile -Exactly 0
+            Should -Invoke CommitFromNewFolder -Exactly 0
+        }
+
+        It 'Rejects clone repository settings redirected through a file symlink before applying changes' -Skip:(-not $script:hasSymlinkCapability) {
+            New-Item -ItemType Directory -Path (Join-Path $testCloneRoot '.github') -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path $cloneSettingsFile -Target $externalSettingsFile -Force | Out-Null
+
+            { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
+                Should -Throw -ExpectedMessage "*Cannot update repository settings: '$cloneSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect.*"
+
+            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+            Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
+            Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
+            Should -Invoke CloneIntoNewFolder -Exactly 1
+            Should -Invoke UpdateSettingsFile -Exactly 0
+            Should -Invoke CommitFromNewFolder -Exactly 0
+        }
+    }
+
     It 'Reads, updates and removes with literal bracketed paths' {
         $newSource = Join-Path $testTemplateFolder 'New[1].txt'
         $newDestination = Join-Path $testWorkspaceFolder 'New[1].txt'
@@ -4408,7 +4557,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType SymbolicLink -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings snapshot: '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
 
         Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
     }
@@ -4429,7 +4578,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
         New-Item -ItemType SymbolicLink -Path $snapshotFile -Target $externalTargetFile -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings snapshot: '$snapshotFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
 
         Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
     }
@@ -4448,9 +4597,14 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType SymbolicLink -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"snapshot":"untouched"}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings: '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
 
         Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
 
     It 'Throws and leaves the external target and the existing snapshot untouched when the template settings file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
@@ -4470,7 +4624,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
 
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
         Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
@@ -4493,7 +4647,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType Junction -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings snapshot: '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
 
         Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
     }
@@ -4512,9 +4666,14 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType Junction -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
+        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
+        $snapshotContent = '{"snapshot":"untouched"}'
+        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
+
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings: '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
 
         Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
+        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
 }
 

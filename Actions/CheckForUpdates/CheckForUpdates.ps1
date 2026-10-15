@@ -73,6 +73,9 @@ $templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
     $templateRepoSettingsFile = Join-Path $templateFolder $RepoSettingsFile
+    if (-not (Test-PathPhysicallyEqual -Path $templateRepoSettingsFile -AnchorPaths @($templateFolder))) {
+        throw "Cannot read template repository settings: '$templateRepoSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+    }
     if (Test-Path -Path $templateRepoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
@@ -292,6 +295,10 @@ else {
         invoke-git status
 
         $dstRoot = (Get-Location).Path
+        $dstRepoSettingsFile = Join-Path $dstRoot $RepoSettingsFile
+        if (-not (Test-PathPhysicallyEqual -Path $dstRepoSettingsFile -AnchorPaths @($dstRoot))) {
+            throw "Cannot update repository settings: '$dstRepoSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        }
 
         # Update the files
         # Calculate the release notes, while updating
@@ -341,7 +348,7 @@ else {
         }
 
         # Update the templateUrl and templateSha in the repo settings file
-        UpdateSettingsFile -settingsFile (Join-Path ".github" "AL-Go-Settings.json") -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
+        UpdateSettingsFile -settingsFile $dstRepoSettingsFile -updateSettings @{ "templateUrl" = $templateUrl; "templateSha" = $templateSha }
 
         Write-Host "ReleaseNotes:"
         Write-Host $releaseNotes

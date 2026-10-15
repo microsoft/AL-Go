@@ -1335,10 +1335,10 @@ function ReadSettingsWithCurrentCustomTemplateRepoSettings {
     # Validate both copy endpoints before touching them (even if the leaf file doesn't exist yet): a symlink/junction
     # anywhere along either path can make it resolve to a different physical location than its literal path
     if (-not (Test-PathPhysicallyEqual -Path $baseFolderCustomTemplateSettingsPath -AnchorPaths @($baseFolder))) {
-        throw "Cannot read settings: '$baseFolderCustomTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        throw "Cannot read custom template repository settings snapshot: '$baseFolderCustomTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
     }
     if (-not (Test-PathPhysicallyEqual -Path $customTemplateRepoSettingsPath -AnchorPaths @($customTemplateFolder))) {
-        throw "Cannot read settings: '$customTemplateRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        throw "Cannot read custom template repository settings: '$customTemplateRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
     }
 
     $baseFolderCustomTemplateSettingsBackupPath = $null
