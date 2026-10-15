@@ -49,6 +49,92 @@ Describe "CheckForUpdates Action Tests" {
     }
 }
 
+Describe "Test-HasSystemFileChanges" {
+    BeforeAll {
+        $scriptRoot = Join-Path (Join-Path $PSScriptRoot '..') 'Actions'
+        . (Join-Path $scriptRoot 'AL-Go-Helper.ps1')
+        $scriptRoot = Join-Path $scriptRoot 'CheckForUpdates'
+        . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+    }
+
+    BeforeEach {
+        $settingsFile = Join-Path $TestDrive 'AL-Go-Settings.json'
+        $templateUrl = 'https://github.com/contoso/AL-Go@main'
+        $settings = @{
+            templateUrl = $templateUrl
+            templateSha = 'old-sha'
+        }
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'parameters', Justification = 'Splatted into Test-HasSystemFileChanges in the It blocks.')]
+        $parameters = @{
+            settingsFile = $settingsFile
+            templateUrl = $templateUrl
+            updateFiles = @()
+            removeFiles = @()
+        }
+    }
+
+    It 'Identifies a SHA-only update without modifying the settings file' {
+        $originalContent = [System.IO.File]::ReadAllBytes($settingsFile)
+        Test-HasSystemFileChanges @parameters | Should -BeFalse
+
+        [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($settingsFile)) | Should -Be ([System.Convert]::ToBase64String($originalContent))
+    }
+
+    It 'Does not skip updates when <change> are pending' -TestCases @(
+        @{ change = 'file updates'; updateFiles = @(@{ DstFile = 'script.ps1'; content = 'new content' }); removeFiles = @() }
+        @{ change = 'file removals'; updateFiles = @(); removeFiles = @('obsolete.ps1') }
+        @{ change = 'settings updates'; updateFiles = @(@{ DstFile = '.github/AL-Go-Settings.json'; content = '{"doNotPerformUpgrade":true}' }); removeFiles = @() }
+    ) {
+        Param($change, $updateFiles, $removeFiles)
+
+        $parameters.updateFiles = $updateFiles
+        $parameters.removeFiles = $removeFiles
+        Test-HasSystemFileChanges @parameters | Should -BeTrue -Because "$change must still be applied"
+    }
+
+    It 'Does not skip a template URL or branch change' -TestCases @(
+        @{ newTemplateUrl = 'https://github.com/other/AL-Go@main' }
+        @{ newTemplateUrl = 'https://github.com/contoso/AL-Go@preview' }
+    ) {
+        Param($newTemplateUrl)
+
+        $parameters.templateUrl = $newTemplateUrl
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Does not skip initialization when <missingMetadata> is missing' -TestCases @(
+        @{ missingMetadata = 'templateUrl' }
+        @{ missingMetadata = 'templateSha' }
+    ) {
+        Param($missingMetadata)
+
+        $settings.Remove($missingMetadata)
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Does not skip initialization when the repository settings file is missing' {
+        Remove-Item $settingsFile
+
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Does not skip initialization when the recorded SHA is empty' {
+        $settings.templateSha = ''
+        $settings | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+
+        Test-HasSystemFileChanges @parameters | Should -BeTrue
+    }
+
+    It 'Reports invalid settings instead of treating them as a no-op' {
+        Set-Content $settingsFile -Value '{invalid json' -Encoding UTF8
+
+        { Test-HasSystemFileChanges @parameters } | Should -Throw
+    }
+}
+
 Describe "YamlClass Tests" {
     BeforeAll {
         $actionName = "CheckForUpdates"

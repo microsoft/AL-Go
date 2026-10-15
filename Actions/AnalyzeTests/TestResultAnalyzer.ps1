@@ -537,7 +537,7 @@ function GetPageScriptingTestResultSummaryMD {
                     $suiteFailureNode.summaryDetails = "$suitePrettyName, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds"
                     foreach($testcase in $testsuite.testcase) {
                         $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
-                        if ($testcase.failure) {
+                        if ($testcase.SelectSingleNode('failure')) {
                             Write-Host "      - Error: $($testcase.failure.message)"
                             Write-Host "        Stacktrace:"
                             Write-Host "        $($testcase.failure."#cdata-section".Trim().Replace("`n","`n        "))"

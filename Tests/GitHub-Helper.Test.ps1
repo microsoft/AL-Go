@@ -1,6 +1,101 @@
 ﻿Get-Module Github-Helper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 
+Describe "FindLatestSuccessfulCICDRun" {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+    }
+
+    BeforeEach {
+        $script:responses = [System.Collections.Queue]::new()
+        Mock Start-Sleep -ModuleName Github-Helper {}
+        Mock Write-Host -ModuleName Github-Helper {}
+        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $false }
+        Mock InvokeWebRequest -ModuleName Github-Helper {
+            @{
+                Content = @{ workflow_runs = @($script:responses.Dequeue()) } | ConvertTo-Json -Depth 10
+            }
+        }
+    }
+
+    It 'returns only the ID and SHA immediately on success and logs counts' {
+        $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = ' CI/CD'; conclusion = 'success' }))
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'releases/29.x' -token 'secret-token' -retention 7)
+
+        $result | Should -HaveCount 2
+        $result[0] | Should -Be 42
+        $result[1] | Should -BeExactly 'baseline-sha'
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter {
+            $uri -like '*per_page=100&page=1&exclude_pull_requests=true&status=completed&branch=releases%2F29.x&created=%3E*%3A*%3A*'
+        }
+        Should -Invoke Write-Host -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter {
+            $Object -like '*attempt 1/3, page 1: 1 workflow runs, 1 CI/CD runs.'
+        }
+        Should -Invoke Write-Host -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $Object -like '*secret-token*' }
+    }
+
+    It 'retries empty listings and restarts pagination after an ineligible listing' {
+        $script:responses.Enqueue(@())
+        $script:responses.Enqueue(@(@{ id = 41; head_sha = 'failed'; name = 'CI/CD'; conclusion = 'failure' }))
+        $script:responses.Enqueue(@())
+        $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = 'CI/CD'; conclusion = 'success' }))
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
+
+        $result | Should -HaveCount 2
+        $result[0] | Should -Be 42
+        $result[1] | Should -BeExactly 'baseline-sha'
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 3 -Exactly -ParameterFilter { $uri -like '*&page=1&*' }
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like '*&page=2&*' }
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $Seconds -eq 5 }
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $Seconds -eq 10 }
+    }
+
+    It 'returns zero and an empty SHA after three exhausted attempts without an extra sleep' {
+        1..3 | ForEach-Object { $script:responses.Enqueue(@()) }
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
+
+        $result | Should -HaveCount 2
+        $result[0] | Should -Be 0
+        $result[1] | Should -BeExactly ''
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 3 -Exactly -ParameterFilter { $uri -like '*&page=1&*' }
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 2 -Exactly
+    }
+
+    It 'propagates request failures rather than returning a missing baseline' {
+        Mock InvokeWebRequest -ModuleName Github-Helper { throw 'Request failed' }
+
+        { FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 } | Should -Throw 'Request failed'
+
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
+    }
+
+    It 'paginates past unrelated and cancelled runs and accepts successful build jobs in a failed run' {
+        $script:responses.Enqueue(@(
+            @{ id = 45; head_sha = 'unrelated'; name = 'Other'; conclusion = 'success' }
+            @{ id = 44; head_sha = 'cancelled'; name = ' CI/CD'; conclusion = 'cancelled' }
+            @{ id = 43; head_sha = 'failed'; name = 'CI/CD'; conclusion = 'failure' }
+        ))
+        $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = ' CI/CD '; conclusion = 'failure' }))
+        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $true } -ParameterFilter { $workflowRunId -eq '42' }
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
+
+        $result | Should -HaveCount 2
+        $result[0] | Should -Be 42
+        $result[1] | Should -BeExactly 'baseline-sha'
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like '*&page=2&*' }
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 2 -Exactly
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $workflowRunId -in @('44', '45') }
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
+    }
+}
+
 Describe "GitHub-Helper Tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')

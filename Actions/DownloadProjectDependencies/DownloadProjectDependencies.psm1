@@ -345,6 +345,9 @@ function Get-DependenciesFromInstallApps {
     '*BuildOutput' is included to ensure the pattern matches multiple artifacts, preventing download-artifact
     v8 from flattening a single artifact directly into the destination path (which breaks the subdirectory
     structure that GetDependencies expects).
+
+    Glob-special characters in the branch name (e.g. ',' which would split the brace expansion)
+    are backslash-escaped, so they match literally.
     .PARAMETER Project
     The name of the current AL-Go project.
     .PARAMETER ProjectDependencies
@@ -369,7 +372,8 @@ function Get-DependencyArtifactPattern {
         return $null
     }
 
-    $branchName = Get-CurrentBranchName
+    # Characters that are legal in Git branch names but special to minimatch
+    $branchName = (Get-CurrentBranchName) -replace '([{},!+@()#\]])', '\$1'
 
     # Build brace-expansion entries per dependency project.
     # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.
@@ -428,4 +432,31 @@ function Resolve-DependencyFiles {
     })
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles
+<#
+    .SYNOPSIS
+    Warns when resolved dependency paths do not refer to existing files.
+    .PARAMETER Dependencies
+    Resolved dependency paths, optionally wrapped in parentheses to mark test apps.
+#>
+function Write-DependencyFileWarnings {
+    Param(
+        [string[]] $Dependencies = @()
+    )
+
+    foreach ($dependency in $Dependencies) {
+        try {
+            $filePath = "$dependency"
+            if ($filePath.StartsWith('(') -and $filePath.EndsWith(')')) {
+                $filePath = $filePath.Substring(1, $filePath.Length - 2)
+            }
+            if ([string]::IsNullOrWhiteSpace($filePath) -or !(Test-Path -LiteralPath $filePath -PathType Leaf -ErrorAction Stop)) {
+                OutputWarning -message "Dependency file not found: $filePath"
+            }
+        }
+        catch {
+            OutputWarning -message "Unable to check dependency file '$filePath': $($_.Exception.Message)"
+        }
+    }
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles, Write-DependencyFileWarnings

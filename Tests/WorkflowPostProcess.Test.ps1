@@ -18,10 +18,10 @@ Describe "WorkflowPostProcess Action Tests" {
         Invoke-Expression $actionScript
     }
 
-    It 'Test action.yaml matches script' {
+    It 'Test action.yaml matches script and telemetry failures are non-blocking' {
         $outputs = [ordered]@{
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs -ContinueOnError
     }
 
     # Call action

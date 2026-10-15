@@ -406,7 +406,8 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
-                        "select" = $settings.nuGetFeedSelectMode
+                        "select" = $settings.nuGetFeedSelectMode -ireplace '-allowPrerelease$', ''
+                        "allowPrerelease" = $settings.nuGetFeedSelectMode -imatch '-allowPrerelease$'
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
@@ -488,8 +489,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $install.apps `
-        -installTestApps $install.testApps `
+        -installApps ([string[]] $install.apps) `
+        -installTestApps ([string[]] $install.testApps) `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
