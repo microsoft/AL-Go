@@ -481,7 +481,130 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
         }
 
-        It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
+        It 'overwriteSettings in a user source prevents subsequent template sources from re-merging that setting' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            try {
+                # Template repo settings add probing paths
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "template-repo"; "version" = "latest" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder $CustomTemplateRepoSettingsFileName) -Encoding utf8 -Force
+
+                # User repo settings explicitly overwrite appDependencyProbingPaths to empty
+                @{ "overwriteSettings" = @("appDependencyProbingPaths"); "appDependencyProbingPaths" = @() } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+                # Template project settings also have probing paths (this is the source of the bug)
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "template-project-repo"; "version" = "latest" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder $CustomTemplateProjectSettingsFileName) -Encoding utf8 -Force
+
+                $ENV:ALGoOrgSettings = ''
+                $ENV:ALGoRepoSettings = ''
+
+                $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+
+                # appDependencyProbingPaths must remain empty: the user's overwriteSettings must win over both template sources
+                $settings.appDependencyProbingPaths | Should -BeNullOrEmpty
+            }
+            finally {
+                Pop-Location
+                Remove-Item $tempName -Recurse -Force
+            }
+        }
+
+        It 'overwriteSettings in a user source still allows subsequent user sources to contribute to that setting' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            try {
+                # Template repo settings add probing paths
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "template-repo"; "version" = "latest" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder $CustomTemplateRepoSettingsFileName) -Encoding utf8 -Force
+
+                # User repo settings explicitly overwrite appDependencyProbingPaths to a specific set
+                @{ "overwriteSettings" = @("appDependencyProbingPaths"); "appDependencyProbingPaths" = @( @{ "repo" = "user-repo"; "version" = "1.0" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+                # Template project settings also have probing paths (must be ignored)
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "template-project-repo"; "version" = "latest" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder $CustomTemplateProjectSettingsFileName) -Encoding utf8 -Force
+
+                # User project settings add one more probing path (must be merged on top of the user repo overwrite)
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "project-repo"; "version" = "2.0" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+                $ENV:ALGoOrgSettings = ''
+                $ENV:ALGoRepoSettings = ''
+
+                $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+
+                # Only user-repo and project-repo entries must be present; template entries must be absent
+                $settings.appDependencyProbingPaths.Count | Should -Be 2
+                $settings.appDependencyProbingPaths.repo | Should -Contain 'user-repo'
+                $settings.appDependencyProbingPaths.repo | Should -Contain 'project-repo'
+                $settings.appDependencyProbingPaths.repo | Should -Not -Contain 'template-repo'
+                $settings.appDependencyProbingPaths.repo | Should -Not -Contain 'template-project-repo'
+            }
+            finally {
+                Pop-Location
+                Remove-Item $tempName -Recurse -Force
+            }
+        }
+
+        It 'overwriteSettings in a user source without the property value does not block template sources from merging that setting' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            try {
+                # Template repo settings add probing paths
+                @{ "appDependencyProbingPaths" = @( @{ "repo" = "template-repo"; "version" = "latest" } ) } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder $CustomTemplateRepoSettingsFileName) -Encoding utf8 -Force
+
+                # User repo settings declare overwriteSettings for appDependencyProbingPaths but do NOT provide the property value.
+                # This must not block template sources from contributing appDependencyProbingPaths.
+                @{ "overwriteSettings" = @("appDependencyProbingPaths") } | ConvertTo-Json -Depth 99 |
+                Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+                $ENV:ALGoOrgSettings = ''
+                $ENV:ALGoRepoSettings = ''
+
+                $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+
+                # appDependencyProbingPaths must contain the template entry because the user source did not provide a value
+                $settings.appDependencyProbingPaths | Should -Not -BeNullOrEmpty
+                $settings.appDependencyProbingPaths.repo | Should -Contain 'template-repo'
+            }
+            finally {
+                Pop-Location
+                Remove-Item $tempName -Recurse -Force
+            }
+        }
+
+
             Mock Write-Host { }
             Mock Out-Host { }
 
