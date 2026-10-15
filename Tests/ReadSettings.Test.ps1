@@ -1,10 +1,22 @@
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
 
 InModuleScope ReadSettings { # Allows testing of private functions
-    Describe "ReadSettings" {
+    Describe 'ReadSettings' {
         BeforeAll {
             [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'scriptPath', Justification = 'False positive.')]
             $schema = Get-Content -Path (Join-Path $PSScriptRoot '../Actions/.Modules/settings.schema.json') -Raw
+        }
+
+        BeforeEach {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalOrgSettings', Justification = 'False positive.')]
+            $originalOrgSettings = $ENV:ALGoOrgSettings
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalRepoSettings', Justification = 'False positive.')]
+            $originalRepoSettings = $ENV:ALGoRepoSettings
+        }
+
+        AfterEach {
+            $ENV:ALGoOrgSettings = $originalOrgSettings
+            $ENV:ALGoRepoSettings = $originalRepoSettings
         }
 
         It 'Reads settings from all settings locations' {
@@ -352,7 +364,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting5 | Should -Be 'value5'      # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'overwriteSettings property resets settings from destination object (complex types: arrays)' {
@@ -375,7 +387,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
 
             # Now use overwriteSettings to overwrite the complex setting
             $dst = [ordered]@{
@@ -396,7 +408,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting5 | Should -Be 'value5'             # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'overwriteSettings property resets settings from destination object (complex types: objects)' {
@@ -459,7 +471,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting6 | Should -Be 'value6'                     # New setting added
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'overwriteSettings property does not reset a setting if it does not exist in the source object' {
@@ -478,7 +490,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $dst.setting2 | Should -Be @('value2.0', 'value2.1')                           # Unchanged
 
             # overwriteSettings should never be added to the destination object
-            $dst.PSObject.Properties.Name | Should -Not -Contain 'overwriteSettings'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
         }
 
         It 'Multiple conditionalSettings with same array setting are merged (all entries kept)' {
@@ -534,11 +546,857 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.workflowDefaultInputs[2].name | Should -Be 'input2'
             $settings.workflowDefaultInputs[2].value | Should -Be 'value3'
 
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Protection from an earlier source prevents a later override' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+            Mock OutputNotice { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: protected settings includes "country", set country = "de"
+            @{ "protectedSettings" = @("country"); "country" = "de" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override country = "ch"
+            @{ "country" = "ch" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
             $ENV:ALGoRepoSettings = ''
+
+            # Protected setting from repo should prevent project from overwriting
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -metadata $metadata
+            $settings.country | Should -Be 'de'   # Repo protected value wins
+            $settings.Contains('protectedSettings') | Should -BeFalse
+            Should -Invoke OutputNotice -Times 0 -Exactly
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Match '^settings .*Project.*settings\.json \(File\)$'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Match '^protected by settings \.github.*\(File\)$'
 
             # Clean up
             Pop-Location
             Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Multiple protectedSettings are respected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: mark both country and keyVaultName as protected
+            @{
+                "protectedSettings" = @("country", "keyVaultName")
+                "country"           = "de"
+                "keyVaultName"      = "orgVault"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override both
+            @{
+                "country"      = "ch"
+                "keyVaultName" = "projectVault"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -metadata $metadata
+            $settings.country | Should -Be 'de'
+            $settings.keyVaultName | Should -Be 'orgVault'
+            $settings.Contains('protectedSettings') | Should -BeFalse
+            foreach ($prop in @('country', 'keyVaultName')) {
+                $metadata.properties[$prop].sourcesSkipped.Count | Should -Be 1
+                $metadata.properties[$prop].sourcesSkipped[0].source | Should -Match '^settings .*Project.*settings\.json \(File\)$'
+                $metadata.properties[$prop].sourcesSkipped[0].reason | Should -Match '^protected by settings \.github.*\(File\)$'
+            }
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Later protected settings can override earlier protected settings' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings (via variable): mark country as protected and set to "de"
+            $ENV:ALGoOrgSettings = @{
+                "protectedSettings" = @("country")
+                "country"           = "de"
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: try to override country with normal (non-protected) setting = "us"
+            @{ "country" = "us" } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: try to override with protected setting = "ch"
+            @{
+                "protectedSettings" = @("country")
+                "country"           = "ch"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Project setting is also marked as protected and should be allowed to override
+            # a protected setting from an earlier source.
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -metadata $metadata
+            $settings.country | Should -Be 'ch'   # Source protected overrides destination protected
+            $metadata.properties.country.sources | Should -Match '^settings .*Project.*settings\.json \(File\)$'
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Match '^settings \.github.*\(File\)$'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings ALGoOrgSettings (Variable)'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Logs unknown when a protected setting has no source metadata' {
+            foreach ($case in @('missing', 'empty')) {
+                $dst = [ordered]@{ country = 'de' }
+                $propertyMetadata = @{ protected = $true }
+                if ($case -eq 'empty') {
+                    $propertyMetadata.sources = @()
+                }
+                $metadata = @{ properties = @{ country = $propertyMetadata } }
+
+                MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ country = 'ch' }) -context 'settings Test' -metadata $metadata
+
+                $dst.country | Should -Be 'de'
+                $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+                $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings Test'
+                $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by unknown'
+            }
+        }
+
+        It 'Collects repeated skipped sources without reporting them during resolution' {
+            Mock OutputNotice { }
+
+            $dst = [ordered]@{ country = 'de' }
+            $metadata = @{ properties = @{ country = @{ protected = $true; sources = @('settings Organization') } } }
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ country = 'first-secret' }) -context 'settings Repository' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ country = 'second-secret'; overwriteSettings = @('country') }) -context 'settings Project' -metadata $metadata
+
+            $dst.country | Should -Be 'de'
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 2
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings Repository'
+            $metadata.properties.country.sourcesSkipped[1].source | Should -Be 'settings Project'
+            $metadata.properties.country.sourcesSkipped[1].reason | Should -Be 'protected by settings Organization'
+            Should -Invoke OutputNotice -Times 0 -Exactly
+        }
+
+        It 'Populates optional metadata for each read without printing a source group' {
+            Mock OutputGroupStart { }
+            Mock OutputGroupEnd { }
+
+            $metadata = @{ stale = $true }
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '{"country":"de"}' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata
+            $settings.country | Should -Be 'de'
+            $metadata.ContainsKey('stale') | Should -BeFalse
+            $metadata.properties.country.sources | Should -Be @('settings ALGoOrgSettings (Variable)')
+
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata
+            $settings.country | Should -Be 'us'
+            $metadata.properties.country.sources | Should -Be @('default')
+            Should -Invoke OutputGroupStart -Times 0 -Exactly
+            Should -Invoke OutputGroupEnd -Times 0 -Exactly
+        }
+
+        It 'Initializes metadata for every default setting, including nested settings' {
+            $metadata = @{}
+            ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata | Out-Null
+
+            $pending = [System.Collections.Stack]::new()
+            $pending.Push(@{ settings = (GetDefaultSettings -repoName 'repo'); metadata = $metadata })
+            while ($pending.Count -gt 0) {
+                $current = $pending.Pop()
+                foreach ($prop in $current.settings.Keys) {
+                    $current.metadata.properties.ContainsKey($prop) | Should -BeTrue
+                    $propertyMetadata = $current.metadata.properties[$prop]
+                    $propertyMetadata.sources[0] | Should -Be 'default'
+                    if ($current.settings[$prop] -is [System.Collections.IDictionary]) {
+                        $pending.Push(@{ settings = $current.settings[$prop]; metadata = $propertyMetadata })
+                    }
+                }
+            }
+        }
+
+        It 'Records accepted and derived sources in metadata' {
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '{"additionalCountries":["de"],"workspaceCompilation":{"parallelism":0}}' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -customSettings '{"additionalCountries":["at"]}' -metadata $metadata
+
+            $settings.additionalCountries | Should -Be @('de', 'at')
+            $metadata.properties.additionalCountries.sources | Should -Be @('default', 'settings ALGoOrgSettings (Variable)', 'settings CustomSettings (Parameter)')
+            $metadata.properties.workspaceCompilation.sources | Should -Be @('default', 'settings ALGoOrgSettings (Variable)')
+            $metadata.properties.workspaceCompilation.properties.parallelism.sources | Should -Be @('settings ALGoOrgSettings (Variable) > workspaceCompilation', 'derived from processor count')
+            $metadata.properties.shell.sources | Should -Be @('default', 'derived from runs-on')
+            $metadata.properties.githubRunner.sources | Should -Be @('default', 'derived from runs-on')
+            $metadata.properties.githubRunnerShell.sources | Should -Be @('default', 'derived from shell')
+            $metadata.properties.projectName.sources | Should -Be @('default', 'derived from project')
+            $metadata.properties.country.sources | Should -Be @('default')
+            $metadata.properties.alDoc.properties.includeProjects.sources | Should -Be @('default')
+        }
+
+        It 'Retains protection and source history when resolving derived settings' {
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -orgSettingsVariableValue '{"protectedSettings":["shell","githubRunnerShell","workspaceCompilation"],"runs-on":"ubuntu-latest","shell":"","githubRunner":"ubuntu-latest","githubRunnerShell":"powershell","workspaceCompilation":{"parallelism":0}}' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -metadata $metadata
+
+            $settings.shell | Should -Be 'pwsh'
+            $settings.githubRunnerShell | Should -Be 'pwsh'
+            $settings.workspaceCompilation.parallelism | Should -BeGreaterThan 0
+            $metadata.properties.shell.protected | Should -BeTrue
+            $metadata.properties.shell.sources | Should -Be @('settings ALGoOrgSettings (Variable)', 'derived from runs-on')
+            $metadata.properties.githubRunnerShell.protected | Should -BeTrue
+            $metadata.properties.githubRunnerShell.sources | Should -Be @('settings ALGoOrgSettings (Variable)', 'derived from githubRunner')
+            $metadata.properties.workspaceCompilation.protected | Should -BeTrue
+            $metadata.properties.workspaceCompilation.properties.parallelism.sources | Should -Be @('settings ALGoOrgSettings (Variable) > workspaceCompilation', 'derived from processor count')
+        }
+
+        It 'Keeps default sources for extensions and clears them for accepted overwrites' {
+            $dst = [ordered]@{
+                country = 'us'
+                projects = @('default-project')
+                nested = [ordered]@{ items = @('default-item') }
+            }
+            $metadata = @{ properties = @{
+                country = @{ sources = @('default') }
+                projects = @{ sources = @('default') }
+                nested = @{ sources = @('default'); properties = @{ items = @{ sources = @('default') } } }
+            } }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                country = 'de'
+                projects = @('first-project')
+                nested = [PSCustomObject]@{ items = @('first-item') }
+                newList = @('first-new')
+            }) -context 'settings First' -metadata $metadata
+
+            $metadata.properties.country.sources | Should -Be @('settings First')
+            $metadata.properties.projects.sources | Should -Be @('default', 'settings First')
+            $metadata.properties.nested.sources | Should -Be @('default', 'settings First')
+            $metadata.properties.nested.properties.items.sources | Should -Be @('default', 'settings First > nested')
+            $metadata.properties.newList.sources | Should -Be @('settings First')
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                overwriteSettings = @('projects')
+                projects = @('replacement-project')
+                nested = [PSCustomObject]@{ overwriteSettings = @('items'); items = @('replacement-item') }
+            }) -context 'settings Second' -metadata $metadata
+
+            $dst.projects | Should -Be @('replacement-project')
+            $dst.nested.items | Should -Be @('replacement-item')
+            $metadata.properties.projects.sources | Should -Be @('settings Second')
+            $metadata.properties.nested.sources | Should -Be @('default', 'settings First', 'settings Second')
+            $metadata.properties.nested.properties.items.sources | Should -Be @('settings Second > nested')
+        }
+
+        It 'Does not log a skip when the source also protects the setting' {
+            $dst = [ordered]@{ country = 'de' }
+            $metadata = @{ properties = @{ country = @{ protected = $true; sources = @('settings Original') } } }
+            $src = [PSCustomObject]@{ protectedSettings = @('country'); country = 'ch' }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test' -metadata $metadata
+
+            $dst.country | Should -Be 'ch'
+            $metadata.properties.country.protected | Should -BeTrue
+            $metadata.properties.country.sources | Should -Be @('settings Test')
+            $metadata.properties.country.ContainsKey('sourcesSkipped') | Should -BeFalse
+        }
+
+        It 'Logs the nested context when a protected setting is skipped' {
+            $dst = [ordered]@{
+                custom = [ordered]@{ country = 'de' }
+            }
+            $metadata = @{ properties = @{ custom = @{ properties = @{ country = @{ protected = $true; sources = @('settings Original') } } } } }
+            $src = [PSCustomObject]@{
+                custom = [PSCustomObject]@{ country = 'ch' }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test' -metadata $metadata
+
+            $dst.custom.country | Should -Be 'de'
+            $metadata.properties.custom.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.custom.properties.country.sourcesSkipped[0].source | Should -Be 'settings Test > custom'
+            $metadata.properties.custom.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings Original'
+        }
+
+        It 'Tracks the source of a nested protected setting across merges' {
+            $dst = [ordered]@{ custom = [ordered]@{ country = 'us' } }
+            $metadata = @{}
+            $firstSource = [PSCustomObject]@{
+                custom = [PSCustomObject]@{ protectedSettings = @('country'); country = 'de' }
+            }
+            $laterSource = [PSCustomObject]@{
+                custom = [PSCustomObject]@{ country = 'ch' }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $firstSource -context 'settings Organization' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $laterSource -context 'settings Project' -metadata $metadata
+
+            $dst.custom.country | Should -Be 'de'
+            $dst.custom.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.custom.sources | Should -Be @('settings Organization', 'settings Project')
+            $metadata.properties.custom.properties.country.protected | Should -BeTrue
+            $metadata.properties.custom.properties.country.sources | Should -Be @('settings Organization > custom')
+            $metadata.properties.custom.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.custom.properties.country.sourcesSkipped[0].source | Should -Be 'settings Project > custom'
+            $metadata.properties.custom.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings Organization > custom'
+        }
+
+        It 'Keeps nested protection separate for sibling objects' {
+            $dst = [ordered]@{
+                first = [ordered]@{ country = 'us' }
+                second = [ordered]@{ country = 'us' }
+            }
+            $metadata = @{}
+            $firstSource = [PSCustomObject]@{
+                first = [PSCustomObject]@{ protectedSettings = @('country'); country = 'de' }
+            }
+            $laterSource = [PSCustomObject]@{
+                first = [PSCustomObject]@{ country = 'ch' }
+                second = [PSCustomObject]@{ country = 'at' }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $firstSource -context 'settings Organization' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $laterSource -context 'settings Project' -metadata $metadata
+
+            $dst.first.country | Should -Be 'de'
+            $dst.second.country | Should -Be 'at'
+            $metadata.properties.second.properties.country.Contains('protected') | Should -BeFalse
+            $metadata.properties.second.properties.country.ContainsKey('sourcesSkipped') | Should -BeFalse
+            $metadata.properties.first.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.first.properties.country.sourcesSkipped[0].source | Should -Be 'settings Project > first'
+            $metadata.properties.first.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings Organization > first'
+        }
+
+        It 'Retains the protecting source when a later declaration supplies no value' {
+            $dst = [ordered]@{ country = 'us' }
+            $metadata = @{}
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ protectedSettings = @('country'); country = 'de' }) -context 'settings Organization' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ protectedSettings = @('country') }) -context 'settings Repository' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ country = 'ch' }) -context 'settings Project' -metadata $metadata
+
+            $dst.country | Should -Be 'de'
+            $metadata.properties.country.protected | Should -BeTrue
+            $metadata.properties.country.sources | Should -Be @('settings Organization')
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings Project'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings Organization'
+        }
+
+        It 'Ignores protection declared without a value' {
+            $dst = [ordered]@{}
+            $metadata = @{}
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ protectedSettings = @('futureSetting') }) -context 'settings Organization' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{ futureSetting = 'later' }) -context 'settings Project' -metadata $metadata
+
+            $dst.futureSetting | Should -Be 'later'
+            $metadata.Contains('properties') | Should -BeTrue
+            $metadata.properties.futureSetting.Contains('protected') | Should -BeFalse
+            $metadata.properties.futureSetting.Contains('properties') | Should -BeFalse
+            $metadata.properties.futureSetting.ContainsKey('sourcesSkipped') | Should -BeFalse
+        }
+
+        It 'Replacing an unprotected parent discards its nested protections' {
+            $dst = [ordered]@{ alDoc = [ordered]@{ includeProjects = @('default') } }
+            $metadata = @{}
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                alDoc = [PSCustomObject]@{ protectedSettings = @('includeProjects'); includeProjects = @('org') }
+            }) -context 'settings Organization' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                overwriteSettings = @('alDoc')
+                alDoc = [PSCustomObject]@{ includeProjects = @('repo') }
+            }) -context 'settings Repository' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                alDoc = [PSCustomObject]@{ includeProjects = @('project') }
+            }) -context 'settings Project' -metadata $metadata
+
+            $dst.alDoc.includeProjects | Should -Be @('repo', 'project')
+            $metadata.properties.alDoc.properties.includeProjects.Contains('protected') | Should -BeFalse
+            $metadata.properties.alDoc.properties.includeProjects.ContainsKey('sourcesSkipped') | Should -BeFalse
+        }
+
+        It 'Requires nested protection to overwrite a protected array' {
+            $dst = [ordered]@{ alDoc = [ordered]@{ includeProjects = @('org') } }
+            $metadata = @{}
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                alDoc = [PSCustomObject]@{ protectedSettings = @('includeProjects'); includeProjects = @('repo') }
+            }) -context 'settings Repository' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                alDoc = [PSCustomObject]@{ overwriteSettings = @('includeProjects'); includeProjects = @('project') }
+            }) -context 'settings Project' -metadata $metadata
+
+            $dst.alDoc.includeProjects | Should -Be @('org', 'repo')
+            $metadata.properties.alDoc.properties.includeProjects.protected | Should -BeTrue
+            $metadata.properties.alDoc.properties.includeProjects.sources | Should -Be @('settings Repository > alDoc')
+            $metadata.properties.alDoc.properties.includeProjects.sourcesSkipped.Count | Should -Be 1
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]@{
+                alDoc = [PSCustomObject]@{ protectedSettings = @('includeProjects'); overwriteSettings = @('includeProjects'); includeProjects = @('workflow') }
+            }) -context 'settings Workflow' -metadata $metadata
+
+            $dst.alDoc.includeProjects | Should -Be @('workflow')
+            $dst.alDoc.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.alDoc.properties.includeProjects.protected | Should -BeTrue
+            $metadata.properties.alDoc.properties.includeProjects.sources | Should -Be @('settings Workflow > alDoc')
+            $metadata.properties.alDoc.properties.includeProjects.ContainsKey('sourcesSkipped') | Should -BeFalse
+        }
+
+        It 'Does not merge a protected array without overwriteSettings' {
+            $dst = [ordered]@{ additionalCountries = @('de', 'at') }
+            $metadata = @{ properties = @{ additionalCountries = @{ protected = $true; sources = @('settings Original') } } }
+            $src = [PSCustomObject]@{ additionalCountries = @('ch', 'be') }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test' -metadata $metadata
+
+            $dst.additionalCountries | Should -Be @('de', 'at')
+            $metadata.properties.additionalCountries.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.additionalCountries.sourcesSkipped[0].source | Should -Be 'settings Test'
+            $metadata.properties.additionalCountries.sourcesSkipped[0].reason | Should -Be 'protected by settings Original'
+        }
+
+        It 'Does not overwrite protection metadata through overwriteSettings' {
+            $dst = [ordered]@{ country = 'de' }
+            $metadata = @{ properties = @{ country = @{ protected = $true; sources = @('settings Original') } } }
+            $src = [PSCustomObject]@{
+                overwriteSettings = @('protectedSettings')
+                protectedSettings = @('keyVaultName')
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -metadata $metadata
+
+            $dst.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.country.protected | Should -BeTrue
+            $metadata.properties.country.sources | Should -Be @('settings Original')
+            $metadata.properties.Contains('keyVaultName') | Should -BeFalse
+            $dst.country | Should -Be 'de'
+        }
+
+        It 'Does not let protectedSettings protect itself from processing' {
+            $dst = [ordered]@{ country = 'de' }
+            $metadata = @{ properties = @{ country = @{ protected = $true; sources = @('settings Original') } } }
+            $src = [PSCustomObject]@{
+                protectedSettings = @('protectedSettings', 'keyVaultName')
+                country = 'ch'
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test' -metadata $metadata
+
+            $dst.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.Contains('keyVaultName') | Should -BeFalse
+            $dst.country | Should -Be 'de'
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings Test'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings Original'
+        }
+
+        It 'protectedSettings are not overridden by overwriteSettings unless source also marks them protected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: mark additionalCountries as protected
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: use overwriteSettings to override additionalCountries (force replacement instead of merge)
+            @{
+                "overwriteSettings"   = @("additionalCountries")
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Neither overwriteSettings nor the source array should change the protected setting.
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("de", "at")
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'protectedSettings can be overridden with overwriteSettings when source also marks them protected' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "additionalCountries" = @("de", "at")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            @{
+                "protectedSettings"   = @("additionalCountries")
+                "overwriteSettings"   = @("additionalCountries")
+                "additionalCountries" = @("ch", "be")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.additionalCountries | Should -Be @("ch", "be")
+
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Empty protectedSettings has no effect (backward compatibility)' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: protectedSettings is empty
+            @{
+                "protectedSettings" = @()
+                "country"           = "us"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: override country
+            @{
+                "country" = "ch"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName ''
+            $settings.country | Should -Be 'ch'   # Project wins (normal behavior)
+            $settings.Contains('protectedSettings') | Should -BeFalse
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'ConditionalSetting with protectedSettings at repo level overrides project setting for specific buildMode' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Repo settings: ConditionalSetting for buildMode "ValidateUS" with protected country marking
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("ValidateUS")
+                        "settings"   = @{
+                            "protectedSettings" = @("country")   # Mark country as protected
+                            "country"           = "us"
+                        }
+                    }
+                )
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $githubFolder "AL-Go-Settings.json") -Encoding utf8 -Force
+
+            # Project settings: country = "w1", buildModes include "ValidateUS"
+            @{
+                "country"    = "w1"
+                "buildModes" = @("Default", "ValidateUS")
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            $ENV:ALGoOrgSettings = ''
+            $ENV:ALGoRepoSettings = ''
+
+            # When reading for buildMode "Default", project country "w1" should be used
+            $defaultMetadata = @{}
+            $settingsDefault = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'Default' -userName '' -metadata $defaultMetadata
+            $settingsDefault.country | Should -Be 'w1'   # No org conditional applies for "Default"
+            $defaultMetadata.properties.country.ContainsKey('sourcesSkipped') | Should -BeFalse
+
+            # When reading for buildMode "ValidateUS", repo conditional with protected marking should override project
+            $metadata = @{}
+            $settingsValidateUS = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName '' -metadata $metadata
+            $settingsValidateUS.country | Should -Be 'us'   # Repo conditional protected setting wins
+            $settingsValidateUS.buildModes | Should -Contain 'ValidateUS'
+            $settingsValidateUS.Contains('protectedSettings') | Should -BeFalse
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Match '^settings .*Project.*settings\.json \(File\)$'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Match '^protected by settings \.github.*conditional settings for buildModes: ValidateUS$'
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+
+        It 'Logs the conditions when a protected setting is skipped by conditional settings' {
+            $orgSettings = @{ protectedSettings = @('country'); country = 'de' } | ConvertTo-Json -Depth 99
+            $repoSettings = @{
+                ConditionalSettings = @(
+                    @{ buildModes = @('ValidateUS'); settings = @{ country = 'ch' } }
+                )
+            } | ConvertTo-Json -Depth 99
+
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -branchName '' -buildMode 'ValidateUS' -userName '' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue $repoSettings -metadata $metadata
+
+            $settings.country | Should -Be 'de'
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings ALGoRepoSettings (Variable) > conditional settings for buildModes: ValidateUS'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings ALGoOrgSettings (Variable)'
+        }
+
+        It 'Applies protection to customSettings unless it also protects the setting' {
+            $orgSettings = @{ protectedSettings = @('country'); country = 'de' } | ConvertTo-Json -Depth 99
+            $customSettings = @{ country = 'ch'; companyName = 'Custom' } | ConvertTo-Json -Depth 99
+
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -customSettings $customSettings -metadata $metadata
+
+            $settings.country | Should -Be 'de'
+            $settings.companyName | Should -Be 'Custom'
+            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
+            $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings CustomSettings (Parameter)'
+            $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings ALGoOrgSettings (Variable)'
+
+            $customSettings = @{ protectedSettings = @('country'); country = 'ch' } | ConvertTo-Json -Depth 99
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $PSScriptRoot -project '' -repoName 'repo' -workflowName '' -branchName '' -userName '' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -customSettings $customSettings -metadata $metadata
+
+            $settings.country | Should -Be 'ch'
+            $metadata.properties.country.ContainsKey('sourcesSkipped') | Should -BeFalse
+        }
+
+        It 'protectedSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: protectedSettings is filled
+            $orgSettings = @{
+                "protectedSettings" = @("country")
+                "country"           = "us"
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another protected setting
+            $repoSettings = @{
+                "protectedSettings" = @("companyName")
+                "country"           = "de"
+                "companyName"       = "MyCompany"
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another protected setting
+            @{
+                "protectedSettings" = @("keyVaultName")
+                "country"           = "ch"
+                "keyVaultName"      = "mykv"
+                "companyName"       = "AnotherCompany"
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue $repoSettings
+            $settings.Contains('protectedSettings') | Should -BeFalse
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+        It 'conditional protectedSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: protectedSettings is filled
+            $orgSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{
+                            "protectedSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another protected setting
+            $repoSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{   "protectedSettings" = @("companyName")
+                            "country"                         = "de"
+                            "companyName"                     = "MyCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another protected setting
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{ "protectedSettings" = @("keyVaultName")
+                            "country"                       = "ch"
+                            "keyVaultName"                  = "mykv"
+                            "companyName"                   = "AnotherCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue $repoSettings
+            $settings.Contains('protectedSettings') | Should -BeFalse
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            # Clean up
+            Pop-Location
+            Remove-Item -Path $tempName -Recurse -Force
+        }
+        It 'mixed protectedSettings are merged correctly' {
+            Mock Write-Host { }
+            Mock Out-Host { }
+
+            Push-Location
+            $tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            $githubFolder = Join-Path $tempName ".github"
+            $projectALGoFolder = Join-Path $tempName "Project/$ALGoFolderName"
+
+            try {
+            New-Item $githubFolder -ItemType Directory | Out-Null
+            New-Item $projectALGoFolder -ItemType Directory | Out-Null
+
+            # Org settings: protectedSettings is filled
+            $ENV:ALGoOrgSettings = @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{
+                            "protectedSettings" = @("country")
+                            "country"           = "us"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99
+
+            # Repo settings: add another protected setting
+            $ENV:ALGoRepoSettings = @{
+                "protectedSettings" = @("companyName")
+                "country"           = "de"
+                "companyName"       = "MyCompany"
+
+            } | ConvertTo-Json -Depth 99
+
+            # Project settings: add another protected setting
+            @{
+                "ConditionalSettings" = @(
+                    @{
+                        "buildModes" = @("CustomBuildMode")
+                        "settings"   = @{ "protectedSettings" = @("keyVaultName")
+                            "country"                       = "ch"
+                            "keyVaultName"                  = "mykv"
+                            "companyName"                   = "AnotherCompany"
+                        }
+                    })
+            } | ConvertTo-Json -Depth 99 |
+            Set-Content -Path (Join-Path $projectALGoFolder "settings.json") -Encoding utf8 -Force
+
+            # Without protected marking, normal hierarchy applies
+            $settings = ReadSettings -baseFolder $tempName -project 'Project' -repoName 'repo' -workflowName '' -branchName '' -userName '' -buildMode 'CustomBuildMode'
+            $settings.Contains('protectedSettings') | Should -BeFalse
+
+            $settings.country | Should -Be 'us'   # from org settings
+            $settings.companyName | Should -Be 'MyCompany'   # from repo settings
+            $settings.keyVaultName | Should -Be 'mykv'   # from project settings
+
+
+            }
+            finally {
+                Pop-Location
+                Remove-Item -Path $tempName -Recurse -Force
+            }
         }
 
         It 'ValidateSettings skips validation entirely on PS versions less than 7 without warning' {
@@ -562,6 +1420,75 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             # Verify no warning was output
             Should -Invoke -CommandName OutputWarning -Times 0
+        }
+    }
+
+    Describe 'OutputSettingsSources' {
+        It 'Prints effective sources, unknowns, and nested protection without values' {
+            Mock Write-Host { }
+
+            $settings = [ordered]@{
+                country = 'secret-value'
+                type = 'PTE'
+                projects = @('secret-project')
+                nested = [ordered]@{ key = 'nested-secret' }
+            }
+            $metadata = @{ properties = @{
+                country = @{ sources = @('Organization'); protected = $true }
+                projects = @{ sources = @('default', 'Repository', 'Project') }
+                nested = @{ sources = @('default', 'Repository'); properties = @{
+                    key = @{ sources = @('default', 'Project'); protected = $true }
+                } }
+            } }
+
+            OutputSettingsSources -settings $settings -metadata $metadata
+
+            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'country: Organization (protected)' }
+            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'type: unknown' }
+            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'projects: default, Repository, Project' }
+            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'nested: default, Repository' }
+            Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { $Object -eq 'nested.key: default, Project (protected)' }
+            Should -Invoke Write-Host -Times 5 -Exactly -ParameterFilter { $Object -notmatch 'secret' }
+            Should -Invoke Write-Host -Times 5 -Exactly
+        }
+    }
+
+    Describe 'OutputSettingsNotices' {
+        It 'Prints repeated and nested skips without setting values' {
+            Mock OutputNotice { }
+
+            $settings = [ordered]@{
+                country = 'secret-country'
+                nested = [ordered]@{ key = 'secret-key'; other = 'secret-other' }
+            }
+            $metadata = @{ properties = @{
+                country = @{ sourcesSkipped = @(
+                    @{ source = 'Repository'; reason = 'protected by Organization' },
+                    @{ source = 'Project'; reason = 'protected by Organization' }
+                ) }
+                nested = @{ properties = @{
+                    key = @{ sourcesSkipped = @(@{ source = 'Workflow > nested'; reason = 'protected by Repository > nested' }) }
+                } }
+            } }
+
+            OutputSettingsNotices -settings $settings -metadata $metadata
+
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter { $message -eq 'Skipped setting country from Repository: protected by Organization' }
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter { $message -eq 'Skipped setting country from Project: protected by Organization' }
+            Should -Invoke OutputNotice -Times 1 -Exactly -ParameterFilter { $message -eq 'Skipped setting nested.key from Workflow > nested: protected by Repository > nested' }
+            Should -Invoke OutputNotice -Times 3 -Exactly -ParameterFilter { $message -notmatch 'secret' }
+            Should -Invoke OutputNotice -Times 3 -Exactly
+        }
+
+        It 'Prints nothing when no source was skipped' {
+            Mock OutputNotice { }
+
+            $settings = [ordered]@{ country = 'secret'; nested = [ordered]@{ key = 'secret' } }
+            $metadata = @{ properties = @{ country = @{ sources = @('Repository') }; nested = @{ properties = @{ key = @{ sources = @('Project') } } } } }
+
+            OutputSettingsNotices -settings $settings -metadata $metadata
+
+            Should -Invoke OutputNotice -Times 0 -Exactly
         }
     }
 }

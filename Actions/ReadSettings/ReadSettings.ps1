@@ -11,7 +11,16 @@
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-$settings = ReadSettings -project $project -buildMode $buildMode -workflowName $workflowName
+$metadata = @{}
+
+$settings = ReadSettings -project $project -buildMode $buildMode -workflowName $workflowName -metadata $metadata
+
+OutputSettingsNotices -settings $settings -metadata $metadata
+
+OutputGroupStart "Settings sources"
+OutputSettingsSources -settings $settings -metadata $metadata
+OutputGroupEnd
+
 if ($get) {
     $getSettings = $get.Split(',').Trim()
 }
