@@ -13,6 +13,8 @@ Describe 'SetupBCQuality action' {
         function New-TestBCQualityPlugin {
             param([string] $Root)
 
+            New-Item -ItemType Directory -Force -Path $Root | Out-Null
+            Set-Content -LiteralPath (Join-Path $Root 'plugin.json') -Value '{"name":"bcquality","version":"0.3.0"}' -Encoding UTF8
             New-Item -ItemType Directory -Force -Path (Join-Path $Root 'skills') | Out-Null
             New-Item -ItemType Directory -Force -Path (Join-Path $Root 'tools') | Out-Null
             foreach ($path in @('skills/entry.md', 'skills/read.md', 'skills/do.md')) {
@@ -88,7 +90,6 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         $settingsJson = @{
             marketplaceRepo = 'https://github.com/contoso/BCQuality'
             version = '2.0'
-            pluginVersion = '0.3.0'
             enabledLayers = @('microsoft')
             disabledSkills = @('microsoft/skills/review/microsoft.md')
             knowledge = @{

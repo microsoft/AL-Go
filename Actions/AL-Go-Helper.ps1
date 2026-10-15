@@ -2432,24 +2432,33 @@ function GetFoldersFromAllProjects {
 
 function GetPackageVersion($packageName) {
     $projFilePath = "$PSScriptRoot\Environment.Packages.proj"
+    $packageJsonPath = "$PSScriptRoot\package.json"
 
-    # Check if the proj file exists
     if (-not (Test-Path $projFilePath)) {
         throw "Environment.Packages.proj file not found at $projFilePath"
     }
 
-    # Load the XML content
     [xml]$projXml = Get-Content -Path $projFilePath
-
-    # Find the PackageReference with the specified Include (package name)
     $packageReference = $projXml.Project.ItemGroup.PackageReference | Where-Object { $_.Include -eq $packageName }
 
     if ($packageReference) {
         return $packageReference.Version
     }
-    else {
-        throw "Package $packageName is not in the list of packages"
+
+    if (Test-Path $packageJsonPath) {
+        $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
+        foreach ($sectionName in @('dependencies', 'devDependencies')) {
+            $section = $packageJson.$sectionName
+            if ($section) {
+                $packageProperty = $section.PSObject.Properties[$packageName]
+                if ($packageProperty) {
+                    return [string] $packageProperty.Value
+                }
+            }
+        }
     }
+
+    throw "Package $packageName is not in the list of packages"
 }
 
 function InstallAzModuleIfNeeded {

@@ -10,10 +10,8 @@ param(
     [string] $marketplace = 'microsoft/BCQuality',
     [Parameter(HelpMessage = "BCQuality marketplace release tag")]
     [string] $marketplaceRef = 'v1.7',
-    [Parameter(HelpMessage = "Expected version from the BCQuality marketplace entry")]
-    [string] $expectedPluginVersion = '0.2.0',
     [Parameter(HelpMessage = "Comma-separated BCQuality layers to retain")]
-    [string] $enabledLayers = 'microsoft',
+    [string] $enabledLayers = 'microsoft,community,custom',
     [Parameter(HelpMessage = "Comma-separated repo-relative skill paths to remove")]
     [string] $disabledSkills = '',
     [Parameter(HelpMessage = "Comma-separated knowledge globs to retain; empty retains all enabled-layer knowledge")]
@@ -50,9 +48,7 @@ if (-not [string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
     if ($marketplace -notmatch '^[^/]+/[^/]+$') {
         throw "BCQuality marketplace URL must identify one owner/repository; received '$marketplaceRepo'."
     }
-
     $marketplaceRef = "v$([string] $settings.version)"
-    $expectedPluginVersion = [string] $settings.pluginVersion
     $enabledLayers = @($settings.enabledLayers) -join ','
     $disabledSkills = @($settings.disabledSkills) -join ','
     $knowledgeAllow = @($settings.knowledge.allow) -join ','
@@ -76,10 +72,6 @@ if ([string]::IsNullOrWhiteSpace($marketplaceRef)) {
 if ($marketplaceRef -match '^[0-9a-fA-F]{40}$') {
     throw 'Copilot CLI marketplace refs support branches and tags, not raw commit SHAs. Use a BCQuality release tag.'
 }
-if ([string]::IsNullOrWhiteSpace($expectedPluginVersion)) {
-    throw 'expectedPluginVersion must be specified.'
-}
-
 $layers = @(ConvertFrom-CsvSetting $enabledLayers)
 $disabledSkillPaths = @(ConvertFrom-CsvSetting $disabledSkills)
 $allowPatterns = @(ConvertFrom-CsvSetting $knowledgeAllow)
@@ -103,7 +95,7 @@ if (-not $copilotHome) {
 }
 
 $sourceHash = ''
-$pluginVersion = $expectedPluginVersion
+$installedPluginVersion = ''
 if (-not $pluginRoot) {
     Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
         & copilot plugin marketplace add "$marketplace#$marketplaceRef"
@@ -124,10 +116,7 @@ if (-not $pluginRoot) {
         throw "Expected exactly one installed bcquality@bcquality plugin, found $($installed.Count)."
     }
     $plugin = $installed[0]
-    $pluginVersion = [string] $plugin.version
-    if ($pluginVersion -ne $expectedPluginVersion) {
-        throw "Installed BCQuality plugin version '$pluginVersion' does not match expected version '$expectedPluginVersion'."
-    }
+    $installedPluginVersion = [string] $plugin.version
     $pluginRoot = [string] $plugin.cache_path
     $sourceHash = [string] $plugin.source_sha
 }
@@ -138,6 +127,7 @@ if (-not (Test-Path -LiteralPath $pluginRoot -PathType Container)) {
 $pluginRoot = (Resolve-Path -LiteralPath $pluginRoot).Path
 
 foreach ($requiredPath in @(
+    'plugin.json',
     'skills/entry.md',
     'skills/read.md',
     'skills/do.md',
@@ -148,6 +138,21 @@ foreach ($requiredPath in @(
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         throw "Installed BCQuality plugin is missing required file '$requiredPath'."
     }
+}
+
+$pluginManifestPath = Join-Path $pluginRoot 'plugin.json'
+try {
+    $pluginManifest = Get-Content -LiteralPath $pluginManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+}
+catch {
+    throw "Installed BCQuality plugin manifest is invalid: $($_.Exception.Message)"
+}
+$pluginVersion = [string] $pluginManifest.version
+if ([string]::IsNullOrWhiteSpace($pluginVersion)) {
+    throw 'Installed BCQuality plugin manifest does not declare a version.'
+}
+if ($installedPluginVersion -and $installedPluginVersion -ne $pluginVersion) {
+    throw "Installed BCQuality plugin version '$installedPluginVersion' does not match plugin manifest version '$pluginVersion'."
 }
 
 $skillIndex = Join-Path $pluginRoot '_skill-index.json'

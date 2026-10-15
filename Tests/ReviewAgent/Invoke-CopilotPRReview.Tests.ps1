@@ -13,7 +13,7 @@ param(
 )
 
 BeforeAll {
-    $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
+    $scriptPath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.ps1' -Resolve
     $scriptRoot = Split-Path -Parent $scriptPath
     $script:ReviewScriptPaths = @($scriptPath) + @(
         Get-ChildItem -LiteralPath $scriptRoot -Filter '*.ps1' -File |
@@ -2047,15 +2047,9 @@ Describe 'BCQuality settings ownership' {
         $env:BCQUALITY_SETTINGS_JSON = @{
             marketplaceRepo = 'https://github.com/microsoft/BCQuality'
             version = '1.7'
-            pluginVersion = '0.2.0'
             enabledLayers = @('microsoft')
             disabledSkills = @('microsoft/skills/review/al-style-review.md')
             knowledge = @{ allow = @('microsoft/knowledge/**'); deny = @() }
-            taskContext = @{
-                technologies = @('al')
-                countries = @('w1')
-                applicationArea = @('all')
-            }
         } | ConvertTo-Json -Compress -Depth 10
         $script:BCQualitySettingsCache = $null
     }
@@ -2065,7 +2059,7 @@ Describe 'BCQuality settings ownership' {
         $script:BCQualitySettingsCache = $null
     }
 
-    It 'builds task context directly from AL-Go settings' {
+    It 'builds task context with internal AL defaults' {
         $context = Build-TaskContext
 
         $context['enabled-layers'] | Should -Be @('microsoft')

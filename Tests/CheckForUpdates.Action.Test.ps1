@@ -2521,21 +2521,25 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToExclude | Should -BeNullOrEmpty
     }
 
-    It 'Applies CICDPullRequestBranches to the Copilot review intake workflow' {
+    It 'Applies CodeReviewAgent branches to the Copilot review intake workflow' {
         $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml"))
 
         ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings @{
-            CICDPullRequestBranches = @('main', 'release/*')
+            CodeReviewAgent = @{
+                branches = @('main', 'release/*')
+            }
         }
 
         $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["main","release/*"]'
     }
 
-    It 'Escapes CICDPullRequestBranches in the Copilot review intake workflow' {
+    It 'Escapes CodeReviewAgent branches in the Copilot review intake workflow' {
         $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml"))
 
         ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings @{
-            CICDPullRequestBranches = @("release/o'clock")
+            CodeReviewAgent = @{
+                branches = @("release/o'clock")
+            }
         }
 
         $expectedBranches = ConvertTo-Json -InputObject @("release/o'clock") -Compress

@@ -139,14 +139,16 @@ function ModifyCopilotPRReviewWorkflow {
         [hashtable] $repoSettings
     )
 
-    if ($repoSettings.Keys -contains 'CICDPullRequestBranches') {
-        $CICDPullRequestBranches = $repoSettings.CICDPullRequestBranches
-    }
-    else {
-        $CICDPullRequestBranches = $defaultCICDPullRequestBranches
+    $codeReviewBranches = @('main')
+    if (
+        $repoSettings.Keys -contains 'CodeReviewAgent' -and
+        $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
+        $repoSettings.CodeReviewAgent.Keys -contains 'branches'
+    ) {
+        $codeReviewBranches = @($repoSettings.CodeReviewAgent.branches)
     }
 
-    $branchesJson = ConvertTo-Json -InputObject @($CICDPullRequestBranches) -Compress
+    $branchesJson = ConvertTo-Json -InputObject $codeReviewBranches -Compress
     $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
 }
 

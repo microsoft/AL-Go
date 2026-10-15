@@ -1,6 +1,6 @@
 # Enable Copilot code review for AL pull requests
 
-AL-Go can review AL changes and post findings as pull request comments. The AL-Go-owned `SetupBCQuality` action installs the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin and filters its skills and knowledge to the configured policy. The prepared plugin is then consumed by the `ReviewAgent` action. Reviews run when a non-draft pull request targeting a branch in `CICDPullRequestBranches` is opened, reopened, synchronized, or marked ready for review. The default target branch is `main`.
+AL-Go can review AL changes and post findings as pull request comments. The AL-Go-owned `SetupBCQuality` action installs the [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin and filters its skills and knowledge to the configured policy. The prepared plugin is then consumed by the `ReviewAgent` action. Reviews run when a non-draft pull request targeting a branch in `CodeReviewAgent.branches` is opened, reopened, synchronized, or marked ready for review. The default target branch is `main`.
 
 ## Prerequisites
 
@@ -19,36 +19,11 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 ```json
 {
-  "BCQuality": {
-    "marketplaceRepo": "https://github.com/microsoft/BCQuality",
-    "version": "1.7",
-    "pluginVersion": "0.2.0",
-    "enabledLayers": [
-      "microsoft"
-    ],
-    "disabledSkills": [],
-    "knowledge": {
-      "allow": [
-        "microsoft/knowledge/**"
-      ],
-      "deny": []
-    },
-    "taskContext": {
-      "technologies": [
-        "al"
-      ],
-      "countries": [
-        "w1"
-      ],
-      "applicationArea": [
-        "all"
-      ]
-    }
-  },
   "CodeReviewAgent": {
     "enabled": true,
-    "model": "gpt-5.6-sol",
-    "leafModel": "gpt-5.6-luna",
+    "branches": [
+      "main"
+    ],
     "excludedOwners": [
       "dependabot[bot]"
     ]
@@ -56,9 +31,9 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 }
 ```
 
-Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CICDPullRequestBranches` will be reviewed automatically.
+Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CodeReviewAgent.branches` will be reviewed automatically.
 
-`BCQuality.marketplaceRepo`, `version`, and `pluginVersion` select and validate the plugin installation. `enabledLayers`, `disabledSkills`, and `knowledge` control the content retained for the review. `taskContext` supplies BCQuality's technology, country, and application-area dimensions. `CodeReviewAgent.model` controls final self-review and consolidation, while `CodeReviewAgent.leafModel` controls the isolated review processes. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
+BCQuality defaults to the trusted `microsoft/BCQuality` marketplace release, retains all content layers, and supplies the internal AL review context. Advanced filtering remains available through `BCQuality.enabledLayers`, `disabledSkills`, and `knowledge`. `CodeReviewAgent.branches` controls the target branches reviewed independently of pull request build branches. `model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
 
 Both settings are populated by default. `CodeReviewAgent` must be enabled at repository level; project settings do not enable or disable the reviewer.
 
@@ -77,4 +52,4 @@ Set `CodeReviewAgent.enabled` to `false` and run **Update AL-Go System Files**. 
 
 ______________________________________________________________________
 
-[back](../README.md)
+[back](../../README.md)

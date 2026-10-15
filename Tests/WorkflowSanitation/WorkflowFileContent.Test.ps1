@@ -89,15 +89,15 @@ Describe "Copilot code review workflows" {
         ([regex]::Matches($runnerWorkflow, 'bcqualitySettingsJson:\s+\$\{\{\s+needs\.prepare\.outputs\.bcqualitySettingsJson\s+\}\}')).Count |
             Should -Be 3
         $runnerWorkflow | Should -Match 'token:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}'
-        $runnerWorkflow | Should -Match '(?m)^  COPILOT_CLI_VERSION:\s+1\.0\.88\r?$'
-        ([regex]::Matches($runnerWorkflow, 'copilotCliVersion:\s+\$\{\{\s+env\.COPILOT_CLI_VERSION\s+\}\}')).Count |
-            Should -Be 2
+        $runnerWorkflow | Should -Not -Match 'COPILOT_CLI_VERSION'
+        $runnerWorkflow | Should -Not -Match 'copilotCliVersion:'
         $runnerWorkflow | Should -Match '(?m)^  REVIEW_AGENT_VERSION:\s+10\.0\.7\r?$'
         ([regex]::Matches($runnerWorkflow, 'agentVersion:\s+\$\{\{\s+env\.REVIEW_AGENT_VERSION\s+\}\}')).Count |
             Should -Be 2
     }
 
     It 'Uses the review action without a third workflow' {
+        ([regex]::Matches($runnerWorkflow, 'runs-on:\s+\[\s+windows-latest\s+\]')).Count | Should -Be 3
         $runnerWorkflow | Should -Match '(?m)^  review:'
         $runnerWorkflow | Should -Match '(?m)^  publish:'
         ([regex]::Matches($runnerWorkflow, 'uses:\s+microsoft/AL-Go-Actions/ReviewAgent@main')).Count | Should -Be 4

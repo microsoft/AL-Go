@@ -13,8 +13,6 @@ temporary GitHub-hosted runners. It does not run on self-hosted runners.
   uses: microsoft/AL-Go-Actions/SetupBCQuality@main
   with:
     marketplaceRef: v1.7
-    expectedPluginVersion: 0.2.0
-    enabledLayers: microsoft
 
 - name: Run a BCQuality-backed feature
   shell: pwsh
@@ -22,6 +20,10 @@ temporary GitHub-hosted runners. It does not run on self-hosted runners.
     BCQUALITY_PLUGIN_ROOT: ${{ steps.bcquality.outputs.pluginRoot }}
   run: ./Run-Feature.ps1
 ```
+
+The marketplace ref selects the BCQuality release. The action discovers the
+installed plugin version from its manifest and retains all content layers by
+default.
 
 The installed plugin is available only to later steps in the same job. A
 different job or workflow receives a new runner and must run the action again:

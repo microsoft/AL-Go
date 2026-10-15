@@ -52,7 +52,7 @@ workflows that install the plugin, run the review, and publish findings.
 1. [How to set up Service Principal for Power Platform](Scenarios/SetupServicePrincipalForPowerPlatform.md)
 1. [Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
 1. [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md)
-1. [Enable Copilot code review for AL pull requests](Scenarios/CopilotCodeReview.md)
+1. [Enable Copilot code review for AL pull requests](Scenarios/Agents/CopilotCodeReview.md)
 
 ## Migration scenarios
 

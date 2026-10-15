@@ -65,7 +65,7 @@ inputs:
     required: false
     default: ''
   copilotCliVersion:
-    description: Exact Copilot CLI version to install and run
+    description: Exact Copilot CLI version to install and run; defaults to the pinned action dependency
     required: false
     default: ''
   agentVersion:

@@ -163,21 +163,16 @@ function GetDefaultSettings
         "BCQuality"                                     = [ordered]@{
             "marketplaceRepo" = "https://github.com/microsoft/BCQuality"
             "version"         = "1.7"
-            "pluginVersion"   = "0.2.0"
-            "enabledLayers"   = @("microsoft")
+            "enabledLayers"   = @("microsoft", "community", "custom")
             "disabledSkills"  = @()
             "knowledge"       = [ordered]@{
-                "allow" = @("microsoft/knowledge/**")
+                "allow" = @()
                 "deny"  = @()
-            }
-            "taskContext"     = [ordered]@{
-                "technologies"   = @("al")
-                "countries"      = @("w1")
-                "applicationArea" = @("all")
             }
         }
         "CodeReviewAgent"                               = [ordered]@{
             "enabled"        = $false
+            "branches"       = @("main")
             "model"          = "gpt-5.6-sol"
             "leafModel"      = "gpt-5.6-luna"
             "excludedOwners" = @()

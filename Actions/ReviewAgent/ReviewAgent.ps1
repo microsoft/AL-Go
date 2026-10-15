@@ -35,7 +35,7 @@ param(
     [string] $reviewOutputDir = '',
     [Parameter(HelpMessage = "Path to the installed and filtered BCQuality plugin")]
     [string] $bcqualityRoot = '',
-    [Parameter(HelpMessage = "Exact Copilot CLI version to install and run")]
+    [Parameter(HelpMessage = "Exact Copilot CLI version to install and run; defaults to the pinned action dependency")]
     [string] $copilotCliVersion = '',
     [Parameter(HelpMessage = "Exact semantic version recorded in review comments and diagnostics")]
     [string] $agentVersion = ''
@@ -44,6 +44,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version 2.0
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\AL-Go-Helper.ps1' -Resolve)
 
 function Write-ReviewOutput {
     param(
@@ -102,16 +103,14 @@ function Get-BCQualitySettings {
         throw 'bcqualitySettingsJson must contain a JSON object.'
     }
     if ([string]::IsNullOrWhiteSpace([string] $settings.marketplaceRepo) -or
-        [string]$settings.version -notmatch '\A[0-9]+\.[0-9]+\z' -or
-        [string]::IsNullOrWhiteSpace([string] $settings.pluginVersion)) {
-        throw 'BCQuality.marketplaceRepo, BCQuality.pluginVersion, and a major.minor BCQuality.version are required.'
+        [string]$settings.version -notmatch '\A[0-9]+\.[0-9]+\z') {
+        throw 'BCQuality.marketplaceRepo and a major.minor BCQuality.version are required.'
     }
     if (@($settings.enabledLayers).Count -eq 0) {
         throw 'BCQuality.enabledLayers must contain at least one layer.'
     }
-    if (-not ($settings.knowledge -is [System.Collections.IDictionary]) -or
-        -not ($settings.taskContext -is [System.Collections.IDictionary])) {
-        throw 'BCQuality.knowledge and BCQuality.taskContext are required.'
+    if (-not ($settings.knowledge -is [System.Collections.IDictionary])) {
+        throw 'BCQuality.knowledge is required.'
     }
 
     return $settings
@@ -149,6 +148,9 @@ function Invoke-ContextPhase {
 }
 
 function Assert-CopilotCliVersion {
+    if ([string]::IsNullOrWhiteSpace($copilotCliVersion)) {
+        $script:copilotCliVersion = [string] (GetPackageVersion -packageName '@github/copilot')
+    }
     if ($copilotCliVersion -notmatch '\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*))?\z') {
         throw "copilotCliVersion must be an exact semantic version; received '$copilotCliVersion'."
     }
@@ -190,6 +192,7 @@ function Invoke-PreparePhase {
 }
 
 function Invoke-GeneratePhase {
+    Assert-CopilotCliVersion
     $bcqualitySettings = Get-BCQualitySettings
     if ([string]::IsNullOrWhiteSpace($bcqualityRoot) -or -not (Test-Path -LiteralPath $bcqualityRoot -PathType Container)) {
         throw "The prepared BCQuality plugin was not found at '$bcqualityRoot'."

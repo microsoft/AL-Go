@@ -12,15 +12,9 @@ Describe 'ReviewAgent action' {
         $script:bcqualitySettings = @{
             marketplaceRepo = 'https://github.com/microsoft/BCQuality'
             version = '1.7'
-            pluginVersion = '0.2.0'
-            enabledLayers = @('microsoft')
+            enabledLayers = @('microsoft', 'community', 'custom')
             disabledSkills = @()
-            knowledge = @{ allow = @('microsoft/knowledge/**'); deny = @() }
-            taskContext = @{
-                technologies = @('al')
-                countries = @('w1')
-                applicationArea = @('all')
-            }
+            knowledge = @{ allow = @(); deny = @() }
         }
         $script:bcqualitySettingsJson = $script:bcqualitySettings | ConvertTo-Json -Compress -Depth 10
     }
@@ -95,7 +89,7 @@ Describe 'ReviewAgent action' {
         $resolvedBCQualitySettings = $outputs.bcqualitySettingsJson | ConvertFrom-Json
         $resolvedBCQualitySettings.marketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
         $resolvedBCQualitySettings.version | Should -Be '2.0'
-        $resolvedBCQualitySettings.enabledLayers | Should -Be 'microsoft'
+        $resolvedBCQualitySettings.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
     }
 
     It 'Rejects metadata that does not match the triggering workflow run' {

@@ -17,14 +17,10 @@ inputs:
     description: BCQuality marketplace release tag
     required: false
     default: v1.7
-  expectedPluginVersion:
-    description: Expected version from the BCQuality marketplace entry
-    required: false
-    default: 0.2.0
   enabledLayers:
     description: Comma-separated BCQuality layers to retain
     required: false
-    default: microsoft
+    default: microsoft,community,custom
   disabledSkills:
     description: Comma-separated repo-relative skill paths to remove
     required: false
@@ -73,7 +69,6 @@ runs:
         _bcqualitySettingsJson: ${{ inputs.bcqualitySettingsJson }}
         _marketplace: ${{ inputs.marketplace }}
         _marketplaceRef: ${{ inputs.marketplaceRef }}
-        _expectedPluginVersion: ${{ inputs.expectedPluginVersion }}
         _enabledLayers: ${{ inputs.enabledLayers }}
         _disabledSkills: ${{ inputs.disabledSkills }}
         _knowledgeAllow: ${{ inputs.knowledgeAllow }}
@@ -81,7 +76,7 @@ runs:
         _token: ${{ inputs.token }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "SetupBCQuality" -Action {
-          ${{ github.action_path }}/SetupBCQuality.ps1 -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -expectedPluginVersion $ENV:_expectedPluginVersion -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny -token $ENV:_token
+          ${{ github.action_path }}/SetupBCQuality.ps1 -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -marketplace $ENV:_marketplace -marketplaceRef $ENV:_marketplaceRef -enabledLayers $ENV:_enabledLayers -disabledSkills $ENV:_disabledSkills -knowledgeAllow $ENV:_knowledgeAllow -knowledgeDeny $ENV:_knowledgeDeny -token $ENV:_token
         }
 branding:
   icon: terminal

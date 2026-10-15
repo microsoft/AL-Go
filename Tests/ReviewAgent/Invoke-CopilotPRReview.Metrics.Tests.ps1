@@ -6,7 +6,7 @@
 param()
 
 BeforeAll {
-    $scriptPath = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts') 'Invoke-CopilotPRReview.ps1'
+    $scriptPath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.ps1' -Resolve
     $scriptRoot = Split-Path -Parent $scriptPath
     $reviewScriptPaths = @($scriptPath) + @(
         Get-ChildItem -LiteralPath $scriptRoot -Filter '*.ps1' -File |

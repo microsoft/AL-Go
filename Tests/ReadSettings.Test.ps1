@@ -284,19 +284,18 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings = GetDefaultSettings
             $codeReviewAgent = $defaultSettings.CodeReviewAgent
             $codeReviewAgent.enabled | Should -Be $false
+            $codeReviewAgent.branches | Should -Be @('main')
             $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $defaultSettings.BCQuality.version | Should -Be '1.7'
-            $defaultSettings.BCQuality.pluginVersion | Should -Be '0.2.0'
-            $defaultSettings.BCQuality.enabledLayers | Should -Be @('microsoft')
+            $defaultSettings.BCQuality.Contains('pluginVersion') | Should -BeFalse
+            $defaultSettings.BCQuality.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
             $defaultSettings.BCQuality.disabledSkills | Should -BeNullOrEmpty
-            $defaultSettings.BCQuality.knowledge.allow | Should -Be @('microsoft/knowledge/**')
+            $defaultSettings.BCQuality.knowledge.allow | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.knowledge.deny | Should -BeNullOrEmpty
-            $defaultSettings.BCQuality.taskContext.technologies | Should -Be @('al')
-            $defaultSettings.BCQuality.taskContext.countries | Should -Be @('w1')
-            $defaultSettings.BCQuality.taskContext.applicationArea | Should -Be @('all')
+            $defaultSettings.BCQuality.Contains('taskContext') | Should -BeFalse
         }
 
         It 'Preserves default Copilot models when only enabled is overridden' {
@@ -310,13 +309,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
 
             $settings.CodeReviewAgent.enabled | Should -Be $true
+            $settings.CodeReviewAgent.branches | Should -Be @('main')
             $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
             $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $settings.BCQuality.version | Should -Be '1.7'
-            $settings.BCQuality.enabledLayers | Should -Be @('microsoft')
-            $settings.BCQuality.taskContext.technologies | Should -Be @('al')
+            $settings.BCQuality.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
         }
 
         It 'Preserves BCQuality policy defaults when only the marketplace is overridden' {
@@ -331,10 +330,10 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
             $settings.BCQuality.version | Should -Be '1.7'
-            $settings.BCQuality.pluginVersion | Should -Be '0.2.0'
-            $settings.BCQuality.enabledLayers | Should -Be @('microsoft')
-            $settings.BCQuality.knowledge.allow | Should -Be @('microsoft/knowledge/**')
-            $settings.BCQuality.taskContext.technologies | Should -Be @('al')
+            $settings.BCQuality.Contains('pluginVersion') | Should -BeFalse
+            $settings.BCQuality.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
+            $settings.BCQuality.knowledge.allow | Should -BeNullOrEmpty
+            $settings.BCQuality.Contains('taskContext') | Should -BeFalse
         }
 
         It 'Rejects unknown BCQuality settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
@@ -345,9 +344,11 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 Should -BeFalse
         }
 
-        It 'Rejects the removed BCQuality bcVersion task-context setting' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+        It 'Rejects hidden BCQuality task-context settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $settings = GetDefaultSettings
-            $settings.BCQuality.taskContext['bcVersion'] = @('26')
+            $settings.BCQuality['taskContext'] = @{
+                technologies = @('al')
+            }
 
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
                 Should -BeFalse

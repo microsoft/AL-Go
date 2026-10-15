@@ -3,6 +3,10 @@
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
     }
 
+    It 'Gets npm package versions from the action dependency manifest' {
+        GetPackageVersion -packageName '@github/copilot' | Should -Be '1.0.88'
+    }
+
     It 'CheckAndCreateProjectFolder' {
         Mock Write-Host { }
 

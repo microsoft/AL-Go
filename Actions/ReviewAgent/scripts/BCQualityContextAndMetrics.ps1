@@ -21,23 +21,14 @@ function Get-BCQualitySettingsCached {
 function Build-TaskContext {
     $settings = Get-BCQualitySettingsCached
 
-    $taskContext = $settings.taskContext
     $context = [ordered]@{
         goal               = 'review pull request'
         'inputs-available' = @('pr-diff', 'file-path', 'repository')
         'enabled-layers'   = @($settings.enabledLayers)
         'disabled-skills'  = @($settings.disabledSkills)
-    }
-
-    $dimensions = [ordered]@{
-        technologies       = 'technologies'
-        countries          = 'countries'
-        applicationArea    = 'application-area'
-    }
-    foreach ($settingName in $dimensions.Keys) {
-        if ($taskContext.ContainsKey($settingName) -and $null -ne $taskContext[$settingName]) {
-            $context[$dimensions[$settingName]] = @($taskContext[$settingName])
-        }
+        technologies       = @('al')
+        countries          = @('w1')
+        'application-area' = @('all')
     }
 
     return $context

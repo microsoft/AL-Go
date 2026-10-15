@@ -304,11 +304,6 @@
                     "pattern": "^[0-9]+\\.[0-9]+$",
                     "description": "BCQuality content version installed from the corresponding v-prefixed marketplace tag."
                 },
-                "pluginVersion": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Expected plugin version declared by the BCQuality marketplace entry."
-                },
                 "enabledLayers": {
                     "type": "array",
                     "minItems": 1,
@@ -359,37 +354,15 @@
                         "allow",
                         "deny"
                     ]
-                },
-                "taskContext": {
-                    "type": "object",
-                    "properties": {
-                        "technologies": {
-                            "$ref": "#/$defs/bcQualityTaskContextDimension"
-                        },
-                        "countries": {
-                            "$ref": "#/$defs/bcQualityTaskContextDimension"
-                        },
-                        "applicationArea": {
-                            "$ref": "#/$defs/bcQualityTaskContextDimension"
-                        }
-                    },
-                    "additionalProperties": false,
-                    "required": [
-                        "technologies",
-                        "countries",
-                        "applicationArea"
-                    ]
                 }
             },
             "additionalProperties": false,
             "required": [
                 "marketplaceRepo",
                 "version",
-                "pluginVersion",
                 "enabledLayers",
                 "disabledSkills",
-                "knowledge",
-                "taskContext"
+                "knowledge"
             ]
         },
         "CodeReviewAgent": {
@@ -399,6 +372,16 @@
                 "enabled": {
                     "type": "boolean",
                     "description": "Enable Copilot code review workflows."
+                },
+                "branches": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": "Target branch patterns that trigger Copilot code review."
                 },
                 "model": {
                     "type": "string",
@@ -422,6 +405,7 @@
             "additionalProperties": false,
             "required": [
                 "enabled",
+                "branches",
                 "model",
                 "leafModel",
                 "excludedOwners"
@@ -943,17 +927,6 @@
                 "required": ["name", "value"]
             },
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
-        }
-    },
-    "$defs": {
-        "bcQualityTaskContextDimension": {
-            "type": "array",
-            "minItems": 1,
-            "uniqueItems": true,
-            "items": {
-                "type": "string",
-                "minLength": 1
-            }
         }
     },
     "patternProperties": {

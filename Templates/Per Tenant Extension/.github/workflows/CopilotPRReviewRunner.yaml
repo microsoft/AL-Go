@@ -16,14 +16,13 @@ defaults:
 env:
   ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
   ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
-  COPILOT_CLI_VERSION: 1.0.88
   REVIEW_AGENT_VERSION: 10.0.7
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   prepare:
     if: github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [ windows-latest ]
     permissions:
       actions: read
       contents: read
@@ -72,7 +71,7 @@ jobs:
   review:
     needs: prepare
     if: needs.prepare.outputs.eligible == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [ windows-latest ]
     permissions:
       contents: read
       pull-requests: read
@@ -100,7 +99,6 @@ jobs:
         with:
           shell: pwsh
           phase: prepare
-          copilotCliVersion: ${{ env.COPILOT_CLI_VERSION }}
 
       - name: Setup BCQuality
         id: setup
@@ -126,7 +124,6 @@ jobs:
           reviewOutputDir: ${{ github.workspace }}/review-output
           bcqualityRoot: ${{ steps.setup.outputs.pluginRoot }}
           bcqualitySettingsJson: ${{ needs.prepare.outputs.bcqualitySettingsJson }}
-          copilotCliVersion: ${{ env.COPILOT_CLI_VERSION }}
           agentVersion: ${{ env.REVIEW_AGENT_VERSION }}
 
       - name: Upload review output
@@ -148,7 +145,7 @@ jobs:
   publish:
     needs: [prepare, review]
     if: needs.review.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [ windows-latest ]
     permissions:
       contents: read
       issues: write
