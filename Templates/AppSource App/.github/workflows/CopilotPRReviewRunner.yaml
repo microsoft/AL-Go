@@ -26,6 +26,7 @@ jobs:
     permissions:
       actions: read
       contents: read
+      pull-requests: read
     outputs:
       model: ${{ steps.context.outputs.model }}
       leafModel: ${{ steps.context.outputs.leafModel }}
@@ -67,6 +68,7 @@ jobs:
           bcqualitySettingsJson: ${{ env.BCQuality }}
           metadataPath: .copilot-pr-review-metadata/event.json
           workflowHeadSha: ${{ github.event.workflow_run.head_sha }}
+          workflowRunId: ${{ github.event.workflow_run.id }}
 
   review:
     needs: prepare

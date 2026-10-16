@@ -8,11 +8,10 @@
     '',
     Justification = 'The test intentionally covers Unicode domain labels and rendered Unicode output.'
 )]
-param(
-    [string] $NormalizationSchemaPath = (Join-Path $PSScriptRoot 'fixtures/findings-report-roles/bcquality-findings-report.b74967bc.schema.json')
-)
+param()
 
 BeforeAll {
+    $NormalizationSchemaPath = Join-Path $PSScriptRoot 'fixtures/findings-report-roles/bcquality-findings-report.b74967bc.schema.json'
     $scriptPath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.ps1' -Resolve
     $scriptRoot = Split-Path -Parent $scriptPath
     $script:ReviewScriptPaths = @($scriptPath) + @(
@@ -1028,7 +1027,7 @@ Describe 'Deterministic leaf orchestration contract' {
 
         Mock Save-CopilotRunMetrics { $script:TestLeafMetrics }
         Mock Start-LeafCopilotProcess {
-            param($Leaf, $WorkDir, $Prompt)
+            param($Leaf, $WorkDir)
 
             New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
             $script:TestLeafReports[$Leaf.id] |
@@ -1216,7 +1215,7 @@ Describe 'Deterministic leaf orchestration contract' {
         } | ConvertTo-Json -Depth 10
 
         { Assert-ConsolidatedReport -ReportText $report -Plan $plan } |
-            Should -Throw "*false schema at '/sub-results/0/$Field'*"
+            Should -Throw '*Root consolidation output does not conform to the root findings-report schema*'
     }
 
     It 'rejects a consolidated report without sub-results' {
@@ -1299,7 +1298,7 @@ Describe 'Deterministic leaf orchestration contract' {
         $process = [pscustomobject]@{ HasExited = $true; ExitCode = 7 }
         $process | Add-Member -MemberType ScriptMethod -Name Dispose -Value {}
         Mock Save-CopilotRunMetrics {
-            param($Records, $OutputDir, $WallTimeSeconds, $MalformedRecords)
+            param($Records, $WallTimeSeconds, $MalformedRecords)
             Get-CopilotRunMetrics -Records $Records -WallTimeSeconds $WallTimeSeconds -MalformedRecords $MalformedRecords
         }
         $leaf = @(Get-ReviewLeafPlan)[0]
@@ -1332,7 +1331,7 @@ Describe 'Deterministic leaf orchestration contract' {
         $process = [pscustomobject]@{ HasExited = $true; ExitCode = 0 }
         $process | Add-Member -MemberType ScriptMethod -Name Dispose -Value {}
         Mock Save-CopilotRunMetrics {
-            param($Records, $OutputDir, $WallTimeSeconds, $MalformedRecords)
+            param($Records, $WallTimeSeconds, $MalformedRecords)
             Get-CopilotRunMetrics -Records $Records -WallTimeSeconds $WallTimeSeconds -MalformedRecords $MalformedRecords
         }
         $leaf = @(Get-ReviewLeafPlan)[0]
@@ -1366,8 +1365,15 @@ Describe 'Deterministic leaf orchestration contract' {
         $workDir = Join-Path $TestDrive 'uncontrolled-timeout-leaf'
         New-Item -ItemType Directory -Path $workDir -Force | Out-Null
         $process = [pscustomobject]@{ HasExited = $false; ExitCode = $null }
-        $process | Add-Member -MemberType ScriptMethod -Name Kill -Value { param($EntireProcessTree) }
-        $process | Add-Member -MemberType ScriptMethod -Name WaitForExit -Value { param($Milliseconds) return $false }
+        $process | Add-Member -MemberType ScriptMethod -Name Kill -Value {
+            param($EntireProcessTree)
+            $EntireProcessTree | Should -BeTrue
+        }
+        $process | Add-Member -MemberType ScriptMethod -Name WaitForExit -Value {
+            param($Milliseconds)
+            $Milliseconds | Should -BeGreaterThan 0
+            return $false
+        }
         $process | Add-Member -MemberType ScriptMethod -Name Dispose -Value {}
         $script:OutputDrainAttempted = $false
         $stdoutTask = [pscustomobject]@{}
@@ -1423,7 +1429,7 @@ Describe 'Deterministic leaf orchestration contract' {
         $process = [pscustomobject]@{ HasExited = $true; ExitCode = 7 }
         $process | Add-Member -MemberType ScriptMethod -Name Dispose -Value {}
         Mock Save-CopilotRunMetrics {
-            param($Records, $OutputDir, $WallTimeSeconds, $MalformedRecords)
+            param($Records, $WallTimeSeconds, $MalformedRecords)
             Get-CopilotRunMetrics -Records $Records -WallTimeSeconds $WallTimeSeconds -MalformedRecords $MalformedRecords
         }
         $leaf = @(Get-ReviewLeafPlan)[0]
@@ -1561,7 +1567,7 @@ Describe 'Deterministic leaf orchestration contract' {
         @($manifest.processes | Where-Object status -eq 'failed').Count | Should -Be 1
         ($manifest.processes | Where-Object status -eq 'failed').skill_id | Should -Be 'al-style-review'
         ($manifest.processes | Where-Object status -eq 'failed').failure_reason |
-            Should -Match 'Required properties.*reference'
+            Should -Match 'Leaf report does not conform to the leaf findings-report schema'
     }
 
     It 'fails before root consolidation when every leaf report is unusable' {
@@ -1929,6 +1935,35 @@ Describe 'Deterministic leaf orchestration contract' {
         }
     }
 
+    It 'records action reference <Ref> without mistaking a mutable ref for a commit' -ForEach @(
+        @{ Ref = 'main'; Commit = $null }
+        @{ Ref = 'v10.0'; Commit = $null }
+        @{ Ref = '0123456789abcdef0123456789abcdef01234567'; Commit = '0123456789abcdef0123456789abcdef01234567' }
+    ) {
+        $script:ReviewPlanIds = @('al-security-review')
+        $ReviewSource = 'pr'
+        $originalRepository = $env:COPILOT_REVIEW_ENGINE_REPOSITORY
+        $originalRef = $env:COPILOT_REVIEW_ENGINE_REF
+        $originalCommit = $env:COPILOT_REVIEW_ENGINE_COMMIT
+        try {
+            $env:COPILOT_REVIEW_ENGINE_REPOSITORY = 'contoso/AL-Go-Actions'
+            $env:COPILOT_REVIEW_ENGINE_REF = $Ref
+            $env:COPILOT_REVIEW_ENGINE_COMMIT = $null
+
+            Save-ReviewRunManifest -Status completed
+
+            $manifest = Get-Content -LiteralPath (Join-Path $ReviewOutputDir '_run-manifest.json') -Raw -Encoding UTF8 |
+                ConvertFrom-Json
+            $manifest.engine.ref | Should -Be $Ref
+            $manifest.engine.commit | Should -Be $Commit
+        }
+        finally {
+            $env:COPILOT_REVIEW_ENGINE_REPOSITORY = $originalRepository
+            $env:COPILOT_REVIEW_ENGINE_REF = $originalRef
+            $env:COPILOT_REVIEW_ENGINE_COMMIT = $originalCommit
+        }
+    }
+
     It 'requires the action repository for pull request reviews' {
         $script:ReviewPlanIds = @('al-security-review')
         $ReviewSource = 'pr'
@@ -2161,6 +2196,16 @@ Describe 'Local review authentication' {
 
     It 'allows local generation without GH_TOKEN' {
         { Assert-Config } | Should -Not -Throw
+    }
+
+    It 'accepts valid branch names containing apostrophes' {
+        $BaseBranch = "release/o'clock"
+        { Assert-Config } | Should -Not -Throw
+    }
+
+    It 'rejects invalid branch names: <_>' -ForEach @('bad..branch', 'branch.lock', 'bad branch', 'bad~branch', '-option') {
+        $BaseBranch = $_
+        { Assert-Config } | Should -Throw '*BASE_BRANCH is not a valid git branch name*'
     }
 
     It 'probes the exact child executable and applies the requested pin at startup' {
@@ -2578,21 +2623,58 @@ Describe 'Group-RegionalFindings' {
         (Get-FindingOtherRegions -Finding $result[0]).region | Should -Be 'US'
     }
 
-    It 'collapses regional copies even when the model wording differs per file' {
-        # The real-world driver for keying on location, not text: for byte-identical
-        # regional copies the model still writes DIFFERENT issue/recommendation prose
-        # per file (it may even cross-reference the other copy). Location must still
-        # collapse them into one comment.
+    It 'preserves regional findings when equivalent defects cannot be established' {
         $findings = @(
             New-RegionalFinding -Path 'src/Layers/W1/AlCosting/Foo.Codeunit.al' -Line 7 -Issue 'Missing SetLoadFields before Get' -Rec 'Add SetLoadFields'
             New-RegionalFinding -Path 'src/Layers/BE/AlCosting/Foo.Codeunit.al' -Line 7 -Issue 'Same issue as the W1 copy: no SetLoadFields' -Rec 'Add a SetLoadFields call'
         )
         $result = @(Group-RegionalFindings -Findings $findings)
-        $result.Count | Should -Be 1
-        $result[0].filePath | Should -Be 'src/Layers/W1/AlCosting/Foo.Codeunit.al'
-        $others = Get-FindingOtherRegions -Finding $result[0]
-        $others.Count | Should -Be 1
-        $others[0].region | Should -Be 'BE'
+        $result.Count | Should -Be 2
+    }
+
+    It 'preserves two distinct defects on the same line across regions' {
+        $findings = @(
+            New-RegionalFinding -Path 'src/Apps/W1/Foo.al' -Issue 'N+1 query' -Rec 'Load fields'
+            New-RegionalFinding -Path 'src/Apps/W1/Foo.al' -Issue 'Repeated lookup' -Rec 'Cache result'
+            New-RegionalFinding -Path 'src/Apps/US/Foo.al' -Issue 'N+1 query' -Rec 'Load fields'
+            New-RegionalFinding -Path 'src/Apps/US/Foo.al' -Issue 'Repeated lookup' -Rec 'Cache result'
+        )
+        $result = @(Group-RegionalFindings -Findings $findings)
+        $result.Count | Should -Be 2
+        $result.issue | Should -Contain 'N+1 query'
+        $result.issue | Should -Contain 'Repeated lookup'
+        foreach ($finding in $result) {
+            @(Get-FindingOtherRegions -Finding $finding).Count | Should -Be 1
+        }
+    }
+
+    It 'preserves differing severity and suggested fixes at the same regional location' {
+        $findings = @(
+            New-RegionalFinding -Path 'src/Apps/W1/Foo.al'
+            New-RegionalFinding -Path 'src/Apps/US/Foo.al'
+            New-RegionalFinding -Path 'src/Apps/DE/Foo.al'
+        )
+        $findings[1].severity = 'High'
+        $findings[2] | Add-Member -NotePropertyName suggestedCode -NotePropertyValue 'Use a different fix'
+        @(Group-RegionalFindings -Findings $findings).Count | Should -Be 3
+    }
+
+    It 'preserves different rule identities even when their messages match' {
+        $findings = @(
+            New-RegionalFinding -Path 'src/Apps/W1/Foo.al'
+            New-RegionalFinding -Path 'src/Apps/US/Foo.al'
+        )
+        $findings[0] | Add-Member -NotePropertyName rawId -NotePropertyValue 'rule-a'
+        $findings[1] | Add-Member -NotePropertyName rawId -NotePropertyValue 'rule-b'
+        @(Group-RegionalFindings -Findings $findings).Count | Should -Be 2
+    }
+
+    It 'does not merge Apps and Layers trees at the same relative path and line' {
+        $findings = @(
+            New-RegionalFinding -Path 'src/Apps/W1/Foo.al'
+            New-RegionalFinding -Path 'src/Layers/US/Foo.al'
+        )
+        @(Group-RegionalFindings -Findings $findings).Count | Should -Be 2
     }
 
     It 'does not collapse findings at different lines of the same file across regions' {

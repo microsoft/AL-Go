@@ -48,10 +48,13 @@ function Test-GlobMatch {
     for ($index = 0; $index -lt $normalizedPattern.Length; $index++) {
         $character = $normalizedPattern[$index]
         if ($character -eq '*' -and ($index + 1) -lt $normalizedPattern.Length -and $normalizedPattern[$index + 1] -eq '*') {
-            [void] $regex.Append('.*')
             $index++
             if (($index + 1) -lt $normalizedPattern.Length -and $normalizedPattern[$index + 1] -eq '/') {
+                [void] $regex.Append('(?:.*/)?')
                 $index++
+            }
+            else {
+                [void] $regex.Append('.*')
             }
         }
         elseif ($character -eq '*') {

@@ -56,12 +56,8 @@ function Group-RegionalFindings {
 
     if (-not $Findings -or $Findings.Count -lt 2) { return @($Findings) }
 
-    # A regional duplicate is the SAME defect shipped in several region layers: the
-    # same domain, at the same region-stripped path and line, under >=2 region roots.
-    # Key on that LOCATION (domain + relative path + line), not the model's free-text
-    # issue/recommendation: the model writes per-file prose that varies across the
-    # copies (it may even say "same as the W1 copy"), so a text signature almost never
-    # matches for genuine twins and the collapse would silently never fire.
+    # Location alone cannot distinguish two defects on the same line. Only merge
+    # equivalent findings, preserving differing prose, severity and suggested fixes.
     $result     = [System.Collections.Generic.List[object]]::new()
     $byLocality = [ordered]@{}
 
@@ -73,7 +69,21 @@ function Group-RegionalFindings {
         }
         $domain = ([string]$finding.domain).Trim().ToLowerInvariant()
         $line   = [int]$finding.lineNumber
-        $key    = "$domain`u{241F}$($info.Relative.ToLowerInvariant())`u{241F}$line"
+        $issue = [string](Get-ObjectPropertyValue -InputObject $finding -Name 'issue')
+        if ([string]::IsNullOrWhiteSpace($issue)) {
+            $result.Add($finding) | Out-Null
+            continue
+        }
+        $identity = @(
+            $info.Tree
+            $info.Relative
+            $domain
+            $line
+            foreach ($name in @('rawId', 'isAgentFinding', 'issue', 'recommendation', 'severity', 'confidence', 'suggestedCode', 'suggestedCodeOmissionReason')) {
+                ([string](Get-ObjectPropertyValue -InputObject $finding -Name $name)).Replace("`r`n", "`n").Trim()
+            }
+        )
+        $key = ConvertTo-Json -InputObject $identity -Compress
         if (-not $byLocality.Contains($key)) {
             $byLocality[$key] = [System.Collections.Generic.List[object]]::new()
         }
@@ -85,7 +95,7 @@ function Group-RegionalFindings {
         $distinctRegions = @($group | ForEach-Object { $_.Info.Region } | Select-Object -Unique)
 
         # Only collapse a genuine cross-region cluster: same location in >=2 regions.
-        if ($group.Count -lt 2 -or $distinctRegions.Count -lt 2) {
+        if ($group.Count -lt 2 -or $distinctRegions.Count -ne $group.Count) {
             foreach ($entry in $group) { $result.Add($entry.Finding) | Out-Null }
             continue
         }

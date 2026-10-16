@@ -220,11 +220,11 @@ function TestWorkflowReferences {
     $yaml = Get-Content -Path $YamlPath -Raw
 
     # Test all referenced workflows are coming from .github/workflows/
-    $alGoWorkflowReferencePatterns = 'uses:\s*([^\s]+\.ya?ml)@([^\s#]+)'
+    $alGoWorkflowReferencePatterns = 'uses:\s*[''"]?([^\s''"]+\.ya?ml)(?:@([^\s#''"]+))?[''"]?(?=\s|$)'
 
     $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
 
-    $localWorkflowsPattern = '^./.github/workflows/*'
+    $localWorkflowsPattern = '^\./\.github/workflows/[^/]+\.ya?ml$'
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
         $workflowPath | Should -Match $localWorkflowsPattern

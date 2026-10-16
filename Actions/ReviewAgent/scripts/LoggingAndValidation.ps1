@@ -170,8 +170,9 @@ function Assert-Config {
             throw "PR_HEAD_SHA must be a full 40-character commit SHA; received '$PrHeadSha'."
         }
     }
-    if ($BaseBranch -notmatch '^[A-Za-z0-9._/-]+$') {
-        throw "BASE_BRANCH contains unexpected characters: '$BaseBranch'. Expected a git ref name matching ^[A-Za-z0-9._/-]+`$."
+    $null = & git check-ref-format "refs/heads/$BaseBranch" 2>&1
+    if ($LASTEXITCODE -ne 0 -or $BaseBranch.StartsWith('-')) {
+        throw "BASE_BRANCH is not a valid git branch name: '$BaseBranch'."
     }
 
     if ($needsCli) {

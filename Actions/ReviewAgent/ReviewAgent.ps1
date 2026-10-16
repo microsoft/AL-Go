@@ -15,6 +15,8 @@ param(
     [string] $metadataPath = '',
     [Parameter(HelpMessage = "Head SHA reported by the completed intake workflow")]
     [string] $workflowHeadSha = '',
+    [Parameter(HelpMessage = "ID of the completed pull request intake workflow run")]
+    [string] $workflowRunId = '',
     [Parameter(HelpMessage = "GitHub token used for pull request access")]
     [string] $token = '',
     [Parameter(HelpMessage = "GitHub owner/repository being reviewed")]
@@ -124,23 +126,62 @@ function Invoke-ContextPhase {
         throw "Pull request metadata was not found at '$metadataPath'."
     }
 
-    $settings = $codeReviewSettingsJson | ConvertFrom-Json
+    $settings = $codeReviewSettingsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
     $bcqualitySettings = Get-BCQualitySettings
-    $metadata = Get-Content -LiteralPath $metadataPath -Encoding UTF8 -Raw | ConvertFrom-Json
-    $owner = [string] $metadata.pull_request.user.login
-    $excludedOwners = @($settings.excludedOwners)
-    $eligible = -not $metadata.pull_request.draft -and $owner -notin $excludedOwners
+    $metadata = Get-Content -LiteralPath $metadataPath -Encoding UTF8 -Raw | ConvertFrom-Json | ConvertTo-HashTable -recurse
     $number = [string] $metadata.pull_request.number
-    $headSha = [string] $metadata.pull_request.head.sha
-    $targetBranch = [string] $metadata.pull_request.base.ref
-
-    if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha) {
-        throw 'Pull request head SHA does not match the triggering workflow run.'
+    if ($number -notmatch '\A[1-9][0-9]*\z' -or $workflowRunId -notmatch '\A[1-9][0-9]*\z' -or
+        $repository -notmatch '\A[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\z' -or -not $token) {
+        throw 'A valid repository, pull request number, workflowRunId, and token are required for trusted context resolution.'
     }
 
+    $apiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL.TrimEnd('/') } else { 'https://api.github.com' }
+    $headers = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json' }
+    $run = (InvokeWebRequest -headers $headers -uri "$apiUrl/repos/$repository/actions/runs/$workflowRunId").Content |
+        ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $pullRequest = (InvokeWebRequest -headers $headers -uri "$apiUrl/repos/$repository/pulls/$number").Content |
+        ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $headSha = [string] $pullRequest.head.sha
+    if ([string]::IsNullOrWhiteSpace($workflowHeadSha) -or $headSha -ne $workflowHeadSha -or $headSha -ne $run.head_sha) {
+        throw 'Pull request head SHA does not match the triggering workflow run.'
+    }
+    # Fork runs can have an empty pull_requests array. Bind those runs using the
+    # authoritative head repository, branch and commit rather than artifact fields.
+    if ($run.event -ne 'pull_request' -or $run.conclusion -ne 'success' -or
+        $run.repository.full_name -ne $repository -or $pullRequest.base.repo.full_name -ne $repository -or
+        [string] $pullRequest.number -ne $number -or
+        $run.head_repository.full_name -ne $pullRequest.head.repo.full_name -or
+        $run.head_branch -ne $pullRequest.head.ref -or
+        (@($run.pull_requests).Count -gt 0 -and $number -notin @($run.pull_requests | ForEach-Object { [string] $_.number }))) {
+        throw 'Pull request identity does not match the triggering workflow run.'
+    }
+    if (@($run.pull_requests).Count -eq 0 -and $pullRequest.state -eq 'open') {
+        $head = [Uri]::EscapeDataString("$($run.head_repository.full_name.Split('/')[0]):$($run.head_branch)")
+        $matchingNumbers = @()
+        $page = 1
+        do {
+            $candidateObjects = (InvokeWebRequest -headers $headers -uri "$apiUrl/repos/$repository/pulls?state=open&head=$head&per_page=100&page=$page").Content |
+                ConvertFrom-Json
+            $candidates = @($candidateObjects | ConvertTo-HashTable -recurse)
+            $matchingNumbers += @($candidates | Where-Object {
+                $_.head.repo.full_name -eq $run.head_repository.full_name -and
+                $_.head.ref -eq $run.head_branch -and $_.head.sha -eq $run.head_sha
+            } | ForEach-Object { [string] $_.number })
+            $page++
+        } while ($candidates.Count -eq 100)
+        if ($matchingNumbers.Count -ne 1 -or $matchingNumbers[0] -ne $number) {
+            throw 'Pull request identity is ambiguous or does not match the triggering workflow run.'
+        }
+    }
+    $owner = [string] $pullRequest.user.login
+    $excludedOwners = @($settings['excludedOwners'])
+    $eligible = $settings['enabled'] -is [bool] -and $settings['enabled'] -eq $true -and
+        $pullRequest.state -eq 'open' -and -not $pullRequest.draft -and $owner -notin $excludedOwners
+    $targetBranch = [string] $pullRequest.base.ref
+
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
-    Write-ReviewOutput -Name model -Value ([string] $settings.model)
-    Write-ReviewOutput -Name leafModel -Value ([string] $settings.leafModel)
+    Write-ReviewOutput -Name model -Value ([string] $settings['model'])
+    Write-ReviewOutput -Name leafModel -Value ([string] $settings['leafModel'])
     Write-ReviewOutput -Name prNumber -Value $number
     Write-ReviewOutput -Name headSha -Value $headSha
     Write-ReviewOutput -Name baseRef -Value $targetBranch
@@ -181,7 +222,8 @@ function Initialize-ReviewEnvironment {
 function Invoke-PreparePhase {
     Assert-CopilotCliVersion
 
-    & npm install --global "@github/copilot@$copilotCliVersion"
+    $npmExecutable = (Get-Command npm -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+    & $npmExecutable install --global "@github/copilot@$copilotCliVersion"
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install GitHub Copilot CLI $copilotCliVersion."
     }

@@ -70,7 +70,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
 
     It 'Matches the standard action wrapper and output contract' {
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName 'SetupBCQuality.ps1'
-        YamlTest -scriptRoot $scriptRoot -actionName 'SetupBCQuality' -actionScript $actionScript -outputs ([ordered]@{
+        YamlTest -scriptRoot $scriptRoot -actionName 'SetupBCQuality' -actionScript $actionScript -DefaultShell pwsh -outputs ([ordered]@{
             pluginRoot = 'Path to the installed and filtered BCQuality plugin'
             pluginVersion = 'Resolved BCQuality plugin version'
             marketplaceRef = 'Marketplace ref used to install BCQuality'
@@ -138,6 +138,23 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/microsoft.md') | Should -BeTrue
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.md') | Should -BeFalse
         Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.bad.al') | Should -BeFalse
+    }
+
+    It 'Preserves directory boundaries in recursive allow and deny globs' {
+        foreach ($path in @('microsoft/knowledge/finance.md', 'microsoft/knowledge/domain/finance.md', 'microsoft/knowledge/domain/notfinance.md')) {
+            Set-Content -LiteralPath (Join-Path $pluginRoot $path) -Value '# article' -Encoding UTF8
+        }
+
+        Test-GlobMatch -Path 'microsoft/knowledge/finance.md' -Pattern 'microsoft/knowledge/**/finance.md' | Should -BeTrue
+        Test-GlobMatch -Path 'microsoft/knowledge/domain/finance.md' -Pattern 'microsoft/knowledge/**/finance.md' | Should -BeTrue
+        Test-GlobMatch -Path 'microsoft/knowledge/domain/notfinance.md' -Pattern 'microsoft/knowledge/**/finance.md' | Should -BeFalse
+
+        & $script:setupScriptPath -enabledLayers microsoft -knowledgeAllow 'microsoft/knowledge/**' `
+            -knowledgeDeny 'microsoft/knowledge/**/finance.md'
+
+        Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/finance.md') | Should -BeFalse
+        Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/finance.md') | Should -BeFalse
+        Test-Path (Join-Path $pluginRoot 'microsoft/knowledge/domain/notfinance.md') | Should -BeTrue
     }
 
     It 'Removes an explicitly disabled skill' {

@@ -42,9 +42,11 @@ Both settings are populated by default. `CodeReviewAgent` must be enabled at rep
 The integration uses two workflows:
 
 1. **Copilot PR Review** runs without write permissions and uploads the pull request event metadata.
-1. **Copilot PR Review Runner** runs from the trusted base branch, downloads that metadata, applies the trusted repository settings, validates the pull request, generates findings, and publishes them.
+1. **Copilot PR Review Runner** runs from the trusted base branch and treats that metadata only as a pull request number hint. It retrieves the workflow run and pull request from GitHub, validates the head repository, branch, commit and pull request association, and uses the authoritative author, draft state and base branch. The trusted repository setting must explicitly enable review before findings can be generated or published.
 
 The trusted runner supports ephemeral GitHub-hosted runners. It installs the pinned Copilot CLI, invokes the AL-Go `SetupBCQuality` action in a secret-scoped step, passes only the prepared plugin path to `ReviewAgent`, runs the model in a separate read-only step, and publishes the generated findings from a separate job. This prevents the model and untrusted pull request code from receiving the private marketplace token or permission to modify the pull request.
+
+`SetupBCQuality` defaults to PowerShell 7 (`pwsh`), which the BCQuality indexing tools require. Review diagnostics record the action repository and requested ref separately. A full commit SHA is recorded when the action is SHA-pinned; for mutable branch/tag references, the commit is unknown (`null`) rather than incorrectly treating the ref or the reviewed repository's checkout as the action commit.
 
 ## Disable the reviewer
 

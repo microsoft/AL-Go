@@ -24,6 +24,10 @@ inputs:
     description: Head SHA reported by the completed intake workflow
     required: false
     default: ''
+  workflowRunId:
+    description: ID of the completed pull request intake workflow run
+    required: false
+    default: ''
   token:
     description: GitHub token used for pull request access
     required: false
@@ -106,6 +110,7 @@ runs:
         _bcqualitySettingsJson: ${{ inputs.bcqualitySettingsJson }}
         _metadataPath: ${{ inputs.metadataPath }}
         _workflowHeadSha: ${{ inputs.workflowHeadSha }}
+        _workflowRunId: ${{ inputs.workflowRunId }}
         _token: ${{ inputs.token }}
         _repository: ${{ inputs.repository }}
         _prNumber: ${{ inputs.prNumber }}
@@ -119,10 +124,10 @@ runs:
         _copilotCliVersion: ${{ inputs.copilotCliVersion }}
         _agentVersion: ${{ inputs.agentVersion }}
         COPILOT_REVIEW_ENGINE_REPOSITORY: ${{ github.action_repository }}
-        COPILOT_REVIEW_ENGINE_COMMIT: ${{ github.action_ref }}
+        COPILOT_REVIEW_ENGINE_REF: ${{ github.action_ref }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReviewAgent" -Action {
-          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -codeReviewSettingsJson $ENV:_codeReviewSettingsJson -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion -agentVersion $ENV:_agentVersion
+          ${{ github.action_path }}/ReviewAgent.ps1 -phase $ENV:_phase -codeReviewSettingsJson $ENV:_codeReviewSettingsJson -bcqualitySettingsJson $ENV:_bcqualitySettingsJson -metadataPath $ENV:_metadataPath -workflowHeadSha $ENV:_workflowHeadSha -workflowRunId $ENV:_workflowRunId -token $ENV:_token -repository $ENV:_repository -prNumber $ENV:_prNumber -prHeadSha $ENV:_prHeadSha -baseRef $ENV:_baseRef -model $ENV:_model -leafModel $ENV:_leafModel -reviewWorkspace $ENV:_reviewWorkspace -reviewOutputDir $ENV:_reviewOutputDir -bcqualityRoot $ENV:_bcqualityRoot -copilotCliVersion $ENV:_copilotCliVersion -agentVersion $ENV:_agentVersion
         }
 branding:
   icon: terminal

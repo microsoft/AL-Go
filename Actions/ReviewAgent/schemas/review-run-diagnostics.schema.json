@@ -31,6 +31,7 @@
           "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}$"
         },
         "commit": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{40}$" },
+        "ref": { "type": ["string", "null"], "minLength": 1 },
         "agent_version": { "type": "string", "minLength": 1 }
       }
     },

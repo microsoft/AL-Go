@@ -81,7 +81,7 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualitySettingsJson:\s+\$\{\{\s+steps\.context\.outputs\.bcqualitySettingsJson\s+\}\}'
-        $reviewAction | Should -Match '\$settings\.excludedOwners'
+        $reviewAction | Should -Match ([regex]::Escape('$settings[''excludedOwners'']'))
         $runnerWorkflow | Should -Match "needs\.prepare\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Not -Match 'needs\.prepare\.outputs\.enabled'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.prepare\.outputs\.model\s+\}\}'
@@ -135,7 +135,7 @@ Describe "Copilot code review workflows" {
         $prepareJob = [regex]::Match($runnerWorkflow, '(?ms)^  prepare:.*?(?=^  review:)').Value
         $intakeWorkflow | Should -Match "(?ms)permissions:\s+contents: read\s+jobs:"
         $runnerWorkflow | Should -Match "(?ms)prepare:.*?permissions:\s+actions: read\s+contents: read"
-        $prepareJob | Should -Not -Match 'pull-requests:\s+read'
+        $prepareJob | Should -Match 'pull-requests:\s+read'
         $runnerWorkflow | Should -Match 'copilot-requests:\s+write'
         $runnerWorkflow | Should -Match 'pull-requests:\s+write'
         $runnerWorkflow | Should -Match 'issues:\s+write'
@@ -149,11 +149,12 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'name:\s+copilot-pr-review-metadata'
         $runnerWorkflow | Should -Match 'run-id:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}'
         $runnerWorkflow | Should -Match "workflowHeadSha:\s+\$\{\{\s+github\.event\.workflow_run\.head_sha\s+\}\}"
+        $runnerWorkflow | Should -Match "workflowRunId:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}"
         $reviewAction | Should -Match ([regex]::Escape('$owner -notin $excludedOwners'))
         $runnerWorkflow | Should -Not -Match 'business-central-bot'
         $runnerWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
         $runnerWorkflow | Should -Not -Match 'Invoke-RestMethod'
-        $reviewAction | Should -Not -Match 'Invoke-RestMethod'
+        $reviewAction | Should -Match 'InvokeWebRequest'
         $runnerWorkflow | Should -Match "needs\.prepare\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Match 'prNumber:\s+\$\{\{\s+needs\.prepare\.outputs\.prNumber\s+\}\}'
         $runnerWorkflow | Should -Match 'prHeadSha:\s+\$\{\{\s+needs\.prepare\.outputs\.headSha\s+\}\}'
