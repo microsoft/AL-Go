@@ -2,6 +2,11 @@
 
 Run pipeline in AL-Go repository
 
+When `useSeparateTestAction.enabled` is true, normal tests remain in RunPipeline if test building,
+test execution, or app publication is disabled; `additionalCountries` is configured; an
+`ImportTestDataInBcContainer` callback would otherwise have no RunPipeline test category to invoke
+it. The action emits a notice with every reason.
+
 ## INPUT
 
 ### ENV variables

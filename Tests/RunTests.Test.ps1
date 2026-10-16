@@ -301,6 +301,44 @@ Describe 'RunTests.psm1 Tests' {
     }
 
     Context 'Invoke-AlGoTestRun' {
+        It 'Warns that configured database restore events are not supported' {
+            $projectPath = New-TestProject
+            $warning = '::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
+            Mock -ModuleName RunTests Write-Host {}
+            $settings = @{
+                restoreDatabases               = @('BeforeEachTestApp')
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @()
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
+                -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
+
+            Should -Invoke -ModuleName RunTests Write-Host -Times 1 -Exactly -ParameterFilter {
+                $Object -eq $warning
+            }
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Does not emit the database restore warning for an empty setting' {
+            $projectPath = New-TestProject
+            $warning = '::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
+            Mock -ModuleName RunTests Write-Host {}
+            $settings = @{
+                restoreDatabases               = @('', ' ')
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @()
+            }
+
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
+                -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
+
+            Should -Invoke -ModuleName RunTests Write-Host -Times 0 -Exactly -ParameterFilter {
+                $Object -eq $warning
+            }
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Does not run tests when there are no test apps' {
             $projectPath = New-TestProject
             $script:runnerCalls = 0
