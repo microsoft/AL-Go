@@ -6,6 +6,7 @@
 param()
 
 BeforeAll {
+    $script:IsGitHubActions = $false
     $scriptPath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.psm1' -Resolve
     $scriptRoot = Split-Path -Parent $scriptPath
     $reviewScriptPaths = @($scriptPath) + @(
@@ -29,6 +30,7 @@ BeforeAll {
         'Get-CopilotNumericAttribute',
         'Get-CopilotRunMetrics',
         'Write-LogPhaseDetail',
+        'Invoke-WithWorkflowCommandsSuspended',
         'Remove-CopilotOtelFile',
         'Read-CopilotOtelFile',
         'Save-CopilotRunMetrics',

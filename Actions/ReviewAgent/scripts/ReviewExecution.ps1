@@ -655,8 +655,7 @@ function Start-LeafCopilotProcess {
         throw "Copilot CLI compatibility was not initialized before starting leaf '$($Leaf.id)'."
     }
 
-    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = $script:CopilotExecutable
+    $startInfo = New-CopilotProcessStartInfo -Executable $script:CopilotExecutable -Arguments $copilotArgs
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardInput = $false
@@ -664,7 +663,6 @@ function Start-LeafCopilotProcess {
     $startInfo.RedirectStandardError = $true
     $startInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
     $startInfo.WorkingDirectory = $WorkDir
-    foreach ($arg in $copilotArgs) { $startInfo.ArgumentList.Add($arg) }
     $startInfo.EnvironmentVariables.Clear()
     foreach ($kv in $cleanEnv.GetEnumerator()) {
         $startInfo.EnvironmentVariables[$kv.Key] = $kv.Value

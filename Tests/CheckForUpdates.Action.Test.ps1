@@ -360,6 +360,22 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         ($yaml.Get('jobs:/CreateRelease:/steps:/- name: Create release/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
     }
 
+    It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension' }
+        @{ Template = 'AppSource App' }
+    ) {
+        param($Template)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $source = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows\CopilotPRReviewRunner.yaml"
+        Mock ReadSettings { @{ 'runs-on' = 'self-hosted, custom-label'; shell = 'powershell' } }
+
+        $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 1
+
+        ([regex]::Matches($modified, 'runs-on:\s+\[\s+windows-latest\s+\]')).Count | Should -Be 3
+        $modified | Should -Not -Match 'self-hosted|custom-label'
+        $modified | Should -Match 'shell: pwsh'
+    }
+
     It 'ModifyRunsOnAndShell rejects powershell with ubuntu-latest' {
         $yaml = [Yaml]::new(@(
             "jobs:",

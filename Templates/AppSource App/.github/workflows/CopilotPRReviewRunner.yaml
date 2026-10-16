@@ -6,7 +6,7 @@ on:
     types: [ completed ]
 
 concurrency:
-  group: copilot-pr-review-runner-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  group: copilot-pr-review-runner-${{ github.event.workflow_run.id }}
   cancel-in-progress: true
 
 defaults:

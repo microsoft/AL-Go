@@ -106,6 +106,11 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Not -Match 'BC-ALAgents'
     }
 
+    It 'Separates concurrency groups by intake run rather than shared head branch' {
+        $runnerWorkflow | Should -Match 'group: copilot-pr-review-runner-\$\{\{ github\.event\.workflow_run\.id \}\}'
+        $runnerWorkflow | Should -Not -Match 'group:.*head_branch'
+    }
+
     It 'Keeps both template workflow sets identical' {
         $appSourceWorkflowFolder = Join-Path $PSScriptRoot '..\..\Templates\AppSource App\.github\workflows' -Resolve
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $intakeWorkflow

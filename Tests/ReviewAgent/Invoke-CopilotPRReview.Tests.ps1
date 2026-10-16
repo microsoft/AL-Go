@@ -60,6 +60,7 @@ BeforeAll {
     $AgentMinimumSeverity = 'Low'
     $MaxFindings = 25
     $script:LastParsingErrors = [System.Collections.Generic.List[string]]::new()
+    $script:IsGitHubActions = $false
 
     $AgentVersion = '1'
     $AgentLabel = 'copilot-pr-review'
@@ -101,6 +102,114 @@ Describe 'Review engine module boundary' {
         finally {
             foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $saved[$name]) }
         }
+    }
+}
+
+Describe 'Untrusted review logging' {
+    BeforeEach {
+        $script:IsGitHubActions = $true
+        $script:CapturedLog = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host {
+            param($Object)
+            $script:CapturedLog.Add([string]$Object)
+        }
+    }
+
+    AfterEach {
+        $script:IsGitHubActions = $false
+    }
+
+    It 'suspends workflow commands across both output streams with a fresh token' {
+        $stdout = '::add-mask::forged-mask'
+        $stderr = "`r::error::forged-annotation"
+        $transcript = [System.Text.StringBuilder]::new()
+
+        Write-CopilotOutput -Stdout $stdout -Stderr $stderr -Transcript $transcript
+
+        $script:CapturedLog.Count | Should -Be 4
+        $script:CapturedLog[0] | Should -Match '^::stop-commands::[a-f0-9]{32}$'
+        $token = $script:CapturedLog[0].Substring('::stop-commands::'.Length)
+        $script:CapturedLog[1] | Should -Be $stdout
+        $script:CapturedLog[2] | Should -Be "[copilot-err] $stderr"
+        $script:CapturedLog[3] | Should -Be "::$($token)::"
+        $transcript.ToString() | Should -Match ([regex]::Escape("out: $stdout"))
+        $transcript.ToString() | Should -Match ([regex]::Escape("err: $stderr"))
+
+        $script:CapturedLog.Clear()
+        Write-CopilotOutput -Stdout $stdout -Transcript $transcript
+        $script:CapturedLog[0] | Should -Not -Be "::stop-commands::$token"
+    }
+
+    It 'restores command parsing even when replay fails' {
+        { Invoke-WithWorkflowCommandsSuspended { throw 'Replay failed' } } | Should -Throw '*Replay failed*'
+
+        $script:CapturedLog.Count | Should -Be 2
+        $token = $script:CapturedLog[0].Substring('::stop-commands::'.Length)
+        $script:CapturedLog[1] | Should -Be "::$($token)::"
+    }
+
+    It 'also protects model-supplied phase details' {
+        Write-LogPhaseDetail -Line "Reason: untrusted`r::add-mask::forged"
+
+        $script:CapturedLog[0] | Should -Match '^::stop-commands::[a-f0-9]{32}$'
+        $script:CapturedLog[1] | Should -Be "  Reason: untrusted`r::add-mask::forged"
+        $token = $script:CapturedLog[0].Substring('::stop-commands::'.Length)
+        $script:CapturedLog[2] | Should -Be "::$($token)::"
+    }
+
+    It 'escapes annotation control characters without decoding supplied escapes: <Name>' -ForEach @(
+        @{ Name = 'bare CR and LF'; Text = "first`r::warning::forged`n%0A"; Expected = 'first%0D::warning::forged%0A%250A' }
+        @{ Name = 'CRLF'; Text = "first`r`nsecond%0D"; Expected = 'first%0D%0Asecond%250D' }
+    ) {
+        Format-AnnotationMessage -Message $Text | Should -BeExactly $Expected
+    }
+}
+
+Describe 'npm Copilot process launching' {
+    It 'executes an npm loader without a command shell in the <Layout> layout' -ForEach @(
+        @{ Layout = 'global' }, @{ Layout = 'local' }
+    ) {
+        $root = Join-Path $TestDrive "npm $Layout with spaces"
+        $shimDirectory = if ($Layout -eq 'global') { $root } else { Join-Path $root 'node_modules/.bin' }
+        $loaderDirectory = Join-Path $root 'node_modules/@github/copilot'
+        New-Item -ItemType Directory -Path $shimDirectory, $loaderDirectory -Force | Out-Null
+        $shim = Join-Path $shimDirectory 'copilot.cmd'
+        Set-Content -LiteralPath $shim -Value '@exit /b 99' -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $loaderDirectory 'npm-loader.js') -Encoding UTF8 -Value @'
+if (process.argv.includes('--version')) {
+    console.log('GitHub Copilot CLI 1.0.83.');
+} else {
+    process.stdout.write(JSON.stringify(process.argv.slice(2)));
+}
+'@
+
+        Get-CopilotExecutableVersion -Executable $shim | Should -Be '1.0.83'
+
+        $arguments = @('-p', 'spaces, "quotes" and trailing \', '--model=test-model')
+        $startInfo = New-CopilotProcessStartInfo -Executable $shim -Arguments $arguments
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $process = [Diagnostics.Process]::new()
+        $process.StartInfo = $startInfo
+        try {
+            $null = $process.Start()
+            $stdout = $process.StandardOutput.ReadToEndAsync()
+            $stderr = $process.StandardError.ReadToEndAsync()
+            $process.WaitForExit()
+
+            $process.ExitCode | Should -Be 0
+            $stderr.GetAwaiter().GetResult() | Should -BeNullOrEmpty
+            @($stdout.GetAwaiter().GetResult() | ConvertFrom-Json) | Should -Be $arguments
+        }
+        finally {
+            $process.Dispose()
+        }
+    }
+
+    It 'fails explicitly when a command shim has no installed npm loader' {
+        $shim = Join-Path $TestDrive 'missing-package/copilot.cmd'
+        { New-CopilotProcessStartInfo -Executable $shim } | Should -Throw '*Cannot find the npm Copilot loader*'
     }
 }
 
@@ -2417,10 +2526,11 @@ Describe 'Local review authentication' {
     }
 
     It 'launches the child Copilot process without a visible console window' {
-        $source = $script:ReviewSourceText
-        $source | Should -Match '\$startInfo\.CreateNoWindow\s*=\s*\$true'
-        $source | Should -Match 'Get-Command copilot\.exe'
-        $source | Should -Match '\$startInfo\.FileName\s*=\s*\$script:CopilotExecutable'
+        foreach ($name in @('Invoke-CopilotCli', 'Start-LeafCopilotProcess')) {
+            $source = ($script:ReviewFunctionAsts | Where-Object Name -eq $name).Body.Extent.Text
+            $source | Should -Match '\$startInfo\.CreateNoWindow\s*=\s*\$true'
+            $source | Should -Match 'New-CopilotProcessStartInfo -Executable \$script:CopilotExecutable'
+        }
     }
 
     It 'does not forward inherited tokens to a local non-CI child process' {

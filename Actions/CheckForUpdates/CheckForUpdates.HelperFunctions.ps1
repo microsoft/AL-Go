@@ -597,7 +597,7 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
+    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting', 'CopilotPRReviewRunner')
     $allowedRunners = @('windows-latest', 'ubuntu-latest')
     $modifyRunsOnAndShell = $true
 

@@ -26,9 +26,28 @@ function Pop-LogGroup {
     }
 }
 
+function Invoke-WithWorkflowCommandsSuspended {
+    param([Parameter(Mandatory)][scriptblock] $Action)
+
+    if (-not $script:IsGitHubActions) {
+        & $Action
+        return
+    }
+
+    $token = [guid]::NewGuid().ToString('N')
+    Write-Host "::stop-commands::$token"
+    try {
+        & $Action
+    }
+    finally {
+        Write-Host "::$($token)::"
+    }
+}
+
 function Write-LogPhaseDetail {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Line', Justification = 'The logging callback consumes the line through dynamic scope.')]
     param([string] $Line)
-    Write-Host "  $Line"
+    Invoke-WithWorkflowCommandsSuspended { Write-Host "  $Line" }
 }
 
 function Format-AnnotationMessage {
@@ -37,7 +56,7 @@ function Format-AnnotationMessage {
     # terminators; escape them per the spec so multi-line messages survive.
     # Encode '%' first so agent-supplied literal '%0A'/'%0D' cannot be replayed
     # as injected command terminators.
-    return (($Message -replace '%', '%25') -replace "`r`n", "`n") -replace "`n", '%0A'
+    return (($Message -replace '%', '%25') -replace "`r", '%0D') -replace "`n", '%0A'
 }
 
 function Write-LogNotice {
@@ -98,10 +117,38 @@ function Resolve-CopilotExecutable {
     return [string]$copilotCommand.Source
 }
 
+function New-CopilotProcessStartInfo {
+    param(
+        [Parameter(Mandatory)][string] $Executable,
+        [string[]] $Arguments = @()
+    )
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $Executable
+    if ([IO.Path]::GetExtension($Executable) -in @('.cmd', '.bat')) {
+        $shimDirectory = Split-Path -Parent $Executable
+        $loaderCandidates = @(
+            (Join-Path $shimDirectory 'node_modules/@github/copilot/npm-loader.js')
+            (Join-Path (Split-Path -Parent $shimDirectory) '@github/copilot/npm-loader.js')
+        )
+        $loader = $loaderCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+        if (-not $loader) {
+            throw "Cannot find the npm Copilot loader for '$Executable'. Reinstall the pinned @github/copilot package."
+        }
+        $node = Get-Command node -CommandType Application -ErrorAction Stop | Select-Object -First 1
+        $startInfo.FileName = $node.Source
+        $startInfo.ArgumentList.Add($loader)
+    }
+    foreach ($argument in $Arguments) { $startInfo.ArgumentList.Add($argument) }
+    return $startInfo
+}
+
 function Invoke-CopilotVersionProbe {
     param([Parameter(Mandatory)][string] $Executable)
 
-    $output = @(& $Executable --version 2>&1)
+    $startInfo = New-CopilotProcessStartInfo -Executable $Executable -Arguments @('--version')
+    $arguments = @($startInfo.ArgumentList)
+    $output = @(& $startInfo.FileName @arguments 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Copilot CLI version probe failed for '$Executable' with exit code $LASTEXITCODE."
     }

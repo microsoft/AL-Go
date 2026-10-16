@@ -1,6 +1,30 @@
 ﻿# ---------------------------------------------------------------------------
 # Run Copilot CLI
 # ---------------------------------------------------------------------------
+function Write-CopilotOutput {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'The logging callback consumes the stream and transcript parameters through dynamic scope.')]
+    param(
+        [string] $Stdout,
+        [string] $Stderr,
+        [Parameter(Mandatory)][System.Text.StringBuilder] $Transcript
+    )
+
+    Invoke-WithWorkflowCommandsSuspended {
+        foreach ($line in ($Stdout -split "`r?`n")) {
+            if ($line) {
+                [void]$Transcript.AppendLine("out: $line")
+                Write-Host $line
+            }
+        }
+        foreach ($line in ($Stderr -split "`r?`n")) {
+            if ($line) {
+                [void]$Transcript.AppendLine("err: $line")
+                Write-Host "[copilot-err] $line"
+            }
+        }
+    }
+}
+
 function Invoke-CopilotCli {
     param([string] $Prompt)
 
@@ -53,8 +77,7 @@ function Invoke-CopilotCli {
             throw 'Copilot CLI compatibility was not initialized before starting root consolidation.'
         }
 
-        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-        $startInfo.FileName               = $script:CopilotExecutable
+        $startInfo = New-CopilotProcessStartInfo -Executable $script:CopilotExecutable -Arguments $copilotArgs
         $startInfo.UseShellExecute        = $false
         $startInfo.CreateNoWindow         = $true
         $startInfo.RedirectStandardInput  = $false
@@ -63,8 +86,6 @@ function Invoke-CopilotCli {
         $startInfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
         if (-not (Test-Path -LiteralPath $AgentWorkDir)) { $null = New-Item -ItemType Directory -Path $AgentWorkDir -Force }
         $startInfo.WorkingDirectory       = $AgentWorkDir
-
-        foreach ($arg in $copilotArgs) { $startInfo.ArgumentList.Add($arg) }
 
         $startInfo.EnvironmentVariables.Clear()
         foreach ($kv in $cleanEnv.GetEnumerator()) {
@@ -113,18 +134,7 @@ function Invoke-CopilotCli {
         # both streams are fully drained. The CLI does not actually stream
         # incrementally in non-interactive mode -- everything lands in one
         # final burst at exit -- so dumping it here loses no liveness.
-        foreach ($line in ($stdout -split "`r?`n")) {
-            if ($line) {
-                [void]$transcriptBuilder.AppendLine("out: $line")
-                [Console]::Out.WriteLine($line)
-            }
-        }
-        foreach ($line in ($stderr -split "`r?`n")) {
-            if ($line) {
-                [void]$transcriptBuilder.AppendLine("err: $line")
-                [Console]::Out.WriteLine("[copilot-err] $line")
-            }
-        }
+        Write-CopilotOutput -Stdout $stdout -Stderr $stderr -Transcript $transcriptBuilder
 
         $elapsed = [DateTime]::UtcNow - $startedAt
         Write-LogPhaseDetail "Copilot CLI exited with code $($process.ExitCode) after $(Format-Duration $elapsed)."
