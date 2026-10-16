@@ -1214,8 +1214,10 @@ Describe 'Deterministic leaf orchestration contract' {
             'skipped-sub-skills' = @()
         } | ConvertTo-Json -Depth 10
 
-        { Assert-ConsolidatedReport -ReportText $report -Plan $plan } |
-            Should -Throw '*Root consolidation output does not conform to the root findings-report schema*'
+        $rejection = { Assert-ConsolidatedReport -ReportText $report -Plan $plan } | Should -Throw -PassThru
+        # Test-Json versions either throw the schema diagnostic or return false.
+        $rejection.Exception.Message |
+            Should -Match "(Root consolidation output does not conform to the root findings-report schema|false schema at '/sub-results/0/$Field')"
     }
 
     It 'rejects a consolidated report without sub-results' {
@@ -1567,7 +1569,7 @@ Describe 'Deterministic leaf orchestration contract' {
         @($manifest.processes | Where-Object status -eq 'failed').Count | Should -Be 1
         ($manifest.processes | Where-Object status -eq 'failed').skill_id | Should -Be 'al-style-review'
         ($manifest.processes | Where-Object status -eq 'failed').failure_reason |
-            Should -Match 'Leaf report does not conform to the leaf findings-report schema'
+            Should -Match '(Leaf report does not conform to the leaf findings-report schema|Required properties.*reference)'
     }
 
     It 'fails before root consolidation when every leaf report is unusable' {
@@ -3396,6 +3398,7 @@ Describe 'Runtime leaf source-bound schemas and prompt' {
     }
 
     It 'requires source capture before runtime schema initialization' {
+        $BCQualityRoot = Join-Path $TestDrive 'uncaptured-bcquality'
         $script:FindingsConsumerContext = $null
         { Initialize-FindingsReportRoleSchemas } | Should -Throw '*Source snapshot must be captured*'
     }
