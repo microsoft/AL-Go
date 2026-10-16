@@ -163,7 +163,7 @@ function GetDefaultSettings
         "BCQuality"                                     = [ordered]@{
             "marketplaceRepo" = "https://github.com/microsoft/BCQuality"
             "version"         = "1.7"
-            "enabledLayers"   = @("microsoft", "community", "custom")
+            "enabledLayers"   = @()
             "disabledSkills"  = @()
             "knowledge"       = [ordered]@{
                 "allow" = @()
@@ -172,7 +172,7 @@ function GetDefaultSettings
         }
         "CodeReviewAgent"                               = [ordered]@{
             "enabled"        = $false
-            "branches"       = @("main")
+            "branches"       = @()
             "model"          = "gpt-5.6-sol"
             "leafModel"      = "gpt-5.6-luna"
             "excludedOwners" = @()

@@ -14,9 +14,9 @@ inputs:
     required: false
     default: microsoft/BCQuality
   marketplaceRef:
-    description: BCQuality marketplace release tag
+    description: BCQuality marketplace release tag; defaults to the centralized BCQuality version
     required: false
-    default: v1.7
+    default: ''
   enabledLayers:
     description: Comma-separated BCQuality layers to retain
     required: false

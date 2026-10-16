@@ -143,7 +143,8 @@ function ModifyCopilotPRReviewWorkflow {
     if (
         $repoSettings.Keys -contains 'CodeReviewAgent' -and
         $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
-        $repoSettings.CodeReviewAgent.Keys -contains 'branches'
+        $repoSettings.CodeReviewAgent.Keys -contains 'branches' -and
+        @($repoSettings.CodeReviewAgent.branches).Count -gt 0
     ) {
         $codeReviewBranches = @($repoSettings.CodeReviewAgent.branches)
     }

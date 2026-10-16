@@ -12,7 +12,7 @@ param()
 
 BeforeAll {
     $NormalizationSchemaPath = Join-Path $PSScriptRoot 'fixtures/findings-report-roles/bcquality-findings-report.b74967bc.schema.json'
-    $scriptPath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.ps1' -Resolve
+    $scriptPath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.psm1' -Resolve
     $scriptRoot = Split-Path -Parent $scriptPath
     $script:ReviewScriptPaths = @($scriptPath) + @(
         Get-ChildItem -LiteralPath $scriptRoot -Filter '*.ps1' -File |
@@ -44,7 +44,7 @@ BeforeAll {
             $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
         }, $true))
     }
-    $script:ReviewFunctionAsts | ForEach-Object {
+    $script:ReviewFunctionAsts | Where-Object Name -ne 'Invoke-CopilotPRReview' | ForEach-Object {
         $functionDefinition = [scriptblock]::Create($_.Extent.Text)
         . $functionDefinition
     }
@@ -67,6 +67,41 @@ BeforeAll {
     $AgentCommentDocUrl = 'https://example.test/review'
     $BCQualityVersion = '1.7'
     $script:BCQualityWebRepoUrl = 'https://github.com/microsoft/BCQuality'
+}
+
+Describe 'Review engine module boundary' {
+    BeforeAll {
+        $modulePath = Join-Path $PSScriptRoot '../../Actions/ReviewAgent/scripts/Invoke-CopilotPRReview.psm1' -Resolve
+        Import-Module $modulePath -Force -DisableNameChecking
+    }
+
+    AfterAll {
+        Remove-Module Invoke-CopilotPRReview
+    }
+
+    It 'exports only the review entry point and does not run a review on import' {
+        @(Get-Command -Module Invoke-CopilotPRReview).Name | Should -Be @('Invoke-CopilotPRReview')
+    }
+
+    It 'resolves per-run configuration in private module functions without leaking it to the caller' {
+        $names = @('BCQUALITY_VERSION', 'REVIEW_PHASE', 'REVIEW_SOURCE', 'GITHUB_TOKEN')
+        $saved = @{}
+        foreach ($name in $names) { $saved[$name] = [Environment]::GetEnvironmentVariable($name) }
+        try {
+            $env:BCQUALITY_VERSION = '2.0'
+            $env:REVIEW_PHASE = 'post'
+            $env:REVIEW_SOURCE = 'pr'
+            $env:GITHUB_TOKEN = ''
+            $Repository = 'caller-value'
+
+            { Invoke-CopilotPRReview } | Should -Throw '*GITHUB_TOKEN is required for posting*'
+
+            $Repository | Should -Be 'caller-value'
+        }
+        finally {
+            foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $saved[$name]) }
+        }
+    }
 }
 
 Describe 'Resolve-FindingLocation' {
@@ -148,6 +183,38 @@ Describe 'Resolve-FindingLocation' {
 
     It 'does not cross into an unrelated hunk' {
         Resolve-FindingLocation -LineMap $lineMap -LineNumber 22 | Should -BeNullOrEmpty
+    }
+
+    It 'does not treat a deleted old coordinate as an exact PR-head anchor' {
+        $shiftedPatch = @'
+@@ -20,4 +10,4 @@
+ context
+-old line
++new line
+ context
+ context
+'@
+        $shiftedMap = Build-LineMap -Patch $shiftedPatch
+
+        Resolve-FindingLocation -LineMap $shiftedMap -LineNumber 21 | Should -BeNullOrEmpty
+        (Resolve-FindingLocation -LineMap $shiftedMap -LineNumber 11).side | Should -Be 'RIGHT'
+    }
+
+    It 'prefers a same-hunk RIGHT anchor over a matching deleted old coordinate' {
+        $shiftedPatch = @'
+@@ -12,4 +10,4 @@
+ context
+-old line
++new line
+ context
+ context
+'@
+        $shiftedMap = Build-LineMap -Patch $shiftedPatch
+
+        $location = Resolve-FindingLocation -LineMap $shiftedMap -LineNumber 13
+        $location.line | Should -Be 11
+        $location.side | Should -Be 'RIGHT'
+        $location.inferred | Should -BeTrue
     }
 
     It 'infers the nearest LEFT anchor in a deletion-only hunk' {

@@ -284,14 +284,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings = GetDefaultSettings
             $codeReviewAgent = $defaultSettings.CodeReviewAgent
             $codeReviewAgent.enabled | Should -Be $false
-            $codeReviewAgent.branches | Should -Be @('main')
+            $codeReviewAgent.branches | Should -BeNullOrEmpty
             $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
-            $defaultSettings.BCQuality.version | Should -Be '1.7'
+            $defaultSettings.BCQuality.version | Should -Match '^[0-9]+\.[0-9]+$'
             $defaultSettings.BCQuality.Contains('pluginVersion') | Should -BeFalse
-            $defaultSettings.BCQuality.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
+            $defaultSettings.BCQuality.enabledLayers | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.disabledSkills | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.knowledge.allow | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.knowledge.deny | Should -BeNullOrEmpty
@@ -300,6 +300,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
         It 'Preserves default Copilot models when only enabled is overridden' {
             $settings = GetDefaultSettings
+            $defaultVersion = $settings.BCQuality.version
             $override = [PSCustomObject]@{
                 CodeReviewAgent = [PSCustomObject]@{
                     enabled = $true
@@ -309,17 +310,18 @@ InModuleScope ReadSettings { # Allows testing of private functions
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
 
             $settings.CodeReviewAgent.enabled | Should -Be $true
-            $settings.CodeReviewAgent.branches | Should -Be @('main')
+            $settings.CodeReviewAgent.branches | Should -BeNullOrEmpty
             $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
             $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
             $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
-            $settings.BCQuality.version | Should -Be '1.7'
-            $settings.BCQuality.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
+            $settings.BCQuality.version | Should -Be $defaultVersion
+            $settings.BCQuality.enabledLayers | Should -BeNullOrEmpty
         }
 
         It 'Preserves BCQuality policy defaults when only the marketplace is overridden' {
             $settings = GetDefaultSettings
+            $defaultVersion = $settings.BCQuality.version
             $override = [PSCustomObject]@{
                 BCQuality = [PSCustomObject]@{
                     marketplaceRepo = 'https://github.com/contoso/BCQuality'
@@ -329,11 +331,19 @@ InModuleScope ReadSettings { # Allows testing of private functions
             MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
 
             $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
-            $settings.BCQuality.version | Should -Be '1.7'
+            $settings.BCQuality.version | Should -Be $defaultVersion
             $settings.BCQuality.Contains('pluginVersion') | Should -BeFalse
-            $settings.BCQuality.enabledLayers | Should -Be @('microsoft', 'community', 'custom')
+            $settings.BCQuality.enabledLayers | Should -BeNullOrEmpty
             $settings.BCQuality.knowledge.allow | Should -BeNullOrEmpty
             $settings.BCQuality.Contains('taskContext') | Should -BeFalse
+        }
+
+        It 'Does not merge implicit layer or branch defaults into explicit settings' {
+            $settings = ReadSettings -baseFolder $TestDrive -repoName 'repo' `
+                -customSettings '{"BCQuality":{"enabledLayers":["microsoft"]},"CodeReviewAgent":{"branches":["release/**","!release/**-alpha"]}}'
+
+            $settings.BCQuality.enabledLayers | Should -Be @('microsoft')
+            $settings.CodeReviewAgent.branches | Should -Be @('release/**', '!release/**-alpha')
         }
 
         It 'Rejects unknown BCQuality settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {

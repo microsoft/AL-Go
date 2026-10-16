@@ -11,8 +11,6 @@ temporary GitHub-hosted runners. It does not run on self-hosted runners.
 - name: Setup BCQuality
   id: bcquality
   uses: microsoft/AL-Go-Actions/SetupBCQuality@main
-  with:
-    marketplaceRef: v1.7
 
 - name: Run a BCQuality-backed feature
   shell: pwsh
@@ -23,7 +21,8 @@ temporary GitHub-hosted runners. It does not run on self-hosted runners.
 
 The marketplace ref selects the BCQuality release. The action discovers the
 installed plugin version from its manifest and retains all content layers by
-default.
+default. When `marketplaceRef` is omitted, the action uses the centralized
+`BCQuality.version` default from AL-Go's settings module.
 
 The installed plugin is available only to later steps in the same job. A
 different job or workflow receives a new runner and must run the action again:
@@ -53,6 +52,11 @@ layer and skill filtering, knowledge filtering, and task context therefore
 share one repository settings surface. The runner passes this action's
 `pluginRoot` output to `ReviewAgent`; the review action does not install
 BCQuality.
+
+JSON arrays are preserved as supplied, including commas in skill paths or
+knowledge patterns. Only the standalone `enabledLayers`, `disabledSkills`,
+`knowledgeAllow`, and `knowledgeDeny` inputs use comma-separated values.
+An empty `BCQuality.enabledLayers` array retains all three content layers.
 
 For a private marketplace repository, pass a token with read access through
 the `token` input. Authentication is applied only to the Git and Copilot CLI

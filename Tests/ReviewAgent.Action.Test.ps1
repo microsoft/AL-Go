@@ -149,6 +149,46 @@ Describe 'ReviewAgent action' {
         } | Should -Throw 'Pull request head SHA does not match the triggering workflow run.'
     }
 
+    It 'Enforces trusted branch patterns against the authoritative base: <Branch>' -TestCases @(
+        @{ Branch = 'main'; Patterns = @(); Eligible = 'true' }
+        @{ Branch = 'release/1'; Patterns = @(); Eligible = 'false' }
+        @{ Branch = 'release/1'; Patterns = @('release/*'); Eligible = 'true' }
+        @{ Branch = 'release/team/1'; Patterns = @('release/*'); Eligible = 'false' }
+        @{ Branch = 'release/team/1'; Patterns = @('release/**'); Eligible = 'true' }
+        @{ Branch = 'release/1-alpha'; Patterns = @('release/**', '!release/**-alpha'); Eligible = 'false' }
+        @{ Branch = 'release/1-alpha'; Patterns = @('release/**', '!release/**-alpha', 'release/1-alpha'); Eligible = 'true' }
+        @{ Branch = 'Main'; Patterns = @('main'); Eligible = 'false' }
+        @{ Branch = 'v2.10.3'; Patterns = @('v[12].[0-9]+.[0-9]+'); Eligible = 'true' }
+        @{ Branch = 'v3.10.3'; Patterns = @('v[12].[0-9]+.[0-9]+'); Eligible = 'false' }
+        @{ Branch = 'releases/1'; Patterns = @('releases?/1'); Eligible = 'true' }
+        @{ Branch = 'release/1'; Patterns = @('releases?/1'); Eligible = 'true' }
+        @{ Branch = 'releaseX/1'; Patterns = @('releases?/1'); Eligible = 'false' }
+        @{ Branch = 'release+1'; Patterns = @('release\+1'); Eligible = 'true' }
+        @{ Branch = 'release11'; Patterns = @('release\+1'); Eligible = 'false' }
+    ) {
+        param($Branch, $Patterns, $Eligible)
+        $script:apiPullRequest.base.ref = $Branch
+        $metadataPath = Join-Path $TestDrive 'branch-event.json'
+        '{"pull_request":{"number":42,"base":{"ref":"main"}}}' |
+            Set-Content -LiteralPath $metadataPath -Encoding UTF8
+        $env:GITHUB_OUTPUT = Join-Path $TestDrive 'branch-output.txt'
+        Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
+        $settingsJson = @{
+            enabled = $true; branches = $Patterns; excludedOwners = @()
+        } | ConvertTo-Json -Depth 5 -Compress
+        $qualitySettings = $script:bcqualitySettings.Clone()
+        $qualitySettings.enabledLayers = @()
+
+        & $script:actionScriptPath @script:contextArguments -phase context -metadataPath $metadataPath `
+            -workflowHeadSha 'abc123' -codeReviewSettingsJson $settingsJson `
+            -bcqualitySettingsJson ($qualitySettings | ConvertTo-Json -Depth 5 -Compress)
+
+        $outputs = Get-Content -LiteralPath $env:GITHUB_OUTPUT
+        $outputs | Should -Contain "eligible=$Eligible"
+        $resolvedQuality = ($outputs | Where-Object { $_ -like 'bcqualitySettingsJson=*' }) -replace '^bcqualitySettingsJson=', '' | ConvertFrom-Json
+        @($resolvedQuality.enabledLayers) | Should -Be @('microsoft', 'community', 'custom')
+    }
+
     It 'Does not review when the trusted opt-in is <Case>' -TestCases @(
         @{ Case = 'false'; Settings = '{"enabled":false,"excludedOwners":[]}' }
         @{ Case = 'missing'; Settings = '{"excludedOwners":[]}' }

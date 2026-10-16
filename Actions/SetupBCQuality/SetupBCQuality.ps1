@@ -8,8 +8,8 @@ param(
     [string] $bcqualitySettingsJson = '',
     [Parameter(HelpMessage = "GitHub owner/repository containing the BCQuality marketplace")]
     [string] $marketplace = 'microsoft/BCQuality',
-    [Parameter(HelpMessage = "BCQuality marketplace release tag")]
-    [string] $marketplaceRef = 'v1.7',
+    [Parameter(HelpMessage = "BCQuality marketplace release tag; defaults to the centralized BCQuality version")]
+    [string] $marketplaceRef = '',
     [Parameter(HelpMessage = "Comma-separated BCQuality layers to retain")]
     [string] $enabledLayers = 'microsoft,community,custom',
     [Parameter(HelpMessage = "Comma-separated repo-relative skill paths to remove")]
@@ -26,10 +26,16 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version 2.0
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'SetupBCQuality.psm1' -Resolve) -Force -DisableNameChecking
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\AL-Go-Helper.ps1' -Resolve)
+
+$layers = @(ConvertFrom-CsvSetting $enabledLayers)
+$disabledSkillPaths = @(ConvertFrom-CsvSetting $disabledSkills)
+$allowPatterns = @(ConvertFrom-CsvSetting $knowledgeAllow)
+$denyPatterns = @(ConvertFrom-CsvSetting $knowledgeDeny)
 
 if (-not [string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
     try {
-        $settings = $bcqualitySettingsJson | ConvertFrom-Json -ErrorAction Stop
+        $settings = $bcqualitySettingsJson | ConvertFrom-Json -ErrorAction Stop | ConvertTo-HashTable -recurse
     }
     catch {
         throw "bcqualitySettingsJson must contain valid JSON: $($_.Exception.Message)"
@@ -49,10 +55,14 @@ if (-not [string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
         throw "BCQuality marketplace URL must identify one owner/repository; received '$marketplaceRepo'."
     }
     $marketplaceRef = "v$([string] $settings.version)"
-    $enabledLayers = @($settings.enabledLayers) -join ','
-    $disabledSkills = @($settings.disabledSkills) -join ','
-    $knowledgeAllow = @($settings.knowledge.allow) -join ','
-    $knowledgeDeny = @($settings.knowledge.deny) -join ','
+    $layers = @($settings.enabledLayers)
+    $disabledSkillPaths = @($settings.disabledSkills)
+    $allowPatterns = @($settings.knowledge.allow)
+    $denyPatterns = @($settings.knowledge.deny)
+}
+elseif ([string]::IsNullOrWhiteSpace($marketplaceRef)) {
+    $settingsModule = Get-Module ReadSettings
+    $marketplaceRef = & $settingsModule { "v$((GetDefaultSettings).BCQuality.version)" }
 }
 
 $runnerEnvironment = if ($env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT) { $env:SETUP_BCQUALITY_RUNNER_ENVIRONMENT } else { $env:RUNNER_ENVIRONMENT }
@@ -72,14 +82,10 @@ if ([string]::IsNullOrWhiteSpace($marketplaceRef)) {
 if ($marketplaceRef -match '^[0-9a-fA-F]{40}$') {
     throw 'Copilot CLI marketplace refs support branches and tags, not raw commit SHAs. Use a BCQuality release tag.'
 }
-$layers = @(ConvertFrom-CsvSetting $enabledLayers)
-$disabledSkillPaths = @(ConvertFrom-CsvSetting $disabledSkills)
-$allowPatterns = @(ConvertFrom-CsvSetting $knowledgeAllow)
-$denyPatterns = @(ConvertFrom-CsvSetting $knowledgeDeny)
 $knownLayers = @('microsoft', 'community', 'custom')
 
 if ($layers.Count -eq 0) {
-    throw 'At least one enabled BCQuality layer is required.'
+    $layers = $knownLayers
 }
 foreach ($layer in $layers) {
     if ($knownLayers -notcontains $layer) {

@@ -2533,6 +2533,16 @@ Describe "GetFilesToUpdate (real template)" {
         $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["main","release/*"]'
     }
 
+    It 'Uses main when the merged CodeReviewAgent branch list is empty' {
+        $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml"))
+
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings @{
+            CodeReviewAgent = @{ branches = @() }
+        }
+
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["main"]'
+    }
+
     It 'Escapes CodeReviewAgent branches in the Copilot review intake workflow' {
         $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder ".github/workflows/CopilotPRReview.yaml"))
 

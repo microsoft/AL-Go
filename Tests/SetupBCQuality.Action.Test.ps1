@@ -128,6 +128,50 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         $report.removedCount | Should -BeGreaterThan 0
     }
 
+    It 'Defaults standalone setup to the centralized BCQuality version' {
+        & $script:setupScriptPath
+
+        $defaultVersion = & (Get-Module ReadSettings) { (GetDefaultSettings).BCQuality.version }
+        $report = Get-Content (Join-Path $pluginRoot '_filter-report.json') -Raw | ConvertFrom-Json
+        $report.marketplaceRef | Should -Be "v$defaultVersion"
+    }
+
+    It 'Retains all layers for an empty merged enabledLayers setting' {
+        $settingsJson = @{
+            marketplaceRepo = 'https://github.com/microsoft/BCQuality'; version = '2.0'
+            enabledLayers = @(); disabledSkills = @()
+            knowledge = @{ allow = @(); deny = @() }
+        } | ConvertTo-Json -Compress -Depth 5
+
+        & $script:setupScriptPath -bcqualitySettingsJson $settingsJson
+
+        $report = Get-Content (Join-Path $pluginRoot '_filter-report.json') -Raw | ConvertFrom-Json
+        @($report.enabledLayers) | Should -Be @('microsoft', 'community', 'custom')
+    }
+
+    It 'Preserves commas in JSON knowledge filters and disabled skill paths' {
+        foreach ($name in @('keep,article', 'deny,article', 'unrelated')) {
+            Set-Content -LiteralPath (Join-Path $pluginRoot "microsoft/knowledge/domain/$name.md") -Value '# article' -Encoding UTF8
+        }
+        $skill = 'microsoft/skills/review/extra,skill.md'
+        Set-Content -LiteralPath (Join-Path $pluginRoot $skill) -Value '# skill' -Encoding UTF8
+        $settingsJson = @{
+            marketplaceRepo = 'https://github.com/microsoft/BCQuality'; version = '2.0'
+            enabledLayers = @('microsoft'); disabledSkills = @($skill)
+            knowledge = @{
+                allow = @('microsoft/knowledge/**/keep,article.md', 'microsoft/knowledge/**/deny,article.md')
+                deny = @('microsoft/knowledge/**/deny,article.md')
+            }
+        } | ConvertTo-Json -Compress -Depth 5
+
+        & $script:setupScriptPath -bcqualitySettingsJson $settingsJson
+
+        Test-Path -LiteralPath (Join-Path $pluginRoot $skill) | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep,article.md') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/deny,article.md') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/unrelated.md') | Should -BeFalse
+    }
+
     It 'Applies allow then deny filtering and removes article samples' {
         Set-Content -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.md') -Value '# keep' -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $pluginRoot 'microsoft/knowledge/domain/keep.bad.al') -Value 'bad' -Encoding UTF8

@@ -109,13 +109,85 @@ function Get-BCQualitySettings {
         throw 'BCQuality.marketplaceRepo and a major.minor BCQuality.version are required.'
     }
     if (@($settings.enabledLayers).Count -eq 0) {
-        throw 'BCQuality.enabledLayers must contain at least one layer.'
+        $settings.enabledLayers = @('microsoft', 'community', 'custom')
     }
     if (-not ($settings.knowledge -is [System.Collections.IDictionary])) {
         throw 'BCQuality.knowledge is required.'
     }
 
     return $settings
+}
+
+function Test-ReviewTargetBranch {
+    param([string] $Branch, [string[]] $Patterns)
+
+    if (-not $Patterns) {
+        $Patterns = @('main')
+    }
+    $included = $false
+    foreach ($pattern in $Patterns) {
+        $exclude = $pattern.StartsWith('!')
+        $glob = if ($exclude) { $pattern.Substring(1) } else { $pattern }
+        if (-not $glob) {
+            throw 'CodeReviewAgent.branches must contain non-empty GitHub Actions branch patterns.'
+        }
+        $expression = [System.Text.StringBuilder]::new('\A')
+        $canQuantify = $false
+        for ($index = 0; $index -lt $glob.Length; $index++) {
+            $character = $glob[$index]
+            switch ($character) {
+                '\' {
+                    $index++
+                    if ($index -ge $glob.Length) {
+                        throw "Invalid trailing escape in CodeReviewAgent branch pattern '$pattern'."
+                    }
+                    [void] $expression.Append([regex]::Escape([string] $glob[$index]))
+                    $canQuantify = $true
+                }
+                '*' {
+                    if ($index + 1 -lt $glob.Length -and $glob[$index + 1] -eq '*') {
+                        $index++
+                        if ($index + 1 -lt $glob.Length -and $glob[$index + 1] -eq '/') {
+                            [void] $expression.Append('(?:.*/)?')
+                            $index++
+                        }
+                        else {
+                            [void] $expression.Append('.*')
+                        }
+                    }
+                    else {
+                        [void] $expression.Append('[^/]*')
+                    }
+                    $canQuantify = $false
+                }
+                '[' {
+                    $end = $glob.IndexOf(']', $index + 1)
+                    if ($end -lt 0 -or $glob.Substring($index + 1, $end - $index - 1) -cnotmatch '\A[A-Za-z0-9-]+\z') {
+                        throw "Invalid character class in CodeReviewAgent branch pattern '$pattern'."
+                    }
+                    [void] $expression.Append($glob.Substring($index, $end - $index + 1))
+                    $index = $end
+                    $canQuantify = $true
+                }
+                { $_ -eq '?' -or $_ -eq '+' } {
+                    if (-not $canQuantify) {
+                        throw "Invalid quantifier in CodeReviewAgent branch pattern '$pattern'."
+                    }
+                    [void] $expression.Append($character)
+                    $canQuantify = $false
+                }
+                default {
+                    [void] $expression.Append([regex]::Escape([string] $character))
+                    $canQuantify = $true
+                }
+            }
+        }
+        [void] $expression.Append('\z')
+        if ([regex]::IsMatch($Branch, $expression.ToString(), [System.Text.RegularExpressions.RegexOptions]::CultureInvariant, [TimeSpan]::FromSeconds(1))) {
+            $included = -not $exclude
+        }
+    }
+    return $included
 }
 
 function Invoke-ContextPhase {
@@ -175,9 +247,11 @@ function Invoke-ContextPhase {
     }
     $owner = [string] $pullRequest.user.login
     $excludedOwners = @($settings['excludedOwners'])
-    $eligible = $settings['enabled'] -is [bool] -and $settings['enabled'] -eq $true -and
-        $pullRequest.state -eq 'open' -and -not $pullRequest.draft -and $owner -notin $excludedOwners
     $targetBranch = [string] $pullRequest.base.ref
+    $branchPatterns = @($settings['branches'])
+    $eligible = $settings['enabled'] -is [bool] -and $settings['enabled'] -eq $true -and
+        $pullRequest.state -eq 'open' -and -not $pullRequest.draft -and $owner -notin $excludedOwners -and
+        (Test-ReviewTargetBranch -Branch $targetBranch -Patterns $branchPatterns)
 
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()
     Write-ReviewOutput -Name model -Value ([string] $settings['model'])

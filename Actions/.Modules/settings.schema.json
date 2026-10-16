@@ -306,7 +306,7 @@
                 },
                 "enabledLayers": {
                     "type": "array",
-                    "minItems": 1,
+                    "default": [],
                     "uniqueItems": true,
                     "items": {
                         "type": "string",
@@ -316,7 +316,7 @@
                             "custom"
                         ]
                     },
-                    "description": "BCQuality content layers retained for agent execution."
+                    "description": "BCQuality content layers retained for agent execution. An empty list retains microsoft, community, and custom."
                 },
                 "disabledSkills": {
                     "type": "array",
@@ -375,13 +375,13 @@
                 },
                 "branches": {
                     "type": "array",
-                    "minItems": 1,
+                    "default": [],
                     "uniqueItems": true,
                     "items": {
                         "type": "string",
                         "minLength": 1
                     },
-                    "description": "Target branch patterns that trigger Copilot code review."
+                    "description": "Ordered GitHub Actions target branch patterns that trigger Copilot code review, including ! exclusions. An empty list reviews main."
                 },
                 "model": {
                     "type": "string",
