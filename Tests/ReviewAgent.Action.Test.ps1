@@ -199,6 +199,7 @@ Describe 'ReviewAgent action' {
         $metadataPath = Join-Path $TestDrive 'opt-in-event.json'
         '{"pull_request":{"number":42}}' | Set-Content -LiteralPath $metadataPath -Encoding UTF8
         $env:GITHUB_OUTPUT = Join-Path $TestDrive 'opt-in-output.txt'
+        Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
         & $script:actionScriptPath @script:contextArguments -phase context -metadataPath $metadataPath `
             -workflowHeadSha 'abc123' -codeReviewSettingsJson $Settings -bcqualitySettingsJson $script:bcqualitySettingsJson
 
@@ -218,6 +219,7 @@ Describe 'ReviewAgent action' {
         '{"pull_request":{"number":42,"draft":false,"user":{"login":"allowed"}}}' |
             Set-Content -LiteralPath $metadataPath -Encoding UTF8
         $env:GITHUB_OUTPUT = Join-Path $TestDrive 'eligibility-output.txt'
+        Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
         & $script:actionScriptPath @script:contextArguments -phase context -metadataPath $metadataPath `
             -workflowHeadSha 'abc123' -codeReviewSettingsJson '{"enabled":true,"excludedOwners":["excluded"]}' `
             -bcqualitySettingsJson $script:bcqualitySettingsJson
