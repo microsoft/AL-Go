@@ -13,10 +13,10 @@ function Get-TestAppsToRun {
     .SYNOPSIS
         Determines the selected test apps and their validated metadata.
     .DESCRIPTION
-        Selects compiled apps matching normal testFolders and excludes BCPT-only apps. When
-        runTestsInAllInstalledTestApps is enabled, installed test apps are included independently.
-        Parentheses around installed app paths are removed to match RunPipeline behavior. Returns
-        each selected app as a record containing Path, Id, and Name.
+        Selects compiled apps matching normal testFolders and excludes BCPT-only apps. Unwrapped
+        installed test app paths are always included. Parenthesized paths are included and unwrapped
+        only when runTestsInAllInstalledTestApps is enabled. Returns each selected app as a record
+        containing Path, Id, and Name.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -79,7 +79,7 @@ function Get-TestAppsToRun {
         }
     }
 
-    if ($settings.runTestsInAllInstalledTestApps -and $installTestAppsJson) {
+    if ($installTestAppsJson) {
         try {
             $installedTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
         }
@@ -87,7 +87,17 @@ function Get-TestAppsToRun {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
         }
         foreach ($installedTestApp in @($installedTestApps)) {
-            $installedTestAppPath = "$installedTestApp".TrimStart("(").TrimEnd(")")
+            $installedTestAppValue = "$installedTestApp"
+            $isParenthesized = $installedTestAppValue.StartsWith("(") -and $installedTestAppValue.EndsWith(")")
+            if ($isParenthesized -and -not $settings.runTestsInAllInstalledTestApps) {
+                continue
+            }
+            $installedTestAppPath = if ($isParenthesized) {
+                $installedTestAppValue.Substring(1, $installedTestAppValue.Length - 2)
+            }
+            else {
+                $installedTestAppValue
+            }
             if ([string]::IsNullOrWhiteSpace($installedTestAppPath)) {
                 throw "The installed test app list '$installTestAppsJson' contains a blank path."
             }

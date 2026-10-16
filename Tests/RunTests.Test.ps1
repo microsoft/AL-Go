@@ -122,15 +122,21 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Ignores installed test apps when runTestsInAllInstalledTestApps is not set' {
+        It 'Includes unwrapped installed apps and skips parenthesized apps when runTestsInAllInstalledTestApps is not set' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
-            $installedApp = Join-Path $projectPath 'Installed1.app'
-            New-Item -Path $installedApp -ItemType File -Force | Out-Null
-            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp)] = [PSCustomObject]@{
-                id = [Guid]::NewGuid().ToString(); name = 'Installed1'
+            $installedApp1 = Join-Path $projectPath 'Installed1.app'
+            $installedApp2 = Join-Path $projectPath 'Installed2.app'
+            New-Item -Path $installedApp1 -ItemType File -Force | Out-Null
+            New-Item -Path $installedApp2 -ItemType File -Force | Out-Null
+            $installedApp1Id = [Guid]::NewGuid().ToString()
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp1)] = [PSCustomObject]@{
+                id = $installedApp1Id; name = 'Installed1'
+            }
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($installedApp2)] = [PSCustomObject]@{
+                id = [Guid]::NewGuid().ToString(); name = 'Installed2'
             }
             $installJson = Join-Path $projectPath 'installTestApps.json'
-            ConvertTo-Json @($installedApp) | Set-Content -Path $installJson -Encoding UTF8
+            ConvertTo-Json @($installedApp1, "($installedApp2)") | Set-Content -Path $installJson -Encoding UTF8
 
             $settings = @{
                 runTestsInAllInstalledTestApps = $false
@@ -138,8 +144,12 @@ Describe 'RunTests.psm1 Tests' {
             }
             $testApps = @(Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson)
 
-            $testApps.Count | Should -Be 1
+            $testApps.Count | Should -Be 2
             [System.IO.Path]::GetFileName($testApps[0].Path) | Should -Be 'App1.Test.app'
+            $testApps[1].Path | Should -Be $installedApp1
+            $testApps[1].Id | Should -Be $installedApp1Id
+            $testApps[1].Name | Should -Be 'Installed1'
+            @($testApps.Path) | Should -Not -Contain $installedApp2
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -203,7 +213,7 @@ Describe 'RunTests.psm1 Tests' {
             $projectPath = New-TestProject
             $installJson = Join-Path $projectPath 'installTestApps.json'
             Set-Content -Path $installJson -Value '{invalid' -Encoding UTF8
-            $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
+            $settings = @{ runTestsInAllInstalledTestApps = $false; testFolders = @() }
 
             {
                 Get-TestAppsToRun -settings $settings -projectPath $projectPath `

@@ -552,7 +552,7 @@ function Invoke-AlRunTestsBatch {
 .PARAMETER ExtensionId
     The extension (app) id.
 .PARAMETER AppName
-    The app name.
+    Optional app name. The JUnit appName property is omitted when blank.
 .PARAMETER Hostname
     The runner host name.
 .OUTPUTS
@@ -566,7 +566,7 @@ function Add-JUnitTestSuite {
         [Parameter(Mandatory = $true)][string[]] $RequestedMethods,
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $MethodResults,
         [Parameter(Mandatory = $true)][string] $ExtensionId,
-        [Parameter(Mandatory = $true)][string] $AppName,
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string] $AppName,
         [Parameter(Mandatory = $true)][string] $Hostname
     )
 
@@ -682,7 +682,7 @@ function Add-JUnitTestSuite {
 .PARAMETER ExtensionId
     App ID whose tests are executed.
 .PARAMETER AppName
-    App name included in logs and JUnit output.
+    Optional app name included in logs and JUnit output when supplied.
 .PARAMETER CompanyName
     Company used for the test run. The container default is used when omitted.
 .PARAMETER Tenant
