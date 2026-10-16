@@ -111,6 +111,14 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Not -Match 'group:.*head_branch'
     }
 
+    It 'Serializes publication per pull request without cancelling the active publisher' {
+        $publishJob = [regex]::Match($runnerWorkflow, '(?ms)^  publish:.*').Value
+        $reviewJob = [regex]::Match($runnerWorkflow, '(?ms)^  review:.*?(?=^  publish:)').Value
+        $publishJob | Should -Match 'group: copilot-pr-review-publish-\$\{\{ needs\.prepare\.outputs\.prNumber \}\}'
+        $publishJob | Should -Match 'cancel-in-progress: false'
+        $reviewJob | Should -Not -Match 'concurrency:'
+    }
+
     It 'Keeps both template workflow sets identical' {
         $appSourceWorkflowFolder = Join-Path $PSScriptRoot '..\..\Templates\AppSource App\.github\workflows' -Resolve
         Get-Content -Path (Join-Path $appSourceWorkflowFolder 'CopilotPRReview.yaml') -Encoding UTF8 -Raw | Should -BeExactly $intakeWorkflow

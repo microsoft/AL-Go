@@ -147,6 +147,9 @@ jobs:
   publish:
     needs: [prepare, review]
     if: needs.review.result == 'success'
+    concurrency:
+      group: copilot-pr-review-publish-${{ needs.prepare.outputs.prNumber }}
+      cancel-in-progress: false
     runs-on: [ windows-latest ]
     permissions:
       contents: read

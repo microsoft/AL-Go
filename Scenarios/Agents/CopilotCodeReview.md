@@ -46,7 +46,7 @@ The integration uses two workflows:
 
 The trusted runner supports ephemeral GitHub-hosted runners, even when repository build jobs use self-hosted runners. It installs the pinned Copilot CLI, invokes the AL-Go `SetupBCQuality` action in a secret-scoped step, passes only the prepared plugin path to `ReviewAgent`, runs the model in a separate read-only step, and publishes the generated findings from a separate job. This prevents the model and untrusted pull request code from receiving the private marketplace token or permission to modify the pull request.
 
-Each completed intake run has an independent review concurrency group, so pull requests sharing a source branch do not cancel one another. Reviews of older commits are not automatically cancelled by newer intake runs.
+Each completed intake run has an independent review concurrency group, so pull requests sharing a source branch do not cancel one another. Reviews of older commits are not automatically cancelled by newer intake runs. Publication is serialized per pull request so overlapping reviews cannot race existing-comment deduplication.
 
 `SetupBCQuality` defaults to PowerShell 7 (`pwsh`), which the BCQuality indexing tools require. Review diagnostics record the action repository and requested ref separately. A full commit SHA is recorded when the action is SHA-pinned; for mutable branch/tag references, the commit is unknown (`null`) rather than incorrectly treating the ref or the reviewed repository's checkout as the action commit.
 

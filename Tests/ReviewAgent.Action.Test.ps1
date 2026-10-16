@@ -17,6 +17,7 @@ Describe 'ReviewAgent action' {
             disabledSkills = @()
             knowledge = @{ allow = @(); deny = @() }
         }
+
         $script:bcqualitySettingsJson = $script:bcqualitySettings | ConvertTo-Json -Compress -Depth 10
     }
 
@@ -296,5 +297,128 @@ Describe 'ReviewAgent action' {
                 -reviewWorkspace $TestDrive `
                 -reviewOutputDir $TestDrive
         } | Should -Throw "agentVersion must be an exact X.Y.Z semantic version*"
+    }
+}
+
+Describe 'ReviewAgent executable phases' {
+    BeforeAll {
+        $script:phaseActionPath = Join-Path $PSScriptRoot '..\Actions\ReviewAgent\ReviewAgent.ps1' -Resolve
+        $script:engineModulePath = Join-Path $PSScriptRoot '..\Actions\ReviewAgent\scripts\Invoke-CopilotPRReview.psm1' -Resolve
+        . (Join-Path $PSScriptRoot '..\Actions\AL-Go-Helper.ps1' -Resolve)
+        function Invoke-TestNpm {}
+        function copilot {}
+        function Invoke-CopilotPRReview {}
+        $script:phaseEnvironmentNames = @(
+            'GITHUB_TOKEN', 'GITHUB_REPOSITORY', 'REVIEW_WORKSPACE', 'REVIEW_OUTPUT_DIR',
+            'PR_NUMBER', 'PR_HEAD_SHA', 'BASE_BRANCH', 'MINIMUM_SEVERITY', 'AGENT_MINIMUM_SEVERITY',
+            'MAX_FINDINGS_PER_DOMAIN', 'COPILOT_REVIEW_FAIL_ON_PARSE_ERROR',
+            'COPILOT_REVIEW_AGENT_LABEL', 'COPILOT_REVIEW_AGENT_VERSION',
+            'COPILOT_REVIEW_AGENT_RELEASE_DATE', 'COPILOT_REVIEW_AGENT_RELEASE_VERSION',
+            'REVIEW_PHASE', 'GH_TOKEN', 'BCQUALITY_ROOT', 'BCQUALITY_REPO', 'BCQUALITY_VERSION',
+            'BCQUALITY_SETTINGS_JSON', 'BCQUALITY_CONSUME', 'COPILOT_MODEL',
+            'COPILOT_REVIEW_CLI_VERSION', 'COPILOT_REVIEW_LEAF_MODEL',
+            'COPILOT_REVIEW_LEAF_EXECUTION', 'COPILOT_REVIEW_MAX_LEAF_CONCURRENCY',
+            'COPILOT_REVIEW_EMBED_DIFF', 'COPILOT_REVIEW_CLI_TIMEOUT_MINUTES', 'COPILOT_REVIEW_POST_SUMMARY'
+        )
+    }
+
+    BeforeEach {
+        $script:savedPhaseEnvironment = @{}
+        foreach ($name in $script:phaseEnvironmentNames) {
+            $script:savedPhaseEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+        }
+        $script:phaseArguments = @{
+            repository = 'contoso/app'; token = 'test-token'; prNumber = '42'; prHeadSha = 'abc123'
+            baseRef = 'release/1'; model = 'root-model'; leafModel = 'leaf-model'
+            reviewWorkspace = $TestDrive; reviewOutputDir = (Join-Path $TestDrive 'output')
+            bcqualityRoot = $TestDrive; copilotCliVersion = '1.0.88'; agentVersion = '10.0.7'
+            bcqualitySettingsJson = '{"marketplaceRepo":"https://github.com/contoso/BCQuality","version":"1.7","enabledLayers":["microsoft"],"knowledge":{"allow":[],"deny":[]}}'
+        }
+        Mock Get-Command { [pscustomobject]@{ Source = 'Invoke-TestNpm' } } -ParameterFilter { $Name -eq 'npm' }
+        Mock Invoke-TestNpm { $global:LASTEXITCODE = 0 }
+        Mock copilot { $global:LASTEXITCODE = 0 }
+        Mock Import-Module {}
+        $script:engineEnvironment = @{}
+        Mock Invoke-CopilotPRReview {
+            foreach ($name in $phaseEnvironmentNames) {
+                $engineEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+            }
+        }
+    }
+
+    AfterEach {
+        foreach ($name in $script:phaseEnvironmentNames) {
+            [Environment]::SetEnvironmentVariable($name, $script:savedPhaseEnvironment[$name])
+        }
+    }
+
+    It 'installs the exact CLI and verifies it in the prepare phase' {
+        & $script:phaseActionPath @script:phaseArguments -phase prepare
+
+        Should -Invoke Invoke-TestNpm -Times 1 -Exactly -ParameterFilter {
+            $args.Count -eq 3 -and $args[0] -eq 'install' -and $args[1] -eq '--global' -and $args[2] -eq '@github/copilot@1.0.88'
+        }
+        Should -Invoke copilot -Times 1 -Exactly -ParameterFilter { $args.Count -eq 1 -and $args[0] -eq '--version' }
+        Should -Invoke Invoke-CopilotPRReview -Times 0
+    }
+
+    It 'propagates <Failure> failures in prepare' -TestCases @(
+        @{ Failure = 'installation'; Expected = '*Failed to install GitHub Copilot CLI*' }
+        @{ Failure = 'version probe'; Expected = '*Failed to execute GitHub Copilot CLI*' }
+    ) {
+        param($Failure, $Expected)
+        if ($Failure -eq 'installation') {
+            Mock Invoke-TestNpm { $global:LASTEXITCODE = 1 }
+        }
+        else {
+            Mock copilot { $global:LASTEXITCODE = 1 }
+        }
+
+        { & $script:phaseActionPath @script:phaseArguments -phase prepare } | Should -Throw $Expected
+        Should -Invoke Invoke-CopilotPRReview -Times 0
+    }
+
+    It 'passes phase-specific inputs to the engine in <Phase>' -TestCases @(
+        @{ Phase = 'generate' }, @{ Phase = 'post' }
+    ) {
+        param($Phase)
+        & $script:phaseActionPath @script:phaseArguments -phase $Phase
+
+        Should -Invoke Invoke-CopilotPRReview -Times 1 -Exactly
+        Should -Invoke Import-Module -Times 1 -Exactly -ParameterFilter { $Name -eq $script:engineModulePath }
+        $script:engineEnvironment.REVIEW_PHASE | Should -Be $Phase
+        $script:engineEnvironment.GITHUB_TOKEN | Should -Be 'test-token'
+        $script:engineEnvironment.GITHUB_REPOSITORY | Should -Be 'contoso/app'
+        $script:engineEnvironment.PR_NUMBER | Should -Be '42'
+        $script:engineEnvironment.PR_HEAD_SHA | Should -Be 'abc123'
+        $script:engineEnvironment.BASE_BRANCH | Should -Be 'release/1'
+        $script:engineEnvironment.REVIEW_WORKSPACE | Should -Be $TestDrive
+        $script:engineEnvironment.REVIEW_OUTPUT_DIR | Should -Be $script:phaseArguments.reviewOutputDir
+        $script:engineEnvironment.COPILOT_REVIEW_AGENT_VERSION | Should -Be '10.0.7'
+        $script:engineEnvironment.BCQUALITY_REPO | Should -Be 'https://github.com/contoso/BCQuality'
+        $script:engineEnvironment.BCQUALITY_VERSION | Should -Be '1.7'
+        ($script:engineEnvironment.BCQUALITY_SETTINGS_JSON | ConvertFrom-Json).enabledLayers | Should -Be @('microsoft')
+        if ($Phase -eq 'generate') {
+            $script:engineEnvironment.GH_TOKEN | Should -Be 'test-token'
+            $script:engineEnvironment.BCQUALITY_ROOT | Should -Be $TestDrive
+            $script:engineEnvironment.BCQUALITY_CONSUME | Should -Be 'plugin'
+            $script:engineEnvironment.COPILOT_MODEL | Should -Be 'root-model'
+            $script:engineEnvironment.COPILOT_REVIEW_LEAF_MODEL | Should -Be 'leaf-model'
+            $script:engineEnvironment.COPILOT_REVIEW_CLI_VERSION | Should -Be '1.0.88'
+        }
+        else {
+            $script:engineEnvironment.COPILOT_REVIEW_POST_SUMMARY | Should -Be 'false'
+        }
+        Should -Invoke Invoke-TestNpm -Times 0
+        Should -Invoke copilot -Times 0
+    }
+
+    It 'propagates engine failures from <Phase>' -TestCases @(
+        @{ Phase = 'generate' }, @{ Phase = 'post' }
+    ) {
+        param($Phase)
+        Mock Invoke-CopilotPRReview { throw 'Engine failed' }
+
+        { & $script:phaseActionPath @script:phaseArguments -phase $Phase } | Should -Throw '*Engine failed*'
     }
 }

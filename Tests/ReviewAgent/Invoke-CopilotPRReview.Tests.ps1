@@ -347,6 +347,25 @@ Describe 'Resolve-FindingLocation' {
         (Resolve-FindingLocation -LineMap $deletionMap -LineNumber 13).side | Should -Be 'LEFT'
     }
 
+    It 'retains a deletion when its old coordinate collides with a different hunk RIGHT line' {
+        $collisionPatch = "@@ -1,0 +1,100 @@`n" + ("+inserted`n" * 100) + @'
+@@ -51,3 +151,2 @@
+ context
+ context
+-deleted old 53
+'@
+        $collisionMap = Build-LineMap -Patch $collisionPatch
+
+        $right = Resolve-FindingLocation -LineMap $collisionMap -LineNumber 53
+        $right.line | Should -Be 53
+        $right.side | Should -Be 'RIGHT'
+        $right.inferred | Should -BeFalse
+        $left = Resolve-FindingLocation -LineMap $collisionMap -LineNumber 152
+        $left.line | Should -Be 53
+        $left.side | Should -Be 'LEFT'
+        $left.inferred | Should -BeTrue
+    }
+
     It 'maps nearby PR-head lines to the closest deletion in a deletion-only hunk' {
         $deletionPatch = @'
 @@ -91,18 +91,14 @@
@@ -2848,6 +2867,24 @@ Describe 'Group-RegionalFindings' {
         @(Group-RegionalFindings -Findings $findings).Count | Should -Be 2
     }
 
+    It 'preserves suggested fixes differing only in string literal casing' {
+        $findings = @(
+            New-RegionalFinding -Path 'src/Apps/W1/Foo.al'
+            New-RegionalFinding -Path 'src/Apps/US/Foo.al'
+        )
+        $findings[0] | Add-Member -NotePropertyName suggestedCode -NotePropertyValue "Code := 'ABC';"
+        $findings[1] | Add-Member -NotePropertyName suggestedCode -NotePropertyValue "Code := 'abc';"
+
+        $result = @(Group-RegionalFindings -Findings $findings)
+
+        $result.Count | Should -Be 2
+        $result[0].suggestedCode | Should -BeExactly "Code := 'ABC';"
+        $result[1].suggestedCode | Should -BeExactly "Code := 'abc';"
+        foreach ($finding in $result) {
+            @(Get-FindingOtherRegions -Finding $finding).Count | Should -Be 0
+        }
+    }
+
     It 'does not merge Apps and Layers trees at the same relative path and line' {
         $findings = @(
             New-RegionalFinding -Path 'src/Apps/W1/Foo.al'
@@ -2911,6 +2948,30 @@ Describe 'Format-OtherRegionsNotice' {
 }
 
 Describe 'Save-ReviewArtifacts' {
+    It 'preserves the generated task context during publication: <Source>' -ForEach @(
+        @{ Source = 'downloaded input' }
+        @{ Source = 'existing diagnostic' }
+    ) {
+        $ReviewOutputDir = Join-Path $TestDrive "post-output-$Source"
+        New-Item -ItemType Directory -Path $ReviewOutputDir -Force | Out-Null
+        $fileName = if ($Source -eq 'downloaded input') { '_task-context.json' } else { 'task-context.json' }
+        $contextJson = '{"enabled-layers":["microsoft"],"knowledge":{"allow":["performance"]}}'
+        Set-Content -LiteralPath (Join-Path $ReviewOutputDir $fileName) -Value $contextJson -Encoding UTF8
+        $report = [pscustomobject]@{
+            Outcome = 'completed'; OutcomeReason = ''; Findings = @()
+            Suppressed = @(); SubResults = @(); SkippedSubSkills = @()
+        }
+        $Repository = 'contoso/app'
+        $PrNumber = 42
+        $BaseBranch = 'main'
+        $PrHeadSha = 'abc123'
+
+        Save-ReviewArtifacts -RawOutput '{}' -Report $report -ParseErrors @() -TaskContext $null -Transcript ''
+
+        (Get-Content -LiteralPath (Join-Path $ReviewOutputDir 'task-context.json') -Raw).Trim() |
+            Should -BeExactly $contextJson
+    }
+
     It 'persists sub-results used for knowledge and sub-skill diagnostics' {
         $ReviewOutputDir = Join-Path $TestDrive 'review-output'
         $Repository = 'microsoft/BCApps'

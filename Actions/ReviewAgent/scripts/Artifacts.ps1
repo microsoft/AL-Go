@@ -170,8 +170,19 @@ function Save-ReviewArtifacts {
     $savedFiles.Add('al-code-review-raw.txt') | Out-Null
 
     $taskPath = Join-Path $ReviewOutputDir 'task-context.json'
-    Set-Content -Path $taskPath -Value ($TaskContext | ConvertTo-Json -Depth 10) -Encoding UTF8
-    $savedFiles.Add('task-context.json') | Out-Null
+    $generatedTaskPath = Join-Path $ReviewOutputDir '_task-context.json'
+    if ($null -ne $TaskContext) {
+        Set-Content -Path $taskPath -Value ($TaskContext | ConvertTo-Json -Depth 10) -Encoding UTF8
+    }
+    elseif (Test-Path -LiteralPath $generatedTaskPath -PathType Leaf) {
+        Copy-Item -LiteralPath $generatedTaskPath -Destination $taskPath -Force
+    }
+    elseif (-not (Test-Path -LiteralPath $taskPath -PathType Leaf)) {
+        Write-LogWarn 'Missing task context' 'No generated task context is available for the published review artifacts.'
+    }
+    if (Test-Path -LiteralPath $taskPath -PathType Leaf) {
+        $savedFiles.Add('task-context.json') | Out-Null
+    }
 
     $payload = @{
         repository    = $Repository

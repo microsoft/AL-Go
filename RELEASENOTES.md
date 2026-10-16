@@ -28,6 +28,8 @@ AL-Go repositories can now opt in to AI-powered review of AL pull request change
 
 Copilot review jobs remain on hosted runners when build jobs use self-hosted runners. Review concurrency is scoped to each intake run, avoiding cancellations between pull requests that share a source branch; newer runs no longer automatically cancel reviews of older commits. Copilot output is logged with workflow-command parsing suspended, and Windows npm installations launch through Node rather than a batch shim.
 
+Publication is serialized per pull request to prevent duplicate-comment races. Review artifacts retain the generated task context after publication, regional deduplication preserves case-sensitive fixes, and deletion anchors survive old/new line-number collisions.
+
 ### Expanded AL-Go telemetry dashboard
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.

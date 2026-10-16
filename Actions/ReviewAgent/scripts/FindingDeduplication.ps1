@@ -59,7 +59,7 @@ function Group-RegionalFindings {
     # Location alone cannot distinguish two defects on the same line. Only merge
     # equivalent findings, preserving differing prose, severity and suggested fixes.
     $result     = [System.Collections.Generic.List[object]]::new()
-    $byLocality = [ordered]@{}
+    $byLocality = [System.Collections.Specialized.OrderedDictionary]::new([StringComparer]::Ordinal)
 
     foreach ($finding in $Findings) {
         $info = Get-RegionalPathInfo -FilePath $finding.filePath

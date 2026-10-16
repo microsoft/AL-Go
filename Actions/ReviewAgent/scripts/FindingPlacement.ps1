@@ -4,7 +4,7 @@
 function Build-LineMap {
     param([string] $Patch)
 
-    $map      = @{}   # lineNumber -> @{ line=N; side='RIGHT'|'LEFT' }
+    $map      = @{}   # Numeric RIGHT keys and namespaced LEFT keys keep both coordinates.
     $oldLine  = 0
     $newLine  = 0
     $newStart = 0
@@ -20,7 +20,7 @@ function Build-LineMap {
             continue
         }
         if ($raw.StartsWith('+') -and -not $raw.StartsWith('+++')) {
-            if (-not $map.ContainsKey($newLine) -or $map[$newLine].side -eq 'LEFT') {
+            if (-not $map.ContainsKey($newLine)) {
                 $map[$newLine] = @{
                     line = $newLine; side = 'RIGHT'
                     newStart = $newStart; newEnd = $newEnd
@@ -29,8 +29,9 @@ function Build-LineMap {
             $newLine++; continue
         }
         if ($raw.StartsWith('-') -and -not $raw.StartsWith('---')) {
-            if (-not $map.ContainsKey($oldLine)) {
-                $map[$oldLine] = @{
+            $oldKey = "LEFT:$oldLine"
+            if (-not $map.ContainsKey($oldKey)) {
+                $map[$oldKey] = @{
                     line = $oldLine; side = 'LEFT'
                     newStart = $newStart; newEnd = $newEnd; deletionPosition = $newLine
                 }
