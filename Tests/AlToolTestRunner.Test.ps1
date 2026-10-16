@@ -829,6 +829,18 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='TestOne']") | Should -Not -BeNullOrEmpty
         }
 
+        It 'Accepts an omitted app name and omits the optional JUnit appName property' {
+            $null = $script:testRunParameters.Remove('AppName')
+
+            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
+
+            [xml] $junit = Get-Content -LiteralPath $script:testRunParameters.JUnitResultFileName -Raw -Encoding UTF8
+            $junit.SelectSingleNode("testsuites/testsuite/properties/property[@name='extensionid']") |
+                Should -Not -BeNullOrEmpty
+            $junit.SelectSingleNode("testsuites/testsuite/properties/property[@name='appName']") |
+                Should -BeNullOrEmpty
+        }
+
         It 'Resolves AlTool through the shared helper when a direct call omits the path' {
             $null = $script:testRunParameters.Remove('AlToolPath')
             Mock -ModuleName AlToolTestRunner GetAlToolPath {
