@@ -152,7 +152,7 @@ function Get-GitFilePatch {
     # to narrow the changed-files list; per-file diffs remain unscoped so we
     # still get the full patch for each surviving file.
     $output = Invoke-GitCommand -Arguments @(
-        '-C', $Context.AnalysisWorkspace, 'diff', $Context.DiffRange, '--', $FilePath
+        '-C', $Context.AnalysisWorkspace, '--literal-pathspecs', 'diff', $Context.DiffRange, '--', $FilePath
     )
     return ($output -join "`n")
 }

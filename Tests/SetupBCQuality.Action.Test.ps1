@@ -285,4 +285,90 @@ param([string] $BCQualityRoot, [string] $IndexPath)
             $env:GIT_CONFIG_VALUE_0 = $previousValue
         }
     }
+
+    Context 'Marketplace installation without a plugin-root override' {
+        BeforeAll {
+            function copilot {}
+        }
+
+        BeforeEach {
+            Remove-Item Env:SETUP_BCQUALITY_PLUGIN_ROOT -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath (Join-Path $pluginRoot '_filter-report.json') -Force -ErrorAction SilentlyContinue
+            $env:SETUP_BCQUALITY_COPILOT_HOME = Join-Path $TestDrive 'copilot-home'
+            New-Item -ItemType Directory -Path $env:SETUP_BCQUALITY_COPILOT_HOME -Force | Out-Null
+            $script:copilotConfigPath = Join-Path $env:SETUP_BCQUALITY_COPILOT_HOME 'config.json'
+            $script:installedPlugin = @{
+                name = 'bcquality'; marketplace = 'bcquality'; version = '0.3.0'
+                cache_path = $pluginRoot; source_sha = ('a' * 40)
+            }
+            @{ installedPlugins = @($script:installedPlugin) } | ConvertTo-Json -Depth 5 |
+                Set-Content -LiteralPath $script:copilotConfigPath -Encoding UTF8
+            Mock copilot { $global:LASTEXITCODE = 0 }
+        }
+
+        It 'registers the requested marketplace and filters the installed plugin from configuration' {
+            & $script:setupScriptPath -marketplace 'contoso/BCQuality' -marketplaceRef 'v1.7' -enabledLayers microsoft
+
+            Should -Invoke copilot -Times 1 -Exactly -ParameterFilter {
+                $args.Count -eq 4 -and ($args -join ' ') -eq 'plugin marketplace add contoso/BCQuality#v1.7'
+            }
+            Should -Invoke copilot -Times 1 -Exactly -ParameterFilter {
+                $args.Count -eq 3 -and ($args -join ' ') -eq 'plugin install bcquality@bcquality'
+            }
+            $report = Get-Content -LiteralPath (Join-Path $pluginRoot '_filter-report.json') -Raw | ConvertFrom-Json
+            $report.sourceHash | Should -Be ('a' * 40)
+            $report.pluginVersion | Should -Be '0.3.0'
+            Test-Path -LiteralPath (Join-Path $pluginRoot 'community/knowledge/domain/community.md') | Should -BeFalse
+            Get-Content -LiteralPath $env:GITHUB_OUTPUT | Should -Contain "pluginRoot=$pluginRoot"
+        }
+
+        It 'propagates a nonzero <Operation> exit' -TestCases @(
+            @{ Operation = 'marketplace'; Expected = '*Failed to register BCQuality marketplace*'; Calls = 1 }
+            @{ Operation = 'install'; Expected = '*Failed to install the BCQuality plugin*'; Calls = 2 }
+        ) {
+            param($Operation, $Expected, $Calls)
+            Mock copilot { $global:LASTEXITCODE = 9 } -ParameterFilter { $args[1] -eq $Operation }
+
+            { & $script:setupScriptPath -marketplace 'contoso/BCQuality' -marketplaceRef 'v1.7' } |
+                Should -Throw $Expected
+            Should -Invoke copilot -Times $Calls -Exactly
+            Test-Path -LiteralPath (Join-Path $pluginRoot '_filter-report.json') | Should -BeFalse
+        }
+
+        It 'rejects <Case> installed-plugin configuration' -TestCases @(
+            @{ Case = 'missing'; Expected = '*configuration not found*' }
+            @{ Case = 'malformed'; Expected = '*configuration is malformed*' }
+            @{ Case = 'invalid JSON'; Expected = '*configuration is malformed*' }
+            @{ Case = 'no matching plugin'; Expected = '*found 0*' }
+            @{ Case = 'ambiguous plugin'; Expected = '*found 2*' }
+        ) {
+            param($Case, $Expected)
+            switch ($Case) {
+                'missing' { Remove-Item -LiteralPath $script:copilotConfigPath -Force }
+                'malformed' { Set-Content -LiteralPath $script:copilotConfigPath -Value 'not JSON' -Encoding UTF8 }
+                'invalid JSON' { Set-Content -LiteralPath $script:copilotConfigPath -Value '{broken' -Encoding UTF8 }
+                'no matching plugin' {
+                    '{"installedPlugins":[{"name":"other","marketplace":"bcquality"}]}' |
+                        Set-Content -LiteralPath $script:copilotConfigPath -Encoding UTF8
+                }
+                'ambiguous plugin' {
+                    @{ installedPlugins = @($script:installedPlugin, $script:installedPlugin) } |
+                        ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $script:copilotConfigPath -Encoding UTF8
+                }
+            }
+
+            { & $script:setupScriptPath -marketplace 'contoso/BCQuality' -marketplaceRef 'v1.7' } |
+                Should -Throw $Expected
+            Test-Path -LiteralPath (Join-Path $pluginRoot '_filter-report.json') | Should -BeFalse
+        }
+
+        It 'rejects an installed-plugin version that differs from its manifest' {
+            $script:installedPlugin.version = '9.9.9'
+            @{ installedPlugins = @($script:installedPlugin) } | ConvertTo-Json -Depth 5 |
+                Set-Content -LiteralPath $script:copilotConfigPath -Encoding UTF8
+
+            { & $script:setupScriptPath -marketplace 'contoso/BCQuality' -marketplaceRef 'v1.7' } |
+                Should -Throw "*version '9.9.9' does not match plugin manifest version '0.3.0'*"
+        }
+    }
 }

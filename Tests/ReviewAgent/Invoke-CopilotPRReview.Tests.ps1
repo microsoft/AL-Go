@@ -3286,6 +3286,25 @@ Describe 'Deterministic findings consumer acceptance' {
         }
     }
 
+    It 'keeps per-file patches literal without disabling discovery globs' {
+        $gitRoot = Join-Path $TestDrive 'literal-file-diff'
+        New-Item -ItemType Directory -Path (Join-Path $gitRoot 'src') -Force | Out-Null
+        $null = Invoke-GitCommand -Arguments @('-C', $gitRoot, 'init', '--quiet')
+        Set-Content -LiteralPath (Join-Path $gitRoot 'src/Code[1].al') -Value 'literal file marker'
+        Set-Content -LiteralPath (Join-Path $gitRoot 'src/Code1.al') -Value 'other file marker'
+        $null = Invoke-GitCommand -Arguments @('-C', $gitRoot, 'add', '--all')
+        $context = [pscustomobject]@{
+            AnalysisWorkspace = $gitRoot; DiffRange = '--cached'; ReviewPathSpec = 'src/Code*.al'
+        }
+
+        $patch = Get-GitFilePatch -Context $context -FilePath 'src/Code[1].al'
+
+        ([regex]::Matches($patch, '(?m)^diff --git ')).Count | Should -Be 1
+        $patch | Should -Match 'literal file marker'
+        $patch | Should -Not -Match 'other file marker'
+        @(Get-GitChangedFiles -Context $context) | Should -Be @('src/Code1.al', 'src/Code[1].al')
+    }
+
     It 'copies authoritative run inputs into an isolated leaf before launching in <_> mode' -ForEach @('cwd', 'plugin') {
         if ($_ -eq 'plugin') {
             $AgentWorkDir = Join-Path $TestDrive 'copy-plugin-output'
