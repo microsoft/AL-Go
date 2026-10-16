@@ -84,6 +84,14 @@ If you navigate to the BingMaps.AppSource repository, you should be able to see 
 
 ![Delivery](https://github.com/microsoft/AL-Go/assets/10775043/c002d29c-96a6-4ef5-b281-ad2518117ca8)
 
+You can also run the **Publish To AppSource** workflow manually. The `appVersion` input determines which artifacts are submitted:
+
+- `current` uses the latest non-prerelease, non-draft release. If the repository doesn't contain any releases, it falls back to the artifacts from the latest successful CI/CD build.
+- `prerelease` uses the latest non-draft release.
+- `draft` uses the latest release, including draft releases.
+- `latest` uses the artifacts from the latest successful CI/CD build.
+- A version number uses the build artifacts matching that version.
+
 ## Preview
 
 If you have set ContinuousDelivery to true, every app will be delivered to AppSource and taken through validation and made available in AppSource as preview. You then need to press **Go Live** in partner center or run the Publish To AppSource workflow in AL-Go for GitHub in order to publish the app to production.
