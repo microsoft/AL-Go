@@ -50,6 +50,8 @@ Each completed intake run has an independent review concurrency group, so pull r
 
 `SetupBCQuality` defaults to PowerShell 7 (`pwsh`), which the BCQuality indexing tools require. Review diagnostics record the action repository and requested ref separately. A full commit SHA is recorded when the action is SHA-pinned; for mutable branch/tag references, the commit is unknown (`null`) rather than incorrectly treating the ref or the reviewed repository's checkout as the action commit.
 
+Review generation requires the `microsoft/skills/review/al-code-review.md` super-skill and its layer to remain enabled and present in the filtered plugin. Invalid filtering configurations fail before any review leaves start. To disable automated review entirely, set `CodeReviewAgent.enabled` to `false` instead.
+
 ## Disable the reviewer
 
 Set `CodeReviewAgent.enabled` to `false` and run **Update AL-Go System Files**. The reviewer workflows are removed from the repository.

@@ -136,7 +136,7 @@ Describe "Copilot code review workflows" {
         $reviewAction | Should -Match '\$env:BCQUALITY_REPO = \[string\] \$bcqualitySettings\.marketplaceRepo'
         $reviewAction | Should -Match '\$env:BCQUALITY_VERSION = \[string\] \$bcqualitySettings\.version'
         $reviewAction | Should -Match '\$env:BCQUALITY_SETTINGS_JSON = \(\$bcqualitySettings'
-        $reviewAction | Should -Match "\$env:BCQUALITY_CONSUME = 'plugin'"
+        $reviewAction | Should -Match ([regex]::Escape('$env:BCQUALITY_CONSUME = ''plugin'''))
         $runnerWorkflow | Should -Match "(?ms)uses:\s+microsoft/AL-Go-Actions/SetupBCQuality@main.*?token:\s+\$\{\{\s+secrets\.BCQUALITY_TOKEN\s+\}\}"
         $runnerWorkflow | Should -Not -Match 'bcqualityToken:'
         $runnerWorkflow | Should -Not -Match 'bcqualitySha|bcquality_sha'

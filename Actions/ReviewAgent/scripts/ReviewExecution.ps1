@@ -469,6 +469,17 @@ function Get-ReviewLeafPlan {
     $settings = Get-BCQualitySettingsCached
     $disabled = @($settings.disabledSkills | ForEach-Object { (($_ + '') -replace '\\', '/').Trim() } | Where-Object { $_ })
     $enabledLayers = @($settings.enabledLayers)
+    $superSkillPath = (([string]$superSkill[0].path) -replace '\\', '/').Trim()
+    if ($disabled -contains $superSkillPath) {
+        throw "Required BCQuality review super-skill '$superSkillPath' is disabled by configuration."
+    }
+    $superSkillLayer = ($superSkillPath -split '/', 2)[0]
+    if ($enabledLayers -notcontains $superSkillLayer) {
+        throw "Required BCQuality review super-skill '$superSkillPath' belongs to a disabled layer."
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $BCQualityRoot $superSkillPath) -PathType Leaf)) {
+        throw "Required BCQuality review super-skill is missing from the filtered plugin: '$superSkillPath'."
+    }
     $plan = [System.Collections.Generic.List[object]]::new()
     $ordinal = 0
     foreach ($path in @($superSkill[0].subSkills)) {

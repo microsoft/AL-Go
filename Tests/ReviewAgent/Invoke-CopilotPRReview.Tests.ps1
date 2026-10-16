@@ -1173,6 +1173,7 @@ Describe 'Deterministic leaf orchestration contract' {
         $RootReportSchemaFileName = '_review-findings-report.root.schema.json'
         Initialize-FindingsConsumerContext -SourcePaths @()
         Initialize-FindingsReportRoleSchemas
+        Set-Content -LiteralPath (Join-Path $BCQualityRoot 'microsoft/skills/review/al-code-review.md') -Value '# code review'
         Set-Content -LiteralPath (Join-Path $BCQualityRoot 'microsoft/skills/review/al-security-review.md') -Value '# security'
         Set-Content -LiteralPath (Join-Path $BCQualityRoot 'microsoft/skills/review/al-style-review.md') -Value '# style'
 
@@ -1261,6 +1262,25 @@ Describe 'Deterministic leaf orchestration contract' {
 
         $plan.id | Should -Be @('al-style-review')
         $plan.ordinal | Should -Be 2
+    }
+
+    It 'rejects a <Case> super-skill before launching any leaf' -ForEach @(
+        @{ Case = 'disabled'; Expected = '*super-skill*disabled by configuration*' }
+        @{ Case = 'missing'; Expected = '*super-skill is missing from the filtered plugin*' }
+        @{ Case = 'layer-disabled'; Expected = '*super-skill*belongs to a disabled layer*' }
+    ) {
+        $superSkillPath = 'microsoft/skills/review/al-code-review.md'
+        switch ($Case) {
+            'disabled' { $script:BCQualitySettingsCache.disabledSkills = @($superSkillPath) }
+            'missing' { Remove-Item -LiteralPath (Join-Path $BCQualityRoot $superSkillPath) -Force }
+            'layer-disabled' { $script:BCQualitySettingsCache.enabledLayers = @('community') }
+        }
+
+        {
+            $plan = @(Get-ReviewLeafPlan)
+            Invoke-DeterministicLeafReviews -Plan $plan
+        } | Should -Throw $Expected
+        Should -Invoke Start-LeafCopilotProcess -Times 0
     }
 
     It 'pins a leaf process to one skill and forbids child-agent delegation' {
