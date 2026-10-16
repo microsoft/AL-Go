@@ -22,6 +22,18 @@ AL-Go now supports including pre-release versions of Business Central app packag
 
 The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
 
+### Copilot code review for AL pull requests
+
+AL-Go repositories can now opt in to AI-powered review of AL pull request changes by enabling `CodeReviewAgent` in `.github/AL-Go-Settings.json`. `CodeReviewAgent` controls the review models, target branches and excluded pull request owners, while the separate `BCQuality` setting controls marketplace installation and filtering. The trusted Copilot PR Review runner verifies pull request metadata against GitHub, checks the configured target branch patterns, and requires an explicit opt-in before reviewing. Empty branch and layer settings use `main` and all BCQuality layers respectively; explicit lists do not inherit those implicit defaults. It invokes AL-Go's `SetupBCQuality` action (PowerShell 7 by default) to install and filter the configured [BCQuality](https://github.com/microsoft/BCQuality) marketplace plugin, then passes the prepared plugin to the `ReviewAgent` action for review generation and pull request publication. Copilot CLI requests are billed to the GitHub organization and require the corresponding organization policy and workflow permissions.
+
+Copilot review jobs remain on hosted runners when build jobs use self-hosted runners. Review concurrency is scoped to each intake run, avoiding cancellations between pull requests that share a source branch; newer runs no longer automatically cancel reviews of older commits. Copilot output is logged with workflow-command parsing suspended, and Windows npm installations launch through Node rather than a batch shim.
+
+Publication is serialized per pull request to prevent duplicate-comment races. Review artifacts retain the generated task context after publication, regional deduplication preserves case-sensitive fixes, and deletion anchors survive old/new line-number collisions.
+
+Review generation rejects filtering configurations that disable or remove its required BCQuality review super-skill before starting any model calls.
+
+Per-file review diffs treat filenames literally, preventing Git pathspec characters such as brackets from including another file's changes in inline-comment coordinates.
+
 ### Expanded AL-Go telemetry dashboard
 
 The starter Azure Data Explorer dashboard now includes dedicated views for workflow reliability, run exploration, test quality, workflow duration, runner efficiency, and AL-Go maintenance. It also provides repository, workflow, branch, and repository-type filtering, clearer empty states, and repository-level runtime supportability information.
