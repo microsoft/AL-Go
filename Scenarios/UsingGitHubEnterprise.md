@@ -5,10 +5,6 @@ Repositories using AL-Go for GitHub are supported on **GitHub Enterprise Cloud w
 > [!NOTE]
 > This support is for repositories **using** AL-Go for GitHub. The AL-Go for GitHub repository itself (the [microsoft/AL-Go](https://github.com/microsoft/AL-Go) development repository) is only supported on `github.com`.
 
-> [!NOTE]
-> The references below will be changed from Freddy-DK/* to microsoft/* before we merge the PR
-> Only reason for referring to Freddy-DK/AL-Go-PTE is that this is the only version that works with GitHub Enterprise
-
 ## How it works
 
 The AL-Go for GitHub templates are published on the public GitHub (`github.com`):
@@ -23,11 +19,9 @@ On `github.com`, you would normally use the **Use this template** button on one 
 
 This means we have to find a different way to copy a template repository from `github.com` into your enterprise. The sections below describe two methods of doing this - **manually** or **using a tool**.
 
-## Manual approach
-
 You can copy one of the public AL-Go templates into your enterprise using **git** and **GitHub CLI**. This mirror-clones the template repository from `github.com` and pushes it into a new repository on your enterprise host.
 
-Replace `OWNER/REPO` with the public template (for example `Freddy-DK/AL-Go-PTE` or `Freddy-DK/AL-Go-AppSource`), `<enterprise>.ghe.com` with your enterprise host and `ORG/REPO` with your organization/repository name:
+Replace `OWNER/REPO` with the public template (for example `microsoft/AL-Go-PTE` or `microsoft/AL-Go-AppSource`), `<enterprise>.ghe.com` with your enterprise host and `ORG/REPO` with your organization/repository name:
 
 ```pwsh
 # 1. Authenticate to your enterprise host (if not already)
@@ -50,56 +44,13 @@ git push --mirror https://<enterprise>.ghe.com/ORG/REPO.git
 > [!NOTE]
 > The mirror-clone in step 2 reads from the **public** `github.com` template, which does not require authentication. Step 3 and step 4 target your enterprise host, using the credentials you authenticated with in step 1.
 
-## Automated approach
-
-Instead of copying the repository manually, you can use the [algoctl](https://github.com/Freddy-DK/algoctl) CLI, which performs the copy for you in a single command.
-
-Before running the commands below, make sure that **git** and **GitHub CLI** are installed and that gh is authenticated to your GitHub enterprise host:
-
-```pwsh
-gh auth login --hostname <enterprise>.ghe.com
-```
-
-The algoctl tool uses GitHub CLI for authentication.
-
-Install algoctl and run `createrepo`, replacing `<enterprise>` and `<org>` with your enterprise host and organization, and pointing `--templaterepo` at the public AL-Go template you want to copy:
-
-```pwsh
-dotnet tool install --global algoctl --prerelease
-algoctl createrepo --repo https://<enterprise>.ghe.com/<org>/<repo> --templaterepo Freddy-DK/AL-Go-PTE
-```
-
-This creates a new repository inside your enterprise organization, seeded from the public AL-Go template. Use `Freddy-DK/AL-Go-AppSource` as the `--templaterepo` for AppSource Apps.
-
 ## Indirect templates
 
-If you want to use indirect templates you need to use the above techniques to copy the two AL-Go template repositories to your enterprise organization - one for Per Tenant Extensions and one for AppSource Apps - based on the public AL-Go templates. Using the [algoctl](https://github.com/Freddy-DK/AL-Go/tree/main/algoctl) CLI, this looks like:
-
-Before running the commands below, make sure that **git** and **GitHub CLI** are installed and that gh is authenticated to your GitHub enterprise org:
-
-```pwsh
-gh auth login --hostname <enterprise>.ghe.com
-```
-
-The algoctl tool uses GitHub CLI for authentication.
-
-Run the following commands, replacing `<enterprise>` and `<org>` with your enterprise host and organization:
-
-```pwsh
-dotnet tool install --global algoctl --prerelease
-algoctl createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-PTE --templaterepo Freddy-DK/AL-Go-PTE
-algoctl createrepo --repo https://<enterprise>.ghe.com/<org>/<enterprise>-AppSource --templaterepo Freddy-DK/AL-Go-AppSource
-```
-<img width="1285" height="799" alt="image" src="https://github.com/user-attachments/assets/0c83b7e7-be79-4834-a010-38683f61d8af" />
-
-Now you have two new repositories inside your enterprise organization, seeded from the public AL-Go PTE and AppSource templates.
-<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/1913679b-53fb-40bb-8731-ff978a5696c6" />
+If you want to use indirect templates you need to use the above technique to copy the two AL-Go template repositories to your enterprise organization - one for Per Tenant Extensions and one for AppSource Apps - based on the public AL-Go templates.
 
 ## Creating repositories based on your indirect template
 
-Creating a repository based on your indirect template, requires you to follow the manual or automated approach from earlier in this documentation, and then run Update AL-Go System Files specifying your indirect template.
-
-If you used the automated approach and specified your indirect template as your template repo, the indirect template is already setup as your template repository.
+Creating a repository based on your indirect template, requires you to follow the same process from earlier in this documentation, and then run Update AL-Go System Files specifying your indirect template - this step is very important.
 
 ## Update AL-Go System Files
 
