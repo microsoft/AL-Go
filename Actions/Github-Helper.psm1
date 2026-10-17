@@ -819,7 +819,15 @@ function DownloadRelease {
     if ($projects -eq "") { $projects = "*" }
     Write-Host "Downloading release $($release.Name), projects $projects, type $mask"
     if ([string]::IsNullOrEmpty($token)) {
-        $token = invoke-gh -silent -returnValue auth token
+        # Scope the gh token to the host serving the API: api.github.com -> github.com, api.<tenant>.ghe.com -> <tenant>.ghe.com, <host>/api/v3 -> <host>
+        $hostname = ([uri]$api_url).Host -replace '^api\.', ''
+        try {
+            $token = invoke-gh -silent -returnValue auth token --hostname $hostname
+        }
+        catch {
+            Write-Host "Unable to get token from gh for $hostname, will attempt to download release anonymously. Message: $($_.Exception.Message)"
+            $token = ''
+        }
     }
     $headers = GetHeaders -token $token -accept "application/octet-stream"
     foreach($project in $projects.Split(',')) {
