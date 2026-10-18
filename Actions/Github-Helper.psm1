@@ -970,7 +970,8 @@ function CheckBuildJobsInWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
-        [string] $workflowRunId
+        [string] $workflowRunId,
+        [string] $api_url = $ENV:GITHUB_API_URL
     )
 
     $per_page = 100
@@ -980,7 +981,7 @@ function CheckBuildJobsInWorkflowRun {
     $anySuccessful = $false
 
     while($true) {
-        $jobsURI = "$ENV:GITHUB_API_URL/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
+        $jobsURI = "$api_url/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
         $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
 
@@ -1023,10 +1024,11 @@ function FindLatestSuccessfulCICDRun {
         [Parameter(Mandatory = $true)]
         [string] $token,
         [Parameter(Mandatory = $true)]
-        [int] $retention
+        [int] $retention,
+        [string] $api_url = $ENV:GITHUB_API_URL
     )
 
-    $headers = GetHeaders -token $token
+    $headers = GetHeaders -token $token -api_url $api_url -repository $repository
     $lastSuccessfulCICDRun = $null
     $per_page = 100
     $maxAttempts = 3
@@ -1039,7 +1041,7 @@ function FindLatestSuccessfulCICDRun {
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $page = 1
         while($true) {
-            $runsURI = "$ENV:GITHUB_API_URL/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
+            $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
             Write-Host "- $runsURI"
             $response = InvokeWebRequest -Headers $headers -Uri $runsURI
             $workflowRuns = $response.Content | ConvertFrom-Json
@@ -1061,7 +1063,7 @@ function FindLatestSuccessfulCICDRun {
                 }
 
                 # CICD run is considered successful if all build jobs were successful
-                $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository
+                $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository -api_url $api_url
 
                 if($areBuildJobsSuccessful) {
                     $lastSuccessfulCICDRun = $CICDRun
@@ -1249,7 +1251,7 @@ function GetArtifacts {
     if($version -eq '*') {
         if(-not $baselineWorkflowID) {
             # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run (within the last 90 days, which is the maximum number of days GitHub Actions keeps artifacts)
-            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token -retention 90
+            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token -retention 90 -api_url $api_url
         }
 
         if($baselineWorkflowID -eq '0') {
