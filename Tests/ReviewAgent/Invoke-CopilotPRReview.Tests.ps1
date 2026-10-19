@@ -2210,7 +2210,7 @@ Describe 'Copilot sub-agent delegation guard' {
         }
         $securityFunction = $functions | Where-Object Name -eq 'Get-CopilotSecurityArguments'
         $securityFunction | Should -Not -BeNullOrEmpty
-        $securityFunction.Body.Extent.Text | Should -Match "'--available-tools', 'view', 'glob', 'rg', 'apply_patch'"
+        $securityFunction.Body.Extent.Text | Should -Match "'--available-tools', 'view', 'glob', 'rg', 'apply_patch', 'create', 'edit'"
         $securityFunction.Body.Extent.Text | Should -Not -Match '\btask\b'
         ($functions | Where-Object Name -eq 'Start-LeafCopilotProcess').Body.Extent.Text |
             Should -Match 'Get-LeafCopilotArguments -Prompt \$Prompt'
@@ -2633,7 +2633,7 @@ Describe 'Local review authentication' {
         $arguments = @(Get-CopilotSecurityArguments -WritablePath 'C:\review-output\leaf\_review-report.json')
         $joined = $arguments -join ' '
 
-        $joined | Should -Match '--available-tools view glob rg apply_patch'
+        $joined | Should -Match '--available-tools view glob rg apply_patch create edit'
         $joined | Should -Match '--disallow-temp-dir'
         $joined | Should -Match '--allow-tool write\(C:/review-output/leaf/_review-report\.json\)'
         $joined | Should -Match '--deny-tool shell'
@@ -2642,6 +2642,12 @@ Describe 'Local review authentication' {
         $joined | Should -Not -Match '/\*\*'
         $joined | Should -Not -Match 'allow-all-paths'
         $joined | Should -Not -Match 'allow-all-tools'
+        $availableToolsEnd = [array]::IndexOf($arguments, '--disallow-temp-dir')
+        @($arguments[1..($availableToolsEnd - 1)]) | Should -Be @('view', 'glob', 'rg', 'apply_patch', 'create', 'edit')
+        $allowedTools = @(for ($index = 0; $index -lt $arguments.Count; $index++) {
+            if ($arguments[$index] -eq '--allow-tool') { $arguments[$index + 1] }
+        })
+        $allowedTools | Should -Be @('view', 'glob', 'rg', 'write(C:/review-output/leaf/_review-report.json)')
     }
 }
 

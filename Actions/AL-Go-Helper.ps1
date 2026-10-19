@@ -2446,14 +2446,11 @@ function GetPackageVersion($packageName) {
     }
 
     if (Test-Path $packageJsonPath) {
-        $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
+        $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
         foreach ($sectionName in @('dependencies', 'devDependencies')) {
-            $section = $packageJson.$sectionName
-            if ($section) {
-                $packageProperty = $section.PSObject.Properties[$packageName]
-                if ($packageProperty) {
-                    return [string] $packageProperty.Value
-                }
+            $section = $packageJson[$sectionName]
+            if ($section -and $section.ContainsKey($packageName)) {
+                return [string] $section[$packageName]
             }
         }
     }

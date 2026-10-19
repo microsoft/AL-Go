@@ -287,7 +287,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $codeReviewAgent.branches | Should -BeNullOrEmpty
             $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
-            $codeReviewAgent.excludedOwners | Should -BeNullOrEmpty
+            $codeReviewAgent.excludedAuthors | Should -BeNullOrEmpty
             $defaultSettings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $defaultSettings.BCQuality.version | Should -Match '^[0-9]+\.[0-9]+$'
             $defaultSettings.BCQuality.Contains('pluginVersion') | Should -BeFalse
@@ -313,7 +313,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings.CodeReviewAgent.branches | Should -BeNullOrEmpty
             $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
             $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
-            $settings.CodeReviewAgent.excludedOwners | Should -BeNullOrEmpty
+            $settings.CodeReviewAgent.excludedAuthors | Should -BeNullOrEmpty
             $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
             $settings.BCQuality.version | Should -Be $defaultVersion
             $settings.BCQuality.enabledLayers | Should -BeNullOrEmpty

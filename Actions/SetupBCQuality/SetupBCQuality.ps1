@@ -54,7 +54,11 @@ if (-not [string]::IsNullOrWhiteSpace($bcqualitySettingsJson)) {
     if ($marketplace -notmatch '^[^/]+/[^/]+$') {
         throw "BCQuality marketplace URL must identify one owner/repository; received '$marketplaceRepo'."
     }
-    $marketplaceRef = "v$([string] $settings.version)"
+    $version = [string] $settings.version
+    if ($version -notmatch '\A[0-9]+\.[0-9]+\z') {
+        throw "BCQuality.version must use major.minor format without a 'v' prefix (for example, '1.6'); received '$version'."
+    }
+    $marketplaceRef = "v$version"
     $layers = @($settings.enabledLayers)
     $disabledSkillPaths = @($settings.disabledSkills)
     $allowPatterns = @($settings.knowledge.allow)
@@ -107,7 +111,7 @@ if (-not $pluginRoot) {
         & copilot plugin marketplace add "$marketplace#$marketplaceRef"
     }
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to register BCQuality marketplace $marketplace#$marketplaceRef."
+        throw "Failed to register BCQuality marketplace $marketplace#$marketplaceRef. Verify that repository '$marketplace' and branch or tag '$marketplaceRef' exist and are accessible to this workflow."
     }
     Invoke-WithGitHubToken -Repository $marketplace -Token $token -ScriptBlock {
         & copilot plugin install 'bcquality@bcquality'

@@ -246,11 +246,11 @@ function Invoke-ContextPhase {
         }
     }
     $owner = [string] $pullRequest.user.login
-    $excludedOwners = @($settings['excludedOwners'])
+    $excludedAuthors = @($settings['excludedAuthors'])
     $targetBranch = [string] $pullRequest.base.ref
     $branchPatterns = @($settings['branches'])
     $eligible = $settings['enabled'] -is [bool] -and $settings['enabled'] -eq $true -and
-        $pullRequest.state -eq 'open' -and -not $pullRequest.draft -and $owner -notin $excludedOwners -and
+        $pullRequest.state -eq 'open' -and -not $pullRequest.draft -and $owner -notin $excludedAuthors -and
         (Test-ReviewTargetBranch -Branch $targetBranch -Patterns $branchPatterns)
 
     Write-ReviewOutput -Name eligible -Value $eligible.ToString().ToLowerInvariant()

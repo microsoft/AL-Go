@@ -393,7 +393,7 @@
                     "minLength": 1,
                     "description": "Copilot model used for isolated review leaf processes."
                 },
-                "excludedOwners": {
+                "excludedAuthors": {
                     "type": "array",
                     "items": {
                         "type": "string",
@@ -408,7 +408,7 @@
                 "branches",
                 "model",
                 "leafModel",
-                "excludedOwners"
+                "excludedAuthors"
             ]
         },
         "customCodeCops": {

@@ -53,6 +53,11 @@ share one repository settings surface. The runner passes this action's
 `pluginRoot` output to `ReviewAgent`; the review action does not install
 BCQuality.
 
+`BCQuality.version` must use `major.minor` format, for example `1.6`, without
+the `v` prefix. The action adds that prefix when selecting the release tag.
+Marketplace registration errors identify the requested repository and ref;
+verify that both exist and that the workflow has access to them.
+
 JSON arrays are preserved as supplied, including commas in skill paths or
 knowledge patterns. Only the standalone `enabledLayers`, `disabledSkills`,
 `knowledgeAllow`, and `knowledgeDeny` inputs use comma-separated values.

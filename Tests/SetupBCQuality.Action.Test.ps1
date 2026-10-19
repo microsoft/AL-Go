@@ -306,6 +306,36 @@ param([string] $BCQualityRoot, [string] $IndexPath)
             Mock copilot { $global:LASTEXITCODE = 0 }
         }
 
+        It 'rejects invalid JSON version <Version> before invoking Copilot' -TestCases @(
+            @{ Version = 'v1.6' }
+            @{ Version = '1.6.0' }
+            @{ Version = '' }
+            @{ Version = '1.6-beta' }
+        ) {
+            param($Version)
+            $settingsJson = @{
+                marketplaceRepo = 'https://github.com/contoso/BCQuality'; version = $Version
+                enabledLayers = @(); disabledSkills = @()
+                knowledge = @{ allow = @(); deny = @() }
+            } | ConvertTo-Json -Compress -Depth 5
+
+            { & $script:setupScriptPath -bcqualitySettingsJson $settingsJson } |
+                Should -Throw "*BCQuality.version must use major.minor format without a 'v' prefix*"
+
+            Should -Invoke copilot -Times 0 -Exactly
+            Test-Path -LiteralPath (Join-Path $pluginRoot '_filter-report.json') | Should -BeFalse
+        }
+
+        It 'preserves standalone branch refs for prototype testing' {
+            & $script:setupScriptPath -marketplace 'contoso/BCQuality' -marketplaceRef 'prototype/review'
+
+            Should -Invoke copilot -Times 1 -Exactly -ParameterFilter {
+                ($args -join ' ') -eq 'plugin marketplace add contoso/BCQuality#prototype/review'
+            }
+            $report = Get-Content -LiteralPath (Join-Path $pluginRoot '_filter-report.json') -Raw | ConvertFrom-Json
+            $report.marketplaceRef | Should -Be 'prototype/review'
+        }
+
         It 'registers the requested marketplace and filters the installed plugin from configuration' {
             & $script:setupScriptPath -marketplace 'contoso/BCQuality' -marketplaceRef 'v1.7' -enabledLayers microsoft
 
@@ -323,7 +353,7 @@ param([string] $BCQualityRoot, [string] $IndexPath)
         }
 
         It 'propagates a nonzero <Operation> exit' -TestCases @(
-            @{ Operation = 'marketplace'; Expected = '*Failed to register BCQuality marketplace*'; Calls = 1 }
+            @{ Operation = 'marketplace'; Expected = "*Failed to register BCQuality marketplace contoso/BCQuality#v1.7*repository 'contoso/BCQuality' and branch or tag 'v1.7' exist and are accessible*"; Calls = 1 }
             @{ Operation = 'install'; Expected = '*Failed to install the BCQuality plugin*'; Calls = 2 }
         ) {
             param($Operation, $Expected, $Calls)

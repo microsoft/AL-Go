@@ -102,7 +102,7 @@ Describe 'ReviewAgent action' {
         & $script:actionScriptPath `
             @script:contextArguments `
             -phase context `
-            -codeReviewSettingsJson '{"enabled":true,"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+            -codeReviewSettingsJson '{"enabled":true,"model":"root-model","leafModel":"leaf-model","excludedAuthors":[]}' `
             -bcqualitySettingsJson ($customBCQualitySettings | ConvertTo-Json -Compress -Depth 10) `
             -metadataPath $metadataPath `
             -workflowHeadSha 'abc123'
@@ -143,7 +143,7 @@ Describe 'ReviewAgent action' {
             & $script:actionScriptPath `
                 @script:contextArguments `
                 -phase context `
-                -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+                -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedAuthors":[]}' `
                 -bcqualitySettingsJson $script:bcqualitySettingsJson `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'workflow-run-sha'
@@ -175,7 +175,7 @@ Describe 'ReviewAgent action' {
         $env:GITHUB_OUTPUT = Join-Path $TestDrive 'branch-output.txt'
         Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
         $settingsJson = @{
-            enabled = $true; branches = $Patterns; excludedOwners = @()
+            enabled = $true; branches = $Patterns; excludedAuthors = @()
         } | ConvertTo-Json -Depth 5 -Compress
         $qualitySettings = $script:bcqualitySettings.Clone()
         $qualitySettings.enabledLayers = @()
@@ -191,9 +191,9 @@ Describe 'ReviewAgent action' {
     }
 
     It 'Does not review when the trusted opt-in is <Case>' -TestCases @(
-        @{ Case = 'false'; Settings = '{"enabled":false,"excludedOwners":[]}' }
-        @{ Case = 'missing'; Settings = '{"excludedOwners":[]}' }
-        @{ Case = 'a string'; Settings = '{"enabled":"true","excludedOwners":[]}' }
+        @{ Case = 'false'; Settings = '{"enabled":false,"excludedAuthors":[]}' }
+        @{ Case = 'missing'; Settings = '{"excludedAuthors":[]}' }
+        @{ Case = 'a string'; Settings = '{"enabled":"true","excludedAuthors":[]}' }
     ) {
         param($Case, $Settings)
         $metadataPath = Join-Path $TestDrive 'opt-in-event.json'
@@ -221,7 +221,7 @@ Describe 'ReviewAgent action' {
         $env:GITHUB_OUTPUT = Join-Path $TestDrive 'eligibility-output.txt'
         Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
         & $script:actionScriptPath @script:contextArguments -phase context -metadataPath $metadataPath `
-            -workflowHeadSha 'abc123' -codeReviewSettingsJson '{"enabled":true,"excludedOwners":["excluded"]}' `
+            -workflowHeadSha 'abc123' -codeReviewSettingsJson '{"enabled":true,"excludedAuthors":["excluded"]}' `
             -bcqualitySettingsJson $script:bcqualitySettingsJson
 
         Get-Content -LiteralPath $env:GITHUB_OUTPUT | Should -Contain 'eligible=false'
@@ -234,7 +234,7 @@ Describe 'ReviewAgent action' {
 
         {
             & $script:actionScriptPath @script:contextArguments -phase context -metadataPath $metadataPath `
-                -workflowHeadSha 'abc123' -codeReviewSettingsJson '{"enabled":true,"excludedOwners":[]}' `
+                -workflowHeadSha 'abc123' -codeReviewSettingsJson '{"enabled":true,"excludedAuthors":[]}' `
                 -bcqualitySettingsJson $script:bcqualitySettingsJson
         } | Should -Throw '*identity does not match*'
     }
@@ -248,7 +248,7 @@ Describe 'ReviewAgent action' {
         $arguments.phase = 'context'
         $arguments.metadataPath = $metadataPath
         $arguments.workflowHeadSha = 'abc123'
-        $arguments.codeReviewSettingsJson = '{"enabled":true,"excludedOwners":[]}'
+        $arguments.codeReviewSettingsJson = '{"enabled":true,"excludedAuthors":[]}'
         $arguments.bcqualitySettingsJson = $script:bcqualitySettingsJson
 
         & $script:actionScriptPath @arguments
@@ -285,7 +285,7 @@ Describe 'ReviewAgent action' {
             & $script:actionScriptPath `
                 @script:contextArguments `
                 -phase context `
-                -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedOwners":[]}' `
+                -codeReviewSettingsJson '{"model":"root-model","leafModel":"leaf-model","excludedAuthors":[]}' `
                 -metadataPath $metadataPath `
                 -workflowHeadSha 'abc123'
         } | Should -Throw 'bcqualitySettingsJson is required.'

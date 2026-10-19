@@ -81,7 +81,7 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+steps\.context\.outputs\.model\s+\}\}'
         $runnerWorkflow | Should -Match 'leafModel:\s+\$\{\{\s+steps\.context\.outputs\.leafModel\s+\}\}'
         $runnerWorkflow | Should -Match 'bcqualitySettingsJson:\s+\$\{\{\s+steps\.context\.outputs\.bcqualitySettingsJson\s+\}\}'
-        $reviewAction | Should -Match ([regex]::Escape('$settings[''excludedOwners'']'))
+        $reviewAction | Should -Match ([regex]::Escape('$settings[''excludedAuthors'']'))
         $runnerWorkflow | Should -Match "needs\.prepare\.outputs\.eligible == 'true'"
         $runnerWorkflow | Should -Not -Match 'needs\.prepare\.outputs\.enabled'
         $runnerWorkflow | Should -Match 'model:\s+\$\{\{\s+needs\.prepare\.outputs\.model\s+\}\}'
@@ -163,7 +163,7 @@ Describe "Copilot code review workflows" {
         $runnerWorkflow | Should -Match 'run-id:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}'
         $runnerWorkflow | Should -Match "workflowHeadSha:\s+\$\{\{\s+github\.event\.workflow_run\.head_sha\s+\}\}"
         $runnerWorkflow | Should -Match "workflowRunId:\s+\$\{\{\s+github\.event\.workflow_run\.id\s+\}\}"
-        $reviewAction | Should -Match ([regex]::Escape('$owner -notin $excludedOwners'))
+        $reviewAction | Should -Match ([regex]::Escape('$owner -notin $excludedAuthors'))
         $runnerWorkflow | Should -Not -Match 'business-central-bot'
         $runnerWorkflow | Should -Not -Match 'ALLOWED_BASE_BRANCHES'
         $runnerWorkflow | Should -Not -Match 'Invoke-RestMethod'

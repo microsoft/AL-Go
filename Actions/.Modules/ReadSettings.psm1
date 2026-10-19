@@ -171,11 +171,11 @@ function GetDefaultSettings
             }
         }
         "CodeReviewAgent"                               = [ordered]@{
-            "enabled"        = $false
-            "branches"       = @()
-            "model"          = "gpt-5.6-sol"
-            "leafModel"      = "gpt-5.6-luna"
-            "excludedOwners" = @()
+            "enabled"         = $false
+            "branches"        = @()
+            "model"           = "gpt-5.6-sol"
+            "leafModel"       = "gpt-5.6-luna"
+            "excludedAuthors" = @()
         }
         "customCodeCops"                                = @()
         "preprocessorSymbols"                           = @()

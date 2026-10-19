@@ -24,7 +24,7 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
     "branches": [
       "main"
     ],
-    "excludedOwners": [
+    "excludedAuthors": [
       "dependabot[bot]"
     ]
   }
@@ -33,7 +33,7 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 
 Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CodeReviewAgent.branches` will be reviewed automatically.
 
-BCQuality defaults to the trusted `microsoft/BCQuality` marketplace release, retains all content layers, and supplies the internal AL review context. Advanced filtering remains available through `BCQuality.enabledLayers`, `disabledSkills`, and `knowledge`. An empty `enabledLayers` list retains Microsoft, community, and custom content; an explicit list retains only those layers. `CodeReviewAgent.branches` controls the target branches reviewed independently of pull request build branches. Its empty default means `main`; an explicit list replaces that fallback and uses ordered GitHub Actions branch patterns, including `!` exclusions. The trusted runner checks the authoritative pull request base branch against these patterns before review. `model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `excludedOwners` contains GitHub login names whose pull requests should not be reviewed. The owner list is empty by default.
+BCQuality defaults to the trusted `microsoft/BCQuality` marketplace release, retains all content layers, and supplies the internal AL review context. Advanced filtering remains available through `BCQuality.enabledLayers`, `disabledSkills`, and `knowledge`. An empty `enabledLayers` list retains Microsoft, community, and custom content; an explicit list retains only those layers. `CodeReviewAgent.branches` controls the target branches reviewed independently of pull request build branches. Its empty default means `main`; an explicit list replaces that fallback and uses ordered GitHub Actions branch patterns, including `!` exclusions. The trusted runner checks the authoritative pull request base branch against these patterns before review. `model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `excludedAuthors` contains GitHub login names whose pull requests should not be reviewed. The author list is empty by default.
 
 Both settings are populated by default. `CodeReviewAgent` must be enabled at repository level; project settings do not enable or disable the reviewer.
 
@@ -51,6 +51,12 @@ Each completed intake run has an independent review concurrency group, so pull r
 `SetupBCQuality` defaults to PowerShell 7 (`pwsh`), which the BCQuality indexing tools require. Review diagnostics record the action repository and requested ref separately. A full commit SHA is recorded when the action is SHA-pinned; for mutable branch/tag references, the commit is unknown (`null`) rather than incorrectly treating the ref or the reviewed repository's checkout as the action commit.
 
 Review generation requires the `microsoft/skills/review/al-code-review.md` super-skill and its layer to remain enabled and present in the filtered plugin. Invalid filtering configurations fail before any review leaves start. To disable automated review entirely, set `CodeReviewAgent.enabled` to `false` instead.
+
+## Review execution and artifacts
+
+Root and leaf model processes can read the sanitized review data and create or edit only their designated report file. Both patch-based and create/edit tools are available for model compatibility; shell commands, URL access, delegation, and automatic temporary-directory access remain unavailable. Copilot output is logged with workflow-command parsing suspended. Windows npm installations launch through Node rather than a batch shim.
+
+Review artifacts retain the generated task context after publication. Regional deduplication preserves case-sensitive fixes, deletion anchors retain their old/new line distinction, and per-file diffs treat filenames literally so Git pathspec characters cannot include another file's changes in inline-comment coordinates.
 
 ## Disable the reviewer
 

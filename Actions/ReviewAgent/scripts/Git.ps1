@@ -303,7 +303,7 @@ function Get-CopilotSecurityArguments {
 
     $writable = ($WritablePath -replace '\\', '/')
     return @(
-        '--available-tools', 'view', 'glob', 'rg', 'apply_patch',
+        '--available-tools', 'view', 'glob', 'rg', 'apply_patch', 'create', 'edit',
         '--disallow-temp-dir',
         '--allow-tool', 'view',
         '--allow-tool', 'glob',
