@@ -159,10 +159,20 @@ Describe "Deliver Module - Get-ArtifactsForDelivery Tests" {
         Should -Invoke GetArtifacts -ModuleName Deliver -Times 0 -Exactly
     }
 
-    It 'falls back to the latest build artifacts when current is specified and no releases exist' {
+    It 'does not fall back to the latest build artifacts by default when current is specified and no releases exist' {
         Mock GetReleases { return @() } -ModuleName Deliver
 
-        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps,Dependencies' -branch 'main' | Should -BeExactly 'MyProject'
+        { Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps,Dependencies' -branch 'main' } | Should -Throw '*was not found on any release*'
+
+        Should -Invoke DownloadRelease -ModuleName Deliver -Times 0 -Exactly
+        Should -Invoke GetArtifacts -ModuleName Deliver -Times 0 -Exactly
+        Should -Invoke DownloadArtifact -ModuleName Deliver -Times 0 -Exactly
+    }
+
+    It 'falls back to the latest build artifacts when current is specified, no releases exist and fallback is enabled' {
+        Mock GetReleases { return @() } -ModuleName Deliver
+
+        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps,Dependencies' -branch 'main' -useLatestBuildIfNoRelease $true | Should -BeExactly 'MyProject'
 
         Should -Invoke DownloadRelease -ModuleName Deliver -Times 0 -Exactly
         Should -Invoke GetArtifacts -ModuleName Deliver -Times 2 -Exactly
@@ -200,7 +210,7 @@ Describe "Deliver Module - Get-ArtifactsForDelivery Tests" {
         Mock GetReleases { return @() } -ModuleName Deliver
         Mock GetArtifacts { return @() } -ModuleName Deliver
 
-        { Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' } | Should -Throw '*Could not find any Apps artifacts*'
+        { Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'MyProject' -atypes 'Apps' -branch 'main' -useLatestBuildIfNoRelease $true } | Should -Throw '*Could not find any Apps artifacts*'
     }
 
     It 'uses the release asset naming convention for the project when downloading releases' {
@@ -214,7 +224,7 @@ Describe "Deliver Module - Get-ArtifactsForDelivery Tests" {
     It 'uses the build artifact naming convention for the project when falling back to the latest build' {
         Mock GetReleases { return @() } -ModuleName Deliver
 
-        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'My Project' -atypes 'Apps' -branch 'main' | Should -BeExactly 'My Project'
+        Get-ArtifactsForDelivery -token 'token' -artifacts 'current' -artifactsFolder $artifactsFolder -project 'My Project' -atypes 'Apps' -branch 'main' -useLatestBuildIfNoRelease $true | Should -BeExactly 'My Project'
 
         Should -Invoke GetArtifacts -ModuleName Deliver -Times 1 -Exactly -ParameterFilter { $projects -eq 'My Project' }
     }

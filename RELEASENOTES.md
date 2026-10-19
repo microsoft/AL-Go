@@ -51,6 +51,7 @@ As part of this, the warning comparison now also parses the raw AL compiler outp
 - Issue 2320 - Deliver to NuGet of release workflow failing with app and test app
 - Issue 2337 - Incremental builds: skipped projects re-publish Default-mode apps into ALL buildMode-specific artifacts
 - Issue 2281 - Publish To AppSource (and other delivery targets) now falls back to the artifacts from the latest build when `current` is specified and the repository doesn't contain any releases - the same fallback as the one already used when deploying to an environment.
+- Issue 2281 - Publish To AppSource can now optionally fall back to the artifacts from the latest successful CI/CD build when `current` is specified and the repository doesn't contain any releases. The fallback must be explicitly enabled when running the workflow.
 
 ### Valid SARIF URIs for file paths containing spaces
 

@@ -13,7 +13,9 @@ Param(
     [Parameter(HelpMessage = "Types of artifacts to deliver (Apps,Dependencies,TestApps)", Mandatory = $false)]
     [string] $atypes = "Apps,Dependencies,TestApps",
     [Parameter(HelpMessage = "Promote AppSource App to Go Live?", Mandatory = $false)]
-    [bool] $goLive
+    [bool] $goLive,
+    [Parameter(HelpMessage = "Use artifacts from the latest successful build if current is specified and no releases exist?", Mandatory = $false)]
+    [bool] $useLatestBuildIfNoRelease = $false
 )
 
 function ConnectAzStorageAccount {
@@ -104,7 +106,7 @@ foreach ($thisProject in $sortedProjectList) {
         }
         # Download the artifacts to deliver. Note that the project name returned is the name used in the
         # downloaded artifact folder names (release assets use a slightly different naming than build artifacts)
-        $project = Get-ArtifactsForDelivery -token $token -artifacts $artifacts -artifactsFolder $artifactsFolder -project $project -atypes $atypes -branch $ENV:GITHUB_REF_NAME
+        $project = Get-ArtifactsForDelivery -token $token -artifacts $artifacts -artifactsFolder $artifactsFolder -project $project -atypes $atypes -branch $ENV:GITHUB_REF_NAME -useLatestBuildIfNoRelease $useLatestBuildIfNoRelease
     }
 
     Write-Host "Project '$project'"
