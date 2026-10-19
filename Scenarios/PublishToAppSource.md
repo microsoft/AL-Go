@@ -86,11 +86,13 @@ If you navigate to the BingMaps.AppSource repository, you should be able to see 
 
 You can also run the **Publish To AppSource** workflow manually. The `appVersion` input determines which artifacts are submitted:
 
-- `current` uses the latest non-prerelease, non-draft release. If the repository doesn't contain any releases, it falls back to the artifacts from the latest successful CI/CD build.
+- `current` uses the latest non-prerelease, non-draft release.
 - `prerelease` uses the latest non-draft release.
 - `draft` uses the latest release, including draft releases.
 - `latest` uses the artifacts from the latest successful CI/CD build.
 - A version number uses the build artifacts matching that version.
+
+If `appVersion` is `current` and the repository doesn't contain any releases, the workflow fails by default. Select **Use artifacts from the latest successful CI/CD build if appVersion is current and no releases exist?** to explicitly allow the workflow to fall back to the latest successful CI/CD build.
 
 ## Preview
 

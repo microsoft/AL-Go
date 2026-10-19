@@ -63,7 +63,7 @@ Downloads the artifacts to deliver for a single project into the artifacts folde
 Downloads the artifacts matching the requested version into the artifacts folder.
 The version can be a release indicator (current, prerelease or draft), latest or a version number.
 If 'current' is requested and the repository doesn't contain any releases, the artifacts from the
-latest build are used instead - the same fallback as the one used when deploying to an environment.
+latest build can optionally be used instead.
 
 .PARAMETER Token
 The GitHub token used for accessing releases and artifacts
@@ -82,6 +82,9 @@ Comma separated list of artifact types to download (f.ex. Apps,Dependencies,Test
 
 .PARAMETER Branch
 The branch from which to get build artifacts
+
+.PARAMETER UseLatestBuildIfNoRelease
+Use artifacts from the latest successful build if current is specified and no releases exist
 
 .OUTPUTS
 The project name as used in the names of the downloaded artifact folders
@@ -104,7 +107,10 @@ function Get-ArtifactsForDelivery {
         [string] $Atypes,
 
         [Parameter(Mandatory = $true)]
-        [string] $Branch
+        [string] $Branch,
+
+        [Parameter(Mandatory = $false)]
+        [bool] $UseLatestBuildIfNoRelease = $false
     )
 
     $searchArtifacts = $false
@@ -147,7 +153,7 @@ function Get-ArtifactsForDelivery {
                 }
             }
         }
-        elseif ($Artifacts -eq "current") {
+        elseif ($Artifacts -eq "current" -and $UseLatestBuildIfNoRelease) {
             # No releases exist in the repository - fall back to the artifacts from the latest build
             Write-Host "::Warning::Current release was specified, but no releases were found. Searching for latest build artifacts instead."
             $searchArtifactsVersion = "latest"
