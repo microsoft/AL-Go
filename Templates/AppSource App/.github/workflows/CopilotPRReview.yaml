@@ -1,9 +1,7 @@
 name: Copilot PR Review
 
 on:
-  pull_request:
-    branches: [ 'main' ]
-    types: [ opened, reopened, synchronize, ready_for_review ]
+  workflow_dispatch:
 
 concurrency:
   group: copilot-pr-review-${{ github.event.pull_request.number }}
@@ -18,6 +16,7 @@ permissions:
 
 jobs:
   Intake:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Upload pull request metadata

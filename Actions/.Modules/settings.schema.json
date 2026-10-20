@@ -371,7 +371,8 @@
             "properties": {
                 "enabled": {
                     "type": "boolean",
-                    "description": "Enable Copilot code review workflows."
+                    "default": false,
+                    "description": "Enable Copilot code review in PTE and AppSource repositories. Update AL-Go System Files adds the automatic review triggers only when true; otherwise it removes the review workflows. Raw templates are manual-only and skip manual runs."
                 },
                 "branches": {
                     "type": "array",

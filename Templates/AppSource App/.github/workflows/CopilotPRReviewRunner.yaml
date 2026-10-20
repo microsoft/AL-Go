@@ -1,9 +1,7 @@
 name: Copilot PR Review Runner
 
 on:
-  workflow_run:
-    workflows: [ Copilot PR Review ]
-    types: [ completed ]
+  workflow_dispatch:
 
 concurrency:
   group: copilot-pr-review-runner-${{ github.event.workflow_run.id }}
@@ -21,7 +19,7 @@ env:
 
 jobs:
   prepare:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: [ windows-latest ]
     permissions:
       actions: read
