@@ -2,7 +2,7 @@
 
 *Prerequisites: A completed ["Register a customer production environment for Manual Deployment"](Scenarios/RegisterProductionEnvironment.md) scenario and a GhTokenWorkflow secret, created following [this walkthrough](GhTokenWorkflow.md)*
 
-1. Every time a CI/CD pipeline runs, it checks whether there are updates to AL-Go system files. AL-Go System files are scripts in the **.AL-Go folder** plus scripts and workflows in the **.github folder**. Looking at the latest CI/CD workflow, we can see that updates are available.
+1. Every time a CI/CD pipeline runs, it checks whether there are updates to AL-Go system files. AL-Go System files are scripts and settings in the **.AL-Go folder** plus scripts, settings, workflows and markdown files in the **.github folder** (see [AL-Go system files](#al-go-system-files) below). Looking at the latest CI/CD workflow, we can see that updates are available.
 
    ![Updates available](https://github.com/user-attachments/assets/81b20bd1-2fe9-4c03-970c-74c9f92ba726)
 
@@ -22,9 +22,26 @@
 
    ![Inspect](https://github.com/user-attachments/assets/faf9f848-85c0-4871-9e52-1fec2e1a70b8)
 
-1. By default, this workflow will apply any updates to the **workflow files (in .github\\workflows)** or **system scripts (in .AL-Go)** from the template repository used to spin up the repository. If you want to change branch or template Url, you can specify the `templateUrl@branch` when you run the workflow.
+1. By default, this workflow will apply any updates to the [AL-Go system files](#al-go-system-files) from the template repository used to spin up the repository. If you want to change branch or template Url, you can specify the `templateUrl@branch` when you run the workflow.
 
 If the only change would be advancing `templateSha` in `.github/AL-Go-Settings.json`, the workflow leaves the repository unchanged and reports that no updates are available. No commit or pull request is created, so this does not trigger CI/CD. The existing SHA remains pinned to the last applied template revision. Actual system-file changes, file removals, template URL or branch changes, and initial template setup are still applied.
+
+## AL-Go system files
+
+By default, the following files from the template repository are created/updated by Update AL-Go System Files:
+
+| Folder | Files | Description |
+| :-- | :-- | :-- |
+| `.github/workflows` | `*.yaml`, `*.yml` | Workflows |
+| `.github/workflows` | `*.md` | Agentic workflows |
+| `.github` | `*.copy.md` | Markdown files |
+| `.github` | `*.ps1` | Scripts |
+| `.github` | `AL-Go-Settings.json`, `*.settings.json` | Repository settings |
+| `.github/.agents` | `*.agent.md` | Agent definitions |
+| `.AL-Go` (per project) | `*.ps1` | Project scripts |
+| `.AL-Go` (per project) | `settings.json` | Project settings |
+
+PowerPlatform workflows (`_BuildPowerPlatformSolution.yaml`, `PushPowerPlatformChanges.yaml` and `PullPowerPlatformChanges.yaml`) are excluded unless the repository is a PTE with `powerPlatformSolutionFolder` set. Use the [customALGoFiles](settings.md#customALGoFiles) setting to include additional files or exclude files from this list.
 
 ______________________________________________________________________
 
