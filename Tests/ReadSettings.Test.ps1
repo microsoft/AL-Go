@@ -984,40 +984,92 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $metadata.properties.additionalCountries.sourcesSkipped[0].reason | Should -Be 'protected by settings Original'
         }
 
-        It 'Does not overwrite protection metadata through overwriteSettings' {
-            $dst = [ordered]@{ country = 'de' }
-            $metadata = @{ properties = @{ country = @{ protected = $true; sources = @('settings Original') } } }
-            $src = [PSCustomObject]@{
-                overwriteSettings = @('protectedSettings')
-                protectedSettings = @('keyVaultName')
-            }
+        It 'Ignores meta setting <target> as a <control> target' -TestCases @(
+            @{ control = 'protectedSettings'; target = 'ConditionalSettings' }
+            @{ control = 'protectedSettings'; target = 'protectedSettings' }
+            @{ control = 'protectedSettings'; target = 'overwriteSettings' }
+            @{ control = 'overwriteSettings'; target = 'ConditionalSettings' }
+            @{ control = 'overwriteSettings'; target = 'protectedSettings' }
+            @{ control = 'overwriteSettings'; target = 'overwriteSettings' }
+        ) {
+            param($control, $target)
 
-            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -metadata $metadata
+            Mock OutputWarning { }
+            Mock OutputDebug { }
+            $dst = [ordered]@{}
+            $metadata = @{}
+            $first = [PSCustomObject]@{ ConditionalSettings = @([PSCustomObject]@{ settings = [PSCustomObject]@{ country = 'de' } }) }
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $first -context 'settings Organization' -metadata $metadata
+            $second = [ordered]@{ ConditionalSettings = @([PSCustomObject]@{ settings = [PSCustomObject]@{ country = 'ch' } }) }
+            $second[$control] = @($target)
 
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src ([PSCustomObject]$second) -context 'settings Repository' -metadata $metadata
+            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $first -context 'settings Project' -metadata $metadata
+
+            $dst.ConditionalSettings.Count | Should -Be 3
+            $dst.ConditionalSettings[0].settings.country | Should -Be 'de'
+            $dst.ConditionalSettings[1].settings.country | Should -Be 'ch'
+            $dst.ConditionalSettings[2].settings.country | Should -Be 'de'
             $dst.Contains('protectedSettings') | Should -BeFalse
-            $metadata.properties.country.protected | Should -BeTrue
-            $metadata.properties.country.sources | Should -Be @('settings Original')
-            $metadata.properties.Contains('keyVaultName') | Should -BeFalse
-            $dst.country | Should -Be 'de'
+            $dst.Contains('overwriteSettings') | Should -BeFalse
+            $metadata.properties.ContainsKey('protectedSettings') | Should -BeFalse
+            $metadata.properties.ContainsKey('overwriteSettings') | Should -BeFalse
+            $metadata.properties.ConditionalSettings.ContainsKey('protected') | Should -BeFalse
+            $metadata.properties.ConditionalSettings.ContainsKey('sourcesSkipped') | Should -BeFalse
+            $metadata.properties.ConditionalSettings.sources | Should -Be @('settings Organization', 'settings Repository', 'settings Project')
+            Should -Invoke OutputWarning -Exactly -Times 0
+            $operation = if ($control -eq 'protectedSettings') { 'protection' } else { 'overwrite' }
+            Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $Message -eq "Skipping $operation of meta setting $target" }
         }
 
-        It 'Does not let protectedSettings protect itself from processing' {
-            $dst = [ordered]@{ country = 'de' }
-            $metadata = @{ properties = @{ country = @{ protected = $true; sources = @('settings Original') } } }
-            $src = [PSCustomObject]@{
-                protectedSettings = @('protectedSettings', 'keyVaultName')
-                country = 'ch'
+        It 'Merges and returns ConditionalSettings despite <control> (empty organization array: <emptyOrganizationArray>)' -TestCases @(
+            @{ control = 'protectedSettings'; emptyOrganizationArray = $false }
+            @{ control = 'overwriteSettings'; emptyOrganizationArray = $false }
+            @{ control = 'protectedSettings'; emptyOrganizationArray = $true }
+            @{ control = 'overwriteSettings'; emptyOrganizationArray = $true }
+        ) {
+            param($control, $emptyOrganizationArray)
+
+            Mock OutputWarning { }
+            $orgSettings = @{
+                ConditionalSettings = @(@{ buildModes = @('ValidateUS'); settings = @{ additionalCountries = @('at'); companyName = 'Organization' } })
             }
+            if ($emptyOrganizationArray) {
+                $orgSettings.ConditionalSettings = @()
+            }
+            $orgSettings[$control] = @('ConditionalSettings')
+            $repoSettings = @{
+                ConditionalSettings = @(@{ buildModes = @('ValidateUS'); settings = @{ additionalCountries = @('ch'); country = 'ch' } })
+            }
+            $repoSettings[$control] = @('ConditionalSettings')
+            $orgSettings = $orgSettings | ConvertTo-Json -Depth 99
+            $repoSettings = $repoSettings | ConvertTo-Json -Depth 99
+            $metadata = @{}
 
-            MergeCustomObjectIntoOrderedDictionary -dst $dst -src $src -context 'settings Test' -metadata $metadata
+            $settings = ReadSettings -baseFolder $TestDrive -project '' -repoName 'repo' -workflowName '' -buildMode 'ValidateUS' -orgSettingsVariableValue $orgSettings -repoSettingsVariableValue $repoSettings -environmentSettingsVariableValue '' -metadata $metadata
 
-            $dst.Contains('protectedSettings') | Should -BeFalse
-            $metadata.properties.Contains('protectedSettings') | Should -BeFalse
-            $metadata.properties.Contains('keyVaultName') | Should -BeFalse
-            $dst.country | Should -Be 'de'
-            $metadata.properties.country.sourcesSkipped.Count | Should -Be 1
-            $metadata.properties.country.sourcesSkipped[0].source | Should -Be 'settings Test'
-            $metadata.properties.country.sourcesSkipped[0].reason | Should -Be 'protected by settings Original'
+            $settings.Contains('ConditionalSettings') | Should -BeTrue
+            if ($emptyOrganizationArray) {
+                $settings.ConditionalSettings.Count | Should -Be 1
+                $settings.additionalCountries | Should -Be @('ch')
+            }
+            else {
+                $settings.ConditionalSettings.Count | Should -Be 2
+                $settings.ConditionalSettings[0].settings.companyName | Should -Be 'Organization'
+                $settings.companyName | Should -Be 'Organization'
+                $settings.additionalCountries | Should -Be @('at', 'ch')
+                $metadata.properties.additionalCountries.sources | Should -Be @(
+                    'default'
+                    'settings ALGoOrgSettings (Variable) > conditional settings for buildModes: ValidateUS'
+                    'settings ALGoRepoSettings (Variable) > conditional settings for buildModes: ValidateUS'
+                )
+            }
+            $settings.ConditionalSettings[-1].settings.country | Should -Be 'ch'
+            $metadata.properties.ConditionalSettings.sources | Should -Be @('settings ALGoOrgSettings (Variable)', 'settings ALGoRepoSettings (Variable)')
+            $metadata.properties.ConditionalSettings.ContainsKey('protected') | Should -BeFalse
+            $metadata.properties.ConditionalSettings.ContainsKey('sourcesSkipped') | Should -BeFalse
+            $settings.country | Should -Be 'ch'
+            Should -Invoke OutputWarning -Exactly -Times 0
         }
 
         It 'protectedSettings are not overridden by overwriteSettings unless source also marks them protected' {

@@ -36,7 +36,13 @@ function MergeCustomObjectIntoOrderedDictionary {
     # Extract the list of protected settings from the source object
     $srcProtectedSettings = @()
     if ($src.PSObject.Properties.Name -contains 'protectedSettings') {
-        $srcProtectedSettings = @($src.protectedSettings)
+        $srcProtectedSettings = @($src.protectedSettings | Where-Object {
+            if ($_ -in @('overwriteSettings', 'protectedSettings', 'ConditionalSettings')) {
+                OutputDebug "Skipping protection of meta setting $_"
+                return $false
+            }
+            return $true
+        })
     }
 
     # If the src object contains property 'overwriteSettings' (list of settings), remove these settings from the dst object, so that they can be re-added with the new value later on
@@ -44,8 +50,8 @@ function MergeCustomObjectIntoOrderedDictionary {
         $src.overwriteSettings | ForEach-Object {
             $prop = $_
 
-            if ($_ -in @('overwriteSettings', 'protectedSettings')) {
-                OutputDebug "Skipping overwrite of metadata setting $prop"
+            if ($_ -in @('overwriteSettings', 'protectedSettings', 'ConditionalSettings')) {
+                OutputDebug "Skipping overwrite of meta setting $prop"
                 return
             }
 
@@ -70,7 +76,7 @@ function MergeCustomObjectIntoOrderedDictionary {
         $prop = $_.Name
 
         if ($prop -in @('overwriteSettings', 'protectedSettings')) {
-            OutputDebug "Skipping initialization of metadata setting $prop"
+            OutputDebug "Skipping initialization of meta setting $prop"
             return
         }
 

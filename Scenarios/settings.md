@@ -327,7 +327,7 @@ then, after merging, the result settings object will contain the following value
 }
 ```
 
-> _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value.
+> _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value. The meta settings `ConditionalSettings`, `overwriteSettings`, and `protectedSettings` are ignored when listed in `overwriteSettings`. To replace an actual setting conditionally, use `overwriteSettings` inside the `settings` object of a matching `ConditionalSettings` block.
 
 ## Protected settings <a id="protectedSettings"></a>
 
@@ -366,7 +366,7 @@ Skipped overrides do not change the protected settings' sources in the workflow 
 
 Protection only takes effect when the source provides the setting's value; listing a name alone does nothing. A later source can change a protected setting only if it also lists that setting in its own `protectedSettings` and supplies a value. `overwriteSettings` alone cannot bypass protection. These rules also apply to `customSettings`, even though it is applied last.
 
-> _**Note**_: `protectedSettings` is optional (effectively empty when omitted). It controls settings merging and is not included in the resolved settings.
+> _**Note**_: `protectedSettings` is optional (effectively empty when omitted). It controls settings merging and is not included in the resolved settings. The meta settings `ConditionalSettings`, `overwriteSettings`, and `protectedSettings` are ignored when listed in `protectedSettings`. To protect an actual setting conditionally, use `protectedSettings` inside the `settings` object of a matching `ConditionalSettings` block.
 
 Protection applies at the level where it is declared. To protect `alDoc.includeProjects`, place `protectedSettings` inside `alDoc`:
 
