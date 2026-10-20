@@ -453,7 +453,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
             $source = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows\$file"
             $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 1
             $yaml = [Yaml]::new($modified.Split("`n"))
-            $yaml.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:')
+            $yaml.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:') -Because "$State settings must not add automatic review triggers"
             $yaml.content | Should -Be ([Yaml]::Load($source)).content
         }
     }
@@ -2601,11 +2601,11 @@ Describe "GetFilesToUpdate (real template)" {
         foreach ($file in @('CopilotPRReview.yaml', 'CopilotPRReviewRunner.yaml')) {
             $source = Join-Path $templateFolder ".github/workflows/$file"
             if ($Enabled) {
-                $filesToInclude.sourceFullPath | Should -Contain $source
+                $filesToInclude.sourceFullPath | Should -Contain $source -Because "$State review workflows must be included"
                 @($filesToExclude | ForEach-Object { $_.sourceFullPath }) | Should -Not -Contain $source
             }
             else {
-                $filesToInclude.sourceFullPath | Should -Not -Contain $source
+                $filesToInclude.sourceFullPath | Should -Not -Contain $source -Because "$State review settings must exclude the workflows"
                 $filesToExclude.sourceFullPath | Should -Contain $source
             }
         }
