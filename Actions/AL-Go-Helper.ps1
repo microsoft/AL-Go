@@ -1689,7 +1689,7 @@ function CreateDevEnv {
                         New-Object -Type PSObject -Property $_
                     }
                 })
-            GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $dependenciesFolder -api_url $ENV:GITHUB_API_URL | ForEach-Object {
+            GetDependencies -probingPathsJson $settings.appDependencyProbingPaths -saveToPath $dependenciesFolder | ForEach-Object {
                 if ($_.startswith('(')) {
                     $installTestApps += $_
                 }

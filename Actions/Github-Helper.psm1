@@ -126,7 +126,6 @@ function InvokeWebRequest {
 function GetDependencies {
     Param(
         $probingPathsJson,
-        [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
         [string[]] $masks = @('Apps','Dependencies','TestApps')
     )

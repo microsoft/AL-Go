@@ -97,7 +97,7 @@ function GetLatestTemplateSha {
     try {
         $url = "$apiUrl/branches/$branch"
         Write-Host "Api URL: $url"
-        $result = Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $url
+        $result = InvokeWebRequest -Headers $headers -Uri $url
         $branchInfo = $result.Content | ConvertFrom-Json
     } catch {
         throw "Failed to update AL-Go System Files. Could not get the latest SHA from template ($templateUrl). (Error was $($_.Exception.Message))"
