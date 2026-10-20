@@ -71,6 +71,30 @@ Describe "Copilot code review workflows" {
         $reviewAction = Get-Content -Path (Join-Path $PSScriptRoot '..\..\Actions\ReviewAgent\ReviewAgent.ps1' -Resolve) -Encoding UTF8 -Raw
     }
 
+    It 'Ships manual-only review templates whose entire job graph skips manual dispatch in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension' }
+        @{ Template = 'AppSource App' }
+    ) {
+        param($Template)
+        . (Join-Path $PSScriptRoot '..\..\Actions\CheckForUpdates\yamlclass.ps1')
+        $folder = Join-Path $PSScriptRoot "..\..\Templates\$Template\.github\workflows"
+        $intake = [Yaml]::Load((Join-Path $folder 'CopilotPRReview.yaml'))
+        $runner = [Yaml]::Load((Join-Path $folder 'CopilotPRReviewRunner.yaml'))
+
+        $intake.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:')
+        $runner.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:')
+        $intake.Get('on:/workflow_dispatch:/').content | Should -BeNullOrEmpty
+        $runner.Get('on:/workflow_dispatch:/').content | Should -BeNullOrEmpty
+        $intake.GetNextLevel('jobs:/') | Should -Be @('Intake:')
+        $intake.GetProperty('jobs:/Intake:/if:') | Should -Be "github.event_name == 'pull_request'"
+        $runner.GetNextLevel('jobs:/') | Should -Be @('prepare:', 'review:', 'publish:')
+        $runner.GetProperty('jobs:/prepare:/if:') | Should -Be "github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'"
+        $runner.GetProperty('jobs:/review:/needs:') | Should -Be 'prepare'
+        $runner.GetProperty('jobs:/review:/if:') | Should -Be "needs.prepare.outputs.eligible == 'true'"
+        $runner.GetPropertyArray('jobs:/publish:/needs:') | Should -Be @('prepare', 'review')
+        $runner.GetProperty('jobs:/publish:/if:') | Should -Be "needs.review.result == 'success'"
+    }
+
     It 'Reads the repository-level opt-in setting from trusted content' {
         $runnerWorkflow | Should -Match 'name:\s+Checkout trusted settings'
         $runnerWorkflow | Should -Match 'get:\s+CodeReviewAgent,BCQuality'

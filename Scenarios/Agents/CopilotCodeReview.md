@@ -31,7 +31,9 @@ Add the following repository-level setting to `.github/AL-Go-Settings.json`:
 }
 ```
 
-Run the **Update AL-Go System Files** workflow to add the review workflows. Subsequent eligible pull requests targeting a branch configured in `CodeReviewAgent.branches` will be reviewed automatically.
+Run the **Update AL-Go System Files** workflow to add the review workflows and their automatic triggers. Subsequent eligible pull requests targeting a branch configured in `CodeReviewAgent.branches` will be reviewed automatically.
+
+Both PTE and AppSource raw templates contain manual-only (`workflow_dispatch`) review workflows. Their entry jobs skip manual runs, so copying the templates directly or through an older updater does not start reviews. The current updater adds the intake `pull_request` and runner `workflow_run` triggers only when `CodeReviewAgent.enabled` is `true`; manual runs remain no-ops. When the setting is missing or disabled, the current updater excludes/removes both review workflows.
 
 BCQuality defaults to the trusted `microsoft/BCQuality` marketplace release, retains all content layers, and supplies the internal AL review context. Advanced filtering remains available through `BCQuality.enabledLayers`, `disabledSkills`, and `knowledge`. An empty `enabledLayers` list retains Microsoft, community, and custom content; an explicit list retains only those layers. `CodeReviewAgent.branches` controls the target branches reviewed independently of pull request build branches. Its empty default means `main`; an explicit list replaces that fallback and uses ordered GitHub Actions branch patterns, including `!` exclusions. The trusted runner checks the authoritative pull request base branch against these patterns before review. `model` controls final self-review and consolidation, while `leafModel` controls the isolated review processes. `excludedAuthors` contains GitHub login names whose pull requests should not be reviewed. The author list is empty by default.
 
