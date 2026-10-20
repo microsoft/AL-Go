@@ -261,6 +261,7 @@ The ReadSettings action writes a **Settings sources** group to the workflow log.
 - A computed setting retains its earlier source followed by the derivation, for example `shell: default, derived from runs-on`.
 - A [protected setting](#protectedSettings) has ` (protected)` appended to its source entry.
 - If source metadata is unavailable, the group shows `unknown`.
+- The group is emitted after action-level transformations and includes pull-request or merge-group overrides and build/revision calculations for the selected versioning strategy.
 
 ## Overwrite settings <a id="overwriteSettings"></a>
 
