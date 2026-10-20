@@ -1,3 +1,7 @@
+### Include agentic workflows when updating system files from AL-Go or indirect templates
+
+Update AL-Go System Files will now also include .md files from .github/workflows. This is the recommended location for storing agentic workflows (.md files).
+
 ### Issues
 
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.
