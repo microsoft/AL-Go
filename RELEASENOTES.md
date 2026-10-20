@@ -10,6 +10,10 @@ The optional `protectedSettings` array lets a settings source retain a value whe
 
 The meta settings `ConditionalSettings`, `overwriteSettings`, and `protectedSettings` cannot themselves be protected or overwritten. Listing any of them in either control is ignored. The `ConditionalSettings` array still merges into resolved settings and retains its source history, while conditional blocks continue to be evaluated per source. Both controls remain supported inside matching blocks' `settings` objects.
 
+### Copilot code review for AL pull requests
+
+AL-Go repositories can now opt in to AI-powered review of AL pull requests, with configurable models, target branches, excluded authors, and BCQuality skills and knowledge. See [Enable Copilot code review](Scenarios/Agents/CopilotCodeReview.md) for setup, organization policy requirements, and operational details.
+
 ### Issues
 
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.

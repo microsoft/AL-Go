@@ -241,6 +241,23 @@ function GetDefaultSettings
         "enableCodeCop"                                 = $false
         "enableUICop"                                   = $false
         "enableCodeAnalyzersOnTestApps"                 = $false
+        "BCQuality"                                     = [ordered]@{
+            "marketplaceRepo" = "https://github.com/microsoft/BCQuality"
+            "version"         = "1.7"
+            "enabledLayers"   = @()
+            "disabledSkills"  = @()
+            "knowledge"       = [ordered]@{
+                "allow" = @()
+                "deny"  = @()
+            }
+        }
+        "CodeReviewAgent"                               = [ordered]@{
+            "enabled"         = $false
+            "branches"        = @()
+            "model"           = "gpt-5.6-sol"
+            "leafModel"       = "gpt-5.6-luna"
+            "excludedAuthors" = @()
+        }
         "customCodeCops"                                = @()
         "preprocessorSymbols"                           = @()
         "features"                                      = @()
