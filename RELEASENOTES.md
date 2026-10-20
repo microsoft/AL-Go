@@ -1,3 +1,7 @@
+### Copilot code review for AL pull requests
+
+AL-Go repositories can now opt in to AI-powered review of AL pull requests, with configurable models, target branches, excluded authors, and BCQuality skills and knowledge. See [Enable Copilot code review](Scenarios/Agents/CopilotCodeReview.md) for setup, organization policy requirements, and operational details.
+
 ### Issues
 
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.

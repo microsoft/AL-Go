@@ -49,6 +49,9 @@ function GetActionScript {
 Test the yaml structure of an action
 .PARAMETER ContinueOnError
 Require the action's run step to be non-blocking.
+
+.PARAMETER DefaultShell
+Expected default shell for the action.
 #>
 function YamlTest {
     Param(
@@ -56,6 +59,8 @@ function YamlTest {
         [string] $actionName,
         [string] $actionScript,
         $outputs = @{},
+        [ValidateSet('powershell', 'pwsh')]
+        [string] $DefaultShell = 'powershell',
         [switch] $ContinueOnError
     )
 
@@ -74,7 +79,7 @@ function YamlTest {
     $yaml.AppendLine("  shell:") | Out-Null
     $yaml.AppendLine("    description: Shell in which you want to run the action (powershell or pwsh)") | Out-Null
     $yaml.AppendLine("    required: false") | Out-Null
-    $yaml.AppendLine("    default: powershell") | Out-Null
+    $yaml.AppendLine("    default: $DefaultShell") | Out-Null
     $parameterString = ""
     $warningLines = @()
     $envLines = [System.Text.StringBuilder]::new()
@@ -172,7 +177,7 @@ function YamlTest {
 
 <#
 .SYNOPSIS
-Test that all actions are referenced from microsoft/AL-Go-Actions@<main|preview> or actions/ (by GitHub)
+Test that all actions and reusable workflows are referenced from approved repositories.
 #>
 function TestActionsReferences {
     param(
@@ -190,10 +195,9 @@ function TestActionsReferences {
     $alGoActionPattern = "^microsoft/AL-Go-Actions/*"
     $gitHubActionPattern = "^actions/*"
     $gitHubCodeQLActionPattern = "^github/codeql-action/*"
-
     $actionReferences | ForEach-Object {
         $origin = $_.Groups[1].Value
-        $version = $_.Groups[2].Value
+        $version = $_.Groups[2].Value.Trim()
 
         $origin | Should -Match "($alGoActionPattern|$gitHubActionPattern|$gitHubCodeQLActionPattern)"
 
@@ -205,7 +209,7 @@ function TestActionsReferences {
 
 <#
 .SYNOPSIS
-Test that all referenced workflows are coming from .github/workflows/
+Test that all referenced workflows are local or explicitly approved external workflows.
 #>
 function TestWorkflowReferences {
     param(
@@ -216,15 +220,14 @@ function TestWorkflowReferences {
     $yaml = Get-Content -Path $YamlPath -Raw
 
     # Test all referenced workflows are coming from .github/workflows/
-    $alGoWorkflowReferencePatterns = 'uses:\s*(.*).(yaml|yml)'
+    $alGoWorkflowReferencePatterns = 'uses:\s*[''"]?([^\s''"]+\.ya?ml)(?:@([^\s#''"]+))?[''"]?(?=\s|$)'
 
     $workflowReferences = [regex]::matches($yaml, $alGoWorkflowReferencePatterns)
 
-    $localWorkflowsPattern = '^./.github/workflows/*'
-
+    $localWorkflowsPattern = '^\./\.github/workflows/[^/]+\.ya?ml$'
     $workflowReferences | ForEach-Object {
         $workflowPath = $_.Groups[1].Value
-        $workflowPath | Should -Match "$localWorkflowsPattern"
+        $workflowPath | Should -Match $localWorkflowsPattern
     }
 }
 

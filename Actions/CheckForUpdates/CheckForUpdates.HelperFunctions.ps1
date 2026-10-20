@@ -133,6 +133,26 @@ function ModifyPullRequestHandlerWorkflow {
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
 }
 
+function ModifyCopilotPRReviewWorkflow {
+    Param(
+        [Yaml] $yaml,
+        [hashtable] $repoSettings
+    )
+
+    $codeReviewBranches = @('main')
+    if (
+        $repoSettings.Keys -contains 'CodeReviewAgent' -and
+        $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
+        $repoSettings.CodeReviewAgent.Keys -contains 'branches' -and
+        @($repoSettings.CodeReviewAgent.branches).Count -gt 0
+    ) {
+        $codeReviewBranches = @($repoSettings.CodeReviewAgent.branches)
+    }
+
+    $branchesJson = ConvertTo-Json -InputObject $codeReviewBranches -Compress
+    $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
+}
+
 function ModifyRunsOnAndShell {
     Param(
         [Yaml] $yaml,
@@ -573,7 +593,11 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
+    if ([System.IO.Path]::GetFileName($srcFile) -eq "CopilotPRReview.yaml") {
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
+    }
+
+    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting', 'CopilotPRReviewRunner')
     $allowedRunners = @('windows-latest', 'ubuntu-latest')
     $modifyRunsOnAndShell = $true
 
@@ -1017,6 +1041,13 @@ function GetDefaultFilesToExclude {
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+        )
+    }
+
+    if ($settings.Keys -notcontains 'CodeReviewAgent' -or !$settings['CodeReviewAgent']['enabled']) {
+        $filesToExclude += @(
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
         )
     }
 
