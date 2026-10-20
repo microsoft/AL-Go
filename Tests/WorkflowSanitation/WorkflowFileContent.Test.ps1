@@ -88,7 +88,7 @@ Describe "Copilot code review workflows" {
         $intake.GetNextLevel('jobs:/') | Should -Be @('Intake:')
         $intake.GetProperty('jobs:/Intake:/if:') | Should -Be "github.event_name == 'pull_request'"
         $runner.GetNextLevel('jobs:/') | Should -Be @('prepare:', 'review:', 'publish:')
-        $runner.GetProperty('jobs:/prepare:/if:') | Should -Be "github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'"
+        $runner.GetProperty('jobs:/prepare:/if:') | Should -Be "github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'" -Because 'A successful manual intake run must not start runner preparation without PR metadata'
         $runner.GetProperty('jobs:/review:/needs:') | Should -Be 'prepare'
         $runner.GetProperty('jobs:/review:/if:') | Should -Be "needs.prepare.outputs.eligible == 'true'"
         $runner.GetPropertyArray('jobs:/publish:/needs:') | Should -Be @('prepare', 'review')
