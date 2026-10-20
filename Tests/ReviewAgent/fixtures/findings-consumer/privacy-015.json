@@ -1,0 +1,38 @@
+{
+  "skill": { "id": "al-performance-review", "version": 1 },
+  "outcome": "completed",
+  "summary": {
+    "counts": { "blocker": 0, "major": 3, "minor": 0, "info": 0 },
+    "coverage": { "worklist-size": 4, "items-evaluated": 4 }
+  },
+  "findings": [
+    {
+      "id": "microsoft/knowledge/performance/httpclient-inside-write-transaction-holds-locks.md#external-crm-sync",
+      "severity": "major",
+      "message": "Synthetic transaction finding retaining the original suffixed ID.",
+      "location": { "file": "src/ExternalCRMSync.Codeunit.al", "line": 32, "range": { "start-line": 32, "end-line": 36 } },
+      "references": [{ "path": "microsoft/knowledge/performance/httpclient-inside-write-transaction-holds-locks.md" }],
+      "confidence": "high",
+      "domain": "Performance"
+    },
+    {
+      "id": "microsoft/knowledge/performance/httpclient-inside-write-transaction-holds-locks.md#outbox-email-dispatcher",
+      "severity": "major",
+      "message": "Synthetic outbox finding retaining the original suffixed ID.",
+      "location": { "file": "src/OutboxEmailDispatcher.Codeunit.al", "line": 15, "range": { "start-line": 15, "end-line": 26 } },
+      "references": [{ "path": "microsoft/knowledge/performance/httpclient-inside-write-transaction-holds-locks.md" }],
+      "confidence": "high",
+      "domain": "Performance"
+    },
+    {
+      "id": "microsoft/knowledge/performance/job-queue-external-effects-must-be-idempotent.md#outbox-email-dispatcher",
+      "severity": "major",
+      "message": "Synthetic retry finding retaining the original suffixed ID.",
+      "location": { "file": "src/OutboxEmailDispatcher.Codeunit.al", "line": 21, "range": { "start-line": 21, "end-line": 26 } },
+      "references": [{ "path": "microsoft/knowledge/performance/job-queue-external-effects-must-be-idempotent.md" }],
+      "confidence": "high",
+      "domain": "Performance"
+    }
+  ],
+  "suppressed": []
+}

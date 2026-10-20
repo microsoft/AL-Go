@@ -1,0 +1,18 @@
+{
+  "skill": { "id": "al-error-handling-review", "version": 1 },
+  "outcome": "completed",
+  "summary": {
+    "counts": { "blocker": 0, "major": 0, "minor": 1, "info": 0 },
+    "coverage": { "worklist-size": 1, "items-evaluated": 1 }
+  },
+  "findings": [{
+    "id": "agent:httpclient-post-failure-reported-as-success",
+    "severity": "minor",
+    "message": "Synthetic agent finding retaining the original uncited high confidence.",
+    "location": { "file": "src/BCBHttpDelivery.Codeunit.al", "line": 12, "range": { "start-line": 12, "end-line": 12 } },
+    "references": [],
+    "confidence": "high",
+    "domain": "Error Handling"
+  }],
+  "suppressed": []
+}
