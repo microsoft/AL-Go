@@ -1005,6 +1005,22 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         ($yaml.Get('jobs:/CreateRelease:/steps:/- name: Create release/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
     }
 
+    It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension' }
+        @{ Template = 'AppSource App' }
+    ) {
+        param($Template)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $source = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows\CopilotPRReviewRunner.yaml"
+        Mock ReadSettings { @{ 'runs-on' = 'self-hosted, custom-label'; shell = 'powershell' } }
+
+        $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 1
+
+        ([regex]::Matches($modified, 'runs-on:\s+\[\s+windows-latest\s+\]')).Count | Should -Be 3
+        $modified | Should -Not -Match 'self-hosted|custom-label'
+        $modified | Should -Match 'shell: pwsh'
+    }
+
     It 'ModifyRunsOnAndShell rejects powershell with ubuntu-latest' {
         $yaml = [Yaml]::new(@(
             "jobs:",
@@ -1017,6 +1033,74 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         }
 
         { ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings } | Should -Throw '*The shell cannot be set to powershell when runs-on is ubuntu-latest*'
+    }
+
+    It 'Adds Copilot review triggers only when enabled in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension' }
+        @{ Template = 'AppSource App' }
+    ) {
+        param($Template)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $workflowFolder = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows"
+        $reviewSettings = @{ enabled = $true }
+        Mock ReadSettings { @{ 'runs-on' = 'windows-latest'; shell = 'pwsh'; CodeReviewAgent = $reviewSettings } }
+
+        foreach ($branches in @(
+            @{ expected = @('main') }
+            @{ configured = @(); expected = @('main') }
+            @{ configured = @('main', 'release/**', '!release/**-alpha'); expected = @('main', 'release/**', '!release/**-alpha') }
+            @{ configured = @("release/o'clock", 'release/"quoted"'); expected = @("release/o'clock", 'release/"quoted"') }
+        )) {
+            if ($branches.ContainsKey('configured')) {
+                $reviewSettings.branches = $branches.configured
+            }
+            $intakeContent = GetWorkflowContentWithChangesFromSettings -srcFile (Join-Path $workflowFolder 'CopilotPRReview.yaml') -repoSettings @{} -depth 1
+            $intake = [Yaml]::new($intakeContent.Split("`n"))
+            $intake.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:', 'pull_request:')
+            $intake.GetProperty('on:/pull_request:/branches:') | Should -Be (ConvertTo-Json -InputObject $branches.expected -Compress)
+            $intake.GetPropertyArray('on:/pull_request:/types:') | Should -Be @('opened', 'reopened', 'synchronize', 'ready_for_review')
+        }
+
+        $runnerContent = GetWorkflowContentWithChangesFromSettings -srcFile (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -repoSettings @{} -depth 1
+        $runner = [Yaml]::new($runnerContent.Split("`n"))
+        $runner.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:', 'workflow_run:')
+        $runner.GetPropertyArray('on:/workflow_run:/workflows:') | Should -Be @('Copilot PR Review')
+        $runner.GetPropertyArray('on:/workflow_run:/types:') | Should -Be @('completed')
+
+        foreach ($workflow in @(
+            @{ yaml = $intake; file = 'CopilotPRReview.yaml' }
+            @{ yaml = $runner; file = 'CopilotPRReviewRunner.yaml' }
+        )) {
+            $original = [Yaml]::Load((Join-Path $workflowFolder $workflow.file))
+            $original.Replace('on:', @())
+            $workflow.yaml.Replace('on:', @())
+            $workflow.yaml.content | Should -Be $original.content -Because 'Opt-in must preserve job guards, permissions, concurrency and steps'
+        }
+    }
+
+    It 'Keeps Copilot review triggers inert with <State> settings in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension'; State = 'missing'; ReviewSettings = $null }
+        @{ Template = 'Per Tenant Extension'; State = 'disabled'; ReviewSettings = @{ enabled = $false } }
+        @{ Template = 'Per Tenant Extension'; State = 'missing enabled'; ReviewSettings = @{ branches = @('release/**') } }
+        @{ Template = 'AppSource App'; State = 'missing'; ReviewSettings = $null }
+        @{ Template = 'AppSource App'; State = 'disabled'; ReviewSettings = @{ enabled = $false } }
+        @{ Template = 'AppSource App'; State = 'missing enabled'; ReviewSettings = @{ branches = @('release/**') } }
+    ) {
+        param($Template, $State, $ReviewSettings)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $settings = @{ 'runs-on' = 'windows-latest'; shell = 'pwsh' }
+        if ($null -ne $ReviewSettings) {
+            $settings.CodeReviewAgent = $ReviewSettings
+        }
+        Mock ReadSettings { $settings }
+
+        foreach ($file in @('CopilotPRReview.yaml', 'CopilotPRReviewRunner.yaml')) {
+            $source = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows\$file"
+            $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 1
+            $yaml = [Yaml]::new($modified.Split("`n"))
+            $yaml.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:') -Because "$State settings must not add automatic review triggers"
+            $yaml.content | Should -Be ([Yaml]::Load($source)).content
+        }
     }
 
     It 'ModifyRunsOnAndShell rejects unsupported shells' {
@@ -3481,6 +3565,20 @@ jobs:
     uses: contoso/AL-Go/Actions@dev
 "@
     }
+
+    It "Replaces the Copilot review action reference" {
+        $srcContent = [ref]@"
+steps:
+  - uses: microsoft/AL-Go-Actions/ReviewAgent@main
+"@
+
+        ReplaceOwnerRepoAndBranch -srcContent $srcContent -templateOwner 'contoso' -templateBranch 'prototype/review'
+
+        $srcContent.Value | Should -Be @"
+steps:
+  - uses: contoso/AL-Go/Actions/ReviewAgent@prototype/review
+"@
+    }
 }
 
 Describe "IsDirectALGo" {
@@ -4681,6 +4779,7 @@ Describe "GetFilesToUpdate (real template)" {
     BeforeAll {
         $actionName = "CheckForUpdates"
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        . (Join-Path $scriptRoot "yamlclass.ps1")
         . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realPTETemplateFolder', Justification = 'False positive.')]
@@ -4698,12 +4797,55 @@ Describe "GetFilesToUpdate (real template)" {
             ".github/workflows/PullPowerPlatformChanges.yaml",
             ".github/workflows/PushPowerPlatformChanges.yaml"
         )
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'copilotPRReviewFiles', Justification = 'False positive.')]
+        $copilotPRReviewFiles = @(
+            ".github/workflows/CopilotPRReview.yaml",
+            ".github/workflows/CopilotPRReviewRunner.yaml"
+        )
+    }
+
+    It 'Includes or excludes both review workflows for <State> in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension'; State = 'missing'; Enabled = $null }
+        @{ Template = 'Per Tenant Extension'; State = 'disabled'; Enabled = $false }
+        @{ Template = 'Per Tenant Extension'; State = 'enabled'; Enabled = $true }
+        @{ Template = 'AppSource App'; State = 'missing'; Enabled = $null }
+        @{ Template = 'AppSource App'; State = 'disabled'; Enabled = $false }
+        @{ Template = 'AppSource App'; State = 'enabled'; Enabled = $true }
+    ) {
+        param($Template, $State, $Enabled)
+        $settings = @{
+            type = $(if ($Template -eq 'Per Tenant Extension') { 'PTE' } else { 'AppSource App' })
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles = @()
+            customALGoFiles = @{ filesToInclude = @(); filesToExclude = @() }
+        }
+        if ($null -ne $Enabled) {
+            $settings.CodeReviewAgent = @{ enabled = $Enabled }
+        }
+        $templateFolder = Join-Path $PSScriptRoot "..\Templates\$Template" -Resolve
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        foreach ($file in $copilotPRReviewFiles) {
+            $source = Join-Path $templateFolder $file
+            if ($Enabled) {
+                $filesToInclude.sourceFullPath | Should -Contain $source -Because "$State review workflows must be included"
+                @($filesToExclude | ForEach-Object { $_.sourceFullPath }) | Should -Not -Contain $source
+            }
+            else {
+                $filesToInclude.sourceFullPath | Should -Not -Contain $source -Because "$State review settings must exclude the workflows"
+                $filesToExclude.sourceFullPath | Should -Contain $source
+            }
+        }
     }
 
     It 'Return the correct files to exclude when type is PTE and powerPlatformSolutionFolder is not empty' {
         $settings = @{
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
+            CodeReviewAgent            = @{
+                enabled = $true
+            }
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
                 filesToInclude = @()
@@ -4713,11 +4855,12 @@ Describe "GetFilesToUpdate (real template)" {
 
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
+        $expectedFilesToInclude = $powerPlatformFiles + $copilotPRReviewFiles
         $filesToInclude | Should -Not -BeNullOrEmpty
-        $filesToInclude.Count | Should -Be 25
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[0])
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[1])
-        $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[2])
+        $filesToInclude.Count | Should -Be ($expectedFilesToInclude.Count + 22)
+        $expectedFilesToInclude | ForEach-Object {
+            $filesToInclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+        }
 
         # No files to exclude or remove
         $filesToExclude | Should -BeNullOrEmpty
@@ -4759,7 +4902,10 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realPTETemplateFolder
 
         # The default exclude entries (PowerPlatform files) and the repository settings' own exclude entry are both applied
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $powerPlatformFiles[0])
+        $expectedFilesToExclude = $powerPlatformFiles + $copilotPRReviewFiles
+        $expectedFilesToExclude | ForEach-Object {
+            $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+        }
         $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildALGoProject.yaml")
         $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realPTETemplateFolder ".github/workflows/_BuildALGoProject.yaml")
     }
@@ -4785,6 +4931,41 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude.sourceFullPath | Should -Not -Contain $ppFileSourcePath
     }
 
+    It 'Applies CodeReviewAgent branches to the Copilot review intake workflow' {
+        $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder $copilotPRReviewFiles[0]))
+
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings @{
+            CodeReviewAgent = @{
+                branches = @('main', 'release/*')
+            }
+        }
+
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["main","release/*"]'
+    }
+
+    It 'Uses main when the merged CodeReviewAgent branch list is empty' {
+        $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder $copilotPRReviewFiles[0]))
+
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings @{
+            CodeReviewAgent = @{ branches = @() }
+        }
+
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be 'branches: ["main"]'
+    }
+
+    It 'Escapes CodeReviewAgent branches in the Copilot review intake workflow' {
+        $yaml = [Yaml]::Load((Join-Path $realPTETemplateFolder $copilotPRReviewFiles[0]))
+
+        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings @{
+            CodeReviewAgent = @{
+                branches = @("release/o'clock")
+            }
+        }
+
+        $expectedBranches = ConvertTo-Json -InputObject @("release/o'clock") -Compress
+        $yaml.Get('on:/pull_request:/branches:').content | Should -Be "branches: $expectedBranches"
+    }
+
     It 'Return PP files in filesToExclude when type is PTE but powerPlatformSolutionFolder is empty' {
         $settings = @{
             type                        = "PTE"
@@ -4808,11 +4989,13 @@ Describe "GetFilesToUpdate (real template)" {
             }
         }
 
-        # All PP files to remove
-        $filesToExclude | Should -Not -BeNullOrEmpty
-        $filesToExclude.Count | Should -Be $powerPlatformFiles.Count
+        # All PP and Copilot review files to remove
+        $expectedFilesToExclude = $powerPlatformFiles + $copilotPRReviewFiles
 
-        $powerPlatformFiles | ForEach-Object {
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be $expectedFilesToExclude.Count
+
+        $expectedFilesToExclude | ForEach-Object {
             $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
             $filesToExclude.destinationFullPath | Should -Contain (Join-Path $baseFolder $_)
         }
@@ -4834,11 +5017,14 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 24
 
-        # Two files to remove
+        # The unused settings file and the disabled Copilot review workflows should be removed
+        $expectedFilesToExclude = $copilotPRReviewFiles + @(".github/Test Next Major.settings.json")
         $filesToExclude | Should -Not -BeNullOrEmpty
-        $filesToExclude.Count | Should -Be 1
-        $filesToExclude[0].sourceFullPath | Should -Be (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-        $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder '.github/Test Next Major.settings.json')
+        $filesToExclude.Count | Should -Be $expectedFilesToExclude.Count
+        $expectedFilesToExclude | ForEach-Object {
+            $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+            $filesToExclude.destinationFullPath | Should -Contain (Join-Path $baseFolder $_)
+        }
     }
 
     It 'Return the correct files when unusedALGoSystemFiles is specified and no PP solution is present' {
@@ -4857,13 +5043,14 @@ Describe "GetFilesToUpdate (real template)" {
         $filesToInclude | Should -Not -BeNullOrEmpty
         $filesToInclude.Count | Should -Be 21
 
-        # Four files to remove
-        $filesToExclude | Should -Not -BeNullOrEmpty
-        $filesToExclude.Count | Should -Be 4
+        # Power Platform, unused settings, and disabled Copilot review files should be removed
+        $expectedFilesToExclude = $powerPlatformFiles + $copilotPRReviewFiles + @(".github/Test Next Major.settings.json")
 
-        $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder ".github/Test Next Major.settings.json")
-        $powerPlatformFiles | ForEach-Object {
-             $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
+        $filesToExclude | Should -Not -BeNullOrEmpty
+        $filesToExclude.Count | Should -Be $expectedFilesToExclude.Count
+
+        $expectedFilesToExclude | ForEach-Object {
+            $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realPTETemplateFolder $_)
         }
     }
 
@@ -4871,6 +5058,9 @@ Describe "GetFilesToUpdate (real template)" {
         $settings = @{
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
+            CodeReviewAgent            = @{
+                enabled = $true
+            }
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
                 filesToInclude = @()
@@ -4920,6 +5110,9 @@ Describe "GetFilesToUpdate (real template)" {
         $settings = @{
             type                        = "PTE"
             powerPlatformSolutionFolder = "PowerPlatformSolution"
+            CodeReviewAgent            = @{
+                enabled = $true
+            }
             unusedALGoSystemFiles       = @()
             customALGoFiles             = @{
                 filesToInclude = @()
@@ -4986,15 +5179,20 @@ Describe "GetFilesToUpdate (real template)" {
 
         $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $realAppSourceAppTemplateFolder
 
-        # PowerPlatform files should be excluded for AppSource App too (same as PTE)
         $filesToInclude | Should -Not -BeNullOrEmpty
+        $filesToExclude | Should -Not -BeNullOrEmpty
 
-        $ppFiles = $filesToInclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
-        $ppFiles | Should -BeNullOrEmpty
+        # PowerPlatform files should not be included/excluded as they are missing in AppSource Template
+        $powerPlatformFiles | ForEach-Object {
+            $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder $_)
+            $filesToExclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder $_)
+        }
 
-        # No files to remove that match PP files as they are not in the template
-        $ppExcludes = $filesToExclude | Where-Object { $_.sourceFullPath -like "*BuildPowerPlatformSolution*" }
-        $ppExcludes | Should -BeNullOrEmpty
+        # Copilot PR review files should be included/excluded correctly
+        $copilotPRReviewFiles | ForEach-Object {
+            $filesToInclude.sourceFullPath | Should -Not -Contain (Join-Path $realAppSourceAppTemplateFolder $_)
+            $filesToExclude.sourceFullPath | Should -Contain (Join-Path $realAppSourceAppTemplateFolder $_)
+        }
     }
 
     It 'GetFilesToUpdate with empty unusedALGoSystemFiles array does not exclude any files' {

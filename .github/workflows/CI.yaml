@@ -45,6 +45,14 @@ jobs:
         run: |
           . (Join-Path "." "Tests/runtests.ps1") -Path "Tests/WorkflowSanitation"
 
+      - name: Test ReviewAgent engine and metrics (PS7)
+        shell: pwsh
+        run: |
+          $result = Invoke-Pester -Path "Tests/ReviewAgent" -PassThru
+          if ($result.FailedCount -gt 0 -or $result.PassedCount -eq 0) {
+            throw "ReviewAgent tests failed or no tests ran."
+          }
+
       - name: Test aka.ms links in markdown files (${{ matrix.psVersion }})
         if: github.repository_owner == 'microsoft'
         run: |
