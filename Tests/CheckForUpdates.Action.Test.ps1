@@ -390,6 +390,74 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         { ModifyRunsOnAndShell -yaml $yaml -repoSettings $repoSettings } | Should -Throw '*The shell cannot be set to powershell when runs-on is ubuntu-latest*'
     }
 
+    It 'Adds Copilot review triggers only when enabled in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension' }
+        @{ Template = 'AppSource App' }
+    ) {
+        param($Template)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $workflowFolder = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows"
+        $reviewSettings = @{ enabled = $true }
+        Mock ReadSettings { @{ 'runs-on' = 'windows-latest'; shell = 'pwsh'; CodeReviewAgent = $reviewSettings } }
+
+        foreach ($branches in @(
+            @{ expected = @('main') }
+            @{ configured = @(); expected = @('main') }
+            @{ configured = @('main', 'release/**', '!release/**-alpha'); expected = @('main', 'release/**', '!release/**-alpha') }
+            @{ configured = @("release/o'clock", 'release/"quoted"'); expected = @("release/o'clock", 'release/"quoted"') }
+        )) {
+            if ($branches.ContainsKey('configured')) {
+                $reviewSettings.branches = $branches.configured
+            }
+            $intakeContent = GetWorkflowContentWithChangesFromSettings -srcFile (Join-Path $workflowFolder 'CopilotPRReview.yaml') -repoSettings @{} -depth 1
+            $intake = [Yaml]::new($intakeContent.Split("`n"))
+            $intake.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:', 'pull_request:')
+            $intake.GetProperty('on:/pull_request:/branches:') | Should -Be (ConvertTo-Json -InputObject $branches.expected -Compress)
+            $intake.GetPropertyArray('on:/pull_request:/types:') | Should -Be @('opened', 'reopened', 'synchronize', 'ready_for_review')
+        }
+
+        $runnerContent = GetWorkflowContentWithChangesFromSettings -srcFile (Join-Path $workflowFolder 'CopilotPRReviewRunner.yaml') -repoSettings @{} -depth 1
+        $runner = [Yaml]::new($runnerContent.Split("`n"))
+        $runner.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:', 'workflow_run:')
+        $runner.GetPropertyArray('on:/workflow_run:/workflows:') | Should -Be @('Copilot PR Review')
+        $runner.GetPropertyArray('on:/workflow_run:/types:') | Should -Be @('completed')
+
+        foreach ($workflow in @(
+            @{ yaml = $intake; file = 'CopilotPRReview.yaml' }
+            @{ yaml = $runner; file = 'CopilotPRReviewRunner.yaml' }
+        )) {
+            $original = [Yaml]::Load((Join-Path $workflowFolder $workflow.file))
+            $original.Replace('on:', @())
+            $workflow.yaml.Replace('on:', @())
+            $workflow.yaml.content | Should -Be $original.content -Because 'Opt-in must preserve job guards, permissions, concurrency and steps'
+        }
+    }
+
+    It 'Keeps Copilot review triggers inert with <State> settings in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension'; State = 'missing'; ReviewSettings = $null }
+        @{ Template = 'Per Tenant Extension'; State = 'disabled'; ReviewSettings = @{ enabled = $false } }
+        @{ Template = 'Per Tenant Extension'; State = 'missing enabled'; ReviewSettings = @{ branches = @('release/**') } }
+        @{ Template = 'AppSource App'; State = 'missing'; ReviewSettings = $null }
+        @{ Template = 'AppSource App'; State = 'disabled'; ReviewSettings = @{ enabled = $false } }
+        @{ Template = 'AppSource App'; State = 'missing enabled'; ReviewSettings = @{ branches = @('release/**') } }
+    ) {
+        param($Template, $State, $ReviewSettings)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $settings = @{ 'runs-on' = 'windows-latest'; shell = 'pwsh' }
+        if ($null -ne $ReviewSettings) {
+            $settings.CodeReviewAgent = $ReviewSettings
+        }
+        Mock ReadSettings { $settings }
+
+        foreach ($file in @('CopilotPRReview.yaml', 'CopilotPRReviewRunner.yaml')) {
+            $source = Join-Path $PSScriptRoot "..\Templates\$Template\.github\workflows\$file"
+            $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 1
+            $yaml = [Yaml]::new($modified.Split("`n"))
+            $yaml.GetNextLevel('on:/') | Should -Be @('workflow_dispatch:') -Because "$State settings must not add automatic review triggers"
+            $yaml.content | Should -Be ([Yaml]::Load($source)).content
+        }
+    }
+
     It 'ModifyRunsOnAndShell rejects unsupported shells' {
         $yaml = [Yaml]::new(@(
             "jobs:",
@@ -2507,6 +2575,40 @@ Describe "GetFilesToUpdate (real template)" {
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'realAppSourceAppTemplateFolder', Justification = 'False positive.')]
         $realAppSourceAppTemplateFolder = Join-Path $PSScriptRoot "../Templates/AppSource App" -Resolve
+    }
+
+    It 'Includes or excludes both review workflows for <State> in <Template>' -TestCases @(
+        @{ Template = 'Per Tenant Extension'; State = 'missing'; Enabled = $null }
+        @{ Template = 'Per Tenant Extension'; State = 'disabled'; Enabled = $false }
+        @{ Template = 'Per Tenant Extension'; State = 'enabled'; Enabled = $true }
+        @{ Template = 'AppSource App'; State = 'missing'; Enabled = $null }
+        @{ Template = 'AppSource App'; State = 'disabled'; Enabled = $false }
+        @{ Template = 'AppSource App'; State = 'enabled'; Enabled = $true }
+    ) {
+        param($Template, $State, $Enabled)
+        $settings = @{
+            type = $(if ($Template -eq 'Per Tenant Extension') { 'PTE' } else { 'AppSource App' })
+            powerPlatformSolutionFolder = ''
+            unusedALGoSystemFiles = @()
+            customALGoFiles = @{ filesToInclude = @(); filesToExclude = @() }
+        }
+        if ($null -ne $Enabled) {
+            $settings.CodeReviewAgent = @{ enabled = $Enabled }
+        }
+        $templateFolder = Join-Path $PSScriptRoot "..\Templates\$Template" -Resolve
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $templateFolder
+
+        foreach ($file in @('CopilotPRReview.yaml', 'CopilotPRReviewRunner.yaml')) {
+            $source = Join-Path $templateFolder ".github/workflows/$file"
+            if ($Enabled) {
+                $filesToInclude.sourceFullPath | Should -Contain $source -Because "$State review workflows must be included"
+                @($filesToExclude | ForEach-Object { $_.sourceFullPath }) | Should -Not -Contain $source
+            }
+            else {
+                $filesToInclude.sourceFullPath | Should -Not -Contain $source -Because "$State review settings must exclude the workflows"
+                $filesToExclude.sourceFullPath | Should -Contain $source
+            }
+        }
     }
 
     It 'Return the correct files to exclude when type is PTE and powerPlatformSolutionFolder is not empty' {

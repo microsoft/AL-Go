@@ -153,6 +153,10 @@ function ModifyPullRequestHandlerWorkflow {
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
 }
 
+<#
+.SYNOPSIS
+Adds the pull request trigger and configured target branches to the enabled review intake workflow.
+#>
 function ModifyCopilotPRReviewWorkflow {
     Param(
         [Yaml] $yaml,
@@ -170,7 +174,10 @@ function ModifyCopilotPRReviewWorkflow {
     }
 
     $branchesJson = ConvertTo-Json -InputObject $codeReviewBranches -Compress
-    $yaml.Replace("on:/pull_request:/branches:", "branches: $branchesJson")
+    $yaml.ReplaceOrAdd('on:/', 'pull_request:', @(
+        "branches: $branchesJson"
+        'types: [ opened, reopened, synchronize, ready_for_review ]'
+    ))
 }
 
 function ModifyRunsOnAndShell {
@@ -613,8 +620,21 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ([System.IO.Path]::GetFileName($srcFile) -eq "CopilotPRReview.yaml") {
-        ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
+    if (
+        $repoSettings.Keys -contains 'CodeReviewAgent' -and
+        $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
+        $repoSettings.CodeReviewAgent.Keys -contains 'enabled' -and
+        $repoSettings.CodeReviewAgent.enabled
+    ) {
+        if ($baseName -eq 'CopilotPRReview') {
+            ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
+        }
+        elseif ($baseName -eq 'CopilotPRReviewRunner') {
+            $yaml.ReplaceOrAdd('on:/', 'workflow_run:', @(
+                'workflows: [ Copilot PR Review ]'
+                'types: [ completed ]'
+            ))
+        }
     }
 
     $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting', 'CopilotPRReviewRunner')
