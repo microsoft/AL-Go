@@ -280,6 +280,113 @@ InModuleScope ReadSettings { # Allows testing of private functions
             }
         }
 
+        It 'Disables Copilot code review by default' {
+            $defaultSettings = GetDefaultSettings
+            $codeReviewAgent = $defaultSettings.CodeReviewAgent
+            $codeReviewAgent.enabled | Should -Be $false
+            $codeReviewAgent.branches | Should -BeNullOrEmpty
+            $codeReviewAgent.model | Should -Be 'gpt-5.6-sol'
+            $codeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
+            $codeReviewAgent.excludedAuthors | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $defaultSettings.BCQuality.version | Should -Match '^[0-9]+\.[0-9]+$'
+            $defaultSettings.BCQuality.Contains('pluginVersion') | Should -BeFalse
+            $defaultSettings.BCQuality.enabledLayers | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.disabledSkills | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.knowledge.allow | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.knowledge.deny | Should -BeNullOrEmpty
+            $defaultSettings.BCQuality.Contains('taskContext') | Should -BeFalse
+        }
+
+        It 'Preserves default Copilot models when only enabled is overridden' {
+            $settings = GetDefaultSettings
+            $defaultVersion = $settings.BCQuality.version
+            $override = [PSCustomObject]@{
+                CodeReviewAgent = [PSCustomObject]@{
+                    enabled = $true
+                }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
+
+            $settings.CodeReviewAgent.enabled | Should -Be $true
+            $settings.CodeReviewAgent.branches | Should -BeNullOrEmpty
+            $settings.CodeReviewAgent.model | Should -Be 'gpt-5.6-sol'
+            $settings.CodeReviewAgent.leafModel | Should -Be 'gpt-5.6-luna'
+            $settings.CodeReviewAgent.excludedAuthors | Should -BeNullOrEmpty
+            $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/microsoft/BCQuality'
+            $settings.BCQuality.version | Should -Be $defaultVersion
+            $settings.BCQuality.enabledLayers | Should -BeNullOrEmpty
+        }
+
+        It 'Preserves BCQuality policy defaults when only the marketplace is overridden' {
+            $settings = GetDefaultSettings
+            $defaultVersion = $settings.BCQuality.version
+            $override = [PSCustomObject]@{
+                BCQuality = [PSCustomObject]@{
+                    marketplaceRepo = 'https://github.com/contoso/BCQuality'
+                }
+            }
+
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $override
+
+            $settings.BCQuality.marketplaceRepo | Should -Be 'https://github.com/contoso/BCQuality'
+            $settings.BCQuality.version | Should -Be $defaultVersion
+            $settings.BCQuality.Contains('pluginVersion') | Should -BeFalse
+            $settings.BCQuality.enabledLayers | Should -BeNullOrEmpty
+            $settings.BCQuality.knowledge.allow | Should -BeNullOrEmpty
+            $settings.BCQuality.Contains('taskContext') | Should -BeFalse
+        }
+
+        It 'Does not merge implicit layer or branch defaults into explicit settings' {
+            $settings = ReadSettings -baseFolder $TestDrive -repoName 'repo' `
+                -customSettings '{"BCQuality":{"enabledLayers":["microsoft"]},"CodeReviewAgent":{"branches":["release/**","!release/**-alpha"]}}'
+
+            $settings.BCQuality.enabledLayers | Should -Be @('microsoft')
+            $settings.CodeReviewAgent.branches | Should -Be @('release/**', '!release/**-alpha')
+        }
+
+        It 'Rejects unknown BCQuality settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $settings = GetDefaultSettings
+            $settings.BCQuality['marketplaceRepository'] = 'https://github.com/microsoft/BCQuality'
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
+        It 'Rejects hidden BCQuality task-context settings' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $settings = GetDefaultSettings
+            $settings.BCQuality['taskContext'] = @{
+                technologies = @('al')
+            }
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
+        It 'Rejects malformed BCQuality marketplace repository URLs' -Skip:($PSVersionTable.PSVersion.Major -lt 7) -TestCases @(
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality.git' }
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality?ref=main' }
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality#main' }
+            @{ MarketplaceRepo = 'https://github.com/microsoft/BCQuality/skills' }
+        ) {
+            param($MarketplaceRepo)
+
+            $settings = GetDefaultSettings
+            $settings.BCQuality.marketplaceRepo = $MarketplaceRepo
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
+        It 'Rejects unknown BCQuality layers' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            $settings = GetDefaultSettings
+            $settings.BCQuality.enabledLayers = @('partner')
+
+            Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+        }
+
         It 'Default settings match schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $defaultSettings = GetDefaultSettings
             Test-Json -json (ConvertTo-Json $defaultSettings -Depth 99) -schema $schema | Should -Be $true
