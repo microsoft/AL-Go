@@ -1,14 +1,12 @@
-### Enhanced `customALGoFiles` setting
+### Improved file handling in Update AL-Go System Files
 
-The `customALGoFiles` setting of a custom template was only applied on the next Update (from `AL-Go-TemplateRepoSettings.doNotEdit.json`). Now the up-to-date settings of the custom template are used directly during "Update AL-Go System Files". The template's `filesToInclude` and `filesToExclude` settings are merged with the consumer repo's settings before resolution.
+- Update AL-Go System Files now uses the latest repository settings from a custom template, such as `customALGoFiles`, in the same update rather than applying them on the next run.
+- `customALGoFiles.filesToInclude` and `filesToExclude` also apply to files in the original AL-Go template, even when those files are absent from the custom template.
+- `filesToExclude` now respects destination mappings from `filesToInclude`, including renamed files and per-project destinations. Existing files are removed unless another included source targets the same destination.
+- Use `destinationName` in `filesToInclude` to rename included files at the destination.
+- For safety, file access is blocked when a path redirects through a symbolic link or junction, or its physical location cannot be verified.
 
-- **`filesToInclude`** now also resolves files from the original AL-Go template. Files present in the official template are propagated even when they are absent from your custom template. When a file exists in both, the official template supplies the base content; for workflow files, customizations from the custom template are reapplied.
-- **`filesToExclude`** now also resolves files from the original AL-Go template (same dual-resolution as `filesToInclude`). Matching sources are not copied to consumer repos; existing destination files are removed only when no other included source targets the same destination.
-- **`destinationName`** (new property on `filesToInclude`): Allows renaming a file at the destination. When set, the file is written to `<destinationFolder>/<destinationName>` instead of keeping the source filename. Changing it does not remove the previously propagated filename; remove that file manually if needed. If rules target the same destination, the first eligible source wins (custom template before original template; within each template, default rules before configured rules).
-
-For safety, CheckForUpdates validates that source, original source, and destination paths do not redirect through symlinks or junctions. A redirect causes an error when checking for updates or applying updates and removals.
-
-Read more at [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#Using-custom-template-files).
+See [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#using-custom-template-files) for details.
 
 ### Copilot code review for AL pull requests
 
