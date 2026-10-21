@@ -73,9 +73,7 @@ $templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
     $templateRepoSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-    if (-not (Test-PathPhysicallyEqual -Path $templateRepoSettingsFile -AnchorPaths @($templateFolder))) {
-        throw "Cannot read template repository settings: '$templateRepoSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
-    }
+    Assert-PathPhysicallyEqual -Path $templateRepoSettingsFile -AnchorPaths @($templateFolder) -Context 'template repository settings'
     if (Test-Path -Path $templateRepoSettingsFile -PathType Leaf) {
         $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
         if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
@@ -161,26 +159,14 @@ foreach($fileToInclude in $filesToInclude) {
     }
     $hasDistinctOriginalSource = -not (GetPathStringComparer).Equals($originalSrcPath, $srcPath)
 
-    # Skip files that do not physically resolve to themselves within the template folders
-    if (-not (Test-PathPhysicallyEqual -Path $srcPath -AnchorPaths $templateFolders)) {
-        OutputWarning "Skipping update for source file '$srcPath': source does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
-        continue
-    }
+    Assert-PathPhysicallyEqual -Path $srcPath -AnchorPaths $templateFolders -Context 'source file'
     if ($hasDistinctOriginalSource) {
-        # Skip files with original files that do not physically resolve to themselves within the template folders
-        if (-not (Test-PathPhysicallyEqual -Path $originalSrcPath -AnchorPaths $templateFolders)) {
-            OutputWarning "Skipping update for source file '$srcPath': original source '$originalSrcPath' does not physically resolve to itself within the template folder(s). This may indicate a symlink/junction redirect."
-            continue
-        }
+        Assert-PathPhysicallyEqual -Path $originalSrcPath -AnchorPaths $templateFolders -Context 'original source file'
     }
 
     $dstPath = $fileToInclude.destinationFullPath
 
-    # Skip files with destinations that do not physically resolve to themselves within the base folder
-    if (-not (Test-PathPhysicallyEqual -Path $dstPath -AnchorPaths @($baseFolder))) {
-        OutputWarning "Skipping update for source file '$srcPath': destination '$dstPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
-        continue
-    }
+    Assert-PathPhysicallyEqual -Path $dstPath -AnchorPaths @($baseFolder) -Context 'destination file'
 
     $dstFileExists = Test-Path -LiteralPath $dstPath -PathType Leaf
 
@@ -296,19 +282,13 @@ else {
 
         $dstRoot = (Get-Location).Path
         $dstRepoSettingsFile = Join-Path $dstRoot $RepoSettingsFile
-        if (-not (Test-PathPhysicallyEqual -Path $dstRepoSettingsFile -AnchorPaths @($dstRoot))) {
-            throw "Cannot update repository settings: '$dstRepoSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
-        }
+        Assert-PathPhysicallyEqual -Path $dstRepoSettingsFile -AnchorPaths @($dstRoot) -Context 'repository settings'
 
         # Update the files
         # Calculate the release notes, while updating
         $releaseNotes = ""
         $updateFiles | ForEach-Object {
-            # Skip files that do not physically resolve to themselves within the destination root folder
-            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_.DstFile) -AnchorPaths @($dstRoot))) {
-                OutputWarning "Skipping update of '$($_.DstFile)': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
-                return
-            }
+            Assert-PathPhysicallyEqual -Path (Join-Path $dstRoot $_.DstFile) -AnchorPaths @($dstRoot) -Context 'destination file'
 
             # Create the destination folder if it doesn't exist
             $path = [System.IO.Path]::GetDirectoryName($_.DstFile)
@@ -337,11 +317,7 @@ else {
             $releaseNotes = "No release notes available!"
         }
         $removeFiles | ForEach-Object {
-            # Skip files that do not physically resolve to themselves within the destination root folder
-            if (-not (Test-PathPhysicallyEqual -Path (Join-Path $dstRoot $_) -AnchorPaths @($dstRoot))) {
-                OutputWarning "Skipping removal of '$_': destination does not physically resolve to itself. This may indicate a symlink/junction redirect."
-                return
-            }
+            Assert-PathPhysicallyEqual -Path (Join-Path $dstRoot $_) -AnchorPaths @($dstRoot) -Context 'destination file'
 
             Write-Host "Remove $_"
             Remove-Item -LiteralPath $_ -Force

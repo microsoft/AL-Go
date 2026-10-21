@@ -281,7 +281,7 @@ The following table summarizes how AL-Go for GitHub manages file updates and exc
 | Yes | No | Yes | The file is **_not_** removed as it was not matched as update |
 | No | Yes/No | Yes | The file is **_not_ created** in the end repo, as it's matched for exclusion |
 
-For safety, updates and removals skip source or destination paths that resolve through a symlink or junction to a different physical path. The workflow emits a warning for each skipped file; use paths without such redirects for files managed by Update AL-Go System Files.
+For safety, files managed by Update AL-Go System Files must not use paths redirected through symlinks or junctions. Such paths cause update checks and updates to fail with an error.
 
 ### Examples of using custom template files
 

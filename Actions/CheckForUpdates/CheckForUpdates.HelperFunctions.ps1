@@ -1077,6 +1077,30 @@ function Test-PathPhysicallyEqual {
 
 <#
 .SYNOPSIS
+Blocks paths that do not physically resolve to themselves or cannot be verified.
+.PARAMETER Path
+The path to validate before accessing it.
+.PARAMETER AnchorPaths
+Trusted anchors passed to Test-PathPhysicallyEqual.
+.PARAMETER Context
+The role of the path, such as source file or repository settings.
+#>
+function Assert-PathPhysicallyEqual {
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [string[]] $AnchorPaths = @(),
+        [Parameter(Mandatory=$true)]
+        [string] $Context
+    )
+
+    if (-not (Test-PathPhysicallyEqual -Path $Path -AnchorPaths $AnchorPaths)) {
+        throw "Unsafe path blocked: $Context '$Path' does not physically resolve to itself, or its physical location could not be verified. This may indicate a symlink/junction redirect."
+    }
+}
+
+<#
+.SYNOPSIS
 Resolves file paths based on the provided source folder, destination folder, and file specifications.
 
 .DESCRIPTION
@@ -1385,12 +1409,8 @@ function ReadSettingsWithCurrentCustomTemplateRepoSettings {
 
     # Validate both copy endpoints before touching them (even if the leaf file doesn't exist yet): a symlink/junction
     # anywhere along either path can make it resolve to a different physical location than its literal path
-    if (-not (Test-PathPhysicallyEqual -Path $baseFolderCustomTemplateSettingsPath -AnchorPaths @($baseFolder))) {
-        throw "Cannot read custom template repository settings snapshot: '$baseFolderCustomTemplateSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
-    }
-    if (-not (Test-PathPhysicallyEqual -Path $customTemplateRepoSettingsPath -AnchorPaths @($customTemplateFolder))) {
-        throw "Cannot read custom template repository settings: '$customTemplateRepoSettingsPath' does not physically resolve to itself. This may indicate a symlink/junction redirect."
-    }
+    Assert-PathPhysicallyEqual -Path $baseFolderCustomTemplateSettingsPath -AnchorPaths @($baseFolder) -Context 'custom template repository settings snapshot'
+    Assert-PathPhysicallyEqual -Path $customTemplateRepoSettingsPath -AnchorPaths @($customTemplateFolder) -Context 'custom template repository settings'
 
     $baseFolderCustomTemplateSettingsBackupPath = $null
 

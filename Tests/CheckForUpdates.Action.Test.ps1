@@ -197,7 +197,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
             New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
 
             { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-                Should -Throw -ExpectedMessage "Cannot read template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
 
             (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
             Should -Invoke GetFilesToUpdate -Exactly 0
@@ -209,7 +209,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
             New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
 
             { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-                Should -Throw -ExpectedMessage "Cannot read template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
 
             (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
             Should -Invoke GetFilesToUpdate -Exactly 0
@@ -221,7 +221,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
             New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalSettingsFile -Force | Out-Null
 
             { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-                Should -Throw -ExpectedMessage "Cannot read template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+                Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
 
             (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
             Should -Invoke GetFilesToUpdate -Exactly 0
@@ -276,7 +276,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
             New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
 
             { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
-                Should -Throw -ExpectedMessage "*Cannot update repository settings: '$cloneSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect.*"
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
 
             (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
             Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
@@ -291,7 +291,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
             New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
 
             { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
-                Should -Throw -ExpectedMessage "*Cannot update repository settings: '$cloneSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect.*"
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
 
             (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
             Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
@@ -306,7 +306,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
             New-Item -ItemType SymbolicLink -Path $cloneSettingsFile -Target $externalSettingsFile -Force | Out-Null
 
             { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
-                Should -Throw -ExpectedMessage "*Cannot update repository settings: '$cloneSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect.*"
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
 
             (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
             Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
@@ -417,11 +417,8 @@ Describe "CheckForUpdates Action: runtime behavior" {
             @{ sourceFullPath = $invalidSource; originalSourceFullPath = $invalidOriginalSource; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder 'File.txt') }
         )
 
-        . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N
-
-        Should -Invoke OutputWarning -Exactly 1
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like '*original source*does not physically resolve*' }
-        $updateFiles.Count | Should -Be 0
+        { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+            Should -Throw -ExpectedMessage 'Unsafe path blocked: original source file *does not physically resolve*'
     }
 
     It 'Applies workflow customizations from case-distinct original sources on Linux' -Skip:(-not $script:isLinuxPlatform) {
@@ -464,7 +461,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $updateFiles[0].content | Should -Not -Match 'CustomJob-MyCustomTemplateJob:'
     }
 
-    It 'CheckForUpdates skips source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
+    It 'CheckForUpdates rejects source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
         # A legitimate file directly in the template folder
         $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
         Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
@@ -478,18 +475,30 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $testFilesToInclude = @(
             @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
             @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+        )
+
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: source file '*redirected.txt' does not physically resolve*"
+    }
+
+    It 'CheckForUpdates rejects original source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+        New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
             @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
-
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*redirected.txt': source does not physically resolve*" }
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*': original source '*redirected.txt' does not physically resolve*" }
-        $updateFiles.Count | Should -Be 1
-        $updateFiles[0].DstFile | Should -Be "legit.txt"
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*redirected.txt' does not physically resolve*"
     }
 
-    It 'CheckForUpdates skips source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+    It 'CheckForUpdates rejects source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
         # A legitimate file directly in the template folder
         $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
         Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
@@ -503,18 +512,30 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $testFilesToInclude = @(
             @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
             @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+        )
+
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: source file '*redirected.txt' does not physically resolve*"
+    }
+
+    It 'CheckForUpdates rejects original source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
             @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
-
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*redirected.txt': source does not physically resolve*" }
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "Skipping update for source file '*': original source '*redirected.txt' does not physically resolve*" }
-        $updateFiles.Count | Should -Be 1
-        $updateFiles[0].DstFile | Should -Be "legit.txt"
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*redirected.txt' does not physically resolve*"
     }
 
-    It 'CheckForUpdates skips source files with case-distinct original sources that do not physically resolve to themselves using symlinks on Linux' -Skip:(-not $script:isLinuxPlatform) {
+    It 'CheckForUpdates rejects source files with case-distinct original sources that do not physically resolve to themselves using symlinks on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $directTemplateFolder = Join-Path $testTemplateFolder "folder"
         $directTemplateFile = Join-Path $directTemplateFolder "file.txt"
         New-Item -ItemType Directory -Path $directTemplateFolder -Force | Out-Null
@@ -530,13 +551,11 @@ Describe "CheckForUpdates Action: runtime behavior" {
             @{ sourceFullPath = $directTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "file.txt") }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N
-
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -clike "Skipping update for source file '*folder*': original source '*FOLDER*' does not physically resolve*" }
-        $updateFiles.Count | Should -Be 0
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*FOLDER*' does not physically resolve*"
     }
 
-    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+    It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
         # A file in the template folder
         $templateFile = Join-Path $testTemplateFolder "template.txt"
         Set-Content -LiteralPath $templateFile -Value "template content"
@@ -548,30 +567,41 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
         New-Item -ItemType Junction -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
 
-        # Create a redirected folder and a symbolic link pointing back to the clone folder
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+        )
+
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
+        Should -Invoke CloneIntoNewFolder -Exactly 0
+        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $false
+    }
+
+    It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        $templateFile = Join-Path $testTemplateFolder "template.txt"
+        Set-Content -LiteralPath $templateFile -Value "template content"
+        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
         $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
         New-Item -ItemType Junction -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
         $testFilesToInclude = @(
             @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
             @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
 
-        $updateFiles.Count | Should -Be 2
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update for source file '*template.txt':*'*redirectedInWorkspace*redirected.txt'*" }
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update of '*redirectedInClone*redirected.txt'*" }
-
-        # The legitimate update was actually written to the (mocked) clone root; the redirected ones were not
+        Should -Invoke CommitFromNewFolder -Exactly 0
+        Should -Invoke UpdateSettingsFile -Exactly 0
         Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
-        Test-Path -Path (Join-Path $testCloneRoot "redirectedInWorkspace/redirected.txt") -PathType Leaf | Should -Be $false
         Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
     }
 
-    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+    It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
         # A file in the template folder
         $templateFile = Join-Path $testTemplateFolder "template.txt"
         Set-Content -LiteralPath $templateFile -Value "template content"
@@ -583,30 +613,41 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
         New-Item -ItemType SymbolicLink -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
 
-        # Create a redirected folder and a symbolic link pointing back to the clone folder
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+        $testFilesToInclude = @(
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+        )
+
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
+        Should -Invoke CloneIntoNewFolder -Exactly 0
+        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $false
+    }
+
+    It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        $templateFile = Join-Path $testTemplateFolder "template.txt"
+        Set-Content -LiteralPath $templateFile -Value "template content"
+        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
         $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
         New-Item -ItemType SymbolicLink -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
         $testFilesToInclude = @(
             @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
             @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
 
-        $updateFiles.Count | Should -Be 2
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update for source file '*template.txt':*'*redirectedInWorkspace*redirected.txt'*" }
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping update of '*redirectedInClone*redirected.txt'*" }
-
-        # The legitimate update was actually written to the (mocked) clone root; the redirected ones were not
+        Should -Invoke CommitFromNewFolder -Exactly 0
+        Should -Invoke UpdateSettingsFile -Exactly 0
         Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
-        Test-Path -Path (Join-Path $testCloneRoot "redirectedInWorkspace/redirected.txt") -PathType Leaf | Should -Be $false
         Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
     }
 
-    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+    It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
         $relativeLegitFile = "legit.txt"
         $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
         $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
@@ -634,10 +675,11 @@ Describe "CheckForUpdates Action: runtime behavior" {
             @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
 
-        $removeFiles.Count | Should -Be 3
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
+        Should -Invoke CommitFromNewFolder -Exactly 0
+        Should -Invoke UpdateSettingsFile -Exactly 0
 
         # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clone redirected file was not
         Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
@@ -645,7 +687,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
         Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
     }
 
-    It 'CheckForUpdates skips destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+    It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
         $relativeLegitFile = "legit.txt"
         $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
         $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
@@ -673,10 +715,11 @@ Describe "CheckForUpdates Action: runtime behavior" {
             @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
         )
 
-        . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor"
+        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
 
-        $removeFiles.Count | Should -Be 3
-        Should -Invoke OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Skipping removal of '*redirectedInClone*redirected.txt'*" }
+        Should -Invoke CommitFromNewFolder -Exactly 0
+        Should -Invoke UpdateSettingsFile -Exactly 0
 
         # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
         Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
@@ -3439,6 +3482,36 @@ Describe "Resolve-PathPhysically" {
     }
 }
 
+Describe "Assert-PathPhysicallyEqual" {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot "../Actions/CheckForUpdates/CheckForUpdates.HelperFunctions.ps1")
+    }
+
+    It 'Accepts a verified path without producing output and forwards the path and anchors' {
+        $expectedPath = Join-Path $TestDrive 'file.txt'
+        $anchors = @($TestDrive, (Join-Path $TestDrive 'trusted'))
+        Mock Test-PathPhysicallyEqual { return $true }
+
+        @(Assert-PathPhysicallyEqual -Path $expectedPath -AnchorPaths $anchors -Context 'source file').Count | Should -Be 0
+
+        Should -Invoke Test-PathPhysicallyEqual -Exactly -Times 1 -ParameterFilter {
+            $Path -eq $expectedPath -and (Compare-Object $AnchorPaths $anchors | Measure-Object).Count -eq 0
+        }
+    }
+
+    It 'Rejects an unsafe or unverifiable path with its context and path' {
+        $expectedPath = Join-Path $TestDrive 'file.txt'
+        Mock Test-PathPhysicallyEqual { return $false }
+
+        { Assert-PathPhysicallyEqual -Path $expectedPath -Context 'original source file' } |
+            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '$expectedPath' does not physically resolve to itself, or its physical location could not be verified. This may indicate a symlink/junction redirect."
+
+        Should -Invoke Test-PathPhysicallyEqual -Exactly -Times 1 -ParameterFilter {
+            $Path -eq $expectedPath -and $AnchorPaths.Count -eq 0
+        }
+    }
+}
+
 Describe "Test-PathPhysicallyEqual" {
     BeforeAll {
         $actionName = "CheckForUpdates"
@@ -4147,7 +4220,6 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
         # The first-listed entry should win over the later entry for the same destination
         $conflict[0].sourceFullPath | Should -Be $testPSFile
-        Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $message -eq "Skipping duplicate file to include '$testTxtFile': destinationFullPath '$(Join-Path $baseFolder 'conflict.txt')' already included" }
     }
 
     It 'GetFilesToUpdate filesToExclude keeps the first entry when two entries collide on the same destination' {
@@ -4167,7 +4239,6 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $filesToExclude.Count | Should -Be 1
         $filesToExclude[0].sourceFullPath | Should -Be $testPSFile
         $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'conflict.txt')
-        Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $message -eq "Skipping duplicate file to exclude '$testTxtFile': destinationFullPath '$(Join-Path $baseFolder 'conflict.txt')' already excluded" }
     }
 
     It 'GetFilesToUpdate retains a replacement when the first source for a destination is excluded' {
@@ -4187,7 +4258,6 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $conflict.Count | Should -Be 1
         $conflict[0].sourceFullPath | Should -Be (Join-Path $templateFolder 'test.txt')
         @($filesToExclude | Where-Object { $_.destinationFullPath -eq (Join-Path $baseFolder 'conflict.txt') }).Count | Should -Be 0
-        Should -Invoke OutputDebug -Exactly -Times 1 -ParameterFilter { $message -eq "Skipping file to exclude '$testPSFile': destinationFullPath '$(Join-Path $baseFolder 'conflict.txt')' included with different source" }
     }
 
     It 'GetFilesToUpdate keeps case-distinct destination entries on Linux' -Skip:(-not $script:isLinuxPlatform) {
@@ -4655,7 +4725,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType SymbolicLink -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings snapshot: '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself*"
 
         Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
     }
@@ -4676,7 +4746,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
         New-Item -ItemType SymbolicLink -Path $snapshotFile -Target $externalTargetFile -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings snapshot: '$snapshotFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot '$snapshotFile' does not physically resolve to itself*"
 
         Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
     }
@@ -4699,7 +4769,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotContent = '{"snapshot":"untouched"}'
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings: '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself*"
 
         Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
@@ -4722,7 +4792,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings: '$templateSettingsFile' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings '$templateSettingsFile' does not physically resolve to itself*"
 
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
         Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
@@ -4745,7 +4815,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
 
         New-Item -ItemType Junction -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings snapshot: '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself*"
 
         Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
     }
@@ -4768,7 +4838,7 @@ Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
         $snapshotContent = '{"snapshot":"untouched"}'
         Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
 
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Cannot read custom template repository settings: '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself. This may indicate a symlink/junction redirect."
+        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself*"
 
         Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
         Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
