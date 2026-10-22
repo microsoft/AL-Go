@@ -1,6 +1,7 @@
 ### Improved file handling in Update AL-Go System Files
 
 - Update AL-Go System Files now uses the latest repository settings from a custom template, such as `customALGoFiles`, in the same update rather than applying them on the next run.
+  - Workflow dependency depth is also determined using these refreshed settings, ensuring enough sequential build jobs are generated for the configured projects.
 - `customALGoFiles.filesToInclude` and `filesToExclude` also apply to files in the original AL-Go template, even when those files are absent from the custom template.
 - `filesToExclude` now respects destination mappings from `filesToInclude`, including renamed files and per-project destinations. Existing files are removed unless another included source targets the same destination.
 - Use `destinationName` in `filesToInclude` to rename included files at the destination.
