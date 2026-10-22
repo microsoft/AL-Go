@@ -1,3 +1,10 @@
+### Preview: Support for GitHub Enterprise Edition with data residency
+
+AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residency. When you create a GitHub Enterprise with data residency, you can create a number of organizations underneath this enterprise (much like we create organizations on github.com). In each of these organizations, you can create any number of internal or private repositories, you cannot create public repositories. The URL for your repository becomes https://enterprise.ghe.com/organization/repository instead of the normal https://github.com/organization/repository.
+
+> [!NOTE]
+> This feature is in preview
+
 ### Copilot code review for AL pull requests
 
 AL-Go repositories can now opt in to AI-powered review of AL pull requests, with configurable models, target branches, excluded authors, and BCQuality skills and knowledge. See [Enable Copilot code review](Scenarios/Agents/CopilotCodeReview.md) for setup, organization policy requirements, and operational details.

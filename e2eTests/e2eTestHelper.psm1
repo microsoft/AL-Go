@@ -137,6 +137,28 @@ function Remove-PropertiesFromJsonFile {
     }
 }
 
+function WaitForRateLimit {
+    Param(
+        [hashtable] $headers,
+        [int] $percentage = 10,
+        [switch] $displayStatus
+    )
+
+    $rate = ((InvokeWebRequest -Headers $headers -Uri "$ENV:GITHUB_API_URL/rate_limit").Content | ConvertFrom-Json).rate
+    $percentRemaining = [int]($rate.remaining*100/$rate.limit)
+    if ($displayStatus) {
+        Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percentRemaining%)"
+    }
+    if ($percentRemaining-lt $percentage) {
+        $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($rate.reset).ToLocalTime()
+        $waitSeconds = ($resetTimestamp - (Get-Date)).TotalSeconds
+        if ($waitSeconds -gt 0) {
+            Write-Host "`nLess than 10% API calls left, waiting for $waitSeconds seconds for limits to reset."
+            Start-Sleep -seconds $waitSeconds
+        }
+    }
+}
+
 function RunWorkflow {
     Param(
         [string] $name,
