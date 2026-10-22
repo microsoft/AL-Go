@@ -47,6 +47,7 @@ $prevLocation = Get-Location
 
 Remove-Module e2eTestHelper -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "e2eTestHelper.psm1") -DisableNameChecking
+. (Join-Path $PSScriptRoot '..\Actions\CheckForUpdates\yamlclass.ps1')
 
 $repository = "$githubOwner/$repoName"
 $branch = "main"
@@ -115,6 +116,18 @@ $runs++
 # Wait for PR handler to start
 Start-Sleep -seconds 100
 MergePRandPull -branch $branch | Out-Null
+# Without opt-in, older updaters copy manual-only review workflows; current updaters omit them.
+foreach ($workflow in @('CopilotPRReview.yaml', 'CopilotPRReviewRunner.yaml')) {
+    $workflowPath = Join-Path $repoPath ".github\workflows\$workflow"
+    if (-not (Test-Path $workflowPath)) { continue }
+    $yaml = [Yaml]::Load($workflowPath)
+    ($yaml.GetNextLevel('on:/') -join ',') | Should -Be 'workflow_dispatch:'
+    $entryJob = if ($workflow -eq 'CopilotPRReview.yaml') { 'Intake' } else { 'prepare' }
+    $reviewEvent = if ($workflow -eq 'CopilotPRReview.yaml') { 'pull_request' } else { 'workflow_run' }
+    $guard = $yaml.GetProperty("jobs:/$($entryJob):/if:")
+    $guard | Should -Match "^github\.event_name == '$reviewEvent'(\s*&&|\s*$)"
+    $guard | Should -Not -Match '\|\|'
+}
 if ($releaseVersion -ge [System.Version]"2.2") {
     # Expected Run: Pull Request Handler triggered by pull_request
     $runs++
