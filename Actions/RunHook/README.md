@@ -40,7 +40,8 @@ Write-Host "BuildInitialize hook running for project '$($parameters.project)'"
 
 | Hook name | Where it runs | Notes |
 | :-- | :-- | :-- |
-| `BuildInitialize` | Build workflow (`_BuildALGoProject.yaml`), immediately after `Read settings` | AL-Go settings are available as environment variables; secrets are not yet read at this point. |
+| `BuildInitialize` | Build workflow (`_BuildALGoProject.yaml`), after `Determine whether to build project` | AL-Go settings are available as environment variables; `buildMode` and `buildIt` can be passed via `parametersJson`. |
+| `BuildCleanup` | Build workflow (`_BuildALGoProject.yaml`), as the last step with `if: always()` | Runs regardless of prior step success/failure and can be used for final reporting/cleanup logic. |
 
 ## INPUT
 
