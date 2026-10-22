@@ -1,3 +1,14 @@
+### Improved file handling in Update AL-Go System Files
+
+- Update AL-Go System Files now uses the latest repository settings from a custom template, such as `customALGoFiles`, in the same update rather than applying them on the next run.
+  - Workflow dependency depth is also determined using these refreshed settings, ensuring enough sequential build jobs are generated for the configured projects.
+- `customALGoFiles.filesToInclude` and `filesToExclude` also apply to files in the original AL-Go template, even when those files are absent from the custom template.
+- `filesToExclude` now respects destination mappings from `filesToInclude`, including renamed files and per-project destinations. Existing files are removed unless another included source targets the same destination.
+- Use `destinationName` in `filesToInclude` to rename included files at the destination.
+- For safety, file access is blocked when a path redirects through a symbolic link or junction, or its physical location cannot be verified.
+
+See [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#using-custom-template-files) for details.
+
 ### Preview: Support for GitHub Enterprise Edition with data residency
 
 AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residency. When you create a GitHub Enterprise with data residency, you can create a number of organizations underneath this enterprise (much like we create organizations on github.com). In each of these organizations, you can create any number of internal or private repositories, you cannot create public repositories. The URL for your repository becomes https://enterprise.ghe.com/organization/repository instead of the normal https://github.com/organization/repository.
