@@ -182,13 +182,27 @@ function New-AcceptedLeafReport {
     if (-not ($ReportText | Test-Json -Schema $Schema -ErrorAction Stop)) {
         throw 'Leaf report does not conform to the leaf findings-report schema.'
     }
-    # Validate all original fields, including range shape/endpoints, before
-    # forming a private candidate. Only the two declared mismatches may defer.
-    Assert-LeafConsumerAcceptance -ReportObject $original -Context $Context `
-        -PermitPrimaryReferenceMismatch -PermitRangeStartMismatch
     $candidate = $ReportText | ConvertFrom-Json -Depth 40 -ErrorAction Stop
     $changes = [Collections.Generic.List[object]]::new()
     $findings = @(Get-ObjectPropertyValue -InputObject $candidate -Name findings)
+    $summary = Get-ObjectPropertyValue -InputObject $candidate -Name summary
+    if ($null -ne $summary) {
+        foreach ($severity in @('blocker', 'major', 'minor', 'info')) {
+            $actual = @($findings | Where-Object severity -CEQ $severity).Count
+            if ($summary.counts.$severity -ne $actual) {
+                $changes.Add([pscustomobject][ordered]@{
+                    kind = 'summary-count'
+                    severity = $severity
+                    original_count = $summary.counts.$severity
+                    canonical_count = $actual
+                })
+                $summary.counts.$severity = $actual
+            }
+        }
+    }
+    # Check all remaining fields before normalizing IDs or ranges.
+    Assert-LeafConsumerAcceptance -ReportObject $candidate -Context $Context `
+        -PermitPrimaryReferenceMismatch -PermitRangeStartMismatch
     for ($index = 0; $index -lt $findings.Count; $index++) {
         $finding = $findings[$index]
         $references = @($finding.references)
@@ -232,6 +246,10 @@ function New-AcceptedLeafReport {
             $reader.DateParseHandling = [Newtonsoft.Json.DateParseHandling]::None
             $json = [Newtonsoft.Json.Linq.JObject]::Load($reader)
             foreach ($change in $changes) {
+                if ($change.kind -eq 'summary-count') {
+                    $json['summary']['counts'][$change.severity] = [Newtonsoft.Json.Linq.JValue]::new([int]$change.canonical_count)
+                    continue
+                }
                 $jsonFinding = $json['findings'][$change.finding_index]
                 if ($change.kind -eq 'finding-id') {
                     $jsonFinding['id'] = [Newtonsoft.Json.Linq.JValue]::new([string]$change.canonical_id)
@@ -1032,15 +1050,19 @@ function Receive-LeafCopilotProcess {
         $accepted = New-AcceptedLeafReport -ReportText $reportText `
             -Schema (Get-FindingsReportRoleSchema -Role leaf) -Context $script:FindingsConsumerContext
         $reportObject = $accepted.Report
+        foreach ($change in @($accepted.Changes | Where-Object kind -eq 'summary-count')) {
+            Write-LogPhaseDetail "Leaf '$($State.Leaf.id)' summary.counts.$($change.severity) corrected from $($change.original_count) to $($change.canonical_count)."
+        }
+        $normalizationChanges = @($accepted.Changes | Where-Object kind -ne 'summary-count')
         $normalization = $null
-        if ($accepted.Changes.Count -gt 0) {
+        if ($normalizationChanges.Count -gt 0) {
             $normalization = [ordered]@{
                 raw_report_path = Get-ReviewRelativeArtifactPath -Path $rawReportPath
                 raw_report_sha256 = (Get-FileHash -LiteralPath $rawReportPath -Algorithm SHA256).Hash.ToLowerInvariant()
-                changes = $accepted.Changes
+                changes = $normalizationChanges
             }
         }
-        if ($repairedSuppressed -or $null -ne $normalization) {
+        if ($repairedSuppressed -or $accepted.Changes.Count -gt 0) {
             Set-Content -LiteralPath $reportPath -Value $accepted.Text -Encoding UTF8
         }
 

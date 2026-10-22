@@ -1848,11 +1848,20 @@ Describe 'Deterministic leaf orchestration contract' {
         Should -Invoke Start-LeafCopilotProcess -Times 2 -Exactly
     }
 
-    It 'retains raw BOM/CRLF bytes and records only fully accepted normalization: <Valid>' -ForEach @(
-        @{ Valid = $true }, @{ Valid = $false }
+    It 'retains raw BOM/CRLF bytes and records only fully accepted normalization: <Valid>, count-only: <CountOnly>' -ForEach @(
+        @{ Valid = $true; CountOnly = $false },
+        @{ Valid = $true; CountOnly = $true },
+        @{ Valid = $false; CountOnly = $false }
     ) {
         $fixture = Join-Path $PSScriptRoot 'fixtures/findings-consumer/privacy-015-normalization.json'
         $report = Get-Content $fixture -Raw | ConvertFrom-Json
+        $report.summary.counts.major = 3
+        if ($CountOnly) {
+            foreach ($finding in $report.findings) {
+                $finding.id = $finding.references[0].path
+                $finding.location.PSObject.Properties.Remove('range')
+            }
+        }
         if (-not $Valid) { $report.findings[3].location.range.'end-line' = 58 }
         $script:FindingsReportRoleSchemas = New-FindingsReportRoleSchemas -SharedSchemaJson (
             Get-Content -LiteralPath $NormalizationSchemaPath -Raw
@@ -1887,9 +1896,16 @@ Describe 'Deterministic leaf orchestration contract' {
         $manifest.processes[0].report_path | Should -Be 'leaf-results/03-al-privacy-review/_review-report.json'
         if ($Valid) {
             $manifest.processes[0].status | Should -Be 'completed'
-            $manifest.processes[0].normalization.raw_report_path | Should -Be 'leaf-results/03-al-privacy-review/_review-report.raw.json'
-            $manifest.processes[0].normalization.raw_report_sha256 | Should -BeExactly $rawHash.ToLowerInvariant()
-            $manifest.processes[0].normalization.changes.Count | Should -Be 8
+            if ($CountOnly) {
+                $manifest.processes[0].PSObject.Properties.Match('normalization').Count | Should -Be 0
+            } else {
+                $manifest.processes[0].normalization.raw_report_path | Should -Be 'leaf-results/03-al-privacy-review/_review-report.raw.json'
+                $manifest.processes[0].normalization.raw_report_sha256 | Should -BeExactly $rawHash.ToLowerInvariant()
+                $manifest.processes[0].normalization.changes.Count | Should -Be 8
+                $manifest.processes[0].normalization.changes = @()
+                ($manifest | ConvertTo-Json -Depth 40 | Test-Json -SchemaFile (Join-Path $ReviewRoot 'schemas/review-run-diagnostics.schema.json') -ErrorAction SilentlyContinue) | Should -BeFalse
+            }
+            $result.Report.summary.counts.major | Should -Be 4
             $acceptedText = Get-Content $result.ReportPath -Raw
             ($acceptedText | ConvertFrom-Json | ConvertTo-Json -Depth 40) | Should -Be ($result.Report | ConvertTo-Json -Depth 40)
             $result.Report.findings[3].id | Should -Be $report.findings[3].references[0].path
@@ -1897,8 +1913,6 @@ Describe 'Deterministic leaf orchestration contract' {
             $prompt = Build-ConsolidationPrompt -LeafResults @($result)
             $prompt | Should -Match ([regex]::Escape(($result.ReportPath -replace '\\', '/')))
             $prompt | Should -Not -Match '_review-report.raw.json'
-            $manifest.processes[0].normalization.changes = @()
-            ($manifest | ConvertTo-Json -Depth 40 | Test-Json -SchemaFile (Join-Path $ReviewRoot 'schemas/review-run-diagnostics.schema.json') -ErrorAction SilentlyContinue) | Should -BeFalse
         } else {
             $manifest.processes[0].status | Should -Be 'failed'
             $manifest.processes[0].failure_reason | Should -Match 'findings\[3\]\.location.range.end-line'
@@ -3413,6 +3427,42 @@ Describe 'Bounded leaf accepted-copy normalization' {
         ($again.Report | ConvertTo-Json -Depth 40) | Should -Be ($accepted.Report | ConvertTo-Json -Depth 40)
     }
 
+    It 'corrects a declared count of 11 for 12 <_> findings without changing findings or coverage' -ForEach @('blocker', 'major', 'minor', 'info') {
+        $severity = $_
+        $report = (New-AcceptedLeafReport -ReportText $normalizationRaw -Schema $normalizationSchema -Context $normalizationContext).Report
+        $report.findings = @($report.findings) * 3
+        foreach ($finding in $report.findings) { $finding.severity = $severity }
+        foreach ($level in @('blocker', 'major', 'minor', 'info')) { $report.summary.counts.$level = 0 }
+        $report.summary.counts.$severity = 11
+        $raw = $report | ConvertTo-Json -Depth 40
+
+        $accepted = New-AcceptedLeafReport -ReportText $raw -Schema $normalizationSchema -Context $normalizationContext
+
+        $accepted.Report.summary.counts.$severity | Should -Be 12
+        $accepted.Changes.Count | Should -Be 1
+        $accepted.Changes[0].kind | Should -Be 'summary-count'
+        $accepted.Changes[0].severity | Should -Be $severity
+        $accepted.Changes[0].original_count | Should -Be 11
+        $accepted.Changes[0].canonical_count | Should -Be 12
+        ($accepted.Report.findings | ConvertTo-Json -Depth 40) | Should -Be ($report.findings | ConvertTo-Json -Depth 40)
+        ($accepted.Report.summary.coverage | ConvertTo-Json) | Should -Be ($report.summary.coverage | ConvertTo-Json)
+        ($report | ConvertTo-Json -Depth 40) | Should -BeExactly $raw
+        ($accepted.Text | ConvertFrom-Json).summary.counts.$severity | Should -Be 12
+        $again = New-AcceptedLeafReport -ReportText $accepted.Text -Schema $normalizationSchema -Context $normalizationContext
+        $again.Text | Should -BeExactly $accepted.Text
+        $again.Changes.Count | Should -Be 0
+    }
+
+    It 'clears overstated counts when there are no findings' {
+        $normalizationReport.findings = @()
+        $accepted = New-AcceptedLeafReport -ReportText ($normalizationReport | ConvertTo-Json -Depth 40) -Schema $normalizationSchema -Context $normalizationContext
+        $accepted.Report.summary.counts.major | Should -Be 0
+        $accepted.Report.findings.Count | Should -Be 0
+        $accepted.Changes.Count | Should -Be 1
+        $accepted.Changes[0].original_count | Should -Be 4
+        $accepted.Changes[0].canonical_count | Should -Be 0
+    }
+
     It 'preserves untouched timestamp-shaped strings instead of applying PowerShell date conversion' {
         $text = $normalizationRaw.Replace('Synthetic AI request privacy finding.', '2026-10-05T13:00:00+05:30')
         $accepted = New-AcceptedLeafReport -ReportText $text -Schema $normalizationSchema -Context $normalizationContext
@@ -3476,7 +3526,9 @@ Describe 'Bounded leaf accepted-copy normalization' {
         @{ Name = 'suggested-code range'; Mutate = { $normalizationReport.findings[3] | Add-Member -NotePropertyName 'suggested-code' -NotePropertyValue 'Replacement();' } },
         @{ Name = 'empty suggested-code'; Mutate = { $normalizationReport.findings[3] | Add-Member -NotePropertyName 'suggested-code' -NotePropertyValue '' } },
         @{ Name = 'null suggested-code'; Mutate = { $normalizationReport.findings[3] | Add-Member -NotePropertyName 'suggested-code' -NotePropertyValue $null } },
-        @{ Name = 'incorrect counts'; Mutate = { $normalizationReport.summary.counts.major = 3 } },
+        @{ Name = 'negative count'; Mutate = { $normalizationReport.summary.counts.major = -1 } },
+        @{ Name = 'string count'; Mutate = { $normalizationReport.summary.counts.major = '3' } },
+        @{ Name = 'incorrect count and incomplete coverage'; Mutate = { $normalizationReport.summary.counts.major = 3; $normalizationReport.summary.coverage.'items-evaluated' = 1 } },
         @{ Name = 'incomplete completed coverage'; Mutate = { $normalizationReport.summary.coverage.'items-evaluated' = 1 } },
         @{ Name = 'leaf role'; Mutate = { $normalizationReport | Add-Member -NotePropertyName 'sub-results' -NotePropertyValue @() } }
     ) {
