@@ -53,6 +53,28 @@ Describe "Get-ProjectsToBuild" {
         $buildOrder[0].buildDimensions[0].project | Should -BeExactly "."
     }
 
+    It 'returns default values when no projects are found' {
+        # Empty repository: no .AL-Go/settings.json in the base folder or any sub-folder
+        $alGoSettings = @{ fullBuildPatterns = @(); projects = @(); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+        $env:Settings = ConvertTo-Json $alGoSettings -Depth 99 -Compress
+
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+        $allProjects | Should -BeExactly @()
+        $modifiedProjects | Should -BeExactly @()
+        $projectsToBuild | Should -BeExactly @()
+
+        $projectDependencies | Should -BeOfType System.Collections.Hashtable
+        $projectDependencies.Count | Should -BeExactly 0
+
+        # Build order should contain a single default entry with no projects and no build dimensions
+        $buildOrder.Count | Should -BeExactly 1
+        $buildOrder[0] | Should -BeOfType System.Collections.Hashtable
+        $buildOrder[0].projects | Should -BeExactly @()
+        $buildOrder[0].projectsCount | Should -BeExactly 0
+        $buildOrder[0].buildDimensions.Count | Should -BeExactly 0
+    }
+
     It 'loads two independent projects with no build modes set' {
         New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
         New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force

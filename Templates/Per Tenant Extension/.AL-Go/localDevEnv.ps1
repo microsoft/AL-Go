@@ -133,6 +133,8 @@ function DownloadHelperFile {
         if ($notifyAuthenticatedAttempt) {
             Write-Host -ForegroundColor Red "Failed to download $name, trying authenticated download"
         }
+        # gh needs to be authenticated to download from private repos, so we try again with gh auth token
+        # no hostname specified, gh needs to be authenticated to github.com
         Invoke-WebRequest -UseBasicParsing -uri $url -OutFile $path -Headers @{ "Authorization" = "token $(gh auth token)" }
     }
     $ProgressPreference = $prevProgressPreference

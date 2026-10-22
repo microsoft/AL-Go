@@ -126,7 +126,6 @@ function InvokeWebRequest {
 function GetDependencies {
     Param(
         $probingPathsJson,
-        [string] $api_url = $ENV:GITHUB_API_URL,
         [string] $saveToPath = (Join-Path $ENV:GITHUB_WORKSPACE ".dependencies"),
         [string[]] $masks = @('Apps','Dependencies','TestApps')
     )
@@ -198,9 +197,22 @@ function GetDependencies {
             }
             $projects = $dependency.projects
             $repository = ([uri]$dependency.repo).AbsolutePath.Replace(".git", "").TrimStart("/").TrimEnd("/")
+            # Derive the API URL from the dependency repo host, so dependencies can be downloaded from a
+            # GitHub host that differs from the one running the workflow. For both github.com and ghe.com the
+            # API host is api.<host> (e.g. api.github.com or api.<tenant>.ghe.com).
+            $dependencyUri = [uri]$dependency.repo
+            if ($dependencyUri.Host -eq 'github.com') {
+                $dependencyApiUrl = 'https://api.github.com'
+            }
+            elseif ($dependencyUri.Host -like '*.ghe.com') {
+                $dependencyApiUrl = "https://api.$($dependencyUri.Host)"
+            }
+            else {
+                throw "Unsupported GitHub dependency host '$($dependencyUri.Host)'."
+            }
             if ($dependency.release_status -eq "latestBuild") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
-                $artifacts = GetArtifacts -token $token -api_url $api_url -repository $repository -mask $currentMask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
+                $token = GetAccessToken -token $dependency.authTokenSecret -api_url $dependencyApiUrl -repository $repository -permissions @{"contents"="read";"actions"="read";"metadata"="read"}
+                $artifacts = GetArtifacts -token $token -api_url $dependencyApiUrl -repository $repository -mask $currentMask -projects $projects -version $dependency.version -branch $dependency.branch -baselineWorkflowID $dependency.baselineWorkflowID
                 if ($artifacts) {
                     $artifacts | ForEach-Object {
                         $download = DownloadArtifact -path $saveToPath -token $token -artifact $_
@@ -222,8 +234,8 @@ function GetDependencies {
                 }
             }
             elseif ($dependency.release_status -ne "thisBuild" -and $dependency.release_status -ne "include") {
-                $token = GetAccessToken -token $dependency.authTokenSecret -repository $repository -permissions @{"contents"="read";"metadata"="read"}
-                $releases = GetReleases -api_url $api_url -token $token -repository $repository
+                $token = GetAccessToken -token $dependency.authTokenSecret -api_url $dependencyApiUrl -repository $repository -permissions @{"contents"="read";"metadata"="read"}
+                $releases = GetReleases -api_url $dependencyApiUrl -token $token -repository $repository
                 if ($dependency.version -ne "latest") {
                     $releases = $releases | Where-Object { ($_.tag_name -eq $dependency.version) }
                 }
@@ -239,7 +251,7 @@ function GetDependencies {
                     throw "Could not find a release that matches the criteria."
                 }
 
-                $download = DownloadRelease -token $token -projects $projects -api_url $api_url -repository $repository -path $saveToPath -release $release -mask $currentMask
+                $download = DownloadRelease -token $token -projects $projects -api_url $dependencyApiUrl -repository $repository -path $saveToPath -release $release -mask $currentMask
                 if ($download) {
                     if ($currentMask -like '*TestApps') {
                         $downloadedList += @("($download)")
@@ -743,28 +755,6 @@ function GetHeaders {
     return $headers
 }
 
-function WaitForRateLimit {
-    Param(
-        [hashtable] $headers,
-        [int] $percentage = 10,
-        [switch] $displayStatus
-    )
-
-    $rate = ((InvokeWebRequest -Headers $headers -Uri "https://api.github.com/rate_limit").Content | ConvertFrom-Json).rate
-    $percentRemaining = [int]($rate.remaining*100/$rate.limit)
-    if ($displayStatus) {
-        Write-Host "$($rate.remaining) API calls remaining out of $($rate.limit) ($percentRemaining%)"
-    }
-    if ($percentRemaining-lt $percentage) {
-        $resetTimestamp = [DateTimeOffset]::FromUnixTimeSeconds($rate.reset).ToLocalTime()
-        $waitSeconds = ($resetTimestamp - (Get-Date)).TotalSeconds
-        if ($waitSeconds -gt 0) {
-            Write-Host "`nLess than 10% API calls left, waiting for $waitSeconds seconds for limits to reset."
-            Start-Sleep -seconds $waitSeconds
-        }
-    }
-}
-
 function GetReleaseNotes {
     Param(
         [string] $token,
@@ -806,7 +796,15 @@ function DownloadRelease {
     if ($projects -eq "") { $projects = "*" }
     Write-Host "Downloading release $($release.Name), projects $projects, type $mask"
     if ([string]::IsNullOrEmpty($token)) {
-        $token = invoke-gh -silent -returnValue auth token
+        # Scope the gh token to the host serving the API: api.github.com -> github.com, api.<tenant>.ghe.com -> <tenant>.ghe.com, <host>/api/v3 -> <host>
+        $hostname = ([uri]$api_url).Host -replace '^api\.', ''
+        try {
+            $token = invoke-gh -silent -returnValue auth token --hostname $hostname
+        }
+        catch {
+            Write-Host "Unable to get token from gh for $hostname, will attempt to download release anonymously. Message: $($_.Exception.Message)"
+            $token = ''
+        }
     }
     $headers = GetHeaders -token $token -accept "application/octet-stream"
     foreach($project in $projects.Split(',')) {
@@ -949,7 +947,8 @@ function CheckBuildJobsInWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $repository,
         [Parameter(Mandatory = $true)]
-        [string] $workflowRunId
+        [string] $workflowRunId,
+        [string] $api_url = $ENV:GITHUB_API_URL
     )
 
     $per_page = 100
@@ -959,7 +958,7 @@ function CheckBuildJobsInWorkflowRun {
     $anySuccessful = $false
 
     while($true) {
-        $jobsURI = "https://api.github.com/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
+        $jobsURI = "$api_url/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
         $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
 
@@ -1002,10 +1001,11 @@ function FindLatestSuccessfulCICDRun {
         [Parameter(Mandatory = $true)]
         [string] $token,
         [Parameter(Mandatory = $true)]
-        [int] $retention
+        [int] $retention,
+        [string] $api_url = $ENV:GITHUB_API_URL
     )
 
-    $headers = GetHeaders -token $token
+    $headers = GetHeaders -token $token -api_url $api_url -repository $repository
     $lastSuccessfulCICDRun = $null
     $per_page = 100
     $maxAttempts = 3
@@ -1018,7 +1018,7 @@ function FindLatestSuccessfulCICDRun {
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $page = 1
         while($true) {
-            $runsURI = "https://api.github.com/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
+            $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
             Write-Host "- $runsURI"
             $response = InvokeWebRequest -Headers $headers -Uri $runsURI
             $workflowRuns = $response.Content | ConvertFrom-Json
@@ -1029,7 +1029,6 @@ function FindLatestSuccessfulCICDRun {
                 # No more workflow runs, breaking out of the loop
                 break
             }
-
             foreach($CICDRun in $CICDRuns) {
                 if($CICDRun.conclusion -eq 'success') {
                     # CICD run is successful
@@ -1041,7 +1040,7 @@ function FindLatestSuccessfulCICDRun {
                 }
 
                 # CICD run is considered successful if all build jobs were successful
-                $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository
+                $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository -api_url $api_url
 
                 if($areBuildJobsSuccessful) {
                     $lastSuccessfulCICDRun = $CICDRun
@@ -1229,7 +1228,7 @@ function GetArtifacts {
     if($version -eq '*') {
         if(-not $baselineWorkflowID) {
             # If the baseline workflow ID is $null or empty, it means that we need to find the latest successful CICD run (within the last 90 days, which is the maximum number of days GitHub Actions keeps artifacts)
-            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token -retention 90
+            $baselineWorkflowID,$baselineWorkflowSHA = FindLatestSuccessfulCICDRun -repository $repository -branch $branch -token $token -retention 90 -api_url $api_url
         }
 
         if($baselineWorkflowID -eq '0') {
