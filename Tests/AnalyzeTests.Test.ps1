@@ -85,9 +85,10 @@ Describe "AnalyzeTests Action Tests" {
                 Name  = 'Mixed Tests'
                 Tests = @('Passes', 'Fails', 'Skips')
             }
+            $diagnosticText = "line one; detail`nAL Callstack:`nline two"
             $results = @(
                 @{ MethodName = 'Passes'; Outcome = 'Pass'; Ms = 10; Message = ''; Stacktrace = '' },
-                @{ MethodName = 'Fails'; Outcome = 'Fail'; Ms = 20; Message = 'assertion failed'; Stacktrace = 'line one;line two' },
+                @{ MethodName = 'Fails'; Outcome = 'Fail'; Ms = 20; Message = 'ignored'; Stacktrace = $diagnosticText },
                 @{ MethodName = 'Skips'; Outcome = 'Skip'; Ms = 0; Message = ''; Stacktrace = '' }
             )
             Add-JUnitTestSuite -Doc $doc -TestSuitesNode $doc.DocumentElement `
@@ -100,8 +101,10 @@ Describe "AnalyzeTests Action Tests" {
 
         $summary | Should -Match '\|Test App\|3\|1[^|]*\|1[^|]*\|1[^|]*\|0\.03\|'
         $failures | Should -Match 'Fails, Failure'
-        $failures | Should -Match 'assertion failed'
-        $failures | Should -Match 'line one'
+        $failures | Should -Match 'Test failed'
+        $failures | Should -Match 'line one; detail'
+        $failures | Should -Match 'AL Callstack:'
+        $failures | Should -Match 'line two'
         $failures | Should -Not -Match 'Skips, Failure'
         $failureSummary | Should -Be '<i>1 failing tests, download test results to see details</i>'
     }

@@ -1,44 +1,11 @@
 # Run tests
 
-Run normal tests (`testFolders`) against the build container kept alive by the RunPipeline action.
+Run normal tests from `testFolders` against an existing Business Central container.
 
-Enable this action with `useSeparateTestAction.enabled`. It is used when normal tests are built and enabled and RunPipeline creates one local build container. Normal tests remain in RunPipeline for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests always remain in RunPipeline.
+The action reads analyzed settings from `Settings` and reconnects to the kept-alive build container using `containerName` and `containerCredential`; `project` selects the project folder, and `installTestAppsJson` supplies installed test-app paths from earlier jobs.
 
-The action keeps `TestResults.xml` in the project folder for AnalyzeTests and copies a produced result to `.buildartifacts/TestResults.xml` for artifact upload. It does not create a result artifact when no result is produced. After the run, it refreshes `ContainerEventLog.evtx` in the project folder so failure diagnostics include test-time events.
+Compiled apps are matched to normal `testFolders`; eligible installed test apps are added from `installTestAppsJson`, and matching disabled-test files are applied. The built-in runner uses AlTool and BcContainerHelper metadata to execute each selected app and append JUnit results to `TestResults.xml`.
 
-Compiled apps are selected by matching their app IDs to `testFolders`, which excludes BCPT-only apps from the shared test-app artifact. When `runTestsInAllInstalledTestApps` is enabled, apps from `installTestAppsJson` are also included. The action honors `disabledTests.json` files found recursively under the matching test folder and project-wide `<appId>.disabledTests.json` files for both the default runner and overrides.
+Produced results remain in the project folder for AnalyzeTests and are copied to `.buildartifacts/TestResults.xml`. The action refreshes `ContainerEventLog.evtx` after execution.
 
-## Test runner
-
-By default, AlTool runs enabled normal tests for each app through one batch and connection while BcContainerHelper provides app metadata, container configuration, company discovery, and server-side test enumeration. The optional `useSeparateTestAction.testType` value limits enumeration to `UnitTest`, `IntegrationTest`, or `Uncategorized`; blank runs all test types. The action writes JUnit output compatible with AL-Go AnalyzeTests and downstream processing.
-
-To use another test runner, add a `RunTestsInBcContainer` override script under the project's `.AL-Go` folder. The override replaces AlTool execution and receives the standard BcContainerHelper test parameters once per test app, including the configured `testType` parameter. Custom overrides may interpret additional values such as `Legacy`.
-
-### Known limitations
-
-The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Repositories that rely on those should execute their tests through BcContainerHelper by supplying a `RunTestsInBcContainer` override script as described above.
-
-Database restore events configured through `restoreDatabases` are not currently supported by the separate RunTests action. The action emits a warning and runs tests without performing the configured database restore.
-
-## INPUT
-
-### ENV variables
-
-| Name | Description |
-| :-- | :-- |
-| Settings | env.Settings must be set by a prior call to the ReadSettings Action |
-| containerName | env.containerName is set by the RunPipeline action and identifies the container to run tests against (the container name is otherwise derived from the project) |
-| containerCredential | env.containerCredential is set by the RunPipeline action and contains the masked, base64-encoded JSON credential used to reconnect to the kept-alive container |
-
-### Parameters
-
-| Name | Required | Description | Default value |
-| :-- | :-: | :-- | :-- |
-| shell | | The shell (powershell or pwsh) in which the PowerShell script should run | powershell |
-| token | | The GitHub token running the action and exposed to test override scripts | github.token |
-| project | | Project folder | '.' |
-| installTestAppsJson | | Path to a JSON file containing a list of test apps to run tests in | '' |
-
-## OUTPUT
-
-None
+The override `.AL-Go/RunTestsInBcContainer.ps1` replaces the built-in test runner. It is invoked once per selected test app with `-parameters` containing the standard BcContainerHelper test arguments and returns whether all tests passed.

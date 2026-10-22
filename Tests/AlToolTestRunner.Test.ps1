@@ -271,13 +271,14 @@ Describe 'AlToolTestRunner.psm1 Tests' {
     Context 'ConvertFrom-AlTestGroupsOutput' {
         InModuleScope AlToolTestRunner {
         It 'Maps pass, fail, and skip result occurrences by codeunit' {
+            $failureOutput = "assertion failed`nAL Callstack:`nline one; detail`nline two"
             $response = @{
                 succeeded = $false
                 message   = 'One or more tests failed.'
                 data      = @{
                     results = @(
                         @{ codeunitId = 130001; methodName = 'SameName'; status = 'passed'; output = ''; durationMs = 11 },
-                        @{ codeunitId = 130001; methodName = 'Fails'; status = 'failed'; output = "assertion failed`nAL Callstack:`nline one`nline two"; durationMs = 12 },
+                        @{ codeunitId = 130001; methodName = 'Fails'; status = 'failed'; output = $failureOutput; durationMs = 12 },
                         @{ codeunitId = 130002; methodName = 'SameName'; status = 'skipped'; output = ''; durationMs = 0 }
                     )
                 }
@@ -292,8 +293,58 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             ($parsed.Results['130002'] | Where-Object MethodName -eq 'SameName').Outcome | Should -Be 'Skip'
             $failedResult = $parsed.Results['130001'] | Where-Object MethodName -eq 'Fails'
             $failedResult.Outcome | Should -Be 'Fail'
-            $failedResult.Message | Should -Be 'assertion failed'
-            $failedResult.Stacktrace | Should -Be 'line one;line two'
+            $failedResult.Message | Should -BeExactly 'Test failed'
+            $failedResult.Stacktrace | Should -BeExactly $failureOutput
+        }
+
+        It 'Uses a stable message and preserves multiline output without a callstack marker' {
+            $failureOutput = "`n  plain failure  `nsecond line; still diagnostic`nthird line"
+            $response = @{
+                succeeded = $false
+                data      = @{
+                    results = @(
+                        @{ codeunitId = 130001; methodName = 'Fails'; status = 'failed'; output = $failureOutput; durationMs = 12 }
+                    )
+                }
+            } | ConvertTo-Json -Depth 6
+
+            $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($response)
+            $failedResult = $parsed.Results['130001'][0]
+
+            $failedResult.Message | Should -BeExactly 'Test failed'
+            $failedResult.Stacktrace | Should -BeExactly $failureOutput
+        }
+
+        It 'Uses a stable message and preserves empty failed output' {
+            $response = @{
+                succeeded = $false
+                data      = @{
+                    results = @(
+                        @{ codeunitId = 130001; methodName = 'Fails'; status = 'failed'; output = ''; durationMs = 12 }
+                    )
+                }
+            } | ConvertTo-Json -Depth 6
+
+            $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($response)
+
+            $parsed.Results['130001'][0].Message | Should -BeExactly 'Test failed'
+            $parsed.Results['130001'][0].Stacktrace | Should -BeExactly ''
+        }
+
+        It 'Uses a stable message and preserves whitespace-only failed output' {
+            $response = @{
+                succeeded = $false
+                data      = @{
+                    results = @(
+                        @{ codeunitId = 130001; methodName = 'Fails'; status = 'failed'; output = "`n  `n"; durationMs = 12 }
+                    )
+                }
+            } | ConvertTo-Json -Depth 6
+
+            $parsed = ConvertFrom-AlTestGroupsOutput -OutputLines @($response)
+
+            $parsed.Results['130001'][0].Message | Should -BeExactly 'Test failed'
+            $parsed.Results['130001'][0].Stacktrace | Should -BeExactly "`n  `n"
         }
 
         It 'Preserves every duplicate result occurrence in response order' {
@@ -921,7 +972,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             [xml] $junit = Get-Content -Path $junitFile -Raw
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='Passing']/failure") | Should -BeNullOrEmpty
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='Failing']/failure").GetAttribute('message') |
-                Should -Be 'primary failure'
+                Should -BeExactly 'Test failed'
             $junit.SelectSingleNode("testsuites/testsuite/testcase[@name='Skipped']/skipped") | Should -Not -BeNullOrEmpty
         }
 
@@ -990,7 +1041,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             $cases = @($junit.SelectNodes("testsuites/testsuite/testcase[@name='Duplicate']"))
             $cases.Count | Should -Be 2
             @($cases | Where-Object { $null -ne $_.SelectSingleNode('failure') }).Count | Should -Be 1
-            $cases[1].SelectSingleNode('failure').GetAttribute('message') | Should -Be 'second occurrence failed'
+            $cases[1].SelectSingleNode('failure').GetAttribute('message') | Should -BeExactly 'Test failed'
             $junit.SelectNodes("testsuites/testsuite/testcase/failure[@message='No result produced by al runtests']").Count |
                 Should -Be 0
         }
@@ -1179,10 +1230,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             $suite.SelectSingleNode('testcase/failure').GetAttribute('message') | Should -Match 'No result produced'
         }
 
-        It 'Records a failing method with its message and stacktrace' {
+        It 'Records a failing method with its message and exact diagnostic output' {
             $codeunit = [PSCustomObject]@{ Id = 130001; Name = 'My Tests' }
+            $diagnosticText = "line1; detail & context <tag>`nAL Callstack:`nline2 > expected"
             $methodResults = @(
-                @{ MethodName = 'TestA'; Outcome = 'Fail'; Ms = 4; Message = 'boom'; Stacktrace = 'line1;line2' }
+                @{ MethodName = 'TestA'; Outcome = 'Fail'; Ms = 4; Message = 'boom'; Stacktrace = $diagnosticText }
             )
 
             $failed = Add-JUnitTestSuite -Doc $script:doc -TestSuitesNode $script:suites -Codeunit $codeunit `
@@ -1191,9 +1243,43 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
 
             $failed | Should -Be 1
             $failureNode = $script:suites.SelectSingleNode('testsuite/testcase/failure')
-            $failureNode.GetAttribute('message') | Should -Be 'boom'
-            $failureNode.InnerText | Should -Match 'line1'
-            $failureNode.InnerText | Should -Match 'line2'
+            $failureNode.GetAttribute('message') | Should -BeExactly 'Test failed'
+            $failureNode.InnerText | Should -BeExactly $diagnosticText
+
+            $serialized = $script:doc.OuterXml
+            $serialized | Should -Match '&amp;'
+            $serialized | Should -Match '&lt;tag&gt;'
+            ([xml] $serialized).SelectSingleNode('testsuites/testsuite/testcase/failure').InnerText |
+                Should -BeExactly $diagnosticText
+        }
+
+        It 'Uses a stable failure message and safe body for empty diagnostic output' {
+            $codeunit = [PSCustomObject]@{ Id = 130001; Name = 'My Tests' }
+            $methodResults = @(
+                @{ MethodName = 'TestA'; Outcome = 'Fail'; Ms = 4; Message = 'ignored'; Stacktrace = '' }
+            )
+
+            Add-JUnitTestSuite -Doc $script:doc -TestSuitesNode $script:suites -Codeunit $codeunit `
+                -RequestedMethods @('TestA') -MethodResults $methodResults -ExtensionId 'ext' -AppName 'app' -Hostname 'host' | Out-Null
+
+            $failureNode = $script:suites.SelectSingleNode('testsuite/testcase/failure')
+            $failureNode.GetAttribute('message') | Should -BeExactly 'Test failed'
+            $failureNode.InnerText | Should -BeExactly ''
+        }
+
+        It 'Uses a stable failure message and preserves whitespace-only diagnostic output' {
+            $codeunit = [PSCustomObject]@{ Id = 130001; Name = 'My Tests' }
+            $diagnosticText = "`n  `n"
+            $methodResults = @(
+                @{ MethodName = 'TestA'; Outcome = 'Fail'; Ms = 4; Message = 'ignored'; Stacktrace = $diagnosticText }
+            )
+
+            Add-JUnitTestSuite -Doc $script:doc -TestSuitesNode $script:suites -Codeunit $codeunit `
+                -RequestedMethods @('TestA') -MethodResults $methodResults -ExtensionId 'ext' -AppName 'app' -Hostname 'host' | Out-Null
+
+            $failureNode = $script:suites.SelectSingleNode('testsuite/testcase/failure')
+            $failureNode.GetAttribute('message') | Should -BeExactly 'Test failed'
+            $failureNode.InnerText | Should -BeExactly $diagnosticText
         }
 
         It 'Records skipped methods in the suite count' {
