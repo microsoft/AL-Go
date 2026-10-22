@@ -2307,9 +2307,10 @@ Describe "ResolveFilePaths" {
         Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*outside the project destination folder '$destinationProjectFolder*" }
     }
 
-    It 'ResolveFilePaths warns and skips per-project path <project> outside the destination folder' -TestCases @(
+    It 'ResolveFilePaths warns and skips per-project path <project> containing parent-directory traversal' -TestCases @(
         @{ project = ".." }
         @{ project = "project/.." }
+        @{ project = "project/../other" }
     ) {
         param($project)
 
@@ -2322,7 +2323,7 @@ Describe "ResolveFilePaths" {
         $fullFilePaths = @(ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects @($project))
 
         $fullFilePaths | Should -BeNullOrEmpty
-        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': project destination folder * resolves to a different path *" }
+        Should -Invoke OutputWarning -Times 1 -ParameterFilter { $message -like "*for project '$project': project path contains parent-directory traversal.*" }
     }
 
     It 'ResolveFilePaths with type' {
@@ -2674,19 +2675,21 @@ Describe "ResolveFilePaths" {
         $fullFilePaths[1].destinationFullPath | Should -Be $fullFilePaths[0].destinationFullPath
     }
 
-    It 'ResolveFilePaths treats dot project as repository root for per-project files' {
+    It 'ResolveFilePaths normalizes dot segments in project path for per-project files' {
         $destinationFolder = Join-Path $PSScriptRoot "destinationFolder"
         $files = @(
             @{ "sourceFolder" = "folder"; "filter" = "File1.txt"; perProject = $true; "destinationFolder" = "custom" }
         )
 
-        $projects = @('.', 'ProjectAlpha')
+        $projects = @('.', 'ProjectAlpha', './ProjectAlpha', 'ProjectAlpha/./')
         $fullFilePaths = ResolveFilePaths -sourceFolder $sourceFolder -files $files -destinationFolder $destinationFolder -projects $projects
 
         $fullFilePaths | Should -Not -BeNullOrEmpty
-        $fullFilePaths.Count | Should -Be 2
+        $fullFilePaths.Count | Should -Be 4
         $fullFilePaths[0].destinationFullPath | Should -Be (Join-Path $destinationFolder "custom/File1.txt")
         $fullFilePaths[1].destinationFullPath | Should -Be (Join-Path $destinationFolder "ProjectAlpha/custom/File1.txt")
+        $fullFilePaths[2].destinationFullPath | Should -Be $fullFilePaths[1].destinationFullPath
+        $fullFilePaths[3].destinationFullPath | Should -Be $fullFilePaths[1].destinationFullPath
     }
 
     It 'ResolveFilePaths handles sourceFolder with trailing slashes' {

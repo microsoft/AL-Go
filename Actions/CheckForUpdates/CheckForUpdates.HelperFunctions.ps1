@@ -1274,15 +1274,13 @@ function ResolveFilePaths {
                         $project = '' # If project is '.', it means the root folder, so we use an empty string
                     }
 
-                    $unresolvedProjectDestinationFolder = Join-Path $destinationFolder $project
-                    $unresolvedProjectDestinationFolder = Join-Path $unresolvedProjectDestinationFolder '' # Ensure unresolved project destination folder has a trailing slash for correct path resolution
-                    $projectDestinationFolder = Resolve-PathLexically -Path $unresolvedProjectDestinationFolder -AsDirectory
-
-                    # Check if the unresolved project destination folder resolves to the same absolute path (e.g. catches ".." and "." segments)
-                    if ($unresolvedProjectDestinationFolder -ne $projectDestinationFolder) {
-                        OutputWarning "Skipping file '$srcFile' for project '$project': project destination folder '$unresolvedProjectDestinationFolder' resolves to a different path '$projectDestinationFolder'."
+                    if ($project.Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) -contains '..') {
+                        OutputWarning "Skipping file '$srcFile' for project '$project': project path contains parent-directory traversal."
                         continue
                     }
+
+                    $projectDestinationFolder = Join-Path $destinationFolder $project
+                    $projectDestinationFolder = Resolve-PathLexically -Path $projectDestinationFolder -AsDirectory
 
                     # Check if the project destination folder is under the base destination folder (lexical, resolves ".."/".")
                     if (-not (Test-PathLexicallyContained -Path $projectDestinationFolder -RootFolder $destinationFolder)) {
