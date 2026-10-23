@@ -17,6 +17,10 @@ AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residen
 > [!NOTE]
 > This feature is in preview
 
+### Include agentic workflows when updating system files from AL-Go or indirect templates
+
+Update AL-Go System Files will now also include .md files from .github/workflows. This is the recommended location for storing agentic workflows (.md files).
+
 ### Copilot code review for AL pull requests
 
 AL-Go repositories can now opt in to AI-powered review of AL pull requests, with configurable models, target branches, excluded authors, and BCQuality skills and knowledge. See [Enable Copilot code review](Scenarios/Agents/CopilotCodeReview.md) for setup, organization policy requirements, and operational details.

@@ -2561,6 +2561,69 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $testTxtFiles[0].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder1/test.txt')
         $testTxtFiles[1].destinationFullPath | Should -Be (Join-Path 'baseFolder' 'folder2/test.txt')
     }
+
+    It 'GetFilesToUpdate includes Markdown files from .github/workflows as agentic workflows for <templateKind> templates' -TestCases @(
+        @{ templateKind = 'direct' }
+        @{ templateKind = 'indirect' }
+    ) {
+        param($templateKind)
+
+        $mdTemplateFolder = Join-Path $TestDrive "mdTemplate-$templateKind"
+        $workflowsFolder = New-Item -ItemType Directory -Path (Join-Path $mdTemplateFolder '.github/workflows') -Force
+        Set-Content -Path (Join-Path $workflowsFolder.FullName 'agent.md') -Value '# agentic workflow' -Encoding UTF8
+        $mdSourceFullPath = (Get-Item -Path (Join-Path $workflowsFolder.FullName 'agent.md')).FullName
+
+        $params = @{}
+        $expectedOriginalSourceFullPath = $null
+        if ($templateKind -eq 'indirect') {
+            $originalFolder = Join-Path $TestDrive "mdOriginalTemplate-$templateKind"
+            $originalWorkflowsFolder = New-Item -ItemType Directory -Path (Join-Path $originalFolder '.github/workflows') -Force
+            Set-Content -Path (Join-Path $originalWorkflowsFolder.FullName 'agent.md') -Value '# original agentic workflow' -Encoding UTF8
+            $expectedOriginalSourceFullPath = (Get-Item -Path (Join-Path $originalWorkflowsFolder.FullName 'agent.md')).FullName
+            $params.originalTemplateFolder = $originalFolder
+        }
+
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @()
+                filesToExclude = @()
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $mdTemplateFolder -projects @('.') @params
+
+        $mdFile = @($filesToInclude | Where-Object { $_.sourceFullPath -eq $mdSourceFullPath })
+        $mdFile.Count | Should -Be 1
+        $mdFile[0].destinationFullPath | Should -Be (Join-Path (Join-Path 'baseFolder' '.github/workflows') 'agent.md')
+        $mdFile[0].type | Should -Be 'agentic workflow'
+        $mdFile[0].originalSourceFullPath | Should -Be $expectedOriginalSourceFullPath
+        $filesToExclude | Should -BeNullOrEmpty
+    }
+
+    It 'GetFilesToUpdate excludes Markdown files from .github/workflows when matched by customALGoFiles.filesToExclude' {
+        $mdTemplateFolder = Join-Path $TestDrive 'mdTemplate-exclude'
+        $workflowsFolder = New-Item -ItemType Directory -Path (Join-Path $mdTemplateFolder '.github/workflows') -Force
+        Set-Content -Path (Join-Path $workflowsFolder.FullName 'agent.md') -Value '# agentic workflow' -Encoding UTF8
+        $mdSourceFullPath = (Get-Item -Path (Join-Path $workflowsFolder.FullName 'agent.md')).FullName
+
+        $settings = @{
+            type                  = "NotPTE"
+            unusedALGoSystemFiles = @()
+            customALGoFiles       = @{
+                filesToInclude = @()
+                filesToExclude = @(@{ sourceFolder = '.github/workflows'; filter = '*.md' })
+            }
+        }
+
+        $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder 'baseFolder' -templateFolder $mdTemplateFolder -projects @('.')
+
+        @($filesToInclude | Where-Object { $_.sourceFullPath -eq $mdSourceFullPath }).Count | Should -Be 0
+        $excludedMdFile = @($filesToExclude | Where-Object { $_.sourceFullPath -eq $mdSourceFullPath })
+        $excludedMdFile.Count | Should -Be 1
+        $excludedMdFile[0].destinationFullPath | Should -Be (Join-Path (Join-Path 'baseFolder' '.github/workflows') 'agent.md')
+    }
 }
 
 Describe "GetFilesToUpdate (real template)" {
