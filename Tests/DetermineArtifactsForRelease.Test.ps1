@@ -133,11 +133,11 @@ Describe 'DetermineArtifactsForRelease Tests' {
                 Should -Throw -ExpectedMessage '*No artifacts found for this project*'
         }
 
-        It 'Throws when no successful CI/CD run exists for latest' {
+        It 'Reports missing artifacts as before when no successful CI/CD run exists for latest' {
             Mock FindLatestSuccessfulCICDRun { 0, '' }
 
             { & $scriptPath -buildVersion 'latest' -GITHUB_TOKEN 'tok' -TOKENFORPUSH 'tok' -ProjectsJson '["proj1"]' } |
-                Should -Throw -ExpectedMessage '*No successful CI/CD run found*'
+                Should -Throw -ExpectedMessage '*No artifacts found for this project*'
             Should -Invoke GetArtifactsFromWorkflowRun -Times 0 -Exactly
         }
 
@@ -176,9 +176,9 @@ Describe 'DetermineArtifactsForRelease Tests' {
             $output | Should -Not -Match 'proj1-main-TestApps'
         }
 
-        It 'Specific version throws when no release artifact with that version exists' {
+        It 'Specific version reports missing artifacts as before when no artifact with that version exists' {
             { & $scriptPath -buildVersion '1.2.3.4' -GITHUB_TOKEN 'tok' -TOKENFORPUSH 'tok' -ProjectsJson '["proj1"]' } |
-                Should -Throw -ExpectedMessage '*No release artifacts found for build version 1.2.3.4*'
+                Should -Throw -ExpectedMessage '*No artifacts found for this project*'
             Should -Invoke GetArtifactsFromWorkflowRun -Times 0 -Exactly
         }
     }

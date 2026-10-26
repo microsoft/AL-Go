@@ -36,16 +36,13 @@ $buildVersion = "$buildVersion"
 $projectNames = @($projects | ForEach-Object {
     if ($_ -and ($_ -ne '.')) { $_.Replace('\','_').Replace('/','_') } else { $settings.repoName }
 })
+$workflowRunId = 0
 if ($buildVersion -eq "latest") {
     $workflowRunId, $workflowRunSha = FindLatestSuccessfulCICDRun -repository $ENV:GITHUB_REPOSITORY -branch $ENV:GITHUB_REF_NAME -token $GITHUB_TOKEN -retention 90 -api_url $ENV:GITHUB_API_URL
-    if (-not $workflowRunId) {
-        throw "No successful CI/CD run found for branch $($ENV:GITHUB_REF_NAME). Run the CI/CD workflow before creating a release."
-    }
     $artifactsVersionFilter = '*'
 }
 else {
     # Find the workflow run of the requested build version by the exact name of its artifacts
-    $workflowRunId = 0
     foreach ($projectName in $projectNames) {
         foreach ($artifactType in @('Apps', 'PowerPlatformSolution')) {
             $artifactName = "$projectName-$refname-$artifactType-$buildVersion"
@@ -61,13 +58,17 @@ else {
             break
         }
     }
-    if (-not $workflowRunId) {
-        throw "No release artifacts found for build version $buildVersion on branch $($ENV:GITHUB_REF_NAME)."
-    }
     $artifactsVersionFilter = $buildVersion
 }
-Write-Host "Using artifacts from CI/CD run $workflowRunId"
-$allArtifacts = @(GetArtifactsFromWorkflowRun -workflowRun $workflowRunId -token $GITHUB_TOKEN -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask '*' -projects ($projectNames -join ',') -version $artifactsVersionFilter)
+# Without a run there are no artifacts, the loop below reports this for every project as before
+$allArtifacts = @()
+if ($workflowRunId) {
+    Write-Host "Using artifacts from CI/CD run $workflowRunId"
+    $allArtifacts = @(GetArtifactsFromWorkflowRun -workflowRun $workflowRunId -token $GITHUB_TOKEN -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask '*' -projects ($projectNames -join ',') -version $artifactsVersionFilter)
+}
+else {
+    Write-Host "No CI/CD run found for build version $buildVersion on branch $($ENV:GITHUB_REF_NAME)"
+}
 Write-Host "Artifacts count: $($allArtifacts.Count)"
 $projects | ForEach-Object {
     $thisProject = $_
