@@ -23,6 +23,10 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 
 ### Issues
 
+- Issue 2370, 2394 - The latest successful CI/CD run is now found by walking the first-parent commit history of the branch and querying the CI/CD runs of each commit (`head_sha`), instead of the workflow run list of the branch, which could return stale results and lead to an older or no baseline being selected. The search considers runs created within the retention period and stops after the first commit older than that.
+
+- Issue 2254, 2419 - Create Release no longer lists all artifacts of the repository, which failed with HTTP 500/502 in repositories with many artifacts. For `latest`, the artifacts are read from the latest successful CI/CD run. For a specific build version, the run is found by the exact name of its artifacts. Only the artifacts of that run are read.
+
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.
 
 - Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
