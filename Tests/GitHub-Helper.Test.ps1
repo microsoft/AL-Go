@@ -4,66 +4,140 @@ Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 Describe "FindLatestSuccessfulCICDRun" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
-    }
 
-    BeforeEach {
-        $script:responses = [System.Collections.Queue]::new()
-        Mock Start-Sleep -ModuleName Github-Helper {}
-        Mock Write-Host -ModuleName Github-Helper {}
-        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $false }
-        Mock InvokeWebRequest -ModuleName Github-Helper {
+        function NewCommit {
+            param([string] $sha, [string[]] $parents = @(), [int] $daysAgo = 0)
             @{
-                Content = @{ workflow_runs = @($script:responses.Dequeue()) } | ConvertTo-Json -Depth 10
+                sha = $sha
+                committer = @{ date = [DateTime]::UtcNow.AddDays(-$daysAgo).ToString('o') }
+                parents = @($parents | ForEach-Object { @{ sha = $_ } })
             }
         }
     }
 
-    It 'returns only the ID and SHA immediately on success and logs counts' {
-        $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = ' CI/CD'; conclusion = 'success' }))
+    BeforeEach {
+        $script:branchHead = ''
+        $script:commits = @{}
+        $script:runs = @{}
+        Mock Write-Host -ModuleName Github-Helper {}
+        Mock Start-Sleep -ModuleName Github-Helper {}
+        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $false }
+        Mock InvokeWebRequest -ModuleName Github-Helper {
+            if ($uri -match '/branches/') {
+                return @{ Content = (@{ commit = @{ sha = $script:branchHead } } | ConvertTo-Json -Depth 10) }
+            }
+            if ($uri -match '/git/commits/(?<sha>[^/?]+)$') {
+                return @{ Content = ($script:commits[$Matches.sha] | ConvertTo-Json -Depth 10) }
+            }
+            if ($uri -match '/actions/runs\?.*head_sha=(?<sha>[^&]+)') {
+                $runList = @()
+                if ($script:runs.ContainsKey($Matches.sha)) { $runList = @($script:runs[$Matches.sha]) }
+                return @{ Content = (@{ workflow_runs = $runList } | ConvertTo-Json -Depth 10) }
+            }
+            throw "Unexpected request: $uri"
+        }
+    }
+
+    BeforeAll {
+        function NewCommit {
+            param([string] $sha, [string[]] $parents = @(), [int] $daysAgo = 0)
+            @{
+                sha = $sha
+                committer = @{ date = [DateTime]::UtcNow.AddDays(-$daysAgo).ToString('o') }
+                parents = @($parents | ForEach-Object { @{ sha = $_ } })
+            }
+        }
+    }
+
+    It 'returns the CI/CD run of the branch head without walking further' {
+        $script:branchHead = 'c3'
+        $script:commits['c3'] = NewCommit 'c3' @('c2')
+        $script:runs['c3'] = @(@{ id = 42; head_sha = 'c3'; name = ' CI/CD'; conclusion = 'success'; created_at = '2026-10-20T10:00:00Z' })
 
         $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'releases/29.x' -token 'secret-token' -retention 7)
 
         $result | Should -HaveCount 2
         $result[0] | Should -Be 42
-        $result[1] | Should -BeExactly 'baseline-sha'
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
-        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly
+        $result[1] | Should -BeExactly 'c3'
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like '*/repos/test/repo/branches/releases/29.x' }
         Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter {
-            $uri -like '*per_page=100&page=1&exclude_pull_requests=true&status=completed&branch=releases%2F29.x&created=%3E*%3A*%3A*'
+            $uri -like '*/repos/test/repo/actions/runs?*head_sha=c3*' -and $uri -like '*branch=releases%2F29.x*' -and $uri -like '*status=completed*' -and $uri -like '*exclude_pull_requests=true*' -and $uri -like '*created=%3E*'
         }
-        Should -Invoke Write-Host -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter {
-            $Object -like '*attempt 1/3, page 1: 1 workflow runs, 1 CI/CD runs.'
-        }
-        Should -Invoke Write-Host -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $Object -like '*secret-token*' }
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $uri -like '*/git/commits/*' }
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly
+        Should -Invoke Write-Host -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { "$Object" -like '*secret-token*' }
     }
 
-    It 'retries empty listings and restarts pagination after an ineligible listing' {
-        $script:responses.Enqueue(@())
-        $script:responses.Enqueue(@(@{ id = 41; head_sha = 'failed'; name = 'CI/CD'; conclusion = 'failure' }))
-        $script:responses.Enqueue(@())
-        $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = 'CI/CD'; conclusion = 'success' }))
+    It 'walks only the first parent and skips cancelled and unrelated runs' {
+        $script:branchHead = 'c4'
+        $script:commits['c4'] = NewCommit 'c4' @('c3', 'feature1')
+        $script:commits['c3'] = NewCommit 'c3' @('c2')
+        $script:commits['c2'] = NewCommit 'c2' @('c1')
+        $script:runs['c4'] = @(
+            @{ id = 50; head_sha = 'c4'; name = 'Other'; conclusion = 'success'; created_at = '2026-10-20T10:05:00Z' },
+            @{ id = 49; head_sha = 'c4'; name = ' CI/CD'; conclusion = 'cancelled'; created_at = '2026-10-20T10:00:00Z' }
+        )
+        $script:runs['c3'] = @(@{ id = 48; head_sha = 'c3'; name = 'CI/CD'; conclusion = 'failure'; created_at = '2026-10-19T10:00:00Z' })
+        $script:runs['c2'] = @(@{ id = 47; head_sha = 'c2'; name = ' CI/CD '; conclusion = 'failure'; created_at = '2026-10-18T10:00:00Z' })
+        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $true } -ParameterFilter { $workflowRunId -eq '47' }
 
         $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
 
         $result | Should -HaveCount 2
-        $result[0] | Should -Be 42
-        $result[1] | Should -BeExactly 'baseline-sha'
-        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 3 -Exactly -ParameterFilter { $uri -like '*&page=1&*' }
-        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like '*&page=2&*' }
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $Seconds -eq 5 }
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $Seconds -eq 10 }
+        $result[0] | Should -Be 47
+        $result[1] | Should -BeExactly 'c2'
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $uri -like '*feature1*' }
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 2 -Exactly
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $workflowRunId -in @('49', '50') }
     }
 
-    It 'returns zero and an empty SHA after three exhausted attempts without an extra sleep' {
-        1..3 | ForEach-Object { $script:responses.Enqueue(@()) }
+    It 'selects the newest eligible run when a commit has several' {
+        $script:branchHead = 'c1'
+        $script:commits['c1'] = NewCommit 'c1'
+        $script:runs['c1'] = @(
+            @{ id = 10; head_sha = 'c1'; name = 'CI/CD'; conclusion = 'success'; created_at = '2026-10-01T10:00:00Z' },
+            @{ id = 11; head_sha = 'c1'; name = 'CI/CD'; conclusion = 'success'; created_at = '2026-10-02T10:00:00Z' }
+        )
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
+
+        $result[0] | Should -Be 11
+    }
+
+    It 'checks the first commit older than the retention and stops there' {
+        $script:branchHead = 'c2'
+        $script:commits['c2'] = NewCommit 'c2' @('c1')
+        $script:commits['c1'] = NewCommit 'c1' @('c0') -daysAgo 10
 
         $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
 
         $result | Should -HaveCount 2
         $result[0] | Should -Be 0
         $result[1] | Should -BeExactly ''
-        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 3 -Exactly -ParameterFilter { $uri -like '*&page=1&*' }
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 2 -Exactly
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like '*head_sha=c1*' }
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $uri -like '*c0*' }
+    }
+
+    It 'finds a recent run on a head commit that is older than the retention' {
+        $script:branchHead = 'c1'
+        $script:commits['c1'] = NewCommit 'c1' @('c0') -daysAgo 30
+        $script:runs['c1'] = @(@{ id = 5; head_sha = 'c1'; name = 'CI/CD'; conclusion = 'success'; created_at = '2026-10-20T10:00:00Z' })
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
+
+        $result[0] | Should -Be 5
+    }
+
+    It 'returns zero and an empty SHA at the root commit' {
+        $script:branchHead = 'c1'
+        $script:commits['c1'] = NewCommit 'c1'
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
+
+        $result | Should -HaveCount 2
+        $result[0] | Should -Be 0
+        $result[1] | Should -BeExactly ''
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
     }
 
     It 'propagates request failures rather than returning a missing baseline' {
@@ -72,40 +146,21 @@ Describe "FindLatestSuccessfulCICDRun" {
         { FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 } | Should -Throw 'Request failed'
 
         Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
     }
 
-    It 'paginates past unrelated and cancelled runs and accepts successful build jobs in a failed run' {
-        $script:responses.Enqueue(@(
-            @{ id = 45; head_sha = 'unrelated'; name = 'Other'; conclusion = 'success' }
-            @{ id = 44; head_sha = 'cancelled'; name = ' CI/CD'; conclusion = 'cancelled' }
-            @{ id = 43; head_sha = 'failed'; name = 'CI/CD'; conclusion = 'failure' }
-        ))
-        $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = ' CI/CD '; conclusion = 'failure' }))
-        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $true } -ParameterFilter { $workflowRunId -eq '42' }
-
-        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7)
-
-        $result | Should -HaveCount 2
-        $result[0] | Should -Be 42
-        $result[1] | Should -BeExactly 'baseline-sha'
-        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like '*&page=2&*' }
-        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 2 -Exactly
-        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $workflowRunId -in @('44', '45') }
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
-    }
-
-    It 'uses the specified api_url instead of GITHUB_API_URL for runs and jobs (e.g. local development environment)' {
+    It 'uses the specified api_url instead of GITHUB_API_URL for commits, runs and jobs (e.g. local development environment)' {
         $originalApiUrl = $ENV:GITHUB_API_URL
         try {
             Remove-Item Env:GITHUB_API_URL -ErrorAction SilentlyContinue
-            $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = 'CI/CD'; conclusion = 'failure' }))
+            $script:branchHead = 'c1'
+            $script:commits['c1'] = NewCommit 'c1'
+            $script:runs['c1'] = @(@{ id = 42; head_sha = 'c1'; name = 'CI/CD'; conclusion = 'failure'; created_at = '2026-10-20T10:00:00Z' })
             Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $true }
 
             $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.contoso.ghe.com')
 
             $result[0] | Should -Be 42
-            Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like 'https://api.contoso.ghe.com/repos/test/repo/actions/runs?*' }
+            Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $uri -notlike 'https://api.contoso.ghe.com/repos/test/repo/*' }
             Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $api_url -eq 'https://api.contoso.ghe.com' }
         }
         finally {
