@@ -1102,7 +1102,9 @@ function GetArtifactsFromWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $projects,
         [Parameter(Mandatory = $false)]
-        [ref] $expiredArtifacts
+        [ref] $expiredArtifacts,
+        [Parameter(Mandatory = $false)]
+        [string] $version = '*'
     )
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
@@ -1145,7 +1147,7 @@ function GetArtifactsFromWorkflowRun {
         foreach($project in $projectArr) {
             # e.g. "MyProject-main-Apps-*", format is: "project-branch-mask-version"
             # Mask might include buildMode like TranslatedTestApps
-            $artifactPattern = "$project-$branch-$mask-*"
+            $artifactPattern = "$project-$branch-$mask-$version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {

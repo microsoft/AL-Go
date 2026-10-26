@@ -190,6 +190,42 @@ Describe "CheckBuildJobsInWorkflowRun" {
     }
 }
 
+Describe "GetArtifactsFromWorkflowRun" {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+    }
+
+    BeforeEach {
+        Mock Write-Host -ModuleName Github-Helper {}
+        Mock InvokeWebRequest -ModuleName Github-Helper {
+            if ($uri -like '*/actions/runs/*/artifacts?*page=1') {
+                return @{ Content = (@{ artifacts = @(
+                    @{ id = 1; name = 'P1-main-Apps-1.0.5.0'; expired = $false },
+                    @{ id = 2; name = 'P1-main-Apps-1.0.5.1'; expired = $false },
+                    @{ id = 3; name = 'P1-main-BuildOutput-1.0.5.0'; expired = $false }
+                ) } | ConvertTo-Json -Depth 10) }
+            }
+            if ($uri -like '*/actions/runs/*/artifacts?*') { return @{ Content = '{"artifacts":[]}' } }
+            if ($uri -like '*/actions/runs/*') { return @{ Content = '{"head_branch":"main"}' } }
+            throw "Unexpected request: $uri"
+        }
+    }
+
+    It 'returns the newest version of each artifact when no version is specified' {
+        $result = @(GetArtifactsFromWorkflowRun -workflowRun '501' -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -mask 'Apps' -projects 'P1')
+
+        $result | Should -HaveCount 1
+        $result[0].name | Should -BeExactly 'P1-main-Apps-1.0.5.1'
+    }
+
+    It 'returns only artifacts of the specified version' {
+        $result = @(GetArtifactsFromWorkflowRun -workflowRun '502' -token 'dummy' -api_url 'https://api.github.com' -repository 'test/repo' -mask 'Apps' -projects 'P1' -version '1.0.5.0')
+
+        $result | Should -HaveCount 1
+        $result[0].name | Should -BeExactly 'P1-main-Apps-1.0.5.0'
+    }
+}
+
 Describe "GitHub-Helper Tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
