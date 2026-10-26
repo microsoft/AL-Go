@@ -19,9 +19,7 @@ Param(
     [Parameter(HelpMessage = "The settings for all Deployment Environments", Mandatory = $true)]
     [string] $deploymentEnvironmentsJson,
     [Parameter(HelpMessage = "Artifacts version. Used to check if this is a deployment from a PR", Mandatory = $false)]
-    [string] $artifactsVersion = '',
-    [Parameter(HelpMessage = "Fail when an artifact app version is lower than the installed version", Mandatory = $false)]
-    [bool] $failOnAppVersionDowngrade = $false
+    [string] $artifactsVersion = ''
 )
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
@@ -29,13 +27,13 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\Deploy\Deploy.psm1" -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
-if (-not $failOnAppVersionDowngrade) {
-    Write-Host "Downgrade check is disabled."
-    return
-}
-
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deploymentSettings = GetDeploymentSettings -deploymentEnvironmentsJson $deploymentEnvironmentsJson -environmentName $environmentName -settings $settings
+
+if (-not (GetFailOnAppVersionDowngrade -deploymentSettings $deploymentSettings -settings $settings)) {
+    Write-Host "Downgrade check is disabled for environment '$environmentName'."
+    return
+}
 
 # Mirror Deploy.ps1: environments handled by a custom DeployTo<EnvironmentType>.ps1 script are not deployed through the built-in SaaS path
 $githubFolder = Join-Path $ENV:GITHUB_WORKSPACE '.github'

@@ -721,6 +721,40 @@ InModuleScope Deploy { # Allows testing of private functions
                     $message -like "*App 2*"
                 }
             }
+
+            It 'Throws instead of warning when failOnDowngrade is set and app version is lower than installed version' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $appFiles = @("Project2App.app")
+
+                { CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -failOnDowngrade } |
+                    Should -Throw "Downgrade check failed:*Project 2 App*"
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Does not throw when failOnDowngrade is set and no app is downgraded' {
+                $bcAuthContext = @{ tenantId = "test-tenant" }
+                $environment = "test-env"
+                $appFiles = @("AppSourceApp.Test.app", "AppSourceApp.app", "NotInstalled.app")
+
+                { CheckInstalledApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -failOnDowngrade } |
+                    Should -Not -Throw
+            }
+        }
+
+        Describe "GetFailOnAppVersionDowngrade" {
+            It 'Returns false when the setting is not defined' {
+                GetFailOnAppVersionDowngrade -deploymentSettings @{} -settings @{} | Should -BeFalse
+            }
+
+            It 'Returns the global setting when DeployTo does not define it' {
+                GetFailOnAppVersionDowngrade -deploymentSettings @{} -settings @{ failOnAppVersionDowngrade = $true } | Should -BeTrue
+            }
+
+            It 'Prefers the DeployTo setting over the global setting' {
+                GetFailOnAppVersionDowngrade -deploymentSettings @{ failOnAppVersionDowngrade = $false } -settings @{ failOnAppVersionDowngrade = $true } | Should -BeFalse
+                GetFailOnAppVersionDowngrade -deploymentSettings @{ failOnAppVersionDowngrade = $true } -settings @{ failOnAppVersionDowngrade = $false } | Should -BeTrue
+            }
         }
 
         Describe "InstallOrUpgradeApps" {

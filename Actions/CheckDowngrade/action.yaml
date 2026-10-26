@@ -26,10 +26,6 @@ inputs:
     description: Artifacts version. Used to check if this is a deployment from a PR
     required: false
     default: ''
-  failOnAppVersionDowngrade:
-    description: Fail when an artifact app version is lower than the installed version
-    required: false
-    default: 'false'
 runs:
   using: composite
   steps:
@@ -42,10 +38,9 @@ runs:
         _type: ${{ inputs.type }}
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         _artifactsVersion: ${{ inputs.artifactsVersion }}
-        _failOnAppVersionDowngrade: ${{ inputs.failOnAppVersionDowngrade }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "CheckDowngrade" -Action {
-          ${{ github.action_path }}/CheckDowngrade.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion -failOnAppVersionDowngrade ($ENV:_failOnAppVersionDowngrade -eq 'true')
+          ${{ github.action_path }}/CheckDowngrade.ps1 -token $ENV:_token -environmentName $ENV:_environmentName -artifactsFolder $ENV:_artifactsFolder -type $ENV:_type -deploymentEnvironmentsJson $ENV:_deploymentEnvironmentsJson -artifactsVersion $ENV:_artifactsVersion
         }
 branding:
   icon: terminal

@@ -22,6 +22,7 @@ $envName = $environmentName.Split(' ')[0]
 $secrets = $env:Secrets | ConvertFrom-Json
 $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $deploymentSettings = GetDeploymentSettings -deploymentEnvironmentsJson $deploymentEnvironmentsJson -environmentName $environmentName -settings $settings
+$failOnAppVersionDowngrade = GetFailOnAppVersionDowngrade -deploymentSettings $deploymentSettings -settings $settings
 
 $authContext = $null
 foreach($secretName in "$($envName)-AuthContext","$($envName)_AuthContext","AuthContext") {
@@ -157,6 +158,9 @@ else {
                     Write-Host "Using $($deploymentSettings.SyncMode)"
                     $parameters += @{ "SyncMode" = $deploymentSettings.SyncMode }
                 }
+                if ($failOnAppVersionDowngrade) {
+                    CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps -failOnDowngrade
+                }
                 Write-Host "Publishing apps using development endpoint"
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages -replacePackageId
             }
@@ -177,7 +181,7 @@ else {
                     $parameters += @{ "SchemaSyncMode" = $syncMode }
                 }
 
-                CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+                CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps -failOnDowngrade:$failOnAppVersionDowngrade
 
                 Write-Host "Publishing apps using automation API"
                 Publish-PerTenantExtensionApps @parameters

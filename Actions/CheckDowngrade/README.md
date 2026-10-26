@@ -4,6 +4,8 @@ Checks whether the apps that the [Deploy](../Deploy/README.md) action will deplo
 
 If the repository contains a custom deployment script (`.github/DeployTo<EnvironmentType>.ps1`) for the environment type, the check is skipped, since the environment is not deployed using the built-in deployment.
 
+The action exits without doing anything unless the [failOnAppVersionDowngrade](https://aka.ms/algosettings#failOnAppVersionDowngrade) setting is enabled, either globally or in `DeployTo<environment>` (which takes precedence).
+
 ## INPUT
 
 ### ENV variables
@@ -24,7 +26,6 @@ If the repository contains a custom deployment script (`.github/DeployTo<Environ
 | type | | Type of deployment (CD or Publish). With CD, environments without an AuthContext secret are skipped unless `continuousDeployment` is set, matching the Deploy action | CD |
 | deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
 | artifactsVersion | | Artifacts version. Used to check if this is a deployment from a PR | |
-| failOnAppVersionDowngrade | | Fail when an artifact app version is lower than the installed version | false |
 
 ## OUTPUT
 

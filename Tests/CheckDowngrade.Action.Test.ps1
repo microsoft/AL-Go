@@ -34,7 +34,7 @@ Describe "CheckDowngrade Action Tests" {
         $env:GITHUB_WORKSPACE = Join-Path $TestDrive ([Guid]::NewGuid().ToString())
         New-Item -Path (Join-Path $env:GITHUB_WORKSPACE '.github') -ItemType Directory -Force | Out-Null
         $env:Secrets = '{"Sandbox-AuthContext":"e30="}'
-        $env:Settings = '{}'
+        $env:Settings = '{"failOnAppVersionDowngrade":true}'
         Mock DownloadAndImportBcContainerHelper {}
         Mock New-BcAuthContext { @{ tenantId = 'tenant' } }
         Mock Get-BcInstalledExtensions { @() }
@@ -58,16 +58,46 @@ Describe "CheckDowngrade Action Tests" {
     }
 
     It 'Does not initialize dependencies when disabled' {
+        $env:Settings = '{}'
+
         CheckDowngrade -environmentName 'Sandbox' -artifactsFolder 'missing' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
 
         Should -Invoke DownloadAndImportBcContainerHelper -Times 0
+        Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 0
+    }
+
+    It 'Is disabled when the environment-specific setting overrides the global setting with false' {
+        $env:Settings = @{
+            "failOnAppVersionDowngrade" = $true
+            "DeployToSandbox" = @{
+                "failOnAppVersionDowngrade" = $false
+            }
+        } | ConvertTo-Json -Depth 10 -Compress
+
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
+
+        Should -Invoke DownloadAndImportBcContainerHelper -Times 0
+        Should -Invoke Get-BcInstalledExtensions -Times 0
+    }
+
+    It 'Is enabled when the environment-specific setting overrides the global setting with true' {
+        $env:Settings = @{
+            "failOnAppVersionDowngrade" = $false
+            "DeployToSandbox" = @{
+                "failOnAppVersionDowngrade" = $true
+            }
+        } | ConvertTo-Json -Depth 10 -Compress
+
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
+
+        Should -Invoke Get-BcInstalledExtensions -Times 1
     }
 
     It 'Skips the check when a custom deployment script exists for the environment type' {
         Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeployToSaaS.ps1') -Value '' -Encoding UTF8
         $env:Secrets = '{}'
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Not -Throw
         Should -Invoke DownloadAndImportBcContainerHelper -Times 0
         Should -Invoke New-BcAuthContext -Times 0
@@ -77,7 +107,7 @@ Describe "CheckDowngrade Action Tests" {
     It 'Runs the check when a custom deployment script exists only for another environment type' {
         Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE '.github/DeployToOnPrem.ps1') -Value '' -Encoding UTF8
 
-        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
 
         Should -Invoke Get-BcInstalledExtensions -Times 1
     }
@@ -85,7 +115,7 @@ Describe "CheckDowngrade Action Tests" {
     It 'Skips the check for CD when no AuthContext exists and continuousDeployment is not set' {
         $env:Secrets = '{}'
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Not -Throw
         Should -Invoke New-BcAuthContext -Times 0
         Should -Invoke Get-BcInstalledExtensions -Times 0
@@ -94,19 +124,20 @@ Describe "CheckDowngrade Action Tests" {
     It 'Fails for CD when no AuthContext exists and continuousDeployment is set' {
         $env:Secrets = '{}'
         $env:Settings = @{
+            "failOnAppVersionDowngrade" = $true
             "DeployToSandbox" = @{
                 "continuousDeployment" = $true
             }
         } | ConvertTo-Json -Depth 10 -Compress
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Throw "No Authentication Context found*"
     }
 
     It 'Fails for Publish when no AuthContext exists' {
         $env:Secrets = '{}'
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -type 'Publish' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -type 'Publish' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Throw "No Authentication Context found*"
     }
 
@@ -122,7 +153,7 @@ Describe "CheckDowngrade Action Tests" {
             }
         }
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Throw "Downgrade check failed:*"
     }
 
@@ -145,7 +176,7 @@ Describe "CheckDowngrade Action Tests" {
             }
         }
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Not -Throw
     }
 
@@ -162,19 +193,20 @@ Describe "CheckDowngrade Action Tests" {
             }
         }
 
-        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true } |
+        { CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson } |
             Should -Not -Throw
         Should -Invoke Get-AppJsonFromAppFile -Times 0
     }
 
     It 'Includes test apps when includeTestAppsInSandboxEnvironment is enabled' {
         $env:Settings = @{
+            "failOnAppVersionDowngrade" = $true
             "DeployToSandbox" = @{
                 "includeTestAppsInSandboxEnvironment" = $true
             }
         } | ConvertTo-Json -Depth 10 -Compress
 
-        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
 
         Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 1 -ParameterFilter {
             $deploymentSettings.includeTestAppsInSandboxEnvironment -eq $true
@@ -182,7 +214,7 @@ Describe "CheckDowngrade Action Tests" {
     }
 
     It 'Excludes test apps when includeTestAppsInSandboxEnvironment is disabled' {
-        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -failOnAppVersionDowngrade $true
+        CheckDowngrade -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson
 
         Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 1 -ParameterFilter {
             $deploymentSettings.includeTestAppsInSandboxEnvironment -eq $false
@@ -191,6 +223,7 @@ Describe "CheckDowngrade Action Tests" {
 
     It 'Uses resolved DeployTo settings for artifact selection and environment name' {
         $env:Settings = @{
+            "failOnAppVersionDowngrade" = $true
             "DeployToSandbox" = @{
                 "EnvironmentName" = "override-bc"
                 "Projects" = "ProjectA"
@@ -199,7 +232,7 @@ Describe "CheckDowngrade Action Tests" {
             }
         } | ConvertTo-Json -Depth 10 -Compress
 
-        CheckDowngrade -token 'token' -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -artifactsVersion 'PR_1' -failOnAppVersionDowngrade $true
+        CheckDowngrade -token 'token' -environmentName 'Sandbox' -artifactsFolder '.artifacts' -deploymentEnvironmentsJson $deploymentEnvironmentsJson -artifactsVersion 'PR_1'
 
         Should -Invoke GetAppsAndDependenciesFromArtifacts -Times 1 -ParameterFilter {
             $token -eq 'token' -and

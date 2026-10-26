@@ -323,7 +323,7 @@
         "failOnAppVersionDowngrade": {
             "type": "boolean",
             "default": false,
-            "description": "Fail deployment in CI/CD if an app in the build artifact has a lower version than the version installed in the environment. Can be overridden per environment in DeployTo<environmentname>. See https://aka.ms/ALGoSettings#failOnAppVersionDowngrade"
+            "description": "Fail deployment in CI/CD and Publish To Environment if an app in the build artifact has a lower version than the version installed in the environment. Can be overridden per environment in DeployTo<environmentname>. See https://aka.ms/ALGoSettings#failOnAppVersionDowngrade"
         },
         "treatTestFailuresAsWarnings": {
             "type": "boolean"
@@ -825,7 +825,7 @@
                 "failOnAppVersionDowngrade": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Fail deployment in CI/CD to this environment if an app in the build artifact has a lower version than the version installed in the environment. Overrides the global failOnAppVersionDowngrade setting. See https://aka.ms/ALGoSettings#failOnAppVersionDowngrade"
+                    "description": "Fail deployment in CI/CD and Publish To Environment to this environment if an app in the build artifact has a lower version than the version installed in the environment. Overrides the global failOnAppVersionDowngrade setting. See https://aka.ms/ALGoSettings#failOnAppVersionDowngrade"
                 }
             }
         }

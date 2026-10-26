@@ -87,6 +87,33 @@ function GetDeploymentSettings {
 
 <#
     .SYNOPSIS
+        Get the effective failOnAppVersionDowngrade setting for an environment
+    .DESCRIPTION
+        A failOnAppVersionDowngrade value in DeployTo<environmentName> takes precedence over the global failOnAppVersionDowngrade setting.
+    .PARAMETER deploymentSettings
+        Deployment settings for the environment (as returned by GetDeploymentSettings)
+    .PARAMETER settings
+        AL-Go settings
+#>
+function GetFailOnAppVersionDowngrade {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $deploymentSettings,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $settings
+    )
+
+    if ($deploymentSettings.ContainsKey('failOnAppVersionDowngrade')) {
+        return [bool]$deploymentSettings.failOnAppVersionDowngrade
+    }
+    if ($settings.ContainsKey('failOnAppVersionDowngrade')) {
+        return [bool]$settings.failOnAppVersionDowngrade
+    }
+    return $false
+}
+
+<#
+    .SYNOPSIS
         Get apps and dependencies from artifacts
     .PARAMETER token
         The GitHub token running the action
@@ -271,15 +298,19 @@ function CheckIfAppNeedsInstallOrUpgrade {
         The environment to check installed apps in.
     .PARAMETER appFiles
         The list of app files to check against installed apps.
+    .PARAMETER failOnDowngrade
+        Throw an error instead of emitting a warning when an installed version is higher than the version in the app file.
 #>
 function CheckInstalledApps {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
-        [string[]] $appFiles
+        [string[]] $appFiles,
+        [switch] $failOnDowngrade
     )
     OutputDebugFunctionCall
 
+    $violations = @()
     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
     foreach($appFile in $appFiles) {
         # Get AppJson (works for full .app files, symbol files and also runtime packages)
@@ -292,9 +323,17 @@ function CheckInstalledApps {
             $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
 
             if ($currentVersion -lt $installedVersion) {
-                OutputWarning -message "App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+                if ($failOnDowngrade) {
+                    $violations += "App '$($appJson.name)' is already installed in version $installedVersion, which is higher than artifact version $currentVersion."
+                }
+                else {
+                    OutputWarning -message "App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+                }
             }
         }
+    }
+    if ($violations.Count -gt 0) {
+        throw "Downgrade check failed: $($violations -join ' ')"
     }
 }
 
