@@ -218,7 +218,7 @@ Describe "FindLatestSuccessfulCICDRun with release artifacts" {
         )
         $script:runsWithArtifacts = @('22', '21')
 
-        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -withReleaseArtifacts)
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -artifactProject 'P1')
 
         $result[0] | Should -Be 22
         $result[1] | Should -BeExactly 'c2'
@@ -231,11 +231,22 @@ Describe "FindLatestSuccessfulCICDRun with release artifacts" {
         $script:runs['c1'] = @(@{ id = 11; head_sha = 'c1'; name = 'CI/CD'; status = 'completed'; conclusion = 'failure'; created_at = '2026-10-19T10:00:00Z' })
         $script:runsWithArtifacts = @('11')
 
-        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -withReleaseArtifacts)
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -artifactProject 'P1')
 
         $result[0] | Should -Be 11
         $result[1] | Should -BeExactly 'c1'
-        Should -Invoke GetArtifactsFromWorkflowRun -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $workflowRun -eq '22' -and $mask -eq 'PowerPlatformSolution' -and $version -eq '*.*.*.*' }
+        Should -Invoke GetArtifactsFromWorkflowRun -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $workflowRun -eq '22' -and $mask -eq 'PowerPlatformSolution' -and $projects -eq 'P1' -and $version -eq '*.*.*.*' }
+    }
+
+    It 'checks only the requested artifact masks' {
+        $script:runs['c2'] = @(@{ id = 22; head_sha = 'c2'; name = 'CI/CD'; status = 'completed'; conclusion = 'success'; created_at = '2026-10-20T10:00:00Z' })
+        $script:runsWithArtifacts = @('22')
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -artifactProject 'P1' -artifactMasks @('*TestApps'))
+
+        $result[0] | Should -Be 0
+        Should -Invoke GetArtifactsFromWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $mask -eq 'Apps' }
+        Should -Invoke GetArtifactsFromWorkflowRun -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $mask -eq '*TestApps' }
     }
 }
 

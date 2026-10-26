@@ -32,44 +32,6 @@ $headers = @{
 }
 $refname = "$ENV:GITHUB_REF_NAME".Replace('/','_')
 $buildVersion = "$buildVersion"
-# Artifact names contain the sanitized project name (or the repository name for single project repositories)
-$projectNames = @($projects | ForEach-Object {
-    if ($_ -and ($_ -ne '.')) { $_.Replace('\','_').Replace('/','_') } else { $settings.repoName }
-})
-$workflowRunId = 0
-if ($buildVersion -eq "latest") {
-    $workflowRunId, $workflowRunSha = FindLatestSuccessfulCICDRun -repository $ENV:GITHUB_REPOSITORY -branch $ENV:GITHUB_REF_NAME -token $GITHUB_TOKEN -retention 90 -api_url $ENV:GITHUB_API_URL -withReleaseArtifacts
-    $artifactsVersionFilter = '*'
-}
-else {
-    # Find the workflow run of the requested build version by the exact name of its artifacts
-    foreach ($projectName in $projectNames) {
-        foreach ($artifactType in @('Apps', 'PowerPlatformSolution')) {
-            $artifactName = "$projectName-$refname-$artifactType-$buildVersion"
-            Write-Host "Search for $artifactName"
-            $namedArtifacts = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?name=$([Uri]::EscapeDataString($artifactName))&per_page=100"
-            $namedArtifact = @($namedArtifacts.artifacts | Where-Object { !$_.expired }) | Select-Object -First 1
-            if ($namedArtifact) {
-                $workflowRunId = $namedArtifact.workflow_run.id
-                break
-            }
-        }
-        if ($workflowRunId) {
-            break
-        }
-    }
-    $artifactsVersionFilter = $buildVersion
-}
-# Without a run there are no artifacts, the loop below reports this for every project as before
-$allArtifacts = @()
-if ($workflowRunId) {
-    Write-Host "Using artifacts from CI/CD run $workflowRunId"
-    $allArtifacts = @(GetArtifactsFromWorkflowRun -workflowRun $workflowRunId -token $GITHUB_TOKEN -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask '*' -projects ($projectNames -join ',') -version $artifactsVersionFilter)
-}
-else {
-    Write-Host "No CI/CD run found for build version $buildVersion on branch $($ENV:GITHUB_REF_NAME)"
-}
-Write-Host "Artifacts count: $($allArtifacts.Count)"
 $projects | ForEach-Object {
     $thisProject = $_
     if ($thisProject -and ($thisProject -ne '.')) {
@@ -79,6 +41,35 @@ $projects | ForEach-Object {
         $project = $settings.repoName
     }
     Write-Host "Analyzing artifacts for project $project"
+    # Find the workflow run with the artifacts of the project and read the artifacts of that run.
+    # Release artifacts (Apps, PowerPlatformSolution) are searched first, test artifacts only for projects without release artifacts.
+    $allArtifacts = @()
+    foreach ($artifactMasks in @(@('Apps', 'PowerPlatformSolution'), @('*TestApps'))) {
+        $workflowRunId = 0
+        if ($buildVersion -eq "latest") {
+            $artifactsVersionFilter = '*'
+            $workflowRunId, $workflowRunSha = FindLatestSuccessfulCICDRun -repository $ENV:GITHUB_REPOSITORY -branch $ENV:GITHUB_REF_NAME -token $GITHUB_TOKEN -retention 90 -api_url $ENV:GITHUB_API_URL -artifactProject $project -artifactMasks $artifactMasks
+        }
+        else {
+            $artifactsVersionFilter = $buildVersion
+            foreach ($artifactMask in $artifactMasks) {
+                $artifactName = "$project-$refname-$($artifactMask.TrimStart('*'))-$buildVersion"
+                Write-Host "Search for $artifactName"
+                $namedArtifacts = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?name=$([Uri]::EscapeDataString($artifactName))&per_page=100"
+                $namedArtifact = @($namedArtifacts.artifacts | Where-Object { !$_.expired }) | Select-Object -First 1
+                if ($namedArtifact) {
+                    $workflowRunId = $namedArtifact.workflow_run.id
+                    break
+                }
+            }
+        }
+        if ($workflowRunId) {
+            Write-Host "Using artifacts from CI/CD run $workflowRunId"
+            $allArtifacts = @(GetArtifactsFromWorkflowRun -workflowRun $workflowRunId -token $GITHUB_TOKEN -api_url $ENV:GITHUB_API_URL -repository $ENV:GITHUB_REPOSITORY -mask '*' -projects $project -version $artifactsVersionFilter)
+            break
+        }
+    }
+    Write-Host "Artifacts count: $($allArtifacts.Count)"
     if ($buildVersion -eq "latest") {
         Write-Host "Grab latest"
         $artifact = $allArtifacts | Where-Object { $_.name -like "$project-$refname-Apps-*.*.*.*" -or $_.name -like "$project-$refname-PowerPlatformSolution-*.*.*.*" } | Select-Object -First 1

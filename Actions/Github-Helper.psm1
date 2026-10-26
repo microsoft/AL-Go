@@ -995,7 +995,7 @@ function CheckBuildJobsInWorkflowRun {
 
     If no successful CICD run is found, 0 and empty string is returned.
 
-    With -withReleaseArtifacts, the state of the runs is ignored and the newest run having non-expired Apps or PowerPlatformSolution artifacts is returned (used by Create Release).
+    With -artifactProject, the state of the runs is ignored and the newest run having non-expired artifacts of the project (one of -artifactMasks, default Apps and PowerPlatformSolution) is returned (used by Create Release).
 #>
 function FindLatestSuccessfulCICDRun {
     Param(
@@ -1008,9 +1008,11 @@ function FindLatestSuccessfulCICDRun {
         [Parameter(Mandatory = $true)]
         [int] $retention,
         [string] $api_url = $ENV:GITHUB_API_URL,
-        [switch] $withReleaseArtifacts
+        [string] $artifactProject = '',
+        [string[]] $artifactMasks = @('Apps', 'PowerPlatformSolution')
     )
 
+    $withReleaseArtifacts = $artifactProject -ne ''
     $headers = GetHeaders -token $token -api_url $api_url -repository $repository
     $lastSuccessfulCICDRun = $null
     $per_page = 100
@@ -1046,11 +1048,11 @@ function FindLatestSuccessfulCICDRun {
 
         foreach($CICDRun in @($CICDRuns | Sort-Object { [DateTimeOffset]$_.created_at } -Descending)) {
             if($withReleaseArtifacts) {
-                # Any run (regardless of its state), which has non-expired release artifacts
-                $releaseArtifacts = @('Apps', 'PowerPlatformSolution' | ForEach-Object {
-                    GetArtifactsFromWorkflowRun -workflowRun $CICDRun.id -token $token -api_url $api_url -repository $repository -mask $_ -projects '*' -version '*.*.*.*'
+                # Any run (regardless of its state), which has non-expired artifacts of the project
+                $runArtifacts = @($artifactMasks | ForEach-Object {
+                    GetArtifactsFromWorkflowRun -workflowRun $CICDRun.id -token $token -api_url $api_url -repository $repository -mask $_ -projects $artifactProject -version '*.*.*.*'
                 })
-                if($releaseArtifacts.Count -gt 0) {
+                if($runArtifacts.Count -gt 0) {
                     $lastSuccessfulCICDRun = $CICDRun
                     break
                 }
