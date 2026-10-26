@@ -994,6 +994,8 @@ function CheckBuildJobsInWorkflowRun {
     The search stops after the first commit, which is older than $retention days.
 
     If no successful CICD run is found, 0 and empty string is returned.
+
+    With -withReleaseArtifacts, the state of the runs is ignored and the newest run having non-expired Apps or PowerPlatformSolution artifacts is returned (used by Create Release).
 #>
 function FindLatestSuccessfulCICDRun {
     Param(
@@ -1005,12 +1007,14 @@ function FindLatestSuccessfulCICDRun {
         [string] $token,
         [Parameter(Mandatory = $true)]
         [int] $retention,
-        [string] $api_url = $ENV:GITHUB_API_URL
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [switch] $withReleaseArtifacts
     )
 
     $headers = GetHeaders -token $token -api_url $api_url -repository $repository
     $lastSuccessfulCICDRun = $null
     $per_page = 100
+    $statusFilter = if ($withReleaseArtifacts) { '' } else { '&status=completed' }
 
     Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
     $expiredDate = [DateTimeOffset]::UtcNow.AddDays(-$retention)
@@ -1028,10 +1032,10 @@ function FindLatestSuccessfulCICDRun {
         $page = 1
         $CICDRuns = @()
         while($true) {
-            $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&head_sha=$commitSha&created=$encodedCreated"
+            $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true$statusFilter&branch=$encodedBranch&head_sha=$commitSha&created=$encodedCreated"
             Write-Host "- $runsURI"
             $workflowRuns = @(((InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json).workflow_runs)
-            $CICDRuns += @($workflowRuns | Where-Object { $_.name.Trim() -eq 'CI/CD' })
+            $CICDRuns += @($workflowRuns | Where-Object { $withReleaseArtifacts -or $_.name.Trim() -eq 'CI/CD' })
             if($workflowRuns.Count -lt $per_page) {
                 # No more workflow runs for this commit
                 break
@@ -1041,6 +1045,17 @@ function FindLatestSuccessfulCICDRun {
         Write-Host "Commit ${commitSha}: $($CICDRuns.Count) completed CI/CD runs."
 
         foreach($CICDRun in @($CICDRuns | Sort-Object { [DateTimeOffset]$_.created_at } -Descending)) {
+            if($withReleaseArtifacts) {
+                # Any run (regardless of its state), which has non-expired release artifacts
+                $releaseArtifacts = @('Apps', 'PowerPlatformSolution' | ForEach-Object {
+                    GetArtifactsFromWorkflowRun -workflowRun $CICDRun.id -token $token -api_url $api_url -repository $repository -mask $_ -projects '*' -version '*.*.*.*'
+                })
+                if($releaseArtifacts.Count -gt 0) {
+                    $lastSuccessfulCICDRun = $CICDRun
+                    break
+                }
+                continue
+            }
             if($CICDRun.conclusion -eq 'success') {
                 # CICD run is successful
                 $lastSuccessfulCICDRun = $CICDRun

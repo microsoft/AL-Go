@@ -38,7 +38,7 @@ $projectNames = @($projects | ForEach-Object {
 })
 $workflowRunId = 0
 if ($buildVersion -eq "latest") {
-    $workflowRunId, $workflowRunSha = FindLatestSuccessfulCICDRun -repository $ENV:GITHUB_REPOSITORY -branch $ENV:GITHUB_REF_NAME -token $GITHUB_TOKEN -retention 90 -api_url $ENV:GITHUB_API_URL
+    $workflowRunId, $workflowRunSha = FindLatestSuccessfulCICDRun -repository $ENV:GITHUB_REPOSITORY -branch $ENV:GITHUB_REF_NAME -token $GITHUB_TOKEN -retention 90 -api_url $ENV:GITHUB_API_URL -withReleaseArtifacts
     $artifactsVersionFilter = '*'
 }
 else {

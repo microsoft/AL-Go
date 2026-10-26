@@ -90,7 +90,7 @@ Describe 'DetermineArtifactsForRelease Tests' {
             $output | Should -Match 'proj1-main-Apps-1\.0\.0\.0'
             $output | Should -Match 'proj1-main-TestApps-1\.0\.0\.0'
             $output | Should -Match 'proj2-main-Apps-1\.0\.0\.0'
-            Should -Invoke FindLatestSuccessfulCICDRun -Times 1 -Exactly -ParameterFilter { $branch -eq 'main' -and $retention -eq 90 -and $repository -eq 'org/repo' }
+            Should -Invoke FindLatestSuccessfulCICDRun -Times 1 -Exactly -ParameterFilter { $branch -eq 'main' -and $retention -eq 90 -and $repository -eq 'org/repo' -and $withReleaseArtifacts }
             Should -Invoke GetArtifactsFromWorkflowRun -Times 1 -Exactly -ParameterFilter { $workflowRun -eq '4711' -and $projects -eq 'proj1,proj2' -and $version -eq '*' }
             Should -Invoke Invoke-RestMethod -Times 0 -Exactly -ParameterFilter { $Uri -like '*/actions/artifacts?per_page*' }
         }

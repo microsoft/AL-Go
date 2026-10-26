@@ -169,6 +169,76 @@ Describe "FindLatestSuccessfulCICDRun" {
     }
 }
 
+Describe "FindLatestSuccessfulCICDRun with release artifacts" {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+
+        function NewCommit {
+            param([string] $sha, [string[]] $parents = @())
+            @{
+                sha = $sha
+                committer = @{ date = [DateTime]::UtcNow.ToString('o') }
+                parents = @($parents | ForEach-Object { @{ sha = $_ } })
+            }
+        }
+    }
+
+    BeforeEach {
+        $script:commits = @{
+            'c2' = NewCommit 'c2' @('c1')
+            'c1' = NewCommit 'c1'
+        }
+        $script:runs = @{}
+        $script:runsWithArtifacts = @()
+        Mock Write-Host -ModuleName Github-Helper {}
+        Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $true }
+        Mock GetArtifactsFromWorkflowRun -ModuleName Github-Helper {
+            if ($script:runsWithArtifacts -contains "$workflowRun" -and $mask -eq 'Apps') { @(@{ name = "P1-main-Apps-1.0.0.0" }) } else { @() }
+        }
+        Mock InvokeWebRequest -ModuleName Github-Helper {
+            if ($uri -match '/branches/') {
+                return @{ Content = (@{ commit = @{ sha = 'c2' } } | ConvertTo-Json -Depth 10) }
+            }
+            if ($uri -match '/git/commits/(?<sha>[^/?]+)$') {
+                return @{ Content = ($script:commits[$Matches.sha] | ConvertTo-Json -Depth 10) }
+            }
+            if ($uri -match '/actions/runs\?.*head_sha=(?<sha>[^&]+)') {
+                $runList = @()
+                if ($script:runs.ContainsKey($Matches.sha)) { $runList = @($script:runs[$Matches.sha]) }
+                return @{ Content = (@{ workflow_runs = $runList } | ConvertTo-Json -Depth 10) }
+            }
+            throw "Unexpected request: $uri"
+        }
+    }
+
+    It 'returns the newest run with release artifacts regardless of the state of the run' {
+        $script:runs['c2'] = @(
+            @{ id = 22; head_sha = 'c2'; name = 'CI/CD'; status = 'in_progress'; conclusion = $null; created_at = '2026-10-20T10:00:00Z' },
+            @{ id = 21; head_sha = 'c2'; name = 'CI/CD'; status = 'completed'; conclusion = 'failure'; created_at = '2026-10-19T10:00:00Z' }
+        )
+        $script:runsWithArtifacts = @('22', '21')
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -withReleaseArtifacts)
+
+        $result[0] | Should -Be 22
+        $result[1] | Should -BeExactly 'c2'
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $uri -like '*status=completed*' }
+        Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly
+    }
+
+    It 'skips runs without release artifacts and continues with the parent commit' {
+        $script:runs['c2'] = @(@{ id = 22; head_sha = 'c2'; name = 'CI/CD'; status = 'completed'; conclusion = 'failure'; created_at = '2026-10-20T10:00:00Z' })
+        $script:runs['c1'] = @(@{ id = 11; head_sha = 'c1'; name = 'CI/CD'; status = 'completed'; conclusion = 'failure'; created_at = '2026-10-19T10:00:00Z' })
+        $script:runsWithArtifacts = @('11')
+
+        $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.github.com' -withReleaseArtifacts)
+
+        $result[0] | Should -Be 11
+        $result[1] | Should -BeExactly 'c1'
+        Should -Invoke GetArtifactsFromWorkflowRun -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $workflowRun -eq '22' -and $mask -eq 'PowerPlatformSolution' -and $version -eq '*.*.*.*' }
+    }
+}
+
 Describe "CheckBuildJobsInWorkflowRun" {
     It 'uses the specified api_url instead of GITHUB_API_URL' {
         $originalApiUrl = $ENV:GITHUB_API_URL
