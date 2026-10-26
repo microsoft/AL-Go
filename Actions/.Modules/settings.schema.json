@@ -289,6 +289,129 @@
             "type": "boolean",
             "description": "Enable code analyzers on test apps. See https://aka.ms/ALGoSettings#enablecodeanalyzersonTestapps"
         },
+        "BCQuality": {
+            "type": "object",
+            "description": "Configures the trusted BCQuality marketplace consumed by AL-Go agents. See https://aka.ms/ALGoSettings#BCQuality",
+            "properties": {
+                "marketplaceRepo": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://github\\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/(?![^/?#]+\\.git/?$)[A-Za-z0-9._-]{1,100}/?$",
+                    "description": "Trusted public or private GitHub repository containing the BCQuality marketplace."
+                },
+                "version": {
+                    "type": "string",
+                    "pattern": "^[0-9]+\\.[0-9]+$",
+                    "description": "BCQuality content version installed from the corresponding v-prefixed marketplace tag."
+                },
+                "enabledLayers": {
+                    "type": "array",
+                    "default": [],
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "microsoft",
+                            "community",
+                            "custom"
+                        ]
+                    },
+                    "description": "BCQuality content layers retained for agent execution. An empty list retains microsoft, community, and custom."
+                },
+                "disabledSkills": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": "Repository-relative BCQuality skill paths removed before agent execution."
+                },
+                "knowledge": {
+                    "type": "object",
+                    "properties": {
+                        "allow": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "description": "Knowledge globs retained within enabled layers; an empty list retains all enabled-layer knowledge."
+                        },
+                        "deny": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "description": "Knowledge globs removed after the allow filter is applied."
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "allow",
+                        "deny"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "marketplaceRepo",
+                "version",
+                "enabledLayers",
+                "disabledSkills",
+                "knowledge"
+            ]
+        },
+        "CodeReviewAgent": {
+            "type": "object",
+            "description": "Configures Copilot code review for AL pull requests. This repository-level setting is applied by Update AL-Go System Files. See https://aka.ms/ALGoSettings#CodeReviewAgent",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable Copilot code review in PTE and AppSource repositories. Update AL-Go System Files adds the automatic review triggers only when true; otherwise it removes the review workflows. Raw templates are manual-only and skip manual runs."
+                },
+                "branches": {
+                    "type": "array",
+                    "default": [],
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": "Ordered GitHub Actions target branch patterns that trigger Copilot code review, including ! exclusions. An empty list reviews main."
+                },
+                "model": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Copilot model used for final self-review and consolidation."
+                },
+                "leafModel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Copilot model used for isolated review leaf processes."
+                },
+                "excludedAuthors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": "GitHub login names whose pull requests are excluded from Copilot code review."
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "enabled",
+                "branches",
+                "model",
+                "leafModel",
+                "excludedAuthors"
+            ]
+        },
         "customCodeCops": {
             "type": "array",
             "items": {
@@ -404,7 +527,13 @@
                         "type": "string",
                         "enum": ["includeDependencies"]
                     },
-                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                    "description": "An array of deliverToAppSource properties to replace instead of merge. A previously protected property can only be replaced when this source also protects it. See https://aka.ms/ALGoSettings#overwriteSettings"
+                },
+                "protectedSettings": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "An array of deliverToAppSource properties protected from later sources that do not also protect them. Each named property must have a value in the same source. Replacing the entire deliverToAppSource object discards these protections unless the parent is protected. See https://aka.ms/ALGoSettings#protectedSettings"
                 }
             },
             "required": [
@@ -640,6 +769,20 @@
                 },
                 "defaultReleaseMD": {
                     "type": "string"
+                },
+                "overwriteSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["includeProjects", "excludeProjects"]
+                    },
+                    "description": "An array of alDoc properties to replace instead of merge. A previously protected property can only be replaced when this source also protects it. See https://aka.ms/ALGoSettings#overwriteSettings"
+                },
+                "protectedSettings": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "An array of alDoc properties protected from later sources that do not also protect them. Each named property must have a value in the same source. Replacing the entire alDoc object discards these protections unless the parent is protected. See https://aka.ms/ALGoSettings#protectedSettings"
                 }
             },
             "required": [
@@ -653,15 +796,7 @@
                 "footer",
                 "defaultIndexMD",
                 "defaultReleaseMD"
-            ],
-            "overwriteSettings": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "enum": ["includeProjects", "excludeProjects"]
-                },
-                "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
-            }
+            ]
         },
         "commitOptions": {
             "type": "object",
@@ -690,7 +825,13 @@
                         "type": "string",
                         "enum": ["pullRequestLabels"]
                     },
-                    "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                    "description": "An array of commitOptions properties to replace instead of merge. A previously protected property can only be replaced when this source also protects it. See https://aka.ms/ALGoSettings#overwriteSettings"
+                },
+                "protectedSettings": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "An array of commitOptions properties protected from later sources that do not also protect them. Each named property must have a value in the same source. Replacing the entire commitOptions object discards these protections unless the parent is protected. See https://aka.ms/ALGoSettings#protectedSettings"
                 }
             },
             "required": [
@@ -738,7 +879,15 @@
                 "type": "string",
                 "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
             },
-            "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
+            "description": "An array of settings to be replaced instead of merged by the current source. An earlier protected setting can only be replaced when this source also protects it. The meta settings ConditionalSettings, overwriteSettings, and protectedSettings are ignored when listed in overwriteSettings. To replace a setting conditionally, use overwriteSettings inside the settings object of a matching ConditionalSettings block. See https://aka.ms/ALGoSettings#overwriteSettings"
+        },
+        "protectedSettings": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": [],
+            "description": "An optional array of settings protected from later sources that do not also protect them. Each named setting must have a value in the same source. Used during merging but not included in the resolved settings. The meta settings ConditionalSettings, overwriteSettings, and protectedSettings are ignored when listed in protectedSettings. To protect a setting conditionally, use protectedSettings inside the settings object of a matching ConditionalSettings block. See https://aka.ms/ALGoSettings#protectedSettings"
         },
         "reportSuppressedDiagnostics": {
             "type": "boolean",

@@ -1,0 +1,7 @@
+{
+  "name": "al-go-action-dependencies",
+  "private": true,
+  "dependencies": {
+    "@github/copilot": "1.0.96"
+  }
+}

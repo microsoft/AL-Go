@@ -22,12 +22,14 @@ try {
 
     if (-not $SkipTelemetry) {
         $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds).ToString()
+        $AdditionalData["ActionConclusion"] = "Success"
         Trace-Information -ActionName $ActionName -AdditionalData $AdditionalData
     }
 }
 catch {
     if (-not $SkipTelemetry) {
         $AdditionalData["ActionDuration"] = (((Get-Date) - $startTime).TotalSeconds).ToString()
+        $AdditionalData["ActionConclusion"] = "Failure"
         Trace-Exception -ActionName $ActionName -ErrorRecord $_ -AdditionalData $AdditionalData
     }
 

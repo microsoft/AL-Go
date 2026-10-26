@@ -80,6 +80,8 @@ The repository settings are only read from the repository settings file (.github
 | <a id="useProjectDependencies"></a>useProjectDependencies | Determines whether your projects are built using a multi-stage built workflow or single stage. After setting useProjectDependencies to true, you need to run Update AL-Go System Files and your workflows including a build job will change to have multiple build jobs, depending on each other. The number of build jobs will be determined by the dependency depth in your projects.<br />You can change dependencies between your projects, but if the dependency **depth** changes, AL-Go will warn you that updates for your AL-Go System Files are available and you will need to run the workflow. |
 | <a id="CICDPushBranches"></a>CICDPushBranches | CICDPushBranches can be specified as an array of branches, which triggers a CI/CD workflow on commit. You need to run the Update AL-Go System Files workflow for the change to take effect.<br />Default is [ "main", "release/\*", "feature/\*" ]<br /><br />**Supported release branch naming formats:**<br />When using release branches, AL-Go supports various naming conventions for matching previous releases during upgrade testing. The following formats are recognized:<br />• `releases/26` - matches releases with major version 26<br />• `releases/26.x` - matches releases with major version 26<br />• `releases/26x` - matches releases with major version 26<br />• `releases/v26` - matches releases with major version 26<br />• `releases/v26.x` - matches releases with major version 26<br />• `releases/v26x` - matches releases with major version 26<br />• `releases/26.3` - matches releases with major.minor version 26.3<br />The same patterns work with the singular `release/` prefix. |
 | <a id="CICDPullRequestBranches"></a>CICDPullRequestBranches | CICDPullRequestBranches can be specified as an array of branches (branch patterns). A Pull Request Build will be triggered when a PR targets a branch that matches one of the patterns in this list. You need to run the Update AL-Go System Files workflow for the change to take effect.<br />Default is [ "main" ] |
+| <a id="BCQuality"></a>BCQuality | Configures the BCQuality plugin used by AL-Go agents. `marketplaceRepo` and `version` select the marketplace release; the installed plugin version is discovered from its manifest. `enabledLayers`, `disabledSkills`, and `knowledge.allow`/`knowledge.deny` control retained content. Defaults retain all Microsoft, community, and custom knowledge from `microsoft/BCQuality` version `1.7`, with no disabled skills or knowledge filters. `enabledLayers` defaults to `[]`, which retains all three layers at execution time; an explicit array retains only the named layers. JSON paths and patterns can contain commas. |
+| <a id="CodeReviewAgent"></a>CodeReviewAgent | Configures Copilot code review for AL pull requests. Set `enabled` to true to have Update AL-Go System Files add the review workflows. `branches` selects reviewed target branch patterns independently of `CICDPullRequestBranches`, using ordered GitHub Actions patterns including `!` exclusions; the trusted runner rechecks the authoritative base branch. `model` selects the model used for final self-review and consolidation, `leafModel` selects the model used for isolated review processes, and `excludedAuthors` lists GitHub authors whose pull requests should not be reviewed. The trusted workflow installs the separately configured [BCQuality](https://github.com/microsoft/BCQuality) marketplace through AL-Go's `SetupBCQuality` action and passes the prepared plugin to `ReviewAgent`. The GitHub organization must allow Copilot CLI requests billed to the organization. See [Enable Copilot code review](Agents/CopilotCodeReview.md). Defaults are `enabled: false`, `branches: []` (reviews `main`; explicit patterns replace this fallback), `model: "gpt-5.6-sol"`, `leafModel: "gpt-5.6-luna"`, and `excludedAuthors: []`. |
 | <a id="pullRequestTrigger"></a>pullRequestTrigger | Setting for specifying the trigger AL-Go should use to trigger Pull Request Builds. Note that when using the default `pull_request` trigger, secrets are not available to the workflow for pull requests from forks. If you need secret access for fork PRs, you can set this to `pull_request_target`, but make sure you understand the [security implications](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) first. You need to run the Update AL-Go System Files workflow for the change to take effect.<BR />Default is [pull_request](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request) |
 | <a id="buildModes"></a>buildModes | A list of build modes to use when building the AL-Go projects. Every AL-Go project will be built using each build mode. The following build modes have special meaning in AL-Go:<br /> **Default**: Apps are compiled as they are in the source code.<br />**Clean**: Should be used for Clean Mode. Use [Conditional Settings](https://aka.ms/algosettings#conditional-settings) with buildMode set the 'Clean' to specify preprocessorSymbols for clean mode.<br />**Translated**: `TranslationFile` compiler feature is enabled when compiling the apps.<br /><br />It is also possible to specify custom build modes by adding a build mode that is different than 'Default', 'Clean' or 'Translated' and use [conditional settings](https://aka.ms/algosettings#conditional-settings) to specify preprocessor symbols and other build settings for the build mode. |
 | <a id="useGitSubmodules"></a>useGitSubmodules | If your repository is using Git Submodules, you can set the `useGitSubmodules` setting to `"true"` or `"recursive"` in order to use these submodules during build workflows. If `useGitSubmodules` is not set, git submodules are not initialized. If the submodules reside in private repositories, you need to define a `gitSubmodulesToken` secret. Read [this](https://aka.ms/algosecrets#gitSubmodulesToken) for more information. |
@@ -251,6 +253,19 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="reportsuppresseddiagnostics"></a>reportSuppressedDiagnostics | If this setting is set to true, the AL compiler will report diagnostics which are suppressed in the code using the pragma `#pragma warning disable <id>`. This can be useful if you want to ensure that no warnings are suppressed in your code. | false |
 | <a id="customALGoFiles"></a>customALGoFiles | An object to configure custom AL-Go files, that will be updated during "Update AL-Go System Files" workflow. The object can contain properties `filesToInclude` and `filesToExclude`. Read more at [Customizing AL-Go](CustomizingALGoForGitHub.md#Using-custom-template-files). | `{ "filesToInclude": [], "filesToExclude": [] }`
 
+## Settings sources in workflow logs <a id="settings-sources"></a>
+
+The ReadSettings action writes a **Settings sources** group to the workflow log. It lists the path and source of every resolved setting, including nested properties, without printing their values in that group. This helps explain which settings files, variables, or defaults contributed to a result. Calling `ReadSettings` directly does not write this group.
+
+- A scalar lists its latest accepted source; an unchanged setting lists `default`.
+- An array lists the sources applied to it, even if a source only repeated an existing value. Extending a default array retains `default`.
+- An object lists sources that supplied the object, even the source changed no nested properties. Each nested property has its own source entry. Extending a default object retains `default`.
+- Replacing an array or object with [overwriteSettings](#overwriteSettings) starts a new source list, including for an object's properties.
+- A computed setting retains its earlier source followed by the derivation, for example `shell: default, derived from runs-on`.
+- A [protected setting](#protectedSettings) has ` (protected)` appended to its source entry.
+- If source metadata is unavailable, the group shows `unknown`.
+- The group is emitted after action-level transformations and includes pull-request or merge-group overrides and build/revision calculations for the selected versioning strategy.
+
 ## Overwrite settings <a id="overwriteSettings"></a>
 
 By default, AL-Go merges settings from various places (see [settings levels](#where-are-the-settings-located)).
@@ -316,7 +331,100 @@ then, after merging, the result settings object will contain the following value
 }
 ```
 
-> _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value.
+> _**Note**_: `overwriteSettings` isn't a setting on its own and it isn't available in the output of `ReadSetting` action, for example. It's merely used to control the settings merging mechanism and allow overwriting complex settings types. The value of `overwriteSettings` should only contain settings of types _array_ or _object_ and all the settings in `overwriteSettings` should be present with the new value. The meta settings `ConditionalSettings`, `overwriteSettings`, and `protectedSettings` are ignored when listed in `overwriteSettings`. To replace an actual setting conditionally, use `overwriteSettings` inside the `settings` object of a matching `ConditionalSettings` block.
+
+## Protected settings <a id="protectedSettings"></a>
+
+Settings are applied in the [order listed above](#where-are-the-settings-located); later sources normally take precedence. To prevent a later source from changing a setting, list its name in `protectedSettings` **alongside its value** in the earlier source.
+
+_Example_:
+Say, `ALGoOrgSettings` contains the following values:
+
+```json
+{
+    "protectedSettings": ["country", "keyVaultName"],
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+and `.github/AL-Go-Settings.json` contains the following values:
+
+```json
+{
+    "country": "us",
+    "keyVaultName": "ProjectVault"
+}
+```
+
+then, after merging, the result settings object will contain the following values:
+
+```json
+{
+    "country": "de",
+    "keyVaultName": "OrgVault"
+}
+```
+
+Skipped overrides do not change the protected settings' sources in the workflow log.
+
+Protection only takes effect when the source provides the setting's value; listing a name alone does nothing. A later source can change a protected setting only if it also lists that setting in its own `protectedSettings` and supplies a value. `overwriteSettings` alone cannot bypass protection. These rules also apply to `customSettings`, even though it is applied last.
+
+> _**Note**_: `protectedSettings` is optional (effectively empty when omitted). It controls settings merging and is not included in the resolved settings. The meta settings `ConditionalSettings`, `overwriteSettings`, and `protectedSettings` are ignored when listed in `protectedSettings`. To protect an actual setting conditionally, use `protectedSettings` inside the `settings` object of a matching `ConditionalSettings` block.
+
+Protection applies at the level where it is declared. To protect `alDoc.includeProjects`, place `protectedSettings` inside `alDoc`:
+
+```json
+{
+    "alDoc": {
+        "protectedSettings": ["includeProjects"],
+        "includeProjects": ["Core"]
+    }
+}
+```
+
+The same pattern applies within `deliverToAppSource` and `commitOptions`. Protecting `alDoc` itself at the top level is separate; if the parent is not protected, a later top-level `overwriteSettings` can replace the whole object and discard its nested protections.
+
+When a value is skipped, the ReadSettings action writes one notice per attempted override, naming the setting path, attempted source, and protecting source without including the value. For example: `Skipped setting country from settings ALGoRepoSettings (Variable): protected by settings ALGoOrgSettings (Variable)`. Direct calls to `ReadSettings` do not write these notices.
+
+Protection also works inside matching `ConditionalSettings`.
+
+_Example_:
+Say, `ALGoOrgSettings` contains the following values to protect `country` only for the `ValidateUS` build mode:
+
+```json
+{
+    "ConditionalSettings": [
+        {
+            "buildModes": ["ValidateUS"],
+            "settings": {
+                "protectedSettings": ["country"],
+                "country": "us"
+            }
+        }
+    ]
+}
+```
+
+and `.AL-Go/settings.json` contains the following values:
+
+```json
+{
+    "country": "w1",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+then, after merging for build mode `ValidateUS`, the result settings object will contain the following values:
+
+```json
+{
+    "country": "us",
+    "buildModes": ["Default", "ValidateUS"]
+}
+```
+
+For other build modes, the project value applies.
 
 <a id="customdelivery"></a>
 

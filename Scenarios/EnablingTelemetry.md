@@ -133,6 +133,12 @@ AL-Go logs four different types of telemetry events: AL-Go action ran/failed and
 | RunNumber | The Run Number |
 | RunAttempt | The attempt number |
 | Repository | The repository Id |
+| RepositoryIsFork | `true` or `false`, from the workflow event's `repository.fork`; `Unknown` if unavailable |
+| GitHubHostingType | `GitHub.com`, `GHEC` (Enterprise Cloud with data residency on `*.ghe.com`), or `GHES` (other GitHub server hosts), based on `GITHUB_SERVER_URL`; `Unknown` if missing or invalid |
+
+`RepositoryIsFork` describes the repository running the workflow, not the source repository of an incoming pull request. A repository created from an AL-Go template is not a fork unless GitHub marks it as one.
+
+These two dimensions are included in both Microsoft and partner telemetry, subject to the existing telemetry settings. The hosting classification does not send the server hostname or URL. `GitHub.com` includes Enterprise Cloud customers hosted on github.com; the hostname cannot distinguish their subscription plan. Missing or invalid metadata produces a warning and an `Unknown` value without preventing the event from being logged.
 
 ### AL-Go action ran
 
@@ -144,6 +150,8 @@ Additional Dimensions:
 | Dimension | Description |
 |-----------|-------------|
 | ActionDuration | The duration of the action |
+| ActionName | The name of the AL-Go action |
+| ActionConclusion | `Success` when the action wrapper completes successfully |
 
 ### AL-Go action failed
 
@@ -156,6 +164,10 @@ Additional Dimensions:
 | Dimension | Description |
 |-----------|-------------|
 | ErrorMessage | The error message thrown |
+| ActionName | The name of the AL-Go action |
+| ActionConclusion | `Failure` when the action wrapper catches a terminating error |
+
+`ActionName` is included when telemetry is logged with an action name. `ActionConclusion` is emitted by the action wrapper, not by individual exception logging calls: a handled error can produce an error event without failing the action. To count failed action executions, filter on `ActionConclusion == "Failure"`. Message-only events, such as workflow summaries and test results, do not automatically receive these action dimensions. Both dimensions are included in Microsoft and partner telemetry, subject to the existing telemetry settings.
 
 ### AL-Go workflow ran
 
