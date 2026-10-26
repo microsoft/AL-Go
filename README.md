@@ -51,6 +51,7 @@ workflows that install the plugin, run the review, and publish findings.
 1. [Connect your GitHub repository to Power Platform](Scenarios/SetupPowerPlatform.md)
 1. [How to set up Service Principal for Power Platform](Scenarios/SetupServicePrincipalForPowerPlatform.md)
 1. [Try one of the Business Central and Power Platform samples](Scenarios/TryPowerPlatformSamples.md)
+1. [Using AL-Go for GitHub on GitHub Enterprise (GHE)](Scenarios/UsingGitHubEnterprise.md)
 1. [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md)
 1. [Enable Copilot code review for AL pull requests](Scenarios/Agents/CopilotCodeReview.md)
 
