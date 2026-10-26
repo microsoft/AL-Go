@@ -35,6 +35,7 @@ Describe "RunTests Action Tests" {
 
         . $helperPath
         Import-Module (Join-Path $scriptRoot 'RunTests.psm1' -Resolve) -DisableNameChecking -Force
+        Import-Module (Join-Path $scriptRoot '..\.Modules\AlToolHelper.psm1' -Resolve) -DisableNameChecking -Force
 
     }
 

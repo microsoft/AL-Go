@@ -11,6 +11,7 @@
 $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+Import-Module (Join-Path $PSScriptRoot '..\.Modules\AlToolHelper.psm1' -Resolve) -DisableNameChecking -Force
 
 <#
 .SYNOPSIS
