@@ -8,6 +8,8 @@ Describe "CheckDowngrade Action Tests" {
         $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $actionScript = $actionScript -replace '(?m)^\.\s+\(Join-Path[^\r\n]*AL-Go-Helper\.ps1[^\r\n]*\)\r?$', ''
         Invoke-Expression $actionScript
         Import-Module (Join-Path $scriptRoot "..\Deploy\Deploy.psm1" -Resolve) -Force
 
