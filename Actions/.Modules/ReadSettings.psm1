@@ -272,6 +272,10 @@ function GetDefaultSettings
         "doNotBuildTests"                               = $false
         "doNotPerformUpgrade"                           = $false
         "doNotRunTests"                                 = $false
+        "useSeparateTestAction"                         = [ordered]@{
+            "enabled"                                   = $false
+            "testType"                                  = ""
+        }
         "doNotRunBcptTests"                             = $false
         "doNotRunPageScriptingTests"                    = $false
         "doNotPublishApps"                              = $false
