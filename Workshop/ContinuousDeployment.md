@@ -88,6 +88,22 @@ New-BcAuthContext -clientID $clientID -clientSecret $clientSecret -tenantID $ten
 
 Paste the value from the clipboard into the "Value" field of the **AuthContext** secret for the environment and you should be good to go.
 
+## PTE deployment authorization
+
+For **Scope PTE** S2S deployment to **BC 29 or later**, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant **tenant admin consent**, and add the client ID to **Authorized Microsoft Entra apps** in the Business Central administration center. Existing app registrations that previously deployed successfully may need this additional authorization. Keep the environment API permissions, such as **Automation.ReadWrite.All** and **API.ReadWrite.All** where required, and the Microsoft Entra application registration and permission sets inside each Business Central environment.
+
+With delegated authentication (impersonation), **Scope PTE** deployment to **BC 29 or later** requires appropriate **Business Central administration center access** as well as the environment permissions. The existing **AUTHCONTEXT** credential structure and the commands above remain unchanged. See the official [Business Central administration center API documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api) for authentication and authorization details.
+
+These additional permissions are not required for deployment to earlier BC versions or the sandbox development endpoint (**Scope Dev**).
+
+## Old published versions
+
+On **BC 29 and later**, Business Central manages old-version cleanup in the background. Older published versions may remain after deployment until background cleanup runs. Cleanup has been observed after an overnight interval, leaving the installed version and the latest uninstalled version; this is not a guaranteed nightly schedule or retention policy.
+
+The optional `DeployTo<environment>.unpublishOldVersions` boolean (default `false`) does not control background cleanup. When enabled on **BC 29 and later**, AL-Go warns and skips explicit unpublish without failing deployment. No additional cleanup setting is needed.
+
+On **BC 25.4 through 28**, enabling the setting removes only selected apps' uninstalled versions older than their currently installed version after successful **Scope PTE** publishing. Cleanup errors remain warnings, and the setting does not apply to Scope Dev or custom deployments.
+
 ## Custom Deployments
 
 AL-Go can also be setup for custom deployment when you want to deploy to non-SaaS environments. More about this in the advanced section.

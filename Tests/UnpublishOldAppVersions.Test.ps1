@@ -63,6 +63,48 @@ InModuleScope Deploy { # Allows testing of private functions
             }
         }
 
+        It 'Explains delayed service-managed cleanup without any writes on BC <major>.<minor>' -TestCases @(
+            @{ major = 29; minor = 0 },
+            @{ major = 29; minor = 1 },
+            @{ major = 30; minor = 0 }
+        ) {
+            param($major, $minor)
+            $script:applicationExtension.versionMajor = $major
+            $script:applicationExtension.versionMinor = $minor
+
+            { UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app") } | Should -Not -Throw
+
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
+                $message -like "*cannot explicitly unpublish*Business Central manages cleanup in the background*may be delayed*timing and retained versions are not guaranteed*AL-Go cleanup was skipped*deployment remains successful*"
+            }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -ne "Get" }
+        }
+
+        It 'Preserves legacy cleanup on BC <major>.<minor>' -TestCases @(
+            @{ major = 25; minor = 4 },
+            @{ major = 28; minor = 9 }
+        ) {
+            param($major, $minor)
+            $script:applicationExtension.versionMajor = $major
+            $script:applicationExtension.versionMinor = $minor
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled OutputWarning -Times 0
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq "Post" -and $Uri -like "*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish"
+            }
+        }
+
+        It 'Warns without writes when the installed Application version is unknown' {
+            $script:applicationExtension.isInstalled = $false
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Could not determine the Business Central version*" }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -ne "Get" }
+        }
+
         It 'Uses the automation API v2.0 endpoint with a bearer token' {
             UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
 
