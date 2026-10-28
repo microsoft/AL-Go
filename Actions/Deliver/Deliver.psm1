@@ -199,4 +199,33 @@ function Save-DeliveryManifest {
     return $Path
 }
 
-Export-ModuleMember -Function Get-ProjectsInDeliveryOrder, Add-DeliveryManifestEntry, Save-DeliveryManifest
+<#
+.SYNOPSIS
+Normalizes the app.json of an app file for comparison with a previously published package
+
+.DESCRIPTION
+The revision of the app version is generated for every build, so it is removed before comparing.
+Everything else in app.json, including major, minor and build of the version, is compared: when it changes,
+the new package must be delivered, even when the code is unchanged.
+
+.PARAMETER AppJson
+The app.json object generated from the app file
+
+.OUTPUTS
+The normalized app.json as a JSON string
+#>
+function ConvertTo-ComparableAppJson {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject] $AppJson
+    )
+
+    $comparable = $AppJson | ConvertTo-Json -Depth 99 | ConvertFrom-Json
+    if (($comparable.PSObject.Properties.Name -contains 'version') -and $comparable.version) {
+        $version = [System.Version] "$($comparable.version)"
+        $comparable.version = "$($version.Major).$($version.Minor).$([Math]::Max($version.Build, 0))"
+    }
+    return $comparable | ConvertTo-Json -Depth 99
+}
+
+Export-ModuleMember -Function Get-ProjectsInDeliveryOrder, Add-DeliveryManifestEntry, Save-DeliveryManifest, ConvertTo-ComparableAppJson
