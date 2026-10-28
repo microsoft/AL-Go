@@ -56,6 +56,9 @@ Describe "AnalyzeTests Action Tests" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'thresholdsFile', Justification = 'False positive.')]
         $thresholdsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).json"
         @{ "NumberOfSqlStmtsThresholdWarning" = 1; "NumberOfSqlStmtsThresholdError" = 2 } | ConvertTo-Json | Set-Content -Path $thresholdsFile -Encoding UTF8
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alToolTestRunnerModule', Justification = 'Used to generate production JUnit in a test.')]
+        $alToolTestRunnerModule = Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve) `
+            -DisableNameChecking -Force -PassThru
     }
 
     It 'Compile Action' {
@@ -66,6 +69,44 @@ Describe "AnalyzeTests Action Tests" {
         $outputs = [ordered]@{
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+    }
+
+    It 'Analyzes mixed normal JUnit produced by Add-JUnitTestSuite' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        $junitFile = Join-Path $TestDrive 'TestResults.xml'
+
+        & $alToolTestRunnerModule {
+            param($Path)
+
+            $doc = [xml] '<?xml version="1.0" encoding="UTF-8"?><testsuites />'
+            $codeunit = [PSCustomObject]@{
+                Id    = 130001
+                Name  = 'Mixed Tests'
+                Tests = @('Passes', 'Fails', 'Skips')
+            }
+            $diagnosticText = "line one; detail`nAL Callstack:`nline two"
+            $results = @(
+                @{ MethodName = 'Passes'; Outcome = 'Pass'; Ms = 10; Message = ''; Stacktrace = '' },
+                @{ MethodName = 'Fails'; Outcome = 'Fail'; Ms = 20; Message = 'ignored'; Stacktrace = $diagnosticText },
+                @{ MethodName = 'Skips'; Outcome = 'Skip'; Ms = 0; Message = ''; Stacktrace = '' }
+            )
+            Add-JUnitTestSuite -Doc $doc -TestSuitesNode $doc.DocumentElement `
+                -Codeunit $codeunit -RequestedMethods $codeunit.Tests -MethodResults $results `
+                -ExtensionId '11111111-1111-1111-1111-111111111111' -AppName 'Test App' -Hostname 'host' | Out-Null
+            $doc.Save($Path)
+        } $junitFile
+
+        $summary, $failures, $failureSummary = GetTestResultSummaryMD -testResultsFile $junitFile
+
+        $summary | Should -Match '\|Test App\|3\|1[^|]*\|1[^|]*\|1[^|]*\|0\.03\|'
+        $failures | Should -Match 'Fails, Failure'
+        $failures | Should -Match 'Test failed'
+        $failures | Should -Match 'line one; detail'
+        $failures | Should -Match 'AL Callstack:'
+        $failures | Should -Match 'line two'
+        $failures | Should -Not -Match 'Skips, Failure'
+        $failureSummary | Should -Be '<i>1 failing tests, download test results to see details</i>'
     }
 
     It 'Test ReadBcptFile' {
@@ -228,5 +269,7 @@ Describe "AnalyzeTests Action Tests" {
         Remove-Item -Path $bcptFilename -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine1 -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine2 -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $thresholdsFile -Force -ErrorAction SilentlyContinue
+        Remove-Module -ModuleInfo $alToolTestRunnerModule -Force -ErrorAction SilentlyContinue
     }
 }

@@ -229,6 +229,16 @@ jobs:
           baselineWorkflowSHA: ${{ inputs.baselineWorkflowSHA }}
           previousAppsPath: ${{ steps.DownloadPreviousRelease.outputs.PreviousAppsPath }}
 
+      - name: Run Tests
+        uses: microsoft/AL-Go-Actions/RunTests@main
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && env.runTestsInSeparateAction == 'True'
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: ${{ inputs.shell }}
+          project: ${{ inputs.project }}
+          installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+
       - name: Sign
         id: sign
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != '')) && (hashFiles(format('{0}/.buildartifacts/Apps/*.app',inputs.project)) != '')
