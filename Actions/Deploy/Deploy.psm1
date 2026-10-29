@@ -354,7 +354,7 @@ function InvokePTEUpload {
     .PARAMETER maxStatusRequests
         Maximum number of status requests. Defaults to 360.
     .PARAMETER pollIntervalSeconds
-        Delay between status requests. Defaults to five seconds.
+        Delay between status requests. Defaults to 30 seconds, capped by the remaining timeout.
 #>
 function WaitPTEOperation {
     Param(
@@ -366,8 +366,8 @@ function WaitPTEOperation {
         [int] $timeoutSeconds = 1800,
         [ValidateRange(1, 360)]
         [int] $maxStatusRequests = 360,
-        [ValidateRange(0, 5)]
-        [int] $pollIntervalSeconds = 5
+        [ValidateRange(0, 30)]
+        [int] $pollIntervalSeconds = 30
     )
 
     $operation = $operation | ConvertTo-HashTable -recurse
@@ -397,7 +397,8 @@ function WaitPTEOperation {
         if ($requests -ge $maxStatusRequests -or $timer.Elapsed.TotalSeconds -ge $timeoutSeconds) {
             break
         }
-        Start-Sleep -Seconds $pollIntervalSeconds
+        $sleepSeconds = [Math]::Min($pollIntervalSeconds, [Math]::Max(0, $timeoutSeconds - $timer.Elapsed.TotalSeconds))
+        Start-Sleep -Milliseconds ([int][Math]::Ceiling($sleepSeconds * 1000))
         if ($timer.Elapsed.TotalSeconds -ge $timeoutSeconds) { break }
         # Renew outside the retry catch so authentication errors always fail immediately.
         $bcAuthContext = Renew-BcAuthContext -bcAuthContext $bcAuthContext
@@ -437,8 +438,8 @@ function WaitPTEOperation {
     .SYNOPSIS
         Publish primary apps or PTE dependencies using the target BC version.
     .DESCRIPTION
-        Below BC 29, delegates publishing to the released BcContainerHelper Automation implementation.
-        On BC 29 and later, AL-Go installs packages immediately using Admin Center API v2.29 with
+        Below BC 30, delegates publishing to the released BcContainerHelper Automation implementation.
+        On BC 30 and later, AL-Go installs packages immediately using Admin Center API v2.29 with
         no legacy fallback. Existing helper utilities expand packages, exclude runtime packages and
         order dependencies. Same or newer installed versions are skipped.
     .PARAMETER bcAuthContext
@@ -464,7 +465,7 @@ function PublishPTEApps {
 
     $extensions = @(Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
     $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
-    if ($applicationVersion -lt [version]'29.0.0.0') {
+    if ($applicationVersion -lt [version]'30.0.0.0') {
         Write-Host "Target BC $applicationVersion - publishing PTEs using BcContainerHelper Automation API"
         Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -SchemaSyncMode $schemaSyncMode
         return
@@ -511,7 +512,7 @@ function PublishPTEApps {
         and clutter Extension Management. This function unpublishes those old versions using the automation API v2.0
         Microsoft.NAV.unpublish action. Only versions that are not installed AND older than a currently installed version
         of the same app (matched by app id) are unpublished. This is only supported for PTE deployments on BC 25.4
-        through 28. On BC 29 and later, Business Central manages old-version cleanup in the background.
+        through 29. On BC 30 and later, Business Central manages old-version cleanup in the background.
         Explicit unpublish is not supported, so AL-Go skips its cleanup with a warning. Background cleanup may
         be delayed; its timing and retained versions are not guaranteed. Read-only Automation API calls determine
         the installed Application version.
@@ -557,8 +558,8 @@ function UnpublishOldAppVersions {
         $extensions = @((Invoke-RestMethod -Method Get -Uri "$companyUrl/extensions" -Headers $headers -UseBasicParsing).value)
 
         $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
-        if ($applicationVersion -ge [version]'29.0.0.0') {
-            OutputWarning -message "AL-Go cannot explicitly unpublish old PTE versions on Business Central 29 or later; environment $environment is running $applicationVersion. Business Central manages cleanup in the background, which may be delayed; cleanup timing and retained versions are not guaranteed. AL-Go cleanup was skipped; the deployment remains successful."
+        if ($applicationVersion -ge [version]'30.0.0.0') {
+            OutputWarning -message "AL-Go cannot explicitly unpublish old PTE versions on Business Central 30 or later; environment $environment is running $applicationVersion. Business Central manages cleanup in the background, which may be delayed; cleanup timing and retained versions are not guaranteed. AL-Go cleanup was skipped; the deployment remains successful."
             return
         }
         if ($applicationVersion -lt [version]'25.4.0.0') {

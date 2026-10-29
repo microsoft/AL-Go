@@ -1,10 +1,14 @@
-### Additional authorization for PTE deployment to BC 29 and later
+### Breaking changes
 
-**Action required for Scope PTE:** BC 29+ S2S deployments need the `AdminCenter.ReadWrite.All` application permission, tenant admin consent, and registration under the Business Central administration center's **Authorized Microsoft Entra apps**. Delegated users need appropriate administration center access. Keep the existing environment permissions and AUTHCONTEXT credential structure. These additional permissions are not required for earlier BC versions or Scope Dev. See [deployment authorization](Workshop/ContinuousDeployment.md#pte-deployment-authorization). Custom deployments and container behavior are unchanged.
+**PTE deployment to BC 30 and later requires additional authorization.** Earlier, environment-level deployment permissions were sufficient. Existing deployments to BC 30 or later will now fail if the required administration center access has not been granted.
+
+For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under the Business Central administration center's **Authorized Microsoft Entra apps**. Delegated users need appropriate administration center access. Keep the existing environment permissions and AUTHCONTEXT credential structure. See [deployment authorization](Workshop/ContinuousDeployment.md#pte-deployment-authorization). Deployments to BC 29 and earlier, Scope Dev, custom deployments, and container behavior are unchanged.
+
+**Old-version cleanup changes on BC 30 and later.** Business Central manages cleanup in the background rather than AL-Go explicitly unpublishing old versions. Cleanup may be delayed; its timing and retained versions are not guaranteed. `unpublishOldVersions` does not control background cleanup: if enabled, AL-Go warns and skips explicit unpublish without failing deployment.
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). After successful Scope PTE deployment on BC 25.4 through 28, it removes only selected apps' uninstalled versions older than the currently installed version. On BC 29 and later, Business Central manages cleanup in the background, which may be delayed; timing and retained versions are not guaranteed. The setting does not control background cleanup: AL-Go warns and skips explicit unpublish without failing deployment. Cleanup failures remain warnings.
+The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). After successful Scope PTE deployment on BC 25.4 through 29, it removes only selected apps' uninstalled versions older than the currently installed version. Cleanup failures remain warnings. For BC 30 and later, see the cleanup behavior under **Breaking changes** above.
 
 ### Expanded AL-Go telemetry dashboard
 

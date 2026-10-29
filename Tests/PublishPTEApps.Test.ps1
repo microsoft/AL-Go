@@ -17,7 +17,7 @@ InModuleScope Deploy {
             $script:bcContainerHelperConfig = @{ apiBaseUrl = 'https://api.example.test/' }
             $script:application = @{
                 id = 'application'; displayName = 'Application'; isInstalled = $true
-                versionMajor = 29; versionMinor = 0; versionBuild = 0; versionRevision = 0
+                versionMajor = 30; versionMinor = 0; versionBuild = 0; versionRevision = 0
             }
             $script:extensions = @($script:application)
             Mock Write-Host { }
@@ -39,8 +39,14 @@ InModuleScope Deploy {
                 Mock WaitPTEOperation { }
             }
 
-            It 'Uses only the released helper for BC 28 and preserves Force and immediate defaults' {
-                $script:application.versionMajor = 28
+            It 'Uses only the released helper for BC <major> and preserves Force and immediate defaults' -TestCases @(
+                @{ major = 28 }, @{ major = 29 }
+            ) {
+                param($major)
+                $script:application.versionMajor = $major
+                $script:application.versionMinor = 9
+                $script:application.versionBuild = 99999
+                $script:application.versionRevision = 99999
                 Mock Publish-PerTenantExtensionApps {
                     $PesterBoundParameters.Keys | Should -Not -Contain 'schedule'
                     $PesterBoundParameters.Keys | Should -Not -Contain 'applicationFamily'
@@ -66,7 +72,7 @@ InModuleScope Deploy {
             }
 
             It 'Uses AL-Go Admin Center publishing for BC <major>' -TestCases @(
-                @{ major = 29 }, @{ major = 30 }
+                @{ major = 30 }, @{ major = 31 }
             ) {
                 param($major)
                 $script:application.versionMajor = $major
@@ -308,6 +314,16 @@ InModuleScope Deploy {
                     $Headers.Authorization -eq 'Bearer renewed-test-token' -and $TimeoutSec -le 30
                 }
                 Assert-MockCalled Renew-BcAuthContext -Exactly 1
+                Assert-MockCalled Start-Sleep -Exactly 1 -ParameterFilter { $Milliseconds -eq 30000 }
+            }
+
+            It 'Uses the requested shorter polling interval without changing the operation endpoint' {
+                WaitPTEOperation -bcAuthContext @{} -appsUri 'https://api.example.test/apps' -operation $script:operation -appId 'app-1' -pollIntervalSeconds 5
+
+                Assert-MockCalled Start-Sleep -Exactly 1 -ParameterFilter { $Milliseconds -eq 5000 }
+                Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                    $Method -eq 'Get' -and $Uri -eq 'https://api.example.test/apps/app-1/operations/operation%20%2F%201'
+                }
             }
 
             It 'Does not count scheduled immediate installation as success' {
@@ -477,6 +493,7 @@ InModuleScope Deploy {
                 { WaitPTEOperation -bcAuthContext @{} -appsUri 'https://api.example.test/apps' -operation $script:operation -appId 'app-1' -timeoutSeconds 1 } | Should -Throw '*Timed out*1 seconds*'
 
                 Assert-MockCalled Invoke-RestMethod -Times 0
+                Assert-MockCalled Start-Sleep -Exactly 1 -ParameterFilter { $Milliseconds -gt 0 -and $Milliseconds -le 1000 }
             }
         }
     }

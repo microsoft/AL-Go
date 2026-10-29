@@ -4,7 +4,7 @@
 
 ## PTE publishing authorization
 
-Before **Scope PTE** deployment to BC 29 or later using S2S, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant tenant admin consent, and register the client ID on the Business Central administration center's **Authorized Microsoft Entra apps** page. Existing app registrations may need this additional authorization. Keep the existing environment API permissions and the Microsoft Entra application registration and required permission sets inside the Business Central environment. These additional permissions are not required for deployment to earlier BC versions.
+Before **Scope PTE** deployment to BC 30 or later using S2S, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant tenant admin consent, and register the client ID on the Business Central administration center's **Authorized Microsoft Entra apps** page. Existing app registrations may need this additional authorization. Keep the existing environment API permissions and the Microsoft Entra application registration and required permission sets inside the Business Central environment. These additional permissions are not required for deployment to earlier BC versions.
 
 The **AUTHCONTEXT** credential structure is unchanged, including `TenantID`, `ClientID`, and `ClientSecret` for S2S. See [deployment authorization](../Workshop/ContinuousDeployment.md#pte-deployment-authorization) and the official [Business Central administration center API authentication documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api).
 

@@ -64,9 +64,9 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         It 'Explains delayed service-managed cleanup without any writes on BC <major>.<minor>' -TestCases @(
-            @{ major = 29; minor = 0 },
-            @{ major = 29; minor = 1 },
-            @{ major = 30; minor = 0 }
+            @{ major = 30; minor = 0 },
+            @{ major = 30; minor = 1 },
+            @{ major = 31; minor = 0 }
         ) {
             param($major, $minor)
             $script:applicationExtension.versionMajor = $major
@@ -82,7 +82,9 @@ InModuleScope Deploy { # Allows testing of private functions
 
         It 'Preserves legacy cleanup on BC <major>.<minor>' -TestCases @(
             @{ major = 25; minor = 4 },
-            @{ major = 28; minor = 9 }
+            @{ major = 28; minor = 9 },
+            @{ major = 29; minor = 0 },
+            @{ major = 29; minor = 9 }
         ) {
             param($major, $minor)
             $script:applicationExtension.versionMajor = $major
