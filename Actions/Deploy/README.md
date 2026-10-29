@@ -2,6 +2,14 @@
 
 Deploy Apps to online environment
 
+## PTE publishing
+
+PTE deployment installs apps in dependency order and skips app versions that are already installed or superseded by a newer installed version. Deployment waits for installation to complete; installation failures fail the deployment.
+
+BC 30+ S2S deployments require `AdminCenter.ReadWrite.All` application permission, tenant admin consent, and registration in the administration center's Authorized Microsoft Entra apps. Existing AUTHCONTEXT structures stay unchanged, and environment API permissions remain necessary. See [deployment authorization](../../Workshop/ContinuousDeployment.md#pte-deployment-authorization) for full requirements.
+
+`unpublishOldVersions` is an optional boolean in `DeployTo<environment>` (default `false`). It runs only after successful Scope PTE publishing. On BC 25.4 through 29, only selected apps' uninstalled versions older than the currently installed version are unpublished. On BC 30+, Business Central manages cleanup in the background, which may be delayed; timing and retained versions are not guaranteed. The setting does not control that background cleanup: AL-Go warns and skips explicit unpublish without failing deployment. Scope Dev, custom deployments, and container behavior are unchanged.
+
 ## INPUT
 
 ### ENV variables

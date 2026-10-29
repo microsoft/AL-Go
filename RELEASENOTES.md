@@ -1,3 +1,11 @@
+### Breaking changes
+
+**PTE deployment to BC 30 and later requires additional authorization.** Earlier, environment-level deployment permissions were sufficient. Existing deployments to BC 30 or later will now fail if the required administration center access has not been granted.
+
+For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under the Business Central administration center's **Authorized Microsoft Entra apps**. Delegated users need appropriate administration center access. Keep the existing environment permissions and AUTHCONTEXT credential structure. See [deployment authorization](Workshop/ContinuousDeployment.md#pte-deployment-authorization). Deployments to BC 29 and earlier, Scope Dev, custom deployments, and container behavior are unchanged.
+
+**Old-version cleanup changes on BC 30 and later.** Business Central manages cleanup in the background rather than AL-Go explicitly unpublishing old versions. Cleanup may be delayed; its timing and retained versions are not guaranteed. `unpublishOldVersions` does not control background cleanup: if enabled, AL-Go warns and skips explicit unpublish without failing deployment.
+
 ### Separate test execution from RunPipeline (PREVIEW)
 
 A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.
@@ -9,7 +17,7 @@ The action uses AlTool by default, running each app's enabled normal tests in on
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
+The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). After successful Scope PTE deployment on BC 25.4 through 29, it removes only selected apps' uninstalled versions older than the currently installed version. Cleanup failures remain warnings. For BC 30 and later, see the cleanup behavior under **Breaking changes** above.
 
 ### Settings sources in workflow logs
 
@@ -56,7 +64,7 @@ AL-Go now supports including pre-release versions of Business Central app packag
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
+The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). After successful Scope PTE deployment on BC 25.4 through 29, it removes only selected apps' uninstalled versions older than the currently installed version. Cleanup failures remain warnings. For BC 30 and later, see the cleanup behavior under **Breaking changes** above.
 
 ### Expanded AL-Go telemetry dashboard
 
