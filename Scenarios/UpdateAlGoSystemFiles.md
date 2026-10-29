@@ -24,6 +24,8 @@
 
 1. By default, this workflow will apply any updates to the **workflow files (in .github\\workflows)** or **system scripts (in .AL-Go)** from the template repository used to spin up the repository. If you want to change branch or template Url, you can specify the `templateUrl@branch` when you run the workflow.
 
+If the only change would be advancing `templateSha` in `.github/AL-Go-Settings.json`, the workflow leaves the repository unchanged and reports that no updates are available. No commit or pull request is created, so this does not trigger CI/CD. The existing SHA remains pinned to the last applied template revision. Actual system-file changes, file removals, template URL or branch changes, and initial template setup are still applied.
+
 ______________________________________________________________________
 
 [back](../README.md)

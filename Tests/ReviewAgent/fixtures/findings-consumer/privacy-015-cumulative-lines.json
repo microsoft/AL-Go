@@ -1,0 +1,29 @@
+{
+  "skill": { "id": "al-error-handling-review", "version": 1 },
+  "outcome": "completed",
+  "summary": {
+    "counts": { "blocker": 0, "major": 0, "minor": 2, "info": 0 },
+    "coverage": { "worklist-size": 4, "items-evaluated": 4 }
+  },
+  "findings": [
+    {
+      "id": "microsoft/knowledge/web-services/check-http-status-before-consuming-response-body.md",
+      "severity": "minor",
+      "message": "Synthetic partner export status finding retaining the original cumulative line.",
+      "location": { "file": "src/CustomerDataExporter.Codeunit.al", "line": 58 },
+      "references": [{ "path": "microsoft/knowledge/web-services/check-http-status-before-consuming-response-body.md" }],
+      "confidence": "high",
+      "domain": "Error Handling"
+    },
+    {
+      "id": "microsoft/knowledge/web-services/check-http-status-before-consuming-response-body.md",
+      "severity": "minor",
+      "message": "Synthetic CRM status finding retaining the original cumulative line and range.",
+      "location": { "file": "src/ExternalCRMSync.Codeunit.al", "line": 98, "range": { "start-line": 87, "end-line": 99 } },
+      "references": [{ "path": "microsoft/knowledge/web-services/check-http-status-before-consuming-response-body.md" }],
+      "confidence": "high",
+      "domain": "Error Handling"
+    }
+  ],
+  "suppressed": []
+}

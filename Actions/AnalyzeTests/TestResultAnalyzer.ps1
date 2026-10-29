@@ -185,11 +185,14 @@ function GetTestResultSummaryMD {
                             $suiteFailureNode = [FailureNode]::new($false)
                             $suiteFailureNode.summaryDetails = "$($suite.name), $($suite.tests) tests, $($suite.failures) failed, $($suite.skipped) skipped, $($suite.time) seconds"
                             foreach($testcase in $suite.testcase) {
-                                if ($testcase.ChildNodes.Count -gt 0) {
+                                $failureNodes = @($testcase.ChildNodes | Where-Object {
+                                        $_.NodeType -eq [System.Xml.XmlNodeType]::Element -and $_.LocalName -eq 'failure'
+                                    })
+                                if ($failureNodes.Count -gt 0) {
                                     Write-Host "    - $($testcase.name), Failure, $($testcase.time) seconds"
                                     $testCaseFailureNode = [FailureNode]::new($false)
                                     $testCaseFailureNode.summaryDetails = "$($testcase.name), Failure"
-                                    foreach($failure in $testcase.ChildNodes) {
+                                    foreach($failure in $failureNodes) {
                                         Write-Host "      - Error: $($failure.message)"
                                         Write-Host "        Stacktrace:"
                                         Write-Host "        $($failure.InnerText.Trim().Replace("`n","`n        "))"
@@ -537,7 +540,7 @@ function GetPageScriptingTestResultSummaryMD {
                     $suiteFailureNode.summaryDetails = "$suitePrettyName, $suiteTests tests, $suitePassed passed, $suiteFailed failed, $suiteSkipped skipped, $suiteTime seconds"
                     foreach($testcase in $testsuite.testcase) {
                         $testName = Split-Path ($testcase.name -replace '\(', '' -replace '\)', '') -Leaf
-                        if ($testcase.failure) {
+                        if ($testcase.SelectSingleNode('failure')) {
                             Write-Host "      - Error: $($testcase.failure.message)"
                             Write-Host "        Stacktrace:"
                             Write-Host "        $($testcase.failure."#cdata-section".Trim().Replace("`n","`n        "))"

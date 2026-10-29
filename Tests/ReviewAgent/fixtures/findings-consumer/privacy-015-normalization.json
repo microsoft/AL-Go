@@ -1,0 +1,51 @@
+{
+  "skill": { "id": "al-privacy-review", "version": 1 },
+  "outcome": "completed",
+  "summary": {
+    "counts": { "blocker": 0, "major": 4, "minor": 0, "info": 0 },
+    "coverage": { "worklist-size": 2, "items-evaluated": 2 }
+  },
+  "findings": [
+    {
+      "id": "privacy-notice-consent-for-external-data-transfer-ai-context",
+      "severity": "major",
+      "message": "Synthetic AI request privacy finding.",
+      "location": { "file": "src/AIContextBuilder.Codeunit.al", "line": 25, "range": { "start-line": 23, "end-line": 25 } },
+      "references": [{ "path": "microsoft/knowledge/privacy/privacy-notice-consent-for-external-data-transfer.md" }],
+      "confidence": "high",
+      "domain": "Privacy",
+      "suggested-code-omission-reason": "Synthetic integration-specific change."
+    },
+    {
+      "id": "privacy-notice-consent-for-external-data-transfer-customer-export",
+      "severity": "major",
+      "message": "Synthetic customer export privacy finding.",
+      "location": { "file": "src/CustomerDataExporter.Codeunit.al", "line": 24, "range": { "start-line": 20, "end-line": 24 } },
+      "references": [{ "path": "microsoft/knowledge/privacy/privacy-notice-consent-for-external-data-transfer.md" }],
+      "confidence": "high",
+      "domain": "Privacy",
+      "suggested-code-omission-reason": "Synthetic integration-specific change."
+    },
+    {
+      "id": "privacy-notice-consent-for-external-data-transfer-crm-sync",
+      "severity": "major",
+      "message": "Synthetic CRM sync privacy finding.",
+      "location": { "file": "src/ExternalCRMSync.Codeunit.al", "line": 23, "range": { "start-line": 19, "end-line": 23 } },
+      "references": [{ "path": "microsoft/knowledge/privacy/privacy-notice-consent-for-external-data-transfer.md" }],
+      "confidence": "high",
+      "domain": "Privacy",
+      "suggested-code-omission-reason": "Synthetic integration-specific change."
+    },
+    {
+      "id": "privacy-notice-consent-for-external-data-transfer-email",
+      "severity": "major",
+      "message": "Synthetic email privacy finding.",
+      "location": { "file": "src/OutboxEmailDispatcher.Codeunit.al", "line": 23, "range": { "start-line": 18, "end-line": 23 } },
+      "references": [{ "path": "microsoft/knowledge/privacy/privacy-notice-consent-for-external-data-transfer.md" }],
+      "confidence": "high",
+      "domain": "Privacy",
+      "suggested-code-omission-reason": "Synthetic integration-specific change."
+    }
+  ],
+  "suppressed": []
+}

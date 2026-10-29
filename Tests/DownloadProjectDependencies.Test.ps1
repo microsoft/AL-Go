@@ -505,6 +505,31 @@ Describe "DownloadProjectDependencies - Get-DependenciesFromInstallApps Tests" {
         $script:capturedUrl | Should -Be "https://example.com/App.app?token=secret-token-value"
     }
 
+    It 'Resolves secret placeholder that contains the entire URL' {
+        $env:Settings = @{
+            installApps = @('${{ mySecret }}')
+            installTestApps = @()
+        } | ConvertTo-Json -Depth 10
+
+        # The secret value is the whole URL
+        $secretValue = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("https://example.com/SecretApp.app"))
+        $env:Secrets = @{
+            mySecret = $secretValue
+        } | ConvertTo-Json -Depth 10
+
+        $script:capturedUrl = $null
+        Mock Invoke-WebRequest {
+            param($Method, $UseBasicParsing, $Uri, $OutFile)
+            $script:capturedUrl = $Uri
+            [System.IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3))
+        } -ModuleName DownloadProjectDependencies
+
+        $result = Get-DependenciesFromInstallApps -DestinationPath $downloadPath
+
+        $script:capturedUrl | Should -Be "https://example.com/SecretApp.app"
+        $result.Apps | Should -HaveCount 1
+    }
+
     It 'Throws error for unknown secret reference' {
         $env:Settings = @{
             installApps = @('https://example.com/App.app?token=${{ unknownSecret }}')
@@ -654,6 +679,48 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
         }
     }
 
+    It 'Escapes commas in branch name so brace expansion is not split (issue #2381)' {
+        $ENV:GITHUB_HEAD_REF = 'users/dev/123-Add-A,-B,-C'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-users_dev_123-Add-A\,-B\,-C-*Apps-*,Base-users_dev_123-Add-A\,-B\,-C-*Dependencies-*,Base-users_dev_123-Add-A\,-B\,-C-*BuildOutput-*}'
+        }
+    }
+
+    It 'Escapes instead of wildcarding, so a look-alike branch such as A-B is not matched' {
+        $ENV:GITHUB_HEAD_REF = 'A,B'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result.Contains('?') | Should -BeFalse
+            $result | Should -BeLike '*Base-A\,B-*'
+        }
+    }
+
+    It 'Escapes brace and extglob characters in branch name' {
+        $ENV:GITHUB_HEAD_REF = 'feat/x+(y)@(z)!(w){a}#1'
+        $projectDependencies = @{ "App" = @("Base") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            $result | Should -Be '{Base-feat_x\+\(y\)\@\(z\)\!\(w\)\{a\}\#1-*Apps-*,Base-feat_x\+\(y\)\@\(z\)\!\(w\)\{a\}\#1-*Dependencies-*,Base-feat_x\+\(y\)\@\(z\)\!\(w\)\{a\}\#1-*BuildOutput-*}'
+        }
+    }
+
+    It 'Keeps only the separator commas unescaped when branch name contains commas' {
+        $ENV:GITHUB_HEAD_REF = 'a,b,c'
+        $projectDependencies = @{ "App" = @("Base", "Common") }
+        InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
+            param($Project, $ProjectDependencies)
+            $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
+            # 2 deps x 3 entries = 6 entries = 5 separator commas
+            [regex]::Matches($result, '(?<!\\),').Count | Should -Be 5
+        }
+    }
+
     It 'Returns null when project is not in the dependencies map even if other projects exist' {
         $projectDependencies = @{ "Other" = @("Base") }
         InModuleScope DownloadProjectDependencies -Parameters @{ Project = "App"; ProjectDependencies = $projectDependencies } {
@@ -661,6 +728,100 @@ Describe "DownloadProjectDependencies - Get-DependencyArtifactPattern Advanced T
             $result = Get-DependencyArtifactPattern -Project $Project -ProjectDependencies $ProjectDependencies
             $result | Should -BeNullOrEmpty
         }
+    }
+}
+
+Describe "DownloadProjectDependencies - Write-DependencyFileWarnings Tests" {
+    BeforeEach {
+        Mock OutputWarning {} -ModuleName DownloadProjectDependencies
+    }
+
+    It 'Accepts empty and null dependency lists' {
+        { Write-DependencyFileWarnings -Dependencies @() } | Should -Not -Throw
+        { Write-DependencyFileWarnings -Dependencies $null } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 0 -Exactly
+    }
+
+    It 'Accepts literal filenames and preserves test app markers' {
+        $appFile = Join-Path $TestDrive "Publisher, LLC_App [1]_1.0.0.0.app"
+        Set-Content -LiteralPath $appFile -Value "app" -Encoding UTF8
+        $dependencies = @($appFile, "($appFile)")
+
+        { Write-DependencyFileWarnings -Dependencies $dependencies } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 0 -Exactly
+
+        $dependencies | Should -HaveCount 2
+        $dependencies[0] | Should -Be $appFile
+        $dependencies[1] | Should -Be "($appFile)"
+    }
+
+    It 'Reports the complete missing path for <name>' -TestCases @(
+        @{ name = 'regular apps'; isTestApp = $false }
+        @{ name = 'test apps'; isTestApp = $true }
+    ) {
+        param($isTestApp)
+        $appFile = Join-Path $TestDrive "Publisher, LLC_Missing_1.0.0.0.app"
+        $dependency = $appFile
+        if ($isTestApp) { $dependency = "($appFile)" }
+
+        { Write-DependencyFileWarnings -Dependencies @($dependency) } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $appFile"
+        }
+    }
+
+    It 'Warns for directories' {
+        { Write-DependencyFileWarnings -Dependencies @("$TestDrive") } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $TestDrive"
+        }
+    }
+
+    It 'Does not resolve missing literal paths as wildcard patterns' {
+        Set-Content -LiteralPath (Join-Path $TestDrive "App1.app") -Value "app" -Encoding UTF8
+        $appFile = Join-Path $TestDrive "App?.app"
+
+        { Write-DependencyFileWarnings -Dependencies @($appFile) } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $appFile"
+        }
+    }
+
+    It 'Warns for empty dependency entries' {
+        { Write-DependencyFileWarnings -Dependencies @('') } | Should -Not -Throw
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: "
+        }
+    }
+
+    It 'Warns on path check errors and continues checking remaining dependencies' {
+        $firstPath = Join-Path $TestDrive "Publisher, LLC_Inaccessible.app"
+        $secondPath = Join-Path $TestDrive "Missing.app"
+        Mock Test-Path { throw "Access denied" } -ModuleName DownloadProjectDependencies -ParameterFilter {
+            $LiteralPath -eq $firstPath
+        }
+
+        { Write-DependencyFileWarnings -Dependencies @($firstPath, $secondPath) } | Should -Not -Throw
+
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Unable to check dependency file '$firstPath': Access denied"
+        }
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 1 -Exactly -ParameterFilter {
+            $message -eq "Dependency file not found: $secondPath"
+        }
+    }
+
+    It 'Continues after missing files without changing the dependency list' {
+        $firstPath = Join-Path $TestDrive "Publisher, LLC_Missing.app"
+        $secondPath = Join-Path $TestDrive "MissingTest.app"
+        $dependencies = @($firstPath, "($secondPath)")
+
+        { Write-DependencyFileWarnings -Dependencies $dependencies } | Should -Not -Throw
+
+        Should -Invoke OutputWarning -ModuleName DownloadProjectDependencies -Times 2 -Exactly
+        $dependencies | Should -HaveCount 2
+        $dependencies[0] | Should -Be $firstPath
+        $dependencies[1] | Should -Be "($secondPath)"
     }
 }
 

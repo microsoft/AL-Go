@@ -19,6 +19,99 @@ Param(
     [string] $previousAppsPath = ''
 )
 
+function New-RunPipelineContainerCredential {
+    <#
+    .SYNOPSIS
+        Creates an administrator credential for a RunPipeline build container.
+    .DESCRIPTION
+        Returns a random administrator credential that RunPipeline passes to Run-AlPipeline.
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'A container password must be generated as plain text to build a reusable credential')]
+    param()
+    $password = "Pass!$([GUID]::NewGuid().ToString())"
+    return (New-Object pscredential 'admin', (ConvertTo-SecureString -String $password -AsPlainText -Force))
+}
+
+function Set-RunPipelineContainerCredential {
+    <#
+    .SYNOPSIS
+        Adds a container credential to the Run-AlPipeline parameters.
+    .DESCRIPTION
+        Always adds the credential used to create the build container. When separate test execution
+        is eligible, masks and exports the credential so the later RunTests action can reconnect.
+    .PARAMETER runAlPipelineParams
+        Parameters passed to Run-AlPipeline.
+    .PARAMETER credential
+        Administrator credential used to create the build container.
+    .PARAMETER exportForRunTests
+        Exports the credential to GITHUB_ENV for the separate RunTests action.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $runAlPipelineParams,
+        [Parameter(Mandatory = $true)]
+        [pscredential] $credential,
+        [switch] $exportForRunTests
+    )
+
+    $runAlPipelineParams["credential"] = $credential
+
+    if ($exportForRunTests) {
+        $containerCredentialPassword = $credential.GetNetworkCredential().Password
+        $containerCredentialJson = @{ "username" = $credential.UserName; "password" = $containerCredentialPassword } | ConvertTo-Json -Compress
+        $containerCredentialBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($containerCredentialJson))
+        Write-Host "::add-mask::$containerCredentialPassword"
+        Write-Host "::add-mask::$containerCredentialBase64"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerCredential=$containerCredentialBase64"
+    }
+}
+
+function Get-SeparateTestActionIneligibilityReasons {
+    <#
+    .SYNOPSIS
+        Gets the reasons normal tests must remain in RunPipeline.
+    .DESCRIPTION
+        Returns deterministic reasons that prevent normal tests from being deferred to the separate
+        RunTests action. The final Run-AlPipeline parameters are inspected so custom and generated
+        ImportTestDataInBcContainer callbacks are handled consistently.
+    .PARAMETER settings
+        The analyzed AL-Go settings.
+    .PARAMETER additionalCountries
+        Additional countries configured for the build.
+    .PARAMETER runAlPipelineParams
+        The final Run-AlPipeline parameter hashtable.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $settings,
+        [AllowNull()]
+        [AllowEmptyCollection()]
+        [AllowEmptyString()]
+        [string[]] $additionalCountries,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $runAlPipelineParams
+    )
+
+    $reasons = @()
+    if ($settings.doNotRunTests) {
+        $reasons += "doNotRunTests is enabled"
+    }
+    if ($settings.doNotBuildTests) {
+        $reasons += "doNotBuildTests is enabled"
+    }
+    if ($settings.doNotPublishApps) {
+        $reasons += "doNotPublishApps is enabled"
+    }
+    if (@($additionalCountries | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
+        $reasons += "additionalCountries is configured"
+    }
+    if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
+        $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
+        $reasons += "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
+    }
+    return @($reasons)
+}
+
 $containerBaseFolder = $null
 $projectPath = $null
 
@@ -406,7 +499,8 @@ try {
                         "nuGetToken" = GetAccessToken -token $gitHubPackagesCredential.token -permissions @{"packages"="read";"contents"="read";"metadata"="read"} -repositories @()
                         "packageName" = $appId
                         "version" = $version
-                        "select" = $settings.nuGetFeedSelectMode
+                        "select" = $settings.nuGetFeedSelectMode -ireplace '-allowPrerelease$', ''
+                        "allowPrerelease" = $settings.nuGetFeedSelectMode -imatch '-allowPrerelease$'
                     }
                     if ($parameters.ContainsKey('CopyInstalledAppsToFolder')) {
                         $publishParams += @{
@@ -473,6 +567,26 @@ try {
     $runAlPipelineParams["preprocessorsymbols"] = $settings.preprocessorSymbols
     $runAlPipelineParams["features"] = $settings.features
 
+    # The separate action needs one local container and must preserve Run-AlPipeline stages that cannot
+    # yet be reproduced after the build.
+    $separateTestActionIneligibilityReasons = @(Get-SeparateTestActionIneligibilityReasons `
+        -settings $settings `
+        -additionalCountries @($additionalCountries) `
+        -runAlPipelineParams $runAlPipelineParams)
+    $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and $separateTestActionIneligibilityReasons.Count -eq 0
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "runTestsInSeparateAction=$runTestsInSeparateAction"
+
+    $containerCredential = New-RunPipelineContainerCredential
+    Set-RunPipelineContainerCredential -runAlPipelineParams $runAlPipelineParams -credential $containerCredential -exportForRunTests:$runTestsInSeparateAction
+
+    if ($runTestsInSeparateAction) {
+        Write-Host "useSeparateTestAction is enabled: skipping normal test execution in RunPipeline and keeping the container alive for the RunTests action"
+        $runAlPipelineParams["doNotRunTests"] = $true
+    }
+    elseif ($settings.useSeparateTestAction.enabled) {
+        Write-Host "::Notice::useSeparateTestAction is enabled, but the separate RunTests action will be skipped: $($separateTestActionIneligibilityReasons -join '; ')."
+    }
+
     Write-Host "Invoke Run-AlPipeline with buildmode $buildMode"
     Run-AlPipeline @runAlPipelineParams `
         -accept_insiderEula `
@@ -488,8 +602,8 @@ try {
         -baseFolder $projectPath `
         -sharedFolder $sharedFolder `
         -licenseFile $licenseFileUrl `
-        -installApps $install.apps `
-        -installTestApps $install.testApps `
+        -installApps ([string[]] $install.apps) `
+        -installTestApps ([string[]] $install.testApps) `
         -installOnlyReferencedApps:$settings.installOnlyReferencedApps `
         -generateDependencyArtifact `
         -updateDependencies:$settings.updateDependencies `
@@ -518,6 +632,7 @@ try {
         -pageScriptingTestResultsFolder (Join-Path $buildArtifactFolder 'PageScriptingTestResultDetails') `
         -CreateRuntimePackages:$CreateRuntimePackages `
         -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
+        -keepContainer:$runTestsInSeparateAction `
         -uninstallRemovedApps
 
     if ($containerBaseFolder) {
