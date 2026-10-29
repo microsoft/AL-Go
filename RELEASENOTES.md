@@ -2,10 +2,10 @@
 
 A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.
 
-The action uses AlTool by default, running each app's enabled normal tests in one batch and connection. It honors `disabledTests.json` definitions and the optional `useSeparateTestAction.testType` value. The built-in runner supports `UnitTest`, `IntegrationTest`, and `Uncategorized`, while custom `RunTestsInBcContainer` overrides may interpret other values such as `Legacy`. Test results remain available to AnalyzeTests and are included in the build artifacts when produced. Failure diagnostics include a refreshed container event log with events from the separate test run.
+The action uses AlTool by default, discovering tests locally from each exact app package and running each app's enabled normal tests in one batch and connection. It honors `disabledTests.json` definitions. Because `al listtests` does not support TestType filtering, the built-in runner warns and ignores a nonblank `useSeparateTestAction.testType`; custom `RunTestsInBcContainer` overrides still receive the configured value. Test results remain available to AnalyzeTests and are included in the build artifacts when produced. Failure diagnostics include a refreshed container event log with events from the separate test run.
 
 > [!NOTE]
-> The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to execute their tests through BcContainerHelper instead. Database restore events configured through `restoreDatabases` are not currently supported by the separate RunTests action; the action emits a warning and does not perform the restore.
+> Tests that require UI or client-callback interaction should use a `RunTestsInBcContainer` override script. Database restore events configured through `restoreDatabases` are not currently supported by the separate RunTests action; the action emits a warning and does not perform the restore.
 
 ### New `unpublishOldVersions` setting for deployment
 

@@ -153,7 +153,11 @@ codeunit 60000 "Separate Test Action E2E"
     Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
         -stepName "Run Tests" -actionName "RunTests" -expectedText "Using al CLI version"
     Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
+        -stepName "Run Tests" -actionName "RunTests" -expectedText "using al listtests --appfile"
+    Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
         -stepName "Run Tests" -actionName "RunTests" -expectedText "Running tests in My App.Test"
+    Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
+        -stepName "Run Tests" -actionName "RunTests" -expectedText "60000/SeparateTestActionE2E"
 
     Test-ArtifactsFromRun `
         -runid $run.id `
