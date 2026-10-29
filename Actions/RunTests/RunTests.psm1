@@ -6,6 +6,8 @@
     executor; a RunTestsInBcContainer override can replace it.
 #>
 
+. (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+Import-Module (Join-Path $PSScriptRoot '..\.Modules\AlToolHelper.psm1' -Resolve) -DisableNameChecking -Force
 Import-Module (Join-Path $PSScriptRoot 'AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
 
 function Get-TestAppsToRun {
@@ -16,7 +18,7 @@ function Get-TestAppsToRun {
         Selects compiled apps matching normal testFolders and excludes BCPT-only apps. Unwrapped
         installed test app paths are always included. Parenthesized paths are included and unwrapped
         only when runTestsInAllInstalledTestApps is enabled. Returns each selected app as a record
-        containing Path, Id, and Name.
+        containing its exact package path, ID, name, and discovered test codeunits.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
@@ -27,8 +29,13 @@ function Get-TestAppsToRun {
     Param(
         [hashtable] $settings,
         [string] $projectPath,
-        [string] $installTestAppsJson = ''
+        [string] $installTestAppsJson = '',
+        [string] $alToolPath = ''
     )
+
+    if ([string]::IsNullOrWhiteSpace($alToolPath)) {
+        $alToolPath = GetAlToolPath
+    }
 
     $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
@@ -56,22 +63,19 @@ function Get-TestAppsToRun {
         $selectedCompiledAppIds = @{}
         foreach ($compiledApp in @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)) {
             try {
-                $compiledAppJson = Get-AppJsonFromAppFile -appFile $compiledApp.FullName
-                $compiledAppId = "$($compiledAppJson.id)"
+                $compiledAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $compiledApp.FullName
+                $compiledAppId = "$($compiledAppDiscovery.AppId)"
             }
             catch {
-                throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
+                throw "Failed to discover compiled test app metadata and tests from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
             }
 
             if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
-                $compiledAppName = "$($compiledAppJson.name)"
-                if ([string]::IsNullOrWhiteSpace($compiledAppName)) {
-                    throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: The compiled app metadata does not contain an app name."
-                }
                 $testApps += [PSCustomObject]@{
-                    Path = $compiledApp.FullName
-                    Id   = $compiledAppId
-                    Name = $compiledAppName
+                    Path       = $compiledApp.FullName
+                    Id         = $compiledAppId
+                    Name       = "$($compiledAppDiscovery.AppName)"
+                    Codeunits  = @($compiledAppDiscovery.Codeunits)
                 }
                 $selectedCompiledAppIds[$compiledAppId] = $true
                 $selectedAppPaths[$compiledApp.FullName] = $true
@@ -101,25 +105,23 @@ function Get-TestAppsToRun {
             if ([string]::IsNullOrWhiteSpace($installedTestAppPath)) {
                 throw "The installed test app list '$installTestAppsJson' contains a blank path."
             }
+            if ($selectedAppPaths.ContainsKey($installedTestAppPath)) {
+                continue
+            }
             try {
-                $installedAppJson = Get-AppJsonFromAppFile -appFile $installedTestAppPath
-                $installedAppId = "$($installedAppJson.id)"
-                $installedAppName = "$($installedAppJson.name)"
-                if ([string]::IsNullOrWhiteSpace($installedAppId) -or [string]::IsNullOrWhiteSpace($installedAppName)) {
-                    throw "The installed app metadata does not contain an app ID and name."
-                }
+                $installedAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $installedTestAppPath
+                $installedAppId = "$($installedAppDiscovery.AppId)"
             }
             catch {
-                throw "Failed to read installed test app metadata from '$installedTestAppPath'. Error: $($_.Exception.Message)"
+                throw "Failed to discover installed test app metadata and tests from '$installedTestAppPath'. Error: $($_.Exception.Message)"
             }
-            if (-not $selectedAppPaths.ContainsKey($installedTestAppPath)) {
-                $testApps += [PSCustomObject]@{
-                    Path = $installedTestAppPath
-                    Id   = $installedAppId
-                    Name = $installedAppName
-                }
-                $selectedAppPaths[$installedTestAppPath] = $true
+            $testApps += [PSCustomObject]@{
+                Path       = $installedTestAppPath
+                Id         = $installedAppId
+                Name       = "$($installedAppDiscovery.AppName)"
+                Codeunits  = @($installedAppDiscovery.Codeunits)
             }
+            $selectedAppPaths[$installedTestAppPath] = $true
         }
     }
 
@@ -279,12 +281,27 @@ function Invoke-AlGoTestRun {
     )
 
     try {
-        if (@($settings.restoreDatabases | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") }).Count -gt 0) {
+        $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
+        if (-not $runTestsOverride -and -not [string]::IsNullOrWhiteSpace($testType)) {
+            Write-Host "::Warning::useSeparateTestAction.testType '$testType' is ignored by the built-in runner because 'al listtests' does not support TestType filtering. All subtype-Test codeunits will be discovered. Use a custom RunTestsInBcContainer override to apply testType."
+        }
+
+        if ($settings.ContainsKey("restoreDatabases") -and
+            @($settings.restoreDatabases | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") }).Count -gt 0) {
             Write-Host "::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed."
         }
 
+        if ([string]::IsNullOrWhiteSpace($alToolPath)) {
+            if ($getAlToolPath) {
+                $alToolPath = & $getAlToolPath
+            }
+            else {
+                $alToolPath = GetAlToolPath
+            }
+        }
+
         $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath `
-            -installTestAppsJson $installTestAppsJson
+            -installTestAppsJson $installTestAppsJson -alToolPath $alToolPath
         if (@($testApps).Count -eq 0) {
             Write-Host "No test apps found to run tests in. Skipping test execution."
             return
@@ -300,16 +317,8 @@ function Invoke-AlGoTestRun {
             }
         }
 
-        if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
-            if (-not $getAlToolPath) {
-                throw "The built-in AlTool runner requires an AlTool path or path resolver."
-            }
-            $alToolPath = & $getAlToolPath
-        }
-
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
-        $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
 
         $allTestsPassed = $true
         $testRunError = $null
@@ -347,6 +356,7 @@ function Invoke-AlGoTestRun {
                         -CompanyName "$($settings.companyName)" `
                         -Tenant "default" `
                         -TestType $testType `
+                        -Codeunits @($testApp.Codeunits) `
                         -DisabledTests @($disabledTests) `
                         -AlToolPath $alToolPath `
                         -JUnitResultFileName $testResultsFile
