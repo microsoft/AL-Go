@@ -348,7 +348,9 @@ Describe "CheckForUpdates Action: runtime behavior" {
                 New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
                 $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
                 Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'externalSettingsHash', Justification = 'False positive.')]
                 $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'templateSettingsFile', Justification = 'False positive.')]
                 $templateSettingsFile = Join-Path $testTemplateFolder $RepoSettingsFile
             }
 
@@ -427,7 +429,9 @@ Describe "CheckForUpdates Action: runtime behavior" {
                 New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
                 $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
                 Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'externalSettingsHash', Justification = 'False positive.')]
                 $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'cloneSettingsFile', Justification = 'False positive.')]
                 $cloneSettingsFile = Join-Path $testCloneRoot $RepoSettingsFile
             }
 
@@ -777,12 +781,14 @@ Describe "CheckForUpdates Action: runtime behavior" {
 
     Context 'Custom template snapshots' {
         BeforeEach {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'repositorySettings', Justification = 'False positive.')]
             $repositorySettings = @{
                 templateUrl = 'https://github.com/contoso/template@main'
                 templateSha = $testSettings.templateSha
                 type = $testSettings.type
                 projects = $testSettings.projects
             }
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'templateSettings', Justification = 'False positive.')]
             $templateSettings = $testSettings.Clone()
             Mock IsDirectALGo { return $false }
             $snapshotBackupFolder = Join-Path $rootFolder 'snapshotBackup'
@@ -1069,6 +1075,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
                 New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
                 Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
                 Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value ($templateSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'externalFolder', Justification = 'False positive.')]
                 $externalFolder = Join-Path $TestDrive ([Guid]::NewGuid().ToString())
                 Mock GetFilesToUpdate {}
             }
