@@ -697,31 +697,44 @@ Describe "CheckForUpdates Action: runtime behavior" {
             Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
         }
 
-        It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+        It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
             $relativeLegitFile = "legit.txt"
-            $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
-            $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+            $relativeRedirectedFolder = "redirectedInWorkspace"
+            $relativeRedirectedFile = Join-Path $relativeRedirectedFolder "redirected.txt"
+
+            # Create folders, files and junctions in workspace folder
+            New-Item -ItemType Junction -Path (Join-Path $testWorkspaceFolder $relativeRedirectedFolder) -Target $testWorkspaceFolder -Force | Out-Null
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedFile) -Value "redirected content" -Force
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+            $testFilesToExclude = @(
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedFile) }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+            $relativeLegitFile = "legit.txt"
             $relativeRedirectedInCloneFolder = "redirectedInClone"
             $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
 
-            # Create folders, files and junctions in workspace folder
+            # Create folders and files in workspace folder
             Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
-            New-Item -ItemType Junction -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
             New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
-            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
             Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
 
             # Create folders, files and junctions in clone folder
             Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
-            New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
             New-Item -ItemType Junction -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
-            Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
             Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
 
             [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
             $testFilesToExclude = @(
                 @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
-                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
                 @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
             )
 
@@ -731,37 +744,49 @@ Describe "CheckForUpdates Action: runtime behavior" {
             Should -Invoke CommitFromNewFolder -Exactly 0
             Should -Invoke UpdateSettingsFile -Exactly 0
 
-            # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clone redirected file was not
+            # The legitimate file was actually removed from the (mocked) clone root; the redirected file was not
             Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
-            Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
             Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
         }
 
-        It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+        It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
             $relativeLegitFile = "legit.txt"
-            $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
-            $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+            $relativeRedirectedFolder = "redirectedInWorkspace"
+            $relativeRedirectedFile = Join-Path $relativeRedirectedFolder "redirected.txt"
+
+            # Create folders, files and symbolic links in workspace folder
+            New-Item -ItemType SymbolicLink -Path (Join-Path $testWorkspaceFolder $relativeRedirectedFolder) -Target $testWorkspaceFolder -Force | Out-Null
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedFile) -Value "redirected content" -Force
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+            $testFilesToExclude = @(
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedFile) }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+            $relativeLegitFile = "legit.txt"
             $relativeRedirectedInCloneFolder = "redirectedInClone"
             $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
 
-            # Create folders, files and junctions in workspace folder
+            # Create folders and files in workspace folder
             Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
-            New-Item -ItemType SymbolicLink -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
             New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
-            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
             Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
 
-            # Create folders, files and junctions in clone folder
+            # Create folders, files and symbolic links in clone folder
             Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
-            New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
             New-Item -ItemType SymbolicLink -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
-            Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
             Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
 
             [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
             $testFilesToExclude = @(
                 @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
-                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
                 @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
             )
 
@@ -771,9 +796,8 @@ Describe "CheckForUpdates Action: runtime behavior" {
             Should -Invoke CommitFromNewFolder -Exactly 0
             Should -Invoke UpdateSettingsFile -Exactly 0
 
-            # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
+            # The legitimate file was actually removed from the (mocked) clone root; the redirected file was not
             Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
-            Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
             Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
         }
 
