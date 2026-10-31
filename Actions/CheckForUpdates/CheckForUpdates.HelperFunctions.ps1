@@ -1402,9 +1402,9 @@ function GetDefaultFilesToExclude {
     2. filesToExclude: Files to skip from copying; if they already exist in the destination they should be deleted.
        Built from default files to exclude and customALGoFiles.filesToExclude in settings, resolved against the template folder and original template folder (if any).
 
-    Note: when a custom template is in use, the caller is expected to call
-    ReadSettingsWithCurrentCustomTemplateRepoSettings before this function, so that the template's
-    customALGoFiles/unusedALGoSystemFiles are already merged into settings.
+    Note: when a custom template is in use, the caller must refresh the custom template settings
+    snapshot files and re-read settings with ReadSettings before calling this function, so that the
+    template's customALGoFiles/unusedALGoSystemFiles are already merged into settings.
 
     The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
     filesToExclude with a deprecation warning.
