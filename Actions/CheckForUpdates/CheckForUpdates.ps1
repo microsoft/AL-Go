@@ -274,6 +274,7 @@ try {
     # Remove files that are in $filesToExclude and exist in the repository
     $removeFiles = $filesToExclude | Where-Object { $_ } | Where-Object {
         $dstPath = $_.destinationFullPath
+        Assert-PathPhysicallyEqual -Path $dstPath -AnchorPaths @($baseFolder) -Context 'destination file'
         if ($backupFiles.ContainsKey($dstPath)) {
             return $null -ne $backupFiles[$dstPath]
         }
