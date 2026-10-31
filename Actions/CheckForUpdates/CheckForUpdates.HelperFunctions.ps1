@@ -557,8 +557,7 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth,
-        [string] $customTemplateFolder = ''
+        [int] $depth
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -580,12 +579,7 @@ function GetWorkflowContentWithChangesFromSettings {
     }
 
     # Re-read settings and this time include workflow specific settings
-    if ($customTemplateFolder) {
-        $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -customTemplateFolder $customTemplateFolder -workflowName $workflowName
-    }
-    else {
-        $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
-    }
+    $repoSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
 
     # Old Schedule key is deprecated, but still supported
     $oldWorkflowScheduleKey = "$($baseName)Schedule"
@@ -1395,64 +1389,6 @@ function GetDefaultFilesToExclude {
     }
 
     return @($filesToExclude)
-}
-
-<#
-.SYNOPSIS
-    Reads settings using the current custom template repository settings without changing the workspace.
-.DESCRIPTION
-    Temporarily refreshes the custom template repository settings snapshot, reads the merged settings, and restores
-    the snapshot to its original state. This allows the current template settings to affect the current run while
-    preserving the workspace state for the normal update comparison.
-    Both copy endpoints (the snapshot file under baseFolder and the settings file under customTemplateFolder) are
-    validated to physically resolve to themselves before either is read or written; the function throws if a
-    symlink/junction anywhere along either path would redirect the backup, copy or restore to a different physical location
-.PARAMETER baseFolder
-    The base folder of the repository whose settings are read. Defaults to GITHUB_WORKSPACE.
-.PARAMETER customTemplateFolder
-    The folder where the custom template files are located.
-.PARAMETER workflowName
-    The workflow whose settings should be included, if specified.
-#>
-function ReadSettingsWithCurrentCustomTemplateRepoSettings {
-    Param(
-        [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
-        [Parameter(Mandatory=$true)]
-        [string] $customTemplateFolder,
-        [string] $workflowName = ''
-    )
-
-    $customTemplateRepoSettingsPath = Join-Path $customTemplateFolder $RepoSettingsFile
-    $baseFolderCustomTemplateSettingsPath = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-
-    # Validate both copy endpoints before touching them (even if the leaf file doesn't exist yet): a symlink/junction
-    # anywhere along either path can make it resolve to a different physical location than its literal path
-    Assert-PathPhysicallyEqual -Path $baseFolderCustomTemplateSettingsPath -AnchorPaths @($baseFolder) -Context 'custom template repository settings snapshot'
-    Assert-PathPhysicallyEqual -Path $customTemplateRepoSettingsPath -AnchorPaths @($customTemplateFolder) -Context 'custom template repository settings'
-
-    $baseFolderCustomTemplateSettingsBackupPath = $null
-
-    if (Test-Path -LiteralPath $baseFolderCustomTemplateSettingsPath -PathType Leaf) {
-        $baseFolderCustomTemplateSettingsBackupPath = Join-Path (GetTemporaryPath) ([Guid]::NewGuid().ToString())
-        Copy-Item -LiteralPath $baseFolderCustomTemplateSettingsPath -Destination $baseFolderCustomTemplateSettingsBackupPath -Force
-    }
-
-    try {
-        if (Test-Path -LiteralPath $customTemplateRepoSettingsPath -PathType Leaf) {
-            Copy-Item -LiteralPath $customTemplateRepoSettingsPath -Destination $baseFolderCustomTemplateSettingsPath -Force
-        }
-        # Keep execution-specific contexts empty for both file selection and workflow-specific reads.
-        return ReadSettings -baseFolder $baseFolder -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
-    }
-    finally {
-        if ($baseFolderCustomTemplateSettingsBackupPath) {
-            Copy-Item -LiteralPath $baseFolderCustomTemplateSettingsBackupPath -Destination $baseFolderCustomTemplateSettingsPath -Force
-            Remove-Item -LiteralPath $baseFolderCustomTemplateSettingsBackupPath -Force
-        }
-        elseif (Test-Path -LiteralPath $baseFolderCustomTemplateSettingsPath -PathType Leaf) {
-            Remove-Item -LiteralPath $baseFolderCustomTemplateSettingsPath -Force
-        }
-    }
 }
 
 <#

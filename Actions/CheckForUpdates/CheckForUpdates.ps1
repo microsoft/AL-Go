@@ -70,6 +70,10 @@ $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 $templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 
+$baseFolder = $ENV:GITHUB_WORKSPACE
+
+$customTemplateSnapshots = @()
+
 $isDirectALGo = IsDirectALGo -templateUrl $templateUrl
 if (-not $isDirectALGo) {
     $templateRepoSettingsFile = Join-Path $templateFolder $RepoSettingsFile
@@ -109,131 +113,190 @@ if (-not $isDirectALGo) {
             if ($isDirectALGo) {
                 Trace-Information -Message "Original template repository is direct AL-Go"
             }
+
+            # Collect custom template snapshot files
+            $templateALGoSettingsFile = Join-Path $templateFolder $ALGoSettingsFile
+            $customTemplateSnapshots = @(
+                @{ src = $templateRepoSettingsFile; dst = Join-Path $baseFolder $CustomTemplateRepoSettingsFile; context = 'repository settings' },
+                @{ src = $templateALGoSettingsFile; dst = Join-Path $baseFolder $CustomTemplateProjectSettingsFile; context = 'project settings' }
+            )
         }
     }
 }
 
-# Get the list of projects in the current repository
-$baseFolder = $ENV:GITHUB_WORKSPACE
+$pathComparer = GetPathStringComparer
+$backupFolder = NewTemporaryFolder
+$backupFiles = [System.Collections.Generic.Dictionary[string, object]]::new($pathComparer)
 
-if ($originalTemplateFolder) {
-    # Use current custom template settings for this run without changing the workspace before comparison.
-    $repoSettings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
-}
+try {
+    if ($customTemplateSnapshots) {
+        # Update custom template snapshot files
+        foreach ($customTemplateSnapshot in $customTemplateSnapshots) {
+            OutputDebug -Message "Updating custom template $($customTemplateSnapshot.context) snapshot file $($customTemplateSnapshot.dst) from $($customTemplateSnapshot.src)"
 
-$projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
+            $dst = Resolve-PathLexically -Path $customTemplateSnapshot.dst
+            $src = Resolve-PathLexically -Path $customTemplateSnapshot.src
 
-$filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+            Assert-PathPhysicallyEqual -Path $src -AnchorPaths @($templateFolder) -Context "custom template $($customTemplateSnapshot.context) snapshot source file"
+            Assert-PathPhysicallyEqual -Path $dst -AnchorPaths @($baseFolder) -Context "custom template $($customTemplateSnapshot.context) snapshot destination file"
 
-# $updateFiles will hold an array of files, which needs to be updated
-$updateFiles = @()
+            if (-not $backupFiles.ContainsKey($dst)) {
+                $dstBackupFile = $null
+                if (Test-Path -LiteralPath $dst -PathType Leaf) {
+                    $dstBackupFile = Join-Path $backupFolder ([System.IO.Path]::GetRandomFileName())
+                    Copy-Item -LiteralPath $dst -Destination $dstBackupFile -Force
+                }
+                $backupFiles[$dst] = $dstBackupFile
+            }
 
-# $removeFiles will hold an array of files, which needs to be removed
-$removeFiles = @()
-
-# Dependency depth determines how many build jobs we need to run sequentially
-# Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
-$depth = 1
-if ($projects.Count -gt 1) {
-    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
-    $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100 -settings $repoSettings
-    $depth = $buildOrder.Count
-    Write-Host "Calculated dependency depth to be $depth"
-}
-
-# Prepare the list of template folders to be used for verification
-$templateFolders = @($templateFolder)
-$customTemplateFolder = ''
-if ($originalTemplateFolder) {
-    $templateFolders += $originalTemplateFolder
-    $customTemplateFolder = $templateFolder
-}
-
-# Loop through all folders in CheckFiles and check if there are any files that needs to be updated
-foreach($fileToInclude in $filesToInclude) {
-    $type = $fileToInclude.type
-    $srcPath = $fileToInclude.sourceFullPath
-    $originalSrcPath = $fileToInclude.originalSourceFullPath
-    if(-not $originalSrcPath) {
-        $originalSrcPath = $srcPath
-    }
-    $hasDistinctOriginalSource = -not (GetPathStringComparer).Equals($originalSrcPath, $srcPath)
-
-    Assert-PathPhysicallyEqual -Path $srcPath -AnchorPaths $templateFolders -Context 'source file'
-    if ($hasDistinctOriginalSource) {
-        Assert-PathPhysicallyEqual -Path $originalSrcPath -AnchorPaths $templateFolders -Context 'original source file'
-    }
-
-    $dstPath = $fileToInclude.destinationFullPath
-
-    Assert-PathPhysicallyEqual -Path $dstPath -AnchorPaths @($baseFolder) -Context 'destination file'
-
-    $dstFileExists = Test-Path -LiteralPath $dstPath -PathType Leaf
-
-    Write-Host "Processing file: $srcPath -> $dstPath (type: $type)"
-
-    switch ($type) {
-        "workflow" {
-            # For workflow files, we might need to modify the file based on the settings
-            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth -customTemplateFolder $customTemplateFolder
-            # Replace static placeholders
-            $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
-        }
-        "settings" {
-            # For settings files, we need to modify the file based on the settings
-            $srcContent = GetModifiedSettingsContent -srcSettingsFile $originalSrcPath -dstSettingsFile $dstPath
-        }
-        Default {
-            # For non-workflow files, just read the file content
-            $srcContent = Get-ContentLF -Path $originalSrcPath
-        }
-    }
-
-    if ($isDirectALGo) {
-        # If we are using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
-        ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
-    }
-
-    if ($type -eq 'workflow' -and $hasDistinctOriginalSource) {
-        # Apply customizations from custom template repository
-        Write-Host "Apply customizations from custom template repository, file: $srcPath"
-        [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcPath)
-    }
-
-    # Get the relative path for the dstPath from the base folder. Don't use Resolve-Path as it will fail if the destination file doesn't exist
-    $relativeDstPath = $dstPath.Substring($baseFolder.Length + 1)
-
-    if ($dstFileExists) {
-        if ($type -eq 'workflow') {
-            Write-Host "Apply customizations from current repository, file: $relativeDstPath"
-            [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
+            if (Test-Path -LiteralPath $src -PathType Leaf) {
+                Copy-Item -LiteralPath $src -Destination $dst -Force
+            }
         }
 
-        # file exists, compare and add to $updateFiles if different
-        $dstContent = Get-ContentLF -Path $dstPath
-        if ($dstContent -cne $srcContent) {
-            Write-Host "Available updates for file $relativeDstPath"
-            $updateFiles += @{ "DstFile" = $relativeDstPath; "content" = $srcContent }
+        # Re-read repository settings after updating custom template snapshot files
+        $repoSettings = ReadSettings -buildMode '' -project '' -workflowName '' -userName '' -branchName '' -trigger '' | ConvertTo-HashTable -recurse
+    }
+
+    # Get the list of projects in the current repository
+    $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
+
+    $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+
+    # $updateFiles will hold an array of files, which needs to be updated
+    $updateFiles = @()
+
+    # $removeFiles will hold an array of files, which needs to be removed
+    $removeFiles = @()
+
+    # Dependency depth determines how many build jobs we need to run sequentially
+    # Every build job might spin up multiple jobs in parallel to build the projects without unresolved deependencies
+    $depth = 1
+    if ($projects.Count -gt 1) {
+        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
+        $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder -buildAllProjects $true -maxBuildDepth 100 -settings $repoSettings
+        $depth = $buildOrder.Count
+        Write-Host "Calculated dependency depth to be $depth"
+    }
+
+    # Prepare the list of template folders to be used for verification
+    $templateFolders = @($templateFolder)
+    if ($originalTemplateFolder) {
+        $templateFolders += $originalTemplateFolder
+    }
+
+    # Loop through all folders in CheckFiles and check if there are any files that needs to be updated
+    foreach($fileToInclude in $filesToInclude) {
+        $type = $fileToInclude.type
+        $srcPath = $fileToInclude.sourceFullPath
+        $originalSrcPath = $fileToInclude.originalSourceFullPath
+        if(-not $originalSrcPath) {
+            $originalSrcPath = $srcPath
+        }
+        $hasDistinctOriginalSource = -not $pathComparer.Equals($originalSrcPath, $srcPath)
+
+        Assert-PathPhysicallyEqual -Path $srcPath -AnchorPaths $templateFolders -Context 'source file'
+        if ($hasDistinctOriginalSource) {
+            Assert-PathPhysicallyEqual -Path $originalSrcPath -AnchorPaths $templateFolders -Context 'original source file'
+        }
+
+        $dstPath = $fileToInclude.destinationFullPath
+
+        Assert-PathPhysicallyEqual -Path $dstPath -AnchorPaths @($baseFolder) -Context 'destination file'
+
+        if ($backupFiles.ContainsKey($dstPath)) {
+            $dstFileExists = $null -ne $backupFiles[$dstPath]
+        } else {
+            $dstFileExists = Test-Path -LiteralPath $dstPath -PathType Leaf
+        }
+
+        Write-Host "Processing file: $srcPath -> $dstPath (type: $type)"
+
+        switch ($type) {
+            "workflow" {
+                # For workflow files, we might need to modify the file based on the settings
+                $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth
+                # Replace static placeholders
+                $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
+            }
+            "settings" {
+                # For settings files, we need to modify the file based on the settings
+                $srcContent = GetModifiedSettingsContent -srcSettingsFile $originalSrcPath -dstSettingsFile $dstPath
+            }
+            Default {
+                # For non-workflow files, just read the file content
+                $srcContent = Get-ContentLF -Path $originalSrcPath
+            }
+        }
+
+        if ($isDirectALGo) {
+            # If we are using direct AL-Go repo, we need to change the owner to the templateOwner, the repo names to AL-Go and AL-Go/Actions and the branch to templateBranch
+            ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
+        }
+
+        if ($type -eq 'workflow' -and $hasDistinctOriginalSource) {
+            # Apply customizations from custom template repository
+            Write-Host "Apply customizations from custom template repository, file: $srcPath"
+            [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcPath)
+        }
+
+        # Get the relative path for the dstPath from the base folder. Don't use Resolve-Path as it will fail if the destination file doesn't exist
+        $relativeDstPath = $dstPath.Substring($baseFolder.Length + 1)
+
+        if ($dstFileExists) {
+            if ($type -eq 'workflow') {
+                Write-Host "Apply customizations from current repository, file: $relativeDstPath"
+                [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
+            }
+
+            # file exists, compare and add to $updateFiles if different
+            if ($backupFiles.ContainsKey($dstPath)) {
+                $dstContent = Get-ContentLF -Path $backupFiles[$dstPath]
+            } else {
+                $dstContent = Get-ContentLF -Path $dstPath
+            }
+            if ($dstContent -cne $srcContent) {
+                Write-Host "Available updates for file $relativeDstPath"
+                $updateFiles += @{ "DstFile" = $relativeDstPath; "content" = $srcContent }
+            }
+            else {
+                Write-Host "No updates for file $relativeDstPath"
+            }
         }
         else {
-            Write-Host "No updates for file $relativeDstPath"
+            # new file, add to $updateFiles
+            Write-Host "New file available: $relativeDstPath"
+            $updateFiles += @{ "DstFile" = $relativeDstPath; "content" = $srcContent }
         }
     }
-    else {
-        # new file, add to $updateFiles
-        Write-Host "New file available: $relativeDstPath"
-        $updateFiles += @{ "DstFile" = $relativeDstPath; "content" = $srcContent }
-    }
-}
 
-Push-Location -Path $baseFolder
-# Remove files that are in $filesToExclude and exist in the repository
-$removeFiles = $filesToExclude | Where-Object { $_ -and (Test-Path -LiteralPath $_.destinationFullPath -PathType Leaf) } | ForEach-Object {
-    $relativePath = Resolve-Path -LiteralPath $_.destinationFullPath -Relative
-    Write-Host "File marked for removal: $relativePath"
-    $relativePath
+    Push-Location -Path $baseFolder
+    # Remove files that are in $filesToExclude and exist in the repository
+    $removeFiles = $filesToExclude | Where-Object { $_ } | Where-Object {
+        $dstPath = $_.destinationFullPath
+        if ($backupFiles.ContainsKey($dstPath)) {
+            return $null -ne $backupFiles[$dstPath]
+        }
+        return Test-Path -LiteralPath $dstPath -PathType Leaf
+    } | ForEach-Object {
+        $relativePath = Resolve-Path -LiteralPath $_.destinationFullPath -Relative
+        Write-Host "File marked for removal: $relativePath"
+        $relativePath
+    }
+    Pop-Location
+
 }
-Pop-Location
+finally {
+    foreach ($backupFileEntry in $backupFiles.GetEnumerator()) {
+        if ($null -ne $backupFileEntry.Value) {
+            Copy-Item -LiteralPath $backupFileEntry.Value -Destination $backupFileEntry.Key -Force
+        }
+        elseif (Test-Path -LiteralPath $backupFileEntry.Key -PathType Leaf) {
+            Remove-Item -LiteralPath $backupFileEntry.Key -Force
+        }
+    }
+    Remove-Item -LiteralPath $backupFolder -Recurse -Force
+}
 
 if ($update -ne 'Y') {
     # $update not set, just issue a warning in the CI/CD workflow that updates are available

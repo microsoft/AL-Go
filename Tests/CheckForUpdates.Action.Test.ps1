@@ -93,8 +93,16 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $originalGitHubWorkspace = $env:GITHUB_WORKSPACE
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubRepository', Justification = 'False positive.')]
         $originalGitHubRepository = $env:GITHUB_REPOSITORY
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGitHubServerUrl', Justification = 'False positive.')]
+        $originalGitHubServerUrl = $env:GITHUB_SERVER_URL
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalLocation', Justification = 'False positive.')]
         $originalLocation = Get-Location
+
+        $originalSettingsEnvironment = @{}
+        foreach ($variableName in @('ALGoOrgSettings', 'ALGoRepoSettings', 'ALGoEnvSettings')) {
+            $originalSettingsEnvironment[$variableName] = [Environment]::GetEnvironmentVariable($variableName)
+            [Environment]::SetEnvironmentVariable($variableName, $null)
+        }
 
         $testRepoName = 'contoso/check-for-updates-runtime-tests'
 
@@ -111,18 +119,13 @@ Describe "CheckForUpdates Action: runtime behavior" {
             shell = 'powershell'
         }
 
-        $testFilesToInclude = @()
-        $testFilesToExclude = @()
-
         $fakeToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('fake-pat'))
 
         Mock DownloadAndImportBcContainerHelper {}
-        Mock ReadSettings { [PSCustomObject]$testSettings }
         Mock DownloadTemplateRepository { return $testTemplateFolder }
         Mock GetSrcFolder { return $testTemplateFolder }
         Mock IsDirectALGo { return $true }
         Mock GetProjectsFromRepository { return @('.') }
-        Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output $testFilesToExclude -NoEnumerate }
         Mock OutputWarning {}
         Mock OutputNotice {}
         Mock RunAndCheck { return 'sha123456789' }
@@ -137,15 +140,24 @@ Describe "CheckForUpdates Action: runtime behavior" {
         New-Item -Path $testWorkspaceFolder -ItemType Directory -Force | Out-Null
         New-Item -Path $testCloneRoot -ItemType Directory -Force | Out-Null
 
+        New-Item -Path (Join-Path $testWorkspaceFolder '.github') -ItemType Directory -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($testSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+
         Set-Location $testWorkspaceFolder
         $env:GITHUB_WORKSPACE = $testWorkspaceFolder
         $env:GITHUB_REPOSITORY = $testRepoName
+        $env:GITHUB_SERVER_URL = 'https://github.com'
     }
 
     AfterEach {
         Set-Location $originalLocation
         $env:GITHUB_WORKSPACE = $originalGitHubWorkspace
         $env:GITHUB_REPOSITORY = $originalGitHubRepository
+        $env:GITHUB_SERVER_URL = $originalGitHubServerUrl
+
+        foreach ($variableName in $originalSettingsEnvironment.Keys) {
+            [Environment]::SetEnvironmentVariable($variableName, $originalSettingsEnvironment[$variableName])
+        }
 
         if (Test-Path -LiteralPath $testTemplateFolder) {
             Remove-Item -Path $testTemplateFolder -Recurse -Force
@@ -159,6 +171,9 @@ Describe "CheckForUpdates Action: runtime behavior" {
     }
 
     It 'Reads initial settings without execution-specific contexts' {
+        Mock ReadSettings { [PSCustomObject]$testSettings }
+        Mock GetFilesToUpdate { Write-Output @() -NoEnumerate; Write-Output @() -NoEnumerate }
+
         . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update N
 
         Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
@@ -168,156 +183,8 @@ Describe "CheckForUpdates Action: runtime behavior" {
         }
     }
 
-    Context 'Template repository settings redirects' {
-        BeforeEach {
-            Mock IsDirectALGo { return $false }
-            $externalFolder = Join-Path $TestDrive 'externalTemplateSettings'
-            New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
-            $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
-            Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
-            $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
-            $templateSettingsFile = Join-Path $testTemplateFolder $RepoSettingsFile
-        }
-
-        AfterEach {
-            $settingsItem = Get-Item -LiteralPath $templateSettingsFile -Force -ErrorAction SilentlyContinue
-            if ($settingsItem -and $settingsItem.LinkType) {
-                Remove-Item -LiteralPath $templateSettingsFile -Force
-            }
-
-            $githubFolder = Join-Path $testTemplateFolder '.github'
-            $githubItem = Get-Item -LiteralPath $githubFolder -Force -ErrorAction SilentlyContinue
-            if ($githubItem -and $githubItem.LinkType -in @('Junction', 'SymbolicLink')) {
-                [System.IO.Directory]::Delete($githubFolder)
-            }
-        }
-
-        It 'Rejects template repository settings redirected through a junction' -Skip:(-not $script:isWindowsPlatform) {
-            $githubFolder = Join-Path $testTemplateFolder '.github'
-            New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
-
-            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-                Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
-
-            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
-            Should -Invoke GetFilesToUpdate -Exactly 0
-            Should -Invoke CloneIntoNewFolder -Exactly 0
-        }
-
-        It 'Rejects template repository settings redirected through a folder symlink' -Skip:(-not $script:hasSymlinkCapability) {
-            $githubFolder = Join-Path $testTemplateFolder '.github'
-            New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
-
-            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-                Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
-
-            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
-            Should -Invoke GetFilesToUpdate -Exactly 0
-            Should -Invoke CloneIntoNewFolder -Exactly 0
-        }
-
-        It 'Rejects template repository settings redirected through a file symlink' -Skip:(-not $script:hasSymlinkCapability) {
-            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
-            New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalSettingsFile -Force | Out-Null
-
-            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-                Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
-
-            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
-            Should -Invoke GetFilesToUpdate -Exactly 0
-            Should -Invoke CloneIntoNewFolder -Exactly 0
-        }
-    }
-
-    Context 'Clone repository settings redirects' {
-        BeforeEach {
-            Mock Test-HasSystemFileChanges { return $true }
-            $templateFile = Join-Path $testTemplateFolder 'pendingUpdate.txt'
-            $workspaceFile = Join-Path $testWorkspaceFolder 'pendingUpdate.txt'
-            $cloneFile = Join-Path $testCloneRoot 'pendingUpdate.txt'
-            $workspaceRemovalFile = Join-Path $testWorkspaceFolder 'pendingRemoval.txt'
-            $cloneRemovalFile = Join-Path $testCloneRoot 'pendingRemoval.txt'
-            Set-Content -LiteralPath $templateFile -Value 'new content' -Encoding UTF8
-            Set-Content -LiteralPath $workspaceFile -Value 'old content' -Encoding UTF8
-            Set-Content -LiteralPath $cloneFile -Value 'old content' -Encoding UTF8
-            Set-Content -LiteralPath $workspaceRemovalFile -Value 'keep me' -Encoding UTF8
-            Set-Content -LiteralPath $cloneRemovalFile -Value 'keep me' -Encoding UTF8
-
-            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-            $testFilesToInclude = @(
-                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = $workspaceFile }
-            )
-            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
-            $testFilesToExclude = @(@{ destinationFullPath = $workspaceRemovalFile })
-
-            $externalFolder = Join-Path $TestDrive 'externalCloneSettings'
-            New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
-            $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
-            Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
-            $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
-            $cloneSettingsFile = Join-Path $testCloneRoot $RepoSettingsFile
-        }
-
-        AfterEach {
-            $settingsItem = Get-Item -LiteralPath $cloneSettingsFile -Force -ErrorAction SilentlyContinue
-            if ($settingsItem -and $settingsItem.LinkType) {
-                Remove-Item -LiteralPath $cloneSettingsFile -Force
-            }
-
-            $githubFolder = Join-Path $testCloneRoot '.github'
-            $githubItem = Get-Item -LiteralPath $githubFolder -Force -ErrorAction SilentlyContinue
-            if ($githubItem -and $githubItem.LinkType -in @('Junction', 'SymbolicLink')) {
-                [System.IO.Directory]::Delete($githubFolder)
-            }
-        }
-
-        It 'Rejects clone repository settings redirected through a junction before applying changes' -Skip:(-not $script:isWindowsPlatform) {
-            $githubFolder = Join-Path $testCloneRoot '.github'
-            New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
-
-            { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
-                Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
-
-            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
-            Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
-            Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
-            Should -Invoke CloneIntoNewFolder -Exactly 1
-            Should -Invoke UpdateSettingsFile -Exactly 0
-            Should -Invoke CommitFromNewFolder -Exactly 0
-        }
-
-        It 'Rejects clone repository settings redirected through a folder symlink before applying changes' -Skip:(-not $script:hasSymlinkCapability) {
-            $githubFolder = Join-Path $testCloneRoot '.github'
-            New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
-
-            { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
-                Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
-
-            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
-            Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
-            Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
-            Should -Invoke CloneIntoNewFolder -Exactly 1
-            Should -Invoke UpdateSettingsFile -Exactly 0
-            Should -Invoke CommitFromNewFolder -Exactly 0
-        }
-
-        It 'Rejects clone repository settings redirected through a file symlink before applying changes' -Skip:(-not $script:hasSymlinkCapability) {
-            New-Item -ItemType Directory -Path (Join-Path $testCloneRoot '.github') -Force | Out-Null
-            New-Item -ItemType SymbolicLink -Path $cloneSettingsFile -Target $externalSettingsFile -Force | Out-Null
-
-            { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
-                Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
-
-            (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
-            Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
-            Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
-            Should -Invoke CloneIntoNewFolder -Exactly 1
-            Should -Invoke UpdateSettingsFile -Exactly 0
-            Should -Invoke CommitFromNewFolder -Exactly 0
-        }
-    }
-
     It 'Reads, updates and removes with literal bracketed paths' {
+        Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output $testFilesToExclude -NoEnumerate }
         $newSource = Join-Path $testTemplateFolder 'New[1].txt'
         $newDestination = Join-Path $testWorkspaceFolder 'New[1].txt'
         Set-Content -LiteralPath $newSource -Value 'new content'
@@ -404,24 +271,8 @@ Describe "CheckForUpdates Action: runtime behavior" {
         Get-Content -LiteralPath (Join-Path $testCloneRoot 'Old1.txt') | Should -Be 'keep me'
     }
 
-    It 'Rejects an external original source on Linux' -Skip:(-not $script:isLinuxPlatform) {
-        $invalidSource = Join-Path $testTemplateFolder 'File.txt'
-        $invalidOriginalSource = Join-Path $testTemplateFolder 'file.txt'
-        Set-Content -LiteralPath $invalidSource -Value 'safe content'
-        $external = Join-Path $TestDrive 'file.txt'
-        Set-Content -LiteralPath $external -Value 'external content'
-        New-Item -ItemType SymbolicLink -Path $invalidOriginalSource -Target $external | Out-Null
-
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $invalidSource; originalSourceFullPath = $invalidOriginalSource; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder 'File.txt') }
-        )
-
-        { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
-            Should -Throw -ExpectedMessage 'Unsafe path blocked: original source file *does not physically resolve*'
-    }
-
     It 'Applies workflow customizations from case-distinct original sources on Linux' -Skip:(-not $script:isLinuxPlatform) {
+        Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output @() -NoEnumerate }
         $workflowSource = Join-Path $testTemplateFolder 'Workflow.yaml'
         $workflowOriginalSource = Join-Path $testTemplateFolder 'WORKFLOW.yaml'
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt') -Destination $workflowSource
@@ -442,6 +293,7 @@ Describe "CheckForUpdates Action: runtime behavior" {
     }
 
     It 'Applies no workflow customizations from case-distinct original sources on Windows' -Skip:(-not $script:isWindowsPlatform) {
+        Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output @() -NoEnumerate }
         $workflowSource = Join-Path $testTemplateFolder 'Workflow.yaml'
         $workflowOriginalSource = Join-Path $testTemplateFolder 'WORKFLOW.yaml'
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CustomizedYamlSnippet-TemplateRepository.txt') -Destination $workflowSource
@@ -461,270 +313,875 @@ Describe "CheckForUpdates Action: runtime behavior" {
         $updateFiles[0].content | Should -Not -Match 'CustomJob-MyCustomTemplateJob:'
     }
 
-    It 'CheckForUpdates rejects source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
-        # A legitimate file directly in the template folder
-        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
-        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+    Context 'Physical path safety' {
+        BeforeEach {
+            $testFilesToInclude = @()
+            $testFilesToExclude = @()
+            Mock GetFilesToUpdate { Write-Output $testFilesToInclude -NoEnumerate; Write-Output $testFilesToExclude -NoEnumerate }
+        }
 
-        # Create a redirection folder and a junction pointing back to the template folder
-        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
-        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
-        New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+        AfterEach {
+            $testLinkPaths = @(
+                (Join-Path $testTemplateFolder 'redirected')
+                (Join-Path $testTemplateFolder 'FOLDER')
+                (Join-Path $testTemplateFolder 'file.txt')
+                (Join-Path $testWorkspaceFolder 'redirectedInWorkspace')
+                (Join-Path $testCloneRoot 'redirectedInClone')
+            )
+            foreach ($linkPath in $testLinkPaths) {
+                $linkItem = Get-Item -LiteralPath $linkPath -Force -ErrorAction SilentlyContinue
+                if ($linkItem -and $linkItem.LinkType -in @('Junction', 'SymbolicLink')) {
+                    if ($linkItem.PSIsContainer) {
+                        [System.IO.Directory]::Delete($linkPath)
+                    }
+                    else {
+                        Remove-Item -LiteralPath $linkPath -Force
+                    }
+                }
+            }
+        }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
-        )
+        Context 'Template repository settings redirects' {
+            BeforeEach {
+                Mock IsDirectALGo { return $false }
+                $externalFolder = Join-Path $TestDrive 'externalTemplateSettings'
+                New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
+                $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
+                Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                $templateSettingsFile = Join-Path $testTemplateFolder $RepoSettingsFile
+            }
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: source file '*redirected.txt' does not physically resolve*"
+            AfterEach {
+                $settingsItem = Get-Item -LiteralPath $templateSettingsFile -Force -ErrorAction SilentlyContinue
+                if ($settingsItem -and $settingsItem.LinkType) {
+                    Remove-Item -LiteralPath $templateSettingsFile -Force
+                }
+
+                $githubFolder = Join-Path $testTemplateFolder '.github'
+                $githubItem = Get-Item -LiteralPath $githubFolder -Force -ErrorAction SilentlyContinue
+                if ($githubItem -and $githubItem.LinkType -in @('Junction', 'SymbolicLink')) {
+                    [System.IO.Directory]::Delete($githubFolder)
+                }
+            }
+
+            It 'Rejects template repository settings redirected through a junction' -Skip:(-not $script:isWindowsPlatform) {
+                $githubFolder = Join-Path $testTemplateFolder '.github'
+                New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
+
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+
+            It 'Rejects template repository settings redirected through a folder symlink' -Skip:(-not $script:hasSymlinkCapability) {
+                $githubFolder = Join-Path $testTemplateFolder '.github'
+                New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
+
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+
+            It 'Rejects template repository settings redirected through a file symlink' -Skip:(-not $script:hasSymlinkCapability) {
+                New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+                New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalSettingsFile -Force | Out-Null
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: template repository settings '$templateSettingsFile' does not physically resolve to itself*"
+
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+        }
+
+        Context 'Clone repository settings redirects' {
+            BeforeEach {
+                Mock Test-HasSystemFileChanges { return $true }
+                $templateFile = Join-Path $testTemplateFolder 'pendingUpdate.txt'
+                $workspaceFile = Join-Path $testWorkspaceFolder 'pendingUpdate.txt'
+                $cloneFile = Join-Path $testCloneRoot 'pendingUpdate.txt'
+                $workspaceRemovalFile = Join-Path $testWorkspaceFolder 'pendingRemoval.txt'
+                $cloneRemovalFile = Join-Path $testCloneRoot 'pendingRemoval.txt'
+                Set-Content -LiteralPath $templateFile -Value 'new content' -Encoding UTF8
+                Set-Content -LiteralPath $workspaceFile -Value 'old content' -Encoding UTF8
+                Set-Content -LiteralPath $cloneFile -Value 'old content' -Encoding UTF8
+                Set-Content -LiteralPath $workspaceRemovalFile -Value 'keep me' -Encoding UTF8
+                Set-Content -LiteralPath $cloneRemovalFile -Value 'keep me' -Encoding UTF8
+
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+                $testFilesToInclude = @(
+                    @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = $workspaceFile }
+                )
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+                $testFilesToExclude = @(@{ destinationFullPath = $workspaceRemovalFile })
+
+                $externalFolder = Join-Path $TestDrive 'externalCloneSettings'
+                New-Item -ItemType Directory -Path $externalFolder -Force | Out-Null
+                $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
+                Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                $cloneSettingsFile = Join-Path $testCloneRoot $RepoSettingsFile
+            }
+
+            AfterEach {
+                $settingsItem = Get-Item -LiteralPath $cloneSettingsFile -Force -ErrorAction SilentlyContinue
+                if ($settingsItem -and $settingsItem.LinkType) {
+                    Remove-Item -LiteralPath $cloneSettingsFile -Force
+                }
+
+                $githubFolder = Join-Path $testCloneRoot '.github'
+                $githubItem = Get-Item -LiteralPath $githubFolder -Force -ErrorAction SilentlyContinue
+                if ($githubItem -and $githubItem.LinkType -in @('Junction', 'SymbolicLink')) {
+                    [System.IO.Directory]::Delete($githubFolder)
+                }
+            }
+
+            It 'Rejects clone repository settings redirected through a junction before applying changes' -Skip:(-not $script:isWindowsPlatform) {
+                $githubFolder = Join-Path $testCloneRoot '.github'
+                New-Item -ItemType Junction -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+                { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
+                    Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
+
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+                Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
+                Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
+                Should -Invoke CloneIntoNewFolder -Exactly 1
+                Should -Invoke UpdateSettingsFile -Exactly 0
+                Should -Invoke CommitFromNewFolder -Exactly 0
+            }
+
+            It 'Rejects clone repository settings redirected through a folder symlink before applying changes' -Skip:(-not $script:hasSymlinkCapability) {
+                $githubFolder = Join-Path $testCloneRoot '.github'
+                New-Item -ItemType SymbolicLink -Path $githubFolder -Target $externalFolder -Force | Out-Null
+
+                { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
+                    Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
+
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+                Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
+                Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
+                Should -Invoke CloneIntoNewFolder -Exactly 1
+                Should -Invoke UpdateSettingsFile -Exactly 0
+                Should -Invoke CommitFromNewFolder -Exactly 0
+            }
+
+            It 'Rejects clone repository settings redirected through a file symlink before applying changes' -Skip:(-not $script:hasSymlinkCapability) {
+                New-Item -ItemType Directory -Path (Join-Path $testCloneRoot '.github') -Force | Out-Null
+                New-Item -ItemType SymbolicLink -Path $cloneSettingsFile -Target $externalSettingsFile -Force | Out-Null
+
+                { . $scriptPath -templateUrl $testSettings.templateUrl -downloadLatest $true -update Y -updateBranch 'update-al-go-system-files' -token $fakeToken -directCommit $true -actor 'test-actor' } |
+                    Should -Throw -ExpectedMessage "*Unsafe path blocked: repository settings '$cloneSettingsFile' does not physically resolve to itself*"
+
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -Be $externalSettingsHash
+                Get-Content -LiteralPath $cloneFile | Should -Be 'old content'
+                Get-Content -LiteralPath $cloneRemovalFile | Should -Be 'keep me'
+                Should -Invoke CloneIntoNewFolder -Exactly 1
+                Should -Invoke UpdateSettingsFile -Exactly 0
+                Should -Invoke CommitFromNewFolder -Exactly 0
+            }
+        }
+
+        It 'Rejects an external original source on Linux' -Skip:(-not $script:isLinuxPlatform) {
+            $invalidSource = Join-Path $testTemplateFolder 'File.txt'
+            $invalidOriginalSource = Join-Path $testTemplateFolder 'file.txt'
+            Set-Content -LiteralPath $invalidSource -Value 'safe content'
+            $external = Join-Path $TestDrive 'file.txt'
+            Set-Content -LiteralPath $external -Value 'external content'
+            New-Item -ItemType SymbolicLink -Path $invalidOriginalSource -Target $external | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $invalidSource; originalSourceFullPath = $invalidOriginalSource; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder 'File.txt') }
+            )
+
+            { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage 'Unsafe path blocked: original source file *does not physically resolve*'
+        }
+
+        It 'CheckForUpdates rejects source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
+            # A legitimate file directly in the template folder
+            $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+            Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+
+            # Create a redirection folder and a junction pointing back to the template folder
+            $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+            $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+            New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: source file '*redirected.txt' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects original source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
+            $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+            Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+            $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+            $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+            New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*redirected.txt' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+            # A legitimate file directly in the template folder
+            $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+            Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+
+            # Create a redirection folder and a symbolic link pointing back to the template folder
+            $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+            $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+            New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: source file '*redirected.txt' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects original source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+            $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
+            Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+            $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
+            $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
+            New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*redirected.txt' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects source files with case-distinct original sources that do not physically resolve to themselves using symlinks on Linux' -Skip:(-not $script:isLinuxPlatform) {
+            $directTemplateFolder = Join-Path $testTemplateFolder "folder"
+            $directTemplateFile = Join-Path $directTemplateFolder "file.txt"
+            New-Item -ItemType Directory -Path $directTemplateFolder -Force | Out-Null
+            Set-Content -LiteralPath $directTemplateFile -Value "direct content"
+
+            $redirectedTemplateFolder = Join-Path $testTemplateFolder "FOLDER"
+            $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "file.txt"
+            New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+            Set-Content -LiteralPath $redirectedTemplateFile -Value "redirected content"
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $directTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "file.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*FOLDER*' does not physically resolve*"
+        }
+
+        It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+            # A file in the template folder
+            $templateFile = Join-Path $testTemplateFolder "template.txt"
+            Set-Content -LiteralPath $templateFile -Value "template content"
+
+            # A legitimate file directly in the clone folder
+            $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+
+            # Create a redirected folder and a symbolic link pointing back to the workspace folder
+            $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
+            New-Item -ItemType Junction -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
+            Should -Invoke CloneIntoNewFolder -Exactly 0
+            Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $false
+        }
+
+        It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+            $templateFile = Join-Path $testTemplateFolder "template.txt"
+            Set-Content -LiteralPath $templateFile -Value "template content"
+            $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+            $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
+            New-Item -ItemType Junction -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+
+            Should -Invoke CommitFromNewFolder -Exactly 0
+            Should -Invoke UpdateSettingsFile -Exactly 0
+            Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
+            Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
+        }
+
+        It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+            # A file in the template folder
+            $templateFile = Join-Path $testTemplateFolder "template.txt"
+            Set-Content -LiteralPath $templateFile -Value "template content"
+
+            # A legitimate file directly in the clone folder
+            $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+
+            # Create a redirected folder and a symbolic link pointing back to the workspace folder
+            $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
+            New-Item -ItemType SymbolicLink -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+                Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
+            Should -Invoke CloneIntoNewFolder -Exactly 0
+            Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $false
+        }
+
+        It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+            $templateFile = Join-Path $testTemplateFolder "template.txt"
+            Set-Content -LiteralPath $templateFile -Value "template content"
+            $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+            $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
+            New-Item -ItemType SymbolicLink -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
+            $testFilesToInclude = @(
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
+                @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+
+            Should -Invoke CommitFromNewFolder -Exactly 0
+            Should -Invoke UpdateSettingsFile -Exactly 0
+            Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
+            Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
+        }
+
+        It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
+            $relativeLegitFile = "legit.txt"
+            $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
+            $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+            $relativeRedirectedInCloneFolder = "redirectedInClone"
+            $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+
+            # Create folders, files and junctions in workspace folder
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+            New-Item -ItemType Junction -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+            # Create folders, files and junctions in clone folder
+            Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
+            New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
+            New-Item -ItemType Junction -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+            Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+            $testFilesToExclude = @(
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+
+            Should -Invoke CommitFromNewFolder -Exactly 0
+            Should -Invoke UpdateSettingsFile -Exactly 0
+
+            # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clone redirected file was not
+            Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
+            Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
+            Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
+        }
+
+        It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
+            $relativeLegitFile = "legit.txt"
+            $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
+            $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
+            $relativeRedirectedInCloneFolder = "redirectedInClone"
+            $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+
+            # Create folders, files and junctions in workspace folder
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
+            New-Item -ItemType SymbolicLink -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+            Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+            # Create folders, files and junctions in clone folder
+            Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
+            New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
+            New-Item -ItemType SymbolicLink -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
+            Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
+            Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
+            $testFilesToExclude = @(
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
+                @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
+            )
+
+            { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
+                Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+
+            Should -Invoke CommitFromNewFolder -Exactly 0
+            Should -Invoke UpdateSettingsFile -Exactly 0
+
+            # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
+            Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
+            Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
+            Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
+        }
+
     }
 
-    It 'CheckForUpdates rejects original source files that do not physically resolve to themselves using junctions' -Skip:(-not $script:isWindowsPlatform) {
-        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
-        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
-        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
-        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
-        New-Item -ItemType Junction -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+    Context 'Custom template snapshots' {
+        BeforeEach {
+            $repositorySettings = @{
+                templateUrl = 'https://github.com/contoso/template@main'
+                templateSha = $testSettings.templateSha
+                type = $testSettings.type
+                projects = $testSettings.projects
+            }
+            $templateSettings = $testSettings.Clone()
+            Mock IsDirectALGo { return $false }
+            $snapshotBackupFolder = Join-Path $rootFolder 'snapshotBackup'
+            Mock NewTemporaryFolder {
+                New-Item -ItemType Directory -Path $snapshotBackupFolder | Out-Null
+                return $snapshotBackupFolder
+            }
+        }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
-        )
+        It 'Restores <initialState> custom template snapshots after update (fails: <failure>)' -TestCases @(
+            @{ initialState = 'changed'; failure = $false }
+            @{ initialState = 'unchanged'; failure = $false }
+            @{ initialState = 'missing'; failure = $false }
+            @{ initialState = 'changed'; failure = $true }
+            @{ initialState = 'unchanged'; failure = $true }
+            @{ initialState = 'missing'; failure = $true }
+        ) {
+            Param($initialState, $failure)
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*redirected.txt' does not physically resolve*"
-    }
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.AL-Go') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder '.github') -Force | Out-Null
 
-    It 'CheckForUpdates rejects source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
-        # A legitimate file directly in the template folder
-        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
-        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
+            $repositoryContent = @{ templateUrl = $testSettings.templateUrl; useProjectDependencies = $true } | ConvertTo-Json -Compress
+            $projectContent = '{"buildModes":["Current"]}'
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value $repositoryContent -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $ALGoSettingsFile) -Value $projectContent -Encoding UTF8
 
-        # Create a redirection folder and a symbolic link pointing back to the template folder
-        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
-        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
-        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+            $snapshots = @(
+                @{
+                    sourceFullPath = Join-Path $testTemplateFolder $RepoSettingsFile
+                    destinationFullPath = Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile
+                }
+                @{
+                    sourceFullPath = Join-Path $testTemplateFolder $ALGoSettingsFile
+                    destinationFullPath = Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile
+                }
+            )
+            foreach ($snapshot in $snapshots) {
+                $snapshot.updatedContent = Get-ContentLF -Path $snapshot.sourceFullPath
+                $snapshot.initialContent = '{"previous":true}'
+                if ($initialState -eq 'unchanged') {
+                    $snapshot.initialContent = $snapshot.updatedContent
+                }
+                if ($initialState -ne 'missing') {
+                    # Preserve BOM and CRLF to detect byte-changing restoration; Set-ContentLF would normalize them.
+                    $snapshotContent = $snapshot.initialContent.Replace("`n", "`r`n") + "`r`n"
+                    $snapshotEncoding = if ($PSVersionTable.PSVersion.Major -lt 6) { 'UTF8' } else { 'utf8BOM' }
+                    Set-Content -LiteralPath $snapshot.destinationFullPath -Value $snapshotContent -Encoding $snapshotEncoding -NoNewline
+                    $snapshot.initialHash = (Get-FileHash -LiteralPath $snapshot.destinationFullPath).Hash
+                }
+            }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $redirectedTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
-        )
+            Mock GetFilesToUpdate {
+                foreach ($snapshot in $snapshots) {
+                    Get-ContentLF -Path $snapshot.destinationFullPath | Should -BeExactly $snapshot.updatedContent
+                }
+                if ($failure) {
+                    throw 'Mock Failure'
+                }
+                Write-Output @() -NoEnumerate
+                Write-Output @() -NoEnumerate
+            }
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: source file '*redirected.txt' does not physically resolve*"
-    }
+            if ($failure) {
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage 'Mock Failure'
+            }
+            else {
+                . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N
+            }
+            Should -Invoke GetFilesToUpdate -Exactly 1
+            foreach ($snapshot in $snapshots) {
+                if ($initialState -eq 'missing') {
+                    Test-Path -LiteralPath $snapshot.destinationFullPath | Should -BeFalse
+                }
+                else {
+                    Get-ContentLF -Path $snapshot.destinationFullPath | Should -BeExactly $snapshot.initialContent
+                    (Get-FileHash -LiteralPath $snapshot.destinationFullPath).Hash | Should -BeExactly $snapshot.initialHash
+                }
+            }
+            Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+        }
 
-    It 'CheckForUpdates rejects original source files that do not physically resolve to themselves using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
-        $legitTemplateFile = Join-Path $testTemplateFolder "legit.txt"
-        Set-Content -LiteralPath $legitTemplateFile -Value "legit content"
-        $redirectedTemplateFolder = Join-Path $testTemplateFolder "redirected"
-        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "redirected.txt"
-        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
+        It 'Restores original custom template snapshots when snapshot handling fails' {
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.AL-Go') -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value ($templateSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $ALGoSettingsFile) -Value '{}' -Encoding UTF8
+            $originalSnapshotHashes = @{}
+            foreach ($snapshotPath in @($CustomTemplateRepoSettingsFile, $CustomTemplateProjectSettingsFile)) {
+                $snapshotFile = Join-Path $testWorkspaceFolder $snapshotPath
+                Set-Content -LiteralPath $snapshotFile -Value '{"previous":true}' -Encoding UTF8 -NoNewline
+                $originalSnapshotHashes[$snapshotFile] = (Get-FileHash -LiteralPath $snapshotFile).Hash
+            }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $legitTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirected.txt") }
-        )
+            $customTemplateProjectSettingsSnapshotFile = Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile
+            $originalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
+            Mock Copy-Item { & $originalCopyItem -LiteralPath $LiteralPath -Destination $Destination -Force }
+            Mock Copy-Item { throw 'Snapshot backup failed' } -ParameterFilter {
+                $LiteralPath -eq $customTemplateProjectSettingsSnapshotFile -and $Destination.StartsWith($snapshotBackupFolder)
+            }
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*redirected.txt' does not physically resolve*"
-    }
+            { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                Should -Throw -ExpectedMessage 'Snapshot backup failed'
 
-    It 'CheckForUpdates rejects source files with case-distinct original sources that do not physically resolve to themselves using symlinks on Linux' -Skip:(-not $script:isLinuxPlatform) {
-        $directTemplateFolder = Join-Path $testTemplateFolder "folder"
-        $directTemplateFile = Join-Path $directTemplateFolder "file.txt"
-        New-Item -ItemType Directory -Path $directTemplateFolder -Force | Out-Null
-        Set-Content -LiteralPath $directTemplateFile -Value "direct content"
+            Should -Invoke Copy-Item -Exactly 1 -ParameterFilter {
+                $LiteralPath -eq $customTemplateProjectSettingsSnapshotFile -and $Destination.StartsWith($snapshotBackupFolder)
+            }
+            foreach ($snapshotFile in $originalSnapshotHashes.Keys) {
+                (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -BeExactly $originalSnapshotHashes[$snapshotFile]
+            }
+            Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+        }
 
-        $redirectedTemplateFolder = Join-Path $testTemplateFolder "FOLDER"
-        $redirectedTemplateFile = Join-Path $redirectedTemplateFolder "file.txt"
-        New-Item -ItemType SymbolicLink -Path $redirectedTemplateFolder -Target $testTemplateFolder -Force | Out-Null
-        Set-Content -LiteralPath $redirectedTemplateFile -Value "redirected content"
+        It 'Calculates updates for refreshed custom template snapshots' {
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.AL-Go') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder '.github') -Force | Out-Null
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $directTemplateFile; originalSourceFullPath = $redirectedTemplateFile; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "file.txt") }
-        )
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
+            $snapshots = @(
+                @{
+                    sourcePath = $RepoSettingsFile
+                    destinationPath = $CustomTemplateRepoSettingsFile
+                    initialContent = '{"runs-on":"windows-2022"}'
+                    updatedContent = $templateSettings | ConvertTo-Json -Depth 10 -Compress
+                }
+                @{
+                    sourcePath = $ALGoSettingsFile
+                    destinationPath = $CustomTemplateProjectSettingsFile
+                    initialContent = '{"buildModes":["NextMajor"]}'
+                    updatedContent = '{"buildModes":["Current"]}'
+                }
+            )
+            foreach ($snapshot in $snapshots) {
+                Set-Content -LiteralPath (Join-Path $testTemplateFolder $snapshot.sourcePath) -Value $snapshot.updatedContent -Encoding UTF8 -NoNewline
+                Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $snapshot.destinationPath) -Value $snapshot.initialContent -Encoding UTF8 -NoNewline
+            }
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update N } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: original source file '*FOLDER*' does not physically resolve*"
-    }
+            . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N
 
-    It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
-        # A file in the template folder
-        $templateFile = Join-Path $testTemplateFolder "template.txt"
-        Set-Content -LiteralPath $templateFile -Value "template content"
+            foreach ($snapshot in $snapshots) {
+                $snapshotUpdates = @($updateFiles | Where-Object { $_.DstFile.Replace('\', '/') -eq $snapshot.destinationPath.Replace('\', '/') })
+                $snapshotUpdates.Count | Should -Be 1 -Because 'temporarily refreshed snapshots should still result in an update'
+                $snapshotUpdates[0].content | Should -BeExactly $snapshot.updatedContent
+            }
+        }
 
-        # A legitimate file directly in the clone folder
-        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+        It 'Calculates removals for excluded custom template snapshots based on their original existence' {
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.AL-Go') -Force | Out-Null
 
-        # Create a redirected folder and a symbolic link pointing back to the workspace folder
-        $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
-        New-Item -ItemType Junction -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+            $templateSettings.customALGoFiles = @{
+                filesToExclude = @(
+                    @{ sourceFolder = '.github'; filter = $RepoSettingsFileName }
+                    @{ sourceFolder = '.AL-Go'; filter = $ALGoSettingsFileName }
+                )
+            }
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value ($templateSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $ALGoSettingsFile) -Value '{"buildModes":["Current"]}' -Encoding UTF8
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
-        )
+            $repositorySnapshotFile = Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile
+            $projectSnapshotFile = Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile
+            Set-Content -LiteralPath $repositorySnapshotFile -Value '{"previous":true}' -Encoding UTF8 -NoNewline
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
-        Should -Invoke CloneIntoNewFolder -Exactly 0
-        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $false
-    }
+            . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N
 
-    It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when updating files using junctions' -Skip:(-not $script:isWindowsPlatform) {
-        $templateFile = Join-Path $testTemplateFolder "template.txt"
-        Set-Content -LiteralPath $templateFile -Value "template content"
-        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
-        $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
-        New-Item -ItemType Junction -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+            $removedFileNames = @($removeFiles | ForEach-Object { Split-Path -Path $_ -Leaf })
+            $removedFileNames | Should -Contain $CustomTemplateRepoSettingsFileName
+            $removedFileNames | Should -Not -Contain $CustomTemplateProjectSettingsFileName
+            Get-ContentLF -Path $repositorySnapshotFile | Should -BeExactly '{"previous":true}'
+            Test-Path -LiteralPath $projectSnapshotFile -PathType Leaf | Should -BeFalse
+        }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
-        )
+        It 'Calculates build depth <expectedDepth> from refreshed custom template project settings snapshot with useProjectDependencies <useProjectDependencies>' -TestCases @(
+            @{ useProjectDependencies = $true; expectedDepth = 2 }
+            @{ useProjectDependencies = $false; expectedDepth = 1 }
+        ) {
+            Param($useProjectDependencies, $expectedDepth)
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
-            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+            Mock GetProjectsFromRepository { return @('Base', 'Dependent') }
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.AL-Go') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder '.github') -Force | Out-Null
 
-        Should -Invoke CommitFromNewFolder -Exactly 0
-        Should -Invoke UpdateSettingsFile -Exactly 0
-        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
-        Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
-    }
+            $repositorySettings.projects = @('Base', 'Dependent')
+            $projectSettings = @{
+                useProjectDependencies = $useProjectDependencies
+                appFolders = @('app')
+                testFolders = @()
+                bcptTestFolders = @()
+            }
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value ($templateSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $ALGoSettingsFile) -Value ($projectSettings | ConvertTo-Json -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile) -Value (@{ useProjectDependencies = -not $useProjectDependencies } | ConvertTo-Json -Compress) -Encoding UTF8
 
-    It 'CheckForUpdates rejects workspace destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
-        # A file in the template folder
-        $templateFile = Join-Path $testTemplateFolder "template.txt"
-        Set-Content -LiteralPath $templateFile -Value "template content"
+            $baseApp = @{ id = '11111111-1111-1111-1111-111111111111'; name = 'Base'; publisher = 'Contoso'; version = '1.0.0.0' }
+            foreach ($projectName in @('Base', 'Dependent')) {
+                $projectFolder = Join-Path $testWorkspaceFolder $projectName
+                New-Item -ItemType Directory -Path (Join-Path $projectFolder '.AL-Go') -Force | Out-Null
+                New-Item -ItemType Directory -Path (Join-Path $projectFolder 'app') -Force | Out-Null
+                Set-Content -LiteralPath (Join-Path $projectFolder $ALGoSettingsFile) -Value '{}' -Encoding UTF8
+                $app = $baseApp.Clone()
+                if ($projectName -eq 'Dependent') {
+                    $app.id = '22222222-2222-2222-2222-222222222222'
+                    $app.name = 'Dependent'
+                    $app.dependencies = @($baseApp)
+                }
+                Set-Content -LiteralPath (Join-Path $projectFolder 'app/app.json') -Value ($app | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            }
 
-        # A legitimate file directly in the clone folder
-        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
+            . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N
 
-        # Create a redirected folder and a symbolic link pointing back to the workspace folder
-        $redirectedWorkspaceFolder = Join-Path $testWorkspaceFolder "redirectedInWorkspace"
-        New-Item -ItemType SymbolicLink -Path $redirectedWorkspaceFolder -Target $testWorkspaceFolder -Force | Out-Null
+            $depth | Should -Be $expectedDepth
+            $buildOrder.Count | Should -Be $expectedDepth
+        }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInWorkspace/redirected.txt") }
-        )
+        It 'Calculates workflow updates from refreshed custom template repository settings snapshot' {
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github/workflows') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder '.github') -Force | Out-Null
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
-            Should -Throw -ExpectedMessage "Unsafe path blocked: destination file '*redirectedInWorkspace*redirected.txt' does not physically resolve*"
-        Should -Invoke CloneIntoNewFolder -Exactly 0
-        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $false
-    }
+            $templateSettings.'runs-on' = 'ubuntu-latest'
+            $templateSettings.shell = 'pwsh'
+            $initialRepoSnapshot = '{"runs-on":"windows-2022","shell":"powershell"}'
+            $settingsFiles = @(
+                @{ path = Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile; content = $initialRepoSnapshot }
+                @{ path = Join-Path $testWorkspaceFolder $RepoSettingsFile; content = ($repositorySettings | ConvertTo-Json -Depth 10 -Compress) }
+                @{ path = Join-Path $testTemplateFolder $RepoSettingsFile; content = ($templateSettings | ConvertTo-Json -Depth 10 -Compress) }
+            )
+            foreach ($settingsFile in $settingsFiles) {
+                Set-Content -LiteralPath $settingsFile.path -Value $settingsFile.content -Encoding UTF8 -NoNewline
+            }
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder '.github/workflows/Build.yaml') -Encoding UTF8 -Value @(
+                'name: Snapshot Build'
+                'on: workflow_dispatch'
+                'jobs:'
+                '  Build:'
+                '    runs-on: [ windows-latest ]'
+                '    steps:'
+                '      - name: Build'
+                '        shell: powershell'
+                '        run: Write-Host build'
+            )
 
-    It 'CheckForUpdates rejects clone destination files that do not physically resolve to themselves when updating files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
-        $templateFile = Join-Path $testTemplateFolder "template.txt"
-        Set-Content -LiteralPath $templateFile -Value "template content"
-        $legitCloneFile = Join-Path $testCloneRoot "legit.txt"
-        $redirectedCloneFolder = Join-Path $testCloneRoot "redirectedInClone"
-        New-Item -ItemType SymbolicLink -Path $redirectedCloneFolder -Target $testCloneRoot -Force | Out-Null
+            . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToInclude', Justification = 'False positive.')]
-        $testFilesToInclude = @(
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "legit.txt") }
-            @{ sourceFullPath = $templateFile; originalSourceFullPath = $null; type = ''; destinationFullPath = (Join-Path $testWorkspaceFolder "redirectedInClone/redirected.txt") }
-        )
+            $workflowUpdates = @($updateFiles | Where-Object { $_.DstFile.Replace('\', '/') -eq '.github/workflows/Build.yaml' })
+            $workflowUpdates.Count | Should -Be 1
+            $workflow = [Yaml]::new($workflowUpdates[0].content.Split("`n"))
+            ($workflow.Get('jobs:/Build:/runs-on:').content -join '') | Should -Be 'runs-on: [ ubuntu-latest ]'
+            ($workflow.Get('jobs:/Build:/steps:/- name: Build/shell:').content -join '') | Should -Be 'shell: pwsh'
+            Get-ContentLF -Path (Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile) | Should -BeExactly $initialRepoSnapshot
+        }
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
-            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+        It 'Selects file updates using refreshed custom template repository settings snapshot' {
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder 'custom-files') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder '.github') -Force | Out-Null
 
-        Should -Invoke CommitFromNewFolder -Exactly 0
-        Should -Invoke UpdateSettingsFile -Exactly 0
-        Test-Path -Path $legitCloneFile -PathType Leaf | Should -Be $true
-        Test-Path -Path (Join-Path $testCloneRoot "redirectedInClone/redirected.txt") -PathType Leaf | Should -Be $false
-    }
+            $templateSettings.customALGoFiles = @{
+                filesToInclude = @(
+                    @{ sourceFolder = 'custom-files'; filter = '*.txt'; destinationFolder = 'selected-files' }
+                )
+            }
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile) -Value ($testSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value ($templateSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+            Set-Content -LiteralPath (Join-Path $testTemplateFolder 'custom-files/Example.txt') -Encoding UTF8 -Value 'Custom file content' -NoNewline
 
-    It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using junctions' -Skip:(-not $script:isWindowsPlatform) {
-        $relativeLegitFile = "legit.txt"
-        $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
-        $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
-        $relativeRedirectedInCloneFolder = "redirectedInClone"
-        $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+            . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N
 
-        # Create folders, files and junctions in workspace folder
-        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
-        New-Item -ItemType Junction -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
-        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
-        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+            $customFileUpdates = @($updateFiles | Where-Object { $_.DstFile.Replace('\', '/') -eq 'selected-files/Example.txt' })
+            $customFileUpdates.Count | Should -Be 1 -Because 'the refreshed customALGoFiles rule must select the file outside the default inclusion rules'
+            $customFileUpdates[0].content | Should -BeExactly 'Custom file content'
+        }
 
-        # Create folders, files and junctions in clone folder
-        Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
-        New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
-        New-Item -ItemType Junction -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
-        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
-        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+        Context 'Physical path safety' {
+            BeforeEach {
+                New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.github') -Force | Out-Null
+                Set-Content -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile) -Value ($repositorySettings | ConvertTo-Json -Compress) -Encoding UTF8
+                Set-Content -LiteralPath (Join-Path $testTemplateFolder $RepoSettingsFile) -Value ($templateSettings | ConvertTo-Json -Depth 10 -Compress) -Encoding UTF8
+                $externalFolder = Join-Path $TestDrive ([Guid]::NewGuid().ToString())
+                Mock GetFilesToUpdate {}
+            }
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
-        $testFilesToExclude = @(
-            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
-            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
-            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
-        )
+            It 'Rejects custom template snapshot source redirected through a junction' -Skip:(-not $script:isWindowsPlatform) {
+                New-Item -ItemType Directory -Path $externalFolder | Out-Null
+                $externalSettingsFile = Join-Path $externalFolder 'settings.json'
+                Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                $snapshotLinkPath = Join-Path $testTemplateFolder '.AL-Go'
+                New-Item -ItemType Junction -Path $snapshotLinkPath -Target $externalFolder | Out-Null
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
-            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: custom template project settings snapshot source file '*does not physically resolve to itself*"
 
-        Should -Invoke CommitFromNewFolder -Exactly 0
-        Should -Invoke UpdateSettingsFile -Exactly 0
+                @(Get-ChildItem -LiteralPath $externalFolder -File).Count | Should -Be 1
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -BeExactly $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+                Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+            }
 
-        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clone redirected file was not
-        Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
-        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
-        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
-    }
+            It 'Rejects custom template snapshot source redirected through a folder symlink' -Skip:(-not $script:hasSymlinkCapability) {
+                New-Item -ItemType Directory -Path $externalFolder | Out-Null
+                $externalSettingsFile = Join-Path $externalFolder 'settings.json'
+                Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                $snapshotLinkPath = Join-Path $testTemplateFolder '.AL-Go'
+                New-Item -ItemType SymbolicLink -Path $snapshotLinkPath -Target $externalFolder | Out-Null
 
-    It 'CheckForUpdates rejects destination files that do not physically resolve to themselves when removing files using symlinks' -Skip:(-not $script:hasSymlinkCapability) {
-        $relativeLegitFile = "legit.txt"
-        $relativeRedirectedInWorkspaceFolder = "redirectedInWorkspace"
-        $relativeRedirectedInWorkspaceFile = Join-Path $relativeRedirectedInWorkspaceFolder "redirected.txt"
-        $relativeRedirectedInCloneFolder = "redirectedInClone"
-        $relativeRedirectedInCloneFile = Join-Path $relativeRedirectedInCloneFolder "redirected.txt"
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: custom template project settings snapshot source file '*does not physically resolve to itself*"
 
-        # Create folders, files and junctions in workspace folder
-        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeLegitFile) -Value "legit content" -Force
-        New-Item -ItemType SymbolicLink -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFolder) -Target $testWorkspaceFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFolder) -Force | Out-Null
-        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
-        Set-Content -Path (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+                @(Get-ChildItem -LiteralPath $externalFolder -File).Count | Should -Be 1
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -BeExactly $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+                Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+            }
 
-        # Create folders, files and junctions in clone folder
-        Set-Content -Path (Join-Path $testCloneRoot $relativeLegitFile) -Value "legit content" -Force
-        New-Item -ItemType Directory -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFolder) -Force | Out-Null
-        New-Item -ItemType SymbolicLink -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFolder) -Target $testCloneRoot -Force | Out-Null
-        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -Value "redirected in workspace content" -Force
-        Set-Content -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -Value "redirected in clone content" -Force
+            It 'Rejects custom template snapshot source redirected through a file symlink' -Skip:(-not $script:hasSymlinkCapability) {
+                New-Item -ItemType Directory -Path $externalFolder | Out-Null
+                $externalSettingsFile = Join-Path $externalFolder 'settings.json'
+                Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                New-Item -ItemType Directory -Path (Join-Path $testTemplateFolder '.AL-Go') | Out-Null
+                $snapshotLinkPath = Join-Path $testTemplateFolder $ALGoSettingsFile
+                New-Item -ItemType SymbolicLink -Path $snapshotLinkPath -Target $externalSettingsFile | Out-Null
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testFilesToExclude', Justification = 'False positive.')]
-        $testFilesToExclude = @(
-            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeLegitFile) }
-            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInWorkspaceFile) }
-            @{ destinationFullPath = (Join-Path $testWorkspaceFolder $relativeRedirectedInCloneFile) }
-        )
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: custom template project settings snapshot source file '*does not physically resolve to itself*"
 
-        { . $scriptPath -templateUrl "https://github.com/contoso/template@main" -downloadLatest $true -update Y -updateBranch "update-al-go-system-files" -token $fakeToken -directCommit $true -actor "test-actor" } |
-            Should -Throw -ExpectedMessage "*Unsafe path blocked: destination file '*redirectedInClone*redirected.txt' does not physically resolve*"
+                @(Get-ChildItem -LiteralPath $externalFolder -File).Count | Should -Be 1
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -BeExactly $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+                Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+            }
 
-        Should -Invoke CommitFromNewFolder -Exactly 0
-        Should -Invoke UpdateSettingsFile -Exactly 0
+            It 'Rejects custom template snapshot destination redirected through a junction' -Skip:(-not $script:isWindowsPlatform) {
+                $snapshotLinkPath = Join-Path $testWorkspaceFolder '.github'
+                Move-Item -LiteralPath $snapshotLinkPath -Destination $externalFolder -Force
+                $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                New-Item -ItemType Junction -Path $snapshotLinkPath -Target $externalFolder | Out-Null
 
-        # The legitimate file and the in workspace redirected file were actually removed from the (mocked) clone root; the in clonde redirected file was not
-        Test-Path -Path (Join-Path $testCloneRoot $relativeLegitFile) -PathType Leaf | Should -Be $false
-        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInWorkspaceFile) -PathType Leaf | Should -Be $false
-        Test-Path -Path (Join-Path $testCloneRoot $relativeRedirectedInCloneFile) -PathType Leaf | Should -Be $true
+                # Both snapshots share .github, so the repository snapshot destination is checked first.
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot destination file '*does not physically resolve to itself*"
+
+                @(Get-ChildItem -LiteralPath $externalFolder -File).Count | Should -Be 1
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -BeExactly $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+                Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+            }
+
+            It 'Rejects custom template snapshot destination redirected through a folder symlink' -Skip:(-not $script:hasSymlinkCapability) {
+                $snapshotLinkPath = Join-Path $testWorkspaceFolder '.github'
+                Move-Item -LiteralPath $snapshotLinkPath -Destination $externalFolder -Force
+                $externalSettingsFile = Join-Path $externalFolder $RepoSettingsFileName
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                New-Item -ItemType SymbolicLink -Path $snapshotLinkPath -Target $externalFolder | Out-Null
+
+                # Both snapshots share .github, so the repository snapshot destination is checked first.
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot destination file '*does not physically resolve to itself*"
+
+                @(Get-ChildItem -LiteralPath $externalFolder -File).Count | Should -Be 1
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -BeExactly $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+                Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+            }
+
+            It 'Rejects custom template snapshot destination redirected through a file symlink' -Skip:(-not $script:hasSymlinkCapability) {
+                New-Item -ItemType Directory -Path $externalFolder | Out-Null
+                $externalSettingsFile = Join-Path $externalFolder 'settings.json'
+                Set-Content -LiteralPath $externalSettingsFile -Value '{"external":"untouched"}' -Encoding UTF8
+                $externalSettingsHash = (Get-FileHash -LiteralPath $externalSettingsFile).Hash
+                $snapshotLinkPath = Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile
+                New-Item -ItemType SymbolicLink -Path $snapshotLinkPath -Target $externalSettingsFile | Out-Null
+
+                { . $scriptPath -templateUrl $repositorySettings.templateUrl -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage "Unsafe path blocked: custom template project settings snapshot destination file '*does not physically resolve to itself*"
+
+                @(Get-ChildItem -LiteralPath $externalFolder -File).Count | Should -Be 1
+                (Get-FileHash -LiteralPath $externalSettingsFile).Hash | Should -BeExactly $externalSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+                Test-Path -LiteralPath $snapshotBackupFolder | Should -BeFalse
+            }
+        }
     }
 }
 
@@ -4575,276 +5032,6 @@ Describe "GetWorkflowContentWithChangesFromSettings" {
             $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
             ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
         }
-    }
-
-    It 'Uses current custom template settings for workflow generation and restores the snapshot' {
-        $baseFolder = Join-Path $TestDrive 'workflowBase'
-        $templateFolder = Join-Path $TestDrive 'workflowTemplate'
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder '.github') -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder '.github') -Force | Out-Null
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"runs-on":"windows-latest","shell":"powershell"}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-        Set-Content -LiteralPath (Join-Path $templateFolder $RepoSettingsFile) -Value '{"runs-on":"ubuntu-latest","shell":"pwsh"}' -Encoding UTF8
-        $srcFile = Join-Path $TestDrive 'Sample.yaml'
-        Set-Content -LiteralPath $srcFile -Value @('name: Sample Workflow', 'jobs:', '  Sample:', '    runs-on: [ windows-latest ]', '    steps:', '      - run: echo sample', '        shell: powershell') -Encoding UTF8
-
-        $originalWorkspace = $env:GITHUB_WORKSPACE
-        try {
-            $env:GITHUB_WORKSPACE = $baseFolder
-            $content = GetWorkflowContentWithChangesFromSettings -srcFile $srcFile -repoSettings @{} -depth 1 -customTemplateFolder $templateFolder
-
-            $content | Should -Match 'runs-on: \[ ubuntu-latest \]'
-            $content | Should -Match 'shell: pwsh'
-            Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
-        }
-        finally {
-            $env:GITHUB_WORKSPACE = $originalWorkspace
-        }
-    }
-}
-
-Describe "ReadSettingsWithCurrentCustomTemplateRepoSettings" {
-    BeforeAll {
-        $actionName = "CheckForUpdates"
-        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
-        . (Join-Path -Path $scriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-        . (Join-Path -Path $scriptRoot -ChildPath "CheckForUpdates.HelperFunctions.ps1")
-    }
-
-    It 'Uses current template settings and restores an existing snapshot' {
-        $templateFolder = Join-Path $TestDrive "templateWithCurrentSettings"
-        $baseFolder = Join-Path $TestDrive "baseWithExistingSnapshot"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        $templateSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}'
-        Set-Content -LiteralPath $templateSettingsFile -Value $templateSettingsContent -Encoding UTF8
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-        $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
-
-        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
-
-        $settings.customALGoFiles.filesToInclude.Count | Should -Be 1
-        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
-        (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
-        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
-    }
-
-    It 'Reads refreshed settings without execution-specific contexts' {
-        $templateFolder = Join-Path $TestDrive 'templateWithContexts'
-        $baseFolder = Join-Path $TestDrive 'baseWithContexts'
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder '.github') -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder '.github') -Force | Out-Null
-        Mock ReadSettings { [pscustomobject]@{ templateSha = 'test' } }
-
-        $originalGitHubRepository = $env:GITHUB_REPOSITORY
-        try {
-            $env:GITHUB_REPOSITORY = 'contoso/context-policy-test'
-            ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder | Out-Null
-
-            Should -Invoke ReadSettings -Exactly 1 -ParameterFilter {
-                $buildMode -ceq '' -and $project -ceq '' -and $workflowName -ceq '' -and
-                $userName -ceq '' -and $branchName -ceq '' -and $trigger -ceq '' -and
-                ($null -eq $repoName -or $repoName -ceq $env:GITHUB_REPOSITORY)
-            }
-        }
-        finally {
-            $env:GITHUB_REPOSITORY = $originalGitHubRepository
-        }
-    }
-
-    It 'Removes a temporary snapshot when none existed before reading settings' {
-        $templateFolder = Join-Path $TestDrive "templateWithoutSnapshot"
-        $baseFolder = Join-Path $TestDrive "baseWithoutSnapshot"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        Test-Path -LiteralPath $snapshotFile | Should -Be $false
-
-        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
-
-        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "current.txt"
-        Test-Path -LiteralPath $snapshotFile | Should -Be $false
-    }
-
-    It 'Does not change an existing snapshot when the template has no settings file' {
-        $templateFolder = Join-Path $TestDrive "templateWithoutSettings"
-        $baseFolder = Join-Path $TestDrive "baseWithUnchangedSnapshot"
-        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"existing.txt"}]}}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-        $snapshotHash = (Get-FileHash -LiteralPath $snapshotFile).Hash
-
-        $settings = ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder
-
-        $settings.customALGoFiles.filesToInclude[0].filter | Should -Be "existing.txt"
-        (Get-FileHash -LiteralPath $snapshotFile).Hash | Should -Be $snapshotHash
-    }
-
-    It 'Restores an existing snapshot when reading refreshed settings fails' {
-        $templateFolder = Join-Path $TestDrive "templateWithInvalidSettings"
-        $baseFolder = Join-Path $TestDrive "baseWithSnapshotAfterFailure"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        Set-Content -LiteralPath $templateSettingsFile -Value '{ invalid json' -Encoding UTF8
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw
-
-        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
-    }
-
-    It 'Throws and leaves the external target untouched when the base folder ".github" is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
-        $templateFolder = Join-Path $TestDrive "templateForBaseGithubLinkEscape"
-        $baseFolder = Join-Path $TestDrive "baseWithGithubLinkEscape"
-        $externalGithubFolder = Join-Path $TestDrive "externalGithubForBaseLinkEscape"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path $baseFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
-
-        $externalSnapshotFile = Join-Path $externalGithubFolder $CustomTemplateRepoSettingsFileName
-        $externalSnapshotContent = '{"external":"untouched"}'
-        Set-Content -LiteralPath $externalSnapshotFile -Value $externalSnapshotContent -Encoding UTF8
-
-        New-Item -ItemType SymbolicLink -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself*"
-
-        Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
-    }
-
-    It 'Throws and leaves the external target untouched when the snapshot file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
-        $templateFolder = Join-Path $TestDrive "templateForSnapshotFileLinkEscape"
-        $baseFolder = Join-Path $TestDrive "baseWithSnapshotFileLinkEscape"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
-
-        $externalTargetFile = Join-Path $TestDrive "externalSnapshotTargetFile.json"
-        $externalTargetContent = '{"external":"untouched"}'
-        Set-Content -LiteralPath $externalTargetFile -Value $externalTargetContent -Encoding UTF8
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        New-Item -ItemType SymbolicLink -Path $snapshotFile -Target $externalTargetFile -Force | Out-Null
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot '$snapshotFile' does not physically resolve to itself*"
-
-        Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
-    }
-
-    It 'Throws and leaves the external target untouched when the template folder ".github" is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
-        $templateFolder = Join-Path $TestDrive "templateWithGithubLinkEscape"
-        $baseFolder = Join-Path $TestDrive "baseForTemplateGithubLinkEscape"
-        $externalGithubFolder = Join-Path $TestDrive "externalGithubForTemplateLinkEscape"
-        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
-
-        $externalSettingsFile = Join-Path $externalGithubFolder $RepoSettingsFileName
-        $externalSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"external.txt"}]}}'
-        Set-Content -LiteralPath $externalSettingsFile -Value $externalSettingsContent -Encoding UTF8
-
-        New-Item -ItemType SymbolicLink -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"snapshot":"untouched"}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself*"
-
-        Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
-        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
-    }
-
-    It 'Throws and leaves the external target and the existing snapshot untouched when the template settings file itself is a symlink redirecting elsewhere' -Skip:(-not $script:hasSymlinkCapability) {
-        $templateFolder = Join-Path $TestDrive "templateWithSettingsFileLinkEscape"
-        $baseFolder = Join-Path $TestDrive "baseForTemplateSettingsFileLinkEscape"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-
-        $externalTargetFile = Join-Path $TestDrive "externalTemplateSettingsTargetFile.json"
-        $externalTargetContent = '{"external":"untouched"}'
-        Set-Content -LiteralPath $externalTargetFile -Value $externalTargetContent -Encoding UTF8
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        New-Item -ItemType SymbolicLink -Path $templateSettingsFile -Target $externalTargetFile -Force | Out-Null
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"stale.txt"}]}}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings '$templateSettingsFile' does not physically resolve to itself*"
-
-        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
-        Get-ContentLF -Path $externalTargetFile | Should -Be $externalTargetContent
-    }
-
-    It 'Throws and leaves the external target untouched when the base folder ".github" is a junction redirecting elsewhere' -Skip:(-not $script:isWindowsPlatform) {
-        $templateFolder = Join-Path $TestDrive "templateForBaseGithubJunctionEscape"
-        $baseFolder = Join-Path $TestDrive "baseWithGithubJunctionEscape"
-        $externalGithubFolder = Join-Path $TestDrive "externalGithubForBaseJunctionEscape"
-        New-Item -ItemType Directory -Path (Join-Path $templateFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path $baseFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
-
-        $templateSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-        Set-Content -LiteralPath $templateSettingsFile -Value '{"customALGoFiles":{"filesToInclude":[{"filter":"current.txt"}]}}' -Encoding UTF8
-
-        $externalSnapshotFile = Join-Path $externalGithubFolder $CustomTemplateRepoSettingsFileName
-        $externalSnapshotContent = '{"external":"untouched"}'
-        Set-Content -LiteralPath $externalSnapshotFile -Value $externalSnapshotContent -Encoding UTF8
-
-        New-Item -ItemType Junction -Path (Join-Path $baseFolder ".github") -Target $externalGithubFolder -Force | Out-Null
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings snapshot '$(Join-Path $baseFolder $CustomTemplateRepoSettingsFile)' does not physically resolve to itself*"
-
-        Get-ContentLF -Path $externalSnapshotFile | Should -Be $externalSnapshotContent
-    }
-
-    It 'Throws and leaves the external target untouched when the template folder ".github" is a junction redirecting elsewhere' -Skip:(-not $script:isWindowsPlatform) {
-        $templateFolder = Join-Path $TestDrive "templateWithGithubJunctionEscape"
-        $baseFolder = Join-Path $TestDrive "baseForTemplateGithubJunctionEscape"
-        $externalGithubFolder = Join-Path $TestDrive "externalGithubForTemplateJunctionEscape"
-        New-Item -ItemType Directory -Path $templateFolder -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $baseFolder ".github") -Force | Out-Null
-        New-Item -ItemType Directory -Path $externalGithubFolder -Force | Out-Null
-
-        $externalSettingsFile = Join-Path $externalGithubFolder $RepoSettingsFileName
-        $externalSettingsContent = '{"customALGoFiles":{"filesToInclude":[{"filter":"external.txt"}]}}'
-        Set-Content -LiteralPath $externalSettingsFile -Value $externalSettingsContent -Encoding UTF8
-
-        New-Item -ItemType Junction -Path (Join-Path $templateFolder ".github") -Target $externalGithubFolder -Force | Out-Null
-
-        $snapshotFile = Join-Path $baseFolder $CustomTemplateRepoSettingsFile
-        $snapshotContent = '{"snapshot":"untouched"}'
-        Set-Content -LiteralPath $snapshotFile -Value $snapshotContent -Encoding UTF8
-
-        { ReadSettingsWithCurrentCustomTemplateRepoSettings -baseFolder $baseFolder -customTemplateFolder $templateFolder } | Should -Throw -ExpectedMessage "Unsafe path blocked: custom template repository settings '$(Join-Path $templateFolder $RepoSettingsFile)' does not physically resolve to itself*"
-
-        Get-ContentLF -Path $externalSettingsFile | Should -Be $externalSettingsContent
-        Get-ContentLF -Path $snapshotFile | Should -Be $snapshotContent
     }
 }
 
