@@ -9,6 +9,31 @@
 
 See [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#using-custom-template-files) for details.
 
+### Separate test execution from RunPipeline (PREVIEW)
+
+A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.
+
+The action uses AlTool by default, running each app's enabled normal tests in one batch and connection. It honors `disabledTests.json` definitions and the optional `useSeparateTestAction.testType` value. The built-in runner supports `UnitTest`, `IntegrationTest`, and `Uncategorized`, while custom `RunTestsInBcContainer` overrides may interpret other values such as `Legacy`. Test results remain available to AnalyzeTests and are included in the build artifacts when produced. Failure diagnostics include a refreshed container event log with events from the separate test run.
+
+> [!NOTE]
+> The built-in AlTool execution path does not run `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that rely on those should supply a `RunTestsInBcContainer` override script to execute their tests through BcContainerHelper instead. Database restore events configured through `restoreDatabases` are not currently supported by the separate RunTests action; the action emits a warning and does not perform the restore.
+
+### New `unpublishOldVersions` setting for deployment
+
+The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
+
+### Settings sources in workflow logs
+
+The ReadSettings action now writes a **Settings sources** group to the workflow log for all resolved settings, including nested properties. It shows which defaults, files, and variables contributed to each setting without printing values in the group. Merged arrays and objects can list multiple sources; computed values retain their earlier source followed by their derivation. An accepted `overwriteSettings` replacement starts a new source list. See [Settings sources in workflow logs](Scenarios/settings.md#settings-sources).
+
+Source tracing is emitted after action-level transformations and includes pull-request or merge-group overrides and versioning-strategy build/revision calculations, so attribution reflects the exported settings.
+
+### Protected settings
+
+The optional `protectedSettings` array lets a settings source retain a value when a later source attempts to change it. For example, `{"protectedSettings":["country"],"country":"de"}` keeps `country` at `de` unless the later source also supplies and protects `country`. `overwriteSettings` alone does not bypass protection. This also applies to `customSettings` and to matching `ConditionalSettings`; nested properties can be protected within their parent object. The ReadSettings action reports each skipped override in a notice naming the sources, not the value. See [Protected settings](Scenarios/settings.md#protectedSettings) for examples and nested-object behavior.
+
+The meta settings `ConditionalSettings`, `overwriteSettings`, and `protectedSettings` cannot themselves be protected or overwritten. Listing any of them in either control is ignored. The `ConditionalSettings` array still merges into resolved settings and retains its source history, while conditional blocks continue to be evaluated per source. Both controls remain supported inside matching blocks' `settings` objects.
+
 ### Preview: Support for GitHub Enterprise Edition with data residency
 
 AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residency. When you create a GitHub Enterprise with data residency, you can create a number of organizations underneath this enterprise (much like we create organizations on github.com). In each of these organizations, you can create any number of internal or private repositories, you cannot create public repositories. The URL for your repository becomes https://enterprise.ghe.com/organization/repository instead of the normal https://github.com/organization/repository.

@@ -467,6 +467,27 @@
         "doNotRunTests": {
             "type": "boolean"
         },
+        "useSeparateTestAction": {
+            "type": "object",
+            "default": {
+                "enabled": false,
+                "testType": ""
+            },
+            "description": "PREVIEW: Configuration for running normal tests in a separate RunTests action. See https://aka.ms/ALGoSettings#useSeparateTestAction",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "When true, normal tests (testFolders) run in a separate RunTests action against the build container kept alive by RunPipeline. Builds with additionalCountries continue to run normal tests inside RunPipeline so every country is tested."
+                },
+                "testType": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Optional test type for the separate RunTests action. The built-in AlTool runner supports UnitTest, IntegrationTest, and Uncategorized; blank runs all test types. Custom RunTestsInBcContainer overrides may interpret other values such as Legacy."
+                }
+            },
+            "additionalProperties": false
+        },
         "doNotRunBcptTests": {
             "type": "boolean"
         },
@@ -522,7 +543,13 @@
                         "type": "string",
                         "enum": ["includeDependencies"]
                     },
-                    "description": "An array of settings to be overwritten by the current deliverToAppSource setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                    "description": "An array of deliverToAppSource properties to replace instead of merge. A previously protected property can only be replaced when this source also protects it. See https://aka.ms/ALGoSettings#overwriteSettings"
+                },
+                "protectedSettings": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "An array of deliverToAppSource properties protected from later sources that do not also protect them. Each named property must have a value in the same source. Replacing the entire deliverToAppSource object discards these protections unless the parent is protected. See https://aka.ms/ALGoSettings#protectedSettings"
                 }
             },
             "required": [
@@ -758,6 +785,20 @@
                 },
                 "defaultReleaseMD": {
                     "type": "string"
+                },
+                "overwriteSettings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["includeProjects", "excludeProjects"]
+                    },
+                    "description": "An array of alDoc properties to replace instead of merge. A previously protected property can only be replaced when this source also protects it. See https://aka.ms/ALGoSettings#overwriteSettings"
+                },
+                "protectedSettings": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "An array of alDoc properties protected from later sources that do not also protect them. Each named property must have a value in the same source. Replacing the entire alDoc object discards these protections unless the parent is protected. See https://aka.ms/ALGoSettings#protectedSettings"
                 }
             },
             "required": [
@@ -771,15 +812,7 @@
                 "footer",
                 "defaultIndexMD",
                 "defaultReleaseMD"
-            ],
-            "overwriteSettings": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "enum": ["includeProjects", "excludeProjects"]
-                },
-                "description": "An array of settings to be overwritten by the current alDoc setting. See https://aka.ms/ALGoSettings#overwriteSettings"
-            }
+            ]
         },
         "commitOptions": {
             "type": "object",
@@ -808,7 +841,13 @@
                         "type": "string",
                         "enum": ["pullRequestLabels"]
                     },
-                    "description": "An array of settings to be overwritten by the current commitOptions setting. See https://aka.ms/ALGoSettings#overwriteSettings"
+                    "description": "An array of commitOptions properties to replace instead of merge. A previously protected property can only be replaced when this source also protects it. See https://aka.ms/ALGoSettings#overwriteSettings"
+                },
+                "protectedSettings": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "An array of commitOptions properties protected from later sources that do not also protect them. Each named property must have a value in the same source. Replacing the entire commitOptions object discards these protections unless the parent is protected. See https://aka.ms/ALGoSettings#protectedSettings"
                 }
             },
             "required": [
@@ -856,7 +895,15 @@
                 "type": "string",
                 "enum": ["unusedALGoSystemFiles", "projects", "additionalCountries", "appDependencies", "appFolders", "testDependencies", "testFolders", "bcptTestFolders", "pageScriptingTests", "restoreDatabases", "installApps", "installTestApps", "customCodeCops", "configPackages", "appSourceCopMandatoryAffixes", "deliverToAppSource", "appDependencyProbingPaths", "incrementalBuilds", "environments", "buildModes", "bcptThresholds", "fullBuildPatterns", "excludeEnvironments", "alDoc", "commitOptions", "trustedSigning"]
             },
-            "description": "An array of settings to be overwritten by the current settings. See https://aka.ms/ALGoSettings#overwriteSettings"
+            "description": "An array of settings to be replaced instead of merged by the current source. An earlier protected setting can only be replaced when this source also protects it. The meta settings ConditionalSettings, overwriteSettings, and protectedSettings are ignored when listed in overwriteSettings. To replace a setting conditionally, use overwriteSettings inside the settings object of a matching ConditionalSettings block. See https://aka.ms/ALGoSettings#overwriteSettings"
+        },
+        "protectedSettings": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": [],
+            "description": "An optional array of settings protected from later sources that do not also protect them. Each named setting must have a value in the same source. Used during merging but not included in the resolved settings. The meta settings ConditionalSettings, overwriteSettings, and protectedSettings are ignored when listed in protectedSettings. To protect a setting conditionally, use protectedSettings inside the settings object of a matching ConditionalSettings block. See https://aka.ms/ALGoSettings#protectedSettings"
         },
         "reportSuppressedDiagnostics": {
             "type": "boolean",
