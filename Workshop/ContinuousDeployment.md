@@ -94,7 +94,7 @@ For **Scope PTE** S2S deployment to **BC 30 or later**, add the **AdminCenter.Re
 
 With delegated authentication (impersonation), **Scope PTE** deployment to **BC 30 or later** requires appropriate **Business Central administration center access** as well as the environment permissions. The existing **AUTHCONTEXT** credential structure and the commands above remain unchanged. See the official [Business Central administration center API documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api) for authentication and authorization details.
 
-These additional permissions are not required for deployment to earlier BC versions or the sandbox development endpoint (**Scope Dev**).
+These authorization requirements also apply when a **Scope Dev** deployment installs or upgrades a PTE dependency on **BC 30 or later**. Publishing primary apps through the sandbox development endpoint does not itself require these additional permissions. Deployment to earlier BC versions does not require them.
 
 ## Old published versions
 
