@@ -707,6 +707,11 @@
             "pattern": "^(pull_request|pull_request_target)$",
             "description": "The type of pull request trigger. See https://aka.ms/ALGoSettings#pullrequesttrigger"
         },
+        "skipDraftPullRequests": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip draft PR builds in PTE and AppSource Pull Request Build workflows. Supports pull_request and pull_request_target; merge-queue builds are unchanged. Run Update AL-Go System Files after changing this setting. See https://aka.ms/ALGoSettings#skipdraftpullrequests"
+        },
         "bcptThresholds": {
             "type": "object",
             "properties": {

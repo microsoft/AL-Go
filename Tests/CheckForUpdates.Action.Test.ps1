@@ -360,6 +360,45 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         ($yaml.Get('jobs:/CreateRelease:/steps:/- name: Create release/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
     }
 
+    It 'Applies draft skipping after generating dependency builds when enabled is <Enabled>' -TestCases @(
+        @{ Enabled = $false }
+        @{ Enabled = $true }
+    ) {
+        param($Enabled)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $source = Join-Path $PSScriptRoot '..\Templates\Per Tenant Extension\.github\workflows\PullRequestHandler.yaml'
+        Mock ReadSettings {
+            @{
+                'runs-on' = 'windows-latest'
+                shell = 'powershell'
+                type = 'PTE'
+                powerPlatformSolutionFolder = ''
+                pullRequestTrigger = 'pull_request_target'
+                CICDPullRequestBranches = @('main')
+                skipDraftPullRequests = $Enabled
+            }
+        }
+
+        $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 3
+        $yaml = [Yaml]::new($modified.Split("`n"))
+        $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build1:'
+        $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build2:'
+        foreach ($job in $yaml.GetNextLevel('jobs:/')) {
+            if ($Enabled) {
+                $yaml.GetProperty("jobs:/$job/if:") | Should -Match '^\(github.event_name == ''merge_group'' \|\| github.event.pull_request.draft == false\) && '
+            }
+            else {
+                $yaml.GetProperty("jobs:/$job/if:") | Should -Not -Match 'pull_request\.draft'
+            }
+        }
+        if ($Enabled) {
+            $yaml.GetPropertyArray('on:/pull_request_target:/types:') | Should -Contain 'ready_for_review'
+        }
+        else {
+            $yaml.Get('on:/pull_request_target:/types:') | Should -BeNullOrEmpty
+        }
+    }
+
     It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(
         @{ Template = 'Per Tenant Extension' }
         @{ Template = 'AppSource App' }

@@ -19,6 +19,13 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $ENV:ALGoRepoSettings = $originalRepoSettings
         }
 
+        It 'Builds draft pull requests by default' {
+            (GetDefaultSettings).skipDraftPullRequests | Should -BeFalse
+            $settingsSchema = $schema | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $settingsSchema.properties.skipDraftPullRequests.type | Should -Be 'boolean'
+            $settingsSchema.properties.skipDraftPullRequests.default | Should -BeFalse
+        }
+
         It 'Reads settings from all settings locations' {
             Mock Write-Host { }
             Mock Out-Host { }
