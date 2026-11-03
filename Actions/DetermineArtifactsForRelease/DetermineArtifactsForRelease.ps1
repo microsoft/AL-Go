@@ -33,7 +33,9 @@ $headers = @{
     "Accept" = "application/vnd.github+json; charset=utf-8"
 }
 do {
-    $repoArtifacts = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page"
+    $repoArtifacts = Invoke-CommandWithRetry -RetryCount 3 -FirstDelay 5 -ScriptBlock {
+        Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "$($ENV:GITHUB_API_URL)/repos/$($ENV:GITHUB_REPOSITORY)/actions/artifacts?per_page=100&page=$page"
+    }
     $allArtifacts += $repoArtifacts.Artifacts | Where-Object { !$_.expired }
     $page++
 }
