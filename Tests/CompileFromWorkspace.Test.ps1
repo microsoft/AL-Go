@@ -612,13 +612,15 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '--useonlycustomfeeds' }
             }
 
-            It 'Targets known BC test libraries without retargeting third-party dependencies' {
+            It 'Targets known BC core apps and test libraries without retargeting third-party dependencies' {
                 Mock Get-Content {
-                    '{"dependencies":[{"id":"dd0be2ea-f733-4d65-bb34-a28f4624fb14","name":"Library Assert","publisher":"Microsoft","version":"20.0.0.0"},{"id":"11111111-1111-1111-1111-111111111111","name":"Other","publisher":"Partner","version":"1.0.0.0"}]}'
+                    '{"dependencies":[{"id":"dd0be2ea-f733-4d65-bb34-a28f4624fb14","name":"Library Assert","publisher":"Microsoft","version":"20.0.0.0"},{"id":"63ca2fa4-4f03-4f2b-a480-172fef340d3f","name":"System Application","publisher":"Microsoft","version":"20.0.0.0"},{"id":"437dbf0e-84ff-417a-965d-ed2bb9650972","name":"Base Application","publisher":"Microsoft","version":"20.0.0.0"},{"id":"f3552374-a1f2-4356-848e-196002525837","name":"Business Foundation","publisher":"Microsoft","version":"24.0.0.0"},{"id":"11111111-1111-1111-1111-111111111111","name":"Other","publisher":"Partner","version":"1.0.0.0"}]}'
                 } -ParameterFilter { $LiteralPath -eq (Join-Path 'App' 'app.json') }
                 Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0'
-                $script:targetDependencies.Count | Should -Be 1
-                $script:targetDependencies[0].version | Should -Be '29.1.0.0'
+                $script:targetDependencies.Count | Should -Be 4
+                foreach ($dependency in $script:targetDependencies) {
+                    $dependency.version | Should -Be '29.1.0.0'
+                }
             }
 
             It 'Rejects a tool without restore capability even if help exits successfully' {

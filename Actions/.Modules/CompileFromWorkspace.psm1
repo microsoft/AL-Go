@@ -392,12 +392,14 @@ function Restore-WorkspacePackages {
     try {
         $symbolVersion = "$($BcVersion.Major).$($BcVersion.Minor).0.0"
         $platformVersion = "$($BcVersion.Major).0.0.0"
+        $bcReleaseAppIds = @($systemAppId, $baseAppId) + $testRunnerApps
+        $bcReleaseAppIds += 'f3552374-a1f2-4356-848e-196002525837' # Business Foundation
         $bcDependencies = @{}
         foreach ($folder in $Folders) {
             $manifest = Get-Content -LiteralPath (Join-Path $folder "app.json") -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
             $dependencies = if ($manifest.ContainsKey('dependencies')) { $manifest.dependencies } else { @() }
             foreach ($dependency in $dependencies) {
-                if ($dependency.id -in $testRunnerApps) {
+                if ($dependency.id -in $bcReleaseAppIds) {
                     if ([version]$dependency.version -gt $BcVersion) {
                         throw "Dependency '$($dependency.name)' requires BC $($dependency.version), newer than the selected BC $BcVersion."
                     }

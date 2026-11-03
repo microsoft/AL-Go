@@ -4,7 +4,7 @@ Workspace compilation now installs ALTool independently and restores symbols fro
 
 This changes the existing preview: `vsixFile` and compiler-folder hooks are rejected, and compilation requiring BC DLLs is not supported. Publishing and runtime testing retain their existing container/artifact behavior. Until workspace restore ships, `workspaceCompilation.useTemporaryAlTool: true` explicitly selects the temporary BC 30 branch-build bundle in the BingMaps test repository instead of the published release-family compiler. See [workspaceCompilation](Scenarios/settings.md#workspaceCompilation) for limitations.
 
-Non-default `nuGetFeedSelectMode` values are rejected rather than ignored. Known BC test toolkit dependencies use the selected BC version, not an older minimum from app.json. Reusing the selected executable does not add commands absent from that tool release: for example, published tool 17 does not support the separate action's `runtests` command.
+Non-default `nuGetFeedSelectMode` values are rejected rather than ignored. Known BC core apps (System Application, Base Application, Business Foundation) and test toolkit dependencies use the selected BC release, not an older minimum from app.json. Reusing the selected executable does not add commands absent from that tool release: for example, published tool 17 does not support the separate action's `runtests` command.
 
 ### Separate test execution from RunPipeline (PREVIEW)
 
