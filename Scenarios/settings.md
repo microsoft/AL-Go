@@ -162,24 +162,6 @@ The following settings are only allowed in workflow specific settings files or i
 | <a id=""></a>appSourceContextSecretName | This setting specifies the name (**NOT the secret**) of a secret containing a json string with ClientID, TenantID and ClientSecret or RefreshToken. If this secret exists, AL-Go will can upload builds to AppSource validation. | AppSourceContext |
 | <a id=""></a>keyVaultCertificateUrlSecretName<br />keyVaultCertificatePasswordSecretName<br />keyVaultClientIdSecretName | If you want to enable KeyVault access for your AppSource App, you need to provide 3 secrets as GitHub Secrets or in the Azure KeyVault. The names of those secrets (**NOT the secrets**) should be specified in the settings file with these 3 settings. Default is to not have KeyVault access from your AppSource App. Read [this](EnableKeyVaultForAppSourceApp.md) for more information. | |
 
-## Disabling individual tests <a id="disabledTests"></a>
-
-To skip specific AL test methods without disabling the entire test run, add either:
-
-- `disabledTests.json` in a test app folder or any of its subfolders. It applies only to that app.
-- `<appId>.disabledTests.json` anywhere under the AL-Go project folder, using the test app's ID from app.json. This also works for installed test apps whose source is not in the project.
-
-Files contain an array of AL codeunit names and method names. `method` can be a string or an array:
-
-```json
-[
-    { "codeunitName": "Sales Tests", "method": "PostInvoice" },
-    { "codeunitName": "Purchase Tests", "method": ["PostOrder", "PostCreditMemo"] }
-]
-```
-
-All matching files are combined. This convention is supported by Run-AlPipeline and the separate RunTests action. Tests are still compiled; only the listed methods are excluded from execution.
-
 <a id="conditional"></a>
 
 ## Conditional Settings
@@ -268,7 +250,7 @@ Please read the release notes carefully when installing new versions of AL-Go fo
 | <a id="doNotBuildTests"></a>doNotBuildTests | This setting forces the pipeline to NOT build and run the tests and performance tests in testFolders and bcptTestFolders | false |
 | <a id="doNotPublishApps"></a>doNotPublishApps | When true, compiles apps without publishing them to the build environment. Upgrade execution and all test execution are also skipped. This does not control delivery of build artifacts to delivery targets. | false |
 | <a id="doNotSignApps"></a>doNotSignApps | When true, skips code signing of apps during builds. Automatically set to true for pull request and merge queue builds. | false |
-| <a id="doNotRunTests"></a>doNotRunTests | This setting forces the pipeline to NOT run the tests in testFolders. Tests are still being built and published. Note this setting can be set in a [workflow specific settings file](#where-are-the-settings-located) to only apply to that workflow | false |
+| <a id="doNotRunTests"></a>doNotRunTests | This setting forces the pipeline to NOT run the tests in testFolders. Tests are still being built and published. Note this setting can be set in a [workflow specific settings file](#where-are-the-settings-located) to only apply to that workflow. To skip individual tests instead, see [Disabling individual tests](AddATestApp.md#disabledTests). | false |
 | <a id="doNotRunBcptTests"></a>doNotRunBcptTests | This setting forces the pipeline to NOT run the performance tests in testFolders. Performance tests are still being built and published. Note this setting can be set in a [workflow specific settings file](#where-are-the-settings-located) to only apply to that workflow | false |
 | <a id="useSeparateTestAction"></a>useSeparateTestAction | **PREVIEW:** Configuration for running normal tests from testFolders in a separate RunTests action against the build container kept alive by RunPipeline.<br />**enabled** - Set to true to enable separate normal-test execution. BCPT and page scripting tests remain in RunPipeline. Normal tests remain in RunPipeline when test building, test execution, or app publication is disabled; additionalCountries is configured; or a test-data import callback would otherwise have no remaining RunPipeline test category. Database restore events configured through restoreDatabases are not currently supported by the separate action; a warning is emitted and the restore is not performed. Default: false.<br />**testType** - Optional test type passed to the separate RunTests action. The built-in AlTool runner supports `UnitTest`, `IntegrationTest`, and `Uncategorized`; blank runs all test types. Custom `RunTestsInBcContainer` overrides may interpret other values such as `Legacy`. Default: blank. | { "enabled": false, "testType": "" } |
 | <a id="memoryLimit"></a>memoryLimit | Specifies the memory limit for the build container. By default, this is left to BcContainerHelper to handle and will currently be set to 8G | 8G |
