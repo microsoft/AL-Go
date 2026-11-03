@@ -984,7 +984,7 @@ function Update-AppJsonProperties {
     foreach ($folder in $Folders) {
         $appJsonFiles = Get-ChildItem -Path $folder -Filter "app.json"
         foreach ($appJsonFile in $appJsonFiles) {
-            $appJsonContent = Get-Content -Path $appJsonFile.FullName -Raw | ConvertFrom-Json
+            $appJsonContent = Get-Content -Path $appJsonFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
             if ($MajorMinorVersion) {
                 # If MajorMinorVersion is provided, use it along with BuildNumber and RevisionNumber (or 0 if not provided) to construct the new version
@@ -1004,13 +1004,14 @@ function Update-AppJsonProperties {
 
             # Stamp build metadata into app.json
             if ($BuildBy -or $BuildUrl) {
-                $buildObject = @{}
-                if ($BuildBy) { $buildObject.by = $BuildBy }
-                if ($BuildUrl) { $buildObject.url = $BuildUrl }
-                if ($appJsonContent.PSObject.Properties.Name -contains 'build') {
-                    $appJsonContent.build = $buildObject
-                } else {
-                    $appJsonContent | Add-Member -MemberType NoteProperty -Name 'build' -Value $buildObject
+                if ($appJsonContent.ContainsKey('runtime') -and [version]$appJsonContent.runtime -lt [version]'12.0') {
+                    OutputWarning "Build metadata requires AL runtime 12.0 or later; not adding it to '$($appJsonFile.FullName)'."
+                }
+                else {
+                    $buildObject = @{}
+                    if ($BuildBy) { $buildObject.by = $BuildBy }
+                    if ($BuildUrl) { $buildObject.url = $BuildUrl }
+                    $appJsonContent["build"] = $buildObject
                 }
             }
 

@@ -327,6 +327,21 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
     }
 
     Describe 'Update-AppJsonProperties' {
+        It 'Only stamps build metadata supported by the manifest runtime <Runtime>' -TestCases @(
+            @{ Runtime = '8.0'; ExpectedBuild = $false }
+            @{ Runtime = '12.0'; ExpectedBuild = $true }
+        ) {
+            param($Runtime, $ExpectedBuild)
+            $folder = Join-Path $TestDrive "runtime-$Runtime"
+            New-Item $folder -ItemType Directory -Force | Out-Null
+            @{ version = '1.0.0.0'; runtime = $Runtime } | ConvertTo-Json | Set-Content (Join-Path $folder 'app.json') -Encoding UTF8
+            Update-AppJsonProperties -Folders @($folder) -BuildNumber 5 -BuildBy 'AL-Go' -BuildUrl 'https://example.com/build'
+            $manifest = Get-Content (Join-Path $folder 'app.json') -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $manifest.version | Should -Be '1.0.5.0'
+            $manifest.ContainsKey('build') | Should -Be $ExpectedBuild
+            if ($ExpectedBuild) { $manifest.build.by | Should -Be 'AL-Go' }
+        }
+
         It 'Updates version with MajorMinorVersion, BuildNumber and RevisionNumber' {
             $projectPath = New-ALGoTestProject -BaseFolder $TestDrive -AppFolders @(
                 @{ Name = "MyApp"; Id = "11111111-1111-1111-1111-111111111111"; Version = "1.0.0.0" }
