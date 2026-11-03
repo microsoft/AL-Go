@@ -22,8 +22,8 @@ Param(
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
-Import-Module (Join-Path $PSScriptRoot "..\.Modules\AlToolHelper.psm1" -Resolve) -Force -DisableNameChecking
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "..\.Modules\AlToolHelper.psm1" -Resolve) -Force -DisableNameChecking
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
 DownloadAndImportBcContainerHelper
