@@ -31,6 +31,7 @@ Describe 'AlToolHelper.psm1 Tests' {
             BeforeEach {
                 $script:alToolEnvironmentVariables = @(
                     'AlToolPath',
+                    'ALGoAlToolMajor',
                     'GITHUB_ENV',
                     'GITHUB_REPOSITORY_ID',
                     'GITHUB_RUN_ATTEMPT',
@@ -91,6 +92,58 @@ Describe 'AlToolHelper.psm1 Tests' {
                     $FilePath -eq 'dotnet'
                 }
                 Test-Path -LiteralPath $env:GITHUB_ENV | Should -BeFalse
+            }
+
+            It 'Selects tool family <Major> for BC <BcVersion> and reuses it for testing' -TestCases @(
+                @{ BcVersion = '28.5.123.0'; Major = 17 }
+                @{ BcVersion = '29.1.456.0'; Major = 18 }
+                @{ BcVersion = '30.0.789.0'; Major = 30 }
+            ) {
+                param($BcVersion, $Major)
+                $script:selectedPath = Join-Path (Join-Path $script:expectedToolDirectory "$Major") (Get-AlToolExecutableName)
+                Mock Invoke-AlNativeCommand {
+                    if ($FilePath -eq 'dotnet') {
+                        New-TestAlToolExecutable -Path $script:selectedPath | Out-Null
+                    }
+                    [PSCustomObject]@{ StandardOutput = @('version'); StandardError = @(); Output = @('version'); ExitCode = 0 }
+                }
+
+                GetAlToolPath -BcVersion $BcVersion | Should -Be $script:selectedPath
+                GetAlToolPath | Should -Be $script:selectedPath
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
+                    $FilePath -eq 'dotnet' -and $ArgumentList[3] -eq '--version' -and $ArgumentList[4] -eq "$Major.*-*"
+                }
+                $env:ALGoAlToolMajor | Should -Be "$Major"
+            }
+
+            It 'Rejects unsupported BC versions instead of selecting the latest compiler' {
+                { GetAlToolPath -BcVersion '27.0' } | Should -Throw '*28 or later*'
+            }
+
+            It 'Rejects a different release family in a job that already selected a tool' {
+                $env:AlToolPath = $script:fakeAlToolPath
+                $env:ALGoAlToolMajor = '17'
+                { GetAlToolPath -BcVersion '29.0' } | Should -Throw '*different BC release*'
+            }
+
+            It 'Uses the explicit temporary build for compilation and subsequent tests' {
+                Mock Install-TemporaryAlTool {
+                    param($ToolDirectory)
+                    New-TestAlToolExecutable -Path (Join-Path $ToolDirectory (Get-AlToolExecutableName)) | Out-Null
+                }
+                $path = GetAlToolPath -BcVersion '29.0' -UseTemporaryAlTool
+                $path | Should -BeLike '*18*workspace-restore-preview*'
+                GetAlToolPath | Should -Be $path
+                Should -Invoke Install-TemporaryAlTool -Times 1 -Exactly
+                Should -Invoke Invoke-AlNativeCommand -Times 0 -Exactly -ParameterFilter { $FilePath -eq 'dotnet' }
+            }
+
+            It 'Rejects an unexpected temporary release bundle before extraction' {
+                Mock Invoke-WebRequest { }
+                Mock Get-FileHash { @{ Hash = 'unexpected' } }
+                Mock Expand-Archive { }
+                { Install-TemporaryAlTool -ToolDirectory $TestDrive } | Should -Throw '*does not match*'
+                Should -Invoke Expand-Archive -Times 0 -Exactly
             }
 
             It 'Reuses the executable from the expected run directory and persists it for later steps' {

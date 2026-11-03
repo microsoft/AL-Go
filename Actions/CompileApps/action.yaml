@@ -44,6 +44,13 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up ALTool runtimes
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+      with:
+        dotnet-version: |
+          8.0.x
+          10.0.x
+
     - name: run
       shell: ${{ inputs.shell }}
       env:

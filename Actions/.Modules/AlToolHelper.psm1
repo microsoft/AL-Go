@@ -141,12 +141,33 @@ function Get-AlToolExecutableName {
     Reuses a valid path from AlToolPath or the deterministic run-scoped tool directory. Otherwise,
     installs the prerelease package into that directory with dotnet tool install --tool-path.
     Newly resolved paths are stored in the current process and GITHUB_ENV for later action steps.
+.PARAMETER BcVersion
+    BC release used for compilation. BC 28/29 use tool majors 17/18; BC 30 onwards uses
+    the BC major. Selects the latest package in that release family, including prereleases,
+    without assuming NuGet minor/build numbers match BC artifact minor/build numbers.
+.PARAMETER UseTemporaryAlTool
+    Explicitly override the published compiler with the temporary workspace-restore branch build.
 .OUTPUTS
     [string] The full path to the AlTool executable.
 #>
 function GetAlToolPath {
+    param(
+        [version] $BcVersion,
+        [switch] $UseTemporaryAlTool
+    )
+
+    $toolMajor = if ($BcVersion) {
+        if ($BcVersion.Major -lt 28) {
+            throw "Workspace compilation requires Business Central 28 or later."
+        }
+        if ($BcVersion.Major -lt 30) { $BcVersion.Major - 11 } else { $BcVersion.Major }
+    } else { 0 }
+
     if (-not [string]::IsNullOrWhiteSpace($env:AlToolPath) -and
         (Test-Path -LiteralPath $env:AlToolPath -PathType Leaf)) {
+        if ($toolMajor -and $env:ALGoAlToolMajor -ne "$toolMajor") {
+            throw "The job already selected an ALTool for a different BC release. Run each BC release in a separate job."
+        }
         return Confirm-AlToolPath -AlToolPath ([System.IO.Path]::GetFullPath($env:AlToolPath))
     }
 
@@ -155,6 +176,13 @@ function GetAlToolPath {
     }
 
     $toolDirectory = Get-AlToolInstallDirectory
+    if ($toolMajor) {
+        $toolDirectory = Join-Path $toolDirectory "$toolMajor"
+        Write-Host "Selecting ALTool release family $toolMajor for Business Central $BcVersion."
+    }
+    if ($UseTemporaryAlTool) {
+        $toolDirectory = Join-Path $toolDirectory "workspace-restore-preview"
+    }
     $alToolPath = Join-Path $toolDirectory (Get-AlToolExecutableName)
     if (-not (Test-Path -LiteralPath $alToolPath -PathType Leaf)) {
         if (Test-Path -LiteralPath $toolDirectory) {
@@ -163,13 +191,19 @@ function GetAlToolPath {
         }
         New-Item -Path $toolDirectory -ItemType Directory -Force | Out-Null
 
-        Write-Host "Installing '$alToolPackageId' (prerelease) into '$toolDirectory'..."
-        $installResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList @(
-            "tool", "install", $alToolPackageId, "--prerelease", "--tool-path", $toolDirectory
-        )
-        $installResult.Output | ForEach-Object { Write-Host $_ }
-        if ($installResult.ExitCode -ne 0) {
-            throw "Failed to install '$alToolPackageId' into '$toolDirectory'. dotnet tool install exited with code $($installResult.ExitCode). Output: $($installResult.Output -join [Environment]::NewLine)"
+        if ($UseTemporaryAlTool) {
+            Install-TemporaryAlTool -ToolDirectory $toolDirectory
+        }
+        else {
+            $versionArguments = if ($toolMajor) { @("--version", "$toolMajor.*-*") } else { @("--prerelease") }
+            Write-Host "Installing '$alToolPackageId' $($versionArguments -join ' ') into '$toolDirectory'..."
+            $installResult = Invoke-AlNativeCommand -FilePath "dotnet" -ArgumentList (
+                @("tool", "install", $alToolPackageId) + $versionArguments + @("--tool-path", $toolDirectory)
+            )
+            $installResult.Output | ForEach-Object { Write-Host $_ }
+            if ($installResult.ExitCode -ne 0) {
+                throw "Failed to install '$alToolPackageId' into '$toolDirectory'. dotnet tool install exited with code $($installResult.ExitCode). Output: $($installResult.Output -join [Environment]::NewLine)"
+            }
         }
     }
 
@@ -180,10 +214,40 @@ function GetAlToolPath {
     $alToolPath = Confirm-AlToolPath -AlToolPath ([System.IO.Path]::GetFullPath($alToolPath))
 
     $env:AlToolPath = $alToolPath
+    $env:ALGoAlToolMajor = "$toolMajor"
     if ($env:GITHUB_ENV) {
         Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "AlToolPath=$alToolPath"
+        Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "ALGoAlToolMajor=$toolMajor"
     }
     return $alToolPath
+}
+
+<#
+.SYNOPSIS
+    Installs the temporary workspace-restore branch build for explicit preview testing.
+.PARAMETER ToolDirectory
+    Destination for the runtime-only bundle. Requires the .NET 10 SDK/runtimes.
+#>
+function Install-TemporaryAlTool {
+    param([Parameter(Mandatory = $true)][string] $ToolDirectory)
+
+    Write-Host "::Warning::Using the temporary BC 30 workspace-restore branch build instead of the BC-selected published compiler."
+    $archive = Join-Path $ToolDirectory "altool.zip"
+    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/Aholstrup1-PersonalOrg/bcsamples-bingmaps.appsource/releases/download/workspace-restore-preview/altool-workspace-restore.zip" -OutFile $archive
+    if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '88B61BCDF2B8B3D8A41D51371C2BB5ECF8EEE4568AE2BE9D14064DADEE25C526') {
+        throw "The temporary ALTool download does not match the approved branch-build bundle."
+    }
+    Expand-Archive -LiteralPath $archive -DestinationPath $ToolDirectory -Force
+    Remove-Item -LiteralPath $archive -Force
+    $executable = Join-Path $ToolDirectory (Get-AlToolExecutableName)
+    if ([Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+        Copy-Item -LiteralPath (Join-Path $ToolDirectory "altool.exe") -Destination $executable
+    }
+    else {
+        Set-Content -LiteralPath $executable -Encoding ASCII -Value "#!/bin/sh`nexec dotnet `"`$(dirname `"`$0`")/altool.dll`" `"`$@`""
+        $result = Invoke-AlNativeCommand -FilePath "chmod" -ArgumentList @("+x", $executable)
+        if ($result.ExitCode -ne 0) { throw "Failed to make the temporary ALTool executable: $($result.Output -join ' ')" }
+    }
 }
 
 Export-ModuleMember -Function GetAlToolPath, Invoke-AlNativeCommand

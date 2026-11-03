@@ -1,9 +1,8 @@
 Import-Module (Join-Path -Path $PSScriptRoot "./DebugLogHelper.psm1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "../TelemetryHelper.psm1" -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot "../Github-Helper.psm1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "AlToolHelper.psm1" -Resolve) -Force -DisableNameChecking
 . (Join-Path -Path $PSScriptRoot -ChildPath "../AL-Go-Helper.ps1" -Resolve)
-
-$script:alTool = $null
 
 <#
 .SYNOPSIS
@@ -45,16 +44,15 @@ function Get-CodeAnalyzers {
     Gets the list of custom code analyzers to use for compilation.
 .DESCRIPTION
     Returns an array of custom code analyzer paths based on the settings provided.
-    URL-based entries are downloaded to the compiler folder. Relative file paths
+    URL-based entries are downloaded to the build's analyzer folder. Relative file paths
     are resolved against the project folder so that workspace compilation passes
     rooted paths to altool/alc.exe (altool only resolves the first comma-separated
     --customanalyzers entry against the project root, so relative paths beyond the
     first one fail to load).
 .PARAMETER Settings
     Hashtable containing the build settings with custom code cop paths or URLs.
-.PARAMETER CompilerFolder
-    The folder where the AL compiler tool is located, used for downloading custom
-    analyzers if URLs are provided.
+.PARAMETER DownloadFolder
+    The folder for downloading custom analyzers if URLs are provided.
 .PARAMETER ProjectFolder
     Folder used as the base for resolving relative customCodeCops entries.
     Defaults to the current location, which Compile.ps1 sets to the project folder.
@@ -67,7 +65,7 @@ function Get-CustomAnalyzers {
         [hashtable] $Settings,
 
         [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder,
+        [string] $DownloadFolder,
 
         [Parameter(Mandatory = $false)]
         [string] $ProjectFolder = (Get-Location).Path
@@ -78,16 +76,10 @@ function Get-CustomAnalyzers {
         return $analyzers
     }
 
-    # Analyzers live in the Analyzers/ subfolder for platform-layout extensions, or
-    # directly in bin/ for framework-dependent / marketplace-packaged extensions.
-    $binPath = Join-Path $CompilerFolder 'compiler/extension/bin'
-    $analyzersPath = Join-Path $binPath 'Analyzers'
-    if (-not (Test-Path $analyzersPath)) {
-        $analyzersPath = $binPath
-    }
     foreach ($customCodeCop in $Settings.CustomCodeCops) {
         if ($customCodeCop -like 'https://*') {
-            $analyzerFileName = Join-Path $analyzersPath "$(Split-Path $customCodeCop -Leaf)"
+            New-Item -Path $DownloadFolder -ItemType Directory -Force | Out-Null
+            $analyzerFileName = Join-Path $DownloadFolder "$(Split-Path $customCodeCop -Leaf)"
             try {
                 Invoke-WebRequest -Uri $customCodeCop -OutFile $analyzerFileName -ErrorAction Stop
             } catch {
@@ -181,64 +173,27 @@ function Get-BuildMetadata {
 }
 
 <#
-    .SYNOPSIS
-    Gets the path to the AL compiler tool (altool).
-    .DESCRIPTION
-    Returns the full path to the AL compiler tool located in the specified compiler folder.
-    Newer AL Language extensions place altool in a platform-specific subfolder (win32/linux),
-    while framework-dependent / marketplace-packaged extensions place it directly under
-    compiler/extension/bin. Both layouts are supported.
-    .PARAMETER CompilerFolder
-    The folder where the AL compiler tool is located.
-    .OUTPUTS
-    The full path to the AL compiler tool.
-#>
-function Get-ALTool {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder
-    )
-
-    if ($script:alTool -and (Test-Path $script:alTool)) {
-        return $script:alTool
-    }
-
-    $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
-    if ($IsLinux) {
-        $alExe = Join-Path $binFolder "linux/altool"
-    }
-    else {
-        $alExe = Join-Path $binFolder "win32/altool.exe"
-    }
-
-    # Fall back to the flat bin folder used by framework-dependent / marketplace VSIX layouts
-    if (-not (Test-Path $alExe)) {
-        $alExe = Join-Path $binFolder (Split-Path $alExe -Leaf)
-    }
-
-    if (-not (Test-Path $alExe)) {
-        throw "Could not find AL tool in the compiler folder: $CompilerFolder"
-    }
-    $script:alTool = $alExe
-    return $script:alTool
-}
-
-<#
 .SYNOPSIS
     Compiles AL apps in a workspace using the ALTool.
 .DESCRIPTION
     Compiles one or more AL app folders using workspace compilation from the ALTool.
     Supports parallel compilation, code analyzers, preprocessor symbols, and compiler features.
     Before calling this function, ensure that:
-    1. A compiler folder has been created
-    2. External dependencies have been fetched into the compiler folder symbols folder
+    1. ALTool has been selected using the shared AlToolHelper
+    2. Project dependencies have been fetched into the package cache
     3. Baseline packages have been downloaded and AppSourceCop baseline packages set up (if applicable)
 .PARAMETER Folders
     Array of app folder paths to compile.
-.PARAMETER CompilerFolder
-    Path to the compiler folder containing the ALTool and symbols.
+.PARAMETER ALToolPath
+    The job's selected ALTool executable, also reused for testing.
+.PARAMETER BcVersion
+    BC artifact version to target when restoring platform and application symbols.
+.PARAMETER Country
+    BC artifact country for symbol restoration.
+.PARAMETER TrustMicrosoftNuGetFeeds
+    Whether restore may use the built-in Microsoft public feeds.
 .PARAMETER PackageCachePath
-    Path to the package cache folder. Defaults to the compiler folder's symbols subfolder.
+    Path to the shared dependency and compiler output cache.
 .PARAMETER OutFolder
     Path to the output folder for compiled .app files. Defaults to PackageCachePath.
 .PARAMETER LogDirectory
@@ -282,9 +237,13 @@ function Build-AppsInWorkspace {
         [Parameter(Mandatory = $true)]
         [string[]]$Folders,
         [Parameter(Mandatory = $true)]
-        [string]$CompilerFolder,
-        [Parameter(Mandatory = $false)]
+        [string]$ALToolPath,
+        [Parameter(Mandatory = $true)]
         [string]$PackageCachePath,
+        [Parameter(Mandatory = $true)]
+        [version]$BcVersion,
+        [string]$Country = 'w1',
+        [bool]$TrustMicrosoftNuGetFeeds = $true,
         [Parameter(Mandatory = $false)]
         [string]$OutFolder,
         [Parameter(Mandatory = $false)]
@@ -326,11 +285,6 @@ function Build-AppsInWorkspace {
         [scriptblock]$PostCompileApp
     )
 
-    # Get the package cache path. Use the compiler folder symbols subfolder if not specified
-    if (-not $PackageCachePath) {
-        $PackageCachePath = Join-Path $CompilerFolder "symbols"
-    }
-
     # Determine the final output folder
     if (-not $OutFolder) {
         $OutputFolder = $PackageCachePath
@@ -348,9 +302,6 @@ function Build-AppsInWorkspace {
     } else {
         $MaxProcesses = $MaxCpuCount
     }
-
-    # Get AL tool path
-    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
 
     # Create workspace file in temp directory
     $datetimeStamp = Get-Date -Format "yyyyMMddHHmmss"
@@ -384,6 +335,8 @@ function Build-AppsInWorkspace {
         Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList $AppType, ([ref] $compilationParameters)
     }
 
+    Restore-WorkspacePackages -ALToolPath $alToolPath -Folders $Folders -PackageCachePath $compilationParameters.PackageCachePath -BcVersion $BcVersion -Country $Country -TrustMicrosoftNuGetFeeds $TrustMicrosoftNuGetFeeds
+
     # Compile apps
     $appFiles = CompileAppsInWorkspace @compilationParameters
 
@@ -397,6 +350,76 @@ function Build-AppsInWorkspace {
     Remove-Item $workspaceFile -Force -ErrorAction SilentlyContinue
 
     return $appFiles
+}
+
+<#
+.SYNOPSIS
+    Restores workspace symbols from public NuGet feeds without downloading BC artifacts.
+.DESCRIPTION
+    Adds a restore-only project to request platform/application symbols for the resolved BC
+    version, rather than only the minimum versions in the source manifests. Source manifests
+    are not changed. Download failures are terminating; there is no artifact fallback.
+.PARAMETER ALToolPath
+    The selected ALTool executable. It must support workspace restore.
+.PARAMETER Folders
+    The source app folders in this compilation batch.
+.PARAMETER PackageCachePath
+    Shared cache containing project dependencies and previously compiled batches.
+.PARAMETER BcVersion
+    The resolved BC artifact version.
+.PARAMETER Country
+    The resolved BC artifact country.
+.PARAMETER TrustMicrosoftNuGetFeeds
+    Whether to allow the built-in Microsoft feeds. When false, only cached dependencies are used.
+#>
+function Restore-WorkspacePackages {
+    param(
+        [Parameter(Mandatory = $true)][string] $ALToolPath,
+        [Parameter(Mandatory = $true)][string[]] $Folders,
+        [Parameter(Mandatory = $true)][string] $PackageCachePath,
+        [Parameter(Mandatory = $true)][version] $BcVersion,
+        [string] $Country = 'w1',
+        [bool] $TrustMicrosoftNuGetFeeds = $true
+    )
+
+    $help = Invoke-AlNativeCommand -FilePath $ALToolPath -ArgumentList @("workspace", "restore", "--help")
+    if ($help.ExitCode -ne 0 -or ($help.StandardOutput -join "`n") -notmatch '--symbolscountryregion') {
+        throw "The selected ALTool does not support workspace restore. Use a release that supports it, explicitly enable the temporary preview tool, or disable workspaceCompilation."
+    }
+
+    $restoreFolder = Join-Path ([System.IO.Path]::GetTempPath()) "al-go-restore-$([Guid]::NewGuid().ToString('N'))"
+    New-Item -Path $restoreFolder -ItemType Directory -Force | Out-Null
+    try {
+        @{
+            id = [Guid]::NewGuid().ToString()
+            name = "AL-Go restore target"
+            publisher = "AL-Go"
+            version = "1.0.0.0"
+            platform = "$BcVersion"
+            application = "$BcVersion"
+        } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $restoreFolder "app.json") -Encoding UTF8
+        $workspaceFile = Join-Path $restoreFolder "restore.code-workspace"
+        $restoreFolders = @($Folders | ForEach-Object {
+            if ([System.IO.Path]::IsPathRooted($_)) { $_ }
+            else { [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $_)) }
+        })
+        New-WorkspaceFromFolders -Folders ($restoreFolders + @($restoreFolder)) -WorkspaceFile $workspaceFile -AltoolPath $ALToolPath
+        $arguments = @("workspace", "restore", $workspaceFile, "--packagecachepath", $PackageCachePath, "--symbolscountryregion", $Country, "--enforceminorversion")
+        if (-not $TrustMicrosoftNuGetFeeds) {
+            $arguments += "--useonlycustomfeeds"
+        }
+        Write-Host "Restoring workspace symbols for Business Central $BcVersion ($Country) from NuGet."
+        $result = Invoke-AlNativeCommand -FilePath $ALToolPath -ArgumentList $arguments
+        $result.StandardError | ForEach-Object { Write-Host $_ }
+        if ($result.ExitCode -ne 0) {
+            throw "Workspace restore failed (exit code $($result.ExitCode)). $($result.StandardOutput -join [Environment]::NewLine)"
+        }
+        $result.StandardOutput -join "`n" | ConvertFrom-Json | ConvertTo-HashTable -recurse | Out-Null
+        $result.StandardOutput | ForEach-Object { Write-Host $_ }
+    }
+    finally {
+        Remove-Item -LiteralPath $restoreFolder -Recurse -Force
+    }
 }
 
 <#
@@ -1055,8 +1078,8 @@ function New-BuildOutputFile {
     Array of file paths to baseline release .app files.
 .PARAMETER BaselinePackageCachePath
     Path to the folder containing the baseline .app files and their dependencies (used for baselinePackageCachePath in AppSourceCop.json).
-.PARAMETER CompilerFolder
-    Path to the compiler folder containing the AL tool.
+.PARAMETER ALToolPath
+    The job's selected ALTool executable.
 .PARAMETER Settings
     Hashtable containing the build settings with AppSourceCop configuration.
 #>
@@ -1069,14 +1092,13 @@ function New-AppSourceCopJson {
         [Parameter(Mandatory = $false)]
         [string] $BaselinePackageCachePath = '',
         [Parameter(Mandatory = $true)]
-        [string] $CompilerFolder,
+        [string] $ALToolPath,
         [Parameter(Mandatory = $true)]
         [hashtable] $Settings
     )
 
     # Extract version info from baseline apps using the AL tool, keyed by app ID
     $baselineAppVersions = @{}
-    $alToolPath = Get-ALTool -CompilerFolder $CompilerFolder
     foreach ($appFile in $BaselineApps) {
         try {
             $appInfo = RunAndCheck $alToolPath GetPackageManifest $appFile | ConvertFrom-Json | ConvertTo-HashTable -recurse

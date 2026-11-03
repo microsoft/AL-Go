@@ -1,3 +1,9 @@
+### Artifact-free workspace compilation (PREVIEW)
+
+Workspace compilation now installs ALTool independently and restores symbols from public Microsoft NuGet feeds instead of downloading BC artifacts or creating a compiler folder. BC 28 selects tool major 17, BC 29 selects 18, and BC 30 onwards selects the matching major; the latest package in that family (including prereleases) is used, not a presumed matching minor/build. The selected executable is reused by the separate test action in the same job. Restore targets the resolved artifact's BC version and country and fails without an artifact fallback.
+
+This changes the existing preview: `vsixFile` and compiler-folder hooks are rejected, and compilation requiring BC DLLs is not supported. Publishing and runtime testing retain their existing container/artifact behavior. Until workspace restore ships, `workspaceCompilation.useTemporaryAlTool: true` explicitly selects the temporary BC 30 branch-build bundle in the BingMaps test repository instead of the published release-family compiler. See [workspaceCompilation](Scenarios/settings.md#workspaceCompilation) for limitations.
+
 ### Separate test execution from RunPipeline (PREVIEW)
 
 A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.

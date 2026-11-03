@@ -689,15 +689,22 @@
         },
         "workspaceCompilation": {
             "type": "object",
-            "description": "PREVIEW: Configuration for workspace compilation. See https://aka.ms/ALGoSettings#workspacecompilation",
+            "description": "PREVIEW: Artifact-free workspace compilation using a BC-release-selected ALTool and public NuGet symbols. Requires BC 28+ and workspace restore support. vsixFile and compiler-folder hooks are not supported. See https://aka.ms/ALGoSettings#workspacecompilation",
             "properties": {
                 "enabled": {
                     "type": "boolean",
-                    "description": "Enable workspace compilation for building apps"
+                    "description": "Enable artifact-free workspace compilation for building apps in both templates.",
+                    "default": false
                 },
                 "parallelism": {
                     "type": "integer",
-                    "description": "The number of parallel processes to use for workspace compilation. Set to 0 or -1 to use all available processors."
+                    "description": "The number of parallel processes to use for workspace compilation. Set to 0 or -1 to use all available processors.",
+                    "default": 1
+                },
+                "useTemporaryAlTool": {
+                    "type": "boolean",
+                    "description": "Temporary opt-in to the BC 30 workspace-restore branch build hosted in the BingMaps test repository, overriding normal BC-release compiler selection for compilation and testing. Requires .NET 10. Only honored when workspace compilation is enabled in either template.",
+                    "default": false
                 }
             },
             "additionalProperties": false

@@ -319,6 +319,7 @@ function GetDefaultSettings
         "workspaceCompilation"                          = [ordered]@{
             "enabled"                                   = $false
             "parallelism"                               = 1
+            "useTemporaryAlTool"                        = $false
         }
         "pullRequestTrigger"                            = "pull_request"
         "bcptThresholds"                                = [ordered]@{

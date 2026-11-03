@@ -417,13 +417,13 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             Set-Content -Path $altoolPath -Value "mock"
         }
 
-        It 'Uses default PackageCachePath when not specified' {
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+        It 'Uses the shared symbol cache without a compiler folder' {
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder)
-                # Verify PackageCachePath defaults to compiler\symbols
-                $PackageCachePath | Should -BeLike '*compiler*symbols'
+                $PackageCachePath | Should -Be (Join-Path $TestDrive 'symbols')
+                $ALToolPath | Should -Be (Join-Path $TestDrive 'compiler\altool.exe')
                 return @()
             } -ModuleName CompileFromWorkspace
 
@@ -431,14 +431,14 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App1"; Id = "11111111-1111-1111-1111-111111111111" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App1")) -CompilerFolder $script:mockCompilerFolder
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App1")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols")
         }
 
         It 'Uses specified PackageCachePath when provided' {
             $customCachePath = Join-Path $TestDrive 'custom-cache'
             New-Item -Path $customCachePath -ItemType Directory -Force | Out-Null
 
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder)
@@ -450,11 +450,11 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App2"; Id = "22222222-2222-2222-2222-222222222222" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App2")) -CompilerFolder $script:mockCompilerFolder -PackageCachePath $customCachePath
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App2")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath $customCachePath
         }
 
         It 'Caps MaxCpuCount to available processor count' {
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers, $PreprocessorSymbols, $Features, $GenerateReportLayout, $Ruleset, $SourceRepositoryUrl, $SourceCommit, $BuildBy, $BuildUrl, $ReportSuppressedDiagnostics, $EnableExternalRulesets, $MaxCpuCount)
@@ -467,13 +467,13 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App3"; Id = "33333333-3333-3333-3333-333333333333" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App3")) -CompilerFolder $script:mockCompilerFolder -MaxCpuCount 9999
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App3")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -MaxCpuCount 9999
         }
 
         It 'Invokes PreCompileApp script before compilation' {
             $script:preCompileInvoked = $false
 
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace { return @() } -ModuleName CompileFromWorkspace
 
@@ -486,7 +486,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 $script:preCompileInvoked = $true
             }
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App4")) -CompilerFolder $script:mockCompilerFolder -PreCompileApp $preCompileScript -AppType 'app'
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App4")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -PreCompileApp $preCompileScript -AppType 'app'
 
             $script:preCompileInvoked | Should -Be $true
         }
@@ -494,7 +494,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'Invokes PostCompileApp script after compilation' {
             $script:postCompileInvoked = $false
 
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace { return @('app1.app', 'app2.app') } -ModuleName CompileFromWorkspace
 
@@ -508,7 +508,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @($appFiles).Count | Should -Be 2
             }
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App5")) -CompilerFolder $script:mockCompilerFolder -PostCompileApp $postCompileScript -AppType 'app'
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App5")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -PostCompileApp $postCompileScript -AppType 'app'
 
             $script:postCompileInvoked | Should -Be $true
         }
@@ -516,7 +516,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         It 'Returns compiled app files from CompileAppsInWorkspace' {
             $expectedApps = @('MyApp_1.0.0.0.app', 'MyApp2_1.0.0.0.app')
 
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace { return $expectedApps } -ModuleName CompileFromWorkspace
 
@@ -524,7 +524,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App6"; Id = "66666666-6666-6666-6666-666666666666" }
             )
 
-            $result = Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App6")) -CompilerFolder $script:mockCompilerFolder
+            $result = Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App6")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols")
 
             @($result).Count | Should -Be 2
             $result | Should -Contain 'MyApp_1.0.0.0.app'
@@ -532,7 +532,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
 
         It 'Passes analyzers to CompileAppsInWorkspace' {
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace {
                 param($ALToolPath, $WorkspaceFile, $PackageCachePath, $OutFolder, $AssemblyProbingPaths, $Analyzers)
@@ -545,11 +545,11 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App7"; Id = "77777777-7777-7777-7777-777777777777" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -CompilerFolder $script:mockCompilerFolder -Analyzers @('CodeCop', 'UICop')
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -Analyzers @('CodeCop', 'UICop')
         }
 
         It 'Accepts bcptApp as AppType for BCPT workspace compilation' {
-            Mock Get-ALTool { return (Join-Path $TestDrive 'compiler\altool.exe') } -ModuleName CompileFromWorkspace
+            Mock Restore-WorkspacePackages { } -ModuleName CompileFromWorkspace
             Mock New-WorkspaceFromFolders { } -ModuleName CompileFromWorkspace
             Mock CompileAppsInWorkspace { return @() } -ModuleName CompileFromWorkspace
 
@@ -557,7 +557,60 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "BcptApp"; Id = "88888888-8888-8888-8888-888888888888" }
             )
 
-            { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -CompilerFolder $script:mockCompilerFolder -AppType 'bcptApp' } | Should -Not -Throw
+            { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -AppType 'bcptApp' } | Should -Not -Throw
+        }
+    }
+
+    Describe 'Restore-WorkspacePackages' {
+        InModuleScope CompileFromWorkspace {
+            BeforeEach {
+                $script:restoreWorkspace = ''
+                Mock New-WorkspaceFromFolders {
+                    param($Folders, $WorkspaceFile)
+                    if ((Split-Path $WorkspaceFile -Leaf) -ne 'restore.code-workspace') { return }
+                    $script:restoreWorkspace = $WorkspaceFile
+                    $target = Get-Content (Join-Path $Folders[-1] 'app.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+                    $target.application | Should -Be '29.1.123.0'
+                    $target.platform | Should -Be '29.1.123.0'
+                    [IO.Path]::IsPathRooted($Folders[0]) | Should -BeTrue
+                }
+                Mock Invoke-AlNativeCommand {
+                    param($ArgumentList)
+                    $stdout = if ($ArgumentList -contains '--help') { '--symbolscountryregion' } else { '{"success":true}' }
+                    [PSCustomObject]@{ StandardOutput = @($stdout); StandardError = @('progress, not JSON'); ExitCode = 0 }
+                }
+            }
+
+            It 'Targets the resolved BC version and country and keeps progress separate from JSON' {
+                Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' -Country 'dk'
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
+                    $ArgumentList -contains '--enforceminorversion' -and $ArgumentList -contains 'dk' -and $ArgumentList -contains $TestDrive
+                }
+                Test-Path (Split-Path $script:restoreWorkspace) | Should -BeFalse
+            }
+
+            It 'Does not enable Microsoft feeds when they are not trusted' {
+                Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' -TrustMicrosoftNuGetFeeds $false
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '--useonlycustomfeeds' }
+            }
+
+            It 'Rejects a tool without restore capability even if help exits successfully' {
+                Mock Invoke-AlNativeCommand {
+                    [PSCustomObject]@{ StandardOutput = @('general help'); StandardError = @(); ExitCode = 0 }
+                }
+                { Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' } | Should -Throw '*does not support workspace restore*'
+                Should -Invoke New-WorkspaceFromFolders -Times 0 -Exactly
+            }
+
+            It 'Fails before compilation when restore exits nonzero and removes its temporary project' {
+                Mock Invoke-AlNativeCommand {
+                    [PSCustomObject]@{ StandardOutput = @('{"success":false}'); StandardError = @('missing dependency'); ExitCode = 1 }
+                } -ParameterFilter { $ArgumentList -notcontains '--help' }
+                Mock CompileAppsInWorkspace { throw 'Compilation must not run' }
+                { Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' } | Should -Throw '*Workspace restore failed*'
+                Should -Invoke CompileAppsInWorkspace -Times 0 -Exactly
+                Test-Path (Split-Path $script:restoreWorkspace) | Should -BeFalse
+            }
         }
     }
 
@@ -707,14 +760,14 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
     Describe 'Get-CustomAnalyzers' {
         It 'Returns empty array when no custom code cops configured' {
-            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @() } -CompilerFolder $TestDrive
+            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @() } -DownloadFolder $TestDrive
 
             @($result).Count | Should -Be 0
         }
 
         It 'Returns rooted local paths as-is' {
             $rooted = Join-Path $TestDrive 'analyzers/MyAnalyzer.dll'
-            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @($rooted) } -CompilerFolder $TestDrive
+            $result = Get-CustomAnalyzers -Settings @{ CustomCodeCops = @($rooted) } -DownloadFolder $TestDrive
 
             @($result).Count | Should -Be 1
             $result | Should -Contain $rooted
@@ -725,7 +778,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             New-Item -Path $projectFolder -ItemType Directory -Force | Out-Null
 
             $settings = @{ CustomCodeCops = @('.alcops/A.dll', '.alcops/B.dll') }
-            $result = @(Get-CustomAnalyzers -Settings $settings -CompilerFolder $TestDrive -ProjectFolder $projectFolder)
+            $result = @(Get-CustomAnalyzers -Settings $settings -DownloadFolder $TestDrive -ProjectFolder $projectFolder)
 
             $result.Count | Should -Be 2
             foreach ($path in $result) {
@@ -744,7 +797,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
 
             $result = @(Get-CustomAnalyzers `
                 -Settings @{ CustomCodeCops = @('.alcops/Not.Yet.Downloaded.dll') } `
-                -CompilerFolder $TestDrive `
+                -DownloadFolder $TestDrive `
                 -ProjectFolder $projectFolder)
 
             $result.Count | Should -Be 1
@@ -760,7 +813,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             try {
                 $result = @(Get-CustomAnalyzers `
                     -Settings @{ CustomCodeCops = @('.alcops/X.dll') } `
-                    -CompilerFolder $TestDrive)
+                    -DownloadFolder $TestDrive)
             } finally {
                 Pop-Location
             }
@@ -769,7 +822,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result[0] | Should -BeLike "$projectFolder*X.dll"
         }
 
-        It 'Downloads URL-based analyzers to compiler folder' {
+        It 'Downloads URL-based analyzers to the specified download folder' {
             $compilerFolder = Join-Path $TestDrive 'compiler-analyzers'
             $analyzersBin = Join-Path $compilerFolder 'compiler\extension\bin\Analyzers'
             New-Item -Path $analyzersBin -ItemType Directory -Force | Out-Null
@@ -779,15 +832,13 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 Set-Content -Path $OutFile -Value 'mock-dll'
             } -ModuleName CompileFromWorkspace
 
-            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -DownloadFolder $compilerFolder)
 
             $result.Count | Should -Be 1
             $result[0] | Should -BeLike '*MyAnalyzer.dll'
         }
 
-        It 'Downloads URL-based analyzers to the flat bin folder when no Analyzers subfolder exists' {
-            # Framework-dependent / marketplace-packaged extensions have no Analyzers/ subfolder,
-            # so downloads must target the flat bin/ folder instead.
+        It 'Creates the analyzer download folder without a compiler layout' {
             $compilerFolder = Join-Path $TestDrive 'compiler-flat-layout'
             $binFolder = Join-Path $compilerFolder 'compiler/extension/bin'
             New-Item -Path $binFolder -ItemType Directory -Force | Out-Null
@@ -797,12 +848,12 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 Set-Content -Path $OutFile -Value 'mock-dll'
             } -ModuleName CompileFromWorkspace
 
-            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -CompilerFolder $compilerFolder)
+            $result = @(Get-CustomAnalyzers -Settings @{ CustomCodeCops = @('https://example.com/MyAnalyzer.dll') } -DownloadFolder $compilerFolder)
 
             $result.Count | Should -Be 1
             $result[0] | Should -BeLike '*MyAnalyzer.dll'
             $result[0] | Should -Not -BeLike '*Analyzers*'
-            (Split-Path $result[0] -Parent).Replace('/', '\') | Should -Be $binFolder.Replace('/', '\')
+            (Split-Path $result[0] -Parent).Replace('/', '\') | Should -Be $compilerFolder.Replace('/', '\')
         }
     }
 
@@ -840,49 +891,6 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $result = Get-AnalyzersForAppType -Settings @{} -AppType 'testApp' -Analyzers $allAnalyzers -CustomAnalyzers $allCustomAnalyzers
             @($result.Analyzers).Count | Should -Be 0
             @($result.CustomAnalyzers).Count | Should -Be 0
-        }
-    }
-
-    Describe 'Get-ALTool' {
-        It 'Finds altool in the platform-specific subfolder (win32/linux)' {
-            $cf = Join-Path $TestDrive 'altool-platform'
-            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
-                param($CompilerFolder)
-                $script:alTool = $null
-                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
-                $toolRelative = if ($IsLinux) { "linux/altool" } else { "win32/altool.exe" }
-                $expected = Join-Path $binFolder $toolRelative
-                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
-                Set-Content -Path $expected -Value 'tool'
-
-                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
-            }
-        }
-
-        It 'Falls back to the flat bin folder for framework-dependent / marketplace VSIX layouts' {
-            $cf = Join-Path $TestDrive 'altool-flat'
-            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
-                param($CompilerFolder)
-                $script:alTool = $null
-                $binFolder = Join-Path $CompilerFolder "compiler/extension/bin"
-                $toolRelative = if ($IsLinux) { "altool" } else { "altool.exe" }
-                $expected = Join-Path $binFolder $toolRelative
-                New-Item -Path (Split-Path $expected -Parent) -ItemType Directory -Force | Out-Null
-                Set-Content -Path $expected -Value 'tool'
-
-                Get-ALTool -CompilerFolder $CompilerFolder | Should -Be $expected
-            }
-        }
-
-        It 'Throws when no AL tool is found in the compiler folder' {
-            $cf = Join-Path $TestDrive 'altool-missing'
-            InModuleScope CompileFromWorkspace -Parameters @{ CompilerFolder = $cf } {
-                param($CompilerFolder)
-                $script:alTool = $null
-                New-Item -Path (Join-Path $CompilerFolder "compiler/extension/bin") -ItemType Directory -Force | Out-Null
-
-                { Get-ALTool -CompilerFolder $CompilerFolder } | Should -Throw "*Could not find AL tool in the compiler folder*"
-            }
         }
     }
 
@@ -1430,14 +1438,14 @@ exit 1
             New-Item -Path $script:baselinePackageCachePath -ItemType Directory -Force | Out-Null
 
             # Mock the AL tool to return manifest info from previous apps (matching app ID)
-            Mock Get-ALTool { return "altool.exe" } -ModuleName CompileFromWorkspace
+            
             Mock RunAndCheck {
                 return '{"Id":"11111111-1111-1111-1111-111111111111","Publisher":"Contoso","Name":"MyApp","Version":"1.0.0.0"}'
             } -ModuleName CompileFromWorkspace
         }
 
         It 'Creates AppSourceCop.json with baseline version from previous app' {
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1455,7 +1463,7 @@ exit 1
                 obsoleteTagMinAllowedMajorMinor = ""
             }
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
             $result.mandatoryAffixes | Should -Be @("Test", "Contoso")
@@ -1467,7 +1475,7 @@ exit 1
                 obsoleteTagMinAllowedMajorMinor = "24.0"
             }
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
             $result.obsoleteTagMinAllowedMajorMinor | Should -Be "24.0"
@@ -1479,7 +1487,7 @@ exit 1
                 obsoleteTagMinAllowedMajorMinor = "23.0"
             }
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings $settings
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings $settings
 
             $result = Get-Content (Join-Path $script:appFolder "AppSourceCop.json") -Raw | ConvertFrom-Json
             $result.version | Should -Be "1.0.0.0"
@@ -1496,7 +1504,7 @@ exit 1
                 return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
             } -ModuleName CompileFromWorkspace
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1513,7 +1521,7 @@ exit 1
                 return '{"Id":"99999999-9999-9999-9999-999999999999","Publisher":"OtherPublisher","Name":"OtherApp","Version":"1.0.0.0"}'
             } -ModuleName CompileFromWorkspace
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1528,7 +1536,7 @@ exit 1
             $copJsonPath = Join-Path $script:appFolder "AppSourceCop.json"
             '{"supportedCountries":["us","ca"],"customSetting":"keep"}' | Set-Content $copJsonPath
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings @{
                 appSourceCopMandatoryAffixes = @("Test")
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1553,7 +1561,7 @@ exit 1
             } | ConvertTo-Json | Set-Content (Join-Path $appFolder2 "app.json")
 
             # RunAndCheck returns app ID matching only MyApp
-            New-AppSourceCopJson -AppFolders @($script:appFolder, $appFolder2) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder, $appFolder2) -BaselineApps @("dummy.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings @{
                 appSourceCopMandatoryAffixes = @()
                 obsoleteTagMinAllowedMajorMinor = ""
             }
@@ -1568,7 +1576,7 @@ exit 1
             Mock RunAndCheck { throw "Failed to read app" } -ModuleName CompileFromWorkspace
             Mock OutputWarning {} -ModuleName CompileFromWorkspace
 
-            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("bad.app") -BaselinePackageCachePath $script:baselinePackageCachePath -CompilerFolder "c:\compiler" -Settings @{
+            New-AppSourceCopJson -AppFolders @($script:appFolder) -BaselineApps @("bad.app") -BaselinePackageCachePath $script:baselinePackageCachePath -ALToolPath "altool.exe" -Settings @{
                 appSourceCopMandatoryAffixes = @("Test")
                 obsoleteTagMinAllowedMajorMinor = ""
             }

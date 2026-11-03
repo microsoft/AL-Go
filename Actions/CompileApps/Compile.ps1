@@ -19,7 +19,10 @@ Param(
     [string] $previousAppsPath = ''
 )
 
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
+
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "..\.Modules\AlToolHelper.psm1" -Resolve) -Force -DisableNameChecking
 Import-Module (Join-Path -Path $PSScriptRoot "..\.Modules\CompileFromWorkspace.psm1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\TelemetryHelper.psm1' -Resolve)
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) -DisableNameChecking
@@ -28,7 +31,7 @@ DownloadAndImportBcContainerHelper
 # ANALYZE - Analyze the repository and determine settings
 $baseFolder = (Get-BasePath)
 if ($project -eq ".") { $project = "" }
-$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
+$settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 $settings = CheckAppDependencyProbingPaths -settings $settings -token $token -baseFolder $baseFolder -project $project
 
@@ -58,6 +61,9 @@ try {
     # Check for precompile and postcompile overrides
     $scriptOverrides = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectFolder ".AL-Go") -OverrideScriptNames @("PreCompileApp", "PostCompileApp", "PreNewBcCompilerFolder", "PostNewBcCompilerFolder")
     $scriptOverrides.Keys | ForEach-Object { Trace-Information -Message "Using override for $_" }
+    if ($settings.vsixFile -or $scriptOverrides['PreNewBcCompilerFolder'] -or $scriptOverrides['PostNewBcCompilerFolder']) {
+        throw "Workspace compilation uses the BC-version-selected ALTool NuGet package, not vsixFile or compiler-folder hooks. Disable workspaceCompilation to use these overrides."
+    }
 
     # Prepare build metadata
     $buildMetadata = Get-BuildMetadata
@@ -80,7 +86,7 @@ try {
 
     if ($dependencyAppsJson -and (Test-Path $dependencyAppsJson)) {
         try {
-            $dependencyApps += Get-Content -Path $dependencyAppsJson | ConvertFrom-Json
+            $dependencyApps += Get-Content -Path $dependencyAppsJson -Encoding UTF8 | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$dependencyAppsJson'. Error: $($_.Exception.Message)"
@@ -89,42 +95,19 @@ try {
 
     if ($dependencyTestAppsJson -and (Test-Path $dependencyTestAppsJson)) {
         try {
-            $dependencyTestApps += Get-Content -Path $dependencyTestAppsJson | ConvertFrom-Json
+            $dependencyTestApps += Get-Content -Path $dependencyTestAppsJson -Encoding UTF8 | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$dependencyTestAppsJson'. Error: $($_.Exception.Message)"
         }
     }
 
-    # Set up a compiler folder
-    $containerName = GetContainerName($project)
-    $cacheFolder = ""
-    if ($settings.gitHubRunner -like "windows-*" -or $settings.gitHubRunner -like "ubuntu-*") {
-        # On GitHub-hosted runners, use a folder in the runner temp directory for caching to speed up subsequent builds
-        $cacheFolder = Join-Path $ENV:RUNNER_TEMP ".artifactcache"
-    }
-
-    $newCompilerFolderParameters = @{
-        artifactUrl          = $artifact
-        vsixFile             = $settings.vsixFile
-        containerName        = "$($containerName)compiler"
-        cacheFolder          = $cacheFolder
-    }
-
-    # Run PreNewBcCompilerFolder hook if available (can modify parameters)
-    if ($scriptOverrides['PreNewBcCompilerFolder']) {
-        & $scriptOverrides['PreNewBcCompilerFolder'] -parameters $newCompilerFolderParameters
-    }
-
-    # Create the compiler folder
-    $compilerFolder = New-BcCompilerFolder @newCompilerFolderParameters
-
-    # Run PostNewBcCompilerFolder hook if available
-    if ($scriptOverrides['PostNewBcCompilerFolder']) {
-        & $scriptOverrides['PostNewBcCompilerFolder'] -parameters $newCompilerFolderParameters -compilerFolder $compilerFolder
-    }
-
-    $packageCachePath = Join-Path $compilerFolder "symbols"
+    $bcVersion = [version]$artifact.Split('/')[4]
+    $country = $artifact.Split('?')[0].TrimEnd('/').Split('/')[5]
+    $useTemporaryAlTool = $settings.workspaceCompilation.ContainsKey('useTemporaryAlTool') -and $settings.workspaceCompilation.useTemporaryAlTool
+    $alToolPath = GetAlToolPath -BcVersion $bcVersion -UseTemporaryAlTool:$useTemporaryAlTool
+    $packageCachePath = Join-Path $buildArtifactFolder "Symbols"
+    New-Item -Path $packageCachePath -ItemType Directory -Force | Out-Null
 
     # Copy dependency apps and test apps to the package cache so the compiler can resolve them
     foreach ($appFile in ($dependencyApps + $dependencyTestApps)) {
@@ -220,7 +203,7 @@ try {
         if ($settings.enableCodeAnalyzersOnTestApps) {
             $appSourceCopFolders += @($settings.testFolders) + @($settings.bcptTestFolders)
         }
-        New-AppSourceCopJson -AppFolders $appSourceCopFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -CompilerFolder $compilerFolder -Settings $settings
+        New-AppSourceCopJson -AppFolders $appSourceCopFolders -BaselineApps $baselineApps -BaselinePackageCachePath $packageCachePath -ALToolPath $alToolPath -Settings $settings
     }
 
     # Update the app jsons with version number (and other properties) from the app manifest files
@@ -230,11 +213,13 @@ try {
 
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
-        CompilerFolder              = $compilerFolder
+        ALToolPath                  = $alToolPath
+        BcVersion                   = $bcVersion
+        Country                     = $country
+        TrustMicrosoftNuGetFeeds    = $settings.trustMicrosoftNuGetFeeds
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath
-        AssemblyProbingPaths        = (Get-AssemblyProbingPaths -CompilerFolder $compilerFolder)
         PreprocessorSymbols         = $settings.preprocessorSymbols
         Features                    = $settings.features
         MaxCpuCount                 = $settings.workspaceCompilation.parallelism
@@ -250,7 +235,7 @@ try {
     # per app type which of these actually apply (test/BCPT apps get none when
     # enableCodeAnalyzersOnTestApps is false - both built-in and custom analyzers).
     $allAnalyzers = @(Get-CodeAnalyzers -Settings $settings)
-    $allCustomAnalyzers = @(Get-CustomAnalyzers -Settings $settings -CompilerFolder $compilerFolder)
+    $allCustomAnalyzers = @(Get-CustomAnalyzers -Settings $settings -DownloadFolder (Join-Path $buildArtifactFolder "Analyzers"))
 
     # When AL alert tracking is enabled, direct per-project error logs to the same folder the classic
     # Run-AlPipeline path uses (.buildartifacts/ErrorLogs), so ProcessALCodeAnalysisLogs and the
