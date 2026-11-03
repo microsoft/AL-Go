@@ -587,8 +587,8 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                     if ((Split-Path $WorkspaceFile -Leaf) -ne 'restore.code-workspace') { return }
                     $script:restoreWorkspace = $WorkspaceFile
                     $target = Get-Content (Join-Path $Folders[-1] 'app.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-                    $target.application | Should -Be '29.1.123.0'
-                    $target.platform | Should -Be '29.1.123.0'
+                    $target.application | Should -Be '29.1.0.0'
+                    $target.platform | Should -Be '29.0.0.0'
                     $script:targetDependencies = @($target.dependencies)
                     [IO.Path]::IsPathRooted($Folders[0]) | Should -BeTrue
                 }
@@ -599,7 +599,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 }
             }
 
-            It 'Targets the resolved BC version and country and keeps progress separate from JSON' {
+            It 'Targets the BC minor and platform major without assuming artifact patch numbers match symbols' {
                 Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' -Country 'dk'
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
                     $ArgumentList -contains '--enforceminorversion' -and $ArgumentList -contains 'dk' -and $ArgumentList -contains $TestDrive
@@ -618,7 +618,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 } -ParameterFilter { $LiteralPath -eq (Join-Path 'App' 'app.json') }
                 Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0'
                 $script:targetDependencies.Count | Should -Be 1
-                $script:targetDependencies[0].version | Should -Be '29.1.123.0'
+                $script:targetDependencies[0].version | Should -Be '29.1.0.0'
             }
 
             It 'Rejects a tool without restore capability even if help exits successfully' {
@@ -1465,7 +1465,6 @@ exit 1
             New-Item -Path $script:baselinePackageCachePath -ItemType Directory -Force | Out-Null
 
             # Mock the AL tool to return manifest info from previous apps (matching app ID)
-            
             Mock RunAndCheck {
                 return '{"Id":"11111111-1111-1111-1111-111111111111","Publisher":"Contoso","Name":"MyApp","Version":"1.0.0.0"}'
             } -ModuleName CompileFromWorkspace

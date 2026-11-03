@@ -356,8 +356,8 @@ function Build-AppsInWorkspace {
 .SYNOPSIS
     Restores workspace symbols from public NuGet feeds without downloading BC artifacts.
 .DESCRIPTION
-    Adds a restore-only project to request platform/application symbols for the resolved BC
-    version, rather than only the minimum versions in the source manifests. Source manifests
+    Adds a restore-only project to request application symbols for the resolved BC minor
+    and platform symbols for its major. Artifact patch numbers are not symbol package versions. Source manifests
     are not changed. Download failures are terminating; there is no artifact fallback.
 .PARAMETER ALToolPath
     The selected ALTool executable. It must support workspace restore.
@@ -390,6 +390,8 @@ function Restore-WorkspacePackages {
     $restoreFolder = Join-Path ([System.IO.Path]::GetTempPath()) "al-go-restore-$([Guid]::NewGuid().ToString('N'))"
     New-Item -Path $restoreFolder -ItemType Directory -Force | Out-Null
     try {
+        $symbolVersion = "$($BcVersion.Major).$($BcVersion.Minor).0.0"
+        $platformVersion = "$($BcVersion.Major).0.0.0"
         $bcDependencies = @{}
         foreach ($folder in $Folders) {
             $manifest = Get-Content -LiteralPath (Join-Path $folder "app.json") -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
@@ -403,7 +405,7 @@ function Restore-WorkspacePackages {
                         id = $dependency.id
                         name = $dependency.name
                         publisher = $dependency.publisher
-                        version = "$BcVersion"
+                        version = $symbolVersion
                     }
                 }
             }
@@ -413,8 +415,8 @@ function Restore-WorkspacePackages {
             name = "AL-Go restore target"
             publisher = "AL-Go"
             version = "1.0.0.0"
-            platform = "$BcVersion"
-            application = "$BcVersion"
+            platform = $platformVersion
+            application = $symbolVersion
             dependencies = @($bcDependencies.Values)
         } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $restoreFolder "app.json") -Encoding UTF8
         $workspaceFile = Join-Path $restoreFolder "restore.code-workspace"
@@ -427,7 +429,7 @@ function Restore-WorkspacePackages {
         if (-not $TrustMicrosoftNuGetFeeds) {
             $arguments += "--useonlycustomfeeds"
         }
-        Write-Host "Restoring workspace symbols for Business Central $BcVersion ($Country) from NuGet."
+        Write-Host "Restoring workspace symbols for Business Central $($BcVersion.Major).$($BcVersion.Minor) ($Country) from NuGet; artifact patch $BcVersion is not a symbol package version."
         $result = Invoke-AlNativeCommand -FilePath $ALToolPath -ArgumentList $arguments
         $result.StandardError | ForEach-Object { Write-Host $_ }
         if ($result.ExitCode -ne 0) {
