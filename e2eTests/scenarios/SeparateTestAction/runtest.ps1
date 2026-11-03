@@ -16,6 +16,26 @@ Param(
     [string] $githubPackagesToken = ($global:SecureGitHubPackagesToken | Get-PlainText)
 )
 
+Write-Host -ForegroundColor Yellow @'
+#  ____                              _       _____         _        _        _   _
+# / ___|  ___ _ __   __ _ _ __ __ _| |_ ___|_   _|__  ___| |_     / \   ___| |_(_) ___  _ __
+# \___ \ / _ \ '_ \ / _` | '__/ _` | __/ _ \ | |/ _ \/ __| __|   / _ \ / __| __| |/ _ \| '_ \
+#  ___) |  __/ |_) | (_| | | | (_| | ||  __/ | |  __/\__ \ |_   / ___ \ (__| |_| | (_) | | | |
+# |____/ \___| .__/ \__,_|_|  \__,_|\__\___| |_|\___||___/\__| /_/   \_\___|\__|_|\___/|_| |_|
+#            |_|
+#
+# This test tests the following scenario:
+#
+#  - Create a new repository based on the PTE template with an app and a test app
+#    - Enable useSeparateTestAction
+#    - Add a test codeunit with one test
+#  - Run the "CI/CD" workflow
+#  - Verify that RunPipeline skips test execution and the RunTests action runs the test app
+#  - Verify the app, test app, and test result artifacts
+#  - Cleanup repositories
+#
+'@
+
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 if ($linux) {
