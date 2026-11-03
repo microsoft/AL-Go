@@ -483,7 +483,7 @@
                 "testType": {
                     "type": "string",
                     "default": "",
-                    "description": "Optional test type for the separate RunTests action. The built-in AlTool runner supports UnitTest, IntegrationTest, and Uncategorized; blank runs all test types. Custom RunTestsInBcContainer overrides may interpret other values such as Legacy."
+                    "description": "Reserved test type for the separate RunTests action. The built-in listtests discovery path does not apply TestType filtering; a nonblank value emits a warning and all subtype-Test codeunits are discovered. A custom RunTestsInBcContainer override receives the configured value."
                 }
             },
             "additionalProperties": false

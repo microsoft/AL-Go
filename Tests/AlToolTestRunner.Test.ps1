@@ -16,17 +16,6 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         $script:stubbedGlobalCommands = @()
         $stubDefinitions = @{
             'ConvertTo-HashTable'               = ${function:ConvertTo-HashTable}
-            'Get-TestsFromBcContainer'          = {
-                param(
-                    [string] $containerName,
-                    [string] $tenant,
-                    [System.Management.Automation.PSCredential] $credential,
-                    [string] $extensionId,
-                    [string] $testType,
-                    [switch] $ignoreGroups
-                )
-                throw 'Get-TestsFromBcContainer must be mocked by the test.'
-            }
             'Get-BcContainerServerConfiguration' = {
                 param([string] $containerName)
                 throw 'Get-BcContainerServerConfiguration must be mocked by the test.'
@@ -66,7 +55,14 @@ Describe 'AlToolTestRunner.psm1 Tests' {
     Context 'Module exports' {
         It 'Exports only the RunTests integration functions' {
             @(Get-Command -Module AlToolTestRunner).Name | Sort-Object |
-                Should -Be @('Invoke-AlToolTestRun')
+                Should -Be @('Get-AlToolAppTests', 'Invoke-AlToolTestRun')
+        }
+
+        It 'Contains no BcContainerHelper test discovery call' {
+            $moduleContent = Get-Content -LiteralPath (
+                Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve
+            ) -Raw -Encoding UTF8
+            $moduleContent | Should -Not -Match '\bGet-TestsFromBcContainer\b'
         }
     }
 
@@ -96,31 +92,158 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
     }
 
+    Context 'Get-AlToolAppTests' {
+        InModuleScope AlToolTestRunner {
+        BeforeEach {
+            $script:discoveryAppFile = Join-Path $TestDrive 'Test.app'
+            Set-Content -LiteralPath $script:discoveryAppFile -Value 'package' -Encoding ASCII
+        }
+
+        It 'Invokes exact package discovery and preserves data-driven metadata in deterministic order' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                $stdout = @{
+                    appId       = '11111111-1111-1111-1111-111111111111'
+                    appName     = 'Test App'
+                    appPublisher = 'Publisher'
+                    appVersion  = '1.2.3.4'
+                    codeunits   = @(
+                        @{
+                            id = 130002; name = 'Second'; namespace = 'Tests'
+                            methods = @(
+                                @{ name = 'Zulu'; isDataDriven = $false },
+                                @{ name = 'Alpha'; isDataDriven = $true }
+                            )
+                        },
+                        @{
+                            id = 130001; name = 'First'; namespace = ''
+                            methods = @(@{ name = 'Only'; isDataDriven = $false })
+                        }
+                    )
+                } | ConvertTo-Json -Depth 7 -Compress
+                [PSCustomObject]@{
+                    StandardOutput = [string[]]@($stdout)
+                    StandardError  = [string[]]@()
+                    Output         = [string[]]@($stdout)
+                    ExitCode       = 0
+                }
+            }
+
+            $result = Get-AlToolAppTests -AlToolPath 'C:\tools\al.exe' -AppFile $script:discoveryAppFile
+
+            $result.AppId | Should -Be '11111111-1111-1111-1111-111111111111'
+            $result.AppName | Should -Be 'Test App'
+            @($result.Codeunits.Id) | Should -Be @(130001, 130002)
+            @($result.Codeunits[1].Methods.Name) | Should -Be @('Alpha', 'Zulu')
+            $result.Codeunits[1].Methods[0].IsDataDriven | Should -BeTrue
+            Should -Invoke -ModuleName AlToolTestRunner Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
+                $FilePath -eq 'C:\tools\al.exe' -and
+                $ArgumentList.Count -eq 3 -and
+                $ArgumentList[0] -eq 'listtests' -and
+                $ArgumentList[1] -eq '--appfile' -and
+                $ArgumentList[2] -eq [System.IO.Path]::GetFullPath($script:discoveryAppFile)
+            }
+        }
+
+        It 'Accepts a successful package with no tests' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                $stdout = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1.0.0.0","codeunits":[]}'
+                [PSCustomObject]@{
+                    StandardOutput = [string[]]@($stdout)
+                    StandardError  = [string[]]@()
+                    Output         = [string[]]@($stdout)
+                    ExitCode       = 0
+                }
+            }
+
+            $result = Get-AlToolAppTests -AlToolPath 'C:\tools\al.exe' -AppFile $script:discoveryAppFile
+            @($result.Codeunits).Count | Should -Be 0
+        }
+
+        It 'Rejects malformed discovery contracts' -TestCases @(
+            @{ Json = ''; Expected = '*empty stdout*' },
+            @{ Json = '{invalid'; Expected = '*invalid output*' },
+            @{ Json = '[]'; Expected = '*invalid output*appId*' },
+            @{ Json = '{"appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[]}'; Expected = '*invalid output*appId*' },
+            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":{}}'; Expected = '*invalid output*id*' },
+            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":0,"name":"Tests","namespace":"","methods":[]}]}'; Expected = '*positive Int32 value*' },
+            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[]},{"id":1,"name":"Other","namespace":"","methods":[]}]}'; Expected = "*Codeunit ID '1' is duplicated*" },
+            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[{"name":"Same","isDataDriven":false},{"name":"same","isDataDriven":true}]}]}'; Expected = "*Method 'same' is duplicated*" },
+            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[{"name":"Test"}]}]}'; Expected = '*invalid output*isDataDriven*' }
+        ) {
+            param($Json, $Expected)
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                [PSCustomObject]@{
+                    StandardOutput = if ($Json) { [string[]]@($Json) } else { [string[]]@() }
+                    StandardError  = [string[]]@()
+                    Output         = if ($Json) { [string[]]@($Json) } else { [string[]]@() }
+                    ExitCode       = 0
+                }
+            }
+
+            { Get-AlToolAppTests -AlToolPath 'C:\tools\al.exe' -AppFile $script:discoveryAppFile } |
+                Should -Throw $Expected
+        }
+
+        It 'Reports native failure diagnostics' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                [PSCustomObject]@{
+                    StandardOutput = [string[]]@('partial stdout')
+                    StandardError  = [string[]]@('package failure')
+                    Output         = [string[]]@('partial stdout', 'package failure')
+                    ExitCode       = 17
+                }
+            }
+
+            { Get-AlToolAppTests -AlToolPath 'C:\tools\al.exe' -AppFile $script:discoveryAppFile } |
+                Should -Throw '*test discovery failed with exit code 17*stdout: partial stdout*stderr: package failure*'
+        }
+
+        It 'Reports empty native output streams' {
+            Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
+                [PSCustomObject]@{
+                    StandardOutput = [string[]]@()
+                    StandardError  = [string[]]@()
+                    Output         = [string[]]@()
+                    ExitCode       = 17
+                }
+            }
+
+            { Get-AlToolAppTests -AlToolPath 'C:\tools\al.exe' -AppFile $script:discoveryAppFile } |
+                Should -Throw '*test discovery failed with exit code 17*stdout: <empty>*stderr: <empty>*'
+        }
+        }
+    }
+
     Context 'Get-AlToolTestCodeunits' {
         InModuleScope AlToolTestRunner {
         It 'Enumerates codeunits and filters disabled methods and whole codeunits' {
-            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
-                @(
-                    [PSCustomObject]@{ Id = '130001'; Name = 'My Tests'; Tests = @('TestOne', 'TestTwo') },
-                    [PSCustomObject]@{ Id = '130002'; Name = 'Whole CU'; Tests = @('X', 'Y') }
-                )
-            }
-            $testCodeunitParams = @{
-                ContainerName = 'test'
-                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
-                ExtensionId   = [Guid]::NewGuid().ToString()
-                DisabledTests = @(
+            $discovered = @(
+                [PSCustomObject]@{
+                    Id = 130001; Name = 'My Tests'; Namespace = 'Tests'
+                    Methods = @(
+                        [PSCustomObject]@{ Name = 'TestOne'; IsDataDriven = $true },
+                        [PSCustomObject]@{ Name = 'TestTwo'; IsDataDriven = $false }
+                    )
+                },
+                [PSCustomObject]@{
+                    Id = 130002; Name = 'Whole CU'; Namespace = ''
+                    Methods = @(
+                        [PSCustomObject]@{ Name = 'X'; IsDataDriven = $false },
+                        [PSCustomObject]@{ Name = 'Y'; IsDataDriven = $false }
+                    )
+                }
+            )
+
+            $codeunits = @(Get-AlToolTestCodeunits -DiscoveredCodeunits $discovered -DisabledTests @(
                     @{ codeunitName = 'My Tests'; method = 'TestTwo' },
                     @{ codeunitName = 'Whole CU'; method = '*' }
-                )
-            }
-
-            $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
+                ))
 
             $codeunits.Count | Should -Be 1
             $codeunits[0].Name | Should -Be 'My Tests'
             @($codeunits[0].Tests).Count | Should -Be 1
             $codeunits[0].Tests[0] | Should -Be 'TestOne'
+            $codeunits[0].Methods[0].IsDataDriven | Should -BeTrue
 
             $groupsPath = InModuleScope AlToolTestRunner -Parameters @{ Codeunits = $codeunits } {
                 New-AlTestGroupsFile -Codeunits $Codeunits
@@ -137,28 +260,28 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
 
         It 'Filters the production hashtable shape case-insensitively while preserving enabled order' {
-            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
-                @(
-                    [PSCustomObject]@{
-                        Id = 130001; Name = 'My Tests'; Tests = @('TestOne', 'TestTwo', 'TestThree', 'TestFour')
-                    },
-                    [PSCustomObject]@{ Id = 130002; Name = 'Whole CU'; Tests = @('X', 'Y') },
-                    [PSCustomObject]@{ Id = 130003; Name = 'Other Tests'; Tests = @('First', 'Second') }
-                )
-            }
-            $testCodeunitParams = @{
-                ContainerName = 'test'
-                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
-                ExtensionId   = [Guid]::NewGuid().ToString()
-                DisabledTests = @(
+            $discovered = @(
+                [PSCustomObject]@{
+                    Id = 130001; Name = 'My Tests'; Namespace = ''
+                    Methods = @('TestOne', 'TestTwo', 'TestThree', 'TestFour') |
+                        ForEach-Object { [PSCustomObject]@{ Name = $_; IsDataDriven = $false } }
+                },
+                [PSCustomObject]@{
+                    Id = 130002; Name = 'Whole CU'; Namespace = ''
+                    Methods = @('X', 'Y') | ForEach-Object { [PSCustomObject]@{ Name = $_; IsDataDriven = $false } }
+                },
+                [PSCustomObject]@{
+                    Id = 130003; Name = 'Other Tests'; Namespace = ''
+                    Methods = @('First', 'Second') | ForEach-Object { [PSCustomObject]@{ Name = $_; IsDataDriven = $false } }
+                }
+            )
+
+            $codeunits = @(Get-AlToolTestCodeunits -DiscoveredCodeunits $discovered -DisabledTests @(
                     @{ codeunitName = 'MY TESTS'; method = 'testtwo' },
                     @{ codeunitName = 'my tests'; method = @('TESTTHREE') },
                     @{ codeunitName = 'My Tests'; method = 'TestTwo' },
                     @{ codeunitName = 'whole cu'; method = '*' }
-                )
-            }
-
-            $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
+                ))
 
             $codeunits.Count | Should -Be 2
             @($codeunits.Name) | Should -Be @('My Tests', 'Other Tests')
@@ -166,57 +289,17 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             @($codeunits[1].Tests) | Should -Be @('First', 'Second')
         }
 
-        It 'Omits testType when blank and returns every codeunit' {
-            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
-                @([PSCustomObject]@{ Id = 130001; Name = 'My Tests'; Tests = @('TestOne') })
-            }
-            $testCodeunitParams = @{
-                ContainerName = 'test'
-                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
-                ExtensionId   = [Guid]::NewGuid().ToString()
-                TestType      = ''
-            }
+        It 'Omits codeunits with no enabled methods' {
+            $discovered = @(
+                [PSCustomObject]@{
+                    Id = 130001; Name = 'My Tests'; Namespace = ''
+                    Methods = @([PSCustomObject]@{ Name = 'OnlyTest'; IsDataDriven = $false })
+                }
+            )
 
-            $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
-            $codeunits.Count | Should -Be 1
-            Should -Invoke -ModuleName AlToolTestRunner Get-TestsFromBcContainer -Times 1 -Exactly -ParameterFilter {
-                -not $PSBoundParameters.ContainsKey('testType')
-            }
-        }
-
-        It 'Passes a supported testType to BcContainerHelper' {
-            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
-                @([PSCustomObject]@{ Id = 130001; Name = 'Integration Tests'; Tests = @('TestOne') })
-            }
-            $testCodeunitParams = @{
-                ContainerName = 'test'
-                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
-                ExtensionId   = [Guid]::NewGuid().ToString()
-                TestType      = 'IntegrationTest'
-            }
-
-            $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
-
-            $codeunits.Count | Should -Be 1
-            Should -Invoke -ModuleName AlToolTestRunner Get-TestsFromBcContainer -Times 1 -Exactly -ParameterFilter {
-                $testType -eq 'IntegrationTest'
-            }
-        }
-
-        It 'Rejects an unsupported built-in testType before calling BcContainerHelper' {
-            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
-                throw 'BcContainerHelper should not be called'
-            }
-            $testCodeunitParams = @{
-                ContainerName = 'test'
-                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
-                ExtensionId   = [Guid]::NewGuid().ToString()
-                TestType      = 'Legacy'
-            }
-
-            { Get-AlToolTestCodeunits @testCodeunitParams } |
-                Should -Throw "*Unsupported testType 'Legacy'*UnitTest*IntegrationTest*Uncategorized*"
-            Should -Invoke -ModuleName AlToolTestRunner Get-TestsFromBcContainer -Times 0 -Exactly
+            @(Get-AlToolTestCodeunits -DiscoveredCodeunits $discovered -DisabledTests @(
+                    @{ codeunitName = 'My Tests'; method = 'OnlyTest' }
+                )).Count | Should -Be 0
         }
         }
     }
@@ -763,7 +846,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             $command = Get-Command Invoke-AlToolTestRun
 
             $command.Parameters.ContainsKey('Parameters') | Should -BeFalse
-            foreach ($parameterName in @('ContainerName', 'Credential', 'ExtensionId', 'JUnitResultFileName')) {
+            foreach ($parameterName in @('ContainerName', 'Credential', 'ExtensionId', 'Codeunits', 'JUnitResultFileName')) {
                 $parameterAttribute = $command.Parameters[$parameterName].Attributes |
                     Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } |
                     Select-Object -First 1
@@ -771,6 +854,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             }
             $command.Parameters.DisabledTests.ParameterType | Should -Be ([hashtable[]])
             $command.Parameters.TestType.ParameterType | Should -Be ([string])
+            $command.Parameters.Codeunits.ParameterType | Should -Be ([object[]])
             $command.Parameters.AlToolPath.ParameterType | Should -Be ([string])
         }
 
@@ -786,6 +870,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 ContainerName       = "-ContainerName 'test'"
                 Credential          = '-Credential $credential'
                 ExtensionId         = "-ExtensionId '$($script:requiredParameterExtensionId)'"
+                Codeunits           = '-Codeunits @()'
                 JUnitResultFileName = "-JUnitResultFileName '$($script:requiredParameterResultFile)'"
             }
             $null = $parameterExpressions.Remove($ParameterName)
@@ -824,7 +909,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
 
             {
                 Invoke-AlToolTestRun -ContainerName 'test' -Credential $script:requiredParameterCredential `
-                    -ExtensionId $script:requiredParameterExtensionId -JUnitResultFileName $Value
+                    -ExtensionId $script:requiredParameterExtensionId -Codeunits @() -JUnitResultFileName $Value
             } | Should -Throw
         }
     }
@@ -840,14 +925,18 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 Credential          = $script:testRunCredential
                 ExtensionId         = [Guid]::NewGuid().ToString()
                 AppName             = 'Test App'
+                Codeunits           = @()
                 AlToolPath          = Join-Path $TestDrive 'al'
                 JUnitResultFileName = Join-Path $TestDrive 'TestResults.xml'
             }
             $script:testRunCodeunit = [PSCustomObject]@{
                 Id    = 130001
                 Name  = 'My Tests'
+                Namespace = 'Tests'
+                Methods = @([PSCustomObject]@{ Name = 'TestOne'; IsDataDriven = $false })
                 Tests = @('TestOne')
             }
+            $script:testRunParameters.Codeunits = @($script:testRunCodeunit)
             Remove-Item -LiteralPath (Join-Path $TestDrive 'TestResults.xml') -Force -ErrorAction SilentlyContinue
 
             Mock -ModuleName AlToolTestRunner Get-AlToolConnection {
@@ -917,8 +1006,12 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
         }
 
         It 'Runs all codeunits for an app in exactly one batch' {
-            $script:testRunParameters.TestType = 'UnitTest'
-            $secondCodeunit = [PSCustomObject]@{ Id = 130002; Name = 'Other Tests'; Tests = @('TestTwo') }
+            $secondCodeunit = [PSCustomObject]@{
+                Id = 130002; Name = 'Other Tests'; Namespace = 'Tests'
+                Methods = @([PSCustomObject]@{ Name = 'TestTwo'; IsDataDriven = $false })
+                Tests = @('TestTwo')
+            }
+            $script:testRunParameters.Codeunits = @($script:testRunCodeunit, $secondCodeunit)
             Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits {
                 return @($script:testRunCodeunit, $secondCodeunit)
             }
@@ -936,11 +1029,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
 
             Should -Invoke -ModuleName AlToolTestRunner Get-AlToolTestCodeunits -Times 1 -Exactly -ParameterFilter {
-                $ContainerName -eq 'test' -and
-                $Credential.UserName -eq 'admin' -and
-                $ExtensionId -eq $script:testRunParameters.ExtensionId -and
-                $Tenant -eq 'default' -and
-                $TestType -eq 'UnitTest' -and
+                $DiscoveredCodeunits.Count -eq 2 -and
                 $DisabledTests.Count -eq 0
             }
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 1 -Exactly -ParameterFilter {
