@@ -233,8 +233,8 @@ function Install-TemporaryAlTool {
 
     Write-Host "::Warning::Using the temporary BC 30 workspace-restore branch build instead of the BC-selected published compiler."
     $archive = Join-Path $ToolDirectory "altool.zip"
-    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/Aholstrup1-PersonalOrg/bcsamples-bingmaps.appsource/releases/download/workspace-restore-preview/altool-workspace-restore.zip" -OutFile $archive
-    if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '88B61BCDF2B8B3D8A41D51371C2BB5ECF8EEE4568AE2BE9D14064DADEE25C526') {
+    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/Aholstrup1-PersonalOrg/bcsamples-bingmaps.appsource/releases/download/workspace-restore-preview/altool-workspace-restore-v2.zip" -OutFile $archive
+    if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '7488028EFDC14546B143C1AD4C7E831CD941B66DDEE9BE1DA1EB3D2CE5057D78') {
         throw "The temporary ALTool download does not match the approved branch-build bundle."
     }
     Expand-Archive -LiteralPath $archive -DestinationPath $ToolDirectory -Force

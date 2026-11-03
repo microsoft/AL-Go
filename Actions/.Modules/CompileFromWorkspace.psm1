@@ -390,6 +390,24 @@ function Restore-WorkspacePackages {
     $restoreFolder = Join-Path ([System.IO.Path]::GetTempPath()) "al-go-restore-$([Guid]::NewGuid().ToString('N'))"
     New-Item -Path $restoreFolder -ItemType Directory -Force | Out-Null
     try {
+        $bcDependencies = @{}
+        foreach ($folder in $Folders) {
+            $manifest = Get-Content -LiteralPath (Join-Path $folder "app.json") -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $dependencies = if ($manifest.ContainsKey('dependencies')) { $manifest.dependencies } else { @() }
+            foreach ($dependency in $dependencies) {
+                if ($dependency.id -in $testRunnerApps) {
+                    if ([version]$dependency.version -gt $BcVersion) {
+                        throw "Dependency '$($dependency.name)' requires BC $($dependency.version), newer than the selected BC $BcVersion."
+                    }
+                    $bcDependencies[$dependency.id] = @{
+                        id = $dependency.id
+                        name = $dependency.name
+                        publisher = $dependency.publisher
+                        version = "$BcVersion"
+                    }
+                }
+            }
+        }
         @{
             id = [Guid]::NewGuid().ToString()
             name = "AL-Go restore target"
@@ -397,6 +415,7 @@ function Restore-WorkspacePackages {
             version = "1.0.0.0"
             platform = "$BcVersion"
             application = "$BcVersion"
+            dependencies = @($bcDependencies.Values)
         } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $restoreFolder "app.json") -Encoding UTF8
         $workspaceFile = Join-Path $restoreFolder "restore.code-workspace"
         $restoreFolders = @($Folders | ForEach-Object {

@@ -565,6 +565,8 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         InModuleScope CompileFromWorkspace {
             BeforeEach {
                 $script:restoreWorkspace = ''
+                $script:targetDependencies = @()
+                Mock Get-Content { '{"dependencies":[]}' } -ParameterFilter { $LiteralPath -eq (Join-Path 'App' 'app.json') }
                 Mock New-WorkspaceFromFolders {
                     param($Folders, $WorkspaceFile)
                     if ((Split-Path $WorkspaceFile -Leaf) -ne 'restore.code-workspace') { return }
@@ -572,6 +574,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                     $target = Get-Content (Join-Path $Folders[-1] 'app.json') -Raw -Encoding UTF8 | ConvertFrom-Json
                     $target.application | Should -Be '29.1.123.0'
                     $target.platform | Should -Be '29.1.123.0'
+                    $script:targetDependencies = @($target.dependencies)
                     [IO.Path]::IsPathRooted($Folders[0]) | Should -BeTrue
                 }
                 Mock Invoke-AlNativeCommand {
@@ -592,6 +595,15 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             It 'Does not enable Microsoft feeds when they are not trusted' {
                 Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' -TrustMicrosoftNuGetFeeds $false
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '--useonlycustomfeeds' }
+            }
+
+            It 'Targets known BC test libraries without retargeting third-party dependencies' {
+                Mock Get-Content {
+                    '{"dependencies":[{"id":"dd0be2ea-f733-4d65-bb34-a28f4624fb14","name":"Library Assert","publisher":"Microsoft","version":"20.0.0.0"},{"id":"11111111-1111-1111-1111-111111111111","name":"Other","publisher":"Partner","version":"1.0.0.0"}]}'
+                } -ParameterFilter { $LiteralPath -eq (Join-Path 'App' 'app.json') }
+                Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0'
+                $script:targetDependencies.Count | Should -Be 1
+                $script:targetDependencies[0].version | Should -Be '29.1.123.0'
             }
 
             It 'Rejects a tool without restore capability even if help exits successfully' {

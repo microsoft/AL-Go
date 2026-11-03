@@ -64,6 +64,9 @@ try {
     if ($settings.vsixFile -or $scriptOverrides['PreNewBcCompilerFolder'] -or $scriptOverrides['PostNewBcCompilerFolder']) {
         throw "Workspace compilation uses the BC-version-selected ALTool NuGet package, not vsixFile or compiler-folder hooks. Disable workspaceCompilation to use these overrides."
     }
+    if ($settings.nuGetFeedSelectMode -ne 'LatestMatching') {
+        throw "Workspace compilation restores public symbols using the BC target and manifest minimums; nuGetFeedSelectMode overrides are not supported. Disable workspaceCompilation to use this setting."
+    }
 
     # Prepare build metadata
     $buildMetadata = Get-BuildMetadata
