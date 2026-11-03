@@ -172,6 +172,9 @@ function GetAlToolPath {
     }
 
     if (-not [string]::IsNullOrWhiteSpace($env:AlToolPath)) {
+        if ($env:ALGoAlToolMajor -and $env:ALGoAlToolMajor -ne '0') {
+            throw "The ALTool selected for this job no longer exists at '$env:AlToolPath'. Refusing to select a different compiler for testing."
+        }
         Remove-Item Env:\AlToolPath -ErrorAction SilentlyContinue
     }
 

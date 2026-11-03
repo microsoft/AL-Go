@@ -45,6 +45,7 @@ Describe 'AlToolHelper.psm1 Tests' {
                 $script:previousPath = $env:PATH
 
                 Remove-Item Env:\AlToolPath -ErrorAction SilentlyContinue
+                Remove-Item Env:\ALGoAlToolMajor -ErrorAction SilentlyContinue
                 $env:GITHUB_ENV = Join-Path $TestDrive "$([Guid]::NewGuid()).env"
                 $env:RUNNER_TEMP = Join-Path $TestDrive 'runner-temp'
                 $env:GITHUB_REPOSITORY_ID = '67890'
@@ -118,6 +119,13 @@ Describe 'AlToolHelper.psm1 Tests' {
 
             It 'Rejects unsupported BC versions instead of selecting the latest compiler' {
                 { GetAlToolPath -BcVersion '27.0' } | Should -Throw '*28 or later*'
+            }
+
+            It 'Does not install a different tool for testing if the selected compiler disappears' {
+                $env:AlToolPath = Join-Path $TestDrive 'missing-selected-tool'
+                $env:ALGoAlToolMajor = '18'
+                { GetAlToolPath } | Should -Throw '*Refusing to select a different compiler*'
+                Should -Invoke Invoke-AlNativeCommand -Times 0 -Exactly
             }
 
             It 'Rejects a different release family in a job that already selected a tool' {
