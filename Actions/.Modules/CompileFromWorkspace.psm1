@@ -901,6 +901,56 @@ function New-WorkspaceFromFolders {
 
 <#
 .SYNOPSIS
+    Prepares manifest requirements for Test Next Major and Test Next Minor compilation.
+.DESCRIPTION
+    Only these compatibility workflows retarget existing application, platform and Microsoft
+    dependency versions to the selected BC Major.Minor.0.0. Other workflows are unchanged.
+    The caller must restore OriginalManifests in a finally block after compilation.
+.PARAMETER Folders
+    App, test and BCPT source folders to prepare.
+.PARAMETER BcVersion
+    Resolved artifact version. Build and revision are never used as dependency minimums.
+.PARAMETER WorkflowName
+    Calling workflow name, not the artifact selector.
+.PARAMETER OriginalManifests
+    Receives original file bytes before each write, including when a later write fails.
+#>
+function Update-CompatibilityAppJsonProperties {
+    param(
+        [Parameter(Mandatory = $true)][string[]] $Folders,
+        [Parameter(Mandatory = $true)][version] $BcVersion,
+        [string] $WorkflowName = "$env:GITHUB_WORKFLOW",
+        [Parameter(Mandatory = $true)][hashtable] $OriginalManifests
+    )
+
+    if ($WorkflowName.Trim() -notin @('Test Next Major', 'Test Next Minor')) {
+        return
+    }
+
+    $minimumVersion = "$($BcVersion.Major).$($BcVersion.Minor).0.0"
+    Write-Host "Preparing $($WorkflowName.Trim()) manifest requirements: $minimumVersion."
+    foreach ($folder in $Folders) {
+        $manifestPath = (Get-Item -LiteralPath (Join-Path $folder 'app.json')).FullName
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        foreach ($property in @('application', 'platform')) {
+            if ($manifest.ContainsKey($property)) {
+                $manifest[$property] = $minimumVersion
+            }
+        }
+        if ($manifest.ContainsKey('dependencies')) {
+            foreach ($dependency in $manifest.dependencies) {
+                if ($dependency.ContainsKey('publisher') -and $dependency.publisher -eq 'Microsoft') {
+                    $dependency.version = $minimumVersion
+                }
+            }
+        }
+        $OriginalManifests[$manifestPath] = [System.IO.File]::ReadAllBytes($manifestPath)
+        $manifest | ConvertTo-Json -Depth 99 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+    }
+}
+
+<#
+.SYNOPSIS
     Updates the version property in app.json files within the specified folders.
 .DESCRIPTION
     Finds all app.json files in the given folders and updates their version property based on the provided major/minor version, build number, and revision number. If only the revision number is provided, it will update just the revision part of the existing version.
@@ -1166,5 +1216,6 @@ Export-ModuleMember -Function Get-CustomAnalyzers
 Export-ModuleMember -Function Get-AnalyzersForAppType
 Export-ModuleMember -Function Get-AssemblyProbingPaths
 Export-ModuleMember -Function Update-AppJsonProperties
+Export-ModuleMember -Function Update-CompatibilityAppJsonProperties
 Export-ModuleMember -Function New-AppSourceCopJson
 Export-ModuleMember -Function Test-BaselineAppDownloaded

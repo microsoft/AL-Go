@@ -42,6 +42,7 @@ if ($settings.appFolders.Count -eq 0 -and $settings.testFolders.Count -eq 0 -and
 }
 
 $projectFolder = Join-Path $baseFolder $project
+$compatibilityManifests = @{}
 Push-Location $projectFolder
 try {
     # Set up output folders
@@ -214,6 +215,9 @@ try {
         -MajorMinorVersion $versionNumber.MajorMinorVersion -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber `
         -BuildBy $buildMetadata.BuildBy -BuildUrl $buildMetadata.BuildUrl
 
+    Update-CompatibilityAppJsonProperties -Folders ($settings.appFolders + $settings.testFolders + $settings.bcptTestFolders) `
+        -BcVersion $bcVersion -OriginalManifests $compatibilityManifests
+
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
         ALToolPath                  = $alToolPath
@@ -308,5 +312,12 @@ try {
         -baselineWorkflowRunId $baselineWorkflowRunId `
         -prBuildOutputFile (Join-Path $projectFolder "BuildOutput.txt")
 } finally {
-    Pop-Location
+    try {
+        foreach ($manifestPath in $compatibilityManifests.Keys) {
+            [System.IO.File]::WriteAllBytes($manifestPath, $compatibilityManifests[$manifestPath])
+        }
+    }
+    finally {
+        Pop-Location
+    }
 }

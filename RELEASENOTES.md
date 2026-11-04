@@ -6,6 +6,8 @@ This changes the existing preview: `vsixFile` and compiler-folder hooks are reje
 
 Non-default `nuGetFeedSelectMode` values are rejected rather than ignored. Symbol version selection follows ALTool's default resolution of app.json requirements, independently of the BC version used to select the compiler. Reusing the selected executable does not add commands absent from that tool release: for example, published tool 17 does not support the separate action's `runtests` command.
 
+Only **Test Next Major** and **Test Next Minor** prepare compatibility requirements before workspace compilation: existing `application`, `platform`, and every dependency with publisher `Microsoft` are temporarily set to the resolved artifact's **Major.Minor.0.0**, never its build or revision. Third-party dependencies and omitted properties are untouched. The action restores the pre-preparation manifest bytes when it finishes, including on failure. CI/CD, PR and Test Current builds do not retarget requirements, even when their artifact selector is `nextmajor` or `nextminor`.
+
 ### Separate test execution from RunPipeline (PREVIEW)
 
 A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.

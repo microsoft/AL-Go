@@ -326,6 +326,74 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
     }
 
+    Describe 'Update-CompatibilityAppJsonProperties' {
+        BeforeEach {
+            $script:compatibilityFolder = Join-Path $TestDrive 'compatibility'
+            New-Item $script:compatibilityFolder -ItemType Directory -Force | Out-Null
+            $script:compatibilityManifest = Join-Path $script:compatibilityFolder 'app.json'
+            @{
+                version = '1.2.3.4'
+                application = '20.0.0.0'
+                platform = '20.0.0.0'
+                runtime = '8.0'
+                dependencies = @(
+                    @{ id = '11111111-1111-1111-1111-111111111111'; publisher = 'Microsoft'; name = 'Any Microsoft app'; version = '99.9.9.9' }
+                    @{ id = '22222222-2222-2222-2222-222222222222'; publisher = 'Partner'; name = 'Partner app'; version = '7.8.9.10' }
+                    @{ id = '33333333-3333-3333-3333-333333333333'; publisher = 'Microsoft Other'; name = 'Not Microsoft'; version = '2.0.0.0' }
+                )
+            } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $script:compatibilityManifest -Encoding UTF8
+            $script:originalBytes = [System.IO.File]::ReadAllBytes($script:compatibilityManifest)
+            $script:originalManifests = @{}
+        }
+
+        It 'Uses only Major.Minor.0.0 for <WorkflowName>, including platform and every Microsoft dependency' -TestCases @(
+            @{ WorkflowName = ' Test Next Major'; BcVersion = '30.0.12345.6789'; Expected = '30.0.0.0' }
+            @{ WorkflowName = ' Test Next Minor '; BcVersion = '29.1.54321.9876'; Expected = '29.1.0.0' }
+        ) {
+            param($WorkflowName, $BcVersion, $Expected)
+            Update-CompatibilityAppJsonProperties -Folders @($script:compatibilityFolder) -BcVersion $BcVersion -WorkflowName $WorkflowName -OriginalManifests $script:originalManifests
+            $manifest = Get-Content -LiteralPath $script:compatibilityManifest -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $manifest.application | Should -Be $Expected
+            $manifest.platform | Should -Be $Expected
+            $manifest.dependencies[0].version | Should -Be $Expected
+            $manifest.dependencies[1].version | Should -Be '7.8.9.10'
+            $manifest.dependencies[2].version | Should -Be '2.0.0.0'
+            $manifest.version | Should -Be '1.2.3.4'
+            $manifest.runtime | Should -Be '8.0'
+            $manifest.dependencies.Count | Should -Be 3
+            $script:originalManifests[$script:compatibilityManifest] | Should -Be $script:originalBytes
+        }
+
+        It 'Does not alter <WorkflowName> even with a next-release artifact version' -TestCases @(
+            @{ WorkflowName = ' CI/CD' }
+            @{ WorkflowName = 'Pull Request Handler' }
+            @{ WorkflowName = 'Pull Request Build' }
+            @{ WorkflowName = 'Test Current' }
+            @{ WorkflowName = 'My Test Next Major' }
+            @{ WorkflowName = '' }
+        ) {
+            param($WorkflowName)
+            Update-CompatibilityAppJsonProperties -Folders @($script:compatibilityFolder) -BcVersion '30.0.12345.6789' -WorkflowName $WorkflowName -OriginalManifests $script:originalManifests
+            [System.IO.File]::ReadAllBytes($script:compatibilityManifest) | Should -Be $script:originalBytes
+            $script:originalManifests.Count | Should -Be 0
+        }
+
+        It 'Does not add omitted application, platform or dependencies fields' {
+            '{"version":"1.0.0.0"}' | Set-Content -LiteralPath $script:compatibilityManifest -Encoding UTF8
+            Update-CompatibilityAppJsonProperties -Folders @($script:compatibilityFolder) -BcVersion '30.0.12345.6789' -WorkflowName 'Test Next Major' -OriginalManifests $script:originalManifests
+            $manifest = Get-Content -LiteralPath $script:compatibilityManifest -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $manifest.Keys | Should -Be @('version')
+        }
+
+        It 'Retains original bytes for restoration when a later manifest fails' {
+            $invalidFolder = Join-Path $TestDrive 'invalid-manifest'
+            New-Item $invalidFolder -ItemType Directory -Force | Out-Null
+            Set-Content (Join-Path $invalidFolder 'app.json') -Value '{invalid' -Encoding UTF8
+            { Update-CompatibilityAppJsonProperties -Folders @($script:compatibilityFolder, $invalidFolder) -BcVersion '30.0.12345.6789' -WorkflowName 'Test Next Major' -OriginalManifests $script:originalManifests } | Should -Throw
+            $script:originalManifests[$script:compatibilityManifest] | Should -Be $script:originalBytes
+        }
+    }
+
     Describe 'Update-AppJsonProperties' {
         It 'Only stamps build metadata supported by the manifest runtime <Runtime>' -TestCases @(
             @{ Runtime = '8.0'; ExpectedBuild = $false }

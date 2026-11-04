@@ -689,7 +689,7 @@
         },
         "workspaceCompilation": {
             "type": "object",
-            "description": "PREVIEW: Artifact-free workspace compilation using a BC-release-selected ALTool and public NuGet symbols resolved from app.json requirements without dependency version adjustments. Requires BC 28+ and workspace restore support. vsixFile and compiler-folder hooks are not supported. See https://aka.ms/ALGoSettings#workspacecompilation",
+            "description": "PREVIEW: Artifact-free workspace compilation using a BC-release-selected ALTool and public NuGet symbols from app.json. Only Test Next Major/Minor temporarily retarget existing application, platform and Microsoft dependencies to the artifact Major.Minor.0.0; normal builds never adjust requirements. Requires BC 28+ and workspace restore support. vsixFile and compiler-folder hooks are not supported. See https://aka.ms/ALGoSettings#workspacecompilation",
             "properties": {
                 "enabled": {
                     "type": "boolean",
