@@ -20,6 +20,7 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
 
         It 'Builds draft pull requests by default' {
+            . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
             (GetDefaultSettings).skipDraftPullRequests | Should -BeFalse
             $settingsSchema = $schema | ConvertFrom-Json | ConvertTo-HashTable -recurse
             $settingsSchema.properties.skipDraftPullRequests.type | Should -Be 'boolean'

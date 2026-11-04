@@ -384,7 +384,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build1:'
         $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build2:'
         foreach ($job in $yaml.GetNextLevel('jobs:/')) {
-            if ($Enabled) {
+            if ($Enabled -and $job -ne 'PregateCheck:') {
                 $yaml.GetProperty("jobs:/$job/if:") | Should -Match '^\(github.event_name == ''merge_group'' \|\| github.event.pull_request.draft == false\) && '
             }
             else {

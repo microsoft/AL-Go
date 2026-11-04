@@ -155,7 +155,8 @@ function ModifyPullRequestHandlerWorkflow {
     if ($repoSettings.ContainsKey('skipDraftPullRequests') -and $repoSettings.skipDraftPullRequests) {
         $yaml.Add("on:/$($repoSettings.pullRequestTrigger):/", 'types: [ opened, reopened, synchronize, ready_for_review ]')
         # Only AL-Go jobs are present here; custom jobs are appended afterwards and remain user-managed.
-        foreach ($job in $yaml.GetNextLevel('jobs:/')) {
+        # Preserve fork validation even when draft build jobs are skipped.
+        foreach ($job in $yaml.GetNextLevel('jobs:/') | Where-Object { $_ -ne 'PregateCheck:' }) {
             $condition = $yaml.GetProperty("jobs:/$job/if:")
             $yaml.Replace("jobs:/$job/if:", "if: (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($condition)")
         }

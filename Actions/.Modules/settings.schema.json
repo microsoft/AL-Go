@@ -710,7 +710,7 @@
         "skipDraftPullRequests": {
             "type": "boolean",
             "default": false,
-            "description": "Skip AL-Go's built-in draft PR build jobs in PTE and AppSource Pull Request Build workflows. Custom jobs remain user-managed and are not modified. Supports pull_request and pull_request_target; merge-queue builds are unchanged. Run Update AL-Go System Files after changing this setting. See https://aka.ms/ALGoSettings#skipdraftpullrequests"
+            "description": "Skip AL-Go's built-in draft PR build jobs in PTE and AppSource Pull Request Build workflows. PregateCheck retains its existing fork validation. Custom jobs remain user-managed and are not modified. Supports pull_request and pull_request_target; merge-queue builds are unchanged. Run Update AL-Go System Files after changing this setting. See https://aka.ms/ALGoSettings#skipdraftpullrequests"
         },
         "bcptThresholds": {
             "type": "object",

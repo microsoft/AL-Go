@@ -69,7 +69,7 @@ Describe "Draft pull request builds" {
                 }
                 foreach ($job in $yaml.GetNextLevel('jobs:/')) {
                     $condition = $yaml.GetProperty("jobs:/$job/if:")
-                    if ($enabled) {
+                    if ($enabled -and $job -ne 'PregateCheck:') {
                         $condition | Should -Be "(github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($($originalConditions[$job]))"
                     }
                     else {
