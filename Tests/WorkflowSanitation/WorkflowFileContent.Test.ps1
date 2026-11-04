@@ -35,6 +35,9 @@ Describe "PreGateCheck in PullRequestHandler should use runs-on: windows-latest"
 }
 
 Describe "Draft pull request builds" {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot '..\..\Actions\AL-Go-Helper.ps1')
+    }
     It 'Only skips draft PRs when opted in for <Template> with <Trigger>' -TestCases @(
         @{ Template = 'Per Tenant Extension'; Trigger = 'pull_request' }
         @{ Template = 'AppSource App'; Trigger = 'pull_request' }
@@ -71,7 +74,7 @@ Describe "Draft pull request builds" {
                 foreach ($job in $yaml.GetNextLevel('jobs:/')) {
                     $condition = $yaml.GetProperty("jobs:/$job/if:")
                     if ($enabled) {
-                        $condition | Should -Be "(github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($($originalConditions[$job]))"
+                        (ConvertFrom-Yaml "if: $condition").if | Should -Be "`${{ (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($($originalConditions[$job])) }}"
                     }
                     else {
                         $condition | Should -Be $originalConditions[$job]

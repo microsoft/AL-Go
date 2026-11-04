@@ -386,7 +386,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build2:'
         foreach ($job in $yaml.GetNextLevel('jobs:/')) {
             if ($Enabled) {
-                $yaml.GetProperty("jobs:/$job/if:") | Should -Match '^\(github.event_name == ''merge_group'' \|\| github.event.pull_request.draft == false\) && '
+                (ConvertFrom-Yaml ($yaml.Get("jobs:/$job/if:").content -join "`n")).if | Should -Match '^\$\{\{ \(github.event_name == ''merge_group'' \|\| github.event.pull_request.draft == false\) && '
             }
             else {
                 $yaml.GetProperty("jobs:/$job/if:") | Should -Not -Match 'pull_request\.draft'
@@ -401,6 +401,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
     }
 
     It 'Guards custom jobs from both customization stages and restores them when disabled' {
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
         Mock Trace-Information {}
         $customFile = Join-Path $TestDrive 'custom.yaml'
         @(
@@ -421,8 +422,8 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
         $guard = "(github.event_name == 'merge_group' || github.event.pull_request.draft == false)"
         foreach ($prefix in @('CustomJob', 'CustomJobRepo')) {
-            $yaml.GetProperty("jobs:/${prefix}Standalone:/if:") | Should -Be $guard
-            $yaml.GetProperty("jobs:/${prefix}Always:/if:") | Should -Be "$guard && (always())"
+            (ConvertFrom-Yaml ($yaml.content -join "`n")).jobs."${prefix}Standalone".if | Should -Be "`${{ $guard }}"
+            (ConvertFrom-Yaml ($yaml.content -join "`n")).jobs."${prefix}Always".if | Should -Be "`${{ $guard && (always()) }}"
         }
         $once = $yaml.content -join "`n"
         Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
@@ -430,9 +431,40 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         Set-DraftPullRequestJobGuards -yaml $yaml -enabled $false
         foreach ($prefix in @('CustomJob', 'CustomJobRepo')) {
             $yaml.Get("jobs:/${prefix}Standalone:/if:") | Should -BeNullOrEmpty
-            $yaml.GetProperty("jobs:/${prefix}Always:/if:") | Should -Be 'always()'
+            (ConvertFrom-Yaml ($yaml.content -join "`n")).jobs."${prefix}Always".if | Should -Be '${{ always() }}'
         }
-        $yaml.GetProperty('jobs:/Build:/if:') | Should -Be 'success()'
+        (ConvertFrom-Yaml ($yaml.content -join "`n")).jobs.Build.if | Should -Be '${{ success() }}'
+    }
+
+    It 'Preserves <Case> custom-job conditions when toggling draft skipping' -TestCases @(
+        @{ Case = 'single quoted false'; Scalar = "'false'"; Expected = 'false' }
+        @{ Case = 'double quoted false'; Scalar = '"false"'; Expected = 'false' }
+        @{ Case = 'Boolean false'; Scalar = 'false'; Expected = 'false' }
+        @{ Case = 'folded'; Scalar = ">-`n      always() &&`n      !cancelled()"; Expected = 'always() && !cancelled()' }
+        @{ Case = 'literal'; Scalar = "|-`n      always() &&`n      !cancelled()"; Expected = "always() &&`n!cancelled()" }
+        @{ Case = 'multiline quoted'; Scalar = "'always() &&`n      !cancelled()'"; Expected = 'always() && !cancelled()' }
+        @{ Case = 'commented'; Scalar = 'always() # keep running'; Expected = 'always()' }
+        @{ Case = 'wrapped negation'; Scalar = '${{ !cancelled() }}'; Expected = '!cancelled()' }
+        @{ Case = 'colon and hash in a string'; Scalar = '"contains(''a: #b'', ''#b'')"'; Expected = "contains('a: #b', '#b')" }
+    ) {
+        param($Case, $Scalar, $Expected)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $yaml = [Yaml]::new(("jobs:`n  CustomJob:`n    if: $Scalar`n    runs-on: ubuntu-latest`n    steps:`n      - run: echo hello # unchanged").Split("`n"))
+        $original = $yaml.content -join "`n"
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $false
+        ($yaml.content -join "`n") | Should -Be $original
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        $parsed = ConvertFrom-Yaml ($yaml.content -join "`n")
+        $parsed.jobs.CustomJob.if | Should -Be "`${{ (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($Expected) }}"
+        $once = $yaml.content -join "`n"
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        ($yaml.content -join "`n") | Should -Be $once
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $false
+        $parsed = ConvertFrom-Yaml ($yaml.content -join "`n")
+        $parsed.jobs.CustomJob.if | Should -Be "`${{ $Expected }}"
+        $parsed.jobs.CustomJob.'runs-on' | Should -Be 'ubuntu-latest'
+        $parsed.jobs.CustomJob.steps[0].run | Should -Be 'echo hello'
+        $yaml.content | Should -Contain '      - run: echo hello # unchanged'
     }
 
     It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(

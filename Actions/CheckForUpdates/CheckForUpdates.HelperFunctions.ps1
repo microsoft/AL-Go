@@ -172,8 +172,34 @@ function Set-DraftPullRequestJobGuards {
     )
 
     $guard = "(github.event_name == 'merge_group' || github.event.pull_request.draft == false)"
-    foreach ($job in $yaml.GetNextLevel('jobs:/') | Where-Object { -not $_.StartsWith('#') }) {
-        $condition = $yaml.GetProperty("jobs:/$job/if:")
+    if (!$enabled -and !($yaml.content -match 'github\.event\.pull_request\.draft == false')) {
+        return
+    }
+    if (!(Get-Module powershell-yaml)) {
+        InstallModule -name powershell-yaml -minimumVersion '0.4.12'
+    }
+    $stream = [YamlDotNet.RepresentationModel.YamlStream]::new()
+    $reader = [System.IO.StringReader]::new($yaml.content -join "`n")
+    try {
+        $stream.Load($reader)
+    }
+    finally {
+        $reader.Dispose()
+    }
+    $jobs = $stream.Documents[0].RootNode.Children[[YamlDotNet.RepresentationModel.YamlScalarNode]::new('jobs')]
+    # Work backwards so source positions remain valid as conditions are replaced.
+    foreach ($job in $jobs.Children.GetEnumerator() | Sort-Object { $_.Key.Start.Index } -Descending) {
+        $entry = @($job.Value.Children.GetEnumerator() | Where-Object { $_.Key.Value -eq 'if' })
+        $condition = ''
+        if ($entry.Count) {
+            if ($entry[0].Value -isnot [YamlDotNet.RepresentationModel.YamlScalarNode]) {
+                throw "The condition for job '$($job.Key.Value)' must be a YAML scalar."
+            }
+            $condition = $entry[0].Value.Value.Trim()
+        }
+        if ($condition.StartsWith('${{') -and $condition.EndsWith('}}')) {
+            $condition = $condition.Substring(3, $condition.Length - 5).Trim()
+        }
         if ($condition -eq $guard) {
             $condition = ''
         }
@@ -185,15 +211,24 @@ function Set-DraftPullRequestJobGuards {
             continue
         }
         if ($enabled) {
-            # A custom job may use an explicit expression wrapper.
-            if ($condition.StartsWith('${{') -and $condition.EndsWith('}}')) {
-                $condition = $condition.Substring(3, $condition.Length - 5).Trim()
-            }
             $condition = if ($condition) { "$guard && ($condition)" } else { $guard }
         }
-        $yaml.Replace("jobs:/$job/if:", @())
+        $replacement = @()
         if ($condition) {
-            $yaml.Add("jobs:/$job/", "if: $condition")
+            # JSON quoting is valid YAML and preserves expression quotes, colons and newlines.
+            $indent = ' ' * ($job.Value.Start.Column - 1)
+            $replacement = @("${indent}if: " + (ConvertTo-Json -InputObject "`${{ $condition }}" -Compress))
+        }
+        if ($entry.Count) {
+            $start = $entry[0].Key.Start.Line - 1
+            $end = $entry[0].Value.End
+            $count = $end.Line - $start
+            if ($end.Column -eq 1) { $count-- }
+            $yaml.Remove($start, $count)
+            $yaml.Insert($start, $replacement)
+        }
+        elseif ($replacement.Count) {
+            $yaml.Insert($job.Value.Start.Line - 1, $replacement)
         }
     }
 }
