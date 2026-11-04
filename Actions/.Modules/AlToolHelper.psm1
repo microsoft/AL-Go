@@ -184,7 +184,7 @@ function GetAlToolPath {
         Write-Host "Selecting ALTool release family $toolMajor for Business Central $BcVersion."
     }
     if ($UseTemporaryAlTool) {
-        $toolDirectory = Join-Path $toolDirectory "workspace-restore-preview"
+        $toolDirectory = Join-Path $toolDirectory "workspace-restore-preview-55badc4d0"
     }
     $alToolPath = Join-Path $toolDirectory (Get-AlToolExecutableName)
     if (-not (Test-Path -LiteralPath $alToolPath -PathType Leaf)) {
@@ -236,8 +236,8 @@ function Install-TemporaryAlTool {
 
     Write-Host "::Warning::Using the temporary BC 30 workspace-restore branch build instead of the BC-selected published compiler."
     $archive = Join-Path $ToolDirectory "altool.zip"
-    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/Aholstrup1-PersonalOrg/bcsamples-bingmaps.appsource/releases/download/workspace-restore-preview/altool-workspace-restore-v2.zip" -OutFile $archive
-    if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '7488028EFDC14546B143C1AD4C7E831CD941B66DDEE9BE1DA1EB3D2CE5057D78') {
+    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/Aholstrup1-PersonalOrg/bcsamples-bingmaps.appsource/releases/download/altool-prerelease-symbols-20261104-55badc4d0/altool-prerelease-symbols-with-analyzers-win-x64-net10-55badc4d0.zip" -OutFile $archive
+    if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '3C7F3BB4FA6D656DADC5A6F3A12875761C8A0AE59B30F082629B5A4370F30685') {
         throw "The temporary ALTool download does not match the approved branch-build bundle."
     }
     Expand-Archive -LiteralPath $archive -DestinationPath $ToolDirectory -Force

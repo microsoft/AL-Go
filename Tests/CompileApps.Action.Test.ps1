@@ -45,4 +45,23 @@ Describe 'CompileApps action startup' {
         [System.IO.File]::ReadAllBytes($manifestPath) | Should -Be $original
         (Get-Location).Path | Should -Be $initialLocation
     }
+
+    It 'Passes the existing dependency selection setting into workspace build parameters' {
+        $actionPath = Join-Path $PSScriptRoot '..\Actions\CompileApps\Compile.ps1'
+        $tokens = $null
+        $errors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($actionPath, [ref]$tokens, [ref]$errors)
+        $assignment = $ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $node.Left.Extent.Text -eq '$buildParams'
+        }, $true)
+        $entry = $assignment.Right.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.HashtableAst]
+        }, $true).KeyValuePairs | Where-Object { $_.Item1.Value -eq 'NuGetFeedSelectMode' }
+        $entry | Should -Not -BeNullOrEmpty
+        $settings = @{ nuGetFeedSelectMode = 'LatestMatching-allowPrerelease' }
+        & ([scriptblock]::Create($entry.Item2.Extent.Text)) | Should -Be $settings.nuGetFeedSelectMode
+    }
 }

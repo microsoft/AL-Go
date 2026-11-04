@@ -192,6 +192,8 @@ function Get-BuildMetadata {
     Whether restore may use the built-in Microsoft public feeds.
 .PARAMETER TrustedNuGetFeeds
     Public Azure Artifacts feed specifications from settings.
+.PARAMETER NuGetFeedSelectMode
+    LatestMatching (stable packages) or LatestMatching-allowPrerelease.
 .PARAMETER PackageCachePath
     Path to the shared dependency and compiler output cache.
 .PARAMETER OutFolder
@@ -243,6 +245,7 @@ function Build-AppsInWorkspace {
         [string]$Country = 'w1',
         [bool]$TrustMicrosoftNuGetFeeds = $true,
         [object[]]$TrustedNuGetFeeds = @(),
+        [string]$NuGetFeedSelectMode = 'LatestMatching',
         [Parameter(Mandatory = $false)]
         [string]$OutFolder,
         [Parameter(Mandatory = $false)]
@@ -334,7 +337,7 @@ function Build-AppsInWorkspace {
         Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList $AppType, ([ref] $compilationParameters)
     }
 
-    Restore-WorkspacePackages -ALToolPath $compilationParameters.ALToolPath -WorkspaceFile $compilationParameters.WorkspaceFile -PackageCachePath $compilationParameters.PackageCachePath -Country $Country -TrustMicrosoftNuGetFeeds $TrustMicrosoftNuGetFeeds -TrustedNuGetFeeds $TrustedNuGetFeeds
+    Restore-WorkspacePackages -ALToolPath $compilationParameters.ALToolPath -WorkspaceFile $compilationParameters.WorkspaceFile -PackageCachePath $compilationParameters.PackageCachePath -Country $Country -TrustMicrosoftNuGetFeeds $TrustMicrosoftNuGetFeeds -TrustedNuGetFeeds $TrustedNuGetFeeds -NuGetFeedSelectMode $NuGetFeedSelectMode
 
     # Compile apps
     $appFiles = CompileAppsInWorkspace @compilationParameters
@@ -425,6 +428,9 @@ function Get-WorkspaceNuGetFeedUrls {
     Whether to allow the built-in Microsoft feeds alongside configured public feeds.
 .PARAMETER TrustedNuGetFeeds
     Public Azure Artifacts feeds. Credentials and restrictive trust options are rejected.
+.PARAMETER NuGetFeedSelectMode
+    LatestMatching leaves prerelease downloads disabled. LatestMatching-allowPrerelease
+    opts in when supported by the selected tool. Other selection modes are not supported.
 #>
 function Restore-WorkspacePackages {
     param(
@@ -433,16 +439,27 @@ function Restore-WorkspacePackages {
         [Parameter(Mandatory = $true)][string] $PackageCachePath,
         [string] $Country = 'w1',
         [bool] $TrustMicrosoftNuGetFeeds = $true,
-        [object[]] $TrustedNuGetFeeds = @()
+        [object[]] $TrustedNuGetFeeds = @(),
+        [string] $NuGetFeedSelectMode = 'LatestMatching'
     )
 
+    if ($NuGetFeedSelectMode -notin @('LatestMatching', 'LatestMatching-allowPrerelease')) {
+        throw "Workspace compilation only supports nuGetFeedSelectMode LatestMatching or LatestMatching-allowPrerelease. Disable workspaceCompilation to use other selection modes."
+    }
+    $allowPrerelease = $NuGetFeedSelectMode -eq 'LatestMatching-allowPrerelease'
     $feedUrls = @(Get-WorkspaceNuGetFeedUrls -TrustedNuGetFeeds $TrustedNuGetFeeds)
     $help = Invoke-AlNativeCommand -FilePath $ALToolPath -ArgumentList @("workspace", "restore", "--help")
     if ($help.ExitCode -ne 0 -or ($help.StandardOutput -join "`n") -notmatch '--symbolscountryregion') {
         throw "The selected ALTool does not support workspace restore. Use a release that supports it, explicitly enable the temporary preview tool, or disable workspaceCompilation."
     }
+    if ($allowPrerelease -and ($help.StandardOutput -join "`n") -notmatch '(?m)^\s*--allowprerelease(?:\s|$)') {
+        throw "nuGetFeedSelectMode LatestMatching-allowPrerelease requires an ALTool with workspace restore --allowprerelease support. Use a supporting release or the explicit temporary preview tool."
+    }
 
     $arguments = @("workspace", "restore", $WorkspaceFile, "--packagecachepath", $PackageCachePath, "--symbolscountryregion", $Country)
+    if ($allowPrerelease) {
+        $arguments += '--allowprerelease'
+    }
     if ($feedUrls.Count -gt 0) {
         $arguments += @('--nugetfeeds') + $feedUrls
     }

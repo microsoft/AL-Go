@@ -732,6 +732,57 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '--useonlycustomfeeds' }
             }
 
+            It 'Maps <Mode> to the dependency prerelease flag without changing feeds' -TestCases @(
+                @{ Mode = 'LatestMatching'; Expected = $false }
+                @{ Mode = 'LatestMatching-allowPrerelease'; Expected = $true }
+                @{ Mode = 'latestmatching-allowprerelease'; Expected = $true }
+            ) {
+                param($Mode, $Expected)
+                Mock Invoke-AlNativeCommand {
+                    [PSCustomObject]@{ StandardOutput = @('--symbolscountryregion', '  --allowprerelease  Include prerelease packages'); StandardError = @(); ExitCode = 0 }
+                } -ParameterFilter { $ArgumentList -contains '--help' }
+                Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive `
+                    -NuGetFeedSelectMode $Mode -TrustMicrosoftNuGetFeeds $false -TrustedNuGetFeeds @(@{url = 'https://pkgs.dev.azure.com/org/_packaging/feed/nuget/v3/index.json'})
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
+                    $ArgumentList[1] -eq 'restore' -and $ArgumentList -notcontains '--help' -and
+                    (($ArgumentList -contains '--allowprerelease') -eq $Expected) -and
+                    $ArgumentList -contains '--useonlycustomfeeds' -and $ArgumentList -contains 'https://pkgs.dev.azure.com/org/_packaging/feed'
+                }
+            }
+
+            It 'Rejects unsupported selection mode <Mode> before invoking ALTool' -TestCases @(
+                @{ Mode = 'Latest' }
+                @{ Mode = 'Latest-allowPrerelease' }
+                @{ Mode = 'Exact' }
+                @{ Mode = 'Exact-allowPrerelease' }
+                @{ Mode = 'EarliestMatching-allowPrerelease' }
+                @{ Mode = 'Earliest' }
+                @{ Mode = 'LatestMatching-allowPrerelease-extra' }
+                @{ Mode = '' }
+            ) {
+                param($Mode)
+                { Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive -NuGetFeedSelectMode $Mode } |
+                    Should -Throw '*only supports nuGetFeedSelectMode LatestMatching or LatestMatching-allowPrerelease*'
+                Should -Invoke Invoke-AlNativeCommand -Times 0 -Exactly
+            }
+
+            It 'Fails clearly before restore or compile when prerelease capability is missing' {
+                Mock CompileAppsInWorkspace { throw 'Compile must not run' }
+                { Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -NuGetFeedSelectMode 'LatestMatching-allowPrerelease' } |
+                    Should -Throw '*requires an ALTool with workspace restore --allowprerelease support*'
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly
+                Should -Invoke CompileAppsInWorkspace -Times 0 -Exactly
+            }
+
+            It 'Does not mistake an unrelated prerelease option for support' {
+                Mock Invoke-AlNativeCommand {
+                    [PSCustomObject]@{ StandardOutput = @('--symbolscountryregion', '  --allowprerelease-other'); StandardError = @(); ExitCode = 0 }
+                }
+                { Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive -NuGetFeedSelectMode 'LatestMatching-allowPrerelease' } |
+                    Should -Throw '*requires an ALTool*'
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly
+            }
+
             It 'Passes multiple normalized feed URLs as separate arguments with Microsoft trust <TrustMicrosoft>' -TestCases @(
                 @{ TrustMicrosoft = $true }
                 @{ TrustMicrosoft = $false }
@@ -770,16 +821,20 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             }
 
             It 'Restores the same workspace and tool passed to compilation' {
+                Mock Invoke-AlNativeCommand {
+                    [PSCustomObject]@{ StandardOutput = @('--symbolscountryregion', '--allowprerelease'); StandardError = @(); ExitCode = 0 }
+                } -ParameterFilter { $ArgumentList -contains '--help' }
                 Mock CompileAppsInWorkspace {
                     param($ALToolPath, $WorkspaceFile, $PackageCachePath)
                     Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
                         $FilePath -eq $ALToolPath -and $ArgumentList[1] -eq 'restore' -and
                         $ArgumentList[2] -eq $WorkspaceFile -and $ArgumentList[4] -eq $PackageCachePath -and
-                        $ArgumentList -contains 'https://pkgs.dev.azure.com/org/_packaging/feed'
+                        $ArgumentList -contains 'https://pkgs.dev.azure.com/org/_packaging/feed' -and
+                        $ArgumentList -contains '--allowprerelease'
                     }
                     return @()
                 }
-                Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -TrustedNuGetFeeds @(@{
+                Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -NuGetFeedSelectMode 'LatestMatching-allowPrerelease' -TrustedNuGetFeeds @(@{
                     url = 'https://pkgs.dev.azure.com/org/_packaging/feed/nuget/v3/index.json'
                 })
                 Should -Invoke New-WorkspaceFromFolders -Times 1 -Exactly

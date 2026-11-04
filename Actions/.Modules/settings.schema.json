@@ -656,7 +656,8 @@
         },
         "nuGetFeedSelectMode": {
             "type": "string",
-            "description": "Determines the select mode when finding Business Central app packages from NuGet feeds, based on the dependency version specified in app.json. Workspace compilation only accepts the default LatestMatching; other values require disabling workspace compilation. See https://aka.ms/ALGoSettings#nugetfeedselectmode"
+            "description": "Determines the select mode when finding Business Central app packages from NuGet feeds. Workspace compilation accepts LatestMatching (stable-only downloads) or LatestMatching-allowPrerelease (passes --allowprerelease to a supporting ALTool). Other base modes require disabling workspace compilation. Numeric app.json requirements, compatible cached symbols and compiler selection are unchanged. See https://aka.ms/ALGoSettings#nugetfeedselectmode",
+            "default": "LatestMatching"
         },
         "microsoftTelemetryConnectionString": {
             "type": "string"
