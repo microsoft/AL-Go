@@ -455,7 +455,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         ($yaml.content -join "`n") | Should -Be $original
         Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
         $parsed = ConvertFrom-Yaml ($yaml.content -join "`n")
-        $parsed.jobs.CustomJob.if | Should -Be "`${{ (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($Expected) }}"
+        $parsed.jobs.CustomJob.if | Should -Be "`${{ (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($Expected) }}" -Because "$Case conditions must retain their expression semantics"
         $once = $yaml.content -join "`n"
         Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
         ($yaml.content -join "`n") | Should -Be $once
