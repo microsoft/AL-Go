@@ -990,7 +990,12 @@ function CheckBuildJobsInWorkflowRun {
     Gets the last successful CICD run ID and SHA for the specified repository and branch.
     Successful CICD runs are those that have a workflow run named ' CI/CD', wasn't cancelled and successfully built all the projects within the last $retention days.
 
-    If no successful CICD run is found after three attempts, 0 and empty string is returned.
+    The search starts at the head of the branch and walks the first-parent commit history backwards, looking for CICD runs of each commit (head_sha).
+    The search stops after the first commit, which is older than $retention days.
+
+    If no successful CICD run is found, 0 and empty string is returned.
+
+    With -artifactProject, the state of the runs is ignored and the newest run having non-expired artifacts of the project (one of -artifactMasks, default Apps and PowerPlatformSolution) is returned (used by Create Release).
 #>
 function FindLatestSuccessfulCICDRun {
     Param(
@@ -1002,77 +1007,96 @@ function FindLatestSuccessfulCICDRun {
         [string] $token,
         [Parameter(Mandatory = $true)]
         [int] $retention,
-        [string] $api_url = $ENV:GITHUB_API_URL
+        [string] $api_url = $ENV:GITHUB_API_URL,
+        [string] $artifactProject = '',
+        [string[]] $artifactMasks = @('Apps', 'PowerPlatformSolution')
     )
 
+    $withReleaseArtifacts = $artifactProject -ne ''
     $headers = GetHeaders -token $token -api_url $api_url -repository $repository
     $lastSuccessfulCICDRun = $null
     $per_page = 100
-    $maxAttempts = 3
+    $statusFilter = if ($withReleaseArtifacts) { '' } else { '&status=completed' }
 
     Write-Host "Finding latest successful CICD run for branch $branch in repository $repository, checking last $retention days"
-    $expired = [DateTime]::UtcNow.AddDays(-$retention).ToString('o')
+    $expiredDate = [DateTimeOffset]::UtcNow.AddDays(-$retention)
     $encodedBranch = [Uri]::EscapeDataString($branch)
-    $encodedCreated = [Uri]::EscapeDataString(">$expired")
+    $encodedCreated = [Uri]::EscapeDataString(">$($expiredDate.UtcDateTime.ToString('o'))")
 
-    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    # Start at the head of the branch and walk the first-parent history backwards
+    $branchURI = "$api_url/repos/$repository/branches/$branch"
+    Write-Host "- $branchURI"
+    $commitSha = ((InvokeWebRequest -Headers $headers -Uri $branchURI).Content | ConvertFrom-Json).commit.sha
+    $checkedCommits = 0
+
+    while($commitSha) {
+        $checkedCommits++
         $page = 1
+        $CICDRuns = @()
         while($true) {
-            $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
+            $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true$statusFilter&branch=$encodedBranch&head_sha=$commitSha&created=$encodedCreated"
             Write-Host "- $runsURI"
-            $response = InvokeWebRequest -Headers $headers -Uri $runsURI
-            $workflowRuns = $response.Content | ConvertFrom-Json
-            $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name.Trim() -eq 'CI/CD' })
-            Write-Host "Baseline discovery attempt $attempt/$maxAttempts, page ${page}: $($workflowRuns.workflow_runs.Count) workflow runs, $($CICDRuns.Count) CI/CD runs."
-
-            if($workflowRuns.workflow_runs.Count -eq 0) {
-                # No more workflow runs, breaking out of the loop
+            $workflowRuns = @(((InvokeWebRequest -Headers $headers -Uri $runsURI).Content | ConvertFrom-Json).workflow_runs)
+            $CICDRuns += @($workflowRuns | Where-Object { $withReleaseArtifacts -or $_.name.Trim() -eq 'CI/CD' })
+            if($workflowRuns.Count -lt $per_page) {
+                # No more workflow runs for this commit
                 break
             }
-            foreach($CICDRun in $CICDRuns) {
-                if($CICDRun.conclusion -eq 'success') {
-                    # CICD run is successful
-                    $lastSuccessfulCICDRun = $CICDRun
-                    break
-                }
-                if ($CICDRun.conclusion -eq 'cancelled') {
-                    continue
-                }
-
-                # CICD run is considered successful if all build jobs were successful
-                $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository -api_url $api_url
-
-                if($areBuildJobsSuccessful) {
-                    $lastSuccessfulCICDRun = $CICDRun
-                    break
-                }
-
-                Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
-            }
-
-            if($lastSuccessfulCICDRun) {
-                break
-            }
-
             $page += 1
         }
+        Write-Host "Commit ${commitSha}: $($CICDRuns.Count) completed CI/CD runs."
 
-        if ($lastSuccessfulCICDRun) {
+        foreach($CICDRun in @($CICDRuns | Sort-Object { [DateTimeOffset]$_.created_at } -Descending)) {
+            if($withReleaseArtifacts) {
+                # Any run (regardless of its state), which has non-expired artifacts of the project
+                $runArtifacts = @($artifactMasks | ForEach-Object {
+                    GetArtifactsFromWorkflowRun -workflowRun $CICDRun.id -token $token -api_url $api_url -repository $repository -mask $_ -projects $artifactProject -version '*.*.*.*'
+                })
+                if($runArtifacts.Count -gt 0) {
+                    $lastSuccessfulCICDRun = $CICDRun
+                    break
+                }
+                continue
+            }
+            if($CICDRun.conclusion -eq 'success') {
+                # CICD run is successful
+                $lastSuccessfulCICDRun = $CICDRun
+                break
+            }
+            if ($CICDRun.conclusion -eq 'cancelled') {
+                continue
+            }
+
+            # CICD run is considered successful if all build jobs were successful
+            $areBuildJobsSuccessful = CheckBuildJobsInWorkflowRun -workflowRunId $($CICDRun.id) -headers $headers -repository $repository -api_url $api_url
+
+            if($areBuildJobsSuccessful) {
+                $lastSuccessfulCICDRun = $CICDRun
+                break
+            }
+
+            Write-Host "CICD run $($CICDRun.id) is not successful. Skipping."
+        }
+
+        if($lastSuccessfulCICDRun) {
             break
         }
 
-        if ($attempt -lt $maxAttempts) {
-            $delaySeconds = 5 * $attempt
-            Write-Host "No eligible baseline found on attempt $attempt/$maxAttempts. Retrying discovery in $delaySeconds seconds."
-            Start-Sleep -Seconds $delaySeconds
+        $commitURI = "$api_url/repos/$repository/git/commits/$commitSha"
+        Write-Host "- $commitURI"
+        $commit = (InvokeWebRequest -Headers $headers -Uri $commitURI).Content | ConvertFrom-Json
+        if([DateTimeOffset]$commit.committer.date -lt $expiredDate) {
+            Write-Host "Commit $commitSha is older than $retention days. Stopping search."
+            break
         }
+        $commitSha = @($commit.parents | ForEach-Object { $_.sha }) | Select-Object -First 1
     }
 
     if($lastSuccessfulCICDRun) {
-        Write-Host "Last successful CICD run for branch $branch in repository $repository is $($lastSuccessfulCICDRun.id) with SHA $($lastSuccessfulCICDRun.head_sha)"
+        Write-Host "Last successful CICD run for branch $branch in repository $repository is $($lastSuccessfulCICDRun.id) with SHA $($lastSuccessfulCICDRun.head_sha) (checked $checkedCommits commits)"
         return $lastSuccessfulCICDRun.id, $lastSuccessfulCICDRun.head_sha
     } else {
-        Write-Host "No successful CICD run found for branch $branch in repository $repository"
+        Write-Host "No successful CICD run found for branch $branch in repository $repository (checked $checkedCommits commits)"
         return 0, ''
     }
 }
@@ -1095,7 +1119,9 @@ function GetArtifactsFromWorkflowRun {
         [Parameter(Mandatory = $true)]
         [string] $projects,
         [Parameter(Mandatory = $false)]
-        [ref] $expiredArtifacts
+        [ref] $expiredArtifacts,
+        [Parameter(Mandatory = $false)]
+        [string] $version = '*'
     )
 
     Write-Host "Getting artifacts for workflow run $workflowRun, mask $mask, projects $projects and version $version"
@@ -1138,7 +1164,7 @@ function GetArtifactsFromWorkflowRun {
         foreach($project in $projectArr) {
             # e.g. "MyProject-main-Apps-*", format is: "project-branch-mask-version"
             # Mask might include buildMode like TranslatedTestApps
-            $artifactPattern = "$project-$branch-$mask-*"
+            $artifactPattern = "$project-$branch-$mask-$version"
             $matchingArtifacts = @($artifacts.artifacts | Where-Object { $_.name -like $artifactPattern })
 
             if ($matchingArtifacts.Count -eq 0) {
