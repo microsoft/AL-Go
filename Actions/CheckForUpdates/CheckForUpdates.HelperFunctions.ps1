@@ -154,9 +154,46 @@ function ModifyPullRequestHandlerWorkflow {
 
     if ($repoSettings.ContainsKey('skipDraftPullRequests') -and $repoSettings.skipDraftPullRequests) {
         $yaml.Add("on:/$($repoSettings.pullRequestTrigger):/", 'types: [ opened, reopened, synchronize, ready_for_review ]')
-        foreach ($job in $yaml.GetNextLevel('jobs:/')) {
-            $condition = $yaml.GetProperty("jobs:/$job/if:")
-            $yaml.Replace("jobs:/$job/if:", "if: (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($condition)")
+    }
+}
+
+<#
+.SYNOPSIS
+Applies or removes draft PR guards after workflow customizations.
+.PARAMETER yaml
+The final pull request workflow, including custom jobs.
+.PARAMETER enabled
+Whether draft PR jobs should be skipped.
+#>
+function Set-DraftPullRequestJobGuards {
+    Param(
+        [Yaml] $yaml,
+        [bool] $enabled
+    )
+
+    $guard = "(github.event_name == 'merge_group' || github.event.pull_request.draft == false)"
+    foreach ($job in $yaml.GetNextLevel('jobs:/') | Where-Object { -not $_.StartsWith('#') }) {
+        $condition = $yaml.GetProperty("jobs:/$job/if:")
+        if ($condition -eq $guard) {
+            $condition = ''
+        }
+        elseif ($condition.StartsWith("$guard && (") -and $condition.EndsWith(')')) {
+            $condition = $condition.Substring($guard.Length + 5)
+            $condition = $condition.Substring(0, $condition.Length - 1)
+        }
+        elseif (!$enabled) {
+            continue
+        }
+        if ($enabled) {
+            # A custom job may use an explicit expression wrapper.
+            if ($condition.StartsWith('${{') -and $condition.EndsWith('}}')) {
+                $condition = $condition.Substring(3, $condition.Length - 5).Trim()
+            }
+            $condition = if ($condition) { "$guard && ($condition)" } else { $guard }
+        }
+        $yaml.Replace("jobs:/$job/if:", @())
+        if ($condition) {
+            $yaml.Add("jobs:/$job/", "if: $condition")
         }
     }
 }

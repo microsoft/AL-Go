@@ -60,6 +60,7 @@ Describe "Draft pull request builds" {
                 }
                 if ($null -ne $enabled) { $settings.skipDraftPullRequests = $enabled }
                 ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $settings
+                Set-DraftPullRequestJobGuards -yaml $yaml -enabled ([bool]$enabled)
                 $yaml.Get('on:/merge_group:') | Should -Not -BeNullOrEmpty
                 if ($enabled) {
                     $yaml.GetPropertyArray("on:/${Trigger}:/types:") | Should -Be @('opened', 'reopened', 'synchronize', 'ready_for_review')

@@ -381,6 +381,7 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
 
         $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 3
         $yaml = [Yaml]::new($modified.Split("`n"))
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $Enabled
         $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build1:'
         $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build2:'
         foreach ($job in $yaml.GetNextLevel('jobs:/')) {
@@ -397,6 +398,41 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         else {
             $yaml.Get('on:/pull_request_target:/types:') | Should -BeNullOrEmpty
         }
+    }
+
+    It 'Guards custom jobs from both customization stages and restores them when disabled' {
+        Mock Trace-Information {}
+        $customFile = Join-Path $TestDrive 'custom.yaml'
+        @(
+            'jobs:'
+            '  CustomJobStandalone:'
+            '    runs-on: ubuntu-latest'
+            '    steps: []'
+            '  CustomJobAlways:'
+            '    if: ${{ always() }}'
+            '    runs-on: ubuntu-latest'
+            '    steps: []'
+        ) | Set-Content $customFile -Encoding UTF8
+        $content = "jobs:`n  Build:`n    if: success()`n    runs-on: ubuntu-latest`n    steps: []"
+        [Yaml]::ApplyTemplateCustomizations([ref] $content, $customFile)
+        (Get-Content $customFile -Raw -Encoding UTF8).Replace('CustomJob', 'CustomJobRepo') | Set-Content $customFile -Encoding UTF8
+        [Yaml]::ApplyFinalCustomizations([ref] $content, $customFile)
+        $yaml = [Yaml]::new($content.Split("`n"))
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        $guard = "(github.event_name == 'merge_group' || github.event.pull_request.draft == false)"
+        foreach ($prefix in @('CustomJob', 'CustomJobRepo')) {
+            $yaml.GetProperty("jobs:/${prefix}Standalone:/if:") | Should -Be $guard
+            $yaml.GetProperty("jobs:/${prefix}Always:/if:") | Should -Be "$guard && (always())"
+        }
+        $once = $yaml.content -join "`n"
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        ($yaml.content -join "`n") | Should -Be $once
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $false
+        foreach ($prefix in @('CustomJob', 'CustomJobRepo')) {
+            $yaml.Get("jobs:/${prefix}Standalone:/if:") | Should -BeNullOrEmpty
+            $yaml.GetProperty("jobs:/${prefix}Always:/if:") | Should -Be 'always()'
+        }
+        $yaml.GetProperty('jobs:/Build:/if:') | Should -Be 'success()'
     }
 
     It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(
