@@ -2,6 +2,14 @@
 
 *Prerequisites: A completed ["Add a test app to an existing project"](Scenarios/AddATestApp.md) scenario, a Microsoft Entra application registration, and an online sandbox environment called QA with the setup for S2S as specified in task 1 and 2 [here](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409) completed.*
 
+## PTE publishing authorization
+
+For **Scope PTE** S2S deployment to BC 30 or later, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant tenant admin consent, and register the application's client ID on the Business Central administration center's **Authorized Microsoft Entra apps** page. Existing app registrations may need this additional authorization. Retain the existing environment API permissions and Microsoft Entra application registration inside the environment, including the required permission sets.
+
+The **AUTHCONTEXT** credential structure below is unchanged. See [deployment authorization](../Workshop/ContinuousDeployment.md#pte-deployment-authorization) and the official [Business Central administration center API authentication documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api). These additional permissions are not required for deployment to earlier BC versions or **Scope Dev**.
+
+## Register the environment
+
 > [!NOTE]
 > For access to environments, environment secrets, and deployment branches in private or internal repositories, you must use GitHub Pro, GitHub Team, or GitHub Enterprise. (see [this](https://go.microsoft.com/fwlink/?linkid=2216857&clcid=0x409)).
 > If you are running a free GitHub SKU, you can use the [environments](https://aka.ms/algosettings#environments) setting and a secret with a name of the environment followed by` _AuthContext` instead of GitHub environments and environment secrets.

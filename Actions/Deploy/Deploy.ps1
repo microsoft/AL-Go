@@ -193,7 +193,7 @@ else {
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages -replacePackageId
             }
             else {
-                # Use automation API for production environments (Publish-PerTenantExtensionApps)
+                # The shared AL-Go publisher selects the API based on the target environment version.
                 $parameters = @{
                     "bcAuthContext" = $bcAuthContext
                     "environment" = $deploymentSettings.EnvironmentName
@@ -201,7 +201,7 @@ else {
                 }
                 if ($deploymentSettings.SyncMode) {
                     if (@('Add','ForceSync') -notcontains $deploymentSettings.SyncMode) {
-                        throw "Invalid SyncMode $($deploymentSettings.SyncMode) when deploying using the automation API. Valid values are Add and ForceSync."
+                        throw "Invalid SyncMode $($deploymentSettings.SyncMode) when deploying Per Tenant Extensions. Valid values are Add and ForceSync."
                     }
                     Write-Host "Using $($deploymentSettings.SyncMode)"
                     $syncMode = $deploymentSettings.SyncMode
@@ -211,11 +211,11 @@ else {
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
 
-                Write-Host "Publishing apps using automation API"
-                Publish-PerTenantExtensionApps @parameters
+                Write-Host "Publishing Per Tenant Extensions"
+                PublishPTEApps @parameters
 
                 if (($deploymentSettings['unpublishOldVersions'] -is [bool]) -and $deploymentSettings['unpublishOldVersions']) {
-                    Write-Host "Unpublishing old app versions"
+                    Write-Host "Checking cleanup of old app versions"
                     UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
                 }
             }

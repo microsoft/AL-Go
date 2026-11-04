@@ -2,6 +2,14 @@
 
 *Prerequisites: A completed ["Create a release of your application"](CreateRelease.md) scenario, an online production environment setup for S2S as specified in task 2 here: [Using Service to Service Authentication - Business Central | Microsoft Docs](https://go.microsoft.com/fwlink/?linkid=2217415&clcid=0x409), using the same Microsoft Entra application registration as scenario 3*
 
+## PTE publishing authorization
+
+Before **Scope PTE** deployment to BC 30 or later using S2S, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant tenant admin consent, and register the client ID on the Business Central administration center's **Authorized Microsoft Entra apps** page. Existing app registrations may need this additional authorization. Keep the existing environment API permissions and the Microsoft Entra application registration and required permission sets inside the Business Central environment. These additional permissions are not required for deployment to earlier BC versions.
+
+The **AUTHCONTEXT** credential structure is unchanged, including `TenantID`, `ClientID`, and `ClientSecret` for S2S. See [deployment authorization](../Workshop/ContinuousDeployment.md#pte-deployment-authorization) and the official [Business Central administration center API authentication documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api).
+
+## Register the environment
+
 > [!NOTE]
 > For access to environments, environment secrets, and deployment branches in private or internal repositories, you must use GitHub Pro, GitHub Team, or GitHub Enterprise. (see [this](https://go.microsoft.com/fwlink/?linkid=2216857&clcid=0x409)). We are considering adding a secondary option for listing environments.
 

@@ -161,7 +161,8 @@ InModuleScope Deploy { # Allows testing of private functions
             }
             Mock Sort-AppFilesByDependencies { }
             Mock Install-BcAppFromAppSource { return $true }
-            Mock Publish-PerTenantExtensionApps { return $true }
+            Mock PublishPTEApps { return $true }
+            Mock Publish-PerTenantExtensionApps { throw "Dependencies must use the shared AL-Go publisher" }
             Mock Write-Host { }
         }
 
@@ -785,7 +786,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter {
                     $appId -eq $script:appSourceApp1Id -and $acceptIsvEula -eq $true -and $installOrUpdateNeededDependencies -eq $true
                 }
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled PublishPTEApps -Times 0
             }
 
             It 'Publishes PTE apps when upgrade needed' {
@@ -804,9 +805,27 @@ InModuleScope Deploy { # Allows testing of private functions
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
 
                 Assert-MockCalled Install-BcAppFromAppSource -Times 0
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter {
-                    $appFiles.Count -eq 1 -and $SchemaSyncMode -eq "Add"
+                Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
+                    $appFiles.Count -eq 1 -and $SchemaSyncMode -eq "Add" -and
+                    $bcAuthContext.tenantId -eq "test-tenant" -and $environment -eq "test-env"
                 }
+            }
+
+            It 'Delegates PTE dependency publishing without requesting deferred installation' {
+                Mock Get-ChildItem {
+                    param($Path)
+                    return @(@{ FullName = Join-Path $Path "PTEApp.app" })
+                }
+                Mock PublishPTEApps {
+                    $PesterBoundParameters.Keys | Should -Not -Contain 'schedule'
+                }
+
+                InstallOrUpgradeApps -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -apps @("PTEApp.app") -installMode "upgrade"
+
+                Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
+                    $appFiles.Count -eq 1 -and $appFiles[0] -like "*PTEApp.app" -and $SchemaSyncMode -eq "Add"
+                }
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
             }
 
             It 'Uses Force schema sync mode when installMode is ForceUpgrade' {
@@ -824,9 +843,24 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
 
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter {
+                Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
                     $SchemaSyncMode -eq "Force"
                 }
+            }
+
+            It 'Propagates shared publishing errors without retrying and cleans up temporary files' {
+                Mock Get-ChildItem {
+                    param($Path)
+                    return @(@{ FullName = Join-Path $Path "PTEApp.app" })
+                }
+                Mock PublishPTEApps { throw "Publishing authorization failed" }
+
+                { InstallOrUpgradeApps -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -apps @("PTEApp.app") -installMode "upgrade" } | Should -Throw "*Publishing authorization failed*"
+
+                Assert-MockCalled PublishPTEApps -Exactly 1
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+                Assert-MockCalled Remove-Item -Exactly 1 -ParameterFilter { $Force -and $Recurse }
             }
 
             It 'Skips AppSource apps published in Dev scope when upgrade needed' {
@@ -864,7 +898,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     $appId -eq $script:appSourceApp1Id
                 }
                 # Should publish PTE apps
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter {
+                Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
                     $appFiles.Count -eq 1
                 }
             }
@@ -878,7 +912,7 @@ InModuleScope Deploy { # Allows testing of private functions
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $environment -apps $apps -installMode $installMode
 
                 Assert-MockCalled Install-BcAppFromAppSource -Times 0
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled PublishPTEApps -Times 0
             }
 
             It 'Handles empty apps array' {
@@ -897,7 +931,7 @@ InModuleScope Deploy { # Allows testing of private functions
                     $appFiles.Count -eq 0
                 }
                 Assert-MockCalled Install-BcAppFromAppSource -Times 0
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled PublishPTEApps -Times 0
             }
 
             It 'Refreshes installed apps list after AppSource installation' {
