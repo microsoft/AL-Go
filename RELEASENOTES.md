@@ -1,6 +1,6 @@
 ### Optional draft PR build skipping
 
-The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip PR builds while a pull request is draft and build when it is marked ready for review. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
+The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
 
 ### Separate test execution from RunPipeline (PREVIEW)
 

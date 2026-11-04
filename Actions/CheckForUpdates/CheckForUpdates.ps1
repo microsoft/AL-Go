@@ -179,20 +179,12 @@ foreach($fileToInclude in $filesToInclude) {
     # Get the relative path for the dstPath from the base folder. Don't use Resolve-Path as it will fail if the destination file doesn't exist
     $relativeDstPath = $dstPath.Substring($baseFolder.Length + 1)
 
-    if ($dstFileExists -and $type -eq 'workflow') {
-        Write-Host "Apply customizations from current repository, file: $relativeDstPath"
-        [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
-    }
-
-    if ($type -eq 'workflow' -and [System.IO.Path]::GetFileNameWithoutExtension($originalSrcPath) -eq 'PullRequestHandler') {
-        $yaml = [Yaml]::new($srcContent.Split("`n"))
-        $workflowName = $yaml.GetProperty('name:').Trim("'`"")
-        $workflowSettings = ReadSettings -buildMode '' -project '' -workflowName $workflowName -userName '' -branchName '' | ConvertTo-HashTable -recurse
-        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $workflowSettings.skipDraftPullRequests
-        $srcContent = $yaml.content -join "`n"
-    }
-
     if ($dstFileExists) {
+        if ($type -eq 'workflow') {
+            Write-Host "Apply customizations from current repository, file: $relativeDstPath"
+            [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
+        }
+
         # file exists, compare and add to $updateFiles if different
         $dstContent = Get-ContentLF -Path $dstPath
         if ($dstContent -cne $srcContent) {

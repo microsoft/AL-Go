@@ -35,9 +35,6 @@ Describe "PreGateCheck in PullRequestHandler should use runs-on: windows-latest"
 }
 
 Describe "Draft pull request builds" {
-    BeforeAll {
-        . (Join-Path $PSScriptRoot '..\..\Actions\AL-Go-Helper.ps1')
-    }
     It 'Only skips draft PRs when opted in for <Template> with <Trigger>' -TestCases @(
         @{ Template = 'Per Tenant Extension'; Trigger = 'pull_request' }
         @{ Template = 'AppSource App'; Trigger = 'pull_request' }
@@ -63,7 +60,6 @@ Describe "Draft pull request builds" {
                 }
                 if ($null -ne $enabled) { $settings.skipDraftPullRequests = $enabled }
                 ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $settings
-                Set-DraftPullRequestJobGuards -yaml $yaml -enabled ([bool]$enabled)
                 $yaml.Get('on:/merge_group:') | Should -Not -BeNullOrEmpty
                 if ($enabled) {
                     $yaml.GetPropertyArray("on:/${Trigger}:/types:") | Should -Be @('opened', 'reopened', 'synchronize', 'ready_for_review')
@@ -74,7 +70,7 @@ Describe "Draft pull request builds" {
                 foreach ($job in $yaml.GetNextLevel('jobs:/')) {
                     $condition = $yaml.GetProperty("jobs:/$job/if:")
                     if ($enabled) {
-                        (ConvertFrom-Yaml "if: $condition").if | Should -Be "`${{ (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($($originalConditions[$job])) }}"
+                        $condition | Should -Be "(github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($($originalConditions[$job]))"
                     }
                     else {
                         $condition | Should -Be $originalConditions[$job]
