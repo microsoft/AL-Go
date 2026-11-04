@@ -65,7 +65,7 @@ try {
         throw "Workspace compilation uses the BC-version-selected ALTool NuGet package, not vsixFile or compiler-folder hooks. Disable workspaceCompilation to use these overrides."
     }
     if ($settings.nuGetFeedSelectMode -ne 'LatestMatching') {
-        throw "Workspace compilation restores public symbols using the BC target and manifest minimums; nuGetFeedSelectMode overrides are not supported. Disable workspaceCompilation to use this setting."
+        throw "Workspace compilation restores public symbols using ALTool and app.json requirements; nuGetFeedSelectMode overrides are not supported. Disable workspaceCompilation to use this setting."
     }
 
     # Prepare build metadata
@@ -217,7 +217,6 @@ try {
     # Collect common parameters for Build-AppsInWorkspace
     $buildParams = @{
         ALToolPath                  = $alToolPath
-        BcVersion                   = $bcVersion
         Country                     = $country
         TrustMicrosoftNuGetFeeds    = $settings.trustMicrosoftNuGetFeeds
         PackageCachePath            = $packageCachePath

@@ -446,7 +446,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App1"; Id = "11111111-1111-1111-1111-111111111111" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App1")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols")
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App1")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols")
         }
 
         It 'Uses specified PackageCachePath when provided' {
@@ -465,7 +465,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App2"; Id = "22222222-2222-2222-2222-222222222222" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App2")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath $customCachePath
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App2")) -ALToolPath $altoolPath -PackageCachePath $customCachePath
         }
 
         It 'Caps MaxCpuCount to available processor count' {
@@ -482,7 +482,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App3"; Id = "33333333-3333-3333-3333-333333333333" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App3")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -MaxCpuCount 9999
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App3")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols") -MaxCpuCount 9999
         }
 
         It 'Invokes PreCompileApp script before compilation' {
@@ -501,7 +501,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 $script:preCompileInvoked = $true
             }
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App4")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -PreCompileApp $preCompileScript -AppType 'app'
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App4")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols") -PreCompileApp $preCompileScript -AppType 'app'
 
             $script:preCompileInvoked | Should -Be $true
         }
@@ -523,7 +523,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @($appFiles).Count | Should -Be 2
             }
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App5")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -PostCompileApp $postCompileScript -AppType 'app'
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App5")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols") -PostCompileApp $postCompileScript -AppType 'app'
 
             $script:postCompileInvoked | Should -Be $true
         }
@@ -539,7 +539,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App6"; Id = "66666666-6666-6666-6666-666666666666" }
             )
 
-            $result = Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App6")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols")
+            $result = Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App6")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols")
 
             @($result).Count | Should -Be 2
             $result | Should -Contain 'MyApp_1.0.0.0.app'
@@ -560,7 +560,7 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "App7"; Id = "77777777-7777-7777-7777-777777777777" }
             )
 
-            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -Analyzers @('CodeCop', 'UICop')
+            Build-AppsInWorkspace -Folders @((Join-Path $projectPath "App7")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols") -Analyzers @('CodeCop', 'UICop')
         }
 
         It 'Accepts bcptApp as AppType for BCPT workspace compilation' {
@@ -572,26 +572,16 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 @{ Name = "BcptApp"; Id = "88888888-8888-8888-8888-888888888888" }
             )
 
-            { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -ALToolPath $altoolPath -BcVersion 29.0 -PackageCachePath (Join-Path $TestDrive "symbols") -AppType 'bcptApp' } | Should -Not -Throw
+            { Build-AppsInWorkspace -Folders @((Join-Path $projectPath "BcptApp")) -ALToolPath $altoolPath -PackageCachePath (Join-Path $TestDrive "symbols") -AppType 'bcptApp' } | Should -Not -Throw
         }
     }
 
     Describe 'Restore-WorkspacePackages' {
         InModuleScope CompileFromWorkspace {
             BeforeEach {
-                $script:restoreWorkspace = ''
-                $script:targetDependencies = @()
-                Mock Get-Content { '{"dependencies":[]}' } -ParameterFilter { $LiteralPath -eq (Join-Path 'App' 'app.json') }
-                Mock New-WorkspaceFromFolders {
-                    param($Folders, $WorkspaceFile)
-                    if ((Split-Path $WorkspaceFile -Leaf) -ne 'restore.code-workspace') { return }
-                    $script:restoreWorkspace = $WorkspaceFile
-                    $target = Get-Content (Join-Path $Folders[-1] 'app.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-                    $target.application | Should -Be '29.1.0.0'
-                    $target.platform | Should -Be '29.0.0.0'
-                    $script:targetDependencies = @($target.dependencies)
-                    [IO.Path]::IsPathRooted($Folders[0]) | Should -BeTrue
-                }
+                $script:restoreWorkspace = Join-Path $TestDrive 'compile.code-workspace'
+                Set-Content -LiteralPath $script:restoreWorkspace -Value '{"folders":[{"path":"App"}]}' -Encoding UTF8
+                Mock New-WorkspaceFromFolders { }
                 Mock Invoke-AlNativeCommand {
                     param($ArgumentList)
                     $stdout = if ($ArgumentList -contains '--help') { '--symbolscountryregion' } else { '{"success":true}' }
@@ -599,46 +589,63 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 }
             }
 
-            It 'Targets the BC minor and platform major without assuming artifact patch numbers match symbols' {
-                Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' -Country 'dk'
+            It 'Passes the existing workspace, cache and country without imposing version selection' {
+                Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive -Country 'dk'
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
-                    $ArgumentList -contains '--enforceminorversion' -and $ArgumentList -contains 'dk' -and $ArgumentList -contains $TestDrive
+                    $ArgumentList.Count -eq 7 -and $ArgumentList[0] -eq 'workspace' -and
+                    $ArgumentList[1] -eq 'restore' -and $ArgumentList[2] -eq $script:restoreWorkspace -and
+                    $ArgumentList[3] -eq '--packagecachepath' -and $ArgumentList[4] -eq $TestDrive -and
+                    $ArgumentList[5] -eq '--symbolscountryregion' -and $ArgumentList[6] -eq 'dk'
                 }
-                Test-Path (Split-Path $script:restoreWorkspace) | Should -BeFalse
+                Should -Invoke New-WorkspaceFromFolders -Times 0 -Exactly
+                Test-Path $script:restoreWorkspace | Should -BeTrue
             }
 
             It 'Does not enable Microsoft feeds when they are not trusted' {
-                Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' -TrustMicrosoftNuGetFeeds $false
+                Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive -TrustMicrosoftNuGetFeeds $false
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '--useonlycustomfeeds' }
             }
 
-            It 'Targets known BC core apps and test libraries without retargeting third-party dependencies' {
-                Mock Get-Content {
-                    '{"dependencies":[{"id":"dd0be2ea-f733-4d65-bb34-a28f4624fb14","name":"Library Assert","publisher":"Microsoft","version":"20.0.0.0"},{"id":"63ca2fa4-4f03-4f2b-a480-172fef340d3f","name":"System Application","publisher":"Microsoft","version":"20.0.0.0"},{"id":"437dbf0e-84ff-417a-965d-ed2bb9650972","name":"Base Application","publisher":"Microsoft","version":"20.0.0.0"},{"id":"f3552374-a1f2-4356-848e-196002525837","name":"Business Foundation","publisher":"Microsoft","version":"24.0.0.0"},{"id":"11111111-1111-1111-1111-111111111111","name":"Other","publisher":"Partner","version":"1.0.0.0"}]}'
-                } -ParameterFilter { $LiteralPath -eq (Join-Path 'App' 'app.json') }
-                Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0'
-                $script:targetDependencies.Count | Should -Be 4
-                foreach ($dependency in $script:targetDependencies) {
-                    $dependency.version | Should -Be '29.1.0.0'
+            It 'Does not read or write app manifests or create a synthetic restore project' {
+                Mock Get-Content { throw 'Restore must leave manifest requirements to ALTool' }
+                Mock Set-Content { throw 'Restore must not write manifests or workspaces' }
+                Mock New-Item { throw 'Restore must not create another project' }
+                Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive
+                Should -Invoke Get-Content -Times 0 -Exactly
+                Should -Invoke Set-Content -Times 0 -Exactly
+                Should -Invoke New-Item -Times 0 -Exactly
+                Should -Invoke New-WorkspaceFromFolders -Times 0 -Exactly
+            }
+
+            It 'Restores the same workspace and tool passed to compilation' {
+                Mock CompileAppsInWorkspace {
+                    param($ALToolPath, $WorkspaceFile, $PackageCachePath)
+                    Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
+                        $FilePath -eq $ALToolPath -and $ArgumentList[1] -eq 'restore' -and
+                        $ArgumentList[2] -eq $WorkspaceFile -and $ArgumentList[4] -eq $PackageCachePath
+                    }
+                    return @()
                 }
+                Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive
+                Should -Invoke New-WorkspaceFromFolders -Times 1 -Exactly
+                Should -Invoke CompileAppsInWorkspace -Times 1 -Exactly
             }
 
             It 'Rejects a tool without restore capability even if help exits successfully' {
                 Mock Invoke-AlNativeCommand {
                     [PSCustomObject]@{ StandardOutput = @('general help'); StandardError = @(); ExitCode = 0 }
                 }
-                { Restore-WorkspacePackages -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' } | Should -Throw '*does not support workspace restore*'
+                { Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive } | Should -Throw '*does not support workspace restore*'
                 Should -Invoke New-WorkspaceFromFolders -Times 0 -Exactly
             }
 
-            It 'Fails before compilation when restore exits nonzero and removes its temporary project' {
+            It 'Fails before compilation when restore exits nonzero' {
                 Mock Invoke-AlNativeCommand {
                     [PSCustomObject]@{ StandardOutput = @('{"success":false}'); StandardError = @('missing dependency'); ExitCode = 1 }
                 } -ParameterFilter { $ArgumentList -notcontains '--help' }
                 Mock CompileAppsInWorkspace { throw 'Compilation must not run' }
-                { Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -BcVersion '29.1.123.0' } | Should -Throw '*Workspace restore failed*'
+                { Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive } | Should -Throw '*Workspace restore failed*'
                 Should -Invoke CompileAppsInWorkspace -Times 0 -Exactly
-                Test-Path (Split-Path $script:restoreWorkspace) | Should -BeFalse
             }
         }
     }
