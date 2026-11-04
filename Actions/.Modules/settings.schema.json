@@ -885,7 +885,41 @@
         },
         "trustMicrosoftNuGetFeeds": {
             "type": "boolean",
-            "description": "Trust Microsoft NuGet feeds. See https://aka.ms/ALGoSettings#trustMicrosoftNuGetFeeds"
+            "description": "Trust Microsoft NuGet feeds. Workspace compilation combines these built-in feeds with configured public Azure Artifacts feeds; false uses only configured feeds and cached packages. See https://aka.ms/ALGoSettings#trustMicrosoftNuGetFeeds",
+            "default": true
+        },
+        "trustedNuGetFeeds": {
+            "type": "array",
+            "default": [],
+            "description": "Optional NuGet dependency feeds for both templates. Workspace compilation accepts only anonymous public Azure Artifacts feed bases or full /nuget/v3/index.json URLs, with no credentials, restrictive patterns or fingerprints. Private, GitHub Packages and general NuGet layouts require the classic pipeline. See https://aka.ms/ALGoSettings#trustedNuGetFeeds",
+            "items": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Feed URL. Workspace compilation accepts HTTPS pkgs.dev.azure.com or org.pkgs.visualstudio.com Azure Artifacts feed bases and normalizes full /nuget/v3/index.json URLs."
+                    },
+                    "authTokenSecret": {
+                        "type": "string",
+                        "description": "Classic pipeline only: secret containing feed credentials. Nonempty values are rejected by workspace compilation."
+                    },
+                    "token": {
+                        "type": "string",
+                        "description": "Legacy inline feed credential. Use authTokenSecret instead. Nonempty values are rejected by workspace compilation."
+                    },
+                    "patterns": {
+                        "type": ["string", "array"],
+                        "items": { "type": "string" },
+                        "description": "Package ID trust patterns. Workspace compilation supports only omission, '*' or an array containing only '*'; restrictive or empty configured patterns are rejected."
+                    },
+                    "fingerprints": {
+                        "type": ["string", "array"],
+                        "items": { "type": "string" },
+                        "description": "Trusted package signature fingerprints. Nonempty values are rejected by workspace compilation."
+                    }
+                }
+            }
         },
         "useGitSubmodules": {
             "type": "string"

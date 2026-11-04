@@ -644,6 +644,64 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
         }
     }
 
+    Describe 'Get-WorkspaceNuGetFeedUrls' {
+        InModuleScope CompileFromWorkspace {
+            It 'Normalizes supported public Azure Artifacts URL <Url>' -TestCases @(
+                @{ Url = 'https://pkgs.dev.azure.com/org/project/_packaging/feed/nuget/v3/index.json'; Expected = 'https://pkgs.dev.azure.com/org/project/_packaging/feed' }
+                @{ Url = 'https://pkgs.dev.azure.com/org/project/_packaging/feed/'; Expected = 'https://pkgs.dev.azure.com/org/project/_packaging/feed' }
+                @{ Url = 'https://pkgs.dev.azure.com/org/_packaging/feed/nuget/v3/index.json/'; Expected = 'https://pkgs.dev.azure.com/org/_packaging/feed' }
+                @{ Url = 'https://org.pkgs.visualstudio.com/project/_packaging/feed/nuget/v3/index.json'; Expected = 'https://org.pkgs.visualstudio.com/project/_packaging/feed' }
+                @{ Url = 'https://org.pkgs.visualstudio.com/_packaging/feed'; Expected = 'https://org.pkgs.visualstudio.com/_packaging/feed' }
+                @{ Url = 'https://pkgs.dev.azure.com/org/my%20project/_packaging/my%20feed'; Expected = 'https://pkgs.dev.azure.com/org/my%20project/_packaging/my%20feed' }
+            ) {
+                param($Url, $Expected)
+                Get-WorkspaceNuGetFeedUrls -TrustedNuGetFeeds @(@{ url = $Url }) | Should -Be $Expected
+            }
+
+            It 'Preserves no-feed behavior and accepts only explicitly unrestricted patterns' {
+                @(Get-WorkspaceNuGetFeedUrls).Count | Should -Be 0
+                foreach ($patterns in @('*', @('*'))) {
+                    Get-WorkspaceNuGetFeedUrls -TrustedNuGetFeeds @(@{
+                        url = 'https://pkgs.dev.azure.com/org/project/_packaging/feed'
+                        patterns = $patterns
+                        fingerprints = @()
+                        authTokenSecret = ''
+                        token = ''
+                    }) | Should -Be 'https://pkgs.dev.azure.com/org/project/_packaging/feed'
+                }
+            }
+
+            It 'Rejects unsupported configuration without echoing values: <Case>' -TestCases @(
+                @{ Case = 'credential secret'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; authTokenSecret = 'sensitive-value' } }
+                @{ Case = 'raw token'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; token = 'sensitive-value' } }
+                @{ Case = 'patterns'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; patterns = @('sensitive-value*') } }
+                @{ Case = 'empty patterns'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; patterns = @() } }
+                @{ Case = 'mixed patterns'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; patterns = @('*', 'sensitive-value*') } }
+                @{ Case = 'fingerprint'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; fingerprints = @('sensitive-value') } }
+                @{ Case = 'unknown auth property'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed'; password = 'sensitive-value' } }
+                @{ Case = 'embedded credential'; Feed = @{ url = 'https://user:sensitive-value@pkgs.dev.azure.com/org/_packaging/feed' } }
+                @{ Case = 'query token'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed?token=sensitive-value' } }
+                @{ Case = 'fragment'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/feed#sensitive-value' } }
+                @{ Case = 'non HTTPS'; Feed = @{ url = 'http://pkgs.dev.azure.com/org/_packaging/sensitive-value' } }
+                @{ Case = 'custom port'; Feed = @{ url = 'https://pkgs.dev.azure.com:8443/org/_packaging/sensitive-value' } }
+                @{ Case = 'GitHub feed'; Feed = @{ url = 'https://nuget.pkg.github.com/sensitive-value/index.json' } }
+                @{ Case = 'generic NuGet'; Feed = @{ url = 'https://example.com/sensitive-value/index.json' } }
+                @{ Case = 'Azure UI URL'; Feed = @{ url = 'https://dev.azure.com/org/project/_artifacts/feed/sensitive-value' } }
+                @{ Case = 'v2 endpoint'; Feed = @{ url = 'https://pkgs.dev.azure.com/org/_packaging/sensitive-value/nuget/v2' } }
+                @{ Case = 'missing url'; Feed = @{} }
+                @{ Case = 'nonstring url'; Feed = @{ url = @('sensitive-value') } }
+                @{ Case = 'nonobject entry'; Feed = 'sensitive-value' }
+            ) {
+                param($Case, $Feed)
+                $message = ''
+                try { Get-WorkspaceNuGetFeedUrls -TrustedNuGetFeeds @($Feed) }
+                catch { $message = $_.Exception.Message }
+                $message | Should -BeLike 'Workspace compilation*'
+                $message | Should -Not -Match 'sensitive-value'
+            }
+        }
+    }
+
     Describe 'Restore-WorkspacePackages' {
         InModuleScope CompileFromWorkspace {
             BeforeEach {
@@ -674,6 +732,32 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '--useonlycustomfeeds' }
             }
 
+            It 'Passes multiple normalized feed URLs as separate arguments with Microsoft trust <TrustMicrosoft>' -TestCases @(
+                @{ TrustMicrosoft = $true }
+                @{ TrustMicrosoft = $false }
+            ) {
+                param($TrustMicrosoft)
+                $feeds = @(
+                    @{ url = 'https://pkgs.dev.azure.com/org/project/_packaging/one/nuget/v3/index.json' }
+                    @{ url = 'https://pkgs.dev.azure.com/org/project/_packaging/two' }
+                )
+                Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive -TrustedNuGetFeeds $feeds -TrustMicrosoftNuGetFeeds $TrustMicrosoft
+                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
+                    $ArgumentList[1] -eq 'restore' -and $ArgumentList[7] -eq '--nugetfeeds' -and
+                    $ArgumentList[8] -eq 'https://pkgs.dev.azure.com/org/project/_packaging/one' -and
+                    $ArgumentList[9] -eq 'https://pkgs.dev.azure.com/org/project/_packaging/two' -and
+                    (($ArgumentList -contains '--useonlycustomfeeds') -eq (-not $TrustMicrosoft))
+                }
+            }
+
+            It 'Rejects unsupported trust options before invoking ALTool, even with cached dependencies' {
+                { Restore-WorkspacePackages -ALToolPath 'al' -WorkspaceFile $script:restoreWorkspace -PackageCachePath $TestDrive -TrustedNuGetFeeds @(@{
+                    url = 'https://pkgs.dev.azure.com/org/_packaging/feed'
+                    fingerprints = @('required-signature')
+                }) } | Should -Throw '*fingerprints*'
+                Should -Invoke Invoke-AlNativeCommand -Times 0 -Exactly
+            }
+
             It 'Does not read or write app manifests or create a synthetic restore project' {
                 Mock Get-Content { throw 'Restore must leave manifest requirements to ALTool' }
                 Mock Set-Content { throw 'Restore must not write manifests or workspaces' }
@@ -690,11 +774,14 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
                     param($ALToolPath, $WorkspaceFile, $PackageCachePath)
                     Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
                         $FilePath -eq $ALToolPath -and $ArgumentList[1] -eq 'restore' -and
-                        $ArgumentList[2] -eq $WorkspaceFile -and $ArgumentList[4] -eq $PackageCachePath
+                        $ArgumentList[2] -eq $WorkspaceFile -and $ArgumentList[4] -eq $PackageCachePath -and
+                        $ArgumentList -contains 'https://pkgs.dev.azure.com/org/_packaging/feed'
                     }
                     return @()
                 }
-                Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive
+                Build-AppsInWorkspace -ALToolPath 'al' -Folders @('App') -PackageCachePath $TestDrive -TrustedNuGetFeeds @(@{
+                    url = 'https://pkgs.dev.azure.com/org/_packaging/feed/nuget/v3/index.json'
+                })
                 Should -Invoke New-WorkspaceFromFolders -Times 1 -Exactly
                 Should -Invoke CompileAppsInWorkspace -Times 1 -Exactly
             }

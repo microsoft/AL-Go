@@ -223,6 +223,7 @@ try {
         ALToolPath                  = $alToolPath
         Country                     = $country
         TrustMicrosoftNuGetFeeds    = $settings.trustMicrosoftNuGetFeeds
+        TrustedNuGetFeeds           = $(if ($settings.ContainsKey('trustedNuGetFeeds')) { @($settings.trustedNuGetFeeds) } else { @() })
         PackageCachePath            = $packageCachePath
         LogDirectory                = $buildArtifactFolder
         Ruleset                     = $rulesetPath

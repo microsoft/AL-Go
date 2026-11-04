@@ -190,6 +190,8 @@ function Get-BuildMetadata {
     BC artifact country for symbol restoration.
 .PARAMETER TrustMicrosoftNuGetFeeds
     Whether restore may use the built-in Microsoft public feeds.
+.PARAMETER TrustedNuGetFeeds
+    Public Azure Artifacts feed specifications from settings.
 .PARAMETER PackageCachePath
     Path to the shared dependency and compiler output cache.
 .PARAMETER OutFolder
@@ -240,6 +242,7 @@ function Build-AppsInWorkspace {
         [string]$PackageCachePath,
         [string]$Country = 'w1',
         [bool]$TrustMicrosoftNuGetFeeds = $true,
+        [object[]]$TrustedNuGetFeeds = @(),
         [Parameter(Mandatory = $false)]
         [string]$OutFolder,
         [Parameter(Mandatory = $false)]
@@ -331,7 +334,7 @@ function Build-AppsInWorkspace {
         Invoke-Command -ScriptBlock $PreCompileApp -ArgumentList $AppType, ([ref] $compilationParameters)
     }
 
-    Restore-WorkspacePackages -ALToolPath $compilationParameters.ALToolPath -WorkspaceFile $compilationParameters.WorkspaceFile -PackageCachePath $compilationParameters.PackageCachePath -Country $Country -TrustMicrosoftNuGetFeeds $TrustMicrosoftNuGetFeeds
+    Restore-WorkspacePackages -ALToolPath $compilationParameters.ALToolPath -WorkspaceFile $compilationParameters.WorkspaceFile -PackageCachePath $compilationParameters.PackageCachePath -Country $Country -TrustMicrosoftNuGetFeeds $TrustMicrosoftNuGetFeeds -TrustedNuGetFeeds $TrustedNuGetFeeds
 
     # Compile apps
     $appFiles = CompileAppsInWorkspace @compilationParameters
@@ -350,6 +353,61 @@ function Build-AppsInWorkspace {
 
 <#
 .SYNOPSIS
+    Validates workspace restore feed specifications and returns Azure Artifacts feed bases.
+.DESCRIPTION
+    ALTool supports anonymous Azure Artifacts feeds, not credentials or package trust filters.
+    Never includes configured values in errors because an unsupported URL or field may contain secrets.
+.PARAMETER TrustedNuGetFeeds
+    Feed specifications with url and optional unrestricted patterns/fingerprints.
+#>
+function Get-WorkspaceNuGetFeedUrls {
+    param([object[]] $TrustedNuGetFeeds = @())
+
+    foreach ($feed in $TrustedNuGetFeeds) {
+        if ($feed -isnot [System.Collections.IDictionary]) {
+            throw "Workspace compilation requires each trustedNuGetFeeds entry to be an object with a url."
+        }
+        foreach ($key in $feed.Keys) {
+            if ($key -notin @('url', 'authTokenSecret', 'token', 'patterns', 'fingerprints')) {
+                throw "Workspace compilation does not support this trustedNuGetFeeds property. Only url and unrestricted trust options are supported."
+            }
+        }
+        if ($feed['authTokenSecret'] -or $feed['token']) {
+            throw "Workspace compilation supports only anonymous public trustedNuGetFeeds; credentials and authTokenSecret are not supported."
+        }
+        if ($feed.Contains('patterns')) {
+            $patterns = @($feed['patterns'])
+            if ($patterns.Count -ne 1 -or $patterns[0] -isnot [string] -or $patterns[0] -ne '*') {
+                throw "Workspace compilation does not support restrictive trustedNuGetFeeds patterns. Omit patterns or use only '*'."
+            }
+        }
+        if ($feed['fingerprints']) {
+            throw "Workspace compilation does not support trustedNuGetFeeds fingerprints."
+        }
+        $uri = $null
+        if ($feed['url'] -isnot [string] -or
+            -not [Uri]::TryCreate($feed['url'], [UriKind]::Absolute, [ref]$uri) -or
+            $uri.Scheme -ne 'https' -or $uri.UserInfo -or $uri.Query -or $uri.Fragment -or -not $uri.IsDefaultPort) {
+            throw "Workspace compilation requires an HTTPS Azure Artifacts feed URL without credentials, query, fragment or custom port."
+        }
+        $path = $uri.AbsolutePath.TrimEnd('/') -replace '/nuget/v3/index\.json$', ''
+        $segment = '(?:[a-z0-9._~-]|%20)+'
+        $validPath = if ($uri.Host -eq 'pkgs.dev.azure.com') {
+            $path -imatch "^/$segment(?:/$segment)?/_packaging/$segment$"
+        }
+        elseif ($uri.Host -imatch '^[a-z0-9-]+\.pkgs\.visualstudio\.com$') {
+            $path -imatch "^(?:/$segment)?/_packaging/$segment$"
+        }
+        else { $false }
+        if (-not $validPath) {
+            throw "Workspace compilation supports only public Azure Artifacts feed bases or their /nuget/v3/index.json URLs; this feed layout is unsupported."
+        }
+        $uri.GetLeftPart([UriPartial]::Authority) + $path
+    }
+}
+
+<#
+.SYNOPSIS
     Restores workspace symbols from public NuGet feeds without downloading BC artifacts.
 .DESCRIPTION
     Uses ALTool's dependency resolution for the app.json requirements in the compilation
@@ -364,7 +422,9 @@ function Build-AppsInWorkspace {
 .PARAMETER Country
     The resolved BC artifact country.
 .PARAMETER TrustMicrosoftNuGetFeeds
-    Whether to allow the built-in Microsoft feeds. When false, only cached dependencies are used.
+    Whether to allow the built-in Microsoft feeds alongside configured public feeds.
+.PARAMETER TrustedNuGetFeeds
+    Public Azure Artifacts feeds. Credentials and restrictive trust options are rejected.
 #>
 function Restore-WorkspacePackages {
     param(
@@ -372,15 +432,20 @@ function Restore-WorkspacePackages {
         [Parameter(Mandatory = $true)][string] $WorkspaceFile,
         [Parameter(Mandatory = $true)][string] $PackageCachePath,
         [string] $Country = 'w1',
-        [bool] $TrustMicrosoftNuGetFeeds = $true
+        [bool] $TrustMicrosoftNuGetFeeds = $true,
+        [object[]] $TrustedNuGetFeeds = @()
     )
 
+    $feedUrls = @(Get-WorkspaceNuGetFeedUrls -TrustedNuGetFeeds $TrustedNuGetFeeds)
     $help = Invoke-AlNativeCommand -FilePath $ALToolPath -ArgumentList @("workspace", "restore", "--help")
     if ($help.ExitCode -ne 0 -or ($help.StandardOutput -join "`n") -notmatch '--symbolscountryregion') {
         throw "The selected ALTool does not support workspace restore. Use a release that supports it, explicitly enable the temporary preview tool, or disable workspaceCompilation."
     }
 
     $arguments = @("workspace", "restore", $WorkspaceFile, "--packagecachepath", $PackageCachePath, "--symbolscountryregion", $Country)
+    if ($feedUrls.Count -gt 0) {
+        $arguments += @('--nugetfeeds') + $feedUrls
+    }
     if (-not $TrustMicrosoftNuGetFeeds) {
         $arguments += "--useonlycustomfeeds"
     }
