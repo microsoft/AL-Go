@@ -1,3 +1,14 @@
+### Improved file handling in Update AL-Go System Files
+
+- Update AL-Go System Files now uses the latest repository settings from a custom template, such as `customALGoFiles`, in the same update rather than applying them on the next run.
+  - Workflow dependency depth is also determined using these refreshed settings, ensuring enough sequential build jobs are generated for the configured projects.
+- `customALGoFiles.filesToInclude` and `filesToExclude` also apply to files in the original AL-Go template, even when those files are absent from the custom template.
+- `filesToExclude` now respects destination mappings from `filesToInclude`, including renamed files and per-project destinations. Existing files are removed unless another included source targets the same destination.
+- Use `destinationName` in `filesToInclude` to rename included files at the destination.
+- For safety, file access is blocked when a path redirects through a symbolic link or junction, or its physical location cannot be verified.
+
+See [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#using-custom-template-files) for details.
+
 ### Separate test execution from RunPipeline (PREVIEW)
 
 A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.
