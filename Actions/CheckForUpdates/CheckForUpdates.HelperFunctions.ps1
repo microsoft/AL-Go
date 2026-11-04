@@ -178,17 +178,31 @@ function Set-DraftPullRequestJobGuards {
     if (!(Get-Module powershell-yaml)) {
         InstallModule -name powershell-yaml -minimumVersion '0.4.12'
     }
+    $content = $yaml.content -join "`n"
     $stream = [YamlDotNet.RepresentationModel.YamlStream]::new()
-    $reader = [System.IO.StringReader]::new($yaml.content -join "`n")
+    $reader = [System.IO.StringReader]::new($content)
     try {
         $stream.Load($reader)
     }
     finally {
         $reader.Dispose()
     }
+    # Representation nodes resolve aliases to their definitions; parser events retain occurrence spans.
+    $events = @()
+    $reader = [System.IO.StringReader]::new($content)
+    try {
+        $parser = [YamlDotNet.Core.Parser]::new($reader)
+        while ($parser.MoveNext()) {
+            $events += $parser.Current
+        }
+    }
+    finally {
+        $reader.Dispose()
+    }
+    $edits = @{}
+    $replacedAnchors = @{}
     $jobs = $stream.Documents[0].RootNode.Children[[YamlDotNet.RepresentationModel.YamlScalarNode]::new('jobs')]
-    # Work backwards so source positions remain valid as conditions are replaced.
-    foreach ($job in $jobs.Children.GetEnumerator() | Sort-Object { $_.Key.Start.Index } -Descending) {
+    foreach ($job in $jobs.Children.GetEnumerator()) {
         $entry = @($job.Value.Children.GetEnumerator() | Where-Object { $_.Key.Value -eq 'if' })
         $condition = ''
         if ($entry.Count) {
@@ -213,24 +227,62 @@ function Set-DraftPullRequestJobGuards {
         if ($enabled) {
             $condition = if ($condition) { "$guard && ($condition)" } else { $guard }
         }
-        $replacement = @()
+        $replacement = ''
         if ($condition) {
-            # JSON quoting is valid YAML and preserves expression quotes, colons and newlines.
-            $indent = ' ' * ($job.Value.Start.Column - 1)
-            $replacement = @("${indent}if: " + (ConvertTo-Json -InputObject "`${{ $condition }}" -Compress))
+            $replacement = ConvertTo-JsonLF -object "`${{ $condition }}"
         }
         if ($entry.Count) {
-            $start = $entry[0].Key.Start.Line - 1
-            $end = $entry[0].Value.End
-            $count = $end.Line - $start
-            if ($end.Column -eq 1) { $count-- }
-            $yaml.Remove($start, $count)
-            $yaml.Insert($start, $replacement)
+            $value = $events | Where-Object { $_.Start.Index -ge $entry[0].Key.End.Index } | Select-Object -First 1
+            $start = $value.Start.Index
+            $end = $value.End.Index
+            if ($value -is [YamlDotNet.Core.Events.Scalar] -and !$value.Anchor.IsEmpty) {
+                $replacedAnchors[$value.Anchor.Value] = $value.Value
+            }
+            if (!$condition) {
+                $start = $entry[0].Key.Start.Index
+                if ($job.Value.Style -eq 'Flow') {
+                    $after = $end
+                    while ($after -lt $content.Length -and [char]::IsWhiteSpace($content[$after])) { $after++ }
+                    if ($content[$after] -eq ',') {
+                        $end = $after + 1
+                    }
+                    else {
+                        $before = $start - 1
+                        while ([char]::IsWhiteSpace($content[$before])) { $before-- }
+                        if ($content[$before] -eq ',') { $start = $before }
+                    }
+                }
+            }
+            # A block scalar's span includes its final line break.
+            if ($end -gt $start -and $content[$end - 1] -eq "`n") { $replacement += "`n" }
+            $edits[$start] = @{ Start = $start; Length = $end - $start; Text = $replacement }
         }
-        elseif ($replacement.Count) {
-            $yaml.Insert($job.Value.Start.Line - 1, $replacement)
+        elseif ($condition) {
+            $start = $job.Value.Start.Index
+            if ($job.Value.Style -eq 'Flow') {
+                $start++
+                $replacement = "if: $replacement, "
+            }
+            else {
+                $indent = ' ' * ($job.Value.Start.Column - 1)
+                $replacement = "if: $replacement`n$indent"
+            }
+            $edits[$start] = @{ Start = $start; Length = 0; Text = $replacement }
         }
     }
+    foreach ($alias in $events | Where-Object { $_ -is [YamlDotNet.Core.Events.AnchorAlias] }) {
+        if ($replacedAnchors.ContainsKey($alias.Value.Value) -and !$edits.ContainsKey($alias.Start.Index)) {
+            $edits[$alias.Start.Index] = @{
+                Start = $alias.Start.Index
+                Length = $alias.End.Index - $alias.Start.Index
+                Text = ConvertTo-JsonLF -object $replacedAnchors[$alias.Value.Value]
+            }
+        }
+    }
+    foreach ($edit in $edits.Values | Sort-Object { $_.Start } -Descending) {
+        $content = $content.Remove($edit.Start, $edit.Length).Insert($edit.Start, $edit.Text)
+    }
+    $yaml.content = $content.Split("`n")
 }
 
 <#

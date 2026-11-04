@@ -467,6 +467,74 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         $yaml.content | Should -Contain '      - run: echo hello # unchanged'
     }
 
+    It 'Preserves flow-style custom jobs when toggling draft skipping with condition <Condition>' -TestCases @(
+        @{ Condition = '"if": "always()", ' }
+        @{ Condition = '' }
+    ) {
+        param($Condition)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $yaml = [Yaml]::new(@(
+            'jobs:'
+            '  CustomJob:'
+            "    {$Condition`"runs-on`": `"ubuntu-latest`", `"steps`": [{`"run`": `"echo hello`"}]}"
+        ))
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        $once = $yaml.content -join "`n"
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        ($yaml.content -join "`n") | Should -Be $once
+        $parsed = ConvertFrom-Yaml $once
+        $parsed.jobs.CustomJob.if | Should -Match 'github.event.pull_request.draft == false'
+        $parsed.jobs.CustomJob.'runs-on' | Should -Be 'ubuntu-latest'
+        $parsed.jobs.CustomJob.steps[0].run | Should -Be 'echo hello'
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $false
+        $parsed = ConvertFrom-Yaml ($yaml.content -join "`n")
+        $parsed.jobs.CustomJob.'runs-on' | Should -Be 'ubuntu-latest'
+        $parsed.jobs.CustomJob.steps[0].run | Should -Be 'echo hello'
+        if ($Condition) {
+            $parsed.jobs.CustomJob.if | Should -Be '${{ always() }}'
+        }
+        else {
+            $parsed.jobs.CustomJob.ContainsKey('if') | Should -BeFalse
+        }
+    }
+
+    It 'Preserves anchor values for steps and guards each job alias independently' {
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $yaml = [Yaml]::new(@(
+            'jobs:'
+            '  CustomJob:'
+            '    if: &runCondition always()'
+            '    runs-on: ubuntu-latest'
+            '    steps:'
+            '      - if: *runCondition'
+            '        run: echo hello'
+            '  CustomJobAlias:'
+            '    if: *runCondition'
+            '    runs-on: ubuntu-latest'
+            '    steps: []'
+        ))
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        $once = $yaml.content -join "`n"
+        $parsed = ConvertFrom-Yaml $once
+        $parsed.jobs.CustomJob.if | Should -Match 'github.event.pull_request.draft == false'
+        $parsed.jobs.CustomJobAlias.if | Should -Be $parsed.jobs.CustomJob.if
+        $parsed.jobs.CustomJob.steps[0].if | Should -Be 'always()'
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        ($yaml.content -join "`n") | Should -Be $once
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $false
+        $parsed = ConvertFrom-Yaml ($yaml.content -join "`n")
+        $parsed.jobs.CustomJob.if | Should -Be '${{ always() }}'
+        $parsed.jobs.CustomJobAlias.if | Should -Be '${{ always() }}'
+        $parsed.jobs.CustomJob.steps[0].if | Should -Be 'always()'
+    }
+
+    It 'Emits normalized draft guard quoting across PowerShell editions' {
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $yaml = [Yaml]::new(@('jobs:', '  CustomJob:', '    if: always()', '    runs-on: ubuntu-latest'))
+        Set-DraftPullRequestJobGuards -yaml $yaml -enabled $true
+        $yaml.GetProperty('jobs:/CustomJob:/if:') | Should -Be '"${{ (github.event_name == ''merge_group'' || github.event.pull_request.draft == false) && (always()) }}"'
+    }
+
     It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(
         @{ Template = 'Per Tenant Extension' }
         @{ Template = 'AppSource App' }
