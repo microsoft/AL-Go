@@ -36,6 +36,8 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 
 ### Issues
 
+- Issue 2438 - Create Release with app version `latest` now sorts repository artifacts by creation time before selecting the latest artifact for each project. Previously it relied on the order returned by the GitHub artifacts API (artifact id, which isn't chronological), so projects could resolve to artifacts from different, older CI/CD runs and the release failed with "The build selected for release doesn't contain all projects". That error now names the mismatching artifact and commits.
+
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.
 
 - Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.

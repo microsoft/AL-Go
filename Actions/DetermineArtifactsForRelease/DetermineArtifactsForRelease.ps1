@@ -38,6 +38,9 @@ do {
     $page++
 }
 while ($repoArtifacts.Artifacts.Count -gt 0)
+# The artifacts API doesn't guarantee an order (in practice it's sorted by artifact id, which isn't chronological).
+# Sort newest first, so that 'latest' resolves to the most recently created artifacts.
+$allArtifacts = @($allArtifacts | Sort-Object -Property @{ Expression = { [DateTime]$_.created_at } } -Descending)
 Write-Host "Repo Artifacts count: $($repoArtifacts.total_count)"
 Write-Host "Downloaded Artifacts count: $($allArtifacts.Count)"
 $projects | ForEach-Object {
@@ -75,7 +78,7 @@ $projects | ForEach-Object {
     }
     if ($sha) {
         if ($artifact.workflow_run.head_sha -ne $sha) {
-            throw "The build selected for release doesn't contain all projects. Please rebuild all projects by manually running the CI/CD workflow and recreate the release."
+            throw "The build selected for release doesn't contain all projects. Artifact $($artifact.name) for project $project was built from commit $($artifact.workflow_run.head_sha), but artifacts for previously analyzed projects were built from commit $sha. Please rebuild all projects by manually running the CI/CD workflow and recreate the release."
         }
     }
     else {
