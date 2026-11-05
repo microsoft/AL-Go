@@ -21,6 +21,9 @@ Deploy Apps to online environment
 | artifactsFolder | Yes | Path to the downloaded artifacts to deploy | |
 | type | | Type of delivery (CD or Release) | CD |
 | deploymentEnvironmentsJson | Yes | The settings for all Deployment Environments | |
+| artifactsVersion | | Artifacts version. Used to check if this is a deployment from a PR | |
+
+When the [failOnAppVersionDowngrade](https://aka.ms/algosettings#failOnAppVersionDowngrade) setting is enabled for the environment, the deployment fails if an app in the artifact has a lower version than the version installed in the environment. The check is performed immediately before publishing.
 
 ## OUTPUT
 

@@ -31,6 +31,89 @@ function GetHeadRefFromPRId {
 
 <#
     .SYNOPSIS
+        Get the deployment settings for an environment, including overrides from the DeployTo<environmentName> setting
+    .PARAMETER deploymentEnvironmentsJson
+        The settings for all Deployment Environments (JSON)
+    .PARAMETER environmentName
+        Name of the environment
+    .PARAMETER settings
+        AL-Go settings, which might contain a DeployTo<environmentName> setting
+#>
+function GetDeploymentSettings {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $deploymentEnvironmentsJson,
+        [Parameter(Mandatory = $true)]
+        [string] $environmentName,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $settings
+    )
+
+    $deploymentEnvironments = $deploymentEnvironmentsJson | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $deploymentSettings = $deploymentEnvironments."$environmentName"
+
+    $envName = $environmentName.Split(' ')[0]
+    # Check DeployTo<environmentName> setting (it could have been added in the environment-specific settings)
+    $settingsName = "DeployTo$envName"
+    if ($settings.ContainsKey($settingsName)) {
+        # If a DeployTo<environmentName> setting exists - use values from this (over the defaults)
+        Write-Host "Setting $settingsName"
+        $deployTo = $settings."$settingsName"
+        $keys = @($deployTo.Keys)
+        foreach($key in $keys) {
+            if ($deploymentSettings.ContainsKey($key)) {
+                if ($null -ne $deploymentSettings."$key" -and $null -ne $deployTo."$key" -and $deploymentSettings."$key".GetType().Name -ne $deployTo."$key".GetType().Name) {
+                    if ($key -eq "runs-on" -and $deployTo."$key" -is [Object[]]) {
+                        # Support setting runs-on as an array in settings to not break old settings
+                        # See https://github.com/microsoft/AL-Go/issues/1182
+                        $deployTo."$key" = $deployTo."$key" -join ','
+                    }
+                    else {
+                        Write-Host "::WARNING::The property $key in $settingsName is expected to be of type $($deploymentSettings."$key".GetType().Name)"
+                    }
+                }
+                Write-Host "Property $key = $($deployTo."$key")"
+                $deploymentSettings."$key" = $deployTo."$key"
+            }
+            else {
+                $deploymentSettings += @{
+                    "$key" = $deployTo."$key"
+                }
+            }
+        }
+    }
+    return $deploymentSettings
+}
+
+<#
+    .SYNOPSIS
+        Get the effective failOnAppVersionDowngrade setting for an environment
+    .DESCRIPTION
+        A failOnAppVersionDowngrade value in DeployTo<environmentName> takes precedence over the global failOnAppVersionDowngrade setting.
+    .PARAMETER deploymentSettings
+        Deployment settings for the environment (as returned by GetDeploymentSettings)
+    .PARAMETER settings
+        AL-Go settings
+#>
+function GetFailOnAppVersionDowngrade {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $deploymentSettings,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $settings
+    )
+
+    if ($deploymentSettings.ContainsKey('failOnAppVersionDowngrade')) {
+        return [bool]$deploymentSettings.failOnAppVersionDowngrade
+    }
+    if ($settings.ContainsKey('failOnAppVersionDowngrade')) {
+        return [bool]$settings.failOnAppVersionDowngrade
+    }
+    return $false
+}
+
+<#
+    .SYNOPSIS
         Get apps and dependencies from artifacts
     .PARAMETER token
         The GitHub token running the action
@@ -215,15 +298,19 @@ function CheckIfAppNeedsInstallOrUpgrade {
         The environment to check installed apps in.
     .PARAMETER appFiles
         The list of app files to check against installed apps.
+    .PARAMETER failOnDowngrade
+        Throw an error instead of emitting a warning when an installed version is higher than the version in the app file.
 #>
 function CheckInstalledApps {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
-        [string[]] $appFiles
+        [string[]] $appFiles,
+        [switch] $failOnDowngrade
     )
     OutputDebugFunctionCall
 
+    $violations = @()
     $installedApps = Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
     foreach($appFile in $appFiles) {
         # Get AppJson (works for full .app files, symbol files and also runtime packages)
@@ -236,9 +323,17 @@ function CheckInstalledApps {
             $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
 
             if ($currentVersion -lt $installedVersion) {
-                OutputWarning -message "App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+                if ($failOnDowngrade) {
+                    $violations += "App '$($appJson.name)' is already installed in version $installedVersion, which is higher than artifact version $currentVersion."
+                }
+                else {
+                    OutputWarning -message "App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
+                }
             }
         }
+    }
+    if ($violations.Count -gt 0) {
+        throw "Downgrade check failed: $($violations -join ' ')"
     }
 }
 

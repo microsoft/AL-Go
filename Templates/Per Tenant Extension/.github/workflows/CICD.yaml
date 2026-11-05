@@ -356,6 +356,17 @@ jobs:
           gitHubSecrets: ${{ toJson(secrets) }}
           getSecrets: '${{ steps.envName.outputs.envName }}-AuthContext,${{ steps.envName.outputs.envName }}_AuthContext,AuthContext'
 
+      - name: Validate App Versions Before Deploy
+        uses: microsoft/AL-Go-Actions/CheckDowngrade@main
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: ${{ matrix.shell }}
+          environmentName: ${{ matrix.environment }}
+          artifactsFolder: '.artifacts'
+          type: 'CD'
+          deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
+
       - name: Deploy to Business Central
         id: Deploy
         uses: microsoft/AL-Go-Actions/Deploy@main
