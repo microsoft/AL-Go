@@ -36,6 +36,8 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 
 ### Issues
 
+- Issue 2437 - Create Release no longer fails with "No artifacts found for this project" when the repository contains a test project (a project with `projectsToTest`). Test projects don't build apps and are now skipped when determining release artifacts.
+
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.
 
 - Issue 2390 - AnalyzeTests no longer crashes under strict mode when a page scripting test suite contains both passed and failed tests, preserving the failure summary.
