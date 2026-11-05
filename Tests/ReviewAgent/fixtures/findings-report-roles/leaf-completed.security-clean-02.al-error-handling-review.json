@@ -1,0 +1,35 @@
+{
+  "skill": {
+    "id": "al-error-handling-review",
+    "version": 1
+  },
+  "outcome": "completed",
+  "summary": {
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 1,
+      "info": 0
+    },
+    "coverage": {
+      "worklist-size": 2,
+      "items-evaluated": 2
+    }
+  },
+  "findings": [
+    {
+      "id": "agent:unchecked-http-request-result",
+      "severity": "minor",
+      "message": "The HTTP request's Boolean result and response status are ignored, so transport failures and non-success HTTP responses can pass silently as if the request succeeded. Capture the result, check IsSuccessStatusCode, and surface a clear error when the request fails.",
+      "location": {
+        "file": "src/PlainTokenHeaderClient.Codeunit.al",
+        "line": 12
+      },
+      "references": [],
+      "confidence": "medium",
+      "domain": "Error Handling",
+      "suggested-code-omission-reason": "The appropriate error message and handling depend on the caller's contract and on whether response-body diagnostics should be exposed."
+    }
+  ],
+  "suppressed": []
+}

@@ -181,6 +181,8 @@ function Get-ProjectsToBuild {
         $modifiedProjects = @()
         $projectsToBuild = @()
         $projectsOrderToBuild = @()
+        # Initialize in case no projects are found
+        $projectBuildInfo = @{ projectDependencies = @{} }
 
         if ($projects) {
             # Calculate the full projects order

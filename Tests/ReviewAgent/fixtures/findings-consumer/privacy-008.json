@@ -1,0 +1,18 @@
+{
+  "skill": { "id": "al-privacy-review", "version": 1 },
+  "outcome": "completed",
+  "summary": {
+    "counts": { "blocker": 0, "major": 1, "minor": 0, "info": 0 },
+    "coverage": { "worklist-size": 4, "items-evaluated": 4 }
+  },
+  "findings": [{
+    "id": "microsoft/knowledge/privacy/privacy-notice-consent-for-external-data-transfer.md",
+    "severity": "major",
+    "message": "Synthetic privacy finding retaining the original invalid location.",
+    "location": { "file": "src/CustomerSyncDispatcher.Codeunit.al", "line": 44, "range": { "start-line": 44, "end-line": 44 } },
+    "references": [{ "path": "microsoft/knowledge/privacy/privacy-notice-consent-for-external-data-transfer.md" }],
+    "confidence": "high",
+    "domain": "Privacy"
+  }],
+  "suppressed": []
+}

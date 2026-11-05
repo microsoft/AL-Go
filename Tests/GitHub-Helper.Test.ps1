@@ -94,6 +94,45 @@ Describe "FindLatestSuccessfulCICDRun" {
         Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $workflowRunId -in @('44', '45') }
         Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
     }
+
+    It 'uses the specified api_url instead of GITHUB_API_URL for runs and jobs (e.g. local development environment)' {
+        $originalApiUrl = $ENV:GITHUB_API_URL
+        try {
+            Remove-Item Env:GITHUB_API_URL -ErrorAction SilentlyContinue
+            $script:responses.Enqueue(@(@{ id = 42; head_sha = 'baseline-sha'; name = 'CI/CD'; conclusion = 'failure' }))
+            Mock CheckBuildJobsInWorkflowRun -ModuleName Github-Helper { $true }
+
+            $result = @(FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 -api_url 'https://api.contoso.ghe.com')
+
+            $result[0] | Should -Be 42
+            Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $uri -like 'https://api.contoso.ghe.com/repos/test/repo/actions/runs?*' }
+            Should -Invoke CheckBuildJobsInWorkflowRun -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $api_url -eq 'https://api.contoso.ghe.com' }
+        }
+        finally {
+            $ENV:GITHUB_API_URL = $originalApiUrl
+        }
+    }
+}
+
+Describe "CheckBuildJobsInWorkflowRun" {
+    It 'uses the specified api_url instead of GITHUB_API_URL' {
+        $originalApiUrl = $ENV:GITHUB_API_URL
+        try {
+            Remove-Item Env:GITHUB_API_URL -ErrorAction SilentlyContinue
+            Mock Write-Host -ModuleName Github-Helper {}
+            Mock InvokeWebRequest -ModuleName Github-Helper {
+                if ($uri -like '*&page=1') { @{ Content = '{"jobs":[{"name":"Build Project1","conclusion":"success"}]}' } }
+                else { @{ Content = '{"jobs":[]}' } }
+            }
+
+            CheckBuildJobsInWorkflowRun -headers @{} -repository 'test/repo' -workflowRunId '42' -api_url 'https://api.contoso.ghe.com' | Should -BeTrue
+
+            Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 2 -Exactly -ParameterFilter { $uri -like 'https://api.contoso.ghe.com/repos/test/repo/actions/runs/42/jobs?*' }
+        }
+        finally {
+            $ENV:GITHUB_API_URL = $originalApiUrl
+        }
+    }
 }
 
 Describe "GitHub-Helper Tests" {

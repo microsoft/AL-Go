@@ -118,7 +118,7 @@ The CI workflow automatically runs all unit tests on both Windows (PowerShell 5)
 In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end tests.
 
 - Test-AL-Go.ps1 contains an end-2-end test scenario and is in E2E.yaml run for all combinations of Public/Private, Windows/Linux, Single/Multiproject and PTE/AppSource.
-- Test-AL-Go-Upgrade.ps1 contains an end-2-end upgrade scenario and is run for all prior releases of AL-Go for GitHub to test that you can successfully upgrade that version to the latestand run CI/CD successfully.
+- Test-AL-Go-Upgrade.ps1 contains an end-2-end upgrade scenario and is run for prior releases of AL-Go for GitHub at or above the configured TestUpgradesFromVersion cutoff to test that you can successfully upgrade that version to the latest and run CI/CD successfully.
 - The scenarios folder contains a set of AL-Go scenarios, which tests specific functionality end to end. Every folder under e2eTests/scenarios, which contains a runtests.ps1 will be run as a scenario test, like:
   - UseProjectDependencies - create a repo with multiple projects and set **UseProjectDependencies** to modify CI/CD and other build workflows to build projects in the right order
   - GitHubPackages - create 3 repositories using GitHub Packages as dependency resolver and check that artifacts are built properly

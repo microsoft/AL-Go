@@ -21,19 +21,43 @@ function DownloadTemplateRepository {
         [bool] $downloadLatest
     )
 
+    # Construct API URL
+    if ($templateUrl -like 'https://github.com/*') {
+        # templateUrl is github.com - use the github.com API URL
+        $apiUrl = $templateUrl.Split('@')[0] -replace "^($([regex]::Escape('https://github.com') -replace '/', '\/'))/(.*)$", "https://api.github.com/repos/`$2"
+    }
+    else {
+        # templateUrl is not github.com (e.g. github enterprise) - use the GITHUB_SERVER_URL and GITHUB_API_URL environment variables
+        $apiUrl = $templateUrl.Split('@')[0] -replace "^($([regex]::Escape($env:GITHUB_SERVER_URL) -replace '/', '\/'))/(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
+    }
+
+    Write-Host "TemplateUrl: $templateUrl"
+    Write-Host "ApiUrl: $apiUrl"
+    Write-Host "TemplateSha: $($templateSha.Value)"
+    Write-Host "DownloadLatest: $downloadLatest"
+
     $templateRepositoryUrl = $templateUrl.Split('@')[0]
     $templateRepository = $templateRepositoryUrl.Split('/')[-2..-1] -join '/'
 
     # Use Authenticated API request if possible to avoid the 60 API calls per hour limit
-    OutputDebug -message "Getting template repository ($templateRepository) with GITHUB_TOKEN"
-    $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
+    if ($templateUrl -like "$env:GITHUB_SERVER_URL/*") {
+        # Use authenticated request if the templateUrl is on the same GitHub server as the current repository
+        Write-Host "Getting template repository ($templateRepository) with GITHUB_TOKEN"
+        $headers = GetHeaders -token $env:GITHUB_TOKEN -repository $templateRepository
+    }
+    else {
+        # Use unauthenticated request if the templateUrl is on a different GitHub server
+        Write-Host "Getting template repository ($templateRepository) anonymously"
+        $headers = GetHeaders -repository $templateRepository
+    }
     try {
+        # This ONLY fails if the template repository is private/internal and the GITHUB_TOKEN does not have access to it
         $response = Invoke-WebRequest -UseBasicParsing -Headers $headers -Method Head -Uri $templateRepositoryUrl
         OutputDebug -message ($response | Format-List | Out-String)
     }
     catch {
         # Ignore error
-        OutputDebug -message "Error getting template repository with GITHUB_TOKEN:"
+        OutputDebug -message "Error getting template repository:"
         OutputDebug -message $_
         $response = $null
     }
@@ -43,13 +67,6 @@ function DownloadTemplateRepository {
         # NOTE that the GitHub app needs to be installed in the template repository for this to work
         $headers = GetHeaders -token $token -repository $templateRepository
     }
-
-    # Construct API URL
-    $apiUrl = $templateUrl.Split('@')[0] -replace "^(https:\/\/github\.com\/)(.*)$", "$ENV:GITHUB_API_URL/repos/`$2"
-
-    Write-Host "TemplateUrl: $templateUrl"
-    Write-Host "TemplateSha: $($templateSha.Value)"
-    Write-Host "DownloadLatest: $downloadLatest"
 
     if ($downloadLatest) {
         # Get latest commit SHA from the template repository
@@ -78,7 +95,10 @@ function GetLatestTemplateSha {
     $branch = $templateUrl.Split('@')[1]
     Write-Host "Get latest SHA for $templateUrl"
     try {
-        $branchInfo = (InvokeWebRequest -Headers $headers -Uri "$apiUrl/branches/$branch").Content | ConvertFrom-Json
+        $url = "$apiUrl/branches/$branch"
+        Write-Host "Api URL: $url"
+        $result = InvokeWebRequest -Headers $headers -Uri $url
+        $branchInfo = $result.Content | ConvertFrom-Json
     } catch {
         throw "Failed to update AL-Go System Files. Could not get the latest SHA from template ($templateUrl). (Error was $($_.Exception.Message))"
     }
@@ -131,6 +151,33 @@ function ModifyPullRequestHandlerWorkflow {
 
     # update the branches: line with the new branches
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+}
+
+<#
+.SYNOPSIS
+Adds the pull request trigger and configured target branches to the enabled review intake workflow.
+#>
+function ModifyCopilotPRReviewWorkflow {
+    Param(
+        [Yaml] $yaml,
+        [hashtable] $repoSettings
+    )
+
+    $codeReviewBranches = @('main')
+    if (
+        $repoSettings.Keys -contains 'CodeReviewAgent' -and
+        $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
+        $repoSettings.CodeReviewAgent.Keys -contains 'branches' -and
+        @($repoSettings.CodeReviewAgent.branches).Count -gt 0
+    ) {
+        $codeReviewBranches = @($repoSettings.CodeReviewAgent.branches)
+    }
+
+    $branchesJson = ConvertTo-Json -InputObject $codeReviewBranches -Compress
+    $yaml.ReplaceOrAdd('on:/', 'pull_request:', @(
+        "branches: $branchesJson"
+        'types: [ opened, reopened, synchronize, ready_for_review ]'
+    ))
 }
 
 function ModifyRunsOnAndShell {
@@ -573,7 +620,24 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting')
+    if (
+        $repoSettings.Keys -contains 'CodeReviewAgent' -and
+        $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
+        $repoSettings.CodeReviewAgent.Keys -contains 'enabled' -and
+        $repoSettings.CodeReviewAgent.enabled
+    ) {
+        if ($baseName -eq 'CopilotPRReview') {
+            ModifyCopilotPRReviewWorkflow -yaml $yaml -repoSettings $repoSettings
+        }
+        elseif ($baseName -eq 'CopilotPRReviewRunner') {
+            $yaml.ReplaceOrAdd('on:/', 'workflow_run:', @(
+                'workflows: [ Copilot PR Review ]'
+                'types: [ completed ]'
+            ))
+        }
+    }
+
+    $criticalWorkflows = @('UpdateGitHubGoSystemFiles', 'Troubleshooting', 'CopilotPRReviewRunner')
     $allowedRunners = @('windows-latest', 'ubuntu-latest')
     $modifyRunsOnAndShell = $true
 
@@ -1017,6 +1081,13 @@ function GetDefaultFilesToExclude {
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = '_BuildPowerPlatformSolution.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PushPowerPlatformChanges.yaml' }
             [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'PullPowerPlatformChanges.yaml' }
+        )
+    }
+
+    if ($settings.Keys -notcontains 'CodeReviewAgent' -or !$settings['CodeReviewAgent']['enabled']) {
+        $filesToExclude += @(
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReview.yaml' }
+            [ordered]@{ 'sourceFolder' = '.github/workflows'; 'filter' = 'CopilotPRReviewRunner.yaml' }
         )
     }
 

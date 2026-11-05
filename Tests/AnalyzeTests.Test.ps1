@@ -56,6 +56,9 @@ Describe "AnalyzeTests Action Tests" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'thresholdsFile', Justification = 'False positive.')]
         $thresholdsFile = Join-Path ([System.IO.Path]::GetTempPath()) "$([GUID]::NewGuid().ToString()).json"
         @{ "NumberOfSqlStmtsThresholdWarning" = 1; "NumberOfSqlStmtsThresholdError" = 2 } | ConvertTo-Json | Set-Content -Path $thresholdsFile -Encoding UTF8
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'alToolTestRunnerModule', Justification = 'Used to generate production JUnit in a test.')]
+        $alToolTestRunnerModule = Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve) `
+            -DisableNameChecking -Force -PassThru
     }
 
     It 'Compile Action' {
@@ -66,6 +69,44 @@ Describe "AnalyzeTests Action Tests" {
         $outputs = [ordered]@{
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+    }
+
+    It 'Analyzes mixed normal JUnit produced by Add-JUnitTestSuite' {
+        . (Join-Path $scriptRoot '../AL-Go-Helper.ps1')
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        $junitFile = Join-Path $TestDrive 'TestResults.xml'
+
+        & $alToolTestRunnerModule {
+            param($Path)
+
+            $doc = [xml] '<?xml version="1.0" encoding="UTF-8"?><testsuites />'
+            $codeunit = [PSCustomObject]@{
+                Id    = 130001
+                Name  = 'Mixed Tests'
+                Tests = @('Passes', 'Fails', 'Skips')
+            }
+            $diagnosticText = "line one; detail`nAL Callstack:`nline two"
+            $results = @(
+                @{ MethodName = 'Passes'; Outcome = 'Pass'; Ms = 10; Message = ''; Stacktrace = '' },
+                @{ MethodName = 'Fails'; Outcome = 'Fail'; Ms = 20; Message = 'ignored'; Stacktrace = $diagnosticText },
+                @{ MethodName = 'Skips'; Outcome = 'Skip'; Ms = 0; Message = ''; Stacktrace = '' }
+            )
+            Add-JUnitTestSuite -Doc $doc -TestSuitesNode $doc.DocumentElement `
+                -Codeunit $codeunit -RequestedMethods $codeunit.Tests -MethodResults $results `
+                -ExtensionId '11111111-1111-1111-1111-111111111111' -AppName 'Test App' -Hostname 'host' | Out-Null
+            $doc.Save($Path)
+        } $junitFile
+
+        $summary, $failures, $failureSummary = GetTestResultSummaryMD -testResultsFile $junitFile
+
+        $summary | Should -Match '\|Test App\|3\|1[^|]*\|1[^|]*\|1[^|]*\|0\.03\|'
+        $failures | Should -Match 'Fails, Failure'
+        $failures | Should -Match 'Test failed'
+        $failures | Should -Match 'line one; detail'
+        $failures | Should -Match 'AL Callstack:'
+        $failures | Should -Match 'line two'
+        $failures | Should -Not -Match 'Skips, Failure'
+        $failureSummary | Should -Be '<i>1 failing tests, download test results to see details</i>'
     }
 
     It 'Test ReadBcptFile' {
@@ -173,9 +214,62 @@ Describe "AnalyzeTests Action Tests" {
         $output | Should -BeOfType 'hashtable'
     }
 
+    It 'Test page scripting summary under strict mode with <passed> passed, <failed> failed and <skipped> skipped tests' -TestCases @(
+        @{ passed = 9; failed = 2; skipped = 0 }
+        @{ passed = 1; failed = 1; skipped = 1 }
+        @{ passed = 2; failed = 0; skipped = 0 }
+        @{ passed = 0; failed = 2; skipped = 0 }
+    ) {
+        Param($passed, $failed, $skipped)
+
+        Set-StrictMode -Version 2.0
+        . (Join-Path $scriptRoot 'TestResultAnalyzer.ps1')
+        Mock Trace-Information {}
+        $testcases = @(
+            for ($i = 1; $i -le $passed; $i++) {
+                "<testcase name='Passed$i.yml' time='1' />"
+            }
+            for ($i = 1; $i -le $failed; $i++) {
+                "<testcase name='Failed$i.yml' time='1'><failure message='Replay error $i'><![CDATA[Stack trace $i]]></failure></testcase>"
+            }
+            for ($i = 1; $i -le $skipped; $i++) {
+                "<testcase name='Skipped$i.yml' time='1'><skipped /></testcase>"
+            }
+        ) -join "`n"
+        $totalTests = $passed + $failed + $skipped
+        $testResultsFile = Join-Path $TestDrive 'PageScriptingTestResults.xml'
+        @"
+<testsuites tests="$totalTests" failures="$failed" skipped="$skipped" time="$totalTests">
+  <testsuite name="TestProject" tests="$totalTests" failures="$failed" skipped="$skipped" time="$totalTests">
+    $testcases
+  </testsuite>
+</testsuites>
+"@ | Set-Content -Path $testResultsFile -Encoding UTF8
+
+        $output = GetPageScriptingTestResultSummaryMD -testResultsFile $testResultsFile -project 'TestProject'
+        $output.SummaryMD | Should -Match "\|TestProject\|$totalTests\|"
+        if ($passed -gt 0) { $output.SummaryMD | Should -Match "\|$passed :heavy_check_mark:\|" }
+        if ($failed -gt 0) { $output.SummaryMD | Should -Match "\|$failed :x:\|" }
+        if ($skipped -gt 0) { $output.SummaryMD | Should -Match "\|$skipped :question:\|" }
+        $output.FailuresMD | Should -Not -Match 'Passed\d+\.yml|Skipped\d+\.yml'
+        for ($i = 1; $i -le $failed; $i++) {
+            $output.FailuresMD | Should -Match "Failed$i\.yml, Failure"
+            $output.FailuresMD | Should -Match "Replay error $i"
+            $output.FailuresMD | Should -Match "Stack trace $i"
+        }
+        if ($failed -eq 0) {
+            $output.FailuresMD | Should -Be '<i>No test failures</i>'
+        }
+        else {
+            $output.FailuresSummaryMD | Should -Be "<i>$failed failing tests, download test results to see details</i>"
+        }
+    }
+
     AfterAll {
         Remove-Item -Path $bcptFilename -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine1 -Force -ErrorAction SilentlyContinue
         Remove-Item -Path $bcptBaseLine2 -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $thresholdsFile -Force -ErrorAction SilentlyContinue
+        Remove-Module -ModuleInfo $alToolTestRunnerModule -Force -ErrorAction SilentlyContinue
     }
 }
