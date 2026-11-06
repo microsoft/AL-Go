@@ -51,4 +51,33 @@ function Validate-UpdateVersionNumber {
     }
 }
 
+<#
+ .SYNOPSIS
+  Validates the release type input for the workflow.
+ .DESCRIPTION
+  When the workflow is triggered by workflow_dispatch, the release type is a choice input and GitHub validates the value.
+  When the workflow is called as a reusable workflow (workflow_call), choice inputs are not supported, so the value must be validated here.
+  The function checks if the release type is one of the allowed values (case-sensitive) and throws an error if it is not.
+ .PARAMETER inputName
+  The name of the workflow input being validated (used in the error message).
+ .PARAMETER inputValue
+  The value of the workflow input. Allowed values are Release, Prerelease and Draft.
+ .EXAMPLE
+  Validate-ReleaseType -inputName 'releaseType' -inputValue 'Prerelease'
+#>
+function Validate-ReleaseType {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $inputName,
+        [Parameter(Mandatory = $false)]
+        [string] $inputValue = ''
+    )
+
+    $legalValues = @('Release','Prerelease','Draft')
+    if ($legalValues -cnotcontains $inputValue) {
+        throw "$inputName is '$inputValue', must be one of: $($legalValues -join ', ')"
+    }
+}
+
 Export-ModuleMember *-*

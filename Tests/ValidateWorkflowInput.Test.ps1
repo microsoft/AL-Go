@@ -51,6 +51,52 @@ Describe "ValidateWorkflowInput Action Tests" {
         { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue '1.2.3.4'} | Should -Throw
         { Validate-UpdateVersionNumber -settings $settings -inputName $inputName -inputValue 'a.b.c'} | Should -Throw
     }
-    # Call action
 
+    It 'Test Validate-ReleaseType' {
+        Import-Module (Join-Path -Path $scriptRoot -ChildPath "$($actionName).psm1" -Resolve) -Force -DisableNameChecking
+        $inputName = 'releaseType'
+
+        { Validate-ReleaseType -inputName $inputName -inputValue 'Release' } | Should -Not -Throw
+        { Validate-ReleaseType -inputName $inputName -inputValue 'Prerelease' } | Should -Not -Throw
+        { Validate-ReleaseType -inputName $inputName -inputValue 'Draft' } | Should -Not -Throw
+        { Validate-ReleaseType -inputName $inputName -inputValue 'release' } | Should -Throw
+        { Validate-ReleaseType -inputName $inputName -inputValue 'Beta' } | Should -Throw
+        { Validate-ReleaseType -inputName $inputName -inputValue '' } | Should -Throw
+    }
+
+    # Call action
+    Context 'Call action with workflowName and inputsJson (reusable workflow)' {
+        BeforeEach {
+            $env:Settings = (@{ versioningStrategy = 0 } | ConvertTo-Json -Compress)
+        }
+
+        AfterEach {
+            Remove-Item env:Settings -ErrorAction SilentlyContinue
+        }
+
+        It 'Validates inputs from inputsJson for the specified workflow' {
+            $inputsJson = @{ name = 'v1.0'; tag = '1.0.0'; releaseType = 'Prerelease'; updateVersionNumber = '+0.1'; createReleaseBranch = $false } | ConvertTo-Json -Compress
+            { . $scriptPath -workflowName ' Create release' -inputsJson $inputsJson } | Should -Not -Throw
+        }
+
+        It 'Does not validate an empty updateVersionNumber in Create release' {
+            $inputsJson = @{ releaseType = 'Release'; updateVersionNumber = '' } | ConvertTo-Json -Compress
+            { . $scriptPath -workflowName ' Create release' -inputsJson $inputsJson } | Should -Not -Throw
+        }
+
+        It 'Throws on invalid releaseType in Create release' {
+            $inputsJson = @{ releaseType = 'Beta'; updateVersionNumber = '' } | ConvertTo-Json -Compress
+            { . $scriptPath -workflowName ' Create release' -inputsJson $inputsJson } | Should -Throw "*releaseType is 'Beta'*"
+        }
+
+        It 'Throws on invalid versionNumber in Increment Version Number' {
+            $inputsJson = @{ versionNumber = '1.2.3'; directCommit = $true } | ConvertTo-Json -Compress
+            { . $scriptPath -workflowName ' Increment Version Number' -inputsJson $inputsJson } | Should -Throw "*versionNumber is '1.2.3'*"
+        }
+
+        It 'Throws when no validation script exists for the workflow' {
+            $inputsJson = @{ releaseType = 'Release' } | ConvertTo-Json -Compress
+            { . $scriptPath -workflowName 'My Orchestrator' -inputsJson $inputsJson } | Should -Throw "No validate workflow script found for myorchestrator."
+        }
+    }
 }
