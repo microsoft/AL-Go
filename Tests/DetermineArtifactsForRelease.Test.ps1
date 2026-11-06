@@ -48,6 +48,25 @@ Describe 'DetermineArtifactsForRelease Tests' {
             $env:GITHUB_API_URL = 'https://api.github.com'
             $env:GITHUB_REF_NAME = 'main'
             $env:Settings = '{"repoName":"repo","type":"PTE","powerPlatformSolutionFolder":""}'
+            $script:originalGitHubWorkspace = $env:GITHUB_WORKSPACE
+            $script:workspaceFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+            New-Item -Path $script:workspaceFolder -ItemType Directory | Out-Null
+            $env:GITHUB_WORKSPACE = $script:workspaceFolder
+            'proj1', 'proj2' | ForEach-Object { New-Item -Path (Join-Path $script:workspaceFolder $_) -ItemType Directory | Out-Null }
+
+            function NewProjectSettings {
+                param([string] $project, [hashtable] $projectSettings)
+                $alGoFolder = Join-Path $script:workspaceFolder (Join-Path $project '.AL-Go')
+                New-Item -Path $alGoFolder -ItemType Directory -Force | Out-Null
+                $projectSettings | ConvertTo-Json -Depth 99 -Compress | Out-File (Join-Path $alGoFolder 'settings.json') -Encoding UTF8
+            }
+        }
+
+        AfterAll {
+            $env:GITHUB_WORKSPACE = $script:originalGitHubWorkspace
+            if ($script:workspaceFolder -and (Test-Path $script:workspaceFolder)) {
+                Remove-Item -Path $script:workspaceFolder -Recurse -Force
+            }
         }
 
         BeforeEach {
@@ -123,6 +142,41 @@ Describe 'DetermineArtifactsForRelease Tests' {
             }
 
             { & $scriptPath -buildVersion 'latest' -GITHUB_TOKEN 'tok' -TOKENFORPUSH 'tok' -ProjectsJson '["proj1"]' } |
+                Should -Throw -ExpectedMessage '*No release artifacts found for any project*'
+        }
+
+        It 'Test project (projectsToTest) is skipped even though it has no artifacts' {
+            NewProjectSettings -project 'testproj' -projectSettings @{ projectsToTest = @('proj1') }
+            $artifacts = @(
+                (MockArtifact 'proj1-main-Apps-1.0.0.0'),
+                (MockArtifact 'proj1-main-TestApps-1.0.0.0')
+            )
+            Mock Invoke-RestMethod -ParameterFilter { $Uri -like '*actions/artifacts*page=1*' } -MockWith {
+                [PSCustomObject]@{ total_count = $artifacts.Count; Artifacts = $artifacts }
+            }
+            Mock Invoke-RestMethod -ParameterFilter { $Uri -like '*actions/artifacts*page=2*' } -MockWith {
+                [PSCustomObject]@{ total_count = 0; Artifacts = @() }
+            }
+            Mock Invoke-RestMethod -ParameterFilter { $Uri -like '*/branches/*' } -MockWith {
+                [PSCustomObject]@{ commit = [PSCustomObject]@{ sha = 'abc123' } }
+            }
+
+            & $scriptPath -buildVersion 'latest' -GITHUB_TOKEN 'tok' -TOKENFORPUSH 'tok' -ProjectsJson '["proj1","testproj"]'
+
+            $output = Get-Content $env:GITHUB_OUTPUT -Raw
+            $output | Should -Match 'commitish=abc123'
+            $output | Should -Match 'proj1-main-Apps-1\.0\.0\.0'
+            $output | Should -Match 'proj1-main-TestApps-1\.0\.0\.0'
+            $output | Should -Not -Match 'testproj'
+        }
+
+        It 'Throws a clear error when only test projects are present' {
+            NewProjectSettings -project 'testproj' -projectSettings @{ projectsToTest = @('proj1') }
+            Mock Invoke-RestMethod -ParameterFilter { $Uri -like '*actions/artifacts*' } -MockWith {
+                [PSCustomObject]@{ total_count = 0; Artifacts = @() }
+            }
+
+            { & $scriptPath -buildVersion 'latest' -GITHUB_TOKEN 'tok' -TOKENFORPUSH 'tok' -ProjectsJson '["testproj"]' } |
                 Should -Throw -ExpectedMessage '*No release artifacts found for any project*'
         }
 
