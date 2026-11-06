@@ -1,0 +1,88 @@
+name: E2E Run Test
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: pwsh
+  testType:
+    description: Test type (test or upgrade)
+    required: false
+    default: 'test'
+  private:
+    description: Private repository
+    required: false
+    default: 'false'
+  githubOwner:
+    description: GitHub owner
+    required: true
+  repoName:
+    description: Repository name
+    required: true
+  e2eAppId:
+    description: E2E App ID
+    required: true
+  e2eAppKey:
+    description: E2E App Key
+    required: true
+  algoAuthApp:
+    description: ALGO Auth App
+    required: true
+  template:
+    description: Template
+    required: true
+  adminCenterApiCredentials:
+    description: Admin center API credentials
+    required: false
+    default: ''
+  multiProject:
+    description: Multi-project
+    required: false
+    default: 'false'
+  appSource:
+    description: AppSource app
+    required: false
+    default: 'false'
+  linux:
+    description: Linux
+    required: false
+    default: 'false'
+  useCompilerFolder:
+    description: Use compiler folder
+    required: false
+    default: 'false'
+  release:
+    description: Release (for upgrade tests)
+    required: false
+    default: ''
+  contentPath:
+    description: Content path (for upgrade tests)
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _testType: ${{ inputs.testType }}
+        _private: ${{ inputs.private }}
+        _githubOwner: ${{ inputs.githubOwner }}
+        _repoName: ${{ inputs.repoName }}
+        _e2eAppId: ${{ inputs.e2eAppId }}
+        _e2eAppKey: ${{ inputs.e2eAppKey }}
+        _algoAuthApp: ${{ inputs.algoAuthApp }}
+        _template: ${{ inputs.template }}
+        _adminCenterApiCredentials: ${{ inputs.adminCenterApiCredentials }}
+        _multiProject: ${{ inputs.multiProject }}
+        _appSource: ${{ inputs.appSource }}
+        _linux: ${{ inputs.linux }}
+        _useCompilerFolder: ${{ inputs.useCompilerFolder }}
+        _release: ${{ inputs.release }}
+        _contentPath: ${{ inputs.contentPath }}
+      run: |
+        ${{ github.action_path }}/E2ERunTest.ps1 -testType $ENV:_testType -private ($ENV:_private -eq 'true') -githubOwner $ENV:_githubOwner -repoName $ENV:_repoName -e2eAppId $ENV:_e2eAppId -e2eAppKey $ENV:_e2eAppKey -algoAuthApp $ENV:_algoAuthApp -template $ENV:_template -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -multiProject ($ENV:_multiProject -eq 'true') -appSource ($ENV:_appSource -eq 'true') -linux ($ENV:_linux -eq 'true') -useCompilerFolder ($ENV:_useCompilerFolder -eq 'true') -release $ENV:_release -contentPath $ENV:_contentPath
+branding:
+  icon: check-square
+  color: blue

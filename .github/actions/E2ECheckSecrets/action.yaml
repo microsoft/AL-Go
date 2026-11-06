@@ -1,0 +1,61 @@
+name: E2E Check Secrets
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: pwsh
+  githubOwner:
+    description: GitHub owner (defaults to current repository owner)
+    required: false
+    default: ''
+  e2eAppId:
+    description: E2E_APP_ID variable value
+    required: false
+    default: ''
+  e2ePrivateKey:
+    description: E2E_PRIVATE_KEY secret value
+    required: false
+    default: ''
+  algoAuthApp:
+    description: ALGOAUTHAPP secret value
+    required: false
+    default: ''
+  adminCenterApiCredentials:
+    description: adminCenterApiCredentials secret value
+    required: false
+    default: ''
+  e2eGHPackagesPAT:
+    description: E2E_GHPackagesPAT secret value
+    required: false
+    default: ''
+  e2eAzureCredentials:
+    description: E2EAZURECREDENTIALS secret value
+    required: false
+    default: ''
+outputs:
+  maxParallel:
+    description: Maximum number of parallel jobs
+    value: ${{ steps.run.outputs.maxParallel }}
+  githubOwner:
+    description: GitHub owner for test repositories
+    value: ${{ steps.run.outputs.githubOwner }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      id: run
+      shell: ${{ inputs.shell }}
+      env:
+        _githubOwner: ${{ inputs.githubOwner }}
+        _e2eAppId: ${{ inputs.e2eAppId }}
+        _e2ePrivateKey: ${{ inputs.e2ePrivateKey }}
+        _algoAuthApp: ${{ inputs.algoAuthApp }}
+        _adminCenterApiCredentials: ${{ inputs.adminCenterApiCredentials }}
+        _e2eGHPackagesPAT: ${{ inputs.e2eGHPackagesPAT }}
+        _e2eAzureCredentials: ${{ inputs.e2eAzureCredentials }}
+      run: |
+        ${{ github.action_path }}/E2ECheckSecrets.ps1 -githubOwner $ENV:_githubOwner -e2eAppId $ENV:_e2eAppId -e2ePrivateKey $ENV:_e2ePrivateKey -algoAuthApp $ENV:_algoAuthApp -adminCenterApiCredentials $ENV:_adminCenterApiCredentials -e2eGHPackagesPAT $ENV:_e2eGHPackagesPAT -e2eAzureCredentials $ENV:_e2eAzureCredentials
+branding:
+  icon: check-circle
+  color: blue
