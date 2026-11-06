@@ -192,6 +192,7 @@ Describe 'DetermineArtifactsForRelease Tests' {
 
         It 'Latest selects the most recently created artifacts, regardless of API order' {
             # Artifacts in the order returned by the API (descending artifact id, which isn't chronological)
+            'DK', 'US', 'W1' | ForEach-Object { New-Item -Path (Join-Path $script:workspaceFolder $_) -ItemType Directory | Out-Null }
             $artifacts = @(
                 (MockArtifact 'W1-main-BuildOutput-1.0.5.0' -sha 'sha5' -createdAt '2026-11-04T15:14:17Z'),
                 (MockArtifact 'W1-main-Apps-1.0.5.0' -sha 'sha5' -createdAt '2026-11-04T15:14:15Z'),
