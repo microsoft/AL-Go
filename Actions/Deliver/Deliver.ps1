@@ -123,10 +123,8 @@ function Compare-AppFiles {
                 if ($fileName -eq 'app.json') {
                     $json1 = Get-Content -Path $file1Path -Encoding UTF8 | ConvertFrom-Json
                     $json2 = Get-Content -Path $file2Path -Encoding UTF8 | ConvertFrom-Json
-                    $json1.version = $null
-                    $json2.version = $null
-                    $normalized1 = $json1 | ConvertTo-Json -Depth 99
-                    $normalized2 = $json2 | ConvertTo-Json -Depth 99
+                    $normalized1 = ConvertTo-ComparableAppJson -AppJson $json1
+                    $normalized2 = ConvertTo-ComparableAppJson -AppJson $json2
                     if ($normalized1 -ne $normalized2) {
                         $differentFiles += $relativePath
                     }
