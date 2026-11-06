@@ -41,6 +41,7 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 ### Issues
 
 - Issue 2417 - Fix workspace compilation with versioning strategy 3 to preserve each app's build number instead of failing with "build ('-1') must be a non-negative value". Explicit build number zero is now applied correctly.
+- Issue 2438 - Create Release with app version `latest` now sorts repository artifacts by creation time before selecting the latest artifact for each project. Previously it relied on the order returned by the GitHub artifacts API (artifact id, which isn't chronological), so projects could resolve to artifacts from different, older CI/CD runs and the release failed with "The build selected for release doesn't contain all projects". That error now names the mismatching artifact and commits.
 
 - Issue 2437 - Create Release no longer fails with "No artifacts found for this project" when the repository contains a test project (a project with `projectsToTest`). Test projects don't build apps and are now skipped when determining release artifacts.
 
