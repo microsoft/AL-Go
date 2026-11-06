@@ -18,6 +18,17 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable
 $projects = $ProjectsJson | ConvertFrom-Json
 Write-Host "projects:"
 $projects | ForEach-Object { Write-Host "- $_" }
+
+# Test projects (projects with projectsToTest) cannot contain buildable code and never produce release artifacts
+$projects = @($projects | Where-Object {
+    $projectSettings = ReadSettings -project $_ -baseFolder $ENV:GITHUB_WORKSPACE
+    if ($projectSettings.projectsToTest -and $projectSettings.projectsToTest.Count -gt 0) {
+        Write-Host "Project $_ is a test project (projectsToTest is set) and doesn't produce release artifacts. Skipping project for release."
+        return $false
+    }
+    return $true
+})
+
 if ($settings.type -eq "PTE" -and $settings.powerPlatformSolutionFolder -ne "") {
     Write-Host "PowerPlatformSolution:"
     Write-Host "- $($settings.powerPlatformSolutionFolder)"
