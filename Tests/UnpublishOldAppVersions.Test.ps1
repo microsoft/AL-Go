@@ -64,6 +64,8 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         It 'Explains delayed service-managed cleanup without any writes on BC <major>.<minor>' -TestCases @(
+            @{ major = 29; minor = 0 },
+            @{ major = 29; minor = 9 },
             @{ major = 30; minor = 0 },
             @{ major = 30; minor = 1 },
             @{ major = 31; minor = 0 }
@@ -72,19 +74,59 @@ InModuleScope Deploy { # Allows testing of private functions
             $script:applicationExtension.versionMajor = $major
             $script:applicationExtension.versionMinor = $minor
 
-            { UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app") } | Should -Not -Throw
+            { UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app") -publishingResults @{ $script:appId = 'AdminCenter' } } | Should -Not -Throw
 
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                $message -like "*cannot explicitly unpublish*Business Central manages cleanup in the background*may be delayed*timing and retained versions are not guaranteed*AL-Go cleanup was skipped*deployment remains successful*"
+                $message -like "*skips explicit cleanup*Admin Center publishing*Business Central manages cleanup in the background*may be delayed*timing and retained versions are not guaranteed*deployment remains successful*"
             }
             Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -ne "Get" }
+        }
+
+        It 'Uses legacy cleanup after Automation fallback on BC <major>' -TestCases @(
+            @{ major = 29 }, @{ major = 30 }, @{ major = 31 }
+        ) {
+            param($major)
+            $script:applicationExtension.versionMajor = $major
+
+            UnpublishOldAppVersions -bcAuthContext @{} -environment test-env -appFiles @('App1.app') -publishingResults @{ $script:appId = 'Automation' }
+
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq 'Post' -and $Uri -like '*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish'
+            }
+            Assert-MockCalled OutputWarning -Times 0
+        }
+
+        It 'Only cleans Automation apps in a mixed-path batch and preserves installed and newer packages' {
+            $script:applicationExtension.versionMajor = 29
+            $script:mockExtensions += @(
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v3'; isInstalled = $false; versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:otherAppId; displayName = 'Other App'; packageId = 'pkg-other-v1'; isInstalled = $false; versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:otherAppId; displayName = 'Other App'; packageId = 'pkg-other-v2'; isInstalled = $true; versionMajor = 2; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+            )
+
+            UnpublishOldAppVersions -bcAuthContext @{} -environment test-env -appFiles @('App1.app', 'OtherApp.app') -publishingResults @{
+                $script:appId = 'Automation'
+                $script:otherAppId = 'AdminCenter'
+            }
+
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Method -eq 'Post' }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Method -eq 'Post' -and $Uri -like '*pkg-app1-v1*' }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -eq 'Post' -and $Uri -like '*pkg-other*' }
+        }
+
+        It 'Does not infer an Automation outcome from the environment version or a skipped app' {
+            $script:applicationExtension.versionMajor = 29
+
+            UnpublishOldAppVersions -bcAuthContext @{} -environment test-env -appFiles @('App1.app') -publishingResults @{ $script:appId = 'Skipped' }
+
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -ne 'Get' }
+            Assert-MockCalled OutputWarning -Exactly 1
         }
 
         It 'Preserves legacy cleanup on BC <major>.<minor>' -TestCases @(
             @{ major = 25; minor = 4 },
             @{ major = 28; minor = 9 },
-            @{ major = 29; minor = 0 },
-            @{ major = 29; minor = 9 }
+            @{ major = 28; minor = 0 }
         ) {
             param($major, $minor)
             $script:applicationExtension.versionMajor = $major

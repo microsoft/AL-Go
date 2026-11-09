@@ -167,8 +167,9 @@ else {
             Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as deploying from a PR is only supported in sandbox environments"
         }
         else {
+            $publishingResults = @{}
             if ($dependencies) {
-                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode
+                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode -publishingResults $publishingResults
             }
             if ($unknownDependencies) {
                 InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $unknownDependencies -installMode $deploymentSettings.DependencyInstallMode
@@ -198,6 +199,7 @@ else {
                     "bcAuthContext" = $bcAuthContext
                     "environment" = $deploymentSettings.EnvironmentName
                     "appFiles" = $apps
+                    "publishingResults" = $publishingResults
                 }
                 if ($deploymentSettings.SyncMode) {
                     if (@('Add','ForceSync') -notcontains $deploymentSettings.SyncMode) {
@@ -216,7 +218,7 @@ else {
 
                 if (($deploymentSettings['unpublishOldVersions'] -is [bool]) -and $deploymentSettings['unpublishOldVersions']) {
                     Write-Host "Checking cleanup of old app versions"
-                    UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
+                    UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps -publishingResults $publishingResults
                 }
             }
         }

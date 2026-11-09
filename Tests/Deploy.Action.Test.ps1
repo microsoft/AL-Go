@@ -76,6 +76,29 @@ Describe "Deploy Action Tests" {
             $script:unpublishAfterPublish | Should -BeTrue
         }
 
+        It 'Shares action-scoped publishing paths across dependencies, primary apps and cleanup' {
+            Mock GetAppsAndDependenciesFromArtifacts { return @('/tmp/app1.app'), @('/tmp/dependency.app') }
+            Mock InstallOrUpgradeApps {
+                $publishingResults.Count | Should -Be 0
+                $publishingResults['dependency'] = 'AdminCenter'
+            }
+            Mock PublishPTEApps {
+                $publishingResults['dependency'] | Should -Be 'AdminCenter'
+                $publishingResults['primary'] = 'Automation'
+            }
+            Mock UnpublishOldAppVersions {
+                $publishingResults['dependency'] | Should -Be 'AdminCenter'
+                $publishingResults['primary'] | Should -Be 'Automation'
+                $appFiles | Should -Not -Contain '/tmp/dependency.app'
+            }
+
+            InvokeDeploy -deploymentSettings @{ "EnvironmentType" = "SaaS"; "EnvironmentName" = "test"; "Branches" = @(); "Projects" = "*"; "DependencyInstallMode" = "upgrade"; "SyncMode" = $null; "Scope" = "PTE"; "continuousDeployment" = $true; "includeTestAppsInSandboxEnvironment" = $false; "excludeAppIds" = @(); "unpublishOldVersions" = $true }
+
+            Assert-MockCalled InstallOrUpgradeApps -Exactly 1
+            Assert-MockCalled PublishPTEApps -Exactly 1
+            Assert-MockCalled UnpublishOldAppVersions -Exactly 1
+        }
+
         It 'Does not invoke cleanup when unpublishOldVersions is not set (default)' {
             InvokeDeploy -deploymentSettings @{ "EnvironmentType" = "SaaS"; "EnvironmentName" = "test"; "Branches" = @(); "Projects" = "*"; "DependencyInstallMode" = "ignore"; "SyncMode" = $null; "Scope" = "PTE"; "continuousDeployment" = $true; "includeTestAppsInSandboxEnvironment" = $false; "excludeAppIds" = @() }
 

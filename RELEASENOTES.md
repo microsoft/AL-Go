@@ -1,10 +1,10 @@
-### Breaking changes
+### Authorization for PTE deployment on BC 29 and later
 
-**PTE deployment to BC 30 and later requires additional authorization.** Earlier, environment-level deployment permissions were sufficient. Existing deployments to BC 30 or later will now fail if the required administration center access has not been granted.
+**Update your deployment authorization:** For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under **Authorized Microsoft Entra apps** in the Business Central administration center. See [deployment setup](Workshop/ContinuousDeployment.md#pte-deployment-authorization).
 
-For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under the Business Central administration center's **Authorized Microsoft Entra apps**. Delegated users need appropriate administration center access. Keep the existing environment permissions and AUTHCONTEXT credential structure. See [deployment authorization](Workshop/ContinuousDeployment.md#pte-deployment-authorization). These requirements also apply when a Scope Dev deployment installs or upgrades a PTE dependency on BC 30 or later. Primary-app publishing through the development endpoint does not itself require the additional authorization. Deployments to BC 29 and earlier, custom deployments, and container behavior are unchanged.
+On BC 29 and later, AL-Go tries the Admin Center API first and falls back to the existing Automation API with a warning after a confirmed failure.
 
-**Old-version cleanup changes on BC 30 and later.** Business Central manages cleanup in the background rather than AL-Go explicitly unpublishing old versions. Cleanup may be delayed; its timing and retained versions are not guaranteed. `unpublishOldVersions` does not control background cleanup: if enabled, AL-Go warns and skips explicit unpublish without failing deployment.
+The Automation API's PTE upload endpoint (`extensionUpload`) is deprecated and planned for removal in 2027 release wave 1; this does not mean all Automation APIs are deprecated. See the [official deprecation notice](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload).
 
 ### Separate test execution from RunPipeline (PREVIEW)
 
@@ -17,7 +17,7 @@ The action uses AlTool by default, running each app's enabled normal tests in on
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). After successful Scope PTE deployment on BC 25.4 through 29, it removes only selected apps' uninstalled versions older than the currently installed version. Cleanup failures remain warnings. For BC 30 and later, see the cleanup behavior under **Breaking changes** above.
+The optional `DeployTo<environment>.unpublishOldVersions` setting (default `false`) removes older, uninstalled versions after successful Scope PTE deployment through Automation on BC 25.4+, including fallback. Administration center deployments use Business Central's background cleanup instead. See [old published versions](Workshop/ContinuousDeployment.md#old-published-versions) for details.
 
 ### Settings sources in workflow logs
 
@@ -64,7 +64,7 @@ AL-Go now supports including pre-release versions of Business Central app packag
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). After successful Scope PTE deployment on BC 25.4 through 29, it removes only selected apps' uninstalled versions older than the currently installed version. Cleanup failures remain warnings. For BC 30 and later, see the cleanup behavior under **Breaking changes** above.
+The optional `DeployTo<environment>.unpublishOldVersions` setting (default `false`) removes older, uninstalled versions after successful Scope PTE deployment through Automation on BC 25.4+, including fallback. Administration center deployments use Business Central's background cleanup instead. See [old published versions](Workshop/ContinuousDeployment.md#old-published-versions) for details.
 
 ### Expanded AL-Go telemetry dashboard
 

@@ -43,6 +43,7 @@ InModuleScope Deploy { # Allows testing of private functions
             Mock OutputGroupStart { }
             Mock OutputGroupEnd { }
             Mock OutputWarning { }
+            Mock Get-AdminCenterInstalledExtensions { throw 'Admin Center read unavailable' }
             Mock Get-AppJsonFromAppFile {
                 param($appFile)
                 switch ($appFile) {
@@ -511,6 +512,21 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         Describe "CheckInstalledApps" {
+            It 'Uses the Admin installed snapshot for higher-version warnings without Automation' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    return [PSCustomObject]@{
+                        id = 'admin-app'; displayName = 'Admin App'; isInstalled = $true
+                        versionMajor = 2; versionMinor = 1; versionBuild = 3; versionRevision = 4
+                    }
+                }
+                Mock Get-AppJsonFromAppFile { return @{ id = 'admin-app'; name = 'Admin App'; Version = '2.1.3.2' } }
+
+                CheckInstalledApps -bcAuthContext @{} -environment Sandbox -appFiles @('Admin.app')
+
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like '*2.1.3.4*higher than 2.1.3.2*' }
+            }
             It 'Does not warn when app version matches installed version' {
                 $bcAuthContext = @{ tenantId = "test-tenant" }
                 $environment = "test-env"
@@ -811,6 +827,47 @@ InModuleScope Deploy { # Allows testing of private functions
                 }
             }
 
+            It 'Uses Admin installed PTE dependency checks without requiring Automation' {
+                Mock Get-ChildItem {
+                    param($Path)
+                    return @(@{ FullName = Join-Path $Path "PTEApp.app" })
+                }
+                Mock Get-AdminCenterInstalledExtensions {
+                    return [PSCustomObject]@{
+                        id = $script:pteApp1Id; displayName = 'PTE App'; isInstalled = $true
+                        versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0
+                        publishedAs = 'tenant'
+                    }
+                }
+
+                InstallOrUpgradeApps -bcAuthContext @{} -environment Sandbox -apps @('PTEApp.app') -installMode upgrade
+
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled PublishPTEApps -Exactly 1
+            }
+
+            It 'Preserves the Dev dependency exclusion using normalized Admin appType' {
+                Mock Get-ChildItem {
+                    param($Path)
+                    return @(@{ FullName = Join-Path $Path "DevScopeApp.app" })
+                }
+                Mock Get-AdminCenterInstalledExtensions {
+                    return [PSCustomObject]@{
+                        id = $script:devScopeAppId; displayName = 'Dev Scope App'; isInstalled = $true
+                        versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0
+                        publishedAs = 'dev'
+                    }
+                }
+
+                InstallOrUpgradeApps -bcAuthContext @{} -environment Sandbox -apps @('DevScopeApp.app') -installMode upgrade
+
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+                Assert-MockCalled PublishPTEApps -Times 0
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like '*published in Dev scope*Cannot upgrade*' }
+            }
+
             It 'Delegates PTE dependency publishing without requesting deferred installation' {
                 Mock Get-ChildItem {
                     param($Path)
@@ -818,10 +875,14 @@ InModuleScope Deploy { # Allows testing of private functions
                 }
                 Mock PublishPTEApps {
                     $PesterBoundParameters.Keys | Should -Not -Contain 'schedule'
+                    $publishingResults['primary'] | Should -Be 'AdminCenter'
+                    $publishingResults['dependency'] = 'Automation'
                 }
 
-                InstallOrUpgradeApps -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -apps @("PTEApp.app") -installMode "upgrade"
+                $results = @{ primary = 'AdminCenter' }
+                InstallOrUpgradeApps -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -apps @("PTEApp.app") -installMode "upgrade" -publishingResults $results
 
+                $results['dependency'] | Should -Be 'Automation'
                 Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
                     $appFiles.Count -eq 1 -and $appFiles[0] -like "*PTEApp.app" -and $SchemaSyncMode -eq "Add"
                 }

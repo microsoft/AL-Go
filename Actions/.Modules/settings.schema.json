@@ -985,7 +985,7 @@
                 "unpublishOldVersions": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Optional boolean, default false. After successful Scope PTE deployment, unpublishes only selected apps' uninstalled versions older than the currently installed version on Business Central 25.4 through 29. On BC 30 and later, Business Central manages cleanup in the background, which may be delayed; timing and retained versions are not guaranteed. This setting does not control background cleanup: AL-Go warns and skips explicit unpublish without failing deployment. Cleanup failures are warnings; does not apply to Scope Dev or custom deployments. See https://aka.ms/ALGoSettings#deployto"
+                    "description": "Optional boolean, default false. After successful Scope PTE deployment through Automation on Business Central 25.4 or later, including fallback, unpublishes only selected apps' uninstalled versions older than the currently installed version. Apps published through Admin Center anywhere in the action are excluded from explicit cleanup; Business Central manages their background cleanup, whose timing and retained versions are not guaranteed. On BC 29 and later, skipped apps without a recorded Automation success are also excluded. Mixed-path deployments clean only eligible Automation apps. This setting does not control background cleanup. Skipped cleanup and cleanup failures are warnings; does not apply to Scope Dev or custom deployments. See https://aka.ms/ALGoSettings#deployto"
                 }
             }
         }
