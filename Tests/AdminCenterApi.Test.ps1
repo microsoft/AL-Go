@@ -153,6 +153,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 }
                 catch {
                     $_.Exception.Message | Should -BeLike '*Authentication failed*'
+                    ($_.FullyQualifiedErrorId -split ',')[0] | Should -Be 'AdminCenterAuthenticationFailed'
                     $_.Exception.Data['AdminCenterRequestStarted'] | Should -BeFalse
                 }
                 Assert-MockCalled Invoke-RestMethod -Times 0
@@ -199,7 +200,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 $stream.Dispose()
             }
 
-            It 'Preserves local package failure as not sent and never calls the request wrapper' {
+            It 'Preserves local package failure and never calls the request wrapper' {
                 Mock Invoke-AdminCenterApi { throw 'Request must not be called' }
 
                 try {
@@ -207,7 +208,6 @@ Describe 'AL-Go Admin Center API helpers' {
                     throw 'Expected failure'
                 }
                 catch {
-                    $_.Exception.Data['AdminCenterRequestStarted'] | Should -BeFalse
                     $_.Exception.Message | Should -Match 'Missing.app'
                 }
                 Assert-MockCalled Invoke-AdminCenterApi -Times 0

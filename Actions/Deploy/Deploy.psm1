@@ -365,9 +365,7 @@ function WaitPTEOperation {
                     [System.Exception]::new("PTE operation $operationId for app $appId did not succeed ($status). $serviceError"),
                     'PTEOperationFailed', 'InvalidResult', $null)
                 $details = Get-AdminCenterApiErrorMessage -errorRecord $record
-                $exception = [System.Exception]::new($details)
-                $exception.Data['PTEFallbackAllowed'] = $status -in 'failed','canceled','skipped'
-                throw $exception
+                throw [System.Exception]::new($details)
             }
         }
         if ($requests -ge $maxStatusRequests -or $timer.Elapsed.TotalSeconds -ge $timeoutSeconds) {
@@ -407,9 +405,10 @@ function WaitPTEOperation {
         Publish primary apps or PTE dependencies using the target BC version.
     .DESCRIPTION
         Below BC 29, delegates publishing to the released BcContainerHelper Automation implementation.
-        On BC 29 and later, AL-Go prefers Admin Center publishing and falls back to Automation after
-        a confirmed failure. Unknown or running outcomes stop deployment to avoid duplicate writes.
-        Completed apps are not replayed. Existing helper utilities expand packages, exclude runtime
+        On BC 29 and later, AL-Go prefers Admin Center publishing and falls back to one Automation
+        batch only for authentication or authorization failures before any Admin publish succeeds.
+        Deployment failures and uncertain outcomes stop without fallback.
+        Existing helper utilities expand packages, exclude runtime
         packages and order dependencies. Same or newer installed versions are skipped.
         Installed apps and the Application version are read from Admin Center first. A failed
         read or invalid Application version falls back to the read-only Automation API.
@@ -447,60 +446,20 @@ function PublishPTEApps {
     try {
         $copiedApps = @(Copy-AppFilesToFolder -appFiles $appFiles -folder $tempPath)
         $sortedApps = @(Sort-AppFilesByDependencies -appFiles $copiedApps -excludeRuntimePackages)
-        $useLegacy = $false
-        $completedExtensions = @()
+        $appsToPublish = @()
         foreach ($appFile in $sortedApps) {
             $appJson = Get-AppJsonFromAppFile -appFile $appFile
             $appVersion = [version]$appJson.version
             $installedVersions = @($extensions | Where-Object { $_.id -eq $appJson.id -and $_.isInstalled } |
                 ForEach-Object { [version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) })
             if (@($installedVersions | Where-Object { $_ -ge $appVersion }).Count -gt 0) {
-                Write-Host "App $($appJson.name) v$appVersion or newer is already installed"
+                Write-Host "App $($appJson.name) v$appVersion or newer is already installed or selected for this batch"
                 if (!$publishingResults.ContainsKey($appJson.id)) { $publishingResults[$appJson.id] = 'Skipped' }
                 continue
             }
-            if (!$useLegacy) {
-                try {
-                    $uploadReturned = $false
-                    $syncMode = if ($schemaSyncMode -eq 'Force') { 'ForceSync' } else { 'Add' }
-                    $operation = Install-AdminCenterPTE -bcAuthContext $bcAuthContext -environment $environment -appFile $appFile -syncMode $syncMode
-                    $uploadReturned = $true
-                    WaitPTEOperation -bcAuthContext $bcAuthContext -environment $environment -operation $operation -appId $appJson.id
-                }
-                catch {
-                    $statusCode = 0
-                    if ($_.Exception.PSObject.Properties['Response'] -and $_.Exception.Response) {
-                        $statusCode = [int]$_.Exception.Response.StatusCode
-                    }
-                    $fallbackAllowed = $_.Exception.Data['PTEFallbackAllowed'] -eq $true -or (!$uploadReturned -and (
-                        $_.Exception.Data['AdminCenterRequestStarted'] -eq $false -or
-                        $statusCode -in 400,401,403,404,405,413,415,422,429))
-                    $details = Get-AdminCenterApiErrorMessage -errorRecord $_
-                    $guidance = "For access errors, update your administration center permissions: https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization"
-                    if (!$fallbackAllowed) {
-                        OutputWarning -message "Admin Center publishing failed for $($appJson.name): $details. $guidance. The installation outcome is unknown or may still be running; stopping without legacy fallback to avoid duplicate installation."
-                        throw [System.Exception]::new("Admin Center publishing stopped without legacy fallback: $details")
-                    }
-                    OutputWarning -message "Admin Center publishing failed for $($appJson.name): $details. $guidance. Falling back to the Automation API for remaining apps."
-                    $useLegacy = $true
-                    # A terminal operation may have changed installed state before failing.
-                    $extensions = @(Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment) + $completedExtensions
-                }
-            }
-            if ($useLegacy) {
-                $installedVersions = @($extensions | Where-Object { $_.id -eq $appJson.id -and $_.isInstalled } |
-                    ForEach-Object { [version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) })
-                if (@($installedVersions | Where-Object { $_ -ge $appVersion }).Count -gt 0) {
-                    Write-Host "App $($appJson.name) v$appVersion or newer is already installed"
-                    if (!$publishingResults.ContainsKey($appJson.id)) { $publishingResults[$appJson.id] = 'Skipped' }
-                    continue
-                }
-                Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles @($appFile) -SchemaSyncMode $schemaSyncMode
-            }
-            if ($publishingResults[$appJson.id] -ne 'AdminCenter') {
-                $publishingResults[$appJson.id] = if ($useLegacy) { 'Automation' } else { 'AdminCenter' }
-            }
-            $completedExtension = @{
+            $appsToPublish += @{ appFile = $appFile; appJson = $appJson }
+            # Also skip duplicate versions already selected for this ordered batch.
+            $extensions += @{
                 id = $appJson.id
                 displayName = $appJson.name
                 isInstalled = $true
@@ -509,8 +468,38 @@ function PublishPTEApps {
                 versionBuild = $appVersion.Build
                 versionRevision = $appVersion.Revision
             }
-            $completedExtensions += $completedExtension
-            $extensions += $completedExtension
+        }
+        $useLegacy = $false
+        $adminPublished = $false
+        foreach ($app in $appsToPublish) {
+            try {
+                $syncMode = if ($schemaSyncMode -eq 'Force') { 'ForceSync' } else { 'Add' }
+                $operation = Install-AdminCenterPTE -bcAuthContext $bcAuthContext -environment $environment -appFile $app.appFile -syncMode $syncMode
+            }
+            catch {
+                $statusCode = 0
+                if ($_.Exception.PSObject.Properties['Response'] -and $_.Exception.Response) {
+                    $statusCode = [int]$_.Exception.Response.StatusCode
+                }
+                $authFailure = $statusCode -in 401,403 -or
+                    ($_.FullyQualifiedErrorId -split ',')[0] -eq 'AdminCenterAuthenticationFailed'
+                if ($adminPublished -or !$authFailure) { throw }
+                $details = Get-AdminCenterApiErrorMessage -errorRecord $_
+                OutputWarning -message "Admin Center authorization failed: $details. Update your administration center permissions: https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization. Falling back to the Automation API for this batch."
+                $useLegacy = $true
+                break
+            }
+            WaitPTEOperation -bcAuthContext $bcAuthContext -environment $environment -operation $operation -appId $app.appJson.id
+            $adminPublished = $true
+            $publishingResults[$app.appJson.id] = 'AdminCenter'
+        }
+        if ($useLegacy) {
+            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles @($appsToPublish | ForEach-Object { $_.appFile }) -SchemaSyncMode $schemaSyncMode
+            foreach ($app in $appsToPublish) {
+                if ($publishingResults[$app.appJson.id] -ne 'AdminCenter') {
+                    $publishingResults[$app.appJson.id] = 'Automation'
+                }
+            }
         }
     }
     finally {

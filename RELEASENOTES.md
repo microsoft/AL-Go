@@ -2,9 +2,13 @@
 
 **Update your deployment authorization:** For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under **Authorized Microsoft Entra apps** in the Business Central administration center. See [deployment setup](Workshop/ContinuousDeployment.md#pte-deployment-authorization).
 
-On BC 29 and later, AL-Go tries the Admin Center API first and falls back to the existing Automation API with a warning after a confirmed failure.
+On BC 29 and later, AL-Go tries the Admin Center API first and falls back to the existing Automation API with a warning only for authentication or authorization failures before any app in the publishing batch succeeds.
 
 The Automation API's PTE upload endpoint (`extensionUpload`) is deprecated and planned for removal in 2027 release wave 1; this does not mean all Automation APIs are deprecated. See the [official deprecation notice](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload).
+
+### Optional draft PR build skipping
+
+The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
 
 ### Separate test execution from RunPipeline (PREVIEW)
 
@@ -43,6 +47,12 @@ AL-Go for GitHub is now supported on GitHub Enterprise Edition with data residen
 AL-Go repositories can now opt in to AI-powered review of AL pull requests, with configurable models, target branches, excluded authors, and BCQuality skills and knowledge. See [Enable Copilot code review](Scenarios/Agents/CopilotCodeReview.md) for setup, organization policy requirements, and operational details.
 
 ### Issues
+
+- Issue 2417 - Fix workspace compilation with versioning strategy 3 to preserve each app's build number instead of failing with "build ('-1') must be a non-negative value". Explicit build number zero is now applied correctly.
+
+- Issue 2438 - Create Release with app version `latest` now sorts repository artifacts by creation time before selecting the latest artifact for each project. Previously it relied on the order returned by the GitHub artifacts API (artifact id, which isn't chronological), so projects could resolve to artifacts from different, older CI/CD runs and the release failed with "The build selected for release doesn't contain all projects". That error now names the mismatching artifact and commits.
+
+- Issue 2437 - Create Release no longer fails with "No artifacts found for this project" when the repository contains a test project (a project with `projectsToTest`). Test projects don't build apps and are now skipped when determining release artifacts.
 
 - Issue 2398 - Preserve dependency paths containing commas when passing a single app to Run-AlPipeline. Download Project Dependencies now warns with the complete path if a resolved dependency file is missing, without changing the output lists.
 

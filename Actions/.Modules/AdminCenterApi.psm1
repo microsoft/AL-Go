@@ -99,7 +99,11 @@ function Invoke-AdminCenterApi {
         $uri = Get-AdminCenterApiUrl -environment $environment -applicationFamily $applicationFamily
         $uri += '/' + (($path | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
         $authContext = Renew-BcAuthContext -bcAuthContext $bcAuthContext
-        if (!$authContext -or !$authContext['AccessToken']) { throw 'Authentication failed before Admin Center request.' }
+        if (!$authContext -or !$authContext['AccessToken']) {
+            throw [System.Management.Automation.ErrorRecord]::new(
+                [System.Security.Authentication.AuthenticationException]::new('Authentication failed before Admin Center request.'),
+                'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
+        }
         Write-Host "::add-mask::$($authContext.AccessToken)"
         $parameters = @{
             Uri = $uri
@@ -125,7 +129,7 @@ function Invoke-AdminCenterApi {
         Upload an app package for immediate PTE installation.
     .DESCRIPTION
         Builds and disposes multipart content using binary serialization supported on PowerShell 5 and 7.
-        Makes one upload attempt and preserves request-phase metadata on failure.
+        Makes one upload attempt without retries.
     .PARAMETER bcAuthContext
         Authentication context.
     .PARAMETER environment
@@ -147,7 +151,6 @@ function Install-AdminCenterPTE {
         [string] $applicationFamily = 'BusinessCentral'
     )
 
-    $requestCalled = $false
     $multipart = $null
     try {
         Add-Type -AssemblyName System.Net.Http
@@ -165,13 +168,8 @@ function Install-AdminCenterPTE {
             $multipart.Add([System.Net.Http.StringContent]::new($fields[$field]), $field)
         }
         $bytes = $multipart.ReadAsByteArrayAsync().GetAwaiter().GetResult()
-        $requestCalled = $true
         Invoke-AdminCenterApi -bcAuthContext $bcAuthContext -environment $environment -applicationFamily $applicationFamily `
             -path @('apps', 'pteInstall') -method Post -body $bytes -contentType $multipart.Headers.ContentType.ToString() -timeoutSeconds 300
-    }
-    catch {
-        if (!$requestCalled) { $_.Exception.Data['AdminCenterRequestStarted'] = $false }
-        throw
     }
     finally {
         if ($multipart) { $multipart.Dispose() }

@@ -288,10 +288,10 @@ InModuleScope Deploy {
                 Assert-MockCalled Remove-Item -Exactly 1
             }
 
-            It 'Falls back on a confirmed failure with actionable service diagnostics and preserves Force' {
+            It 'Falls back on an explicit authorization rejection with actionable diagnostics and preserves Force' {
                 Mock Install-AdminCenterPTE {
                     $exception = [System.Exception]::new('403 Forbidden: AdminCenter permission missing')
-                    $exception.Data['PTEFallbackAllowed'] = $true
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
                     throw $exception
                 }
 
@@ -304,31 +304,35 @@ InModuleScope Deploy {
                     $message -like '*403 Forbidden*permission missing*permissions*ContinuousDeployment.md#pte-deployment-authorization*Falling back*'
                 }
                 Assert-MockCalled WaitPTEOperation -Times 0
-                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
             }
 
             It 'Falls back when the helper reports authentication failed before sending an upload' {
                 Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Authentication failed: consent missing')
-                    $exception.Data['AdminCenterRequestStarted'] = $false
-                    throw $exception
+                    throw [System.Management.Automation.ErrorRecord]::new(
+                        [System.Security.Authentication.AuthenticationException]::new('Authentication failed: token missing'),
+                        'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
                 }
                 PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
 
                 Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
                 Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                    $message -like '*Authentication failed: consent missing*permissions*Falling back*'
+                    $message -like '*Authentication failed: token missing*permissions*Falling back*'
                 }
                 Assert-MockCalled Invoke-RestMethod -Times 0
             }
 
             It 'Classifies installation HTTP <statusCode> without replaying ambiguous requests' -TestCases @(
-                @{ statusCode = 400; allowed = $true },
+                @{ statusCode = 400; allowed = $false },
                 @{ statusCode = 401; allowed = $true },
                 @{ statusCode = 403; allowed = $true },
-                @{ statusCode = 404; allowed = $true },
+                @{ statusCode = 404; allowed = $false },
+                @{ statusCode = 405; allowed = $false },
                 @{ statusCode = 409; allowed = $false },
-                @{ statusCode = 429; allowed = $true },
+                @{ statusCode = 413; allowed = $false },
+                @{ statusCode = 415; allowed = $false },
+                @{ statusCode = 422; allowed = $false },
+                @{ statusCode = 429; allowed = $false },
                 @{ statusCode = 500; allowed = $false },
                 @{ statusCode = 503; allowed = $false }
             ) {
@@ -352,16 +356,27 @@ InModuleScope Deploy {
                 Assert-MockCalled Install-AdminCenterPTE -Exactly 1
             }
 
-            It 'Allows fallback for a local file preparation failure reported before sending' {
+            It 'Does not fall back for a local file preparation failure reported before sending' {
                 Mock Install-AdminCenterPTE {
                     $exception = [IO.FileNotFoundException]::new('Package missing')
                     $exception.Data['AdminCenterRequestStarted'] = $false
                     throw $exception
                 }
 
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } | Should -Throw '*Package missing*'
 
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
+
+            It 'Does not mistake a TLS authentication exception for a deployment authorization rejection' {
+                Mock Install-AdminCenterPTE {
+                    throw [System.Security.Authentication.AuthenticationException]::new('TLS handshake failed')
+                }
+
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } |
+                    Should -Throw '*TLS handshake failed*'
+
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
             }
 
             It 'Never treats a status-read rejection or renewal failure as a rejected upload' -TestCases @(
@@ -382,7 +397,11 @@ InModuleScope Deploy {
                 Assert-MockCalled Install-AdminCenterPTE -Exactly 1
             }
 
-            It 'Does not replay completed apps and uses legacy publishing only for remaining sorted apps' {
+            It 'Stops without fallback on an authorization failure after an Admin success' -TestCases @(
+                @{ statusCode = 401 }, @{ statusCode = 403 }
+            ) {
+                param($statusCode)
+                $script:installStatus = $statusCode
                 Mock Sort-AppFilesByDependencies { return @('First.app', 'Second.app', 'Duplicate.app', 'Third.app') }
                 Mock Get-AppJsonFromAppFile {
                     param($appFile)
@@ -392,23 +411,54 @@ InModuleScope Deploy {
                 Mock Install-AdminCenterPTE {
                     param($appFile)
                     if ($appFile -eq 'Second.app') {
-                        $exception = [System.Exception]::new('Package rejected')
-                        $exception.Data['PTEFallbackAllowed'] = $true
+                        $exception = [System.Exception]::new('Authorization rejected after first app')
+                        $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:installStatus })
                         throw $exception
                     }
                     return @{ id = 'completed'; appId = $appFile; status = 'succeeded' }
                 }
 
                 $results = @{}
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip') -publishingResults $results
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip') -publishingResults $results } |
+                    Should -Throw '*Authorization rejected after first app*'
 
                 Assert-MockCalled Install-AdminCenterPTE -Exactly 2
                 Assert-MockCalled WaitPTEOperation -Exactly 1 -ParameterFilter { $appId -eq 'First.app' }
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 2
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter { $appFiles[0] -eq 'Second.app' }
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter { $appFiles[0] -eq 'Third.app' }
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0 -ParameterFilter { $appFiles[0] -in 'First.app','Duplicate.app' }
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0 -ParameterFilter { $appFile -in 'Duplicate.app','Third.app' }
                 $results['First.app'] | Should -Be 'AdminCenter'
+                $results.ContainsKey('Second.app') | Should -BeFalse
+                $results.ContainsKey('Third.app') | Should -BeFalse
+            }
+
+            It 'Falls back once for the ordered eligible batch without retrying Admin for later apps' {
+                Mock Sort-AppFilesByDependencies { return @('Installed.app', 'First.app', 'Duplicate.app', 'Second.app', 'Third.app') }
+                $script:extensions += @{
+                    id = 'Installed.app'; displayName = 'Installed'; isInstalled = $true
+                    versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0
+                }
+                Mock Get-AppJsonFromAppFile {
+                    param($appFile)
+                    $id = if ($appFile -eq 'Duplicate.app') { 'First.app' } else { $appFile }
+                    return @{ id = $id; name = $id; version = '2.0.0.0' }
+                }
+                Mock Install-AdminCenterPTE {
+                    $exception = [System.Exception]::new('User not authorized')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                    throw $exception
+                }
+                $results = @{}
+
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip') -publishingResults $results
+
+                Assert-MockCalled Install-AdminCenterPTE -Exactly 1 -ParameterFilter { $appFile -eq 'First.app' }
+                Assert-MockCalled WaitPTEOperation -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter {
+                    ($appFiles -join ',') -eq 'First.app,Second.app,Third.app'
+                }
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                $results['Installed.app'] | Should -Be 'Skipped'
+                $results['First.app'] | Should -Be 'Automation'
                 $results['Second.app'] | Should -Be 'Automation'
                 $results['Third.app'] | Should -Be 'Automation'
             }
@@ -419,8 +469,8 @@ InModuleScope Deploy {
                 $results['app-1'] | Should -Be 'AdminCenter'
                 Mock Get-AppJsonFromAppFile { return @{ id = 'app-1'; name = 'App'; version = '3.0.0.0' } }
                 Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Confirmed rejection')
-                    $exception.Data['PTEFallbackAllowed'] = $true
+                    $exception = [System.Exception]::new('Authorization rejected')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
                     throw $exception
                 }
 
@@ -434,8 +484,8 @@ InModuleScope Deploy {
                 $firstResults = @{}
                 PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') -publishingResults $firstResults
                 Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Confirmed rejection')
-                    $exception.Data['PTEFallbackAllowed'] = $true
+                    $exception = [System.Exception]::new('Authorization rejected')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
                     throw $exception
                 }
                 $secondResults = @{}
@@ -446,26 +496,10 @@ InModuleScope Deploy {
                 $secondResults['app-1'] | Should -Be 'Automation'
             }
 
-            It 'Refreshes installed state before fallback and skips a now-installed app' {
-                Mock Install-AdminCenterPTE {
-                    $script:extensions += @{
-                        id = 'app-1'; isInstalled = $true; versionMajor = 2; versionMinor = 0; versionBuild = 0; versionRevision = 0
-                    }
-                    $exception = [System.Exception]::new('Terminal operation failed after installation')
-                    $exception.Data['PTEFallbackAllowed'] = $true
-                    throw $exception
-                }
-
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
-
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
-            }
-
             It 'Propagates a legacy fallback failure without continuing or claiming success' {
                 Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Confirmed Admin Center failure')
-                    $exception.Data['PTEFallbackAllowed'] = $true
+                    $exception = [System.Exception]::new('Authorization rejected')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
                     throw $exception
                 }
                 Mock Publish-PerTenantExtensionApps { throw 'Legacy publishing failed' }
@@ -476,16 +510,15 @@ InModuleScope Deploy {
                 Assert-MockCalled Remove-Item -Exactly 1
             }
 
-            It 'Falls back after a terminal operation failure' {
+            It 'Stops without fallback after a terminal operation failure' {
                 Mock WaitPTEOperation {
-                    $exception = [System.Exception]::new('Operation failed: rejected package')
-                    $exception.Data['PTEFallbackAllowed'] = $true
-                    throw $exception
+                    throw 'Operation failed: rejected package'
                 }
 
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } |
+                    Should -Throw '*Operation failed: rejected package*'
 
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
             }
 
             It 'Stops after an accepted operation loses polling without replaying completed or later apps' {
@@ -507,9 +540,7 @@ InModuleScope Deploy {
                 Assert-MockCalled Install-AdminCenterPTE -Exactly 2
                 Assert-MockCalled Install-AdminCenterPTE -Times 0 -ParameterFilter { $appFile -eq 'Third.app' }
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                    $message -like '*operation-2*permissions*stopping without legacy fallback*'
-                }
+                Assert-MockCalled OutputWarning -Times 0
             }
         }
 
@@ -528,13 +559,13 @@ InModuleScope Deploy {
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 0
             }
 
-            It 'Allows fallback for terminal <status> but not an unrecognized outcome' -TestCases @(
-                @{ status = 'failed'; allowed = $true },
-                @{ status = 'canceled'; allowed = $true },
-                @{ status = 'skipped'; allowed = $true },
-                @{ status = 'unknown'; allowed = $false }
+            It 'Reports terminal or unrecognized <status> without fallback metadata' -TestCases @(
+                @{ status = 'failed' },
+                @{ status = 'canceled' },
+                @{ status = 'skipped' },
+                @{ status = 'unknown' }
             ) {
-                param($status, $allowed)
+                param($status)
                 $script:operation.status = $status
                 $script:operation | Add-Member NoteProperty errorMessage 'Service validation detail'
 
@@ -543,7 +574,7 @@ InModuleScope Deploy {
                     throw 'Expected terminal error'
                 }
                 catch {
-                    $_.Exception.Data['PTEFallbackAllowed'] | Should -Be $allowed
+                    $_.Exception.Data.Count | Should -Be 0
                     $_.Exception.Message | Should -Match 'Service validation detail'
                 }
             }

@@ -6,7 +6,7 @@ Deploy Apps to online environment
 
 Deploys PTEs in dependency order, skipping app versions already installed or superseded.
 
-On BC 29+, PTE deployment prefers the administration center. Configure the [required authorization](../../Workshop/ContinuousDeployment.md#pte-deployment-authorization) to use it; confirmed failures can fall back to the existing deployment method. Primary-app Dev publishing is unchanged.
+On BC 29+, PTE deployment prefers the administration center. Configure the [required authorization](../../Workshop/ContinuousDeployment.md#pte-deployment-authorization); authentication or authorization failures can fall back only before any app in the publishing batch succeeds. Primary-app Dev publishing is unchanged.
 
 Optional `DeployTo<environment>.unpublishOldVersions` (default `false`) cleans older, uninstalled versions after Automation deployment on BC 25.4+. Administration center deployments use Business Central's background cleanup. See [cleanup details](../../Workshop/ContinuousDeployment.md#old-published-versions).
 
