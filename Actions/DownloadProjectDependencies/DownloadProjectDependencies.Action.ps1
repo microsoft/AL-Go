@@ -156,6 +156,8 @@ $downloadedDependencies | ForEach-Object {
 $downloadedApps += $settingsDependencies.Apps
 $downloadedTestApps += $settingsDependencies.TestApps
 
+Write-DependencyFileWarnings -Dependencies ($downloadedApps + $downloadedTestApps)
+
 OutputMessageAndArray -message "Downloaded dependencies (Apps)" -arrayOfStrings $downloadedApps
 OutputMessageAndArray -message "Downloaded dependencies (Test Apps)" -arrayOfStrings $downloadedTestApps
 

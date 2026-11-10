@@ -1,0 +1,24 @@
+{
+  "skill": {
+    "id": "al-finance-review",
+    "version": 1
+  },
+  "outcome": "not-applicable",
+  "outcome-reason": "The changed AL code contains AI context, customer data export, external CRM synchronization, and email dispatch behavior, but no admitted Finance review surface involving financial posting, Finance-owned ledger records, VAT, applications, reversals, or posting-linked dimensions.",
+  "summary": {
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 0,
+      "info": 0
+    },
+    "coverage": {
+      "worklist-size": 0,
+      "items-evaluated": 0
+    }
+  },
+  "findings": [],
+  "suppressed": [],
+  "sub-results": [],
+  "skipped-sub-skills": []
+}

@@ -230,6 +230,11 @@ if ($update -ne 'Y') {
     }
 }
 else {
+    if (-not (Test-HasSystemFileChanges -settingsFile (Join-Path $baseFolder $RepoSettingsFile) -templateUrl $templateUrl -updateFiles $updateFiles -removeFiles $removeFiles)) {
+        OutputNotice -message "No updates available for AL-Go for GitHub."
+        return
+    }
+
     # $update set, update the files
     try {
         # If a pull request already exists with the same REF, then exit
@@ -239,7 +244,7 @@ else {
         # Get Token with permissions to modify workflows in this repository
         $repoWriteToken = GetAccessToken -token $token -permissions @{"actions"="read";"contents"="write";"pull_requests"="write";"workflows"="write"}
         $env:GH_TOKEN = $repoWriteToken
-
+        $env:GH_HOST = ([Uri]$env:GITHUB_SERVER_URL).Host
         $existingPullRequest = (gh api --paginate "/repos/$env:GITHUB_REPOSITORY/pulls?base=$updateBranch" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" | ConvertFrom-Json) | Where-Object { $_.title -eq $commitMessage } | Select-Object -First 1
         if ($existingPullRequest) {
             OutputWarning "Pull request already exists for $($commitMessage): $($existingPullRequest.html_url)."

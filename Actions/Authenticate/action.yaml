@@ -1,0 +1,42 @@
+name: Authenticate to BC
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  secrets:
+    description: Authentication secrets JSON from ReadSecrets
+    required: true
+  secretNames:
+    description: Comma-separated secret keys in priority order; first non-empty value wins
+    required: true
+  authType:
+    description: Authentication target (AdminCenter or Environment)
+    required: true
+  environmentName:
+    description: Environment name; required for Environment and empty for AdminCenter
+    required: false
+    default: ''
+outputs:
+  deviceCode:
+    description: Device code used to complete authentication in a subsequent job
+    value: ${{ steps.authenticate.outputs.deviceCode }}
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      id: authenticate
+      env:
+        _secrets: ${{ inputs.secrets }}
+        _secretNames: ${{ inputs.secretNames }}
+        _authType: ${{ inputs.authType }}
+        _environmentName: ${{ inputs.environmentName }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "Authenticate" -Action {
+          ${{ github.action_path }}/Authenticate.ps1 -secrets $ENV:_secrets -secretNames $ENV:_secretNames -authType $ENV:_authType -environmentName $ENV:_environmentName
+        }
+branding:
+  icon: terminal
+  color: blue

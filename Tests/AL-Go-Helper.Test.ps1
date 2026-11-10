@@ -1,6 +1,33 @@
-﻿Describe "AL-Go-Helper tests" {
+Describe "AL-Go-Helper tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+    }
+
+    It 'Gets npm package versions from the action dependency manifest' {
+        $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\Actions\package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        GetPackageVersion -packageName '@github/copilot' | Should -Be $manifest.dependencies.'@github/copilot'
+    }
+
+    It 'Looks up npm packages with optional dependency sections under StrictMode: <Case>' -TestCases @(
+        @{ Case = 'dependencies only'; Manifest = '{"dependencies":{"test-package":"1.2.3"}}'; Package = 'test-package'; Expected = '1.2.3' }
+        @{ Case = 'devDependencies only'; Manifest = '{"devDependencies":{"test-package":"2.3.4"}}'; Package = 'test-package'; Expected = '2.3.4' }
+        @{ Case = 'neither section'; Manifest = '{}'; Package = 'test-package'; Expected = '' }
+        @{ Case = 'unknown package'; Manifest = '{"dependencies":{"other-package":"1.2.3"}}'; Package = 'test-package'; Expected = '' }
+    ) {
+        param($Case, $Manifest, $Package, $Expected)
+        Set-StrictMode -Version 2.0
+        $manifestContent = $Manifest
+        Mock Get-Content { '<Project><ItemGroup><PackageReference Include="existing-package" Version="3.4.5" /></ItemGroup></Project>' }
+        Mock Get-Content { $manifestContent } -ParameterFilter { $LiteralPath -like '*package.json' }
+        Mock Test-Path { $true }
+
+        if ($Expected) {
+            GetPackageVersion -packageName $Package | Should -Be $Expected -Because $Case
+        }
+        else {
+            { GetPackageVersion -packageName $Package } | Should -Throw "Package $Package is not in the list of packages" -Because $Case
+        }
+        GetPackageVersion -packageName 'existing-package' | Should -Be '3.4.5'
     }
 
     It 'CheckAndCreateProjectFolder' {

@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/BCQuality/schemas/findings-report.schema.json",
+  "title": "BCQuality findings report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skill", "outcome", "summary", "findings", "suppressed"],
+  "properties": {
+    "skill": { "$ref": "#/definitions/skillReference" },
+    "outcome": {
+      "enum": ["completed", "not-applicable", "no-knowledge", "partial", "failed"]
+    },
+    "outcome-reason": { "type": "string", "minLength": 1 },
+    "summary": { "$ref": "#/definitions/summary" },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/finding" }
+    },
+    "suppressed": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/suppressed" }
+    },
+    "sub-results": {
+      "type": "array",
+      "items": { "$ref": "#" }
+    },
+    "skipped-sub-skills": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/skippedSubSkill" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": { "enum": ["partial", "failed"] }
+        }
+      },
+      "then": { "required": ["outcome-reason"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": { "enum": ["not-applicable", "no-knowledge", "failed"] }
+        }
+      },
+      "then": {
+        "properties": {
+          "findings": { "maxItems": 0 }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "skillReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker", "major", "minor", "info"],
+      "properties": {
+        "blocker": { "type": "integer", "minimum": 0 },
+        "major": { "type": "integer", "minimum": 0 },
+        "minor": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worklist-size", "items-evaluated"],
+      "properties": {
+        "worklist-size": { "type": "integer", "minimum": 0 },
+        "items-evaluated": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["counts", "coverage"],
+      "properties": {
+        "counts": { "$ref": "#/definitions/counts" },
+        "coverage": { "$ref": "#/definitions/coverage" }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "pattern": "^[^\\\\]+$" },
+        "sha": { "type": "string", "pattern": "^[a-fA-F0-9]{40}$" }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1, "pattern": "^[^\\\\]+$" },
+        "line": { "type": "integer", "minimum": 1 },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start-line", "end-line"],
+          "properties": {
+            "start-line": { "type": "integer", "minimum": 1 },
+            "end-line": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "message", "references", "confidence"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["blocker", "major", "minor", "info"] },
+        "message": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/definitions/location" },
+        "references": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/reference" }
+        },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "from-sub-skill": { "type": "string", "minLength": 1 },
+        "domain": { "type": "string", "minLength": 1, "pattern": "^[^\\r\\n]+$" },
+        "suggested-code": { "type": "string", "minLength": 1 },
+        "suggested-code-omission-reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "suppressed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "reason"],
+      "properties": {
+        "reference": { "$ref": "#/definitions/reference" },
+        "reason": { "enum": ["layer-precedence", "configuration"] }
+      }
+    },
+    "skippedSubSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill", "reason"],
+      "properties": {
+        "skill": { "$ref": "#/definitions/skillReference" },
+        "reason": { "enum": ["configuration", "not-applicable"] }
+      }
+    }
+  }
+}

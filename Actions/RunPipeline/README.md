@@ -2,6 +2,11 @@
 
 Run pipeline in AL-Go repository
 
+When `useSeparateTestAction.enabled` is true, normal tests remain in RunPipeline if test building,
+test execution, or app publication is disabled; `additionalCountries` is configured; an
+`ImportTestDataInBcContainer` callback would otherwise have no RunPipeline test category to invoke
+it. The action emits a notice with every reason.
+
 ## INPUT
 
 ### ENV variables
@@ -32,6 +37,8 @@ Run pipeline in AL-Go repository
 | Name | Description |
 | :-- | :-- |
 | containerName | Container name of a container used during build |
+| containerCredential | Masked, base64-encoded JSON credential for reconnecting to a container kept alive for the RunTests action |
+| runTestsInSeparateAction | True only when RunPipeline kept a single local build container alive for the RunTests action |
 
 ## OUTPUT variables
 

@@ -26,6 +26,7 @@ runs:
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      continue-on-error: true
       env:
         _telemetryScopeJson: ${{ inputs.telemetryScopeJson }}
         _currentJobContext: ${{ inputs.currentJobContext }}

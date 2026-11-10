@@ -299,23 +299,27 @@ function Get-DependenciesFromInstallApps {
             }
             Write-Host "Processing install$($list) entry: $appFile"
 
-            # If the app file is not a URL, resolve local path.
-            if ($appFile -notlike 'http*://*') {
-                $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFile -DestinationPath $DestinationPath
-            } else {
-                # Else, check for secrets in the URL and replace them. Only match on the first occurrence of the pattern ${{ secretName }}
-                $appFileUrl = $appFile
-                $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
-                if ($appFile -match $pattern) {
-                    $secretName = $matches[2]
-                    if (-not $secrets.ContainsKey($secretName) -or [string]::IsNullOrEmpty($secrets."$secretName")) {
-                        throw "Setting: install$($list) references unknown secret '$secretName' in URL: $appFile"
-                    }
-                    $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
+            # Resolve any secret placeholder first, so classification (URL vs local path) is done against
+            # the resolved value. This supports the case where the entire URL is stored in a secret.
+            # Only match on the first occurrence of the pattern ${{ secretName }}.
+            $cleanAppFile = $appFile
+            $appFileUrl = $appFile
+            $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+            if ($appFile -match $pattern) {
+                $secretName = $matches[2]
+                if (-not $secrets.ContainsKey($secretName) -or [string]::IsNullOrEmpty($secrets."$secretName")) {
+                    throw "Setting: install$($list) references unknown secret '$secretName' in: $appFile"
                 }
+                $appFileUrl = $appFileUrl.Replace($matches[1],[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secrets."$secretName")))
+            }
 
+            # If the resolved app file is not a URL, resolve local path.
+            if ($appFileUrl -notlike 'http*://*') {
+                $updatedListOfFiles += Get-AppFilesFromLocalPath -Path $appFileUrl -DestinationPath $DestinationPath
+            } else {
                 # Download the file (may return multiple .app files if it's a zip)
-                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -CleanUrl $appFile -DownloadPath $DestinationPath
+                # Pass the unresolved value as CleanUrl so secret values aren't leaked into logs.
+                $appFiles = Get-AppFilesFromUrl -Url $appFileUrl -CleanUrl $cleanAppFile -DownloadPath $DestinationPath
 
                 $updatedListOfFiles += $appFiles
             }
@@ -341,6 +345,9 @@ function Get-DependenciesFromInstallApps {
     '*BuildOutput' is included to ensure the pattern matches multiple artifacts, preventing download-artifact
     v8 from flattening a single artifact directly into the destination path (which breaks the subdirectory
     structure that GetDependencies expects).
+
+    Glob-special characters in the branch name (e.g. ',' which would split the brace expansion)
+    are backslash-escaped, so they match literally.
     .PARAMETER Project
     The name of the current AL-Go project.
     .PARAMETER ProjectDependencies
@@ -365,7 +372,8 @@ function Get-DependencyArtifactPattern {
         return $null
     }
 
-    $branchName = Get-CurrentBranchName
+    # Characters that are legal in Git branch names but special to minimatch
+    $branchName = (Get-CurrentBranchName) -replace '([{},!+@()#\]])', '\$1'
 
     # Build brace-expansion entries per dependency project.
     # *Apps covers Apps+TestApps+buildMode variants; *Dependencies covers Dependencies.
@@ -424,4 +432,31 @@ function Resolve-DependencyFiles {
     })
 }
 
-Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles
+<#
+    .SYNOPSIS
+    Warns when resolved dependency paths do not refer to existing files.
+    .PARAMETER Dependencies
+    Resolved dependency paths, optionally wrapped in parentheses to mark test apps.
+#>
+function Write-DependencyFileWarnings {
+    Param(
+        [string[]] $Dependencies = @()
+    )
+
+    foreach ($dependency in $Dependencies) {
+        try {
+            $filePath = "$dependency"
+            if ($filePath.StartsWith('(') -and $filePath.EndsWith(')')) {
+                $filePath = $filePath.Substring(1, $filePath.Length - 2)
+            }
+            if ([string]::IsNullOrWhiteSpace($filePath) -or !(Test-Path -LiteralPath $filePath -PathType Leaf -ErrorAction Stop)) {
+                OutputWarning -message "Dependency file not found: $filePath"
+            }
+        }
+        catch {
+            OutputWarning -message "Unable to check dependency file '$filePath': $($_.Exception.Message)"
+        }
+    }
+}
+
+Export-ModuleMember -Function Get-AppFilesFromUrl, Get-AppFilesFromLocalPath, Get-DependenciesFromInstallApps, Get-DependencyArtifactPattern, Resolve-DependencyFiles, Write-DependencyFileWarnings

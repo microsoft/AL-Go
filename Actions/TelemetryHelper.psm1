@@ -45,6 +45,56 @@ function Get-ApplicationInsightsTelemetryClient($TelemetryConnectionString)
 }
 #endregion
 
+<#
+    .SYNOPSIS
+    Gets the GitHub hosting platform for telemetry.
+#>
+function Get-GitHubHostingType {
+    $hostingType = 'Unknown'
+    $serverUri = $null
+    if ($ENV:GITHUB_SERVER_URL -and
+        [Uri]::TryCreate($ENV:GITHUB_SERVER_URL, [UriKind]::Absolute, [ref]$serverUri) -and
+        $serverUri.Scheme -in @('https', 'http') -and $serverUri.Host) {
+        if ($serverUri.Host -eq 'github.com') {
+            $hostingType = 'GitHub.com'
+        }
+        elseif ($serverUri.Host.EndsWith('.ghe.com', [StringComparison]::OrdinalIgnoreCase)) {
+            $hostingType = 'GHEC'
+        }
+        else {
+            $hostingType = 'GHES'
+        }
+    }
+    else {
+        Write-Host "::Warning::Unable to determine GitHub hosting type from GITHUB_SERVER_URL."
+    }
+    return $hostingType
+}
+
+<#
+    .SYNOPSIS
+    Gets the workflow repository's fork status for telemetry.
+#>
+function Get-RepositoryIsFork {
+    $repositoryIsFork = 'Unknown'
+    try {
+        if (-not $ENV:GITHUB_EVENT_PATH) {
+            throw 'GITHUB_EVENT_PATH is unavailable.'
+        }
+        $githubEvent = Get-Content -LiteralPath $ENV:GITHUB_EVENT_PATH -Raw -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        if ($githubEvent -isnot [System.Collections.IDictionary] -or
+            $githubEvent.repository -isnot [System.Collections.IDictionary] -or
+            $githubEvent.repository.fork -isnot [bool]) {
+            throw 'The event does not contain a boolean repository.fork.'
+        }
+        $repositoryIsFork = $githubEvent.repository.fork.ToString().ToLowerInvariant()
+    }
+    catch {
+        Write-Host "::Warning::Unable to determine repository fork status from GITHUB_EVENT_PATH. RepositoryIsFork will be Unknown."
+    }
+    return $repositoryIsFork
+}
+
 function AddTelemetryEvent()
 {
     param(
@@ -77,6 +127,8 @@ function AddTelemetryEvent()
         ### Add GitHub Repository information
         Add-TelemetryProperty -Hashtable $Data -Key 'Repository' -Value $ENV:GITHUB_REPOSITORY_ID
         Add-TelemetryProperty -Hashtable $Data -Key 'RepositoryOwnerID' -Value $ENV:GITHUB_REPOSITORY_OWNER_ID
+        Add-TelemetryProperty -Hashtable $Data -Key 'GitHubHostingType' -Value (Get-GitHubHostingType)
+        Add-TelemetryProperty -Hashtable $Data -Key 'RepositoryIsFork' -Value (Get-RepositoryIsFork)
 
         $repoSettings = ReadSettings
         if ($repoSettings.microsoftTelemetryConnectionString -ne '') {
@@ -135,6 +187,7 @@ function Trace-Information() {
         $Message = "AL-Go action ran: $ActionName"
     }
 
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ActionName' -Value $ActionName
     AddTelemetryEvent -Message $Message -Severity 'Information' -Data $AdditionalData
 }
 
@@ -206,6 +259,7 @@ function Trace-Exception() {
     if (-not $Message) {
         $Message = "AL-Go action failed: $ActionName"
     }
+    Add-TelemetryProperty -Hashtable $AdditionalData -Key 'ActionName' -Value $ActionName
     AddTelemetryEvent -Message $Message -Severity 'Error' -Data $AdditionalData
 }
 

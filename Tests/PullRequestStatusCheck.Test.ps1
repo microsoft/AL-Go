@@ -15,6 +15,16 @@ Describe "PullRequestStatusCheck Action Tests" {
         Import-Module (Join-Path $scriptRoot '..\Github-Helper.psm1' -Resolve) -DisableNameChecking
         $ENV:GITHUB_REPOSITORY = "organization/repository"
         $ENV:GITHUB_RUN_ID = "123456"
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalServerUrl', Justification = 'False positive.')]
+        $originalServerUrl = $ENV:GITHUB_SERVER_URL
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGhHost', Justification = 'False positive.')]
+        $originalGhHost = $ENV:GH_HOST
+        $ENV:GITHUB_SERVER_URL = "https://github.com"
+    }
+
+    AfterAll {
+        $ENV:GITHUB_SERVER_URL = $originalServerUrl
+        $ENV:GH_HOST = $originalGhHost
     }
 
     It 'Compile Action' {
@@ -46,6 +56,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         Mock Write-Host {}
         & $scriptPath
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "PR Build succeeded" }
+        $ENV:GH_HOST | Should -Be 'github.com'
     }
 
     It 'should retry when the jobs API call fails and then give up' {
