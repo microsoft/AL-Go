@@ -658,10 +658,6 @@
             "type": "string",
             "description": "Determines the select mode when finding Business Central app packages from NuGet feeds, based on the dependency version specified in app.json. See https://aka.ms/ALGoSettings#nugetfeedselectmode"
         },
-        "nuGetFeedAllowPrerelease": {
-            "type": "boolean",
-            "description": "Determines whether to allow prerelease versions when finding Business Central app packages from NuGet feeds. See https://aka.ms/ALGoSettings#nugetfeedallowprerelease"
-        },
         "microsoftTelemetryConnectionString": {
             "type": "string"
         },

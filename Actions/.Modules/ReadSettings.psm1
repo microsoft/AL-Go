@@ -344,7 +344,6 @@ function GetDefaultSettings
         }
         "trustMicrosoftNuGetFeeds"                      = $true
         "nuGetFeedSelectMode"                           = "LatestMatching"
-        "nuGetFeedAllowPrerelease"                      = $false
         "commitOptions"                                 = [ordered]@{
             "messageSuffix"                             = ""
             "pullRequestAutoMerge"                      = $false
