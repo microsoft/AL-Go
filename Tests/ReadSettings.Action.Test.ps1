@@ -26,6 +26,50 @@ Describe "ReadSettings Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
+    It 'Includes optional patterns in the Settings environment variable: <Patterns>' -TestCases @(
+        @{ Patterns = '[]' }
+        @{ Patterns = '["*NextMinor*"]' }
+        @{ Patterns = '["*NextMinor*","*NextMajor*"]' }
+        @{ Patterns = '["Build * (NextMinor) / *"]' }
+    ) {
+        param($Patterns)
+        $originalEnvironment = @{}
+        foreach ($name in @('GITHUB_WORKSPACE', 'GITHUB_OUTPUT', 'GITHUB_ENV', 'GITHUB_RUN_NUMBER', 'GITHUB_RUN_ATTEMPT', 'GITHUB_EVENT_NAME', 'ALGoOrgSettings', 'ALGoRepoSettings', 'ALGoEnvSettings')) {
+            $originalEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+        }
+        try {
+            $env:GITHUB_WORKSPACE = $TestDrive
+            $env:GITHUB_OUTPUT = Join-Path $TestDrive 'outputs.txt'
+            $env:GITHUB_ENV = Join-Path $TestDrive 'env.txt'
+            Set-Content -Path $env:GITHUB_OUTPUT -Value '' -Encoding UTF8
+            Set-Content -Path $env:GITHUB_ENV -Value '' -Encoding UTF8
+            $env:GITHUB_RUN_NUMBER = '1'
+            $env:GITHUB_RUN_ATTEMPT = '1'
+            $env:GITHUB_EVENT_NAME = 'pull_request'
+            $env:ALGoOrgSettings = ''
+            $env:ALGoEnvSettings = ''
+            $env:ALGoRepoSettings = "{`"optionalPatternForPrValidation`":$Patterns}"
+            Mock Write-Host {}
+            & $scriptPath -workflowName '' -project ''
+            $settingsLine = Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 |
+                Where-Object { $_ -like 'Settings=*' }
+            $exportedSettings = $settingsLine.Substring('Settings='.Length) | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            (ConvertTo-Json -InputObject @($exportedSettings.optionalPatternForPrValidation) -Compress) | Should -Be $Patterns
+            @(Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Where-Object { $_ -like 'optionalPatternForPrValidationJson=*' }).Count | Should -Be 0
+            Set-Content -Path $env:GITHUB_ENV -Value '' -Encoding UTF8
+            & $scriptPath -workflowName '' -project '' -get 'country,optionalPatternForPrValidation'
+            $patternsArray = ($Patterns | ConvertFrom-Json)
+            Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Should -Contain "optionalPatternForPrValidation=$patternsArray"
+            Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Should -Contain 'country=us'
+            @(Get-Content -Path $env:GITHUB_OUTPUT -Encoding UTF8 | Where-Object { $_ }).Count | Should -Be 4
+        }
+        finally {
+            foreach ($name in $originalEnvironment.Keys) {
+                [Environment]::SetEnvironmentVariable($name, $originalEnvironment[$name])
+            }
+        }
+    }
+
     It 'Emits skipped settings and a single balanced sources group' {
         $workspace = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
         $originalEnvironment = @{}

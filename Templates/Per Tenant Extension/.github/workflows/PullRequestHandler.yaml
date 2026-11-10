@@ -160,6 +160,17 @@ jobs:
     runs-on: [ windows-latest ]
     name: Pull Request Status Check
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: true
+          ref: ${{ github.event_name == 'pull_request' && github.sha || github.event_name == 'merge_group' && github.ref || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@main
+        with:
+          shell: powershell
+
       - name: Pull Request Status Check
         id: PullRequestStatusCheck
         uses: microsoft/AL-Go-Actions/PullRequestStatusCheck@main
@@ -167,6 +178,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           shell: powershell
+          optionalPatternForPrValidationJson: ${{ toJson(fromJson(env.Settings).optionalPatternForPrValidation) }}
 
       - name: Finalize the workflow
         id: PostProcess

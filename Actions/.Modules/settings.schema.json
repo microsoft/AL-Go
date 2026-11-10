@@ -3,6 +3,14 @@
     "description": "Schema for AL-Go settings",
     "type": "object",
     "properties": {
+        "optionalPatternForPrValidation": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": [],
+            "description": "Optional case-insensitive PowerShell wildcard patterns matching full job names. Only names matching 'Build * (*) / * (*)' qualify, including custom jobs following this convention. Matching failures do not block the aggregate Pull Request Status Check; jobs outside this convention remain required. Applies to PTE and AppSource Pull Request Build workflows, including merge groups. See https://aka.ms/ALGoSettings#optionalPatternForPrValidation"
+        },
         "type": {
             "type": "string",
             "minLength": 1,
