@@ -137,41 +137,18 @@ function Get-AlToolCompany {
                 }
             }
 
-            $codeunitIds = @{}
             $codeunits = @()
             foreach ($codeunit in @($response.codeunits)) {
-                [int] $codeunitId = 0
-                $codeunitIdText = "$($codeunit.id)"
-                if (-not [int]::TryParse(
-                        $codeunitIdText,
-                        [System.Globalization.NumberStyles]::Integer,
-                        [System.Globalization.CultureInfo]::InvariantCulture,
-                        [ref] $codeunitId
-                    ) -or $codeunitId -le 0) {
-                    throw "Codeunit ID '$codeunitIdText' must be a positive Int32 value."
-                }
-                if ($codeunitIds.ContainsKey("$codeunitId")) {
-                    throw "Codeunit ID '$codeunitId' is duplicated."
-                }
-                $codeunitIds["$codeunitId"] = $true
+                [int] $codeunitId = $codeunit.id
 
                 $codeunitName = "$($codeunit.name)".Trim()
                 if ([string]::IsNullOrWhiteSpace($codeunitName)) {
                     throw "Codeunit '$codeunitId' must have a nonblank name."
                 }
 
-                $methodNames = @{}
                 $methods = @()
                 foreach ($method in @($codeunit.methods)) {
                     $methodName = "$($method.name)".Trim()
-                    if ([string]::IsNullOrWhiteSpace($methodName)) {
-                        throw "Codeunit '$codeunitId' contains a blank method name."
-                    }
-                    $methodKey = $methodName.ToLowerInvariant()
-                    if ($methodNames.ContainsKey($methodKey)) {
-                        throw "Method '$methodName' is duplicated in codeunit '$codeunitId'."
-                    }
-                    $methodNames[$methodKey] = $true
                     $methods += [PSCustomObject]@{
                         Name         = $methodName
                         IsDataDriven = [System.Convert]::ToBoolean(

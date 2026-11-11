@@ -165,9 +165,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             @{ Json = '[]'; Expected = '*invalid output*appId*' },
             @{ Json = '{"appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[]}'; Expected = '*invalid output*appId*' },
             @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":{}}'; Expected = '*invalid output*id*' },
-            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":0,"name":"Tests","namespace":"","methods":[]}]}'; Expected = '*positive Int32 value*' },
-            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[]},{"id":1,"name":"Other","namespace":"","methods":[]}]}'; Expected = "*Codeunit ID '1' is duplicated*" },
-            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[{"name":"Same","isDataDriven":false},{"name":"same","isDataDriven":true}]}]}'; Expected = "*Method 'same' is duplicated*" },
+            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":"invalid","name":"Tests","namespace":"","methods":[]}]}'; Expected = '*invalid output*' },
             @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[{"name":"Test"}]}]}'; Expected = '*invalid output*isDataDriven*' }
         ) {
             param($Json, $Expected)

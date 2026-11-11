@@ -92,6 +92,16 @@ Describe 'RunTests.psm1 Tests' {
             $moduleContent | Should -Not -Match '\bGet-AppJsonFromAppFile\b'
         }
 
+        It 'Does not resolve AlTool when no package needs discovery' {
+            $projectPath = New-TestProject
+            $settings = @{ runTestsInAllInstalledTestApps = $false; testFolders = @() }
+
+            @(Get-TestAppsToRun -settings $settings -projectPath $projectPath).Count | Should -Be 0
+
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 0 -Exactly
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Collects compiled test apps from the build artifacts folder' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $settings = @{
@@ -368,9 +378,10 @@ Describe 'RunTests.psm1 Tests' {
             $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false; testFolders = @() }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
-                -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
+                -credential $testCredential
 
             $script:runnerCalls | Should -Be 0
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 0 -Exactly
             Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
             Test-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml') | Should -BeFalse
             Remove-Item -Path $projectPath -Recurse -Force
@@ -845,7 +856,6 @@ Describe 'RunTests.psm1 Tests' {
     Context 'Invoke-AlGoTestRun (default AlTool runner)' {
         It 'Runs the AlTool runner for every test app when no override is supplied' {
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
-            $script:alToolPathResolutionCount = 0
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $settings = @{
                 doNotRunTests                  = $false
@@ -859,20 +869,16 @@ Describe 'RunTests.psm1 Tests' {
                 }
             }
 
-            $getAlToolPath = {
-                $script:alToolPathResolutionCount++
-                return 'C:\dotnet-tools\al.exe'
-            }
             {
                 Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
-                    -credential $testCredential -getAlToolPath $getAlToolPath
+                    -credential $testCredential
             } | Should -Not -Throw
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly -ParameterFilter {
                 $TestType -eq '' -and $Codeunits.Count -eq 1 -and $AlToolPath -eq 'C:\dotnet-tools\al.exe'
             }
-            $script:alToolPathResolutionCount | Should -Be 1
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

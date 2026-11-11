@@ -25,6 +25,8 @@ function Get-TestAppsToRun {
         The full path to the project folder.
     .PARAMETER installTestAppsJson
         Path to a JSON file with the list of installed test apps.
+    .PARAMETER alToolPath
+        Full path to AlTool when already resolved.
     #>
     Param(
         [hashtable] $settings,
@@ -32,10 +34,6 @@ function Get-TestAppsToRun {
         [string] $installTestAppsJson = '',
         [string] $alToolPath = ''
     )
-
-    if ([string]::IsNullOrWhiteSpace($alToolPath)) {
-        $alToolPath = GetAlToolPath
-    }
 
     $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
@@ -62,6 +60,9 @@ function Get-TestAppsToRun {
     if (Test-Path $testAppOutputFolder) {
         $selectedCompiledAppIds = @{}
         foreach ($compiledApp in @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)) {
+            if ([string]::IsNullOrWhiteSpace($alToolPath)) {
+                $alToolPath = GetAlToolPath
+            }
             try {
                 $compiledAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $compiledApp.FullName
                 $compiledAppId = "$($compiledAppDiscovery.AppId)"
@@ -107,6 +108,9 @@ function Get-TestAppsToRun {
             }
             if ($selectedAppPaths.ContainsKey($installedTestAppPath)) {
                 continue
+            }
+            if ([string]::IsNullOrWhiteSpace($alToolPath)) {
+                $alToolPath = GetAlToolPath
             }
             try {
                 $installedAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $installedTestAppPath
@@ -266,8 +270,6 @@ function Invoke-AlGoTestRun {
         Optional scriptblock overriding the built-in AlTool test runner (RunTestsInBcContainer).
     .PARAMETER alToolPath
         Full path to the AlTool executable used by the built-in runner.
-    .PARAMETER getAlToolPath
-        Shared resolver used to discover or install AlTool when alToolPath is omitted.
     #>
     Param(
         [hashtable] $settings,
@@ -276,8 +278,7 @@ function Invoke-AlGoTestRun {
         [System.Management.Automation.PSCredential] $credential,
         [string] $installTestAppsJson = '',
         [scriptblock] $runTestsOverride = $null,
-        [string] $alToolPath = '',
-        [scriptblock] $getAlToolPath = $null
+        [string] $alToolPath = ''
     )
 
     try {
@@ -291,20 +292,15 @@ function Invoke-AlGoTestRun {
             Write-Host "::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed."
         }
 
-        if ([string]::IsNullOrWhiteSpace($alToolPath)) {
-            if ($getAlToolPath) {
-                $alToolPath = & $getAlToolPath
-            }
-            else {
-                $alToolPath = GetAlToolPath
-            }
-        }
-
         $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath `
             -installTestAppsJson $installTestAppsJson -alToolPath $alToolPath
         if (@($testApps).Count -eq 0) {
             Write-Host "No test apps found to run tests in. Skipping test execution."
             return
+        }
+
+        if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
+            $alToolPath = GetAlToolPath
         }
 
         Write-Host "Running tests against container '$containerName'"
