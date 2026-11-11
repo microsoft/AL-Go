@@ -1412,9 +1412,12 @@ function GetDefaultFilesToExclude {
     2. filesToExclude: Files to skip from copying; if they already exist in the destination they should be deleted.
        Built from default files to exclude and customALGoFiles.filesToExclude in settings, resolved against the template folder and original template folder (if any).
 
-    Note: when a custom template is in use, the caller must refresh the custom template settings
-    snapshot files and re-read settings with ReadSettings before calling this function, so that the
-    template's customALGoFiles/unusedALGoSystemFiles are already merged into settings.
+    Note: when a custom template is in use, the caller must refresh the custom template settings
+
+    snapshot files and re-read settings with ReadSettings before calling this function, so that the
+
+    template's customALGoFiles/unusedALGoSystemFiles are already merged into settings.
+
 
     The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
     filesToExclude with a deprecation warning.
@@ -1498,18 +1501,16 @@ function GetFilesToUpdate {
 
     # Apply unusedALGoSystemFiles logic
     $unusedALGoSystemFiles = $settings.unusedALGoSystemFiles
-    $unusedALGoSystemFileNames = [System.Collections.Generic.HashSet[string]]::new($pathComparer)
-    $unusedALGoSystemFileNames.UnionWith([string[]]$unusedALGoSystemFiles)
 
     # Exclude unusedALGoSystemFiles from $filesToInclude and add them to $filesToExclude
-    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) }
+    $unusedFilesToExclude = $filesToInclude | Where-Object { $unusedALGoSystemFiles -contains (Split-Path -Path $_.sourceFullPath -Leaf) }
     if ($unusedFilesToExclude) {
         Trace-DeprecationWarning "The 'unusedALGoSystemFiles' setting is deprecated and will be removed in future versions." -DeprecationTag "unusedALGoSystemFiles"
 
         OutputDebug "The following files are marked as unused and will be removed if they exist:"
         $unusedFilesToExclude | ForEach-Object { OutputDebug "- $($_.destinationFullPath)" }
 
-        $filesToInclude = @($filesToInclude | Where-Object { -not $unusedALGoSystemFileNames.Contains((Split-Path -Path $_.sourceFullPath -Leaf)) })
+        $filesToInclude = @($filesToInclude | Where-Object { $unusedALGoSystemFiles -notcontains (Split-Path -Path $_.sourceFullPath -Leaf) })
         $filesToExclude += @($unusedFilesToExclude)
     }
 

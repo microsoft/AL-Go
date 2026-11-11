@@ -4499,10 +4499,15 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         $filesToExclude[0].destinationFullPath | Should -Be (Join-Path $baseFolder 'test.txt')
     }
 
-    It 'Return the correct files when unusedALGoSystemFiles is specified' {
+    It 'Return the correct files when unusedALGoSystemFiles specifies <unusedFileName>' -TestCases @(
+        @{ unusedFileName = 'test.ps1' }
+        @{ unusedFileName = 'TEST.PS1' }
+    ) {
+        Param($unusedFileName)
+
         $settings = @{
             type                  = "nonPTE"
-            unusedALGoSystemFiles = @("test.ps1")
+            unusedALGoSystemFiles = @($unusedFileName)
             customALGoFiles       = @{
                 filesToInclude = @(@{ filter = "*" })
                 filesToExclude = @()
