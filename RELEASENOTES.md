@@ -2,7 +2,8 @@
 
 - Update AL-Go System Files now uses the latest repository settings from a custom template, such as `customALGoFiles`, in the same update rather than applying them on the next run.
   - Workflow dependency depth is also determined using these refreshed settings, ensuring enough sequential build jobs are generated for the configured projects.
-- `customALGoFiles.filesToInclude` and `filesToExclude` also apply to files in the original AL-Go template, even when those files are absent from the custom template.
+- Default AL-Go file rules and `customALGoFiles.filesToInclude` now also resolve files from the original AL-Go template when they are absent from the custom template; `filesToExclude` applies to these files too.
+  - **Breaking change:** standard workflows or scripts intentionally deleted from a custom template can be recreated in consumer repositories. To keep them absent, add matching `customALGoFiles.filesToExclude` entries to the custom template's `.github/AL-Go-Settings.json` before updating consumers.
 - `filesToExclude` now respects destination mappings from `filesToInclude`, including renamed files and per-project destinations. Existing files are removed unless another included source targets the same destination.
 - Use `destinationName` in `filesToInclude` to rename included files at the destination.
 - Update AL-Go System Files now ignores trigger-based conditional settings when selecting files and generating workflows, including during CI/CD update checks.
