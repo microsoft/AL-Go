@@ -341,6 +341,97 @@ Describe "CheckForUpdates Action: runtime behavior" {
             }
         }
 
+        Context 'Template source folder redirects' {
+            BeforeAll {
+                $realGetSrcFolder = (Get-Item function:GetSrcFolder).ScriptBlock
+            }
+
+            BeforeEach {
+                $primaryDownloadFolder = Join-Path $TestDrive 'primaryDownload'
+                $primarySourceFolder = Join-Path $primaryDownloadFolder 'repo'
+                $originalDownloadFolder = Join-Path $TestDrive 'originalDownload'
+                $originalSourceFolder = Join-Path $originalDownloadFolder 'repo/Templates/Per Tenant Extension'
+                $externalTemplateFolder = Join-Path $TestDrive 'externalTemplate'
+                $rootLinkPath = ''
+                $workspaceSettingsHash = (Get-FileHash -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile)).Hash
+
+                New-Item -ItemType Directory -Path (Join-Path $primarySourceFolder '.github/workflows') -Force | Out-Null
+                New-Item -ItemType Directory -Path (Join-Path $originalSourceFolder '.github/workflows') -Force | Out-Null
+
+                Mock GetSrcFolder { & $realGetSrcFolder -repoType $repoType -templateUrl $templateUrl -templateFolder $templateFolder -srcPath $srcPath }
+                Mock IsDirectALGo { return $templateUrl -like 'https://github.com/*/AL-Go@*' }
+                Mock DownloadTemplateRepository { return $primaryDownloadFolder } -ParameterFilter { $templateUrl -eq 'https://github.com/contoso/template@main' }
+                Mock DownloadTemplateRepository { return $originalDownloadFolder } -ParameterFilter { $templateUrl -eq 'https://github.com/contoso/AL-Go@main' }
+            }
+
+            AfterEach {
+                if ($rootLinkPath) {
+                    [System.IO.Directory]::Delete($rootLinkPath)
+                }
+                Remove-Item -LiteralPath $primaryDownloadFolder, $originalDownloadFolder, $externalTemplateFolder -Recurse -Force -ErrorAction SilentlyContinue
+            }
+
+            It 'Rejects a primary template source folder redirected through a junction before selecting files' -Skip:(-not $script:isWindowsPlatform) {
+                Move-Item -LiteralPath $primarySourceFolder -Destination $externalTemplateFolder
+                New-Item -ItemType Junction -Path $primarySourceFolder -Target $externalTemplateFolder | Out-Null
+                $rootLinkPath = $primarySourceFolder
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage 'Unsafe path blocked: template folder *'
+
+                (Get-FileHash -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile)).Hash | Should -Be $workspaceSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+
+            It 'Rejects a primary template source folder redirected through a symlink before selecting files' -Skip:(-not $script:hasSymlinkCapability) {
+                Move-Item -LiteralPath $primarySourceFolder -Destination $externalTemplateFolder
+                New-Item -ItemType SymbolicLink -Path $primarySourceFolder -Target $externalTemplateFolder | Out-Null
+                $rootLinkPath = $primarySourceFolder
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage 'Unsafe path blocked: template folder *'
+
+                (Get-FileHash -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile)).Hash | Should -Be $workspaceSettingsHash
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+
+            It 'Rejects an original template source folder redirected through a junction when using a custom template' -Skip:(-not $script:isWindowsPlatform) {
+                Set-Content -LiteralPath (Join-Path $primarySourceFolder $RepoSettingsFile) -Value '{"templateUrl":"https://github.com/contoso/AL-Go@main"}' -Encoding UTF8
+                Move-Item -LiteralPath $originalSourceFolder -Destination $externalTemplateFolder
+                New-Item -ItemType Junction -Path $originalSourceFolder -Target $externalTemplateFolder | Out-Null
+                $rootLinkPath = $originalSourceFolder
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage 'Unsafe path blocked: original template folder *'
+
+                Should -Invoke DownloadTemplateRepository -Exactly 1 -ParameterFilter { $templateUrl -eq 'https://github.com/contoso/AL-Go@main' }
+                (Get-FileHash -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile)).Hash | Should -Be $workspaceSettingsHash
+                Test-Path -LiteralPath (Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile) | Should -BeFalse
+                Test-Path -LiteralPath (Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile) | Should -BeFalse
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+
+            It 'Rejects an original template source folder redirected through a symlink when using a custom template' -Skip:(-not $script:hasSymlinkCapability) {
+                Set-Content -LiteralPath (Join-Path $primarySourceFolder $RepoSettingsFile) -Value '{"templateUrl":"https://github.com/contoso/AL-Go@main"}' -Encoding UTF8
+                Move-Item -LiteralPath $originalSourceFolder -Destination $externalTemplateFolder
+                New-Item -ItemType SymbolicLink -Path $originalSourceFolder -Target $externalTemplateFolder | Out-Null
+                $rootLinkPath = $originalSourceFolder
+
+                { . $scriptPath -templateUrl 'https://github.com/contoso/template@main' -downloadLatest $true -update N } |
+                    Should -Throw -ExpectedMessage 'Unsafe path blocked: original template folder *'
+
+                Should -Invoke DownloadTemplateRepository -Exactly 1 -ParameterFilter { $templateUrl -eq 'https://github.com/contoso/AL-Go@main' }
+                (Get-FileHash -LiteralPath (Join-Path $testWorkspaceFolder $RepoSettingsFile)).Hash | Should -Be $workspaceSettingsHash
+                Test-Path -LiteralPath (Join-Path $testWorkspaceFolder $CustomTemplateRepoSettingsFile) | Should -BeFalse
+                Test-Path -LiteralPath (Join-Path $testWorkspaceFolder $CustomTemplateProjectSettingsFile) | Should -BeFalse
+                Should -Invoke GetFilesToUpdate -Exactly 0
+                Should -Invoke CloneIntoNewFolder -Exactly 0
+            }
+        }
+
         Context 'Template repository settings redirects' {
             BeforeEach {
                 Mock IsDirectALGo { return $false }
@@ -4205,6 +4296,28 @@ steps:
   - uses: contoso/AL-Go/Actions/ReviewAgent@prototype/review
 "@
     }
+}
+
+Describe "GetSrcFolder" {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot '../Actions/CheckForUpdates/CheckForUpdates.HelperFunctions.ps1')
+    }
+
+    BeforeEach {
+        $templateFolder = Join-Path $TestDrive 'download'
+        $sourceFolder = Join-Path $templateFolder 'repo/Templates/Per Tenant Extension'
+        New-Item -ItemType Directory -Path (Join-Path $sourceFolder '.github/workflows') -Force | Out-Null
+    }
+
+    AfterEach {
+        Remove-Item -LiteralPath $templateFolder -Recurse -Force
+    }
+
+    It 'Returns the expected template source folder' {
+        GetSrcFolder -repoType 'PTE' -templateUrl 'https://github.com/contoso/AL-Go@main' -templateFolder $templateFolder |
+            Should -Be (Join-Path $sourceFolder '')
+    }
+
 }
 
 Describe "IsDirectALGo" {

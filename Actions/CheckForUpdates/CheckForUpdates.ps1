@@ -62,9 +62,10 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $originalTemplateFolder = $null
-$templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
-$templateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder
+$templateDownloadFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
+$templateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateDownloadFolder
 Write-Host "Template Folder: $templateFolder"
+Assert-PathPhysicallyEqual -Path $templateFolder -AnchorPaths @($templateDownloadFolder) -Context 'template folder'
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
@@ -99,10 +100,11 @@ if (-not $isDirectALGo) {
             }
 
             # Download the "original" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
-            $originalTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $originalTemplateUrl -templateSha ([ref]$originalTemplateSha) -downloadLatest ($originalTemplateSha -eq '')
-            $originalTemplateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateFolder
+            $originalTemplateDownloadFolder = DownloadTemplateRepository -token $token -templateUrl $originalTemplateUrl -templateSha ([ref]$originalTemplateSha) -downloadLatest ($originalTemplateSha -eq '')
+            $originalTemplateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateDownloadFolder
 
             Write-Host "Original Template Folder: $originalTemplateFolder"
+            Assert-PathPhysicallyEqual -Path $originalTemplateFolder -AnchorPaths @($originalTemplateDownloadFolder) -Context 'original template folder'
 
             # Set TemplateBranch and TemplateOwner
             # Keep TemplateUrl and TemplateSha pointing to the custom template repository
