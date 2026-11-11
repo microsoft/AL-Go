@@ -7,7 +7,7 @@
 - `filesToExclude` now respects destination mappings from `filesToInclude`, including renamed files and per-project destinations. Existing files are removed unless another included source targets the same destination.
 - Use `destinationName` in `filesToInclude` to rename included files at the destination.
 - Update AL-Go System Files now ignores trigger-based conditional settings when selecting files and generating workflows, including during CI/CD update checks.
-- For safety, file access is blocked when a path redirects through a symbolic link or junction, or its physical location cannot be verified.
+- For safety, the update validates selected source paths before reading file contents and destination paths before writing or removing files. These operations are blocked when a path redirects through a symbolic link or junction, or its physical location cannot be verified.
 
 See [Customizing AL-Go for GitHub](Scenarios/CustomizingALGoForGitHub.md#using-custom-template-files) for details.
 
