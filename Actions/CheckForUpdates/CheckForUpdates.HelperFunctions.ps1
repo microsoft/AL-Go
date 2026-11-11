@@ -831,8 +831,8 @@ function Test-HasSystemFileChanges {
         [array] $removeFiles
     )
 
-    if (-not $updateFiles -and -not $removeFiles -and (Test-Path -Path $settingsFile -PathType Leaf)) {
-        $currentSettings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    if (-not $updateFiles -and -not $removeFiles -and (Test-Path -LiteralPath $settingsFile -PathType Leaf)) {
+        $currentSettings = Get-Content -LiteralPath $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
         if ($currentSettings['templateUrl'] -ceq $templateUrl -and $currentSettings['templateSha']) {
             return $false
         }
@@ -848,8 +848,8 @@ function UpdateSettingsFile {
 
     $modified = $false
     # Update Repo Settings file with the template URL
-    if (Test-Path $settingsFile) {
-        $settings = Get-Content $settingsFile -Encoding UTF8 | ConvertFrom-Json
+    if (Test-Path -LiteralPath $settingsFile) {
+        $settings = Get-Content -LiteralPath $settingsFile -Encoding UTF8 | ConvertFrom-Json
     }
     else {
         $settings = [PSCustomObject]@{}

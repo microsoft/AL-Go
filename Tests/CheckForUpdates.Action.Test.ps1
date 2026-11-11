@@ -1307,6 +1307,58 @@ Describe "CheckForUpdates Action: runtime behavior" {
     }
 }
 
+Describe "UpdateSettingsFile" {
+    BeforeAll {
+        $scriptRoot = Join-Path (Join-Path $PSScriptRoot '..') 'Actions'
+        . (Join-Path $scriptRoot 'AL-Go-Helper.ps1')
+        $scriptRoot = Join-Path $scriptRoot 'CheckForUpdates'
+        . (Join-Path $scriptRoot 'CheckForUpdates.HelperFunctions.ps1')
+    }
+
+    It 'Updates literal bracketed settings paths with modified result <expectedModified>' -TestCases @(
+        @{ templateSha = 'new-sha'; expectedModified = $true }
+        @{ templateSha = 'old-sha'; expectedModified = $false }
+    ) {
+        Param($templateSha, $expectedModified)
+
+        $settingsFile = Join-Path $TestDrive 'clone[1]/AL-Go-Settings.json'
+        $decoyFile = Join-Path $TestDrive 'clone1/AL-Go-Settings.json'
+        New-Item -ItemType Directory -Path (Split-Path $settingsFile), (Split-Path $decoyFile) -Force | Out-Null
+        $settings = @{
+            templateUrl = 'https://github.com/contoso/AL-Go@main'
+            templateSha = 'old-sha'
+            doNotPerformUpgrade = $true
+            customALGoFiles = @{ filesToInclude = @(@{ sourceFolder = 'custom' }) }
+        }
+        $settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $settingsFile -Encoding UTF8
+        $decoySettings = $settings.Clone()
+        $decoySettings.templateSha = 'new-sha'
+        $decoySettings.doNotPerformUpgrade = $false
+        $decoySettings.customALGoFiles = @{ filesToInclude = @(@{ sourceFolder = 'decoy' }) }
+        $decoySettings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $decoyFile -Encoding UTF8
+        $initialHash = (Get-FileHash -LiteralPath $settingsFile).Hash
+        $decoyHash = (Get-FileHash -LiteralPath $decoyFile).Hash
+        $updateSettings = @{ templateUrl = $settings.templateUrl; templateSha = $templateSha }
+
+        UpdateSettingsFile -settingsFile $settingsFile -updateSettings $updateSettings | Should -Be $expectedModified
+
+        $updatedSettings = Get-Content -LiteralPath $settingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+        $updatedSettings.templateUrl | Should -BeExactly $settings.templateUrl
+        $updatedSettings.templateSha | Should -BeExactly $templateSha
+        $updatedSettings.doNotPerformUpgrade | Should -BeTrue
+        $updatedSettings.customALGoFiles.filesToInclude[0].sourceFolder | Should -BeExactly 'custom'
+        (Get-FileHash -LiteralPath $decoyFile).Hash | Should -Be $decoyHash
+        if (-not $expectedModified) {
+            (Get-FileHash -LiteralPath $settingsFile).Hash | Should -Be $initialHash
+        }
+
+        Remove-Item -LiteralPath $decoyFile
+        $updatedHash = (Get-FileHash -LiteralPath $settingsFile).Hash
+        UpdateSettingsFile -settingsFile $settingsFile -updateSettings $updateSettings | Should -BeFalse
+        (Get-FileHash -LiteralPath $settingsFile).Hash | Should -Be $updatedHash
+    }
+}
+
 Describe "Test-HasSystemFileChanges" {
     BeforeAll {
         $scriptRoot = Join-Path (Join-Path $PSScriptRoot '..') 'Actions'
@@ -1337,6 +1389,37 @@ Describe "Test-HasSystemFileChanges" {
         Test-HasSystemFileChanges @parameters | Should -BeFalse
 
         [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($settingsFile)) | Should -Be ([System.Convert]::ToBase64String($originalContent))
+    }
+
+    It 'Reads literal bracketed settings paths with template URL change <urlChanged>' -TestCases @(
+        @{ urlChanged = $false }
+        @{ urlChanged = $true }
+    ) {
+        Param($urlChanged)
+
+        $settingsFile = Join-Path $TestDrive 'clone[1]/AL-Go-Settings.json'
+        $decoyFile = Join-Path $TestDrive 'clone1/AL-Go-Settings.json'
+        New-Item -ItemType Directory -Path (Split-Path $settingsFile), (Split-Path $decoyFile) -Force | Out-Null
+        $decoySettings = $settings.Clone()
+        if ($urlChanged) {
+            $settings.templateUrl = 'https://github.com/other/AL-Go@main'
+        }
+        else {
+            $decoySettings.templateUrl = 'https://github.com/other/AL-Go@main'
+        }
+        $settings | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8
+        $decoySettings | ConvertTo-Json | Set-Content -LiteralPath $decoyFile -Encoding UTF8
+        $initialHash = (Get-FileHash -LiteralPath $settingsFile).Hash
+        $decoyHash = (Get-FileHash -LiteralPath $decoyFile).Hash
+        $parameters.settingsFile = $settingsFile
+
+        Test-HasSystemFileChanges @parameters | Should -Be $urlChanged
+
+        (Get-FileHash -LiteralPath $settingsFile).Hash | Should -Be $initialHash
+        (Get-FileHash -LiteralPath $decoyFile).Hash | Should -Be $decoyHash
+        Remove-Item -LiteralPath $decoyFile
+        Test-HasSystemFileChanges @parameters | Should -Be $urlChanged
+        (Get-FileHash -LiteralPath $settingsFile).Hash | Should -Be $initialHash
     }
 
     It 'Does not skip updates when <change> are pending' -TestCases @(
