@@ -289,6 +289,14 @@
             "type": "boolean",
             "description": "Enable code analyzers on test apps. See https://aka.ms/ALGoSettings#enablecodeanalyzersonTestapps"
         },
+        "enableAppSourceCop": {
+            "type": "boolean",
+            "description": "Enable AppSourceCop. If not set, AppSourceCop is enabled when the project type is AppSource App. See https://aka.ms/ALGoSettings#enableAppSourceCop"
+        },
+        "enablePerTenantExtensionCop": {
+            "type": "boolean",
+            "description": "Enable PerTenantExtensionCop. If not set, PerTenantExtensionCop is enabled when the project type is PTE. See https://aka.ms/ALGoSettings#enablePerTenantExtensionCop"
+        },
         "BCQuality": {
             "type": "object",
             "description": "Configures the trusted BCQuality marketplace consumed by AL-Go agents. See https://aka.ms/ALGoSettings#BCQuality",
@@ -707,6 +715,22 @@
             "pattern": "^(pull_request|pull_request_target)$",
             "description": "The type of pull request trigger. See https://aka.ms/ALGoSettings#pullrequesttrigger"
         },
+        "CICDPushBranches": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": ["main", "release/*", "feature/*"],
+            "description": "An array of branches (branch patterns) that trigger the CI/CD workflow on push. Run Update AL-Go System Files after changing this setting. See https://aka.ms/ALGoSettings#CICDPushBranches"
+        },
+        "CICDPullRequestBranches": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": ["main"],
+            "description": "An array of target branches (branch patterns) that trigger the Pull Request Build workflow. Run Update AL-Go System Files after changing this setting. See https://aka.ms/ALGoSettings#CICDPullRequestBranches"
+        },
         "skipDraftPullRequests": {
             "type": "boolean",
             "default": false,
@@ -885,6 +909,39 @@
             "type": "boolean",
             "description": "Trust Microsoft NuGet feeds. See https://aka.ms/ALGoSettings#trustMicrosoftNuGetFeeds"
         },
+        "trustedNuGetFeeds": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL of the NuGet feed."
+                    },
+                    "authTokenSecret": {
+                        "type": "string",
+                        "description": "The name of a secret containing the authentication token for a private NuGet feed."
+                    },
+                    "patterns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Only trust packages where the ID matches one of these patterns. Defaults to all packages (*)."
+                    },
+                    "fingerprints": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Only trust packages signed with a certificate matching one of these fingerprints."
+                    }
+                },
+                "required": ["url"]
+            },
+            "default": [],
+            "description": "An array of NuGet feed specifications used for dependency resolution. See https://aka.ms/ALGoSettings#trustedNuGetFeeds"
+        },
         "useGitSubmodules": {
             "type": "string"
         },
@@ -964,6 +1021,31 @@
             "type": "boolean",
             "description": "Indicates whether the project can be postponed in the build order to optimize build times. See https://aka.ms/ALGoSettings#postponeProjectInBuildOrder"
         },
+        "workflowSchedule": {
+            "type": "object",
+            "properties": {
+                "cron": {
+                    "type": "string",
+                    "description": "The cron expression used to schedule workflow runs."
+                },
+                "includeBranches": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Branch patterns for scheduled runs. Multi-branch scheduling is currently supported only for Update AL-Go System Files."
+                }
+            },
+            "required": ["cron"],
+            "description": "Schedule a workflow using a cron expression. Set this in workflow-specific or conditional settings and run Update AL-Go System Files for changes to take effect. When omitted, no schedule is added. See https://aka.ms/ALGoSettings#workflowSchedule"
+        },
+        "workflowConcurrency": {
+            "type": ["array", "string"],
+            "items": {
+                "type": "string"
+            },
+            "description": "A YAML line or an array of YAML lines controlling workflow concurrency. Set this in workflow-specific or conditional settings and run Update AL-Go System Files for changes to take effect. Defaults depend on the workflow. See https://aka.ms/ALGoSettings#workflowConcurrency"
+        },
         "workflowDefaultInputs": {
             "type": "array",
             "items": {
@@ -980,6 +1062,73 @@
                 "required": ["name", "value"]
             },
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
+        },
+        "BcContainerHelperVersion": {
+            "type": "string",
+            "description": "The version of BcContainerHelper to use, such as a specific version, latest, preview, or dev. Defaults to latest (or preview for AL-Go preview). See https://aka.ms/ALGoSettings#BcContainerHelperVersion"
+        },
+        "ConditionalSettings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "repositories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings to repositories matching these patterns."
+                    },
+                    "projects": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings to projects matching these patterns."
+                    },
+                    "buildModes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings when building with build modes matching these patterns."
+                    },
+                    "branches": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings to branches matching these patterns."
+                    },
+                    "workflows": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings to workflows matching these patterns."
+                    },
+                    "users": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings for users matching these patterns."
+                    },
+                    "triggers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Apply settings when GITHUB_EVENT_NAME matches one of these values."
+                    },
+                    "settings": {
+                        "$ref": "#",
+                        "description": "The settings to apply when all specified conditions are met."
+                    }
+                },
+                "required": ["settings"]
+            },
+            "description": "An array of settings blocks applied when all specified conditions are met. See https://aka.ms/ALGoSettings#conditional-settings"
         }
     },
     "patternProperties": {
