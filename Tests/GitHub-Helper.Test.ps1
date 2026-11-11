@@ -66,13 +66,13 @@ Describe "FindLatestSuccessfulCICDRun" {
         Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 2 -Exactly
     }
 
-    It 'propagates request failures rather than returning a missing baseline' {
+    It 'propagates request failures after retries rather than returning a missing baseline' {
         Mock InvokeWebRequest -ModuleName Github-Helper { throw 'Request failed' }
 
         { FindLatestSuccessfulCICDRun -repository 'test/repo' -branch 'main' -token 'dummy' -retention 7 } | Should -Throw 'Request failed'
 
-        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly
-        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 0 -Exactly
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 3 -Exactly
+        Should -Invoke Start-Sleep -ModuleName Github-Helper -Times 2 -Exactly
     }
 
     It 'paginates past unrelated and cancelled runs and accepts successful build jobs in a failed run' {

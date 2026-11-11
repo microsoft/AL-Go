@@ -1536,6 +1536,68 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         ($yaml.Get('jobs:/CreateRelease:/steps:/- name: Create release/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
     }
 
+    It 'Applies draft skipping after generating dependency builds when enabled is <Enabled>' -TestCases @(
+        @{ Enabled = $false }
+        @{ Enabled = $true }
+    ) {
+        param($Enabled)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $source = Join-Path $PSScriptRoot '..\Templates\Per Tenant Extension\.github\workflows\PullRequestHandler.yaml'
+        Mock ReadSettings {
+            @{
+                'runs-on' = 'windows-latest'
+                shell = 'powershell'
+                type = 'PTE'
+                powerPlatformSolutionFolder = ''
+                pullRequestTrigger = 'pull_request_target'
+                CICDPullRequestBranches = @('main')
+                skipDraftPullRequests = $Enabled
+            }
+        }
+
+        $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 3
+        $yaml = [Yaml]::new($modified.Split("`n"))
+        $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build1:'
+        $yaml.GetNextLevel('jobs:/') | Should -Contain 'Build2:'
+        foreach ($job in $yaml.GetNextLevel('jobs:/')) {
+            if ($Enabled -and $job -ne 'PregateCheck:') {
+                $yaml.GetProperty("jobs:/$job/if:") | Should -Match '^\(github.event_name == ''merge_group'' \|\| github.event.pull_request.draft == false\) && '
+            }
+            else {
+                $yaml.GetProperty("jobs:/$job/if:") | Should -Not -Match 'pull_request\.draft'
+            }
+        }
+        if ($Enabled) {
+            $yaml.GetPropertyArray('on:/pull_request_target:/types:') | Should -Contain 'ready_for_review'
+        }
+        else {
+            $yaml.Get('on:/pull_request_target:/types:') | Should -BeNullOrEmpty
+        }
+
+        Mock Trace-Information {}
+        $customFile = Join-Path $TestDrive 'custom.yaml'
+        @(
+            'jobs:'
+            '  CustomJobStandalone:'
+            '    runs-on: ubuntu-latest'
+            '    steps: []'
+            '  CustomJobAlways:'
+            '    if: ${{ always() }}'
+            '    runs-on: ubuntu-latest'
+            '    steps: []'
+        ) | Set-Content $customFile -Encoding UTF8
+        $customYaml = [Yaml]::Load($customFile)
+        [Yaml]::ApplyTemplateCustomizations([ref] $modified, $customFile)
+        (Get-Content $customFile -Raw -Encoding UTF8).Replace('CustomJob', 'CustomJobRepo') | Set-Content $customFile -Encoding UTF8
+        [Yaml]::ApplyFinalCustomizations([ref] $modified, $customFile)
+        $yaml = [Yaml]::new($modified.Split("`n"))
+        foreach ($name in @('Standalone', 'Always')) {
+            $expected = ($customYaml.Get("jobs:/CustomJob${name}:/").content -join "`n").TrimEnd()
+            ($yaml.Get("jobs:/CustomJob${name}:/").content -join "`n").TrimEnd() | Should -Be $expected
+            ($yaml.Get("jobs:/CustomJobRepo${name}:/").content -join "`n").TrimEnd() | Should -Be $expected
+        }
+    }
+
     It 'Keeps Copilot review jobs hosted with self-hosted build settings in <Template>' -TestCases @(
         @{ Template = 'Per Tenant Extension' }
         @{ Template = 'AppSource App' }

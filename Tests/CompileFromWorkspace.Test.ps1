@@ -327,6 +327,10 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
     }
 
     Describe 'Update-AppJsonProperties' {
+        BeforeAll {
+            . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1' -Resolve)
+        }
+
         It 'Updates version with MajorMinorVersion, BuildNumber and RevisionNumber' {
             $projectPath = New-ALGoTestProject -BaseFolder $TestDrive -AppFolders @(
                 @{ Name = "MyApp"; Id = "11111111-1111-1111-1111-111111111111"; Version = "1.0.0.0" }
@@ -351,16 +355,47 @@ Write-Host "Post-compile: $($appFiles.Count) apps"
             $updatedAppJson.version | Should -Be '1.0.200.75'
         }
 
-        It 'Updates only RevisionNumber when BuildNumber is 0' {
+        It 'Updates only RevisionNumber when BuildNumber is omitted' {
             $projectPath = New-ALGoTestProject -BaseFolder $TestDrive -AppFolders @(
-                @{ Name = "MyApp3"; Id = "33333333-3333-3333-3333-333333333333"; Version = "1.0.0.0" }
+                @{ Name = "MyApp3"; Id = "33333333-3333-3333-3333-333333333333"; Version = "1.0.42.0" }
             )
             $appFolder = Join-Path $projectPath "MyApp3"
 
             Update-AppJsonProperties -Folders @($appFolder) -RevisionNumber 99
 
             $updatedAppJson = Get-Content -Path (Join-Path $appFolder 'app.json') | ConvertFrom-Json
-            $updatedAppJson.version | Should -Be '1.0.0.99'
+            $updatedAppJson.version | Should -Be '1.0.42.99'
+        }
+
+        It 'Applies versioning strategy <Strategy> with build number <BuildNumber>' -TestCases @(
+            @{ Strategy = 3; BuildNumber = -1; ExpectedAppVersion = '1.2.42.99'; ExpectedTestVersion = '2.3.17.99' }
+            @{ Strategy = 0; BuildNumber = 0; ExpectedAppVersion = '1.2.0.99'; ExpectedTestVersion = '2.3.0.99' }
+        ) {
+            param($Strategy, $BuildNumber, $ExpectedAppVersion, $ExpectedTestVersion)
+
+            $projectPath = New-ALGoTestProject -BaseFolder $TestDrive `
+                -AppFolders @(
+                    @{ Name = "VersionedApp"; Version = "1.2.42.5" }
+                ) `
+                -TestFolders @(
+                    @{ Name = "VersionedApp.Test"; Version = "2.3.17.8" }
+                )
+            $appFolder = Join-Path $projectPath "VersionedApp"
+            $testFolder = Join-Path $projectPath "VersionedApp.Test"
+            $versionNumber = Get-VersionNumber -Settings @{
+                versioningStrategy = $Strategy
+                appBuild = $BuildNumber
+                appRevision = 99
+            }
+
+            Update-AppJsonProperties -Folders @($appFolder, $testFolder) `
+                -MajorMinorVersion $versionNumber.MajorMinorVersion `
+                -BuildNumber $versionNumber.BuildNumber -RevisionNumber $versionNumber.RevisionNumber
+
+            $appJson = Get-Content -Path (Join-Path $appFolder 'app.json') -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $testJson = Get-Content -Path (Join-Path $testFolder 'app.json') -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $appJson.version | Should -Be $ExpectedAppVersion
+            $testJson.version | Should -Be $ExpectedTestVersion
         }
 
         It 'Updates multiple app folders in a project' {
