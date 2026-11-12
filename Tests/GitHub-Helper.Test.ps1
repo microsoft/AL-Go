@@ -398,4 +398,75 @@ Describe "GitHub-Helper Tests" {
             Remove-Item -Path $saveToPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
+
+    Context 'GetDependencies when thisBuild artifacts are missing' {
+        BeforeEach {
+            $script:saveToPath = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
+            Mock GetAccessToken -ModuleName Github-Helper { 'token' }
+            Mock GetArtifacts -ModuleName Github-Helper { @() }
+        }
+        AfterEach {
+            Remove-Item -Path $script:saveToPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        It 'Throws instead of falling back to the baseline when the project was built in this run (<type>)' -TestCases @(
+            @{ type = 'hashtable' }
+            @{ type = 'pscustomobject' }
+        ) {
+            param($type)
+            $probingPath = @{
+                release_status     = 'thisBuild'
+                version            = 'latest'
+                buildMode          = 'Default'
+                projects           = 'MyProj'
+                branch             = 'main'
+                baseBranch         = 'main'
+                baselineWorkflowID = '123'
+                builtInThisRun     = $true
+                repo               = 'https://github.com/test/repo'
+            }
+            if ($type -eq 'pscustomobject') { $probingPath = [PSCustomObject]$probingPath }
+
+            { GetDependencies -probingPathsJson $probingPath -saveToPath $script:saveToPath -masks @('Apps') } | Should -Throw "*'MyProj' was built in this workflow run*expired*"
+            Should -Invoke GetArtifacts -ModuleName Github-Helper -Times 0
+        }
+
+        It 'Falls back to the baseline workflow run when the project was not built in this run' {
+            $probingPath = @{
+                release_status     = 'thisBuild'
+                version            = 'latest'
+                buildMode          = 'Default'
+                projects           = 'MyProj'
+                branch             = 'feature/x'
+                baseBranch         = 'main'
+                baselineWorkflowID = '123'
+                builtInThisRun     = $false
+                repo               = 'https://github.com/test/repo'
+            }
+
+            GetDependencies -probingPathsJson $probingPath -saveToPath $script:saveToPath -masks @('Apps') | Out-Null
+            Should -Invoke GetArtifacts -ModuleName Github-Helper -Times 1 -ParameterFilter { $branch -eq 'main' -and $baselineWorkflowID -eq '123' -and $projects -eq 'MyProj' }
+        }
+
+        It 'Does not throw when the project was built in this run but only produced the alternate (TestApps) artifact' {
+            $depFolder = New-Item -ItemType Directory -Path (Join-Path $script:saveToPath "MyProj-main-TestApps-PR1-20261112")
+            [System.IO.File]::WriteAllBytes((Join-Path $depFolder "Test.app"), [byte[]](1, 2, 3))
+            $probingPath = @{
+                release_status     = 'thisBuild'
+                version            = 'latest'
+                buildMode          = 'Default'
+                projects           = 'MyProj'
+                branch             = 'main'
+                baseBranch         = 'main'
+                baselineWorkflowID = '123'
+                builtInThisRun     = $true
+                repo               = 'https://github.com/test/repo'
+            }
+
+            $result = @(GetDependencies -probingPathsJson $probingPath -saveToPath $script:saveToPath -masks @('Apps', 'TestApps'))
+            $result | Should -HaveCount 1
+            $result[0] | Should -Be "($(Join-Path $depFolder 'Test.app'))"
+            Should -Invoke GetArtifacts -ModuleName Github-Helper -Times 0
+        }
+    }
 }
