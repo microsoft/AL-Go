@@ -259,12 +259,6 @@ Get-ContentLF -Path (Join-Path (Get-Location) $optionalCustomFileName) | Should 
 # Check that missing workflow file is present (in default filesToInclude)
 (Join-Path (Get-Location) $missingWorkflowFileRelativePath) | Should -Exist
 
-# Remove missing workflow files from template repository again
-Remove-Item -Path $missingWorkflowFile -Force | Out-Null
-
-# Push
-CommitAndPush -commitMessage 'Restore template customizations [skip ci]'
-
 #endregion
 
 #region validate template repository CI/CD workflow
@@ -276,6 +270,22 @@ $run = RunCICD -repository $templateRepository -branch $branch -wait
 Test-LogContainsFromRun -repository $templateRepository -runid $run.id -jobName 'CustomJob-TemplateInit' -stepName 'Init' -expectedText 'CustomJob-TemplateInit was here!'
 Test-LogContainsFromRun -repository $templateRepository -runid $run.id -jobName 'CustomJob-TemplateDeploy' -stepName 'Deploy' -expectedText 'CustomJob-TemplateDeploy was here!'
 { Test-LogContainsFromRun -repository $templateRepository -runid $run.id -jobName 'JustSomeTemplateJob' -stepName 'JustSomeTemplateStep' -expectedText 'JustSomeTemplateJob was here!' } | Should -Throw
+
+#endregion
+
+#region restore template repository customizations
+
+# Add Custom Jobs to CICD.yaml again
+$cicdYaml = [yaml]::Load($cicdWorkflow)
+$cicdYaml | Should -Not -BeNullOrEmpty
+$cicdYaml.AddCustomJobsToYaml(@($customJobs | Where-Object { $_.Name -eq 'JustSomeTemplateJob' }), [CustomizationOrigin]::FinalRepository)
+$cicdYaml.Save($cicdWorkflow)
+
+# Remove missing workflow files from template repository again
+Remove-Item -Path $missingWorkflowFile -Force | Out-Null
+
+# Push
+CommitAndPush -commitMessage 'Restore template customizations [skip ci]'
 
 #endregion
 
