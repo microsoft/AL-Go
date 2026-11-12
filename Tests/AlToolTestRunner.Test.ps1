@@ -98,6 +98,38 @@ Describe 'AlToolTestRunner.psm1 Tests' {
 
     Context 'Get-AlToolTestCodeunits' {
         InModuleScope AlToolTestRunner {
+        It 'Enumerates a non-enumerated array as separate codeunits' {
+            Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
+                return ,@(
+                    [PSCustomObject]@{ Id = 60010; Name = 'Integration Tests'; Tests = @('IntegrationTest') },
+                    [PSCustomObject]@{ Id = 60011; Name = 'Unit Tests'; Tests = @('UnitTest') },
+                    [PSCustomObject]@{ Id = 60012; Name = 'Uncategorized Tests'; Tests = @('OtherTest') }
+                )
+            }
+            $testCodeunitParams = @{
+                ContainerName = 'test'
+                Credential    = (New-Object System.Management.Automation.PSCredential('admin', (ConvertTo-SecureString 'password' -AsPlainText -Force)))
+                ExtensionId   = [Guid]::NewGuid().ToString()
+            }
+
+            $codeunits = @(Get-AlToolTestCodeunits @testCodeunitParams)
+
+            $codeunits.Count | Should -Be 3
+            @($codeunits.Id) | Should -Be @(60010, 60011, 60012)
+            @($codeunits[0].Tests) | Should -Be @('IntegrationTest')
+            @($codeunits[1].Tests) | Should -Be @('UnitTest')
+            @($codeunits[2].Tests) | Should -Be @('OtherTest')
+
+            $groupsPath = New-AlTestGroupsFile -Codeunits $codeunits
+            try {
+                (Get-Content -LiteralPath $groupsPath -Raw -Encoding UTF8).Trim() |
+                    Should -Be '[{"codeunitId":60010,"testMethods":["IntegrationTest"]},{"codeunitId":60011,"testMethods":["UnitTest"]},{"codeunitId":60012,"testMethods":["OtherTest"]}]'
+            }
+            finally {
+                Remove-Item -LiteralPath $groupsPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+
         It 'Enumerates codeunits and filters disabled methods and whole codeunits' {
             Mock -ModuleName AlToolTestRunner Get-TestsFromBcContainer {
                 @(
