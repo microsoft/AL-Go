@@ -162,7 +162,7 @@ Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $b
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
     -stepName "Run Tests" -actionName "RunTests" -expectedText "Running tests in My App.Test"
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
-    -stepName "Run Tests" -actionName "RunTests" -expectedText "60000/SeparateTestActionE2E"
+    -stepName "Run Tests" -actionName "RunTests" -expectedText "Executing 3 discovered test method(s)."
 
 Test-ArtifactsFromRun `
     -runid $run.id `
