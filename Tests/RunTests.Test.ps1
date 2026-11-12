@@ -336,8 +336,8 @@ Describe 'RunTests.psm1 Tests' {
     Context 'Invoke-AlGoTestRun' {
         It 'Warns that configured database restore events are not supported' {
             $projectPath = New-TestProject
-            $warning = '::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
-            Mock -ModuleName RunTests Write-Host {}
+            $warning = 'restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
+            Mock -ModuleName RunTests OutputWarning {}
             $settings = @{
                 restoreDatabases               = @('BeforeEachTestApp')
                 runTestsInAllInstalledTestApps = $false
@@ -347,16 +347,16 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
                 -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
 
-            Should -Invoke -ModuleName RunTests Write-Host -Times 1 -Exactly -ParameterFilter {
-                $Object -eq $warning
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -eq $warning
             }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
         It 'Does not emit the database restore warning for an empty setting' {
             $projectPath = New-TestProject
-            $warning = '::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
-            Mock -ModuleName RunTests Write-Host {}
+            $warning = 'restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
+            Mock -ModuleName RunTests OutputWarning {}
             $settings = @{
                 restoreDatabases               = @('', ' ')
                 runTestsInAllInstalledTestApps = $false
@@ -366,8 +366,8 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
                 -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
 
-            Should -Invoke -ModuleName RunTests Write-Host -Times 0 -Exactly -ParameterFilter {
-                $Object -eq $warning
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 0 -Exactly -ParameterFilter {
+                $message -eq $warning
             }
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -884,7 +884,7 @@ Describe 'RunTests.psm1 Tests' {
         }
 
         It 'Warns and continues when testType is nonblank on the built-in AlTool path' {
-            Mock -ModuleName RunTests Write-Host {}
+            Mock -ModuleName RunTests OutputWarning {}
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $settings = @{
@@ -902,8 +902,8 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' `
                 -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
 
-            Should -Invoke -ModuleName RunTests Write-Host -Times 1 -Exactly -ParameterFilter {
-                $Object -like "::Warning::*testType 'IntegrationTest'*ignored*listtests*does not support TestType filtering*all subtype-Test codeunits*custom RunTestsInBcContainer override*"
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like "*testType 'IntegrationTest'*ignored*listtests*does not support TestType filtering*all subtype-Test codeunits*custom RunTestsInBcContainer override*"
             }
             Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly -ParameterFilter {

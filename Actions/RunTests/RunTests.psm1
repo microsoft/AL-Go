@@ -301,12 +301,12 @@ function Invoke-AlGoTestRun {
     try {
         $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
         if (-not $runTestsOverride -and -not [string]::IsNullOrWhiteSpace($testType)) {
-            Write-Host "::Warning::useSeparateTestAction.testType '$testType' is ignored by the built-in runner because 'al listtests' does not support TestType filtering. All subtype-Test codeunits will be discovered. Use a custom RunTestsInBcContainer override to apply testType."
+            OutputWarning "useSeparateTestAction.testType '$testType' is ignored by the built-in runner because 'al listtests' does not support TestType filtering. All subtype-Test codeunits will be discovered. Use a custom RunTestsInBcContainer override to apply testType."
         }
 
         if ($settings.ContainsKey("restoreDatabases") -and
             @($settings.restoreDatabases | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") }).Count -gt 0) {
-            Write-Host "::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed."
+            OutputWarning "restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed."
         }
 
         $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath `
