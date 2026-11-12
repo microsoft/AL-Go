@@ -4,11 +4,12 @@
 
 .DESCRIPTION
     This is the default RunTests executor when no RunTestsInBcContainer override is supplied.
-    BcContainerHelper provides app metadata, container configuration, company discovery, and test
-    enumeration. AlTool runs each app's enabled methods as one batch and writes the outcomes as JUnit.
+    AlTool discovers package metadata and tests directly from each exact .app file, runs each app's
+    enabled methods as one batch, and writes the outcomes as JUnit. BcContainerHelper remains in use
+    for container connection and company operations.
 #>
 
-$ErrorActionPreference = "Stop"
+$errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 . (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\.Modules\AlToolHelper.psm1' -Resolve) -DisableNameChecking -Force
@@ -89,6 +90,85 @@ function Get-AlToolCompany {
 
 <#
 .SYNOPSIS
+    Discovers app metadata and test methods directly from an app package.
+.DESCRIPTION
+    Runs the resolved AlTool executable with `listtests --appfile`, parses its JSON response, and
+    returns deterministic typed records.
+.PARAMETER AlToolPath
+    Full path to the AlTool executable.
+.PARAMETER AppFile
+    Full path to the app package to inspect.
+.OUTPUTS
+    A PSCustomObject with AppId, AppName, AppPublisher, AppVersion, and Codeunits.
+#>
+function Get-AlToolAppTests {
+    param(
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $AlToolPath,
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $AppFile
+    )
+
+    if (-not (Test-Path -LiteralPath $AppFile -PathType Leaf)) {
+        throw "Cannot discover tests because app package '$AppFile' does not exist."
+    }
+    $fullAppFile = [System.IO.Path]::GetFullPath($AppFile)
+    $nativeResult = Invoke-AlNativeCommand -FilePath $AlToolPath -ArgumentList @(
+        'listtests', '--appfile', $fullAppFile
+    )
+    $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
+    $standardErrorText = ($nativeResult.StandardError -join [Environment]::NewLine).Trim()
+    if ($nativeResult.ExitCode -ne 0) {
+        $stdout = if ($standardOutputText) { $standardOutputText } else { "<empty>" }
+        $stderr = if ($standardErrorText) { $standardErrorText } else { "<empty>" }
+        throw "AlTool test discovery failed with exit code $($nativeResult.ExitCode) for '$fullAppFile'.`nstdout: $stdout`nstderr: $stderr"
+    }
+    if ([string]::IsNullOrWhiteSpace($standardOutputText)) {
+        $stderr = if ($standardErrorText) { $standardErrorText } else { "<empty>" }
+        throw "AlTool test discovery returned empty stdout for '$fullAppFile'. stderr: $stderr"
+    }
+
+    try {
+        $response = ConvertTo-HashTable -object ($standardOutputText | ConvertFrom-Json) -recurse
+    }
+    catch {
+        throw "AlTool test discovery returned invalid JSON for '$fullAppFile'. $($_.Exception.Message)"
+    }
+
+    $codeunits = @()
+    foreach ($codeunit in @($response.codeunits)) {
+        [int] $codeunitId = $codeunit.id
+        $methods = @()
+        foreach ($method in @($codeunit.methods)) {
+            $methods += [PSCustomObject]@{
+                Name         = "$($method.name)".Trim()
+                IsDataDriven = [System.Convert]::ToBoolean(
+                    $method.isDataDriven,
+                    [System.Globalization.CultureInfo]::InvariantCulture
+                )
+            }
+        }
+
+        $codeunits += [PSCustomObject]@{
+            Id        = $codeunitId
+            Name      = "$($codeunit.name)".Trim()
+            Namespace = "$($codeunit.namespace)".Trim()
+            Methods   = @($methods | Sort-Object Name)
+        }
+    }
+
+    $discovery = [PSCustomObject]@{
+        AppId        = "$($response.appId)".Trim()
+        AppName      = "$($response.appName)".Trim()
+        AppPublisher = "$($response.appPublisher)".Trim()
+        AppVersion   = "$($response.appVersion)".Trim()
+        Codeunits    = @($codeunits | Sort-Object Id)
+    }
+
+    Write-Host "Discovered $($discovery.Codeunits.Count) test codeunit(s) from app package '$fullAppFile' using al listtests --appfile."
+    return $discovery
+}
+
+<#
+.SYNOPSIS
     Builds case-insensitive disabled-method and disabled-codeunit lookups.
 .DESCRIPTION
     A `*` method disables the complete codeunit instead of a method named `*`.
@@ -123,53 +203,22 @@ function Get-DisabledTestKeySet {
 
 <#
 .SYNOPSIS
-    Enumerates enabled test methods for an app in the container.
+    Gets test codeunits with disabled tests removed.
 .DESCRIPTION
-    Removes configured disabled methods and codeunits before AlTool execution.
-.PARAMETER ContainerName
-    Container whose tests are enumerated.
-.PARAMETER Credential
-    Credential used to access the container.
-.PARAMETER ExtensionId
-    App ID whose test codeunits are enumerated.
-.PARAMETER Tenant
-    Tenant used for test enumeration.
-.PARAMETER TestType
-    Optional platform test type. Supported values are UnitTest, IntegrationTest, and Uncategorized.
-    Blank enumerates all test types.
+    Converts test codeunit records into testgroups input after removing configured disabled methods
+    and codeunits.
+.PARAMETER Codeunits
+    Codeunit records with Id, Name, Namespace, and Methods properties.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
 .OUTPUTS
     [object[]] Codeunit objects with .Id, .Name, .Tests (enabled method name array).
 #>
-function Get-AlToolTestCodeunits {
+function Get-AlToolTestEnabledCodeunits {
     param(
-        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $ContainerName,
-        [Parameter(Mandatory = $true)][System.Management.Automation.PSCredential] $Credential,
-        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $ExtensionId,
-        [string] $Tenant = "default",
-        [string] $TestType = "",
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $Codeunits,
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @()
     )
-
-    $getTestsParams = @{
-        containerName = $ContainerName
-        tenant        = $Tenant
-        credential    = $Credential
-        extensionId   = $ExtensionId
-        ignoreGroups  = $true
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($TestType)) {
-        $supportedTestTypes = @("UnitTest", "IntegrationTest", "Uncategorized")
-        $matchingTestType = @($supportedTestTypes | Where-Object { $_ -eq $TestType })
-        if ($matchingTestType.Count -eq 0) {
-            throw "Unsupported testType '$TestType' for the built-in AlTool runner. Supported values are UnitTest, IntegrationTest, Uncategorized, or blank."
-        }
-        $getTestsParams["testType"] = $matchingTestType[0]
-    }
-
-    $codeunits = @(Get-TestsFromBcContainer @getTestsParams | ForEach-Object { $_ })
 
     $disabledMethods = @{}
     $disabledCodeunits = @{}
@@ -181,9 +230,10 @@ function Get-AlToolTestCodeunits {
 
     $result = @()
     $disabledCount = 0
-    foreach ($cu in $codeunits) {
+    foreach ($cu in $Codeunits) {
         $cuNameLower = "$($cu.Name)".ToLowerInvariant()
-        $methods = @($cu.Tests | ForEach-Object { "$_" })
+        $methodRecords = @($cu.Methods)
+        $methods = @($methodRecords | ForEach-Object { "$($_.Name)" })
 
         if ($disabledCodeunits.ContainsKey($cuNameLower)) {
             $disabledCount += $methods.Count
@@ -196,12 +246,19 @@ function Get-AlToolTestCodeunits {
             $methods = $enabled
         }
         if ($methods.Count -gt 0) {
-            $result += [PSCustomObject]@{ Id = $cu.Id; Name = $cu.Name; Tests = $methods }
+            $enabledMethodRecords = @($methodRecords | Where-Object { $methods -contains "$($_.Name)" })
+            $result += [PSCustomObject]@{
+                Id        = $cu.Id
+                Name      = $cu.Name
+                Namespace = $cu.Namespace
+                Methods   = $enabledMethodRecords
+                Tests     = $methods
+            }
         }
     }
 
     if ($disabledCount -gt 0) {
-        Write-Host "Excluded $disabledCount disabled test method(s) from altool enumeration."
+        Write-Host "Excluded $disabledCount disabled test method(s) from AlTool package discovery."
     }
     return @($result)
 }
@@ -658,10 +715,11 @@ function Add-JUnitTestSuite {
 .PARAMETER CompanyName
     Company used for the test run. The container default is used when omitted.
 .PARAMETER Tenant
-    Tenant used for container discovery and AlTool execution.
+    Tenant used for AlTool execution.
 .PARAMETER TestType
-    Optional platform test type used by BcContainerHelper for server-side test enumeration. Supported
-    values are UnitTest, IntegrationTest, and Uncategorized. Blank enumerates all test types.
+    Reserved for future AlTool TestType filtering. The current implementation does not apply it.
+.PARAMETER Codeunits
+    Test codeunit records with Id, Name, Namespace, and Methods properties.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
 .PARAMETER AlToolPath
@@ -680,6 +738,7 @@ function Invoke-AlToolTestRun {
         [string] $CompanyName = "",
         [string] $Tenant = "default",
         [string] $TestType = "",
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $Codeunits,
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @(),
         [string] $AlToolPath = "",
         [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName
@@ -699,9 +758,8 @@ function Invoke-AlToolTestRun {
         $env:BC_SERVER_USERNAME = $Credential.UserName
         $env:BC_SERVER_PASSWORD = $Credential.GetNetworkCredential().Password
 
-        $codeunits = @(Get-AlToolTestCodeunits -ContainerName $ContainerName -Credential $Credential `
-                -ExtensionId $ExtensionId -Tenant $Tenant -TestType $TestType -DisabledTests $DisabledTests)
-        Write-Host "Enumerated $($codeunits.Count) test codeunit(s) for app '$AppName'."
+        $codeunits = @(Get-AlToolTestEnabledCodeunits -Codeunits $Codeunits -DisabledTests $DisabledTests)
+        Write-Host "Selected $($codeunits.Count) discovered test codeunit(s) for app '$AppName'."
         if ($codeunits.Count -eq 0) {
             Write-Host "No test codeunits to run for app '$AppName'; nothing to do."
             return $true
@@ -717,9 +775,18 @@ function Invoke-AlToolTestRun {
             throw "Could not resolve a company to run tests against in container '$ContainerName'."
         }
 
-        Write-Host "altool run: app='$AppName' extensionId=$ExtensionId company='$company' server='$($connection.Server)' instance='$($connection.ServerInstance)' port=$($connection.Port) tenant='$Tenant'"
+        Write-Host "altool run: app='$AppName' extensionId=$ExtensionId company='$company' server='$($connection.Server)' instance='$($connection.ServerInstance)' port=$($connection.Port) tenant='$Tenant' requestedTestType='$TestType'"
 
         $hostname = [System.Net.Dns]::GetHostName()
+        $requestedTestNames = @(
+            foreach ($codeunit in $codeunits) {
+                foreach ($method in @($codeunit.Tests)) {
+                    "$($codeunit.Id)/$method"
+                }
+            }
+        )
+        Write-Host "Executing $($requestedTestNames.Count) discovered test method(s)."
+        OutputDebug "Discovered test method(s): $($requestedTestNames -join ', ')"
 
         # Multiple test apps append to the same result file.
         $doc = New-Object System.Xml.XmlDocument
@@ -782,4 +849,4 @@ function Invoke-AlToolTestRun {
     }
 }
 
-Export-ModuleMember -Function Invoke-AlToolTestRun
+Export-ModuleMember -Function Invoke-AlToolTestRun, Get-AlToolAppTests

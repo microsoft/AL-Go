@@ -6,6 +6,8 @@
     executor; a RunTestsInBcContainer override can replace it.
 #>
 
+. (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+Import-Module (Join-Path $PSScriptRoot '..\.Modules\AlToolHelper.psm1' -Resolve) -DisableNameChecking -Force
 Import-Module (Join-Path $PSScriptRoot 'AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
 
 function Get-TestAppsToRun {
@@ -16,25 +18,34 @@ function Get-TestAppsToRun {
         Selects compiled apps matching normal testFolders and excludes BCPT-only apps. Unwrapped
         installed test app paths are always included. Parenthesized paths are included and unwrapped
         only when runTestsInAllInstalledTestApps is enabled. Returns each selected app as a record
-        containing Path, Id, and Name.
+        containing its exact package path, ID, name, and discovered test codeunits.
     .PARAMETER settings
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
         The full path to the project folder.
     .PARAMETER installTestAppsJson
         Path to a JSON file with the list of installed test apps.
+    .PARAMETER alToolPath
+        Full path to AlTool when already resolved.
     #>
     Param(
         [hashtable] $settings,
         [string] $projectPath,
-        [string] $installTestAppsJson = ''
+        [string] $installTestAppsJson = '',
+        [string] $alToolPath = ''
     )
 
+    # Locate packages compiled from this project's test folders.
     $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
+    # Initialize the selected apps and de-duplication lookups.
     $testApps = @()
     $selectedAppPaths = @{}
     $normalTestAppIds = @{}
+    $compiledApps = @()
+    $dependencyTestAppPaths = @()
+
+    # Read the app IDs that identify normal test folders and exclude BCPT test folders.
     foreach ($testFolder in @($settings.testFolders)) {
         $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
         try {
@@ -52,77 +63,97 @@ function Get-TestAppsToRun {
         $normalTestAppIds[$sourceAppId] = $true
     }
 
+    # Collect all test packages produced by the compilation step.
     if (Test-Path $testAppOutputFolder) {
-        $selectedCompiledAppIds = @{}
-        foreach ($compiledApp in @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)) {
-            try {
-                $compiledAppJson = Get-AppJsonFromAppFile -appFile $compiledApp.FullName
-                $compiledAppId = "$($compiledAppJson.id)"
-            }
-            catch {
-                throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
-            }
-
-            if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
-                $compiledAppName = "$($compiledAppJson.name)"
-                if ([string]::IsNullOrWhiteSpace($compiledAppName)) {
-                    throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: The compiled app metadata does not contain an app name."
-                }
-                $testApps += [PSCustomObject]@{
-                    Path = $compiledApp.FullName
-                    Id   = $compiledAppId
-                    Name = $compiledAppName
-                }
-                $selectedCompiledAppIds[$compiledAppId] = $true
-                $selectedAppPaths[$compiledApp.FullName] = $true
-            }
-        }
+        $compiledApps = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)
     }
 
+    # Collect eligible dependency test packages supplied through installTestAppsJson.
     if ($installTestAppsJson) {
         try {
-            $installedTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
+            $dependencyTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
         }
-        foreach ($installedTestApp in @($installedTestApps)) {
-            $installedTestAppValue = "$installedTestApp"
-            $isParenthesized = $installedTestAppValue.StartsWith("(") -and $installedTestAppValue.EndsWith(")")
+        foreach ($dependencyTestApp in @($dependencyTestApps)) {
+            $dependencyTestAppValue = "$dependencyTestApp"
+            $isParenthesized = $dependencyTestAppValue.StartsWith("(") -and $dependencyTestAppValue.EndsWith(")")
             if ($isParenthesized -and -not $settings.runTestsInAllInstalledTestApps) {
                 continue
             }
-            $installedTestAppPath = if ($isParenthesized) {
-                $installedTestAppValue.Substring(1, $installedTestAppValue.Length - 2)
+            $dependencyTestAppPath = if ($isParenthesized) {
+                $dependencyTestAppValue.Substring(1, $dependencyTestAppValue.Length - 2)
             }
             else {
-                $installedTestAppValue
+                $dependencyTestAppValue
             }
-            if ([string]::IsNullOrWhiteSpace($installedTestAppPath)) {
+            if ([string]::IsNullOrWhiteSpace($dependencyTestAppPath)) {
                 throw "The installed test app list '$installTestAppsJson' contains a blank path."
             }
-            try {
-                $installedAppJson = Get-AppJsonFromAppFile -appFile $installedTestAppPath
-                $installedAppId = "$($installedAppJson.id)"
-                $installedAppName = "$($installedAppJson.name)"
-                if ([string]::IsNullOrWhiteSpace($installedAppId) -or [string]::IsNullOrWhiteSpace($installedAppName)) {
-                    throw "The installed app metadata does not contain an app ID and name."
-                }
-            }
-            catch {
-                throw "Failed to read installed test app metadata from '$installedTestAppPath'. Error: $($_.Exception.Message)"
-            }
-            if (-not $selectedAppPaths.ContainsKey($installedTestAppPath)) {
-                $testApps += [PSCustomObject]@{
-                    Path = $installedTestAppPath
-                    Id   = $installedAppId
-                    Name = $installedAppName
-                }
-                $selectedAppPaths[$installedTestAppPath] = $true
-            }
+            $dependencyTestAppPaths += $dependencyTestAppPath
         }
     }
 
+    # Resolve AlTool only when at least one app package needs discovery.
+    if (($compiledApps.Count -gt 0 -or $dependencyTestAppPaths.Count -gt 0) -and
+        [string]::IsNullOrWhiteSpace($alToolPath)) {
+        $alToolPath = GetAlToolPath
+    }
+
+    # Discover compiled packages and select only normal test apps once per app ID.
+    $selectedCompiledAppIds = @{}
+    foreach ($compiledApp in $compiledApps) {
+        try {
+            $compiledAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $compiledApp.FullName
+            $compiledAppId = "$($compiledAppDiscovery.AppId)"
+            $compiledAppName = "$($compiledAppDiscovery.AppName)"
+            if ([string]::IsNullOrWhiteSpace($compiledAppId) -or [string]::IsNullOrWhiteSpace($compiledAppName)) {
+                throw "The package metadata does not contain a nonblank app ID and name."
+            }
+        }
+        catch {
+            throw "Failed to discover compiled test app metadata and tests from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
+        }
+
+        if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
+            $testApps += [PSCustomObject]@{
+                Path       = $compiledApp.FullName
+                Id         = $compiledAppId
+                Name       = $compiledAppName
+                Codeunits  = @($compiledAppDiscovery.Codeunits)
+            }
+            $selectedCompiledAppIds[$compiledAppId] = $true
+            $selectedAppPaths[$compiledApp.FullName] = $true
+        }
+    }
+
+    # Discover dependency test packages that were not already selected as compiled apps.
+    foreach ($dependencyTestAppPath in $dependencyTestAppPaths) {
+        if ($selectedAppPaths.ContainsKey($dependencyTestAppPath)) {
+            continue
+        }
+        try {
+            $dependencyAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $dependencyTestAppPath
+            $dependencyAppId = "$($dependencyAppDiscovery.AppId)"
+            $dependencyAppName = "$($dependencyAppDiscovery.AppName)"
+            if ([string]::IsNullOrWhiteSpace($dependencyAppId) -or [string]::IsNullOrWhiteSpace($dependencyAppName)) {
+                throw "The package metadata does not contain a nonblank app ID and name."
+            }
+        }
+        catch {
+            throw "Failed to discover installed test app metadata and tests from '$dependencyTestAppPath'. Error: $($_.Exception.Message)"
+        }
+        $testApps += [PSCustomObject]@{
+            Path       = $dependencyTestAppPath
+            Id         = $dependencyAppId
+            Name       = $dependencyAppName
+            Codeunits  = @($dependencyAppDiscovery.Codeunits)
+        }
+        $selectedAppPaths[$dependencyTestAppPath] = $true
+    }
+
+    # Return local compiled apps first, followed by dependency test apps.
     return @($testApps)
 }
 
@@ -263,9 +294,7 @@ function Invoke-AlGoTestRun {
     .PARAMETER runTestsOverride
         Optional scriptblock overriding the built-in AlTool test runner (RunTestsInBcContainer).
     .PARAMETER alToolPath
-        Full path to the AlTool executable used by the built-in runner.
-    .PARAMETER getAlToolPath
-        Shared resolver used to discover or install AlTool when alToolPath is omitted.
+        Full path to the AlTool executable used for package discovery and by the built-in runner.
     #>
     Param(
         [hashtable] $settings,
@@ -274,20 +303,29 @@ function Invoke-AlGoTestRun {
         [System.Management.Automation.PSCredential] $credential,
         [string] $installTestAppsJson = '',
         [scriptblock] $runTestsOverride = $null,
-        [string] $alToolPath = '',
-        [scriptblock] $getAlToolPath = $null
+        [string] $alToolPath = ''
     )
 
     try {
-        if (@($settings.restoreDatabases | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") }).Count -gt 0) {
-            Write-Host "::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed."
+        $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
+        if (-not $runTestsOverride -and -not [string]::IsNullOrWhiteSpace($testType)) {
+            OutputWarning "useSeparateTestAction.testType '$testType' is ignored by the built-in runner because 'al listtests' does not support TestType filtering. All subtype-Test codeunits will be discovered. Use a custom RunTestsInBcContainer override to apply testType."
+        }
+
+        if ($settings.ContainsKey("restoreDatabases") -and
+            @($settings.restoreDatabases | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") }).Count -gt 0) {
+            OutputWarning "restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed."
         }
 
         $testApps = Get-TestAppsToRun -settings $settings -projectPath $projectPath `
-            -installTestAppsJson $installTestAppsJson
+            -installTestAppsJson $installTestAppsJson -alToolPath $alToolPath
         if (@($testApps).Count -eq 0) {
             Write-Host "No test apps found to run tests in. Skipping test execution."
             return
+        }
+
+        if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
+            $alToolPath = GetAlToolPath
         }
 
         Write-Host "Running tests against container '$containerName'"
@@ -300,16 +338,8 @@ function Invoke-AlGoTestRun {
             }
         }
 
-        if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
-            if (-not $getAlToolPath) {
-                throw "The built-in AlTool runner requires an AlTool path or path resolver."
-            }
-            $alToolPath = & $getAlToolPath
-        }
-
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
-        $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
 
         $allTestsPassed = $true
         $testRunError = $null
@@ -347,6 +377,7 @@ function Invoke-AlGoTestRun {
                         -CompanyName "$($settings.companyName)" `
                         -Tenant "default" `
                         -TestType $testType `
+                        -Codeunits @($testApp.Codeunits) `
                         -DisabledTests @($disabledTests) `
                         -AlToolPath $alToolPath `
                         -JUnitResultFileName $testResultsFile

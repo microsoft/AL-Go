@@ -6,8 +6,6 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
 
-# Stub for the BcContainerHelper function so it can be mocked within the module scope
-function Get-AppJsonFromAppFile { param($appFile) }
 function Get-BcContainerEventLog { param($containerName, [switch] $doNotOpen) }
 
 Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/RunTests.psm1' -Resolve) -DisableNameChecking -Force
@@ -63,17 +61,53 @@ Describe 'RunTests.psm1 Tests' {
     BeforeEach {
         $script:eventLogSource = Join-Path $TestDrive "$([Guid]::NewGuid()).evtx"
         Set-Content -Path $script:eventLogSource -Value 'post-test-events' -Encoding UTF8
-        Mock -ModuleName RunTests Get-AppJsonFromAppFile {
-            $fullPath = [System.IO.Path]::GetFullPath("$appFile")
+        Mock -ModuleName RunTests GetAlToolPath { return 'C:\dotnet-tools\al.exe' }
+        Mock -ModuleName RunTests Get-AlToolAppTests {
+            $fullPath = [System.IO.Path]::GetFullPath("$AppFile")
             if (-not $script:compiledAppMetadataByPath.ContainsKey($fullPath)) {
-                throw "No test metadata configured for '$appFile'."
+                throw "No test metadata configured for '$AppFile'."
             }
-            return $script:compiledAppMetadataByPath[$fullPath]
+            $metadata = $script:compiledAppMetadataByPath[$fullPath]
+            return [PSCustomObject]@{
+                AppId        = "$($metadata.id)"
+                AppName      = "$($metadata.name)"
+                AppPublisher = 'Test Publisher'
+                AppVersion   = '1.0.0.0'
+                Codeunits    = @(
+                    [PSCustomObject]@{
+                        Id = 130001; Name = 'Tests'; Namespace = 'Tests'
+                        Methods = @([PSCustomObject]@{ Name = 'TestOne'; IsDataDriven = $false })
+                    }
+                )
+            }
         }
         Mock -ModuleName RunTests Get-BcContainerEventLog { return $script:eventLogSource }
     }
 
     Context 'Get-TestAppsToRun' {
+        It 'Uses AlTool discovery for package metadata and tests' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            @(Get-TestAppsToRun -settings $settings -projectPath $projectPath).Count | Should -Be 1
+
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Does not resolve AlTool when no package needs discovery' {
+            $projectPath = New-TestProject
+            $settings = @{ runTestsInAllInstalledTestApps = $false; testFolders = @() }
+
+            @(Get-TestAppsToRun -settings $settings -projectPath $projectPath).Count | Should -Be 0
+
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 0 -Exactly
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Collects compiled test apps from the build artifacts folder' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $settings = @{
@@ -150,6 +184,7 @@ Describe 'RunTests.psm1 Tests' {
             $testApps[1].Id | Should -Be $installedApp1Id
             $testApps[1].Name | Should -Be 'Installed1'
             @($testApps.Path) | Should -Not -Contain $installedApp2
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -204,7 +239,7 @@ Describe 'RunTests.psm1 Tests' {
             $settings = @{ runTestsInAllInstalledTestApps = $true; testFolders = @() }
 
             { Get-TestAppsToRun -settings $settings -projectPath $projectPath -installTestAppsJson $installJson } |
-                Should -Throw "*Failed to read installed test app metadata*$missingApp*"
+                Should -Throw "*Failed to discover installed test app metadata and tests*$missingApp*"
 
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -237,6 +272,9 @@ Describe 'RunTests.psm1 Tests' {
 
             $testApps.Count | Should -Be 1
             $testApps[0].Path | Should -Be $compiledAppPath
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly -ParameterFilter {
+                $AppFile -eq $compiledAppPath
+            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -272,14 +310,14 @@ Describe 'RunTests.psm1 Tests' {
 
         It 'Reports unreadable compiled app metadata clearly' {
             $projectPath = New-TestProject -CompiledTestApps @('Broken.Test.app')
-            Mock -ModuleName RunTests Get-AppJsonFromAppFile { throw 'corrupt package' }
+            Mock -ModuleName RunTests Get-AlToolAppTests { throw 'corrupt package' }
             $settings = @{
                 runTestsInAllInstalledTestApps = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
             { Get-TestAppsToRun -settings $settings -projectPath $projectPath } |
-                Should -Throw "*Failed to read compiled test app metadata*Broken.Test.app*corrupt package*"
+                Should -Throw "*Failed to discover compiled test app metadata and tests*Broken.Test.app*corrupt package*"
 
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -288,13 +326,14 @@ Describe 'RunTests.psm1 Tests' {
             $projectPath = New-TestProject -CompiledTestApps @('Broken.Test.app')
             $compiledAppPath = Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestApps') 'Broken.Test.app'
             $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($compiledAppPath)].name = ''
+            Mock -ModuleName RunTests Get-AlToolAppTests { throw 'The package does not contain a nonblank appName.' }
             $settings = @{
                 runTestsInAllInstalledTestApps = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             }
 
             { Get-TestAppsToRun -settings $settings -projectPath $projectPath } |
-                Should -Throw "*Failed to read compiled test app metadata*Broken.Test.app*app name*"
+                Should -Throw "*Failed to discover compiled test app metadata and tests*Broken.Test.app*appName*"
 
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -303,8 +342,8 @@ Describe 'RunTests.psm1 Tests' {
     Context 'Invoke-AlGoTestRun' {
         It 'Warns that configured database restore events are not supported' {
             $projectPath = New-TestProject
-            $warning = '::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
-            Mock -ModuleName RunTests Write-Host {}
+            $warning = 'restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
+            Mock -ModuleName RunTests OutputWarning {}
             $settings = @{
                 restoreDatabases               = @('BeforeEachTestApp')
                 runTestsInAllInstalledTestApps = $false
@@ -314,16 +353,16 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
                 -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
 
-            Should -Invoke -ModuleName RunTests Write-Host -Times 1 -Exactly -ParameterFilter {
-                $Object -eq $warning
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -eq $warning
             }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
         It 'Does not emit the database restore warning for an empty setting' {
             $projectPath = New-TestProject
-            $warning = '::Warning::restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
-            Mock -ModuleName RunTests Write-Host {}
+            $warning = 'restoreDatabases is configured, but database restore is not currently supported by the separate RunTests action and will not be performed.'
+            Mock -ModuleName RunTests OutputWarning {}
             $settings = @{
                 restoreDatabases               = @('', ' ')
                 runTestsInAllInstalledTestApps = $false
@@ -333,8 +372,8 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
                 -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
 
-            Should -Invoke -ModuleName RunTests Write-Host -Times 0 -Exactly -ParameterFilter {
-                $Object -eq $warning
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 0 -Exactly -ParameterFilter {
+                $message -eq $warning
             }
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -346,9 +385,10 @@ Describe 'RunTests.psm1 Tests' {
             $settings = @{ doNotRunTests = $false; runTestsInAllInstalledTestApps = $false; companyName = ''; treatTestFailuresAsWarnings = $false; testFolders = @() }
 
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
-                -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
+                -credential $testCredential
 
             $script:runnerCalls | Should -Be 0
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 0 -Exactly
             Test-Path (Join-Path $projectPath 'TestResults.xml') | Should -BeFalse
             Test-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'TestResults.xml') | Should -BeFalse
             Remove-Item -Path $projectPath -Recurse -Force
@@ -428,6 +468,8 @@ Describe 'RunTests.psm1 Tests' {
                 -credential $testCredential -runTestsOverride $override
 
             $script:capturedTestType | Should -Be 'Legacy'
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1 -Exactly
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 0 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -477,7 +519,7 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Uses selected app metadata without reading the compiled app again during execution' {
+        It 'Discovers compiled package metadata and tests once for a custom override' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $settings = @{
                 doNotRunTests                  = $false
@@ -490,7 +532,8 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
                 -credential $testCredential -runTestsOverride { return $true }
 
-            Should -Invoke -ModuleName RunTests Get-AppJsonFromAppFile -Times 1 -Exactly
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1 -Exactly
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -823,7 +866,6 @@ Describe 'RunTests.psm1 Tests' {
     Context 'Invoke-AlGoTestRun (default AlTool runner)' {
         It 'Runs the AlTool runner for every test app when no override is supplied' {
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
-            $script:alToolPathResolutionCount = 0
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
             $settings = @{
                 doNotRunTests                  = $false
@@ -837,55 +879,23 @@ Describe 'RunTests.psm1 Tests' {
                 }
             }
 
-            $getAlToolPath = {
-                $script:alToolPathResolutionCount++
-                return 'C:\dotnet-tools\al.exe'
-            }
             {
                 Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
-                    -credential $testCredential -getAlToolPath $getAlToolPath
+                    -credential $testCredential
             } | Should -Not -Throw
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 2 -Exactly -ParameterFilter {
-                $TestType -eq '' -and $AlToolPath -eq 'C:\dotnet-tools\al.exe'
+                $TestType -eq '' -and $Codeunits.Count -eq 1 -and $AlToolPath -eq 'C:\dotnet-tools\al.exe'
             }
-            $script:alToolPathResolutionCount | Should -Be 1
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Maps useSeparateTestAction.testType and other built-in runner parameters' {
-            $appId = [Guid]::NewGuid().ToString()
-            $script:capturedAlToolParams = $null
-            Mock -ModuleName RunTests Invoke-AlToolTestRun {
-                param(
-                    $ContainerName,
-                    [System.Management.Automation.PSCredential] $Credential,
-                    $ExtensionId,
-                    $AppName,
-                    $CompanyName,
-                    $Tenant,
-                    $TestType,
-                    [hashtable[]] $DisabledTests,
-                    $AlToolPath,
-                    $JUnitResultFileName
-                )
-                $script:capturedAlToolParams = @{
-                    Keys                = @($PSBoundParameters.Keys)
-                    ContainerName       = $ContainerName
-                    Credential          = $Credential
-                    ExtensionId         = $ExtensionId
-                    AppName             = $AppName
-                    CompanyName         = $CompanyName
-                    Tenant              = $Tenant
-                    TestType            = $TestType
-                    DisabledTests       = @($DisabledTests)
-                    AlToolPath          = $AlToolPath
-                    JUnitResultFileName = $JUnitResultFileName
-                }
-                return $true
-            }
-            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') -CompiledAppIds @{ 'App1.Test.app' = $appId }
+        It 'Warns and continues when testType is nonblank on the built-in AlTool path' {
+            Mock -ModuleName RunTests OutputWarning {}
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $true }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $settings = @{
                 doNotRunTests                  = $false
                 runTestsInAllInstalledTestApps = $false
@@ -898,31 +908,16 @@ Describe 'RunTests.psm1 Tests' {
                 }
             }
 
-            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
+            Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'mycontainer' `
+                -credential $testCredential -alToolPath 'C:\dotnet-tools\al.exe'
 
-            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly
-            @($script:capturedAlToolParams.Keys | Sort-Object) | Should -Be @(
-                'AlToolPath',
-                'AppName',
-                'CompanyName',
-                'ContainerName',
-                'Credential',
-                'DisabledTests',
-                'ExtensionId',
-                'JUnitResultFileName',
-                'Tenant',
-                'TestType'
-            )
-            $script:capturedAlToolParams.ContainerName | Should -Be 'mycontainer'
-            $script:capturedAlToolParams.Credential | Should -BeOfType [System.Management.Automation.PSCredential]
-            $script:capturedAlToolParams.ExtensionId | Should -Be $appId
-            $script:capturedAlToolParams.AppName | Should -Be 'App1.Test'
-            $script:capturedAlToolParams.CompanyName | Should -Be 'CRONUS'
-            $script:capturedAlToolParams.AlToolPath | Should -Be 'C:\dotnet-tools\al.exe'
-            $script:capturedAlToolParams.Tenant | Should -Be 'default'
-            $script:capturedAlToolParams.TestType | Should -Be 'IntegrationTest'
-            $script:capturedAlToolParams.DisabledTests.Count | Should -Be 0
-            $script:capturedAlToolParams.JUnitResultFileName | Should -Be (Join-Path $projectPath 'TestResults.xml')
+            Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like "*testType 'IntegrationTest'*ignored*listtests*does not support TestType filtering*all subtype-Test codeunits*custom RunTestsInBcContainer override*"
+            }
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
+            Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly -ParameterFilter {
+                $TestType -eq 'IntegrationTest'
+            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
