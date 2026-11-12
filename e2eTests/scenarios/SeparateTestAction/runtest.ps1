@@ -27,11 +27,11 @@ Write-Host -ForegroundColor Yellow @'
 # This test tests the following scenario:
 #
 #  - Create a new repository based on the PTE template with an app and a test app
-#    - Enable useSeparateTestAction
-#    - Add a test codeunit with one test
+#    - Enable useSeparateTestAction with Windows PowerShell 5.1
+#    - Add three test codeunits with one test each
 #  - Run the "CI/CD" workflow
 #  - Verify that RunPipeline skips test execution and the RunTests action runs the test app
-#  - Verify the app, test app, and test result artifacts
+#  - Verify the app, test app, and test result artifacts, including each codeunit's result
 #  - Cleanup repositories
 #
 '@
@@ -70,7 +70,11 @@ $previousLocation = Get-Location
 $repository = "$githubOwner/$repoName"
 $branch = "main"
 $template = "https://github.com/$pteTemplate"
-$expectedTestCaseName = "SeparateTestActionE2E"
+$expectedTestCases = [ordered]@{
+    "60000" = "SeparateTestActionE2E"
+    "60001" = "SeparateTestActionE2E2"
+    "60002" = "SeparateTestActionE2E3"
+}
 
 SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
 
@@ -86,6 +90,7 @@ CreateAlGoRepository `
         Add-PropertiesToJsonFile -path (Join-Path $path ".AL-Go\settings.json") -properties @{
             "appFolders" = @("My App")
             "testFolders" = @("My App.Test")
+            "githubRunnerShell" = "powershell"
             "useSeparateTestAction" = @{
                 "enabled"  = $true
                 "testType" = ""
@@ -101,6 +106,30 @@ codeunit 60000 "Separate Test Action E2E"
     procedure SeparateTestActionE2E()
     begin
         if (2 + 2 <> 4) then
+            Error('Unexpected arithmetic result.');
+    end;
+}
+
+codeunit 60001 "Separate Test Action E2E 2"
+{
+    Subtype = Test;
+
+    [Test]
+    procedure SeparateTestActionE2E2()
+    begin
+        if (3 + 3 <> 6) then
+            Error('Unexpected arithmetic result.');
+    end;
+}
+
+codeunit 60002 "Separate Test Action E2E 3"
+{
+    Subtype = Test;
+
+    [Test]
+    procedure SeparateTestActionE2E3()
+    begin
+        if (4 + 4 <> 8) then
             Error('Unexpected arithmetic result.');
     end;
 }
@@ -125,6 +154,8 @@ Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $b
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
     -stepName "Run Tests" -actionName "RunTests" -expectedText "Running tests against container"
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
+    -stepName "Run Tests" -actionName "RunTests" -expectedText "Running on Windows, PowerShell 5.1"
+Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
     -stepName "Run Tests" -actionName "RunTests" -expectedText "Using al CLI version"
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
     -stepName "Run Tests" -actionName "RunTests" -expectedText "using al listtests --appfile"
@@ -137,14 +168,17 @@ Test-ArtifactsFromRun `
     -runid $run.id `
     -folder "artifacts" `
     -expectedArtifacts @{"Apps" = 1; "TestApps" = 1} `
-    -expectedNumberOfTests 1 `
+    -expectedNumberOfTests $expectedTestCases.Count `
     -repoVersion "1.0" `
     -appVersion ""
 
 $testResultFiles = @(Get-Item -Path (Join-Path $repoPath "artifacts\*-TestResults*\TestResults.xml"))
 $testResultFiles.Count | Should -Be 1
 [xml] $testResults = Get-Content -Path $testResultFiles[0].FullName -Encoding UTF8
-@($testResults.SelectNodes("//testcase[@name='$expectedTestCaseName']")).Count | Should -Be 1
+foreach ($codeunitId in $expectedTestCases.Keys) {
+    $testCaseName = $expectedTestCases[$codeunitId]
+    @($testResults.SelectNodes("//testcase[@name='$testCaseName' and starts-with(@classname, '$codeunitId ')]")).Count | Should -Be 1
+}
 
 Set-Location $previousLocation
 RemoveRepository -repository $repository -path $repoPath
