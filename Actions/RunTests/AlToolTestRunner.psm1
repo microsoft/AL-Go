@@ -88,99 +88,84 @@ function Get-AlToolCompany {
     return ""
 }
 
-    <#
-    .SYNOPSIS
-        Discovers app metadata and test methods directly from an app package.
-    .DESCRIPTION
-        Runs the resolved AlTool executable with `listtests --appfile`, parses its JSON response, and
-        returns deterministic typed records.
-    .PARAMETER AlToolPath
-        Full path to the AlTool executable.
-    .PARAMETER AppFile
-        Full path to the app package to inspect.
-    .OUTPUTS
-        A PSCustomObject with AppId, AppName, AppPublisher, AppVersion, and Codeunits.
-    #>
-    function Get-AlToolAppTests {
-        param(
-            [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $AlToolPath,
-            [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $AppFile
-        )
+<#
+.SYNOPSIS
+    Discovers app metadata and test methods directly from an app package.
+.DESCRIPTION
+    Runs the resolved AlTool executable with `listtests --appfile`, parses its JSON response, and
+    returns deterministic typed records.
+.PARAMETER AlToolPath
+    Full path to the AlTool executable.
+.PARAMETER AppFile
+    Full path to the app package to inspect.
+.OUTPUTS
+    A PSCustomObject with AppId, AppName, AppPublisher, AppVersion, and Codeunits.
+#>
+function Get-AlToolAppTests {
+    param(
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $AlToolPath,
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $AppFile
+    )
 
-        if (-not (Test-Path -LiteralPath $AppFile -PathType Leaf)) {
-            throw "Cannot discover tests because app package '$AppFile' does not exist."
-        }
-        $fullAppFile = [System.IO.Path]::GetFullPath($AppFile)
-        $nativeResult = Invoke-AlNativeCommand -FilePath $AlToolPath -ArgumentList @(
-            'listtests', '--appfile', $fullAppFile
-        )
-        $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
-        $standardErrorText = ($nativeResult.StandardError -join [Environment]::NewLine).Trim()
-        if ($nativeResult.ExitCode -ne 0) {
-            $stdout = if ($standardOutputText) { $standardOutputText } else { "<empty>" }
-            $stderr = if ($standardErrorText) { $standardErrorText } else { "<empty>" }
-            throw "AlTool test discovery failed with exit code $($nativeResult.ExitCode) for '$fullAppFile'.`nstdout: $stdout`nstderr: $stderr"
-        }
-        if ([string]::IsNullOrWhiteSpace($standardOutputText)) {
-            $stderr = if ($standardErrorText) { $standardErrorText } else { "<empty>" }
-            throw "AlTool test discovery returned empty stdout for '$fullAppFile'. stderr: $stderr"
-        }
-
-        try {
-            $response = ConvertTo-HashTable -object ($standardOutputText | ConvertFrom-Json) -recurse
-
-            $metadata = @{}
-            foreach ($propertyName in @('appId', 'appName', 'appPublisher', 'appVersion')) {
-                $metadata[$propertyName] = "$($response.$propertyName)".Trim()
-                if ([string]::IsNullOrWhiteSpace($metadata[$propertyName])) {
-                    throw "Property '$propertyName' must not be blank."
-                }
-            }
-
-            $codeunits = @()
-            foreach ($codeunit in @($response.codeunits)) {
-                [int] $codeunitId = $codeunit.id
-
-                $codeunitName = "$($codeunit.name)".Trim()
-                if ([string]::IsNullOrWhiteSpace($codeunitName)) {
-                    throw "Codeunit '$codeunitId' must have a nonblank name."
-                }
-
-                $methods = @()
-                foreach ($method in @($codeunit.methods)) {
-                    $methodName = "$($method.name)".Trim()
-                    $methods += [PSCustomObject]@{
-                        Name         = $methodName
-                        IsDataDriven = [System.Convert]::ToBoolean(
-                            $method.isDataDriven,
-                            [System.Globalization.CultureInfo]::InvariantCulture
-                        )
-                    }
-                }
-
-                $codeunits += [PSCustomObject]@{
-                    Id        = $codeunitId
-                    Name      = $codeunitName
-                    Namespace = "$($codeunit.namespace)".Trim()
-                    Methods   = @($methods | Sort-Object Name)
-                }
-            }
-
-            $discovery = [PSCustomObject]@{
-                AppId        = $metadata.appId
-                AppName      = $metadata.appName
-                AppPublisher = $metadata.appPublisher
-                AppVersion   = $metadata.appVersion
-                Codeunits    = @($codeunits | Sort-Object Id)
-            }
-        }
-        catch {
-            throw "AlTool test discovery returned invalid output for '$fullAppFile'. $($_.Exception.Message)"
-        }
-
-        Write-Host "Discovered $($discovery.Codeunits.Count) test codeunit(s) from app package '$fullAppFile' using al listtests --appfile."
-        return $discovery
+    if (-not (Test-Path -LiteralPath $AppFile -PathType Leaf)) {
+        throw "Cannot discover tests because app package '$AppFile' does not exist."
     }
+    $fullAppFile = [System.IO.Path]::GetFullPath($AppFile)
+    $nativeResult = Invoke-AlNativeCommand -FilePath $AlToolPath -ArgumentList @(
+        'listtests', '--appfile', $fullAppFile
+    )
+    $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
+    $standardErrorText = ($nativeResult.StandardError -join [Environment]::NewLine).Trim()
+    if ($nativeResult.ExitCode -ne 0) {
+        $stdout = if ($standardOutputText) { $standardOutputText } else { "<empty>" }
+        $stderr = if ($standardErrorText) { $standardErrorText } else { "<empty>" }
+        throw "AlTool test discovery failed with exit code $($nativeResult.ExitCode) for '$fullAppFile'.`nstdout: $stdout`nstderr: $stderr"
+    }
+    if ([string]::IsNullOrWhiteSpace($standardOutputText)) {
+        $stderr = if ($standardErrorText) { $standardErrorText } else { "<empty>" }
+        throw "AlTool test discovery returned empty stdout for '$fullAppFile'. stderr: $stderr"
+    }
+
+    try {
+        $response = ConvertTo-HashTable -object ($standardOutputText | ConvertFrom-Json) -recurse
+    }
+    catch {
+        throw "AlTool test discovery returned invalid JSON for '$fullAppFile'. $($_.Exception.Message)"
+    }
+
+    $codeunits = @()
+    foreach ($codeunit in @($response.codeunits)) {
+        [int] $codeunitId = $codeunit.id
+        $methods = @()
+        foreach ($method in @($codeunit.methods)) {
+            $methods += [PSCustomObject]@{
+                Name         = "$($method.name)".Trim()
+                IsDataDriven = [System.Convert]::ToBoolean(
+                    $method.isDataDriven,
+                    [System.Globalization.CultureInfo]::InvariantCulture
+                )
+            }
+        }
+
+        $codeunits += [PSCustomObject]@{
+            Id        = $codeunitId
+            Name      = "$($codeunit.name)".Trim()
+            Namespace = "$($codeunit.namespace)".Trim()
+            Methods   = @($methods | Sort-Object Name)
+        }
+    }
+
+    $discovery = [PSCustomObject]@{
+        AppId        = "$($response.appId)".Trim()
+        AppName      = "$($response.appName)".Trim()
+        AppPublisher = "$($response.appPublisher)".Trim()
+        AppVersion   = "$($response.appVersion)".Trim()
+        Codeunits    = @($codeunits | Sort-Object Id)
+    }
+
+    Write-Host "Discovered $($discovery.Codeunits.Count) test codeunit(s) from app package '$fullAppFile' using al listtests --appfile."
+    return $discovery
+}
 
 <#
 .SYNOPSIS
@@ -800,7 +785,8 @@ function Invoke-AlToolTestRun {
                 }
             }
         )
-        Write-Host "Executing discovered test method(s): $($requestedTestNames -join ', ')"
+        Write-Host "Executing $($requestedTestNames.Count) discovered test method(s)."
+        OutputDebug "Discovered test method(s): $($requestedTestNames -join ', ')"
 
         # Multiple test apps append to the same result file.
         $doc = New-Object System.Xml.XmlDocument

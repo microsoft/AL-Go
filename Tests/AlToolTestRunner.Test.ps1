@@ -159,14 +159,9 @@ Describe 'AlToolTestRunner.psm1 Tests' {
             @($result.Codeunits).Count | Should -Be 0
         }
 
-        It 'Rejects malformed discovery contracts' -TestCases @(
+        It 'Rejects empty or invalid JSON output' -TestCases @(
             @{ Json = ''; Expected = '*empty stdout*' },
-            @{ Json = '{invalid'; Expected = '*invalid output*' },
-            @{ Json = '[]'; Expected = '*invalid output*appId*' },
-            @{ Json = '{"appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[]}'; Expected = '*invalid output*appId*' },
-            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":{}}'; Expected = '*invalid output*id*' },
-            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":"invalid","name":"Tests","namespace":"","methods":[]}]}'; Expected = '*invalid output*' },
-            @{ Json = '{"appId":"id","appName":"name","appPublisher":"publisher","appVersion":"1","codeunits":[{"id":1,"name":"Tests","namespace":"","methods":[{"name":"Test"}]}]}'; Expected = '*invalid output*isDataDriven*' }
+            @{ Json = '{invalid'; Expected = '*invalid JSON*' }
         ) {
             param($Json, $Expected)
             Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
@@ -1000,6 +995,19 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
 
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 1 -Exactly -ParameterFilter {
                 $AlToolPath -eq 'D:\shared-tools\al.exe'
+            }
+        }
+
+        It 'Logs the test count normally and method names only as debug output' {
+            Mock -ModuleName AlToolTestRunner OutputDebug {}
+
+            Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
+
+            Should -Invoke -ModuleName AlToolTestRunner Write-Host -Times 1 -Exactly -ParameterFilter {
+                "$Object" -eq 'Executing 1 discovered test method(s).'
+            }
+            Should -Invoke -ModuleName AlToolTestRunner OutputDebug -Times 1 -Exactly -ParameterFilter {
+                $message -eq 'Discovered test method(s): 130001/TestOne'
             }
         }
 

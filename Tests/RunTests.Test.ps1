@@ -85,11 +85,17 @@ Describe 'RunTests.psm1 Tests' {
     }
 
     Context 'Get-TestAppsToRun' {
-        It 'Contains no BcContainerHelper package metadata call' {
-            $moduleContent = Get-Content -LiteralPath (
-                Join-Path $PSScriptRoot '../Actions/RunTests/RunTests.psm1' -Resolve
-            ) -Raw -Encoding UTF8
-            $moduleContent | Should -Not -Match '\bGet-AppJsonFromAppFile\b'
+        It 'Uses AlTool discovery for package metadata and tests' {
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                runTestsInAllInstalledTestApps = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+            }
+
+            @(Get-TestAppsToRun -settings $settings -projectPath $projectPath).Count | Should -Be 1
+
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
+            Remove-Item -Path $projectPath -Recurse -Force
         }
 
         It 'Does not resolve AlTool when no package needs discovery' {
@@ -462,6 +468,8 @@ Describe 'RunTests.psm1 Tests' {
                 -credential $testCredential -runTestsOverride $override
 
             $script:capturedTestType | Should -Be 'Legacy'
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1 -Exactly
+            Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 0 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -511,7 +519,7 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
-        It 'Uses selected app metadata without reading the compiled app again during execution' {
+        It 'Discovers compiled package metadata and tests once for a custom override' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
             $settings = @{
                 doNotRunTests                  = $false
@@ -524,6 +532,7 @@ Describe 'RunTests.psm1 Tests' {
             Invoke-AlGoTestRun -settings $settings -projectPath $projectPath -containerName 'test' `
                 -credential $testCredential -runTestsOverride { return $true }
 
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1 -Exactly
             Should -Invoke -ModuleName RunTests Get-AlToolAppTests -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }

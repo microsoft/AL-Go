@@ -107,6 +107,10 @@ function Get-TestAppsToRun {
         try {
             $compiledAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $compiledApp.FullName
             $compiledAppId = "$($compiledAppDiscovery.AppId)"
+            $compiledAppName = "$($compiledAppDiscovery.AppName)"
+            if ([string]::IsNullOrWhiteSpace($compiledAppId) -or [string]::IsNullOrWhiteSpace($compiledAppName)) {
+                throw "The package metadata does not contain a nonblank app ID and name."
+            }
         }
         catch {
             throw "Failed to discover compiled test app metadata and tests from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
@@ -116,7 +120,7 @@ function Get-TestAppsToRun {
             $testApps += [PSCustomObject]@{
                 Path       = $compiledApp.FullName
                 Id         = $compiledAppId
-                Name       = "$($compiledAppDiscovery.AppName)"
+                Name       = $compiledAppName
                 Codeunits  = @($compiledAppDiscovery.Codeunits)
             }
             $selectedCompiledAppIds[$compiledAppId] = $true
@@ -132,6 +136,10 @@ function Get-TestAppsToRun {
         try {
             $dependencyAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $dependencyTestAppPath
             $dependencyAppId = "$($dependencyAppDiscovery.AppId)"
+            $dependencyAppName = "$($dependencyAppDiscovery.AppName)"
+            if ([string]::IsNullOrWhiteSpace($dependencyAppId) -or [string]::IsNullOrWhiteSpace($dependencyAppName)) {
+                throw "The package metadata does not contain a nonblank app ID and name."
+            }
         }
         catch {
             throw "Failed to discover installed test app metadata and tests from '$dependencyTestAppPath'. Error: $($_.Exception.Message)"
@@ -139,7 +147,7 @@ function Get-TestAppsToRun {
         $testApps += [PSCustomObject]@{
             Path       = $dependencyTestAppPath
             Id         = $dependencyAppId
-            Name       = "$($dependencyAppDiscovery.AppName)"
+            Name       = $dependencyAppName
             Codeunits  = @($dependencyAppDiscovery.Codeunits)
         }
         $selectedAppPaths[$dependencyTestAppPath] = $true
@@ -286,7 +294,7 @@ function Invoke-AlGoTestRun {
     .PARAMETER runTestsOverride
         Optional scriptblock overriding the built-in AlTool test runner (RunTestsInBcContainer).
     .PARAMETER alToolPath
-        Full path to the AlTool executable used by the built-in runner.
+        Full path to the AlTool executable used for package discovery and by the built-in runner.
     #>
     Param(
         [hashtable] $settings,
