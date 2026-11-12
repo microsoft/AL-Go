@@ -24,6 +24,7 @@ To optimize build performance, only artifacts from dependency projects are downl
 | buildMode | Yes | The build mode to use to downloaded to most appropriate dependencies. If a dependency project isn't built in the provided build mode, then the artifacts from the default mode will be used | |
 | projectDependenciesJson | Yes | A JSON-formatted object that maps a project to an array of its dependencies | |
 | baselineWorkflowRunId | No | The ID of the workflow run that was used as baseline for the current build | '0' |
+| projectsJson | No | A JSON-formatted array of the projects built in the current workflow run. Dependency projects not in this list fall back to the artifacts from the baseline workflow run. If a dependency project is in this list (for the build mode used), its artifacts from the current workflow run are required and the action fails if they cannot be found (f.ex. because they have expired) | '[]' |
 
 ## OUTPUT
 

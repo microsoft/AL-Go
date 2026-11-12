@@ -1,3 +1,7 @@
+### Builds fail when dependency artifacts from the current run are missing
+
+When a dependency project is built in the current workflow run, dependent build jobs now fail with a clear error if the dependency's artifacts from that run cannot be found. Previously, AL-Go silently installed the dependency's apps from the baseline (last known good) build instead. This could happen when **Re-run failed jobs** was used after the short-lived build artifacts had expired (see [`shortLivedArtifactsRetentionDays`](https://aka.ms/algosettings#shortLivedArtifactsRetentionDays)), so tests ran against stale apps and could pass incorrectly. To recover, re-run all jobs or push a new commit. Dependency projects that are not built in the current run (incremental builds) still use artifacts from the baseline build. Run **Update AL-Go System Files** to pick up the updated workflows.
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
