@@ -2,6 +2,71 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 # Pin the contract AL-Go implements; update this with its callers and contract tests.
 $adminCenterApiVersion = 'v2.29'
+$script:adminCenterAuthContext = $null
+$script:adminCenterSourceContext = $null
+$script:adminCenterTarget = $null
+
+<#
+    .SYNOPSIS
+        Prepare the Admin Center target and authentication context for this Deploy action.
+    .DESCRIPTION
+        Native requests using this original BCH context share the owned target and Admin context.
+    .PARAMETER bcAuthContext
+        Original BCH authentication context, retained unchanged.
+    .PARAMETER settings
+        AL-Go settings containing the native API root and application family.
+    .PARAMETER preserveScopes
+        Preserve explicitly supplied AUTHCONTEXT scopes or resource instead of using the native root.
+#>
+function Initialize-AdminCenterAuthContext {
+    Param(
+        [hashtable] $bcAuthContext,
+        [hashtable] $settings = @{},
+        [switch] $preserveScopes
+    )
+
+    $target = Get-DeploymentTarget -settings $settings
+    $adminContext = $bcAuthContext.Clone()
+    $scopes = if ($preserveScopes) { $adminContext['Scopes'] } else { "$($target.apiBaseUrl)/" }
+    if ($adminContext['Scopes'] -ne $scopes) {
+        $adminContext['Scopes'] = $scopes
+        $adminContext['UtcExpiresOn'] = [DateTime]::MinValue
+    }
+    $script:adminCenterAuthContext = $adminContext
+    $script:adminCenterSourceContext = $bcAuthContext
+    $script:adminCenterTarget = $target
+}
+
+<#
+    .SYNOPSIS
+        Resolve the repository's native Admin Center API root and application family.
+    .PARAMETER settings
+        AL-Go repository settings.
+#>
+function Get-DeploymentTarget {
+    Param(
+        [hashtable] $settings = @{}
+    )
+
+    $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
+    if ($settings.ContainsKey('deploymentBaseUrl') -and $settings['deploymentBaseUrl'] -isnot [string]) {
+        throw 'deploymentBaseUrl must be a string.'
+    }
+    if ($settings['deploymentBaseUrl']) { $apiBaseUrl = [string]$settings['deploymentBaseUrl'] }
+    $uri = $null
+    if (![Uri]::TryCreate($apiBaseUrl, [UriKind]::Absolute, [ref]$uri) -or
+        $uri.Scheme -ne 'https' -or $uri.UserInfo -or $uri.Query -or $uri.Fragment) {
+        throw 'deploymentBaseUrl must be an absolute HTTPS API root without credentials, query or fragment.'
+    }
+    $applicationFamily = 'BusinessCentral'
+    if ($settings.ContainsKey('deploymentApplicationFamily')) {
+        $applicationFamily = $settings['deploymentApplicationFamily']
+        if ($applicationFamily -isnot [string] -or [string]::IsNullOrWhiteSpace($applicationFamily)) {
+            throw 'deploymentApplicationFamily must be a nonempty string.'
+        }
+    }
+    return @{ apiBaseUrl = $apiBaseUrl.TrimEnd('/'); applicationFamily = $applicationFamily }
+}
 
 <#
     .SYNOPSIS
@@ -10,15 +75,18 @@ $adminCenterApiVersion = 'v2.29'
         Application family containing the environment.
     .PARAMETER environment
         Target environment name.
+    .PARAMETER apiBaseUrl
+        Native Admin Center API root, independent of BcContainerHelper configuration.
 #>
 function Get-AdminCenterApiUrl {
     Param(
         [string] $applicationFamily = 'BusinessCentral',
         [Parameter(Mandatory = $true)]
-        [string] $environment
+        [string] $environment,
+        [string] $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
     )
 
-    return "https://api.businesscentral.dynamics.com/admin/$adminCenterApiVersion/applications/$([Uri]::EscapeDataString($applicationFamily))/environments/$([Uri]::EscapeDataString($environment))"
+    return "$($apiBaseUrl.TrimEnd('/'))/admin/$adminCenterApiVersion/applications/$([Uri]::EscapeDataString($applicationFamily))/environments/$([Uri]::EscapeDataString($environment))"
 }
 
 <#
@@ -63,6 +131,8 @@ function Get-AdminCenterApiErrorMessage {
         Send one authenticated Admin Center request without retries.
     .DESCRIPTION
         Preserves HTTP errors and records whether sending was attempted in Exception.Data.
+        Uses the initialized Deploy target unless explicitly overridden and retains renewed authentication.
+        Other callers use standard target defaults and their supplied context without changing action state.
     .PARAMETER bcAuthContext
         Authentication context to renew.
     .PARAMETER environment
@@ -79,6 +149,8 @@ function Get-AdminCenterApiErrorMessage {
         Maximum duration of this request.
     .PARAMETER applicationFamily
         Target application family.
+    .PARAMETER apiBaseUrl
+        Target API root.
 #>
 function Invoke-AdminCenterApi {
     Param(
@@ -91,19 +163,28 @@ function Invoke-AdminCenterApi {
         [string] $contentType,
         [ValidateRange(1, 300)]
         [int] $timeoutSeconds = 30,
-        [string] $applicationFamily = 'BusinessCentral'
+        [string] $applicationFamily = 'BusinessCentral',
+        [string] $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
     )
 
     $requestStarted = $false
     try {
-        $uri = Get-AdminCenterApiUrl -environment $environment -applicationFamily $applicationFamily
+        $actionContext = $null -ne $script:adminCenterAuthContext -and
+            [object]::ReferenceEquals($bcAuthContext, $script:adminCenterSourceContext)
+        if ($actionContext) {
+            if (!$PSBoundParameters.ContainsKey('apiBaseUrl')) { $apiBaseUrl = $script:adminCenterTarget.apiBaseUrl }
+            if (!$PSBoundParameters.ContainsKey('applicationFamily')) { $applicationFamily = $script:adminCenterTarget.applicationFamily }
+        }
+        $uri = Get-AdminCenterApiUrl -environment $environment -applicationFamily $applicationFamily -apiBaseUrl $apiBaseUrl
         $uri += '/' + (($path | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
-        $authContext = Renew-BcAuthContext -bcAuthContext $bcAuthContext
+        $adminContext = if ($actionContext) { $script:adminCenterAuthContext } else { $bcAuthContext.Clone() }
+        $authContext = Renew-BcAuthContext -bcAuthContext $adminContext
         if (!$authContext -or !$authContext['AccessToken']) {
             throw [System.Management.Automation.ErrorRecord]::new(
                 [System.Security.Authentication.AuthenticationException]::new('Authentication failed before Admin Center request.'),
                 'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
         }
+        if ($actionContext) { $script:adminCenterAuthContext = $authContext }
         Write-Host "::add-mask::$($authContext.AccessToken)"
         $parameters = @{
             Uri = $uri
@@ -140,6 +221,8 @@ function Invoke-AdminCenterApi {
         Admin Center schema synchronization mode, Add or ForceSync.
     .PARAMETER applicationFamily
         Target application family.
+    .PARAMETER apiBaseUrl
+        Target API root.
 #>
 function Install-AdminCenterPTE {
     Param(
@@ -148,7 +231,8 @@ function Install-AdminCenterPTE {
         [string] $appFile,
         [ValidateSet('Add', 'ForceSync')]
         [string] $syncMode = 'Add',
-        [string] $applicationFamily = 'BusinessCentral'
+        [string] $applicationFamily = 'BusinessCentral',
+        [string] $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
     )
 
     $multipart = $null
@@ -168,7 +252,10 @@ function Install-AdminCenterPTE {
             $multipart.Add([System.Net.Http.StringContent]::new($fields[$field]), $field)
         }
         $bytes = $multipart.ReadAsByteArrayAsync().GetAwaiter().GetResult()
-        Invoke-AdminCenterApi -bcAuthContext $bcAuthContext -environment $environment -applicationFamily $applicationFamily `
+        $parameters = @{} + $PSBoundParameters
+        $parameters.Remove('appFile')
+        $parameters.Remove('syncMode')
+        Invoke-AdminCenterApi @parameters `
             -path @('apps', 'pteInstall') -method Post -body $bytes -contentType $multipart.Headers.ContentType.ToString() -timeoutSeconds 300
     }
     finally {
@@ -191,6 +278,8 @@ function Install-AdminCenterPTE {
         Maximum duration of this status request.
     .PARAMETER applicationFamily
         Target application family.
+    .PARAMETER apiBaseUrl
+        Target API root.
 #>
 function Get-AdminCenterAppOperation {
     Param(
@@ -200,11 +289,14 @@ function Get-AdminCenterAppOperation {
         [string] $operationId,
         [ValidateRange(1, 30)]
         [int] $timeoutSeconds = 30,
-        [string] $applicationFamily = 'BusinessCentral'
+        [string] $applicationFamily = 'BusinessCentral',
+        [string] $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
     )
 
-    Invoke-AdminCenterApi -bcAuthContext $bcAuthContext -environment $environment -applicationFamily $applicationFamily `
-        -path @('apps', $appId, 'operations', $operationId) -timeoutSeconds $timeoutSeconds
+    $parameters = @{} + $PSBoundParameters
+    $parameters.Remove('appId')
+    $parameters.Remove('operationId')
+    Invoke-AdminCenterApi @parameters -path @('apps', $appId, 'operations', $operationId)
 }
 
 <#
@@ -222,15 +314,18 @@ function Get-AdminCenterAppOperation {
         Target environment.
     .PARAMETER applicationFamily
         Target application family.
+    .PARAMETER apiBaseUrl
+        Target API root.
 #>
 function Get-AdminCenterInstalledExtensions {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
-        [string] $applicationFamily = 'BusinessCentral'
+        [string] $applicationFamily = 'BusinessCentral',
+        [string] $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
     )
 
-    $response = Invoke-AdminCenterApi -bcAuthContext $bcAuthContext -environment $environment -applicationFamily $applicationFamily -path @('apps')
+    $response = Invoke-AdminCenterApi @PSBoundParameters -path @('apps')
     $response = $response | ConvertTo-HashTable -recurse
     if ($response -isnot [hashtable] -or !$response.ContainsKey('value') -or $response['value'] -isnot [array]) {
         throw 'Admin Center installed-app response must contain an apps array.'
@@ -267,4 +362,4 @@ function Get-AdminCenterInstalledExtensions {
     }
 }
 
-Export-ModuleMember -Function Get-AdminCenterApiUrl, Get-AdminCenterApiErrorMessage, Invoke-AdminCenterApi, Install-AdminCenterPTE, Get-AdminCenterAppOperation, Get-AdminCenterInstalledExtensions
+Export-ModuleMember -Function Initialize-AdminCenterAuthContext, Get-AdminCenterApiUrl, Get-AdminCenterApiErrorMessage, Invoke-AdminCenterApi, Install-AdminCenterPTE, Get-AdminCenterAppOperation, Get-AdminCenterInstalledExtensions

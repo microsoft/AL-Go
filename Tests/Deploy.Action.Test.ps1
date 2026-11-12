@@ -1,4 +1,4 @@
-﻿Get-Module TestActionsHelper | Remove-Module -Force
+Get-Module TestActionsHelper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot 'TestActionsHelper.psm1')
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
@@ -27,16 +27,19 @@ Describe "Deploy Action Tests" {
     Context "unpublishOldVersions wiring" {
         BeforeAll {
             Import-Module (Join-Path $scriptRoot "Deploy.psm1") -Force
+            Import-Module (Join-Path $scriptRoot "..\.Modules\AdminCenterApi.psm1") -DisableNameChecking
             . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
             DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
 
             function InvokeDeploy {
                 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'sandbox', Justification = 'Used inside the Invoke-RestMethod mock scriptblock')]
-                Param([bool] $sandbox = $true, [hashtable] $deploymentSettings)
+                Param([bool] $sandbox = $true, [hashtable] $deploymentSettings, [hashtable] $repositorySettings = @{}, [hashtable] $authParameters = @{ refreshToken = 'dummy' })
                 $json = @{ "test" = $deploymentSettings } | ConvertTo-Json -Depth 10 -Compress
-                $authContext = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"refreshToken":"dummy"}'))
+                $authContext = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes(($authParameters | ConvertTo-Json -Compress)))
                 $env:Secrets = @{ "test-AuthContext" = ""; "test_AuthContext" = ""; "AuthContext" = $authContext } | ConvertTo-Json -Compress
-                $env:Settings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" } | ConvertTo-Json -Compress
+                $actionSettings = @{ "type" = "PTE"; "runs-on" = "ubuntu-latest"; "shell" = "pwsh" }
+                foreach ($name in $repositorySettings.Keys) { $actionSettings[$name] = $repositorySettings[$name] }
+                $env:Settings = $actionSettings | ConvertTo-Json -Depth 10 -Compress
                 Mock Invoke-RestMethod { return @{ "Status" = "Ready"; "environmentType" = (@{ $true = 1; $false = 0 }[$sandbox]) } }
                 . $scriptPath -token 'dummy' -environmentName 'test' -artifactsFolder 'artifacts' -type 'CD' -deploymentEnvironmentsJson $json
             }
@@ -55,6 +58,8 @@ Describe "Deploy Action Tests" {
             Mock GetAppsAndDependenciesFromArtifacts { return @('/tmp/app1.app'), @() }
             Mock Sort-AppFilesByDependencies { }
             Mock CheckInstalledApps { }
+            Mock Initialize-AdminCenterAuthContext { }
+            Mock Initialize-PTEPublishingApi { }
             Mock PublishPTEApps { $script:publishPTECalled = $true }
             Mock Publish-PerTenantExtensionApps { throw "The action must use the shared AL-Go publisher" }
             Mock Publish-BcContainerApp { }
@@ -76,27 +81,170 @@ Describe "Deploy Action Tests" {
             $script:unpublishAfterPublish | Should -BeTrue
         }
 
-        It 'Shares action-scoped publishing paths across dependencies, primary apps and cleanup' {
+        It 'Initializes the PTE route before dependencies and primary publishing' {
+            $script:events = @()
+            Mock Initialize-PTEPublishingApi { $script:events += 'probe' }
             Mock GetAppsAndDependenciesFromArtifacts { return @('/tmp/app1.app'), @('/tmp/dependency.app') }
-            Mock InstallOrUpgradeApps {
-                $publishingResults.Count | Should -Be 0
-                $publishingResults['dependency'] = 'AdminCenter'
+            Mock InstallOrUpgradeApps { $script:events += 'dependency' }
+            Mock CheckInstalledApps { $script:events += 'preflight' }
+            Mock PublishPTEApps { $script:events += 'primary' }
+            Mock UnpublishOldAppVersions {
+                $script:events += 'cleanup'
+                ($appFiles -join ',') | Should -Be '/tmp/app1.app'
             }
-            Mock PublishPTEApps {
-                $publishingResults['dependency'] | Should -Be 'AdminCenter'
-                $publishingResults['primary'] = 'Automation'
+
+            InvokeDeploy -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @(); unpublishOldVersions = $true }
+
+            ($script:events -join ',') | Should -Be 'probe,dependency,preflight,primary,cleanup'
+        }
+
+        It 'Keeps Admin settings separate from BCH authentication, dependencies and cleanup' {
+            Mock New-BcAuthContext {
+                $script:deploymentConfig = $bcContainerHelperConfig
+                $bcContainerHelperConfig.apiBaseUrl | Should -Be 'https://legacy.test'
+                return @{ tenantId = 'test-tenant' }
+            }
+            Mock GetAppsAndDependenciesFromArtifacts { return @('/tmp/app1.app'), @('/tmp/dependency.app') }
+            Mock Sort-AppFilesByDependencies {
+                param($unknownDependencies)
+                $unknownDependencies.Value = @('unknown:Dependency_1.0.0.0.app')
+            }
+            Mock InstallOrUpgradeApps { }
+            Mock InstallUnknownDependencies {
+                $bcContainerHelperConfig.apiBaseUrl | Should -Be 'https://legacy.test'
             }
             Mock UnpublishOldAppVersions {
-                $publishingResults['dependency'] | Should -Be 'AdminCenter'
-                $publishingResults['primary'] | Should -Be 'Automation'
-                $appFiles | Should -Not -Contain '/tmp/dependency.app'
+                $bcContainerHelperConfig.apiBaseUrl | Should -Be 'https://legacy.test'
             }
 
-            InvokeDeploy -deploymentSettings @{ "EnvironmentType" = "SaaS"; "EnvironmentName" = "test"; "Branches" = @(); "Projects" = "*"; "DependencyInstallMode" = "upgrade"; "SyncMode" = $null; "Scope" = "PTE"; "continuousDeployment" = $true; "includeTestAppsInSandboxEnvironment" = $false; "excludeAppIds" = @(); "unpublishOldVersions" = $true }
+            InvokeDeploy -repositorySettings @{
+                deploymentBaseUrl = 'https://deploy.test/root/'
+                deploymentApplicationFamily = 'Custom / Family'
+                apiBaseUrl = 'https://legacy.test'
+                baseUrl = 'https://web.test'
+            } -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @(); unpublishOldVersions = $true }
 
-            Assert-MockCalled InstallOrUpgradeApps -Exactly 1
-            Assert-MockCalled PublishPTEApps -Exactly 1
+            foreach ($command in @('Initialize-PTEPublishingApi', 'InstallOrUpgradeApps', 'CheckInstalledApps', 'PublishPTEApps')) {
+                Assert-MockCalled $command -Exactly 1 -ParameterFilter {
+                    !$PesterBoundParameters.ContainsKey('deploymentTarget')
+                }
+            }
             Assert-MockCalled UnpublishOldAppVersions -Exactly 1
+            Assert-MockCalled InstallUnknownDependencies -Exactly 1
+            Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
+                $settings.deploymentBaseUrl -eq 'https://deploy.test/root/' -and
+                $settings.deploymentApplicationFamily -eq 'Custom / Family' -and !$preserveScopes
+            }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -like 'https://web.test/*' }
+            $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
+            $script:deploymentConfig.baseUrl | Should -Be 'https://web.test'
+        }
+
+        It 'Does not retain the explicit target in a following deployment with only the legacy override' {
+            Mock New-BcAuthContext {
+                $script:deploymentConfig = $bcContainerHelperConfig
+                return @{ tenantId = 'test-tenant' }
+            }
+            $deployment = @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
+
+            InvokeDeploy -deploymentSettings $deployment -repositorySettings @{
+                deploymentBaseUrl = 'https://explicit.test'; deploymentApplicationFamily = 'CustomFamily'
+                apiBaseUrl = 'https://legacy.test'
+            }
+            $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
+            InvokeDeploy -deploymentSettings $deployment -repositorySettings @{
+                apiBaseUrl = 'https://legacy.test'
+            }
+
+            Assert-MockCalled PublishPTEApps -Exactly 2
+            Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
+                $settings['deploymentBaseUrl'] -eq 'https://explicit.test' -and
+                $settings['deploymentApplicationFamily'] -eq 'CustomFamily'
+            }
+            Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
+                !$settings.ContainsKey('deploymentBaseUrl') -and !$settings.ContainsKey('deploymentApplicationFamily')
+            }
+            $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
+        }
+
+        It 'Does not modify the helper API root when authentication fails' {
+            Mock New-BcAuthContext {
+                $script:deploymentConfig = $bcContainerHelperConfig
+                $bcContainerHelperConfig.apiBaseUrl | Should -Be 'https://legacy.test'
+                throw 'Authentication failed'
+            }
+            Mock OutputError { param($message) throw $message }
+
+            { InvokeDeploy -repositorySettings @{
+                deploymentBaseUrl = 'https://explicit.test'
+                apiBaseUrl = 'https://legacy.test'
+            } -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() } } | Should -Throw '*Authentication failed*'
+
+            $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
+            Assert-MockCalled PublishPTEApps -Times 0
+            Assert-MockCalled Initialize-PTEPublishingApi -Times 0
+            Assert-MockCalled Initialize-AdminCenterAuthContext -Times 0
+        }
+
+        It 'Preserves explicitly supplied OAuth scopes instead of silently retargeting their audience' {
+            Mock New-BcAuthContext {
+                return @{ tenantId = 'tenant'; Scopes = 'https://audience.test/.default' }
+            }
+            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://explicit.test' } `
+                -authParameters @{ refreshToken = 'dummy'; scopes = @('https://audience.test/.default') } `
+                -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
+
+            Assert-MockCalled New-BcAuthContext -Exactly 1 -ParameterFilter {
+                $scopes -eq 'https://audience.test/.default'
+            }
+            Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
+                $bcAuthContext.Scopes -eq 'https://audience.test/.default'
+            }
+            Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
+                $preserveScopes -and $bcAuthContext.Scopes -eq 'https://audience.test/.default' -and
+                $settings.deploymentBaseUrl -eq 'https://explicit.test'
+            }
+        }
+
+        It 'Keeps the original BCH token resource when Admin settings differ' {
+            Mock New-BcAuthContext {
+                # The action reloads BCH, so mock the current module instance after that import.
+                Mock Invoke-RestMethod -ModuleName BcContainerHelper {
+                    return @{ access_token = 'fake-token' }
+                }
+                Mock Parse-JWTtoken -ModuleName BcContainerHelper {
+                    return @{ appid = 'fake-client'; exp = 2000000000 }
+                }
+                $newContext = Get-Command New-BcAuthContext -Module BcContainerHelper
+                & $newContext -tenantID 'fake-tenant' -clientID 'fake-client' -clientSecret 'fake-secret' -silent
+            }
+
+            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://explicit.test'; apiBaseUrl = 'https://legacy.test' } `
+                -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
+
+            Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 1 -ParameterFilter {
+                $Uri -eq 'https://login.microsoftonline.com/fake-tenant/oauth2/v2.0/token' -and
+                $Body.scope -eq 'https://legacy.test/.default'
+            }
+        }
+
+        It 'Preserves an explicit resource for native authentication and leaves the BCH context unchanged' {
+            $script:originalAuthContext = @{
+                tenantId = 'tenant'; Scopes = 'https://explicit-resource.test/'; AccessToken = 'original-token'
+            }
+            Mock New-BcAuthContext { return $script:originalAuthContext }
+            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://admin.test' } `
+                -authParameters @{ refreshToken = 'dummy'; resource = 'https://explicit-resource.test' } `
+                -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
+
+            Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
+                $bcAuthContext.Scopes -eq 'https://explicit-resource.test/'
+            }
+            Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
+                $preserveScopes -and $bcAuthContext.Scopes -eq 'https://explicit-resource.test/' -and
+                [object]::ReferenceEquals($bcAuthContext, $script:originalAuthContext)
+            }
+            $script:originalAuthContext.AccessToken | Should -Be 'original-token'
         }
 
         It 'Does not invoke cleanup when unpublishOldVersions is not set (default)' {
@@ -154,6 +302,42 @@ Describe "Deploy Action Tests" {
             Assert-MockCalled PublishPTEApps -Times 0
             Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
             Assert-MockCalled UnpublishOldAppVersions -Times 0
+            Assert-MockCalled Initialize-PTEPublishingApi -Times 0
+        }
+
+        It 'Probes before Dev dependency installation only for PTE dependency packages' -TestCases @(
+            @{ from = 50000; expectedProbes = 1 },
+            @{ from = 100000; expectedProbes = 0 }
+        ) {
+            param($from, $expectedProbes)
+            $script:dependencyRange = $from
+            Mock GetAppsAndDependenciesFromArtifacts { return @('/tmp/app1.app'), @('/tmp/dependency.app') }
+            Mock Get-AppJsonFromAppFile { return @{ idRanges = @(@{ from = $script:dependencyRange; to = 999999 }) } }
+            $script:events = @()
+            Mock Initialize-PTEPublishingApi { $script:events += 'probe' }
+            Mock InstallOrUpgradeApps { $script:events += 'dependencies' }
+
+            InvokeDeploy -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = 'Dev'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
+
+            Assert-MockCalled Initialize-PTEPublishingApi -Exactly $expectedProbes
+            Assert-MockCalled PublishPTEApps -Times 0
+            Assert-MockCalled Publish-BcContainerApp -Exactly 1
+            if ($expectedProbes) { ($script:events -join ',') | Should -Be 'probe,dependencies' }
+            else { ($script:events -join ',') | Should -Be 'dependencies' }
+        }
+
+        It 'Stops before publishing when authentication or the route probe fails' {
+            Mock InstallOrUpgradeApps { }
+            $deployment = @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
+            Mock New-BcAuthContext { throw 'Authentication failed' }
+            { InvokeDeploy -deploymentSettings $deployment } | Should -Throw '*Authentication failed*'
+
+            Mock New-BcAuthContext { return @{ tenantId = 'test-tenant' } }
+            Mock Initialize-PTEPublishingApi { throw 'Probe timeout' }
+            Mock OutputError { param($message) throw $message }
+            { InvokeDeploy -deploymentSettings $deployment } | Should -Throw '*Probe timeout*'
+            Assert-MockCalled PublishPTEApps -Times 0
+            Assert-MockCalled InstallOrUpgradeApps -Times 0
         }
     }
 }

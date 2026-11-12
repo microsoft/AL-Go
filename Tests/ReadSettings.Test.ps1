@@ -27,6 +27,18 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settingsSchema.properties.skipDraftPullRequests.default | Should -BeFalse
         }
 
+        It 'Aligns deployment target defaults with the settings schema' {
+            . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+            $defaults = GetDefaultSettings
+            $settingsSchema = $schema | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $defaults.deploymentBaseUrl | Should -Be ''
+            $defaults.deploymentApplicationFamily | Should -Be 'BusinessCentral'
+            foreach ($name in @('deploymentBaseUrl', 'deploymentApplicationFamily')) {
+                $settingsSchema.properties[$name].type | Should -Be 'string'
+                $settingsSchema.properties[$name].default | Should -Be $defaults[$name]
+            }
+        }
+
         It 'Reads settings from all settings locations' {
             Mock Write-Host { }
             Mock Out-Host { }

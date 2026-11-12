@@ -20,6 +20,7 @@ InModuleScope Deploy {
                 versionMajor = 30; versionMinor = 0; versionBuild = 0; versionRevision = 0
             }
             $script:extensions = @($script:application)
+            $script:ptePublishingApi = ''
             Mock Write-Host { }
             Mock OutputWarning { }
             Mock Renew-BcAuthContext { return @{ AccessToken = 'renewed-test-token' } }
@@ -31,8 +32,144 @@ InModuleScope Deploy {
             Mock Publish-PerTenantExtensionApps { }
         }
 
-        Context "Shared router" {
+        Context "Action route selection" {
+            It 'Selects Admin on BC <major> through the native request boundary' -TestCases @(
+                @{ major = 29 }, @{ major = 30 }, @{ major = 31 }
+            ) {
+                param($major)
+                $script:application.versionMajor = $major
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1 -ParameterFilter {
+                    $environment -eq 'Sandbox' -and !$PesterBoundParameters.ContainsKey('apiBaseUrl') -and
+                    !$PesterBoundParameters.ContainsKey('applicationFamily')
+                }
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+            }
+
+            It 'Selects Automation below BC 29 even when Admin access works' {
+                $script:application.versionMajor = 28
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be Automation
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Selects Automation once for probe HTTP <statusCode>' -TestCases @(
+                @{ statusCode = 401 }, @{ statusCode = 403 }
+            ) {
+                param($statusCode)
+                $script:probeStatus = $statusCode
+                Mock Get-AdminCenterInstalledExtensions {
+                    $exception = [System.Exception]::new('Admin permission missing')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:probeStatus })
+                    throw $exception
+                }
+
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be Automation
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
+                    $message -like '*Admin permission missing*permissions*ContinuousDeployment.md#pte-deployment-authorization*throughout this Deploy action*'
+                }
+            }
+
+            It 'Selects Automation for the helper-owned missing-token error' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    throw [System.Management.Automation.ErrorRecord]::new(
+                        [System.Security.Authentication.AuthenticationException]::new('Token missing'),
+                        'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
+                }
+
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+                $script:ptePublishingApi | Should -Be Automation
+                Assert-MockCalled OutputWarning -Exactly 1
+            }
+
+            It 'Does not mistake a probe <problem> for an authorization setup failure' -TestCases @(
+                @{ problem = 'network' }, @{ problem = 'timeout' }, @{ problem = 'TLS' },
+                @{ problem = 'text-only 403' }, @{ problem = 'malformed' }, @{ problem = 'missing Application' },
+                @{ problem = 'incomplete Application' }, @{ problem = 'invalid Application' }, @{ problem = 'ambiguous Application' },
+                @{ problem = '404' }, @{ problem = '500' }
+            ) {
+                param($problem)
+                switch ($problem) {
+                    network { Mock Get-AdminCenterInstalledExtensions { throw [System.Net.WebException]::new('Connection failed') } }
+                    timeout { Mock Get-AdminCenterInstalledExtensions { throw [TimeoutException]::new('Timed out') } }
+                    TLS { Mock Get-AdminCenterInstalledExtensions { throw [System.Security.Authentication.AuthenticationException]::new('TLS failed') } }
+                    'text-only 403' { Mock Get-AdminCenterInstalledExtensions { throw '403 Forbidden' } }
+                    malformed { Mock Get-AdminCenterInstalledExtensions { throw 'Invalid app version' } }
+                    'missing Application' { Mock Get-AdminCenterInstalledExtensions { return @() } }
+                    'incomplete Application' {
+                        Mock Get-AdminCenterInstalledExtensions { return @{ displayName = 'Application'; isInstalled = $true; versionMajor = 30 } }
+                    }
+                    'invalid Application' { $script:application.versionMajor = 'unknown' }
+                    'ambiguous Application' { Mock Get-AdminCenterInstalledExtensions { return @($script:application, $script:application.Clone()) } }
+                    default {
+                        $script:probeStatus = [int]$problem
+                        Mock Get-AdminCenterInstalledExtensions {
+                            $exception = [System.Exception]::new('Service failure')
+                            $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:probeStatus })
+                            throw $exception
+                        }
+                    }
+                }
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } | Should -Throw
+                $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Fails rather than using a default version if the selected Automation read fails' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    $exception = [System.Exception]::new('Not authorized')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                    throw $exception
+                }
+                Mock Get-BcInstalledExtensions { throw 'Automation read failed' }
+
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } | Should -Throw '*Automation read failed*'
+                $script:ptePublishingApi | Should -Be ''
+            }
+
+            It 'Overwrites the previous choice on each initialization' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    $exception = [System.Exception]::new('Not authorized')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 401 })
+                    throw $exception
+                }
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+                $script:ptePublishingApi | Should -Be Automation
+                Mock Get-AdminCenterInstalledExtensions { return $script:extensions }
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+            }
+
+            It 'Uses the selected read API without repeating the authorization probe or changing routes' {
+                GetInstalledExtensions -bcAuthContext @{} -environment Sandbox -publishingApi AdminCenter | Out-Null
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1 -ParameterFilter {
+                    $environment -eq 'Sandbox'
+                }
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Mock Get-AdminCenterInstalledExtensions { throw 'Read failed after selection' }
+                { GetInstalledExtensions -bcAuthContext @{} -environment Sandbox -publishingApi AdminCenter } |
+                    Should -Throw '*Read failed after selection*'
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                GetInstalledExtensions -bcAuthContext @{} -environment Sandbox -publishingApi Automation | Out-Null
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled OutputWarning -Times 0
+            }
+        }
+
+        Context "Selected route publishing" {
             BeforeEach {
+                $script:ptePublishingApi = 'AdminCenter'
                 Mock NewTemporaryFolder { return 'test-app-folder' }
                 Mock Copy-AppFilesToFolder { return @('App.app') }
                 Mock Sort-AppFilesByDependencies { return @('App.app') }
@@ -42,17 +179,119 @@ InModuleScope Deploy {
                 Mock WaitPTEOperation { }
             }
 
-            It 'Uses only the released helper for BC <major> and preserves Force and immediate defaults' -TestCases @(
-                @{ major = 27 }, @{ major = 28 }
+            It 'Reuses the initialized Automation route for dependencies and primary publishing' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    $exception = [System.Exception]::new('Admin permission missing')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                    throw $exception
+                }
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Dependency.app')
+                $script:ptePublishingApi | Should -Be Automation
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Primary.app')
+
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 2
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+                Assert-MockCalled OutputWarning -Exactly 1
+            }
+
+            It 'Requires explicit initialization instead of selecting a route while publishing' {
+                $script:ptePublishingApi = ''
+                GetInstalledExtensions -bcAuthContext @{} -environment Sandbox | Out-Null
+                $script:ptePublishingApi | Should -Be ''
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } |
+                    Should -Throw '*must be initialized*'
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Does not switch an Admin route when a later read or write fails authorization' -TestCases @(
+                @{ step = 'read' }, @{ step = 'write' }
+            ) {
+                param($step)
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Dependency.app')
+                $exception = [System.Exception]::new('Later access rejected')
+                $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                $script:laterFailure = $exception
+                if ($step -eq 'read') {
+                    Mock Get-AdminCenterInstalledExtensions { throw $script:laterFailure }
+                }
+                else {
+                    Mock Install-AdminCenterPTE { throw $script:laterFailure }
+                }
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Primary.app') } |
+                    Should -Throw '*Later access rejected*'
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Reinitializes the route by probing the next environment' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    if ($environment -eq 'First') {
+                        $exception = [System.Exception]::new('First target not configured')
+                        $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                        throw $exception
+                    }
+                    return $script:extensions
+                }
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment First
+                $script:ptePublishingApi | Should -Be Automation
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Second
+                PublishPTEApps -bcAuthContext @{} -environment Second -appFiles @('App.app')
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 2 -ParameterFilter {
+                    $environment -eq 'Second'
+                }
+                Assert-MockCalled Install-AdminCenterPTE -Exactly 1 -ParameterFilter {
+                    $environment -eq 'Second'
+                }
+            }
+
+            It 'Does not persist a route when the initial probe fails unexpectedly' {
+                $script:ptePublishingApi = ''
+                Mock Get-AdminCenterInstalledExtensions { throw [TimeoutException]::new('Probe timeout') }
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } | Should -Throw '*Probe timeout*'
+                $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled NewTemporaryFolder -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
+
+            It 'Does not hide an unexpected metadata read failure before publishing' -TestCases @(
+                @{ problem = 'network' }, @{ problem = 'malformed' }
+            ) {
+                param($problem)
+                if ($problem -eq 'network') {
+                    Mock Get-AdminCenterInstalledExtensions { throw [System.Net.WebException]::new('Connection failed') }
+                }
+                else {
+                    Mock Get-AdminCenterInstalledExtensions { throw 'Malformed app response' }
+                }
+                { GetInstalledExtensions -bcAuthContext @{} -environment Sandbox } | Should -Throw
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Passes original packages to BCH for BC <major> and preserves Force and immediate defaults' -TestCases @(
+                @{ major = 27 }, @{ major = 28 }, @{ major = 29 }, @{ major = 30 }, @{ major = 31 }
             ) {
                 param($major)
                 $script:application.versionMajor = $major
                 $script:application.versionMinor = 9
                 $script:application.versionBuild = 99999
                 $script:application.versionRevision = 99999
+                $script:ptePublishingApi = 'Automation'
                 Mock Publish-PerTenantExtensionApps {
                     $PesterBoundParameters.Keys | Should -Not -Contain 'schedule'
                     $PesterBoundParameters.Keys | Should -Not -Contain 'applicationFamily'
+                    $bcContainerHelperConfig.apiBaseUrl | Should -Be 'https://api.example.test/'
                 }
 
                 PublishPTEApps -bcAuthContext @{ tenantId = 'tenant' } -environment 'Sandbox' -appFiles @('Apps.zip') -schemaSyncMode Force
@@ -63,7 +302,35 @@ InModuleScope Deploy {
                 }
                 Assert-MockCalled Install-AdminCenterPTE -Times 0
                 Assert-MockCalled NewTemporaryFolder -Times 0
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Times 0
                 Assert-MockCalled Invoke-RestMethod -Times 0
+            }
+
+            It 'Routes one original batch to the Admin publisher without preparing packages in the router' {
+                Mock Publish-AdminCenterPTEApps { }
+
+                PublishPTEApps -bcAuthContext @{ tenantId = 'tenant' } -environment Sandbox -appFiles @('Apps.zip', 'Other.app') `
+                    -schemaSyncMode Force
+
+                Assert-MockCalled Publish-AdminCenterPTEApps -Exactly 1 -ParameterFilter {
+                    $bcAuthContext.tenantId -eq 'tenant' -and $environment -eq 'Sandbox' -and
+                    ($appFiles -join ',') -eq 'Apps.zip,Other.app' -and $schemaSyncMode -eq 'Force'
+                }
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Times 0
+                Assert-MockCalled Copy-AppFilesToFolder -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
+
+            It 'Does not silently switch a selected Admin route when the target version changes below BC 29' {
+                $script:application.versionMajor = 28
+
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } |
+                    Should -Throw '*selected API will not be changed*'
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
             }
 
             It 'Keeps API implementation helpers private and exposes the shared publisher' {
@@ -100,66 +367,52 @@ InModuleScope Deploy {
                 Assert-MockCalled Get-BcInstalledExtensions -Times 0
             }
 
-            It 'Uses Automation reads after an Admin <problem> without changing write routing' -TestCases @(
-                @{ problem = 'authorization' }, @{ problem = 'network' }, @{ problem = 'malformed response' },
-                @{ problem = 'missing Application' }, @{ problem = 'incomplete Application' }, @{ problem = 'ambiguous Application' }
-            ) {
-                param($problem)
-                switch ($problem) {
-                    authorization { Mock Get-AdminCenterInstalledExtensions { throw '403 Forbidden: User not authorized' } }
-                    network { Mock Get-AdminCenterInstalledExtensions { throw [System.Net.WebException]::new('Connection failed') } }
-                    'malformed response' { Mock Get-AdminCenterInstalledExtensions { throw 'Admin Center installed app has invalid full version.' } }
-                    'missing Application' { Mock Get-AdminCenterInstalledExtensions { return @() } }
-                    'incomplete Application' {
-                        Mock Get-AdminCenterInstalledExtensions { return @{ displayName = 'Application'; isInstalled = $true; versionMajor = 30 } }
-                    }
-                    'ambiguous Application' { Mock Get-AdminCenterInstalledExtensions { return @($script:application, $script:application.Clone()) } }
+            It 'Passes the same source auth context through snapshot, upload and exact-operation wait' {
+                $script:sourceContext = @{ tenantId = 'tenant' }
+                Mock Get-AdminCenterInstalledExtensions {
+                    [object]::ReferenceEquals($bcAuthContext, $script:sourceContext) | Should -BeTrue
+                    return $script:extensions
                 }
 
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
+                PublishPTEApps -bcAuthContext $script:sourceContext -environment Sandbox -appFiles @('App.app')
 
                 Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
-                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
-                Assert-MockCalled Install-AdminCenterPTE -Exactly 1
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-                Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -like '*Admin Center installed-app read failed*Using the read-only Automation API*' }
-            }
-
-            It 'Uses the Automation Application version below 29 when the Admin read fails' {
-                $script:application.versionMajor = 28
-                Mock Get-AdminCenterInstalledExtensions { throw '403 Forbidden' }
-
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
-
-                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
-                Assert-MockCalled Install-AdminCenterPTE -Times 0
-            }
-
-            It 'Propagates Automation read failure instead of publishing with a default version' {
-                Mock Get-AdminCenterInstalledExtensions { throw '403 Forbidden' }
-                Mock Get-BcInstalledExtensions { throw 'Automation read failed' }
-
-                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } | Should -Throw '*Automation read failed*'
-
-                Assert-MockCalled Install-AdminCenterPTE -Times 0
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-            }
-
-            It 'Uses the default API family with <helperConfiguration> helper configuration' -TestCases @(
-                @{ helperConfiguration = 'overridden' }, @{ helperConfiguration = 'missing' }
-            ) {
-                param($helperConfiguration)
-                if ($helperConfiguration -eq 'missing') {
-                    $script:bcContainerHelperConfig = $null
+                Assert-MockCalled Install-AdminCenterPTE -Exactly 1 -ParameterFilter {
+                    [object]::ReferenceEquals($bcAuthContext, $script:sourceContext)
                 }
+                Assert-MockCalled WaitPTEOperation -Exactly 1 -ParameterFilter {
+                    [object]::ReferenceEquals($bcAuthContext, $script:sourceContext)
+                }
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
 
+            It 'Uses the full copied paths throughout Admin batch preparation and upload' {
+                $script:copiedApp = Join-Path $TestDrive 'expanded packages\Publisher_App_2.0.0.0.app'
+                Mock Copy-AppFilesToFolder { return @($script:copiedApp) }
+                Mock Sort-AppFilesByDependencies { return $appFiles }
+
+                Publish-AdminCenterPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip')
+
+                Assert-MockCalled Sort-AppFilesByDependencies -Exactly 1 -ParameterFilter {
+                    $appFiles.Count -eq 1 -and $appFiles[0] -eq $script:copiedApp -and $excludeRuntimePackages
+                }
+                Assert-MockCalled Get-AppJsonFromAppFile -Exactly 1 -ParameterFilter { $appFile -eq $script:copiedApp }
+                Assert-MockCalled Install-AdminCenterPTE -Exactly 1 -ParameterFilter { $appFile -eq $script:copiedApp }
+                Assert-MockCalled WaitPTEOperation -Exactly 1 -ParameterFilter {
+                    $appId -eq 'app-1' -and $operation.id -eq 'operation-1'
+                }
+                Assert-MockCalled Remove-Item -Exactly 1
+            }
+
+            It 'Leaves native target selection to the request boundary' {
                 Mock Install-AdminCenterPTE {
+                    $PesterBoundParameters.Keys | Should -Not -Contain 'apiBaseUrl'
                     $PesterBoundParameters.Keys | Should -Not -Contain 'applicationFamily'
                     return @{ id = 'operation-1'; appId = 'app-1'; status = 'running' }
                 }
                 Mock WaitPTEOperation {
-                    $PesterBoundParameters.Keys | Should -Not -Contain 'applicationFamily'
+                    $PesterBoundParameters.Keys | Should -Not -Contain 'deploymentTarget'
                 }
                 PublishPTEApps -bcAuthContext @{} -environment 'QA / East' -appFiles @('App.app') -schemaSyncMode Force
 
@@ -181,36 +434,7 @@ InModuleScope Deploy {
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
             }
 
-            It 'Fails explicitly before any publishing when the target version is <problem>' -TestCases @(
-                @{ problem = 'missing' }, @{ problem = 'incomplete' }, @{ problem = 'invalid' }, @{ problem = 'ambiguous' }
-            ) {
-                param($problem)
-                switch ($problem) {
-                    missing { $script:extensions = @() }
-                    incomplete { $script:application.Remove('versionMinor') }
-                    invalid { $script:application.versionMajor = 'unknown' }
-                    ambiguous { $script:extensions += $script:application.Clone() }
-                }
-
-                { PublishPTEApps -bcAuthContext @{} -environment 'Sandbox' -appFiles @('App.app') } | Should -Throw '*Could not determine the Business Central version*'
-
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-                Assert-MockCalled Install-AdminCenterPTE -Times 0
-            }
-
-            It 'Ignores uninstalled Application records when detecting the target version' {
-                $oldApplication = $script:application.Clone()
-                $oldApplication.isInstalled = $false
-                $oldApplication.versionMajor = 28
-                $script:extensions = @($oldApplication, [PSCustomObject]$script:application)
-
-                PublishPTEApps -bcAuthContext @{} -environment 'Sandbox' -appFiles @('App.app')
-
-                Assert-MockCalled Install-AdminCenterPTE -Exactly 1
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-            }
-
-            It 'Skips an installed <version> version but not a newer uninstalled package' -TestCases @(
+            It 'Skips an installed <version> version through Admin Center' -TestCases @(
                 @{ version = 2 }, @{ version = 3 }
             ) {
                 param($version)
@@ -223,6 +447,9 @@ InModuleScope Deploy {
 
                 Assert-MockCalled Install-AdminCenterPTE -Times 0
                 Assert-MockCalled WaitPTEOperation -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like '*already installed*' }
             }
 
             It 'Upgrades an older installed app even if an uninstalled newer package is present' {
@@ -242,6 +469,7 @@ InModuleScope Deploy {
                 Mock Sort-AppFilesByDependencies { return @('Dependency.app', 'Dependent.app') }
                 Mock Get-AppJsonFromAppFile {
                     param($appFile)
+                    $script:events += "read:$appFile"
                     return @{ id = $appFile; name = $appFile; version = '2.0.0.0' }
                 }
                 $script:events = @()
@@ -257,18 +485,9 @@ InModuleScope Deploy {
 
                 PublishPTEApps -bcAuthContext @{} -environment 'Sandbox' -appFiles @('Apps.zip')
 
-                ($script:events -join ',') | Should -Be 'upload:Dependency.app,complete:Dependency.app,upload:Dependent.app,complete:Dependent.app'
+                ($script:events -join ',') | Should -Be 'read:Dependency.app,upload:Dependency.app,complete:Dependency.app,read:Dependent.app,upload:Dependent.app,complete:Dependent.app'
                 Assert-MockCalled Sort-AppFilesByDependencies -Exactly 1 -ParameterFilter { $excludeRuntimePackages -and $appFiles.Count -eq 3 }
                 Assert-MockCalled Install-AdminCenterPTE -Times 0 -ParameterFilter { $appFile -eq 'Runtime.app' }
-            }
-
-            It 'Remembers completed installs when another package for the same app is encountered' {
-                Mock Sort-AppFilesByDependencies { return @('App.app', 'Duplicate.app') }
-
-                PublishPTEApps -bcAuthContext @{} -environment 'Sandbox' -appFiles @('App.app', 'Duplicate.app')
-
-                Assert-MockCalled Install-AdminCenterPTE -Exactly 1
-                Assert-MockCalled WaitPTEOperation -Exactly 1
             }
 
             It 'Does not fall back or continue after an ambiguous <step> failure' -TestCases @(
@@ -288,72 +507,74 @@ InModuleScope Deploy {
                 Assert-MockCalled Remove-Item -Exactly 1
             }
 
-            It 'Falls back on an explicit authorization rejection with actionable diagnostics and preserves Force' {
+            It 'Never changes route after upload HTTP <statusCode>, including the first upload' -TestCases @(
+                @{ statusCode = 400 }, @{ statusCode = 401 }, @{ statusCode = 403 },
+                @{ statusCode = 404 }, @{ statusCode = 409 }, @{ statusCode = 500 }
+            ) {
+                param($statusCode)
+                $script:uploadStatus = $statusCode
                 Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('403 Forbidden: AdminCenter permission missing')
-                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                    $exception = [System.Exception]::new('Upload rejected')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:uploadStatus })
                     throw $exception
                 }
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } |
+                    Should -Throw '*Upload rejected*'
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
 
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') -schemaSyncMode Force
+            It 'Leaves Automation package preparation and installed-version skipping entirely to BCH' {
+                $script:ptePublishingApi = 'Automation'
+                Mock Sort-AppFilesByDependencies { return @('Installed.app', 'First.app', 'Second.app') }
+                $script:extensions += @{
+                    id = 'Installed.app'; displayName = 'Installed'; isInstalled = $true
+                    versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0
+                }
+                Mock Get-AppJsonFromAppFile {
+                    param($appFile)
+                    return @{ id = $appFile; name = $appFile; version = '2.0.0.0' }
+                }
+                Mock Publish-PerTenantExtensionApps {
+                    $bcContainerHelperConfig.apiBaseUrl | Should -Be 'https://api.example.test/'
+                }
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip', 'Installed.app') `
+                    -schemaSyncMode Force
 
                 Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter {
-                    $environment -eq 'Sandbox' -and $appFiles.Count -eq 1 -and $appFiles[0] -eq 'App.app' -and $schemaSyncMode -eq 'Force'
+                    ($appFiles -join ',') -eq 'Apps.zip,Installed.app' -and $schemaSyncMode -eq 'Force'
                 }
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                    $message -like '*403 Forbidden*permission missing*permissions*ContinuousDeployment.md#pte-deployment-authorization*Falling back*'
-                }
-                Assert-MockCalled WaitPTEOperation -Times 0
+                Assert-MockCalled Copy-AppFilesToFolder -Times 0
+                Assert-MockCalled Sort-AppFilesByDependencies -Times 0
+                Assert-MockCalled Get-AppJsonFromAppFile -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Times 0
                 Assert-MockCalled Get-BcInstalledExtensions -Times 0
             }
 
-            It 'Falls back when the helper reports authentication failed before sending an upload' {
-                Mock Install-AdminCenterPTE {
-                    throw [System.Management.Automation.ErrorRecord]::new(
-                        [System.Security.Authentication.AuthenticationException]::new('Authentication failed: token missing'),
-                        'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
-                }
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
-
+            It 'Propagates Automation batch failures without changing route or preparing packages' {
+                $script:ptePublishingApi = 'Automation'
+                Mock Publish-PerTenantExtensionApps { throw 'Batch failed' }
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } |
+                    Should -Throw '*Batch failed*'
+                $script:ptePublishingApi | Should -Be Automation
                 Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
-                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                    $message -like '*Authentication failed: token missing*permissions*Falling back*'
-                }
-                Assert-MockCalled Invoke-RestMethod -Times 0
+                Assert-MockCalled NewTemporaryFolder -Times 0
+                Assert-MockCalled Remove-Item -Times 0
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
             }
 
-            It 'Classifies installation HTTP <statusCode> without replaying ambiguous requests' -TestCases @(
-                @{ statusCode = 400; allowed = $false },
-                @{ statusCode = 401; allowed = $true },
-                @{ statusCode = 403; allowed = $true },
-                @{ statusCode = 404; allowed = $false },
-                @{ statusCode = 405; allowed = $false },
-                @{ statusCode = 409; allowed = $false },
-                @{ statusCode = 413; allowed = $false },
-                @{ statusCode = 415; allowed = $false },
-                @{ statusCode = 422; allowed = $false },
-                @{ statusCode = 429; allowed = $false },
-                @{ statusCode = 500; allowed = $false },
-                @{ statusCode = 503; allowed = $false }
-            ) {
-                param($statusCode, $allowed)
-                $script:installStatus = $statusCode
-                Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new("Service HTTP $script:installStatus")
-                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:installStatus })
-                    $exception.Data['AdminCenterRequestStarted'] = $true
-                    throw $exception
+            It 'Preserves distinct versions from the dependency sorter without synthetic installed entries' {
+                Mock Sort-AppFilesByDependencies { return @('Newer.app', 'Older.app') }
+                Mock Get-AppJsonFromAppFile {
+                    param($appFile)
+                    return @{ id = 'app-1'; name = 'App'; version = $(if ($appFile -eq 'Newer.app') { '3.0.0.0' } else { '2.0.0.0' }) }
                 }
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip')
 
-                if ($allowed) {
-                    PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
-                    Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
-                }
-                else {
-                    { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } | Should -Throw "*Service HTTP $statusCode*"
-                    Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-                }
-                Assert-MockCalled Install-AdminCenterPTE -Exactly 1
+                Assert-MockCalled Install-AdminCenterPTE -Exactly 2
+                $script:extensions.Count | Should -Be 1
             }
 
             It 'Does not fall back for a local file preparation failure reported before sending' {
@@ -395,119 +616,6 @@ InModuleScope Deploy {
 
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
                 Assert-MockCalled Install-AdminCenterPTE -Exactly 1
-            }
-
-            It 'Stops without fallback on an authorization failure after an Admin success' -TestCases @(
-                @{ statusCode = 401 }, @{ statusCode = 403 }
-            ) {
-                param($statusCode)
-                $script:installStatus = $statusCode
-                Mock Sort-AppFilesByDependencies { return @('First.app', 'Second.app', 'Duplicate.app', 'Third.app') }
-                Mock Get-AppJsonFromAppFile {
-                    param($appFile)
-                    $id = if ($appFile -eq 'Duplicate.app') { 'First.app' } else { $appFile }
-                    return @{ id = $id; name = $id; version = '2.0.0.0' }
-                }
-                Mock Install-AdminCenterPTE {
-                    param($appFile)
-                    if ($appFile -eq 'Second.app') {
-                        $exception = [System.Exception]::new('Authorization rejected after first app')
-                        $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:installStatus })
-                        throw $exception
-                    }
-                    return @{ id = 'completed'; appId = $appFile; status = 'succeeded' }
-                }
-
-                $results = @{}
-                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip') -publishingResults $results } |
-                    Should -Throw '*Authorization rejected after first app*'
-
-                Assert-MockCalled Install-AdminCenterPTE -Exactly 2
-                Assert-MockCalled WaitPTEOperation -Exactly 1 -ParameterFilter { $appId -eq 'First.app' }
-                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
-                Assert-MockCalled Install-AdminCenterPTE -Times 0 -ParameterFilter { $appFile -in 'Duplicate.app','Third.app' }
-                $results['First.app'] | Should -Be 'AdminCenter'
-                $results.ContainsKey('Second.app') | Should -BeFalse
-                $results.ContainsKey('Third.app') | Should -BeFalse
-            }
-
-            It 'Falls back once for the ordered eligible batch without retrying Admin for later apps' {
-                Mock Sort-AppFilesByDependencies { return @('Installed.app', 'First.app', 'Duplicate.app', 'Second.app', 'Third.app') }
-                $script:extensions += @{
-                    id = 'Installed.app'; displayName = 'Installed'; isInstalled = $true
-                    versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0
-                }
-                Mock Get-AppJsonFromAppFile {
-                    param($appFile)
-                    $id = if ($appFile -eq 'Duplicate.app') { 'First.app' } else { $appFile }
-                    return @{ id = $id; name = $id; version = '2.0.0.0' }
-                }
-                Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('User not authorized')
-                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
-                    throw $exception
-                }
-                $results = @{}
-
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip') -publishingResults $results
-
-                Assert-MockCalled Install-AdminCenterPTE -Exactly 1 -ParameterFilter { $appFile -eq 'First.app' }
-                Assert-MockCalled WaitPTEOperation -Times 0
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1 -ParameterFilter {
-                    ($appFiles -join ',') -eq 'First.app,Second.app,Third.app'
-                }
-                Assert-MockCalled Get-BcInstalledExtensions -Times 0
-                $results['Installed.app'] | Should -Be 'Skipped'
-                $results['First.app'] | Should -Be 'Automation'
-                $results['Second.app'] | Should -Be 'Automation'
-                $results['Third.app'] | Should -Be 'Automation'
-            }
-
-            It 'Retains Admin Center cleanup protection across dependency and primary batches for the same app' {
-                $results = @{}
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Dependency.app') -publishingResults $results
-                $results['app-1'] | Should -Be 'AdminCenter'
-                Mock Get-AppJsonFromAppFile { return @{ id = 'app-1'; name = 'App'; version = '3.0.0.0' } }
-                Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Authorization rejected')
-                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
-                    throw $exception
-                }
-
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Primary.app') -publishingResults $results
-
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
-                $results['app-1'] | Should -Be 'AdminCenter'
-            }
-
-            It 'Does not retain publishing paths from a different action' {
-                $firstResults = @{}
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') -publishingResults $firstResults
-                Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Authorization rejected')
-                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
-                    throw $exception
-                }
-                $secondResults = @{}
-
-                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') -publishingResults $secondResults
-
-                $firstResults['app-1'] | Should -Be 'AdminCenter'
-                $secondResults['app-1'] | Should -Be 'Automation'
-            }
-
-            It 'Propagates a legacy fallback failure without continuing or claiming success' {
-                Mock Install-AdminCenterPTE {
-                    $exception = [System.Exception]::new('Authorization rejected')
-                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
-                    throw $exception
-                }
-                Mock Publish-PerTenantExtensionApps { throw 'Legacy publishing failed' }
-
-                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } | Should -Throw '*Legacy publishing failed*'
-
-                Assert-MockCalled Publish-PerTenantExtensionApps -Exactly 1
-                Assert-MockCalled Remove-Item -Exactly 1
             }
 
             It 'Stops without fallback after a terminal operation failure' {
@@ -557,6 +665,15 @@ InModuleScope Deploy {
                 WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 0
+            }
+
+            It 'Leaves exact-operation target selection to the native request boundary' {
+                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+
+                Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1 -ParameterFilter {
+                    !$PesterBoundParameters.ContainsKey('apiBaseUrl') -and !$PesterBoundParameters.ContainsKey('applicationFamily') -and
+                    $appId -eq 'app-1' -and $operationId -eq 'operation / 1'
+                }
             }
 
             It 'Reports terminal or unrecognized <status> without fallback metadata' -TestCases @(

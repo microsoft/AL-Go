@@ -2,9 +2,11 @@
 
 **Update your deployment authorization:** For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under **Authorized Microsoft Entra apps** in the Business Central administration center. See [deployment setup](Workshop/ContinuousDeployment.md#pte-deployment-authorization).
 
-On BC 29 and later, AL-Go tries the Admin Center API first and falls back to the existing Automation API with a warning only for authentication or authorization failures before any app in the publishing batch succeeds.
+On BC 29 and later, AL-Go checks Admin Center access before publishing and selects the existing Automation API with a warning only if that check fails authentication or authorization. All PTEs in the Deploy action use the selected API; publishing failures stop deployment.
 
 The Automation API's PTE upload endpoint (`extensionUpload`) is deprecated and planned for removal in 2027 release wave 1; this does not mean all Automation APIs are deprecated. See the [official deprecation notice](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload).
+
+For custom Admin services, configure repository settings `deploymentBaseUrl` and `deploymentApplicationFamily`. Automation keeps its existing BCH settings independently. See [target setup and authorization](Workshop/ContinuousDeployment.md#custom-deployment-targets).
 
 ### Optional draft PR build skipping
 

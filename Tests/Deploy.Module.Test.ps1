@@ -19,6 +19,7 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         BeforeEach {
+            $script:ptePublishingApi = ''
             # Set up common test environment variables
             $env:GITHUB_WORKSPACE = (Join-Path ([System.IO.Path]::GetTempPath()) "deployModuleTest")
             $env:GITHUB_REPOSITORY = "test/repo"
@@ -43,7 +44,11 @@ InModuleScope Deploy { # Allows testing of private functions
             Mock OutputGroupStart { }
             Mock OutputGroupEnd { }
             Mock OutputWarning { }
-            Mock Get-AdminCenterInstalledExtensions { throw 'Admin Center read unavailable' }
+            Mock Get-AdminCenterInstalledExtensions {
+                $exception = [System.Exception]::new('Admin Center access not configured')
+                $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = 403 })
+                throw $exception
+            }
             Mock Get-AppJsonFromAppFile {
                 param($appFile)
                 switch ($appFile) {
@@ -161,7 +166,10 @@ InModuleScope Deploy { # Allows testing of private functions
                 )
             }
             Mock Sort-AppFilesByDependencies { }
-            Mock Install-BcAppFromAppSource { return $true }
+            Mock Install-BcAppFromAppSource {
+                $PesterBoundParameters.Keys | Should -Not -Contain 'applicationFamily'
+                return $true
+            }
             Mock PublishPTEApps { return $true }
             Mock Publish-PerTenantExtensionApps { throw "Dependencies must use the shared AL-Go publisher" }
             Mock Write-Host { }
@@ -513,6 +521,7 @@ InModuleScope Deploy { # Allows testing of private functions
 
         Describe "CheckInstalledApps" {
             It 'Uses the Admin installed snapshot for higher-version warnings without Automation' {
+                $script:ptePublishingApi = 'AdminCenter'
                 Mock Get-AdminCenterInstalledExtensions {
                     return [PSCustomObject]@{
                         id = 'admin-app'; displayName = 'Admin App'; isInstalled = $true
@@ -523,7 +532,9 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 CheckInstalledApps -bcAuthContext @{} -environment Sandbox -appFiles @('Admin.app')
 
-                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1 -ParameterFilter {
+                    $environment -eq 'Sandbox'
+                }
                 Assert-MockCalled Get-BcInstalledExtensions -Times 0
                 Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like '*2.1.3.4*higher than 2.1.3.2*' }
             }
@@ -828,6 +839,7 @@ InModuleScope Deploy { # Allows testing of private functions
             }
 
             It 'Uses Admin installed PTE dependency checks without requiring Automation' {
+                $script:ptePublishingApi = 'AdminCenter'
                 Mock Get-ChildItem {
                     param($Path)
                     return @(@{ FullName = Join-Path $Path "PTEApp.app" })
@@ -842,12 +854,17 @@ InModuleScope Deploy { # Allows testing of private functions
 
                 InstallOrUpgradeApps -bcAuthContext @{} -environment Sandbox -apps @('PTEApp.app') -installMode upgrade
 
-                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1 -ParameterFilter {
+                    $environment -eq 'Sandbox'
+                }
                 Assert-MockCalled Get-BcInstalledExtensions -Times 0
-                Assert-MockCalled PublishPTEApps -Exactly 1
+                Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
+                    $environment -eq 'Sandbox' -and !$PesterBoundParameters.ContainsKey('deploymentTarget')
+                }
             }
 
             It 'Preserves the Dev dependency exclusion using normalized Admin appType' {
+                $script:ptePublishingApi = 'AdminCenter'
                 Mock Get-ChildItem {
                     param($Path)
                     return @(@{ FullName = Join-Path $Path "DevScopeApp.app" })
@@ -875,14 +892,10 @@ InModuleScope Deploy { # Allows testing of private functions
                 }
                 Mock PublishPTEApps {
                     $PesterBoundParameters.Keys | Should -Not -Contain 'schedule'
-                    $publishingResults['primary'] | Should -Be 'AdminCenter'
-                    $publishingResults['dependency'] = 'Automation'
                 }
 
-                $results = @{ primary = 'AdminCenter' }
-                InstallOrUpgradeApps -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -apps @("PTEApp.app") -installMode "upgrade" -publishingResults $results
+                InstallOrUpgradeApps -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -apps @("PTEApp.app") -installMode "upgrade"
 
-                $results['dependency'] | Should -Be 'Automation'
                 Assert-MockCalled PublishPTEApps -Exactly 1 -ParameterFilter {
                     $appFiles.Count -eq 1 -and $appFiles[0] -like "*PTEApp.app" -and $SchemaSyncMode -eq "Add"
                 }

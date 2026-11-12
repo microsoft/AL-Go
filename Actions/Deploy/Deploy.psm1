@@ -1,6 +1,19 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\.Modules\AdminCenterApi.psm1') -Force -DisableNameChecking
 
+$script:ptePublishingApi = ''
+
+function Test-AdminCenterAuthorizationError {
+    Param([System.Management.Automation.ErrorRecord] $errorRecord)
+
+    $statusCode = 0
+    if ($errorRecord.Exception.PSObject.Properties['Response'] -and $errorRecord.Exception.Response) {
+        $statusCode = [int]$errorRecord.Exception.Response.StatusCode
+    }
+    return $statusCode -in 401,403 -or
+        ($errorRecord.FullyQualifiedErrorId -split ',')[0] -eq 'AdminCenterAuthenticationFailed'
+}
+
 <#
     .SYNOPSIS
         Get the head ref from a PR
@@ -272,33 +285,59 @@ function GetPTEApplicationVersion {
 
 <#
     .SYNOPSIS
-        Prefer Admin Center installed apps, falling back to the read-only Automation API.
+        Read installed apps using the selected API, or the original BCH API for non-PTE work.
     .PARAMETER bcAuthContext
         Business Central authentication context.
     .PARAMETER environment
         Target environment.
-    .PARAMETER requireApplicationVersion
-        Validate the unique installed Application version before accepting the Admin snapshot.
+    .PARAMETER publishingApi
+        Optional explicit read API. By default uses the selected PTE API, or BCH before selection.
 #>
 function GetInstalledExtensions {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
-        [switch] $requireApplicationVersion
+        [ValidateSet('', 'AdminCenter', 'Automation')]
+        [string] $publishingApi = $script:ptePublishingApi
     )
 
-    try {
-        $extensions = @(Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
-        if ($requireApplicationVersion) {
-            GetPTEApplicationVersion -extensions $extensions -environment $environment | Out-Null
-        }
-        return $extensions
-    }
-    catch {
-        $details = Get-AdminCenterApiErrorMessage -errorRecord $_
-        Write-Host "Admin Center installed-app read failed: $details. Using the read-only Automation API. For access errors, see https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization"
+    if ($publishingApi -eq 'AdminCenter') {
+        return Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment
     }
     return Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
+}
+
+<#
+    .SYNOPSIS
+        Select the PTE publishing API once, before this action publishes any PTEs.
+    .PARAMETER bcAuthContext
+        Business Central authentication context.
+    .PARAMETER environment
+        Target environment.
+#>
+function Initialize-PTEPublishingApi {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment
+    )
+
+    $publishingApi = 'AdminCenter'
+    try {
+        $extensions = @(Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
+    }
+    catch {
+        if (!(Test-AdminCenterAuthorizationError -errorRecord $_)) { throw }
+        $details = Get-AdminCenterApiErrorMessage -errorRecord $_
+        OutputWarning -message "Admin Center authorization failed: $details. Update your administration center permissions: https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization. Using the Automation API for PTE publishing throughout this Deploy action."
+        $publishingApi = 'Automation'
+        $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -publishingApi $publishingApi)
+    }
+    $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
+    if ($applicationVersion -lt [version]'29.0.0.0') {
+        $publishingApi = 'Automation'
+    }
+    Write-Host "Target BC $applicationVersion - using $publishingApi for PTE publishing throughout this Deploy action"
+    $script:ptePublishingApi = $publishingApi
 }
 
 <#
@@ -402,16 +441,10 @@ function WaitPTEOperation {
 
 <#
     .SYNOPSIS
-        Publish primary apps or PTE dependencies using the target BC version.
+        Publish primary apps or PTE dependencies through the action-selected API.
     .DESCRIPTION
-        Below BC 29, delegates publishing to the released BcContainerHelper Automation implementation.
-        On BC 29 and later, AL-Go prefers Admin Center publishing and falls back to one Automation
-        batch only for authentication or authorization failures before any Admin publish succeeds.
-        Deployment failures and uncertain outcomes stop without fallback.
-        Existing helper utilities expand packages, exclude runtime
-        packages and order dependencies. Same or newer installed versions are skipped.
-        Installed apps and the Application version are read from Admin Center first. A failed
-        read or invalid Application version falls back to the read-only Automation API.
+        Delegates the original packages to BcContainerHelper or the Admin Center batch publisher,
+        as selected at Deploy initialization before PTE operations. Failures never switch APIs.
     .PARAMETER bcAuthContext
         Business Central authentication context.
     .PARAMETER environment
@@ -420,9 +453,6 @@ function WaitPTEOperation {
         App packages or archives to publish.
     .PARAMETER schemaSyncMode
         Existing helper-compatible sync mode: Add or Force (mapped to ForceSync for Admin Center).
-    .PARAMETER publishingResults
-        Action-scoped map of app IDs to publishing paths, used for optional cleanup.
-        Any Admin Center success protects that app from explicit cleanup for the rest of the action.
 #>
 function PublishPTEApps {
     Param(
@@ -430,76 +460,67 @@ function PublishPTEApps {
         [string] $environment,
         [string[]] $appFiles,
         [ValidateSet('Add', 'Force')]
-        [string] $schemaSyncMode = 'Add',
-        [hashtable] $publishingResults = @{}
+        [string] $schemaSyncMode = 'Add'
     )
 
-    $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -requireApplicationVersion)
+    if (!$script:ptePublishingApi) {
+        throw 'The PTE publishing API must be initialized before publishing.'
+    }
+    if ($script:ptePublishingApi -eq 'Automation') {
+        Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -SchemaSyncMode $schemaSyncMode
+    }
+    elseif ($script:ptePublishingApi -eq 'AdminCenter') {
+        Publish-AdminCenterPTEApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -schemaSyncMode $schemaSyncMode
+    }
+    else {
+        throw "Invalid PTE publishing API: $script:ptePublishingApi"
+    }
+}
+
+<#
+    .SYNOPSIS
+        Publish a batch of PTE packages through Admin Center.
+    .DESCRIPTION
+        Requires BC 29 or later. Expands packages, excludes runtime packages and orders dependencies.
+        Skips same or newer installed versions, and waits for each exact install operation before continuing.
+    .PARAMETER bcAuthContext
+        Business Central authentication context.
+    .PARAMETER environment
+        Target Business Central environment name.
+    .PARAMETER appFiles
+        App packages or archives to publish.
+    .PARAMETER schemaSyncMode
+        Existing helper-compatible sync mode: Add or Force (mapped to ForceSync).
+#>
+function Publish-AdminCenterPTEApps {
+    Param(
+        [hashtable] $bcAuthContext,
+        [string] $environment,
+        [string[]] $appFiles,
+        [ValidateSet('Add', 'Force')]
+        [string] $schemaSyncMode = 'Add'
+    )
+
+    $extensions = @(Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
     $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
     if ($applicationVersion -lt [version]'29.0.0.0') {
-        Write-Host "Target BC $applicationVersion - publishing PTEs using BcContainerHelper Automation API"
-        Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -SchemaSyncMode $schemaSyncMode
-        return
+        throw "Admin Center PTE publishing requires BC 29 or later; the selected API will not be changed."
     }
-    Write-Host "Target BC $applicationVersion - publishing PTEs using AL-Go Admin Center API"
     $tempPath = NewTemporaryFolder
     try {
         $copiedApps = @(Copy-AppFilesToFolder -appFiles $appFiles -folder $tempPath)
         $sortedApps = @(Sort-AppFilesByDependencies -appFiles $copiedApps -excludeRuntimePackages)
-        $appsToPublish = @()
+        $syncMode = if ($schemaSyncMode -eq 'Force') { 'ForceSync' } else { 'Add' }
         foreach ($appFile in $sortedApps) {
             $appJson = Get-AppJsonFromAppFile -appFile $appFile
             $appVersion = [version]$appJson.version
             $installedVersions = @($extensions | Where-Object { $_.id -eq $appJson.id -and $_.isInstalled } |
                 ForEach-Object { [version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) })
             if (@($installedVersions | Where-Object { $_ -ge $appVersion }).Count -gt 0) {
-                Write-Host "App $($appJson.name) v$appVersion or newer is already installed or selected for this batch"
-                if (!$publishingResults.ContainsKey($appJson.id)) { $publishingResults[$appJson.id] = 'Skipped' }
                 continue
             }
-            $appsToPublish += @{ appFile = $appFile; appJson = $appJson }
-            # Also skip duplicate versions already selected for this ordered batch.
-            $extensions += @{
-                id = $appJson.id
-                displayName = $appJson.name
-                isInstalled = $true
-                versionMajor = $appVersion.Major
-                versionMinor = $appVersion.Minor
-                versionBuild = $appVersion.Build
-                versionRevision = $appVersion.Revision
-            }
-        }
-        $useLegacy = $false
-        $adminPublished = $false
-        foreach ($app in $appsToPublish) {
-            try {
-                $syncMode = if ($schemaSyncMode -eq 'Force') { 'ForceSync' } else { 'Add' }
-                $operation = Install-AdminCenterPTE -bcAuthContext $bcAuthContext -environment $environment -appFile $app.appFile -syncMode $syncMode
-            }
-            catch {
-                $statusCode = 0
-                if ($_.Exception.PSObject.Properties['Response'] -and $_.Exception.Response) {
-                    $statusCode = [int]$_.Exception.Response.StatusCode
-                }
-                $authFailure = $statusCode -in 401,403 -or
-                    ($_.FullyQualifiedErrorId -split ',')[0] -eq 'AdminCenterAuthenticationFailed'
-                if ($adminPublished -or !$authFailure) { throw }
-                $details = Get-AdminCenterApiErrorMessage -errorRecord $_
-                OutputWarning -message "Admin Center authorization failed: $details. Update your administration center permissions: https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization. Falling back to the Automation API for this batch."
-                $useLegacy = $true
-                break
-            }
-            WaitPTEOperation -bcAuthContext $bcAuthContext -environment $environment -operation $operation -appId $app.appJson.id
-            $adminPublished = $true
-            $publishingResults[$app.appJson.id] = 'AdminCenter'
-        }
-        if ($useLegacy) {
-            Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles @($appsToPublish | ForEach-Object { $_.appFile }) -SchemaSyncMode $schemaSyncMode
-            foreach ($app in $appsToPublish) {
-                if ($publishingResults[$app.appJson.id] -ne 'AdminCenter') {
-                    $publishingResults[$app.appJson.id] = 'Automation'
-                }
-            }
+            $operation = Install-AdminCenterPTE -bcAuthContext $bcAuthContext -environment $environment -appFile $appFile -syncMode $syncMode
+            WaitPTEOperation -bcAuthContext $bcAuthContext -environment $environment -operation $operation -appId $appJson.id
         }
     }
     finally {
@@ -515,8 +536,7 @@ function PublishPTEApps {
         and clutter Extension Management. This function unpublishes those old versions using the automation API v2.0
         Microsoft.NAV.unpublish action. Only versions that are not installed AND older than a currently installed version
         of the same app (matched by app id) are unpublished. Automation cleanup requires BC 25.4 or later,
-        including after fallback. On BC 29 and later, only apps successfully published through Automation
-        and not through Admin Center during this action are eligible. AL-Go skips other apps with a warning.
+        including after fallback.
         For Admin Center publishing, Business Central manages cleanup in the background. Background cleanup may
         be delayed; its timing and retained versions are not guaranteed. Read-only Automation API calls determine
         the installed Application version.
@@ -529,19 +549,20 @@ function PublishPTEApps {
         The list of deployed app files. Only the app id is read from these files to identify which apps to clean up;
         for each such app, published versions are compared against the version currently installed in the environment
         (not the deployed artifact version), and uninstalled versions older than the installed version are unpublished.
-    .PARAMETER publishingResults
-        Caller-owned per-app publishing paths. On BC 29 and later only Automation results allow explicit cleanup.
 #>
 function UnpublishOldAppVersions {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
-        [string[]] $appFiles,
-        [hashtable] $publishingResults = @{}
+        [string[]] $appFiles
     )
     OutputDebugFunctionCall
 
     try {
+        if ($script:ptePublishingApi -eq 'AdminCenter') {
+            OutputWarning -message "AL-Go skips explicit cleanup for Admin Center publishing to $environment. Business Central manages cleanup in the background, which may be delayed; cleanup timing and retained versions are not guaranteed. The deployment remains successful."
+            return
+        }
         # Deployed app ids read from the .app files
         $deployedApps = @($appFiles | ForEach-Object {
             $appJson = Get-AppJsonFromAppFile -appFile $_
@@ -565,14 +586,6 @@ function UnpublishOldAppVersions {
         $extensions = @((Invoke-RestMethod -Method Get -Uri "$companyUrl/extensions" -Headers $headers -UseBasicParsing).value)
 
         $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
-        if ($applicationVersion -ge [version]'29.0.0.0') {
-            $automationApps = @($deployedApps | Where-Object { $publishingResults[$_.Id] -eq 'Automation' })
-            if ($automationApps.Count -ne $deployedApps.Count) {
-                OutputWarning -message "AL-Go skips explicit cleanup for apps without an exclusively Automation publishing outcome in this deployment to $environment. For Admin Center publishing, Business Central manages cleanup in the background, which may be delayed; cleanup timing and retained versions are not guaranteed. The deployment remains successful."
-            }
-            $deployedApps = $automationApps
-            if ($deployedApps.Count -eq 0) { return }
-        }
         if ($applicationVersion -lt [version]'25.4.0.0') {
             OutputWarning -message "Unpublishing old app versions requires Business Central 25.4 or later; environment $environment is running $applicationVersion."
             return
@@ -626,16 +639,13 @@ function UnpublishOldAppVersions {
         The list of app files to install or upgrade.
     .PARAMETER installMode
         The mode of installation, can be 'ignore', 'upgrade', 'forceUpgrade'.
-    .PARAMETER publishingResults
-        Action-scoped per-app publishing paths shared with primary-app publishing and optional cleanup.
 #>
 function InstallOrUpgradeApps {
     Param(
         [hashtable] $bcAuthContext,
         [string] $environment,
         [string[]] $apps,
-        [string] $installMode,
-        [hashtable] $publishingResults = @{}
+        [string] $installMode
     )
     OutputDebugFunctionCall
 
@@ -649,7 +659,7 @@ function InstallOrUpgradeApps {
     try {
         Copy-AppFilesToFolder -appFiles $apps -folder $tempPath | Out-Null
         $apps = @(Get-ChildItem -Path $tempPath -Filter *.app | ForEach-Object { $_.FullName })
-        $installedApps = GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment
+        $installedApps = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
         $PTEsToInstall = @()
         # Run through all apps and install or upgrade AppSource apps first (and collect PTEs)
         foreach($app in $apps) {
@@ -671,13 +681,13 @@ function InstallOrUpgradeApps {
                 else {
                     Install-BcAppFromAppSource -bcAuthContext $bcAuthContext -environment $environment -appId $appJson.id -acceptIsvEula -installOrUpdateNeededDependencies -allowInstallationOnProduction
                     # Update installed apps list as dependencies may have changed / been installed
-                    $installedApps = GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment
+                    $installedApps = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
                 }
             }
         }
         if ($PTEsToInstall) {
             # Install or upgrade PTEs
-            PublishPTEApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode -publishingResults $publishingResults
+            PublishPTEApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $PTEsToInstall -SchemaSyncMode $schemaSyncMode
         }
     }
     finally {
@@ -752,4 +762,4 @@ function InstallUnknownDependencies {
     }
 }
 
-Export-ModuleMember -Function GetHeadRefFromPRId, GetAppsAndDependenciesFromArtifacts, CheckIfAppNeedsInstallOrUpgrade, CheckInstalledApps, PublishPTEApps, UnpublishOldAppVersions, InstallOrUpgradeApps, InstallUnknownDependencies
+Export-ModuleMember -Function GetHeadRefFromPRId, GetAppsAndDependenciesFromArtifacts, CheckIfAppNeedsInstallOrUpgrade, CheckInstalledApps, Initialize-PTEPublishingApi, PublishPTEApps, UnpublishOldAppVersions, InstallOrUpgradeApps, InstallUnknownDependencies

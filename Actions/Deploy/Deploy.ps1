@@ -15,6 +15,7 @@ Param(
 )
 
 Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
+Import-Module (Join-Path $PSScriptRoot '..\.Modules\AdminCenterApi.psm1') -DisableNameChecking
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
@@ -124,6 +125,8 @@ else {
         if ($null -eq $bcAuthContext) {
             throw "Authentication failed"
         }
+        Initialize-AdminCenterAuthContext -bcAuthContext $bcAuthContext -settings $settings `
+            -preserveScopes:([bool]($authContextParams['scopes'] -or $authContextParams['resource']))
     } catch {
         throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
     }
@@ -167,9 +170,21 @@ else {
             Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as deploying from a PR is only supported in sandbox environments"
         }
         else {
-            $publishingResults = @{}
+            $hasPTEDependencies = $false
+            if ($scope -eq 'Dev' -and $deploymentSettings.DependencyInstallMode -ne 'ignore') {
+                foreach ($dependency in $dependencies) {
+                    $appJson = Get-AppJsonFromAppFile -appFile $dependency
+                    if ($appJson.idRanges.from -ge 50000 -and $appJson.idRanges.from -lt 100000) {
+                        $hasPTEDependencies = $true
+                        break
+                    }
+                }
+            }
+            if ($scope -eq 'PTE' -or $hasPTEDependencies) {
+                Initialize-PTEPublishingApi -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName
+            }
             if ($dependencies) {
-                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode -publishingResults $publishingResults
+                InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode
             }
             if ($unknownDependencies) {
                 InstallUnknownDependencies -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $unknownDependencies -installMode $deploymentSettings.DependencyInstallMode
@@ -194,12 +209,10 @@ else {
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages -replacePackageId
             }
             else {
-                # The shared AL-Go publisher selects the API based on the target environment version.
                 $parameters = @{
                     "bcAuthContext" = $bcAuthContext
                     "environment" = $deploymentSettings.EnvironmentName
                     "appFiles" = $apps
-                    "publishingResults" = $publishingResults
                 }
                 if ($deploymentSettings.SyncMode) {
                     if (@('Add','ForceSync') -notcontains $deploymentSettings.SyncMode) {
@@ -218,7 +231,7 @@ else {
 
                 if (($deploymentSettings['unpublishOldVersions'] -is [bool]) -and $deploymentSettings['unpublishOldVersions']) {
                     Write-Host "Checking cleanup of old app versions"
-                    UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps -publishingResults $publishingResults
+                    UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
                 }
             }
         }
