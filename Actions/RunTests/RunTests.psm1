@@ -35,13 +35,17 @@ function Get-TestAppsToRun {
         [string] $alToolPath = ''
     )
 
+    # Locate packages compiled from this project's test folders.
     $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
+    # Initialize the selected apps and de-duplication lookups.
     $testApps = @()
     $selectedAppPaths = @{}
     $normalTestAppIds = @{}
     $compiledApps = @()
-    $installedTestAppPaths = @()
+    $dependencyTestAppPaths = @()
+
+    # Read the app IDs that identify normal test folders and exclude BCPT test folders.
     foreach ($testFolder in @($settings.testFolders)) {
         $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
         try {
@@ -59,41 +63,45 @@ function Get-TestAppsToRun {
         $normalTestAppIds[$sourceAppId] = $true
     }
 
+    # Collect all test packages produced by the compilation step.
     if (Test-Path $testAppOutputFolder) {
         $compiledApps = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)
     }
 
+    # Collect eligible dependency test packages supplied through installTestAppsJson.
     if ($installTestAppsJson) {
         try {
-            $installedTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
+            $dependencyTestApps = Get-Content -Path $installTestAppsJson -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
         }
         catch {
             throw "Failed to parse JSON file at path '$installTestAppsJson'. Error: $($_.Exception.Message)"
         }
-        foreach ($installedTestApp in @($installedTestApps)) {
-            $installedTestAppValue = "$installedTestApp"
-            $isParenthesized = $installedTestAppValue.StartsWith("(") -and $installedTestAppValue.EndsWith(")")
+        foreach ($dependencyTestApp in @($dependencyTestApps)) {
+            $dependencyTestAppValue = "$dependencyTestApp"
+            $isParenthesized = $dependencyTestAppValue.StartsWith("(") -and $dependencyTestAppValue.EndsWith(")")
             if ($isParenthesized -and -not $settings.runTestsInAllInstalledTestApps) {
                 continue
             }
-            $installedTestAppPath = if ($isParenthesized) {
-                $installedTestAppValue.Substring(1, $installedTestAppValue.Length - 2)
+            $dependencyTestAppPath = if ($isParenthesized) {
+                $dependencyTestAppValue.Substring(1, $dependencyTestAppValue.Length - 2)
             }
             else {
-                $installedTestAppValue
+                $dependencyTestAppValue
             }
-            if ([string]::IsNullOrWhiteSpace($installedTestAppPath)) {
+            if ([string]::IsNullOrWhiteSpace($dependencyTestAppPath)) {
                 throw "The installed test app list '$installTestAppsJson' contains a blank path."
             }
-            $installedTestAppPaths += $installedTestAppPath
+            $dependencyTestAppPaths += $dependencyTestAppPath
         }
     }
 
-    if (($compiledApps.Count -gt 0 -or $installedTestAppPaths.Count -gt 0) -and
+    # Resolve AlTool only when at least one app package needs discovery.
+    if (($compiledApps.Count -gt 0 -or $dependencyTestAppPaths.Count -gt 0) -and
         [string]::IsNullOrWhiteSpace($alToolPath)) {
         $alToolPath = GetAlToolPath
     }
 
+    # Discover compiled packages and select only normal test apps once per app ID.
     $selectedCompiledAppIds = @{}
     foreach ($compiledApp in $compiledApps) {
         try {
@@ -116,26 +124,28 @@ function Get-TestAppsToRun {
         }
     }
 
-    foreach ($installedTestAppPath in $installedTestAppPaths) {
-        if ($selectedAppPaths.ContainsKey($installedTestAppPath)) {
+    # Discover dependency test packages that were not already selected as compiled apps.
+    foreach ($dependencyTestAppPath in $dependencyTestAppPaths) {
+        if ($selectedAppPaths.ContainsKey($dependencyTestAppPath)) {
             continue
         }
         try {
-            $installedAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $installedTestAppPath
-            $installedAppId = "$($installedAppDiscovery.AppId)"
+            $dependencyAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $dependencyTestAppPath
+            $dependencyAppId = "$($dependencyAppDiscovery.AppId)"
         }
         catch {
-            throw "Failed to discover installed test app metadata and tests from '$installedTestAppPath'. Error: $($_.Exception.Message)"
+            throw "Failed to discover installed test app metadata and tests from '$dependencyTestAppPath'. Error: $($_.Exception.Message)"
         }
         $testApps += [PSCustomObject]@{
-            Path       = $installedTestAppPath
-            Id         = $installedAppId
-            Name       = "$($installedAppDiscovery.AppName)"
-            Codeunits  = @($installedAppDiscovery.Codeunits)
+            Path       = $dependencyTestAppPath
+            Id         = $dependencyAppId
+            Name       = "$($dependencyAppDiscovery.AppName)"
+            Codeunits  = @($dependencyAppDiscovery.Codeunits)
         }
-        $selectedAppPaths[$installedTestAppPath] = $true
+        $selectedAppPaths[$dependencyTestAppPath] = $true
     }
 
+    # Return local compiled apps first, followed by dependency test apps.
     return @($testApps)
 }
 
