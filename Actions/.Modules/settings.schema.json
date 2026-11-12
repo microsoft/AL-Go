@@ -1122,7 +1122,6 @@
                         "description": "Apply settings when GITHUB_EVENT_NAME matches one of these values."
                     },
                     "settings": {
-                        "$ref": "#",
                         "description": "The settings to apply when all specified conditions are met."
                     }
                 },
