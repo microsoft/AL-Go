@@ -212,7 +212,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
         }
     }
 
-    Context 'Get-AlToolTestCodeunits' {
+    Context 'Get-AlToolTestEnabledCodeunits' {
         InModuleScope AlToolTestRunner {
         It 'Enumerates codeunits and filters disabled methods and whole codeunits' {
             $discovered = @(
@@ -232,7 +232,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 }
             )
 
-            $codeunits = @(Get-AlToolTestCodeunits -DiscoveredCodeunits $discovered -DisabledTests @(
+            $codeunits = @(Get-AlToolTestEnabledCodeunits -Codeunits $discovered -DisabledTests @(
                     @{ codeunitName = 'My Tests'; method = 'TestTwo' },
                     @{ codeunitName = 'Whole CU'; method = '*' }
                 ))
@@ -274,7 +274,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 }
             )
 
-            $codeunits = @(Get-AlToolTestCodeunits -DiscoveredCodeunits $discovered -DisabledTests @(
+            $codeunits = @(Get-AlToolTestEnabledCodeunits -Codeunits $discovered -DisabledTests @(
                     @{ codeunitName = 'MY TESTS'; method = 'testtwo' },
                     @{ codeunitName = 'my tests'; method = @('TESTTHREE') },
                     @{ codeunitName = 'My Tests'; method = 'TestTwo' },
@@ -295,7 +295,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 }
             )
 
-            @(Get-AlToolTestCodeunits -DiscoveredCodeunits $discovered -DisabledTests @(
+            @(Get-AlToolTestEnabledCodeunits -Codeunits $discovered -DisabledTests @(
                     @{ codeunitName = 'My Tests'; method = 'OnlyTest' }
                 )).Count | Should -Be 0
         }
@@ -941,7 +941,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 return @{ Server = 'http://test'; ServerInstance = 'BC'; Port = 7049 }
             }
             Mock -ModuleName AlToolTestRunner Get-AlToolCompany { return 'CRONUS' }
-            Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits { return @($script:testRunCodeunit) }
+            Mock -ModuleName AlToolTestRunner Get-AlToolTestEnabledCodeunits { return @($script:testRunCodeunit) }
             Mock -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch {
                 return @{
                     Results    = @{ '130001' = @(
@@ -1010,7 +1010,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                 Tests = @('TestTwo')
             }
             $script:testRunParameters.Codeunits = @($script:testRunCodeunit, $secondCodeunit)
-            Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits {
+            Mock -ModuleName AlToolTestRunner Get-AlToolTestEnabledCodeunits {
                 return @($script:testRunCodeunit, $secondCodeunit)
             }
             Mock -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch {
@@ -1026,8 +1026,8 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
 
             Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
 
-            Should -Invoke -ModuleName AlToolTestRunner Get-AlToolTestCodeunits -Times 1 -Exactly -ParameterFilter {
-                $DiscoveredCodeunits.Count -eq 2 -and
+            Should -Invoke -ModuleName AlToolTestRunner Get-AlToolTestEnabledCodeunits -Times 1 -Exactly -ParameterFilter {
+                $Codeunits.Count -eq 2 -and
                 $DisabledTests.Count -eq 0
             }
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 1 -Exactly -ParameterFilter {
@@ -1180,7 +1180,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
         }
 
         It 'Skips AlTool when enumeration finds no enabled codeunits' {
-            Mock -ModuleName AlToolTestRunner Get-AlToolTestCodeunits { return @() }
+            Mock -ModuleName AlToolTestRunner Get-AlToolTestEnabledCodeunits { return @() }
 
             Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 0 -Exactly

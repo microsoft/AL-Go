@@ -178,6 +178,7 @@ Describe 'RunTests.psm1 Tests' {
             $testApps[1].Id | Should -Be $installedApp1Id
             $testApps[1].Name | Should -Be 'Installed1'
             @($testApps.Path) | Should -Not -Contain $installedApp2
+            Should -Invoke -ModuleName RunTests GetAlToolPath -Times 1 -Exactly
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

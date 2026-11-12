@@ -40,6 +40,8 @@ function Get-TestAppsToRun {
     $testApps = @()
     $selectedAppPaths = @{}
     $normalTestAppIds = @{}
+    $compiledApps = @()
+    $installedTestAppPaths = @()
     foreach ($testFolder in @($settings.testFolders)) {
         $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
         try {
@@ -58,30 +60,7 @@ function Get-TestAppsToRun {
     }
 
     if (Test-Path $testAppOutputFolder) {
-        $selectedCompiledAppIds = @{}
-        foreach ($compiledApp in @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)) {
-            if ([string]::IsNullOrWhiteSpace($alToolPath)) {
-                $alToolPath = GetAlToolPath
-            }
-            try {
-                $compiledAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $compiledApp.FullName
-                $compiledAppId = "$($compiledAppDiscovery.AppId)"
-            }
-            catch {
-                throw "Failed to discover compiled test app metadata and tests from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
-            }
-
-            if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
-                $testApps += [PSCustomObject]@{
-                    Path       = $compiledApp.FullName
-                    Id         = $compiledAppId
-                    Name       = "$($compiledAppDiscovery.AppName)"
-                    Codeunits  = @($compiledAppDiscovery.Codeunits)
-                }
-                $selectedCompiledAppIds[$compiledAppId] = $true
-                $selectedAppPaths[$compiledApp.FullName] = $true
-            }
-        }
+        $compiledApps = @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)
     }
 
     if ($installTestAppsJson) {
@@ -106,27 +85,55 @@ function Get-TestAppsToRun {
             if ([string]::IsNullOrWhiteSpace($installedTestAppPath)) {
                 throw "The installed test app list '$installTestAppsJson' contains a blank path."
             }
-            if ($selectedAppPaths.ContainsKey($installedTestAppPath)) {
-                continue
-            }
-            if ([string]::IsNullOrWhiteSpace($alToolPath)) {
-                $alToolPath = GetAlToolPath
-            }
-            try {
-                $installedAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $installedTestAppPath
-                $installedAppId = "$($installedAppDiscovery.AppId)"
-            }
-            catch {
-                throw "Failed to discover installed test app metadata and tests from '$installedTestAppPath'. Error: $($_.Exception.Message)"
-            }
-            $testApps += [PSCustomObject]@{
-                Path       = $installedTestAppPath
-                Id         = $installedAppId
-                Name       = "$($installedAppDiscovery.AppName)"
-                Codeunits  = @($installedAppDiscovery.Codeunits)
-            }
-            $selectedAppPaths[$installedTestAppPath] = $true
+            $installedTestAppPaths += $installedTestAppPath
         }
+    }
+
+    if (($compiledApps.Count -gt 0 -or $installedTestAppPaths.Count -gt 0) -and
+        [string]::IsNullOrWhiteSpace($alToolPath)) {
+        $alToolPath = GetAlToolPath
+    }
+
+    $selectedCompiledAppIds = @{}
+    foreach ($compiledApp in $compiledApps) {
+        try {
+            $compiledAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $compiledApp.FullName
+            $compiledAppId = "$($compiledAppDiscovery.AppId)"
+        }
+        catch {
+            throw "Failed to discover compiled test app metadata and tests from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
+        }
+
+        if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
+            $testApps += [PSCustomObject]@{
+                Path       = $compiledApp.FullName
+                Id         = $compiledAppId
+                Name       = "$($compiledAppDiscovery.AppName)"
+                Codeunits  = @($compiledAppDiscovery.Codeunits)
+            }
+            $selectedCompiledAppIds[$compiledAppId] = $true
+            $selectedAppPaths[$compiledApp.FullName] = $true
+        }
+    }
+
+    foreach ($installedTestAppPath in $installedTestAppPaths) {
+        if ($selectedAppPaths.ContainsKey($installedTestAppPath)) {
+            continue
+        }
+        try {
+            $installedAppDiscovery = Get-AlToolAppTests -AlToolPath $alToolPath -AppFile $installedTestAppPath
+            $installedAppId = "$($installedAppDiscovery.AppId)"
+        }
+        catch {
+            throw "Failed to discover installed test app metadata and tests from '$installedTestAppPath'. Error: $($_.Exception.Message)"
+        }
+        $testApps += [PSCustomObject]@{
+            Path       = $installedTestAppPath
+            Id         = $installedAppId
+            Name       = "$($installedAppDiscovery.AppName)"
+            Codeunits  = @($installedAppDiscovery.Codeunits)
+        }
+        $selectedAppPaths[$installedTestAppPath] = $true
     }
 
     return @($testApps)

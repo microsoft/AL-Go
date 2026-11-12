@@ -218,20 +218,20 @@ function Get-DisabledTestKeySet {
 
 <#
 .SYNOPSIS
-    Filters discovered test methods for execution.
+    Gets test codeunits with disabled tests removed.
 .DESCRIPTION
-    Converts the validated `al listtests --appfile` records into testgroups input after removing
-    configured disabled methods and codeunits.
-.PARAMETER DiscoveredCodeunits
-    Codeunits returned by Get-AlToolAppTests.
+    Converts test codeunit records into testgroups input after removing configured disabled methods
+    and codeunits.
+.PARAMETER Codeunits
+    Codeunit records with Id, Name, Namespace, and Methods properties.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
 .OUTPUTS
     [object[]] Codeunit objects with .Id, .Name, .Tests (enabled method name array).
 #>
-function Get-AlToolTestCodeunits {
+function Get-AlToolTestEnabledCodeunits {
     param(
-        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $DiscoveredCodeunits,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $Codeunits,
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @()
     )
 
@@ -245,7 +245,7 @@ function Get-AlToolTestCodeunits {
 
     $result = @()
     $disabledCount = 0
-    foreach ($cu in $DiscoveredCodeunits) {
+    foreach ($cu in $Codeunits) {
         $cuNameLower = "$($cu.Name)".ToLowerInvariant()
         $methodRecords = @($cu.Methods)
         $methods = @($methodRecords | ForEach-Object { "$($_.Name)" })
@@ -734,7 +734,7 @@ function Add-JUnitTestSuite {
 .PARAMETER TestType
     Reserved for future AlTool TestType filtering. The current implementation does not apply it.
 .PARAMETER Codeunits
-    Test codeunits discovered from the exact app package by `al listtests --appfile`.
+    Test codeunit records with Id, Name, Namespace, and Methods properties.
 .PARAMETER DisabledTests
     Hashtable entries describing test methods or codeunits excluded from the run.
 .PARAMETER AlToolPath
@@ -773,7 +773,7 @@ function Invoke-AlToolTestRun {
         $env:BC_SERVER_USERNAME = $Credential.UserName
         $env:BC_SERVER_PASSWORD = $Credential.GetNetworkCredential().Password
 
-        $codeunits = @(Get-AlToolTestCodeunits -DiscoveredCodeunits $Codeunits -DisabledTests $DisabledTests)
+        $codeunits = @(Get-AlToolTestEnabledCodeunits -Codeunits $Codeunits -DisabledTests $DisabledTests)
         Write-Host "Selected $($codeunits.Count) discovered test codeunit(s) for app '$AppName'."
         if ($codeunits.Count -eq 0) {
             Write-Host "No test codeunits to run for app '$AppName'; nothing to do."
