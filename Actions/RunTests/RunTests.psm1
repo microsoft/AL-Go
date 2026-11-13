@@ -434,7 +434,6 @@ function Invoke-AlGoTestRun {
                         $runTestsParams["testType"] = $testType
                     }
                     if ($coverageInvocationActive) {
-                        $runTestsParams["codeCoverageMode"] = "line"
                         $runTestsParams["codeCoverageFormats"] = @($coverageSession.Formats)
                         $runTestsParams["codeCoverageSourceRoots"] = @($coverageSourceRoots)
                         $runTestsParams["codeCoverageApplicationIds"] = @($coverageApplicationIds)
@@ -467,7 +466,6 @@ function Invoke-AlGoTestRun {
                         JUnitResultFileName = $testResultsFile
                     }
                     if ($coverageInvocationActive) {
-                        $alToolParameters.CoverageMode = "line"
                         $alToolParameters.CoverageOutputPath = $coverageOutputPath
                         $alToolParameters.CoverageFormats = @($coverageSession.Formats)
                         $alToolParameters.CoverageSourceRoots = @($coverageSourceRoots)

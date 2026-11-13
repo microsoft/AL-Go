@@ -204,7 +204,7 @@ Describe "RunTests Action Tests" {
                 enabled                 = $true
                 testType                = 'IntegrationTest'
                 codeCoverageEnabled     = $true
-                codeCoverageFormats     = @('bc-json')
+                codeCoverageGenerateCobertura = $false
                 codeCoverageSummary     = 'both'
             }
         } | ConvertTo-Json -Depth 4
@@ -224,7 +224,7 @@ Describe "RunTests Action Tests" {
             $settings.useSeparateTestAction.enabled | Should -BeTrue
             $settings.useSeparateTestAction.testType | Should -Be 'IntegrationTest'
             $settings.useSeparateTestAction.codeCoverageEnabled | Should -BeTrue
-            $settings.useSeparateTestAction.codeCoverageFormats | Should -Be @('bc-json')
+            $settings.useSeparateTestAction.codeCoverageGenerateCobertura | Should -BeFalse
             $settings.useSeparateTestAction.codeCoverageSummary | Should -Be 'both'
             return @{ testFolders = @() }
         }

@@ -2,7 +2,6 @@
   "project": "Project1",
   "projectName": "Project 1",
   "buildMode": "Default",
-  "mode": "line",
   "formats": [ "bc-json", "cobertura" ],
   "sourceRoots": [
     "Project1/App1.abc.Test",

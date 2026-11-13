@@ -875,8 +875,6 @@ function Get-CoverageDiagnosticAssessment {
     $lineAffectedSources = @{}
     $ignoredDiagnostics = 0
     $diagnostics = @(Get-CoverageArray $Report.diagnostics | ForEach-Object { "$_" })
-    $coverageMode = "$($Report.coverageMode)".ToLowerInvariant()
-
     if (-not [bool]$Report.complete) {
         $notices += "The BC JSON report declares global enrichment incomplete."
     }
@@ -888,13 +886,7 @@ function Get-CoverageDiagnosticAssessment {
         }
 
         if ($diagnostic -match '^AL object ([0-9]+):([0-9]+) is defined by multiple source files and was not enriched\.$') {
-            if ($coverageMode -eq "line") {
-                $ignoredDiagnostics++
-            }
-            else {
-                $lineReasons += "A duplicate AL object could not be uniquely enriched."
-                $lineGlobalUnsafe = $true
-            }
+            $ignoredDiagnostics++
             continue
         }
 
@@ -934,13 +926,7 @@ function Get-CoverageDiagnosticAssessment {
 
         if ($diagnostic.StartsWith("Coverage method identity resolution failed for '",
                 [System.StringComparison]::Ordinal)) {
-            if ($coverageMode -eq "line") {
-                $ignoredDiagnostics++
-            }
-            else {
-                $lineReasons += "Coverage method identity could not be resolved."
-                $lineGlobalUnsafe = $true
-            }
+            $ignoredDiagnostics++
             continue
         }
 

@@ -473,10 +473,7 @@
                 "enabled": false,
                 "testType": "",
                 "codeCoverageEnabled": false,
-                "codeCoverageFormats": [
-                    "bc-json",
-                    "cobertura"
-                ],
+                "codeCoverageGenerateCobertura": true,
                 "codeCoverageSummary": "both"
             },
             "description": "PREVIEW: Configuration for running normal tests in a separate RunTests action. See https://aka.ms/ALGoSettings#useSeparateTestAction",
@@ -496,22 +493,10 @@
                     "default": false,
                     "description": "When true, the built-in separate RunTests action collects executable-line coverage on container platform 30.0.56026.0 or later. Unsupported or unconfirmed platform versions produce a warning and continue tests without coverage."
                 },
-                "codeCoverageFormats": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string",
-                        "enum": [
-                            "bc-json",
-                            "cobertura"
-                        ]
-                    },
-                    "uniqueItems": true,
-                    "default": [
-                        "bc-json",
-                        "cobertura"
-                    ],
-                    "description": "Coverage artifact formats produced for every selected test app. Supported values are bc-json and cobertura. Project and repository summaries require bc-json."
+                "codeCoverageGenerateCobertura": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "When true, produces a Cobertura interoperability artifact in addition to the BC JSON artifact required for AL-Go coverage analysis."
                 },
                 "codeCoverageSummary": {
                     "type": "string",
@@ -522,7 +507,7 @@
                         "both"
                     ],
                     "default": "both",
-                    "description": "Controls GitHub executable-line coverage visualization when code coverage is enabled: none, project, repository, or both. Use none when collecting only Cobertura."
+                    "description": "Controls GitHub executable-line coverage visualization when code coverage is enabled: none, project, repository, or both."
                 }
             },
             "additionalProperties": false

@@ -9,7 +9,7 @@ A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "tes
     "enabled": true,
     "testType": "",
     "codeCoverageEnabled": false,
-    "codeCoverageFormats": [ "bc-json", "cobertura" ],
+    "codeCoverageGenerateCobertura": true,
     "codeCoverageSummary": "both"
   }
 }
@@ -19,7 +19,7 @@ The separate action is used when normal tests are enabled and the build uses one
 
 The built-in runner uses AlTool, honors `disabledTests.json`, and supports the optional `testType` values `UnitTest`, `IntegrationTest`, and `Uncategorized`. Blank runs all supported test types. Test results continue to appear in AnalyzeTests and the TestResults artifact, and test failures include the refreshed container event log.
 
-Set `codeCoverageEnabled` to `true` to collect executable-line coverage. Coverage requires Business Central container platform 30.0.56026.0 or later. Older or unconfirmed versions produce a warning and continue running tests without coverage. `codeCoverageFormats` supports `bc-json`, `cobertura`, or both. `codeCoverageSummary` controls project and repository job summaries with `none`, `project`, `repository`, or `both`. Summaries require `bc-json`; use `none` for Cobertura-only collection. Coverage files are published in the CodeCoverage artifact. Configured app and test folders without AL source files are skipped automatically. Line summaries ignore duplicate-object and method-identity enrichment diagnostics, but remain incomplete when the server reports missing lines that cannot be safely mapped.
+Set `codeCoverageEnabled` to `true` to collect executable-line coverage. Coverage requires Business Central container platform 30.0.56026.0 or later. Older or unconfirmed versions produce a warning and continue running tests without coverage. BC JSON is always produced for AL-Go analysis. Set `codeCoverageGenerateCobertura` to `false` to omit the additional Cobertura interoperability artifact. `codeCoverageSummary` controls project and repository job summaries with `none`, `project`, `repository`, or `both`. Coverage files are published in the CodeCoverage artifact. Configured app and test folders without AL source files are skipped automatically. Line summaries ignore duplicate-object and method-identity enrichment diagnostics, but remain incomplete when the server reports missing lines that cannot be safely mapped.
 
 Projects with a custom `.AL-Go/RunTestsInBcContainer.ps1` can continue using its existing single-parameter signature. Before enabling coverage, update the override to use the coverage values AL-Go adds to the existing `$parameters` hashtable on supported containers. The context includes regular source-root application IDs, and compatible preview AlTool builds can pass matching compiler-instrumented packages through the optional runner `CoverageAppPaths` parameter. Coverage disabled and unsupported behavior is unchanged. See the [RunTests action documentation](Actions/RunTests/README.md) for the override example and supported fields.
 

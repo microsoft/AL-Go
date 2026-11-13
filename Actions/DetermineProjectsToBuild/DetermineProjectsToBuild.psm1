@@ -133,6 +133,10 @@ function CreateBuildDimensions {
                 @($buildModeSettings.additionalCountries).Count -eq 0
             $codeCoverageRepositorySummary = $codeCoverageExpected -and
                 "$($separateTestSettings.codeCoverageSummary)" -in @("repository", "both")
+            $codeCoverageFormats = @("bc-json")
+            if ([bool]$separateTestSettings.codeCoverageGenerateCobertura) {
+                $codeCoverageFormats += "cobertura"
+            }
 
             $buildDimensions += @{
                 project                       = $project
@@ -142,8 +146,7 @@ function CreateBuildDimensions {
                 githubRunnerShell             = $githubRunnerShell
                 codeCoverageExpected          = $codeCoverageExpected
                 codeCoverageRepositorySummary = $codeCoverageRepositorySummary
-                codeCoverageMode              = "line"
-                codeCoverageFormats           = @($separateTestSettings.codeCoverageFormats)
+                codeCoverageFormats           = @($codeCoverageFormats)
             }
         }
     }

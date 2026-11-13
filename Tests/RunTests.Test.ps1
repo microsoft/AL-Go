@@ -1251,7 +1251,6 @@ Describe 'RunTests.psm1 Tests' {
                 param(
                     $ExtensionId,
                     $AppName,
-                    $CoverageMode,
                     $CoverageOutputPath,
                     [string[]] $CoverageFormats,
                     [string[]] $CoverageSourceRoots,
@@ -1264,7 +1263,6 @@ Describe 'RunTests.psm1 Tests' {
                 $script:capturedCoverageRuns += [PSCustomObject]@{
                     ExtensionId        = $ExtensionId
                     AppName            = $AppName
-                    CoverageMode       = $CoverageMode
                     CoverageOutputPath = $CoverageOutputPath
                     CoverageFormats    = @($CoverageFormats)
                     CoverageSourceRoots = @($CoverageSourceRoots)
@@ -1274,7 +1272,7 @@ Describe 'RunTests.psm1 Tests' {
                 New-Item -Path $CoverageOutputPath -ItemType Directory -Force | Out-Null
                 @{
                     schemaVersion = '1.0'
-                    coverageMode = $CoverageMode
+                    coverageMode = 'line'
                     complete = $isComplete
                 } | ConvertTo-Json | Set-Content -LiteralPath (
                     Join-Path $CoverageOutputPath 'coverage.bc.json'
@@ -1307,10 +1305,10 @@ Describe 'RunTests.psm1 Tests' {
                 appFolders                     = @('App')
                 testFolders                    = $testFolders
                 useSeparateTestAction           = @{
-                    enabled                 = $true
-                    testType                = ''
-                    codeCoverageEnabled     = $true
-                    codeCoverageFormats     = @('bc-json', 'cobertura')
+                    enabled                       = $true
+                    testType                      = ''
+                    codeCoverageEnabled           = $true
+                    codeCoverageGenerateCobertura = $true
                 }
             }
 
@@ -1323,7 +1321,6 @@ Describe 'RunTests.psm1 Tests' {
             Should -Invoke -ModuleName RunTests Get-AlGoCodeCoverageCapability -Times 1 -Exactly
             $script:capturedCoverageRuns.Count | Should -Be 2
             $script:coverageStatusObservedDuringRuns | Should -Be @($false, $false)
-            $script:capturedCoverageRuns[0].CoverageMode | Should -Be 'line'
             $script:capturedCoverageRuns[0].CoverageFormats | Should -Be @('bc-json', 'cobertura')
             $script:capturedCoverageRuns[0].CoverageSourceRoots | Should -Contain (
                 [System.IO.Path]::GetFullPath((Join-Path $projectPath 'App'))
@@ -1344,12 +1341,11 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus = Get-Content -LiteralPath (Join-Path $coverageRoot 'coverage-status.json') `
                 -Raw -Encoding UTF8 | ConvertFrom-Json
             $coverageStatus.PSObject.Properties.Name |
-                Should -Be @('project', 'projectName', 'buildMode', 'mode', 'formats', 'sourceRoots',
+                Should -Be @('project', 'projectName', 'buildMode', 'formats', 'sourceRoots',
                     'sourceRootDetails', 'runs')
             $coverageStatus.project | Should -Be 'Projects/Coverage'
             $coverageStatus.projectName | Should -Be 'Coverage Project'
             $coverageStatus.buildMode | Should -Be 'Clean'
-            $coverageStatus.mode | Should -Be 'line'
             $coverageStatus.formats | Should -Be @('bc-json', 'cobertura')
             $coverageStatus.sourceRoots | Should -Be @('App', 'TestApp1', 'TestApp2')
             $coverageStatus.sourceRootDetails.Count | Should -Be 3
@@ -1420,10 +1416,10 @@ Describe 'RunTests.psm1 Tests' {
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
                 useSeparateTestAction           = @{
-                    enabled                 = $true
-                    testType                = ''
-                    codeCoverageEnabled     = $true
-                    codeCoverageFormats     = @('bc-json', 'cobertura')
+                    enabled                       = $true
+                    testType                      = ''
+                    codeCoverageEnabled           = $true
+                    codeCoverageGenerateCobertura = $true
                 }
             }
 
@@ -1468,10 +1464,10 @@ Describe 'RunTests.psm1 Tests' {
                 treatTestFailuresAsWarnings    = $false
                 testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
                 useSeparateTestAction           = @{
-                    enabled                 = $true
-                    testType                = ''
-                    codeCoverageEnabled     = $true
-                    codeCoverageFormats     = @('bc-json')
+                    enabled                       = $true
+                    testType                      = ''
+                    codeCoverageEnabled           = $true
+                    codeCoverageGenerateCobertura = $false
                 }
             }
 
@@ -1482,7 +1478,6 @@ Describe 'RunTests.psm1 Tests' {
             } | Should -Throw '*coverage export failed*'
 
             Should -Invoke -ModuleName RunTests Invoke-AlToolTestRun -Times 1 -Exactly -ParameterFilter {
-                $CoverageMode -eq 'line' -and
                 $CoverageFormats -eq @('bc-json') -and
                 -not [string]::IsNullOrWhiteSpace($CoverageOutputPath)
             }
@@ -1662,7 +1657,7 @@ Describe 'RunTests.psm1 Tests' {
                     enabled = $true
                     testType = ''
                     codeCoverageEnabled = $true
-                    codeCoverageFormats = @('bc-json')
+                    codeCoverageGenerateCobertura = $false
                 }
             }
 
@@ -1773,7 +1768,7 @@ Describe 'RunTests.psm1 Tests' {
                     enabled = $true
                     testType = 'IntegrationTest'
                     codeCoverageEnabled = $true
-                    codeCoverageFormats = @('bc-json', 'cobertura')
+                    codeCoverageGenerateCobertura = $true
                 }
             }
             $script:coverageOverrideCalls = 0
@@ -1838,7 +1833,6 @@ Describe 'RunTests.psm1 Tests' {
                     'codeCoverageApplicationIds',
                     'codeCoverageFormats',
                     'codeCoverageIsComplete',
-                    'codeCoverageMode',
                     'codeCoverageOutputPath',
                     'codeCoverageSourceRoots'
                 )
@@ -1873,7 +1867,7 @@ Describe 'RunTests.psm1 Tests' {
                     enabled = $true
                     testType = 'IntegrationTest'
                     codeCoverageEnabled = $true
-                    codeCoverageFormats = @('bc-json')
+                    codeCoverageGenerateCobertura = $false
                 }
             }
             $override = {
@@ -1910,7 +1904,7 @@ Describe 'RunTests.psm1 Tests' {
                     enabled = $true
                     testType = 'IntegrationTest'
                     codeCoverageEnabled = $true
-                    codeCoverageFormats = @('bc-json')
+                    codeCoverageGenerateCobertura = $false
                 }
             }
             $script:unsupportedCoverageCalls = 0
@@ -1955,7 +1949,7 @@ Describe 'RunTests.psm1 Tests' {
                     enabled = $true
                     testType = 'Uncategorized'
                     codeCoverageEnabled = $true
-                    codeCoverageFormats = @('bc-json')
+                    codeCoverageGenerateCobertura = $false
                 }
             }
             $override = {

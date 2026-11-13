@@ -242,7 +242,7 @@ A coverage-aware `.AL-Go/RunTestsInBcContainer.ps1` receives:
 - Historical test parameters in `$parameters`.
 - Coverage-only values in the same hashtable when coverage is supported.
 
-The coverage values are `codeCoverageMode`, `codeCoverageFormats`, `codeCoverageSourceRoots`, `codeCoverageOutputPath`, `codeCoverageAlToolModulePath`, `codeCoverageAlToolPath`, and `codeCoverageIsComplete`. The override runs once per app and must return a Boolean test result. For supported coverage it must write coverage into `codeCoverageOutputPath` and set `codeCoverageIsComplete`. AL-Go retains ownership of artifact validation, run state, compaction, and status publication.
+The coverage values are `codeCoverageFormats`, `codeCoverageSourceRoots`, `codeCoverageOutputPath`, `codeCoverageAlToolModulePath`, `codeCoverageAlToolPath`, and `codeCoverageIsComplete`. The formats always include `bc-json`; `cobertura` is included when `codeCoverageGenerateCobertura` is true. The override runs once per app and must return a Boolean test result. For supported coverage it must write coverage into `codeCoverageOutputPath` and set `codeCoverageIsComplete`. AL-Go retains ownership of artifact validation, run state, compaction, and status publication.
 
 When coverage is disabled or unsupported, AL-Go omits the coverage values and the override runs with the historical parameter shape.
 
@@ -282,7 +282,7 @@ After each runner invocation, the coordinator validates:
 - Every requested fixed artifact exists.
 - BC JSON is a valid complete document.
 - `schemaVersion` is `1.0`.
-- Report mode is the requested session mode.
+- Report mode is `line`.
 - Structured and file completeness agree.
 
 The run becomes `complete`, `incomplete`, or `failed`. Test pass or failure is independent from coverage completeness, so a failed test app can still contribute valid coverage.
@@ -299,7 +299,7 @@ For every queued report, the worker:
 1. Merges lines by canonical semantic identity.
 
 Duplicate line facts use OR semantics: a semantic line is covered when any duplicate has a positive hit count.
-For line-mode assessment, duplicate-object and method-identity enrichment diagnostics are notices because they do not remove an otherwise exported executable line. A server missing-line summary remains globally unsafe because its omitted lines have no structured source identities that AL-Go can validate. Procedure-capable modes retain strict duplicate-object and method-identity handling.
+Duplicate-object and method-identity enrichment diagnostics are notices because they do not remove an otherwise exported executable line. A server missing-line summary remains globally unsafe because its omitted lines have no structured source identities that AL-Go can validate.
 
 The worker retains only:
 

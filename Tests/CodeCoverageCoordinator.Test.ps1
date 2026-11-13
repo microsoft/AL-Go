@@ -56,7 +56,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                     testFolders = @("Test")
                     useSeparateTestAction = @{
                         codeCoverageEnabled = $true
-                        codeCoverageFormats = @($formats)
+                        codeCoverageGenerateCobertura = "cobertura" -in $formats
                     }
                 }
             }
@@ -98,7 +98,6 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                         Join-Path $session.RootPath "$($run.AppId)"
                     ))
                 formats = @($session.Formats)
-                mode = "line"
                 coverageIsComplete = $null
             }
         }
@@ -212,6 +211,8 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
         $status.runs[0].state | Should -Be "complete"
+        $status.formats | Should -Be @("bc-json", "cobertura")
+        $status.PSObject.Properties.Name | Should -Not -Contain "mode"
     }
 
     Context 'BC JSON metadata reader' {
@@ -387,12 +388,11 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $emptyRun = Get-CoordinatorRun -session $session -appId $testApps[0].Id
         $emptyContext = New-CoordinatorArtifactFixture -session $session -run $emptyRun
         InModuleScope AlToolTestRunner -Parameters @{
-            CoverageMode = $emptyContext.mode
             CoverageOutputPath = $emptyContext.coverageOutputPath
             CoverageFormats = $emptyContext.formats
         } {
-            Write-EmptyAlToolCoverageArtifacts -CoverageMode $CoverageMode `
-                -CoverageOutputPath $CoverageOutputPath -CoverageFormats $CoverageFormats
+            Write-EmptyAlToolCoverageArtifacts -CoverageOutputPath $CoverageOutputPath `
+                -CoverageFormats $CoverageFormats
         }
         $emptyContext.coverageIsComplete = $true
         Complete-AlGoCodeCoverageRun -session $session -run $emptyRun `
@@ -444,9 +444,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $metrics.Total | Should -Be 1
     }
 
-    It 'Accepts incomplete coverage and Cobertura-only coverage' {
+    It 'Accepts incomplete BC JSON coverage without generating Cobertura' {
         $projectPath = New-CoordinatorProject
-        $session = New-CoordinatorSession -projectPath $projectPath -formats @("cobertura")
+        $session = New-CoordinatorSession -projectPath $projectPath -formats @("bc-json")
         $run = Get-CoordinatorRun -session $session `
             -appId "22222222-2222-2222-2222-222222222222"
         $context = New-CoordinatorArtifactFixture -session $session -run $run
@@ -459,6 +459,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
         $status.runs[0].state | Should -Be "incomplete"
+        $status.formats | Should -Be @("bc-json")
     }
 
     It 'Fails closed when required artifacts are missing' {
@@ -639,7 +640,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             projectsToTest = @("Target")
             useSeparateTestAction = @{
                 codeCoverageEnabled = $true
-                codeCoverageFormats = @("bc-json")
+                codeCoverageGenerateCobertura = $false
             }
         }
         $analyzeRepo = {
@@ -664,7 +665,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             testFolders = @("Test")
             useSeparateTestAction = @{
                 codeCoverageEnabled = $true
-                codeCoverageFormats = @("bc-json")
+                codeCoverageGenerateCobertura = $false
             }
         }
 

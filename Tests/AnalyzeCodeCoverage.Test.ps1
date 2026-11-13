@@ -42,7 +42,6 @@ Describe "AnalyzeCodeCoverage" {
                 project = $Project
                 projectName = $ProjectName
                 buildMode = $BuildMode
-                mode = "all"
                 formats = @("bc-json")
                 sourceRoots = @($sourceRoot)
                 sourceRootDetails = @(@{
@@ -65,7 +64,7 @@ Describe "AnalyzeCodeCoverage" {
             }
             @{
                 schemaVersion = "1.0"
-                coverageMode = "all"
+                coverageMode = "line"
                 complete = $true
                 diagnostics = @()
                 sources = @($SourcePath)
@@ -94,14 +93,13 @@ Describe "AnalyzeCodeCoverage" {
         }
 
         function New-ExpectedDimension {
-            Param([string] $Project, [string] $ProjectName = "", [string] $BuildMode = "Default", [string] $Mode = "all")
+            Param([string] $Project, [string] $ProjectName = "", [string] $BuildMode = "Default")
             return @{
                 project = $Project
                 projectName = $ProjectName
                 buildMode = $BuildMode
                 codeCoverageExpected = $true
                 codeCoverageRepositorySummary = $true
-                codeCoverageMode = $Mode
                 codeCoverageFormats = @("bc-json")
             }
         }
@@ -136,18 +134,8 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Match "\| Line app \| 1/2 \| 50% \|"
     }
 
-    It "does not expose procedure-only reports as coverage" {
-        $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "Procedure")
-        $model.Complete | Should -BeFalse
-        $model.LineComplete | Should -BeFalse
-        $summary = New-ProjectCoverageSummary $model
-        $summary | Should -Match "\*\*Line coverage:\*\* unavailable"
-        $summary | Should -Not -Match "\*\*Procedure coverage"
-        $summary | Should -Match "No regular apps were available"
-    }
-
-    It "OR-unions executable lines from historical all-mode reports" {
-        $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "All")
+    It "OR-unions executable lines from multiple line-mode reports" {
+        $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "MultipleRuns")
         $model.Complete | Should -BeTrue
         $model.LineComplete | Should -BeTrue
         $model.Runs.Count | Should -Be 2
@@ -159,20 +147,6 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Not -Match "Procedure"
         $summary | Should -Not -Match "src/Shared\.Report\.al"
         $summary | Should -Not -Match "\| Source \|"
-    }
-
-    It "renders status only when only Cobertura was requested" {
-        $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "CoberturaOnly")
-        $model.Complete | Should -BeFalse
-        $summary = New-ProjectCoverageSummary $model
-        $summary | Should -Match "Coverage data is incomplete"
-        $summary | Should -Match "action logs for details"
-        $summary | Should -Match "raw CodeCoverage reports are retained only for debug reruns"
-        $summary | Should -Not -Match "bc-json coverage format"
-        $summary | Should -Match "No regular apps were available"
-        $summary | Should -Not -Match "%"
-        $summary | Should -Not -Match "Top 10 uncovered objects"
-        $summary | Should -Not -Match "executable lines"
     }
 
     It "treats missing and corrupt reports as incomplete without throwing" {
@@ -703,7 +677,7 @@ Describe "AnalyzeCodeCoverage" {
     }
 
     It "sorts and escapes project application rows deterministically" {
-        $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "All")
+        $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "MultipleRuns")
         $model.Apps = @(
             @{ AppName = "Zulu app"; AppId = "2"; RootIdentity = "z"; LineComplete = $false; Lines = @{} },
             @{ AppName = "A|<script> app"; AppId = "1"; RootIdentity = "a"; LineComplete = $false; Lines = @{} }
@@ -972,33 +946,6 @@ Describe "AnalyzeCodeCoverage" {
         $assessment.Notices -join " " | Should -Match "Ignored 2 diagnostics"
     }
 
-    It "keeps duplicate-object and method diagnostics unsafe outside line mode" {
-        $scope = @{
-            IncludedLineObjects = @{}
-            IncludedLineSources = @{}
-            ExcludedLineObjects = @{ "1|308" = $true }
-            ApplicationLines = @{}
-            LineReasons = @()
-            ExcludedLineFacts = 8
-        }
-        $report = @{
-            coverageMode = "all"
-            complete = $false
-            diagnostics = @(
-                "AL object 1:308 is defined by multiple source files and was not enriched.",
-                "Coverage method identity resolution failed for 'C:\repo\App': compiler error"
-            )
-        }
-
-        $assessment = Get-CoverageDiagnosticAssessment -Report $report -Scope $scope
-
-        $assessment.LineGlobalUnsafe | Should -BeTrue
-        @($assessment.LineReasons) | Should -Be @(
-            "A duplicate AL object could not be uniquely enriched.",
-            "Coverage method identity could not be resolved."
-        )
-    }
-
     It "keeps missing server lines globally unsafe without excluded facts" {
         $scope = @{
             IncludedLineObjects = @{}
@@ -1202,7 +1149,7 @@ Describe "AnalyzeCodeCoverage" {
 
         $buildOrder = @(@{
                 buildDimensions = @(
-                    (New-ExpectedDimension -Project "Project1" -ProjectName "Project 1" -Mode "line")
+                    (New-ExpectedDimension -Project "Project1" -ProjectName "Project 1")
                 )
             }) | ConvertTo-Json -Depth 10
         $repositoryModel = Get-RepositoryCoverageModel -CoveragePath $coveragePath `
@@ -1278,7 +1225,7 @@ Describe "AnalyzeCodeCoverage" {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $buildOrder = @(@{
                 buildDimensions = @(
-                    (New-ExpectedDimension -Project "Project1" -ProjectName "Project 1" -Mode "line")
+                    (New-ExpectedDimension -Project "Project1" -ProjectName "Project 1")
                 )
             }) | ConvertTo-Json -Depth 10
 

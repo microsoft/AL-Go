@@ -400,7 +400,7 @@ function New-EmptyProjectCoverageModel {
         Project = $Project
         ProjectName = $ProjectName
         BuildMode = $BuildMode
-        Mode = ""
+        Mode = "line"
         Formats = @()
         SourceRoots = @()
         SourceRootDetails = @()
@@ -424,9 +424,6 @@ function Get-ProjectCoverageModelFromStatus {
     $fallbackName = if ($ExpectedDimension) { "$($ExpectedDimension.projectName)" } else { "" }
     $fallbackBuildMode = if ($ExpectedDimension) { "$($ExpectedDimension.buildMode)" } else { "" }
     $model = New-EmptyProjectCoverageModel -Project $fallbackProject -ProjectName $fallbackName -BuildMode $fallbackBuildMode
-    if ($ExpectedDimension -and $ExpectedDimension.Contains("codeCoverageMode")) {
-        $model.Mode = "$($ExpectedDimension.codeCoverageMode)".ToLowerInvariant()
-    }
     $model.StatusPath = $StatusPath
     $statusJson = Read-CoverageJson -Path $StatusPath -Kind "Coverage status"
     if (-not $statusJson.Valid) {
@@ -435,7 +432,7 @@ function Get-ProjectCoverageModelFromStatus {
     }
 
     $status = $statusJson.Data
-    foreach ($property in @("project", "projectName", "buildMode", "mode", "formats", "sourceRoots", "runs")) {
+    foreach ($property in @("project", "projectName", "buildMode", "formats", "sourceRoots", "runs")) {
         if (-not $status.Contains($property)) {
             $model.Reasons = @("Coverage status is missing required data.")
             return $model
@@ -454,7 +451,6 @@ function Get-ProjectCoverageModelFromStatus {
     $model.Project = "$($status.project)"
     $model.ProjectName = "$($status.projectName)"
     $model.BuildMode = "$($status.buildMode)"
-    $model.Mode = "$($status.mode)".ToLowerInvariant()
     $model.Formats = $formats
     $model.SourceRoots = $sourceRoots
     $model.SourceRootDetails = @(Get-CoverageSourceRootDetails -Status $status -SourceRoots $sourceRoots)
@@ -490,9 +486,6 @@ function Get-ProjectCoverageModelFromStatus {
     }
     $reasons = @()
 
-    if (-not (Test-CoverageMode $model.Mode)) {
-        $reasons += "Coverage status mode is not supported."
-    }
     if ("bc-json" -notin $formats) {
         $reasons += "The bc-json coverage format was not requested."
     }
@@ -502,10 +495,6 @@ function Get-ProjectCoverageModelFromStatus {
                 (ConvertTo-CoverageDimensionIdentity $model.Project) -or
             "$($ExpectedDimension.buildMode)" -ine $model.BuildMode) {
             $reasons += "Coverage status does not match the expected project and build mode."
-        }
-        $expectedMode = "$($ExpectedDimension.codeCoverageMode)".ToLowerInvariant()
-        if (-not (Test-CoverageMode $expectedMode) -or $expectedMode -ne $model.Mode) {
-            $reasons += "Coverage mode does not match the expected build dimension."
         }
         try {
             $expectedFormats = @(Get-CoverageArray $ExpectedDimension.codeCoverageFormats |
@@ -714,8 +703,7 @@ function Get-ProjectCoverageModelFromStatus {
             $runReasons += "No bc-json report was requested."
         }
 
-        $runLineComplete = $model.Mode -in @("line", "all") -and
-            $projectReasons.Count -eq 0 -and $runReasons.Count -eq 0 -and
+        $runLineComplete = $projectReasons.Count -eq 0 -and $runReasons.Count -eq 0 -and
             $runLineReasons.Count -eq 0 -and -not $lineGlobalUnsafe
         if ($runLineComplete) {
             foreach ($sourceIdentity in $lineAffectedSources) {
@@ -729,8 +717,7 @@ function Get-ProjectCoverageModelFromStatus {
         }
         Merge-CoverageRunIntoApplications -Applications $model.Apps -Scope $scope `
             -SourceRootDetails $model.SourceRootDetails `
-            -BlocksAllApplications ($model.Mode -notin @("line", "all") -or
-                $projectReasons.Count -gt 0 -or $runReasons.Count -gt 0) `
+            -BlocksAllApplications ($projectReasons.Count -gt 0 -or $runReasons.Count -gt 0) `
             -LineGlobalUnsafe $lineGlobalUnsafe -LineAffectedSources $lineAffectedSources
         $runModels += @{
             AppId = $appId
@@ -774,8 +761,7 @@ function Get-ProjectCoverageModelFromStatus {
     elseif ($model.Apps.Count -eq 0) {
         $model.LineReasons += "Coverage status contains no regular application roots."
     }
-    $model.LineComplete = $model.Mode -in @("line", "all") -and
-        $model.Reasons.Count -eq 0 -and $model.LineReasons.Count -eq 0 -and
+    $model.LineComplete = $model.Reasons.Count -eq 0 -and $model.LineReasons.Count -eq 0 -and
         @($model.Apps | Where-Object { -not [bool]$_.LineComplete }).Count -eq 0
     if ($model.LineComplete) {
         foreach ($app in $model.Apps) {
@@ -857,9 +843,8 @@ function Get-RepositoryApplications {
     $blockedProjects = @{}
     foreach ($projectModel in $ProjectModels) {
         $projectIdentity = ConvertTo-CoverageDimensionIdentity "$($projectModel.Project)"
-        if ($projectModel.Mode -in @("line", "all") -and
-            (($projectModel.Runs.Count -eq 0 -and $projectModel.Reasons.Count -gt 0) -or
-                -not [bool]$projectModel.ApplicationMetadataAvailable)) {
+        if (($projectModel.Runs.Count -eq 0 -and $projectModel.Reasons.Count -gt 0) -or
+            -not [bool]$projectModel.ApplicationMetadataAvailable) {
             $blockedProjects[$projectIdentity] = $true
         }
         $projectDisplay = if ([string]::IsNullOrWhiteSpace("$($projectModel.ProjectName)")) {
@@ -958,7 +943,7 @@ function Get-RepositoryCoverageModel {
     $reasons = @()
     foreach ($dimension in $dimensions) {
         $requiredProperties = @("project", "projectName", "buildMode", "codeCoverageExpected",
-            "codeCoverageRepositorySummary", "codeCoverageMode", "codeCoverageFormats")
+            "codeCoverageRepositorySummary", "codeCoverageFormats")
         $missingProperty = $false
         foreach ($property in $requiredProperties) {
             if ($dimension -isnot [System.Collections.IDictionary] -or -not $dimension.Contains($property)) {
@@ -982,7 +967,6 @@ function Get-RepositoryCoverageModel {
         if ($statusMatches.Count -ne 1) {
             $missingModel = New-EmptyProjectCoverageModel -Project "$($dimension.project)" `
                 -ProjectName "$($dimension.projectName)" -BuildMode "$($dimension.buildMode)"
-            $missingModel.Mode = "$($dimension.codeCoverageMode)"
             $missingReason = if ($statusMatches.Count -eq 0) {
                 "Expected coverage artifact is missing."
             }
@@ -992,9 +976,7 @@ function Get-RepositoryCoverageModel {
             $missingModel.Reasons = @($missingReason)
             $projectModels += $missingModel
             $reasons += "$($dimension.project) [$($dimension.buildMode)]: $missingReason"
-            if ($missingModel.Mode -in @("line", "all")) {
-                $repositoryModel.LineReasons += "$($dimension.project) [$($dimension.buildMode)]: $missingReason"
-            }
+            $repositoryModel.LineReasons += "$($dimension.project) [$($dimension.buildMode)]: $missingReason"
             continue
         }
 
@@ -1003,18 +985,14 @@ function Get-RepositoryCoverageModel {
         $projectModels += $projectModel
         foreach ($reason in $projectModel.Reasons) {
             $reasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
-            if ($projectModel.Mode -in @("line", "all")) {
-                $repositoryModel.LineReasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
-            }
+            $repositoryModel.LineReasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
         }
-        if ($projectModel.Mode -in @("line", "all")) {
-            foreach ($reason in $projectModel.LineReasons) {
-                $repositoryModel.LineReasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
-            }
-            if (-not $projectModel.LineComplete -and
-                $projectModel.Reasons.Count -eq 0 -and $projectModel.LineReasons.Count -eq 0) {
-                $repositoryModel.LineReasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: Regular application line coverage is incomplete."
-            }
+        foreach ($reason in $projectModel.LineReasons) {
+            $repositoryModel.LineReasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
+        }
+        if (-not $projectModel.LineComplete -and
+            $projectModel.Reasons.Count -eq 0 -and $projectModel.LineReasons.Count -eq 0) {
+            $repositoryModel.LineReasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: Regular application line coverage is incomplete."
         }
         $repositoryModel.Notices += $projectModel.Notices
     }
@@ -1033,11 +1011,8 @@ function Get-RepositoryCoverageModel {
             }
         }
     }
-    $lineRequested = @($projectModels | Where-Object { $_.Mode -in @("line", "all") }).Count -gt 0
-    $repositoryModel.LineComplete = $lineRequested -and $repositoryModel.LineReasons.Count -eq 0
+    $repositoryModel.LineComplete = $repositoryModel.LineReasons.Count -eq 0
     $repositoryModel.Complete = $repositoryModel.LineComplete
-    $modes = @($projectModels | ForEach-Object { $_.Mode } | Select-Object -Unique)
-    $repositoryModel.Mode = if ($modes.Count -eq 1) { $modes[0] } else { "all" }
     return $repositoryModel
 }
 
@@ -1307,7 +1282,7 @@ function New-RepositoryCoverageSummary {
             "incomplete"
         }
         $lineRate = "-"
-        if ($projectModel.LineComplete -and $projectModel.Mode -in @("line", "all")) {
+        if ($projectModel.LineComplete) {
             $lineMetrics = Get-CoverageMetrics $projectModel.Lines
             if ($lineMetrics.Total -gt 0) {
                 $lineRate = "$($lineMetrics.Percentage.ToString("0.0", [System.Globalization.CultureInfo]::InvariantCulture))%"

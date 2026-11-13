@@ -268,7 +268,6 @@ function Write-CodeCoverageStatusInternal {
             project = "$($session.Project)"
             projectName = "$($session.ProjectName)"
             buildMode = "$($session.BuildMode)"
-            mode = $script:CodeCoverageMode
             formats = @($session.Formats)
             sourceRoots = @($session.SourceRootRecords | ForEach-Object { "$($_.RelativePath)" })
             sourceRootDetails = @(Get-CodeCoverageSourceRootDetails $session.SourceRootRecords)
@@ -548,11 +547,14 @@ function New-AlGoCodeCoverageSession {
         -not $capability.ContainsKey("Reason")) {
         throw "A valid code coverage capability result is required."
     }
-    $coverageFormats = @("bc-json", "cobertura")
+    $generateCobertura = $true
     if ($settings.ContainsKey("useSeparateTestAction") -and
-        $settings.useSeparateTestAction.ContainsKey("codeCoverageFormats")) {
-        $coverageFormats = @($settings.useSeparateTestAction.codeCoverageFormats |
-            ForEach-Object { "$_".ToLowerInvariant() })
+        $settings.useSeparateTestAction.ContainsKey("codeCoverageGenerateCobertura")) {
+        $generateCobertura = [bool]$settings.useSeparateTestAction.codeCoverageGenerateCobertura
+    }
+    $coverageFormats = @("bc-json")
+    if ($generateCobertura) {
+        $coverageFormats += "cobertura"
     }
 
     $coverageRoot = [System.IO.Path]::GetFullPath(

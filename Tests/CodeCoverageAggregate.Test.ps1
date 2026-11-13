@@ -34,7 +34,6 @@ Describe "Code coverage aggregate" {
                 project = "."
                 projectName = "Project"
                 buildMode = "Default"
-                mode = "line"
                 formats = @("bc-json")
                 sourceRoots = @("App")
                 sourceRootDetails = @([ordered]@{
@@ -98,7 +97,7 @@ Describe "Code coverage aggregate" {
                 Project = "$($status.project)"
                 ProjectName = "$($status.projectName)"
                 BuildMode = "$($status.buildMode)"
-                Mode = "$($status.mode)"
+                Mode = "line"
                 Formats = @($status.formats)
                 SourceRoots = @($status.sourceRoots)
                 SourceRootDetails = @($status.sourceRootDetails)
@@ -189,7 +188,6 @@ Describe "Code coverage aggregate" {
                 project = $project
                 projectName = $project
                 buildMode = "Default"
-                mode = "line"
                 formats = @("bc-json")
                 sourceRoots = @("Shared")
                 sourceRootDetails = $details
@@ -428,12 +426,12 @@ Describe "Code coverage aggregate" {
                     @{
                         project = "A"; projectName = "A"; buildMode = "Default"
                         codeCoverageExpected = $true; codeCoverageRepositorySummary = $true
-                        codeCoverageMode = "line"; codeCoverageFormats = @("bc-json")
+                        codeCoverageFormats = @("bc-json")
                     },
                     @{
                         project = "B"; projectName = "B"; buildMode = "Default"
                         codeCoverageExpected = $true; codeCoverageRepositorySummary = $true
-                        codeCoverageMode = "line"; codeCoverageFormats = @("bc-json")
+                        codeCoverageFormats = @("bc-json")
                     }
                 )
             }) | ConvertTo-Json -Depth 10

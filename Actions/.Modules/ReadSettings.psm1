@@ -162,25 +162,20 @@ function MergeCustomObjectIntoOrderedDictionary {
             }
             else {
                 if ($srcProp -is [Object[]]) {
-                    if ($prop -eq "codeCoverageFormats") {
-                        $dst."$prop" = @($srcProp)
-                    }
-                    else {
-                        $srcProp | ForEach-Object {
-                            $srcElm = $_
-                            $srcElmType = $srcElm.GetType().Name
-                            if ($srcElmType -eq "PSCustomObject") {
-                                # Array of objects are not checked for uniqueness
-                                $ht = [ordered]@{}
-                                $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture ([cultureinfo]::InvariantCulture) | ForEach-Object {
-                                    $ht[$_.Name] = $_.Value
-                                }
-                                $dst."$prop" += @($ht)
+                    $srcProp | ForEach-Object {
+                        $srcElm = $_
+                        $srcElmType = $srcElm.GetType().Name
+                        if ($srcElmType -eq "PSCustomObject") {
+                            # Array of objects are not checked for uniqueness
+                            $ht = [ordered]@{}
+                            $srcElm.PSObject.Properties | Sort-Object -Property Name -Culture ([cultureinfo]::InvariantCulture) | ForEach-Object {
+                                $ht[$_.Name] = $_.Value
                             }
-                            else {
-                                # Add source element to destination array, but only if it does not already exist
-                                $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique)
-                            }
+                            $dst."$prop" += @($ht)
+                        }
+                        else {
+                            # Add source element to destination array, but only if it does not already exist
+                            $dst."$prop" = @($dst."$prop" + $srcElm | Select-Object -Unique)
                         }
                     }
                 }
@@ -281,7 +276,7 @@ function GetDefaultSettings
             "enabled"                                   = $false
             "testType"                                  = ""
             "codeCoverageEnabled"                       = $false
-            "codeCoverageFormats"                       = @("bc-json", "cobertura")
+            "codeCoverageGenerateCobertura"             = $true
             "codeCoverageSummary"                       = "both"
         }
         "doNotRunBcptTests"                             = $false

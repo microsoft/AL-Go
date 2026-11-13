@@ -14,12 +14,12 @@ Describe "Get-ProjectsToBuild" {
     }
 
     It 'Adds consumed code coverage metadata to build dimensions for summary scope <Summary>' -TestCases @(
-        @{ Summary = 'none'; ExpectedRepositorySummary = $false }
-        @{ Summary = 'project'; ExpectedRepositorySummary = $false }
-        @{ Summary = 'repository'; ExpectedRepositorySummary = $true }
-        @{ Summary = 'both'; ExpectedRepositorySummary = $true }
+        @{ Summary = 'none'; ExpectedRepositorySummary = $false; GenerateCobertura = $true; ExpectedFormats = @('bc-json', 'cobertura') }
+        @{ Summary = 'project'; ExpectedRepositorySummary = $false; GenerateCobertura = $true; ExpectedFormats = @('bc-json', 'cobertura') }
+        @{ Summary = 'repository'; ExpectedRepositorySummary = $true; GenerateCobertura = $false; ExpectedFormats = @('bc-json') }
+        @{ Summary = 'both'; ExpectedRepositorySummary = $true; GenerateCobertura = $true; ExpectedFormats = @('bc-json', 'cobertura') }
     ) {
-        param($Summary, $ExpectedRepositorySummary)
+        param($Summary, $ExpectedRepositorySummary, $GenerateCobertura, $ExpectedFormats)
 
         $coverageDimensionSettings = @{
             githubRunner          = 'windows-latest'
@@ -30,10 +30,10 @@ Describe "Get-ProjectsToBuild" {
             doNotPublishApps      = $false
             additionalCountries   = @()
             useSeparateTestAction = @{
-                enabled             = $true
-                codeCoverageEnabled = $true
-                codeCoverageFormats = @('bc-json', 'cobertura')
-                codeCoverageSummary = $Summary
+                enabled                       = $true
+                codeCoverageEnabled           = $true
+                codeCoverageGenerateCobertura = $GenerateCobertura
+                codeCoverageSummary           = $Summary
             }
         }
         $dimensions = @(InModuleScope DetermineProjectsToBuild -Parameters @{
@@ -49,8 +49,8 @@ Describe "Get-ProjectsToBuild" {
         $dimensions.Count | Should -Be 1
         $dimensions[0].codeCoverageExpected | Should -BeTrue
         $dimensions[0].codeCoverageRepositorySummary | Should -Be $ExpectedRepositorySummary
-        $dimensions[0].codeCoverageMode | Should -Be 'line'
-        $dimensions[0].codeCoverageFormats | Should -Be @('bc-json', 'cobertura')
+        $dimensions[0].ContainsKey('codeCoverageMode') | Should -BeFalse
+        $dimensions[0].codeCoverageFormats | Should -Be $ExpectedFormats
     }
 
     It 'Does not expect coverage when separate execution cannot collect it' {
@@ -63,10 +63,10 @@ Describe "Get-ProjectsToBuild" {
             doNotPublishApps      = $false
             additionalCountries   = @('dk')
             useSeparateTestAction = @{
-                enabled             = $true
-                codeCoverageEnabled = $true
-                codeCoverageFormats = @('bc-json')
-                codeCoverageSummary = 'both'
+                enabled                       = $true
+                codeCoverageEnabled           = $true
+                codeCoverageGenerateCobertura = $false
+                codeCoverageSummary           = 'both'
             }
         }
         $dimension = @(InModuleScope DetermineProjectsToBuild -Parameters @{

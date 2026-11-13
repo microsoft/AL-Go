@@ -1,0 +1,29 @@
+{
+  "project": "MultipleRunsProject",
+  "projectName": "Multiple runs project",
+  "buildMode": "Default",
+  "formats": [ "bc-json", "cobertura" ],
+  "sourceRoots": [ "src" ],
+  "sourceRootDetails": [
+    {
+      "path": "src",
+      "kind": "app",
+      "appId": "multiple-runs-regular-app",
+      "appName": "Multiple runs app"
+    }
+  ],
+  "runs": [
+    {
+      "appId": "run-a",
+      "appName": "Test run A",
+      "outputDirectory": "CodeCoverage/run-a",
+      "state": "complete"
+    },
+    {
+      "appId": "run-b",
+      "appName": "Test run B",
+      "outputDirectory": "CodeCoverage/run-b",
+      "state": "complete"
+    }
+  ]
+}

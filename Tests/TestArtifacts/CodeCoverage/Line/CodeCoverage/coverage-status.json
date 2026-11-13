@@ -2,7 +2,6 @@
   "project": "LineProject",
   "projectName": "Line project",
   "buildMode": "Default",
-  "mode": "line",
   "formats": [ "bc-json" ],
   "sourceRoots": [ "src" ],
   "sourceRootDetails": [
