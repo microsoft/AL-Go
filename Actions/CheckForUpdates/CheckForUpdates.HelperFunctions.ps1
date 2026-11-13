@@ -875,6 +875,10 @@ function UpdateSettingsFile {
     return $modified
 }
 
+<#
+.SYNOPSIS
+Returns the path string comparison: ordinal on Linux, ordinal-ignore-case otherwise.
+#>
 function GetPathStringComparison {
     if ($PSVersionTable.PSVersion.Major -ge 6 -and $IsLinux) {
         return [System.StringComparison]::Ordinal
@@ -884,6 +888,10 @@ function GetPathStringComparison {
     }
 }
 
+<#
+.SYNOPSIS
+Returns the path string comparer: ordinal on Linux, ordinal-ignore-case otherwise.
+#>
 function GetPathStringComparer {
     if ((GetPathStringComparison) -eq [System.StringComparison]::Ordinal) {
         return [System.StringComparer]::Ordinal
@@ -1152,6 +1160,7 @@ An array of hashtables specifying the files to resolve. Each hashtable can conta
 - origin: The origin of the files, either 'template' or 'custom template' (default is 'template').
 - type: The type of the files (default is empty).
 - destinationFolder: The subfolder within the destination folder where the files should be placed (default is the same as sourceFolder).
+- destinationName: The destination filename to use instead of the source filename (default is the source filename).
 - perProject: A boolean indicating whether the files are per project (default is false).
 
 .PARAMETER projects
@@ -1413,11 +1422,8 @@ function GetDefaultFilesToExclude {
        Built from default files to exclude and customALGoFiles.filesToExclude in settings, resolved against the template folder and original template folder (if any).
 
     Note: when a custom template is in use, the caller must refresh the custom template settings
-
     snapshot files and re-read settings with ReadSettings before calling this function, so that the
-
     template's customALGoFiles/unusedALGoSystemFiles are already merged into settings.
-
 
     The deprecated unusedALGoSystemFiles setting is also applied: matching files are moved from filesToInclude to
     filesToExclude with a deprecation warning.
@@ -1430,8 +1436,9 @@ function GetDefaultFilesToExclude {
 .PARAMETER originalTemplateFolder
     The folder where the original AL-Go template files are located (if any).
     When provided, it signals that a custom template is in use. Both filesToInclude and filesToExclude specs are
-    resolved against this folder in addition to templateFolder; entries not already covered by originalSourceFullPath
-    tracking are appended to propagate upstream template additions and deletions to consumer repositories.
+    resolved against this folder in addition to templateFolder, and all original-template matches are appended.
+    Exclusion rules are applied before keeping the first eligible match per destination, with templateFolder
+    matches preceding originalTemplateFolder matches.
 .PARAMETER projects
     The list of projects in the repository.
     The projects are used to resolve per-project files.
