@@ -356,7 +356,7 @@ function Invoke-AlGoTestRun {
                 Write-Host "Code coverage artifacts will be retained under '$($coverageSession.RootPath)'."
             }
             else {
-                OutputWarning -message "Code coverage requires container platform 30.0.56026.0 or later. $($coverageCapability.Reason) Tests will continue without coverage."
+                OutputWarning -message "Code coverage is unavailable. $($coverageCapability.Reason) Tests will continue without coverage."
             }
         }
 
@@ -509,8 +509,12 @@ function Invoke-AlGoTestRun {
                     -suppressFailure:([bool]$testRunError)
             }
             catch {
-                if ($testRunError) {
-                    OutputWarning -message "Failed to finalize code coverage status after test execution failed. $($_.Exception.Message)"
+                $ordinaryTestFailure = [bool]$testRunError -or (
+                    -not $allTestsPassed -and -not $settings.treatTestFailuresAsWarnings
+                )
+                if ($ordinaryTestFailure) {
+                    $coverageError = "Code coverage finalization also failed. $($_.Exception.Message)"
+                    Write-Host "::Error::$($coverageError.Replace("`r",'').Replace("`n",' '))"
                 }
                 else {
                     $testRunError = $_

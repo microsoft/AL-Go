@@ -210,7 +210,7 @@ Describe "Code coverage aggregate" {
         }
     }
 
-    It "produces an aggregate equivalent to raw reports with duplicate OR semantics" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+    It "produces an aggregate equivalent to raw reports with duplicate OR semantics" {
         $repositoryRoot = New-AggregateRepository -name "Equivalent"
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
@@ -273,7 +273,7 @@ Describe "Code coverage aggregate" {
         Test-Path -LiteralPath $reportB | Should -BeFalse
     }
 
-    It "retains raw input and publishes nothing when the worker rejects corrupt JSON" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+    It "retains raw input and publishes nothing when the worker rejects corrupt JSON" {
         $repositoryRoot = New-AggregateRepository -name "Corrupt"
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
@@ -299,7 +299,7 @@ Describe "Code coverage aggregate" {
         Test-Path -LiteralPath "$publishedPath.tmp" | Should -BeFalse
     }
 
-    It "preserves incomplete diagnostic scoping and project Markdown" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+    It "preserves incomplete diagnostic scoping and project Markdown" {
         $fixtureRoot = Join-Path $PSScriptRoot "TestArtifacts\CodeCoverage\ScopedIncomplete"
         $rawArtifact = Join-Path $TestDrive "ScopedRaw"
         $aggregateArtifact = Join-Path $TestDrive "ScopedAggregate"

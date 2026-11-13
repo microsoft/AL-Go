@@ -152,6 +152,15 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         }
     }
 
+    BeforeEach {
+        $script:originalRunnerDebug = $env:RUNNER_DEBUG
+        $env:RUNNER_DEBUG = $null
+    }
+
+    AfterEach {
+        $env:RUNNER_DEBUG = $script:originalRunnerDebug
+    }
+
     It 'Creates one deterministic isolated run plan without publishing intermediate status' {
         $projectPath = New-CoordinatorProject
         $testApps = @(
@@ -182,6 +191,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             "Formats",
             "Project",
             "ProjectName",
+            "PwshPath",
             "RepositoryRoot",
             "RootPath",
             "Runs",
@@ -213,6 +223,10 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status.runs[0].state | Should -Be "complete"
         $status.formats | Should -Be @("bc-json", "cobertura")
         $status.PSObject.Properties.Name | Should -Not -Contain "mode"
+        $status.PSObject.Properties.Name | Should -Contain "aggregate"
+        Test-Path -LiteralPath (
+            Join-Path $context.coverageOutputPath "coverage.bc.json"
+        ) | Should -BeFalse
     }
 
     Context 'BC JSON metadata reader' {
@@ -504,6 +518,66 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             Complete-AlGoCodeCoverageRun -session $session -run $run `
                 -coverageIsComplete $true
         } | Should -Throw "*cannot complete from state 'complete'*"
+        Complete-AlGoCodeCoverageSession -session $session
+    }
+
+    It 'Retains raw BC JSON after successful compaction when runner debug is enabled' {
+        $projectPath = New-CoordinatorProject
+        $session = New-CoordinatorSession -projectPath $projectPath
+        $run = Get-CoordinatorRun -session $session `
+            -appId "22222222-2222-2222-2222-222222222222"
+        $context = New-CoordinatorArtifactFixture -session $session -run $run
+        Write-CoordinatorCoverageArtifacts -context $context
+        $previousRunnerDebug = $env:RUNNER_DEBUG
+        try {
+            $env:RUNNER_DEBUG = "1"
+            Complete-AlGoCodeCoverageRun -session $session -run $run `
+                -coverageIsComplete $context.coverageIsComplete
+            Complete-AlGoCodeCoverageSession -session $session
+        }
+        finally {
+            $env:RUNNER_DEBUG = $previousRunnerDebug
+        }
+
+        Test-Path -LiteralPath (
+            Join-Path $context.coverageOutputPath "coverage.bc.json"
+        ) | Should -BeTrue
+    }
+
+    It 'Fails coverage and retains raw BC JSON when compaction fails (<Case>)' -TestCases @(
+        @{ Case = "normally"; SuppressFailure = $false },
+        @{ Case = "after an earlier runner failure"; SuppressFailure = $true }
+    ) {
+        Param($Case, $SuppressFailure)
+
+        Mock -ModuleName CodeCoverageCoordinator Start-CodeCoverageCompactorInternal {
+            return @{ Telemetry = @() }
+        }
+        Mock -ModuleName CodeCoverageCoordinator Add-CodeCoverageAggregateWorkItem {}
+        Mock -ModuleName CodeCoverageCoordinator Complete-CodeCoverageAggregateWorker {
+            throw "worker failed"
+        }
+        $projectPath = New-CoordinatorProject
+        $session = New-CoordinatorSession -projectPath $projectPath
+        $run = Get-CoordinatorRun -session $session `
+            -appId "22222222-2222-2222-2222-222222222222"
+        $context = New-CoordinatorArtifactFixture -session $session -run $run
+        Write-CoordinatorCoverageArtifacts -context $context
+
+        Complete-AlGoCodeCoverageRun -session $session -run $run `
+            -coverageIsComplete $context.coverageIsComplete
+        {
+            Complete-AlGoCodeCoverageSession -session $session `
+                -suppressFailure:$SuppressFailure
+        } |
+            Should -Throw "*Code coverage compaction failed*worker failed*"
+
+        Test-Path -LiteralPath (
+            Join-Path $context.coverageOutputPath "coverage.bc.json"
+        ) | Should -BeTrue
+        $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
+            -Raw -Encoding UTF8 | ConvertFrom-Json
+        $status.PSObject.Properties.Name | Should -Not -Contain "aggregate"
     }
 
     It 'Rejects unsupported schema versions and unexpected coverage modes' -TestCases @(

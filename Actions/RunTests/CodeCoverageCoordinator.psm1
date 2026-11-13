@@ -306,29 +306,13 @@ function Write-CodeCoverageStatusInternal {
 function Write-CodeCoverageCompactorEvents {
     Param([hashtable] $session)
 
-    if (-not $session.Compactor) {
+    if (-not $session.Compactor -or -not $session.Compactor.ContainsKey("Telemetry")) {
         return
     }
-    $telemetryEvent = $null
-    $culture = [System.Globalization.CultureInfo]::InvariantCulture
-    while ($session.Compactor.Events.TryDequeue([ref]$telemetryEvent)) {
-        if ("$($telemetryEvent.Type)" -eq "report") {
-            $session.CompactorTelemetry.Add($telemetryEvent)
-            Write-Host ("Code coverage compaction: app={0}, size={1} MiB, queueWait={2}s, queueDepth={3}, parse={4}s, extractedLines={5}, acceptedLines={6}, newLines={7}, aggregateLines={8}, memoryBefore={9} MiB, memoryAfter={10} MiB." -f
-                $telemetryEvent.AppId,
-                ([long]$telemetryEvent.Bytes / 1MB).ToString("0.0", $culture),
-                ([double]$telemetryEvent.QueueWaitMilliseconds / 1000).ToString("0.000", $culture),
-                $telemetryEvent.QueueDepthAtEnqueue,
-                ([double]$telemetryEvent.ParseMilliseconds / 1000).ToString("0.000", $culture),
-                $telemetryEvent.ExtractedLineCount,
-                $telemetryEvent.AcceptedLineCount,
-                $telemetryEvent.NewLineCount,
-                $telemetryEvent.AggregateLineCount,
-                ([long]$telemetryEvent.MemoryBeforeBytes / 1MB).ToString("0.0", $culture),
-                ([long]$telemetryEvent.MemoryAfterBytes / 1MB).ToString("0.0", $culture))
-        }
-        $telemetryEvent = $null
+    foreach ($telemetryEvent in @($session.Compactor.Telemetry)) {
+        $session.CompactorTelemetry.Add($telemetryEvent)
     }
+    $session.Compactor.Telemetry = @()
 }
 
 <#
@@ -451,14 +435,14 @@ function Test-CodeCoverageArtifacts {
 .SYNOPSIS
     Determines whether the handed-off container platform supports code coverage.
 .DESCRIPTION
-    Code coverage requires container platform 30.0.56026.0 or later. Missing or malformed handoff
-    data is treated as unavailable.
+    Code coverage requires container platform 30.0.56026.0 or later and PowerShell 7 for
+    mandatory compaction. Missing capabilities are treated as unavailable.
 .PARAMETER platformVersion
     Actual build container platform version exported by RunPipeline.
 .PARAMETER platformVersionReason
     Non-sensitive reason supplied when the platform version could not be determined.
 .OUTPUTS
-    Hashtable containing Supported and Reason.
+    Hashtable containing Supported, Reason, and the resolved PowerShell 7 path.
 #>
 function Get-AlGoCodeCoverageCapability {
     Param(
@@ -471,11 +455,12 @@ function Get-AlGoCodeCoverageCapability {
         return @{
             Supported = $false
             Reason = if ([string]::IsNullOrWhiteSpace($platformVersionReason)) {
-                "RunPipeline did not provide the build container platform version."
+                "RunPipeline did not provide the build container platform version. Code coverage requires container platform $minimumVersion or later."
             }
             else {
-                $platformVersionReason
+                "$platformVersionReason Code coverage requires container platform $minimumVersion or later."
             }
+            PwshPath = ""
         }
     }
 
@@ -483,19 +468,33 @@ function Get-AlGoCodeCoverageCapability {
     if (-not [version]::TryParse($platformVersion.Trim(), [ref] $parsedVersion)) {
         return @{
             Supported = $false
-            Reason = "RunPipeline provided an invalid build container platform version."
+            Reason = "RunPipeline provided an invalid build container platform version. Code coverage requires container platform $minimumVersion or later."
+            PwshPath = ""
         }
     }
 
-    $supported = $parsedVersion -ge $minimumVersion
+    if ($parsedVersion -lt $minimumVersion) {
+        return @{
+            Supported = $false
+            Reason = "Container platform $parsedVersion is older than the required $minimumVersion."
+            PwshPath = ""
+        }
+    }
+
+    $pwshCommand = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if (-not $pwshCommand) {
+        return @{
+            Supported = $false
+            Reason = "PowerShell 7 (pwsh) is required for code coverage compaction."
+            PwshPath = ""
+        }
+    }
+
     return @{
-        Supported = $supported
-        Reason = if ($supported) {
-            "Container platform $parsedVersion supports code coverage."
-        }
-        else {
-            "Container platform $parsedVersion is older than the required $minimumVersion."
-        }
+        Supported = $true
+        Reason = "Container platform $parsedVersion and PowerShell 7 support code coverage."
+        PwshPath = "$($pwshCommand.Source)"
     }
 }
 
@@ -595,6 +594,7 @@ function New-AlGoCodeCoverageSession {
 
     $session = @{
         Supported = [bool]$capability.Supported
+        PwshPath = "$($capability.PwshPath)"
         Project = if ([string]::IsNullOrWhiteSpace($project)) { "." } else { $project.Replace('\', '/') }
         ProjectName = $projectName
         BuildMode = $buildMode
@@ -606,11 +606,6 @@ function New-AlGoCodeCoverageSession {
         Compactor = $null
         CompactorFailure = ""
         CompactorTelemetry = [System.Collections.Generic.List[object]]::new()
-    }
-    if ($session.Supported -and "bc-json" -in $session.Formats) {
-        if ($PSVersionTable.PSVersion.Major -lt 7) {
-            Write-Host "::Warning::Code coverage compaction requires PowerShell 7. Raw BC JSON reports will be retained."
-        }
     }
     return $session
 }
@@ -649,7 +644,8 @@ function Start-CodeCoverageCompactorInternal {
         -repositoryRoot $session.RepositoryRoot `
         -metadata $metadata `
         -temporaryPath "$aggregatePath.$([guid]::NewGuid().ToString('N')).tmp" `
-        -publishedPath $aggregatePath
+        -publishedPath $aggregatePath `
+        -pwshPath $session.PwshPath
 }
 
 <#
@@ -694,8 +690,7 @@ function Complete-AlGoCodeCoverageRun {
             -rawComplete $coverageIsComplete
         $run.State = if ([bool]$coverageIsComplete) { "complete" } else { "incomplete" }
         $run.CompletedAtUtc = [DateTime]::UtcNow
-        if ($PSVersionTable.PSVersion.Major -ge 7 -and
-            "bc-json" -in $session.Formats -and
+        if ("bc-json" -in $session.Formats -and
             [string]::IsNullOrWhiteSpace($session.CompactorFailure)) {
             try {
                 if (-not $session.Compactor) {
@@ -718,7 +713,7 @@ function Complete-AlGoCodeCoverageRun {
             }
             catch {
                 $session.CompactorFailure = $_.Exception.Message
-                Write-Host "::Warning::Code coverage compaction could not enqueue app '$($run.AppName)'. Raw BC JSON reports will be retained. $($session.CompactorFailure)"
+                throw "Code coverage compaction could not accept app '$($run.AppName)'. $($session.CompactorFailure)"
             }
         }
         Write-CodeCoverageCompactorEvents -session $session
@@ -767,6 +762,7 @@ function Complete-AlGoCodeCoverageSession {
     }
     $aggregate = $null
     $drainStopwatch = $null
+    $compactionFailed = $false
     if ($session.Compactor) {
         $drainStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
@@ -783,10 +779,11 @@ function Complete-AlGoCodeCoverageSession {
             }
         }
         catch {
+            $compactionFailed = $true
             $aggregate = $null
             Remove-Item -LiteralPath (Get-CodeCoverageAggregatePath -session $session) `
                 -Force -ErrorAction SilentlyContinue
-            Write-Host "::Warning::Code coverage compaction failed. Raw BC JSON reports are retained and the historical analyzer path remains authoritative. $($_.Exception.Message)"
+            $failureReasons += "Code coverage compaction failed. Raw BC JSON reports were retained. $($_.Exception.Message)"
         }
         finally {
             $session.Compactor = $null
@@ -796,23 +793,20 @@ function Complete-AlGoCodeCoverageSession {
         Write-CodeCoverageStatusInternal -session $session -aggregate $aggregate
     }
     catch {
-        if (-not $aggregate) {
-            throw
-        }
-        $statusError = $_
-        $aggregate = $null
-        Remove-Item -LiteralPath (Get-CodeCoverageAggregatePath -session $session) `
-            -Force -ErrorAction SilentlyContinue
-        Write-Host "::Warning::The code coverage aggregate could not be referenced by the final status. Raw BC JSON reports are retained. $($statusError.Exception.Message)"
-        Write-CodeCoverageStatusInternal -session $session
+        throw "The final code coverage status could not be written. $($_.Exception.Message)"
     }
     if ($aggregate) {
         $removedBytes = [long]0
-        try {
-            $removedBytes = Remove-CodeCoverageRawReports -session $session
+        if ("$env:RUNNER_DEBUG" -eq "1") {
+            Write-Host "RUNNER_DEBUG=1; retaining raw BC JSON code coverage reports."
         }
-        catch {
-            Write-Host "::Warning::The code coverage aggregate was published, but one or more raw BC JSON reports could not be deleted. $($_.Exception.Message)"
+        else {
+            try {
+                $removedBytes = Remove-CodeCoverageRawReports -session $session
+            }
+            catch {
+                Write-Host "::Warning::The code coverage aggregate was published, but one or more raw BC JSON reports could not be deleted. $($_.Exception.Message)"
+            }
         }
         $drainStopwatch.Stop()
 
@@ -841,7 +835,7 @@ function Complete-AlGoCodeCoverageSession {
             ($removedBytes / 1MB).ToString("0.0", $culture),
             $overlappedReports)
     }
-    if ($failureReasons.Count -gt 0 -and -not $suppressFailure) {
+    if ($failureReasons.Count -gt 0 -and ($compactionFailed -or -not $suppressFailure)) {
         throw ($failureReasons | Select-Object -Unique) -join " "
     }
 }

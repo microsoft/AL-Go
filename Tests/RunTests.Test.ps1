@@ -64,6 +64,8 @@ Describe 'RunTests.psm1 Tests' {
     }
 
     BeforeEach {
+        $script:originalRunnerDebug = $env:RUNNER_DEBUG
+        $env:RUNNER_DEBUG = $null
         $script:eventLogSource = Join-Path $TestDrive "$([Guid]::NewGuid()).evtx"
         Set-Content -Path $script:eventLogSource -Value 'post-test-events' -Encoding UTF8
         Mock -ModuleName RunTests Get-AppJsonFromAppFile {
@@ -74,6 +76,10 @@ Describe 'RunTests.psm1 Tests' {
             return $script:compiledAppMetadataByPath[$fullPath]
         }
         Mock -ModuleName RunTests Get-BcContainerEventLog { return $script:eventLogSource }
+    }
+
+    AfterEach {
+        $env:RUNNER_DEBUG = $script:originalRunnerDebug
     }
 
     It 'Delegates coverage lifecycle ownership to the coordinator module' {
@@ -674,7 +680,22 @@ Describe 'RunTests.psm1 Tests' {
                     -platformVersionReason ''
 
                 $capability.Supported | Should -BeTrue
-                $capability.Reason | Should -Match 'supports code coverage'
+                $capability.Reason | Should -Match 'support code coverage'
+                $capability.PwshPath | Should -Not -BeNullOrEmpty
+            }
+        }
+
+        It 'Disables coverage when PowerShell 7 is unavailable' {
+            InModuleScope CodeCoverageCoordinator {
+                Mock Get-Command {}
+
+                $capability = Get-AlGoCodeCoverageCapability `
+                    -platformVersion '30.0.56026.0' `
+                    -platformVersionReason ''
+
+                $capability.Supported | Should -BeFalse
+                $capability.Reason | Should -BeLike '*PowerShell 7*required*'
+                $capability.PwshPath | Should -BeNullOrEmpty
             }
         }
     }
@@ -1245,7 +1266,11 @@ Describe 'RunTests.psm1 Tests' {
             $script:coverageStatusObservedDuringRuns = @()
             $script:coverageInvocation = 0
             Mock -ModuleName RunTests Get-AlGoCodeCoverageCapability {
-                return @{ Supported = $true; Reason = "" }
+                return @{
+                    Supported = $true
+                    Reason = ""
+                    PwshPath = (Get-Command pwsh -CommandType Application).Source
+                }
             }
             Mock -ModuleName RunTests Invoke-AlToolTestRun {
                 param(
@@ -1274,6 +1299,12 @@ Describe 'RunTests.psm1 Tests' {
                     schemaVersion = '1.0'
                     coverageMode = 'line'
                     complete = $isComplete
+                    diagnostics = @()
+                    sources = @()
+                    tests = @()
+                    procedureEdges = @()
+                    methods = @()
+                    lines = @()
                 } | ConvertTo-Json | Set-Content -LiteralPath (
                     Join-Path $CoverageOutputPath 'coverage.bc.json'
                 ) -Encoding UTF8
@@ -1342,7 +1373,7 @@ Describe 'RunTests.psm1 Tests' {
                 -Raw -Encoding UTF8 | ConvertFrom-Json
             $coverageStatus.PSObject.Properties.Name |
                 Should -Be @('project', 'projectName', 'buildMode', 'formats', 'sourceRoots',
-                    'sourceRootDetails', 'runs')
+                    'sourceRootDetails', 'runs', 'aggregate')
             $coverageStatus.project | Should -Be 'Projects/Coverage'
             $coverageStatus.projectName | Should -Be 'Coverage Project'
             $coverageStatus.buildMode | Should -Be 'Clean'
@@ -1367,9 +1398,9 @@ Describe 'RunTests.psm1 Tests' {
             }
             $coverageStatusByAppId[$appOneId] | Should -Be 'complete'
             $coverageStatusByAppId[$appTwoId] | Should -Be 'incomplete'
-            @($coverageStatus.PSObject.Properties.Name) | Should -Not -Contain 'aggregate'
+            @($coverageStatus.PSObject.Properties.Name) | Should -Contain 'aggregate'
             @(Get-ChildItem -LiteralPath $coverageRoot -Filter 'coverage.bc.json' -File -Recurse).Count |
-                Should -Be 2
+                Should -Be 0
             ($coverageStatus | ConvertTo-Json -Depth 5) | Should -Not -Match 'admin|password|diagnostic'
             Remove-Item -Path $projectPath -Recurse -Force
         }
@@ -1432,7 +1463,7 @@ Describe 'RunTests.psm1 Tests' {
             $script:coverageDowngradeBoundParameters | Should -Not -Contain 'CoverageMode'
             $script:coverageDowngradeBoundParameters | Should -Not -Contain 'CoverageOutputPath'
             Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
-                $message -like '*container platform 30.0.56026.0*continue without coverage*'
+                $message -like '*Code coverage is unavailable*30.0.56026.0*continue without coverage*'
             }
             $coverageRoot = Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
             Test-Path -LiteralPath $staleCoveragePath | Should -BeFalse
@@ -1491,6 +1522,55 @@ Describe 'RunTests.psm1 Tests' {
             }
             $coverageStatusByAppId[$appOneId] | Should -Be 'failed'
             $coverageStatusByAppId[$appTwoId] | Should -Be 'failed'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Keeps ordinary test failure primary when code coverage finalization also fails' {
+            $appId = [Guid]::NewGuid().ToString()
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app') `
+                -CompiledAppIds @{ 'App1.Test.app' = $appId }
+            $settings = @{
+                doNotRunTests                  = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName                    = ''
+                treatTestFailuresAsWarnings    = $false
+                testFolders                    = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                useSeparateTestAction           = @{
+                    enabled                       = $true
+                    testType                      = ''
+                    codeCoverageEnabled           = $true
+                    codeCoverageGenerateCobertura = $false
+                }
+            }
+            Mock -ModuleName RunTests Get-AlGoCodeCoverageCapability {
+                return @{ Supported = $true; Reason = ''; PwshPath = 'pwsh' }
+            }
+            Mock -ModuleName RunTests New-AlGoCodeCoverageSession {
+                return @{
+                    Supported = $true
+                    Formats = @('bc-json')
+                    RootPath = Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
+                    SourceRootRecords = @()
+                    Runs = @(@{ AppId = $appId; AppName = 'App1.Test'; State = '' })
+                }
+            }
+            Mock -ModuleName RunTests Invoke-AlToolTestRun { return $false }
+            Mock -ModuleName RunTests Complete-AlGoCodeCoverageRun {}
+            Mock -ModuleName RunTests Complete-AlGoCodeCoverageSession {
+                throw 'compactor failed'
+            }
+            Mock -ModuleName RunTests Write-Host {}
+
+            {
+                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath `
+                    -containerName 'test' -credential $testCredential `
+                    -alToolPath 'C:\dotnet-tools\al.exe' `
+                    -containerPlatformVersion '30.0.56026.0'
+            } | Should -Throw '*There are test failures*'
+
+            Should -Invoke -ModuleName RunTests Write-Host -Times 1 -Exactly -ParameterFilter {
+                "$Object" -like '::Error::Code coverage finalization also failed*compactor failed*'
+            }
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
@@ -1927,7 +2007,7 @@ Describe 'RunTests.psm1 Tests' {
 
             $script:unsupportedCoverageCalls | Should -Be 2
             Should -Invoke -ModuleName RunTests OutputWarning -Times 1 -Exactly -ParameterFilter {
-                $message -like '*container platform 30.0.56026.0*'
+                $message -like '*Code coverage is unavailable*30.0.56026.0*'
             }
             $status = Get-Content -LiteralPath (
                 Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage') `
@@ -1986,19 +2066,12 @@ Describe 'RunTests.psm1 Tests' {
             ) -Raw -Encoding UTF8 | ConvertFrom-Json
             $status.runs[0].state | Should -Be 'complete'
             $coverageRoot = Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
-            if ($PSVersionTable.PSVersion.Major -ge 7) {
-                $status.aggregate.format | Should -Be 'al-go-line-union-binary-gzip'
-                Test-Path -LiteralPath (
-                    Join-Path $coverageRoot 'coverage-aggregate.bin.gz'
-                ) | Should -BeTrue
-                @(Get-ChildItem -LiteralPath $coverageRoot `
-                        -Filter 'coverage.bc.json' -File -Recurse).Count | Should -Be 0
-            }
-            else {
-                @($status.PSObject.Properties.Name) | Should -Not -Contain 'aggregate'
-                @(Get-ChildItem -LiteralPath $coverageRoot `
-                        -Filter 'coverage.bc.json' -File -Recurse).Count | Should -Be 1
-            }
+            $status.aggregate.format | Should -Be 'al-go-line-union-binary-gzip'
+            Test-Path -LiteralPath (
+                Join-Path $coverageRoot 'coverage-aggregate.bin.gz'
+            ) | Should -BeTrue
+            @(Get-ChildItem -LiteralPath $coverageRoot `
+                    -Filter 'coverage.bc.json' -File -Recurse).Count | Should -Be 0
             Remove-Item -Path $projectPath -Recurse -Force
         }
     }

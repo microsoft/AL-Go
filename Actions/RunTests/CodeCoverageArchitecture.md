@@ -24,8 +24,8 @@ flowchart TD
     TOOL[Invoke-AlToolTestRun or project override]
     AL[al runtests]
     COMPLETE[Complete-AlGoCodeCoverageRun]
-    QUEUE[BlockingCollection queue]
-    WORKER[One PowerShell 7 compactor runspace]
+    PIPE[Redirected standard input]
+    WORKER[One persistent pwsh compactor process]
     FINAL[Complete-AlGoCodeCoverageSession]
     STATUS[coverage-status.json]
     AGG[coverage-aggregate.bin.gz]
@@ -39,7 +39,7 @@ flowchart TD
     ORCH --> SESSION --> LOOP
     LOOP --> TOOL --> AL --> COMPLETE
     COMPLETE -->|next app| LOOP
-    COMPLETE -->|validated descriptor| QUEUE --> WORKER
+    COMPLETE -->|validated JSON descriptor| PIPE --> WORKER
     LOOP --> FINAL
     WORKER --> AGG
     FINAL --> STATUS
@@ -48,7 +48,7 @@ flowchart TD
     FINAL -->|always retains requested Cobertura| COB
     STATUS --> UPLOAD
     AGG --> UPLOAD
-    RAW -->|fallback only| UPLOAD
+    RAW -->|debug or failed compaction diagnostics| UPLOAD
     COB --> UPLOAD
     UPLOAD --> PROJECT
     UPLOAD --> REPOJOB
@@ -66,8 +66,8 @@ sequenceDiagram
     participant Coordinator as Coverage coordinator
     participant Runner as AlTool runner or override
     participant AlTool as al runtests
-    participant Queue as Work queue
-    participant Worker as Compactor runspace
+    participant Pipe as Redirected stdin
+    participant Worker as Persistent pwsh compactor
     participant Analyzer as AnalyzeCodeCoverage
 
     Workflow->>Entry: Run Tests step with pwsh
@@ -85,21 +85,21 @@ sequenceDiagram
         Runner-->>RunTests: Boolean test result and completeness
         RunTests->>Coordinator: Complete-AlGoCodeCoverageRun
         Coordinator->>Coordinator: Validate artifacts and BC JSON metadata
-        alt First valid BC JSON report on PowerShell 7
+        alt First valid BC JSON report
             Coordinator->>Worker: Start-CodeCoverageAggregateWorker
         end
-        Coordinator->>Queue: Add-CodeCoverageAggregateWorkItem
-        Queue-->>Worker: Immutable report descriptor
+        Coordinator->>Pipe: Add-CodeCoverageAggregateWorkItem
+        Pipe-->>Worker: One compact JSON descriptor
         Note over RunTests,Worker: Parent starts the next app while the worker parses the previous report
         Worker->>Worker: Read-BcCoverageReport and merge semantic lines
-        Worker-->>Coordinator: Telemetry event
+        Worker-->>RunTests: Compactor log output
     end
 
     RunTests->>Coordinator: Complete-AlGoCodeCoverageSession
-    Coordinator->>Queue: CompleteAdding
+    Coordinator->>Pipe: Close standard input
     Coordinator->>Worker: Complete-CodeCoverageAggregateWorker
     Worker->>Worker: Write, checksum, validate, and atomically publish aggregate
-    Worker-->>Coordinator: Aggregate descriptor
+    Worker-->>Coordinator: Temporary JSON result file
     Coordinator->>Coordinator: Write final coverage-status.json
     Coordinator->>Coordinator: Delete raw BC JSON only after status references aggregate
     Coordinator-->>RunTests: Finalized
@@ -114,12 +114,12 @@ sequenceDiagram
 ### Inside one RunTests action
 
 - Test apps are producers and run sequentially in `Invoke-AlGoTestRun`. There is no parallel AlTool test execution within one project job.
-- Compaction has exactly one consumer. `Start-CodeCoverageAggregateWorker` creates a separate PowerShell runspace with `PowerShell.BeginInvoke()`.
-- The producer and consumer communicate through `BlockingCollection[object]`.
+- Compaction has exactly one consumer. `Start-CodeCoverageAggregateWorker` starts one persistent `pwsh -NoProfile -NonInteractive` child process.
+- The producer sends one compact JSON descriptor per report through redirected standard input. Child stdout and stderr remain attached to the action log.
 - The worker is started lazily after the first report passes artifact and metadata validation.
-- Each subsequent valid report is enqueued as an immutable descriptor. The parent immediately proceeds to the next app.
+- Each subsequent valid report is streamed as an immutable descriptor. The parent immediately proceeds to the next app.
 - The worker parses one report at a time. There is no parser pool and no concurrent mutation of the semantic line union.
-- `Complete-AlGoCodeCoverageSession` closes the queue and waits for the worker. This final drain is the only point where RunTests must wait for outstanding compaction.
+- `Complete-AlGoCodeCoverageSession` closes standard input and waits for the worker. This final drain is the only point where RunTests must wait for outstanding compaction.
 - The parent is the only writer of `coverage-status.json`. The worker never writes status.
 
 This design overlaps CPU and I/O-heavy report parsing with the next AlTool test run while avoiding locks around the aggregate model.
@@ -147,11 +147,11 @@ Keeping every report until artifact upload and then parsing them in AnalyzeCodeC
 
 ### Chosen design
 
-RunTests starts one long-lived PowerShell 7 worker after the first report has passed metadata validation. Each completed app contributes an immutable descriptor to a `BlockingCollection`. The worker consumes descriptors in order and streams one report at a time while the parent starts the next test app.
+RunTests starts one long-lived PowerShell 7 child process after the first report has passed metadata validation. Each completed app contributes one immutable JSON descriptor through redirected standard input. The worker consumes descriptors in order and streams one report at a time while the parent starts the next test app.
 
 The worker keeps one canonical executable-line union. Line identity is based on the resolved source and executable line identity, and duplicate facts use OR semantics: a line is covered if any run reports a positive hit count. Per-run completeness and diagnostic assessments remain separate so merging repeated lines does not erase whether an individual report was incomplete or unsafe.
 
-After the producer closes the queue, the worker drains remaining reports and atomically publishes the aggregate. Raw BC JSON reports are deleted only after the aggregate has been written, validated, and referenced by the final status. If compaction fails, raw reports remain available to the historical analyzer path.
+After the producer closes standard input, the worker drains remaining reports and atomically publishes the aggregate. Raw BC JSON reports are deleted only after the aggregate has been written, validated, and referenced by the final status. `RUNNER_DEBUG=1` retains raw reports. Compaction failure retains raw reports for diagnosis and fails coverage.
 
 This design provides the following benefits:
 
@@ -161,7 +161,7 @@ This design provides the following benefits:
 - AnalyzeCodeCoverage reads the compact aggregate instead of reparsing all raw reports.
 - One worker owns the union, so no parser pool, merge locks, or concurrent aggregate mutation are required.
 
-The first implementation does not reduce peak runner disk usage because raw reports remain until durable aggregate publication. It reduces final waiting time and published artifact size while preserving a safe fallback.
+The first implementation does not reduce peak runner disk usage because raw reports remain until durable aggregate publication. It reduces final waiting time and published artifact size while preserving failure diagnostics.
 
 ### Alternative considered: test-app-specific source roots
 
@@ -179,7 +179,7 @@ Project-scoped roots plus semantic compaction favor correctness and deterministi
 
 ### Across workflow jobs
 
-Build matrix jobs can run in parallel. Each project and build-mode job owns its own coverage directory, session, queue, and worker. No compactor is shared across jobs.
+Build matrix jobs can run in parallel. Each project and build-mode job owns its own coverage directory, session, input pipe, and worker. No compactor is shared across jobs.
 
 The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads their artifacts and merges project models logically for the repository summary. It does not modify the uploaded artifacts.
 
@@ -190,19 +190,19 @@ The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads
 | `RunTests.ps1` | RunTests composite action | Once per project build job | Reads settings, reconnects to the kept container, loads overrides, and calls the module orchestrator. |
 | `Invoke-AlGoTestRun` | `RunTests.ps1` | Once per project build job | Selects apps, creates the coverage session, runs every app sequentially, finalizes coverage, preserves JUnit, and reports the test outcome. |
 | `Get-TestAppsToRun` | `Invoke-AlGoTestRun` | Before session creation | Selects compiled test apps and optionally installed test apps. |
-| `Get-AlGoCodeCoverageCapability` | `Invoke-AlGoTestRun` | Once when coverage is requested | Accepts coverage only for container platform 30.0.56026.0 or later. |
+| `Get-AlGoCodeCoverageCapability` | `Invoke-AlGoTestRun` | Once when coverage is requested | Accepts coverage only for container platform 30.0.56026.0 or later with `pwsh` available. |
 | `New-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once before the app loop | Resolves ordered source roots and creates minimal ordered per-app run records. |
 | `Resolve-CodeCoverageSourceRootData` | Session creation | Once for a supported session | Collects app and test roots containing AL source files from the project and direct `projectsToTest`, rejects unsafe paths, deduplicates, and sorts roots. |
 | `Invoke-AlToolTestRun` | App loop or opted-in override | Once per selected test app | Enumerates tests, invokes AlTool, appends JUnit, surfaces diagnostics, and returns test success plus coverage completeness. |
 | `Invoke-AlRunTestsBatch` | `Invoke-AlToolTestRun` | Once per app with test codeunits | Builds the `al runtests` arguments, uses a temporary response file when the native command would be too large, invokes the process, and parses its structured output. |
-| `Complete-AlGoCodeCoverageRun` | App loop | Immediately after one supported invocation | Validates fixed artifacts and metadata, assigns the final run state, starts the worker if needed, and enqueues the report. |
-| `Test-CodeCoverageArtifacts` | Per-run completion | Before enqueue | Checks requested files, schema version, mode, and agreement between structured completeness and BC JSON. |
-| `Start-CodeCoverageAggregateWorker` | Per-run completion | Lazily for the first valid BC JSON report | Creates the queue, event queue, and single background PowerShell runspace. |
-| `Add-CodeCoverageAggregateWorkItem` | Per-run completion | Once per valid complete or incomplete report | Adds sequence, app identity, state, completeness, and raw report path to the queue. |
-| `Invoke-CodeCoverageAggregateWorker` | Background runspace | Until the queue is closed | Streams reports, evaluates diagnostics, and maintains the canonical OR-covered semantic line union. |
+| `Complete-AlGoCodeCoverageRun` | App loop | Immediately after one supported invocation | Validates fixed artifacts and metadata, assigns the final run state, starts the worker if needed, and streams the report descriptor. |
+| `Test-CodeCoverageArtifacts` | Per-run completion | Before streaming | Checks requested files, schema version, mode, and agreement between structured completeness and BC JSON. |
+| `Start-CodeCoverageAggregateWorker` | Per-run completion | Lazily for the first valid BC JSON report | Starts one persistent PowerShell 7 child process with redirected standard input. |
+| `Add-CodeCoverageAggregateWorkItem` | Per-run completion | Once per valid complete or incomplete report | Writes sequence, app identity, state, completeness, and raw report path as compact JSON. |
+| `Invoke-CodeCoverageAggregateWorker` | Child process | Until standard input closes | Streams reports, evaluates diagnostics, and maintains the canonical OR-covered semantic line union. |
 | `Complete-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once after the app loop, including error paths | Resolves unfinished states, drains compaction, writes final status, performs safe cleanup, and enforces coverage failures. |
-| `Complete-CodeCoverageAggregateWorker` | Session completion | During final drain | Closes the queue, waits for the runspace, returns the validated aggregate descriptor, and disposes worker resources. |
-| `Write-CodeCoverageStatusInternal` | Session completion | Once, with one fallback rewrite only if aggregate referencing fails | Atomically publishes the final status. There are no intermediate status writes. |
+| `Complete-CodeCoverageAggregateWorker` | Session completion | During final drain | Closes standard input, waits for the child process, reads its temporary result file, and disposes worker resources. |
+| `Write-CodeCoverageStatusInternal` | Session completion | Once | Atomically publishes the final status. There are no intermediate status writes. |
 | `AnalyzeCodeCoverage.ps1` | Project step or repository job | After coverage artifact publication | Loads settings, builds the requested model, logs details, and appends Markdown to the job summary. |
 | `Get-ProjectCoverageModelFromStatus` | Analyzer | Once per status file | Validates status and aggregate contracts, or reads raw reports when no aggregate descriptor exists. |
 | `Get-RepositoryCoverageModel` | Repository analyzer | Once after artifact download | Checks expected build dimensions and combines project application models without double-counting semantic lines. |
@@ -268,7 +268,7 @@ The session contains:
 - One minimal ordered run record per app.
 - The canonical coverage root from which per-app, status, and aggregate paths are derived.
 - The repository root needed by the streaming reader.
-- Optional live PowerShell 7 worker state.
+- Optional live PowerShell 7 child-process state.
 
 Source-root order is deterministic. It is part of the report mapping contract and the aggregate fingerprint.
 
@@ -289,7 +289,7 @@ The run becomes `complete`, `incomplete`, or `failed`. Test pass or failure is i
 
 ### 4. Background compaction
 
-For every queued report, the worker:
+For every streamed report descriptor, the worker:
 
 1. Streams the report with `Read-BcCoverageReport`.
 1. Validates the full JSON document and required schema.
@@ -322,7 +322,7 @@ The parent then:
 
 ## On-disk contracts
 
-Successful PowerShell 7 compaction normally leaves:
+Successful compaction normally leaves:
 
 ```text
 .buildartifacts/CodeCoverage/
@@ -334,7 +334,7 @@ Successful PowerShell 7 compaction normally leaves:
     `-- coverage.cobertura.xml
 ```
 
-Fallback or Windows PowerShell 5.1 execution leaves raw reports:
+Debug runs and failed compaction retain raw reports:
 
 ```text
 .buildartifacts/CodeCoverage/
@@ -355,7 +355,7 @@ The aggregate is an AL-Go contract, not an AlTool schema 1.0 document. It contai
 
 `Get-ProjectCoverageModelFromStatus` treats the status as authoritative:
 
-- If status has no aggregate descriptor, it reads per-run `coverage.bc.json`. This preserves historical artifacts and the compaction fallback.
+- If status has no aggregate descriptor, it reads per-run `coverage.bc.json`. This preserves compatibility with historical artifacts; current compaction failures still fail the RunTests action.
 - If status has an aggregate descriptor, it validates the descriptor, path containment, checksum, source-root fingerprint, header metadata, run identities, counts, and size.
 - A declared but missing, corrupt, or mismatched aggregate fails closed. The analyzer does not silently fall back to raw reports after an aggregate was published.
 
@@ -368,14 +368,14 @@ Repository analysis verifies the expected project and build-mode dimensions from
 | Condition | Test execution | Coverage result | Raw BC JSON |
 | :-- | :-- | :-- | :-- |
 | Coverage disabled | Unchanged | No session or status | Not created |
-| Unsupported platform | Runs normally | Final `unsupported` states and warning | Not created |
+| Unsupported platform or missing `pwsh` | Runs normally | Final `unsupported` states and one warning | Not created |
 | Test assertions fail but coverage is valid | Test result remains failed or warning per settings | Valid report is compacted and analyzed | Deleted after aggregate publication |
-| Supported coverage output is missing or invalid | Fails closed | Run becomes `failed` and its output is not authoritative | Retained when the session uses raw fallback; otherwise subject to normal post-publication cleanup |
-| Worker enqueue or parse fails | Continues to finalization | Warning and historical raw-report fallback | Retained |
-| Aggregate validation or publication fails | Continues with raw fallback unless another coverage failure exists | Status has no aggregate descriptor | Retained |
-| Status cannot reference a valid aggregate | Aggregate publication is removed and status is rewritten for raw fallback | Raw path remains authoritative | Retained |
+| Supported coverage output is missing or invalid | Fails closed | Run becomes `failed` and its output is not authoritative | Retained |
+| Worker input or parse fails | Fails coverage | Status has no aggregate descriptor | Retained |
+| Aggregate validation or publication fails | Fails coverage | Status has no aggregate descriptor | Retained |
+| Status cannot reference a valid aggregate | Fails coverage | No successful coverage result is published | Retained |
 | Aggregate succeeds but raw deletion fails | Warning | Aggregate remains authoritative | Undeleted files may also be uploaded |
-| Earlier runner exception exists | Original exception wins | Best available final status is written with suppressed secondary failure | Retained as needed |
+| Earlier ordinary test failure exists | Ordinary test failure wins and coverage failure is emitted as an error | Best available final status is written | Retained as needed |
 
 ## Telemetry
 
@@ -408,8 +408,8 @@ When changing this flow:
 1. Preserve deterministic source-root, run, and semantic-line ordering.
 1. Keep aggregate and historical raw analyzer paths equivalent.
 1. Test complete, incomplete, failed-test-valid-coverage, zero-codeunit, duplicate-line, diagnostics, multi-run, and repository cases.
-1. Test worker startup, queue drain, worker failure, corruption, fingerprint mismatch, atomic publication, cleanup, and fallback.
-1. Run RunTests and analyzer suites in PowerShell 7 and supported consumer tests in Windows PowerShell 5.1.
+1. Test worker startup, input drain, worker failure, corruption, fingerprint mismatch, atomic publication, cleanup, and hard failure.
+1. Run RunTests and analyzer suites from both PowerShell 7 and Windows PowerShell 5.1 parents.
 
 The primary implementation and tests are:
 
