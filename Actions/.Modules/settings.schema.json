@@ -948,7 +948,7 @@
                     }
                 },
                 "filesToExclude": {
-                    "description": "An array of file specifications to exclude from the update. Files that match these specifications are not copied from the template to the repository. Existing destination files selected for exclusion are removed unless another included source targets the same destination. When used in a custom template's settings, exclusions are also propagated from the original template to consumer repos even if the files no longer exist in the custom template.",
+                    "description": "An array of file specifications to exclude from the update. Files that match these specifications are not copied from the template to the repository. Existing destination files selected for exclusion are removed unless another included source targets the same destination. When a custom template is in use, exclusion rules from the custom template or consumer repository settings are matched against files in both the custom template and the original AL-Go template.",
                     "type": "array",
                     "items": {
                         "type": "object",
