@@ -135,6 +135,26 @@ Describe "CheckBuildJobsInWorkflowRun" {
     }
 }
 
+Describe "GetReleaseNotes" {
+    It 'returns the response content so that non-ASCII characters survive ConvertFrom-Json' {
+        # Build the text from code points so the test does not depend on the encoding of this file
+        $expectedBody = "Pr$([char]0xFC)fung f$([char]0xFC)r Gr$([char]0xF6)$([char]0xDF)e $([char]0xC4)$([char]0xD6)$([char]0xDC) $([char]0x201E)Test$([char]0x201C)"
+        $json = @{ name = 'v1.0.0'; body = $expectedBody } | ConvertTo-Json -Compress
+        Mock Write-Host -ModuleName Github-Helper {}
+        Mock InvokeWebRequest -ModuleName Github-Helper {
+            # Emulates Windows PowerShell 5.1: converting the response object to a string replaces non-ASCII characters with '?'
+            $response = [pscustomobject]@{ Content = $json }
+            $response | Add-Member -MemberType ScriptMethod -Name ToString -Value { $this.Content -replace '[^\u0000-\u007F]', '?' } -Force
+            $response
+        }
+
+        $releaseNotes = GetReleaseNotes -token 'token' -repository 'test/repo' -api_url 'https://api.github.com' -tag_name '1.0.0' | ConvertFrom-Json
+
+        $releaseNotes.body | Should -BeExactly $expectedBody
+        Should -Invoke InvokeWebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $method -eq 'POST' -and $uri -eq 'https://api.github.com/repos/test/repo/releases/generate-notes' }
+    }
+}
+
 Describe "GitHub-Helper Tests" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
