@@ -171,7 +171,7 @@ function Get-AlToolTestCodeunits {
         $getTestsParams["testType"] = $matchingTestType[0]
     }
 
-    $codeunits = @(Get-TestsFromBcContainer @getTestsParams)
+    $codeunits = @(Get-TestsFromBcContainer @getTestsParams | ForEach-Object { $_ })
 
     $disabledMethods = @{}
     $disabledCodeunits = @{}

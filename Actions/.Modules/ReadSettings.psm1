@@ -329,6 +329,7 @@ function GetDefaultSettings
             "parallelism"                               = 1
         }
         "pullRequestTrigger"                            = "pull_request"
+        "skipDraftPullRequests"                         = $false
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
             "DurationError"                             = 25
