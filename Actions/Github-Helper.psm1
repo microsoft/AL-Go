@@ -778,7 +778,8 @@ function GetReleaseNotes {
         $postParams["target_commitish"] = $target_commitish
     }
 
-    InvokeWebRequest -Headers (GetHeaders -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes"
+    # Return the response content (JSON string). Piping the response object itself into ConvertFrom-Json converts it with ToString(), which replaces non-ASCII characters (like umlauts) with '?'.
+    (InvokeWebRequest -Headers (GetHeaders -token $token) -Method POST -Body ($postParams | ConvertTo-Json) -Uri "$api_url/repos/$repository/releases/generate-notes").Content
 }
 
 function DownloadRelease {
