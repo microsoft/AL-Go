@@ -1165,7 +1165,7 @@ function Add-CoverageOverviewMarkdown {
 
     if (-not $Model.Complete) {
         [void]$Builder.AppendLine("> [!WARNING]")
-        [void]$Builder.AppendLine("> Coverage data is incomplete. Available metrics are shown only when they can be calculated safely. See the action logs and raw CodeCoverage artifact for details.")
+        [void]$Builder.AppendLine("> Coverage data is incomplete. Available metrics are shown only when they can be calculated safely. See the action logs for details. Raw CodeCoverage reports are retained only for debug reruns.")
         [void]$Builder.AppendLine()
     }
     if ($Model.LineComplete) {
@@ -1174,7 +1174,7 @@ function Add-CoverageOverviewMarkdown {
             -DenominatorName "executable lines" -UncoveredName "uncovered"
     }
     else {
-        [void]$Builder.AppendLine("**Line coverage:** unavailable (coverage data is incomplete or could not be evaluated safely; see the action logs and raw CodeCoverage artifact for details)")
+        [void]$Builder.AppendLine("**Line coverage:** unavailable (coverage data is incomplete or could not be evaluated safely; see the action logs for details; raw CodeCoverage reports are retained only for debug reruns)")
         [void]$Builder.AppendLine()
     }
 }

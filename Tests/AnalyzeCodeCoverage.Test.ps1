@@ -166,7 +166,8 @@ Describe "AnalyzeCodeCoverage" {
         $model.Complete | Should -BeFalse
         $summary = New-ProjectCoverageSummary $model
         $summary | Should -Match "Coverage data is incomplete"
-        $summary | Should -Match "action logs and raw CodeCoverage artifact"
+        $summary | Should -Match "action logs for details"
+        $summary | Should -Match "raw CodeCoverage reports are retained only for debug reruns"
         $summary | Should -Not -Match "bc-json coverage format"
         $summary | Should -Match "No regular apps were available"
         $summary | Should -Not -Match "%"
@@ -1191,7 +1192,8 @@ Describe "AnalyzeCodeCoverage" {
         $projectSummary = New-ProjectCoverageSummary $projectModel
 
         $projectSummary | Should -Match "Coverage data is incomplete"
-        $projectSummary | Should -Match "action logs and raw CodeCoverage artifact"
+        $projectSummary | Should -Match "action logs for details"
+        $projectSummary | Should -Match "raw CodeCoverage reports are retained only for debug reruns"
         $projectSummary | Should -Not -Match ([regex]::Escape($diagnostic))
         $projectSummary | Should -Not -Match "AL0247"
         $projectSummary | Should -Not -Match "HelloWorld\.al"
@@ -1216,7 +1218,8 @@ Describe "AnalyzeCodeCoverage" {
         $repositorySummary = New-RepositoryCoverageSummary $repositoryModel
 
         $repositorySummary | Should -Match "Coverage data is incomplete"
-        $repositorySummary | Should -Match "action logs and raw CodeCoverage artifact"
+        $repositorySummary | Should -Match "action logs for details"
+        $repositorySummary | Should -Match "raw CodeCoverage reports are retained only for debug reruns"
         $repositorySummary | Should -Not -Match ([regex]::Escape($diagnostic))
         $repositorySummary | Should -Not -Match "AL0247"
         $repositorySummary | Should -Not -Match "HelloWorld\.al"
