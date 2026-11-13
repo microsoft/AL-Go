@@ -4,16 +4,31 @@ param()
 
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-. (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
-
-# Stub for the BcContainerHelper function so it can be mocked within the module scope
-function Get-AppJsonFromAppFile { param($appFile) }
-function Get-BcContainerEventLog { param($containerName, [switch] $doNotOpen) }
-
-Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/RunTests.psm1' -Resolve) -DisableNameChecking -Force
-
 Describe 'RunTests.psm1 Tests' {
     BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        # Module-scoped mocks need globally visible targets without helper autoload.
+        $script:stubbedGlobalCommands = @()
+        $stubDefinitions = @{
+            'ConvertTo-HashTable' = ${function:ConvertTo-HashTable}
+            'Get-AppJsonFromAppFile' = {
+                param($appFile)
+                throw 'Get-AppJsonFromAppFile must be mocked by the test.'
+            }
+            'Get-BcContainerEventLog' = {
+                param($containerName, [switch] $doNotOpen)
+                throw 'Get-BcContainerEventLog must be mocked by the test.'
+            }
+        }
+        foreach ($commandName in $stubDefinitions.Keys) {
+            $functionPath = "Function:\global:$commandName"
+            if (-not (Test-Path -LiteralPath $functionPath)) {
+                Set-Item -LiteralPath $functionPath -Value $stubDefinitions[$commandName]
+                $script:stubbedGlobalCommands += $commandName
+            }
+        }
+        Import-Module (Join-Path $PSScriptRoot '../Actions/RunTests/RunTests.psm1' -Resolve) -DisableNameChecking -Force
+
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testCredential', Justification = 'Used in tests')]
         $testCredential = New-Object System.Management.Automation.PSCredential("admin", (ConvertTo-SecureString "password" -AsPlainText -Force))
         $script:compiledAppMetadataByPath = @{}
@@ -57,6 +72,12 @@ Describe 'RunTests.psm1 Tests' {
             )
 
             return @($script:testFoldersByProject[$ProjectPath])
+        }
+    }
+
+    AfterAll {
+        foreach ($commandName in $script:stubbedGlobalCommands) {
+            Remove-Item "Function:\global:$commandName" -Force -ErrorAction SilentlyContinue
         }
     }
 

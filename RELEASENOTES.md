@@ -1,3 +1,13 @@
+### Authorization for PTE deployment on BC 29 and later
+
+**Update your deployment authorization:** For S2S, add the `AdminCenter.ReadWrite.All` application permission, grant tenant admin consent, and register the client ID under **Authorized Microsoft Entra apps** in the Business Central administration center. See [deployment setup](Workshop/ContinuousDeployment.md#pte-deployment-authorization).
+
+On BC 29 and later, AL-Go checks Admin Center access before publishing and selects the existing Automation API with a warning only if that check fails authentication or authorization. All PTEs in the Deploy action use the selected API; publishing failures stop deployment.
+
+The Automation API's PTE upload endpoint (`extensionUpload`) is deprecated and planned for removal in 2027 release wave 1; this does not mean all Automation APIs are deprecated. See the [official deprecation notice](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload).
+
+For custom Admin services, configure repository settings `deploymentBaseUrl` and `deploymentApplicationFamily`. Automation keeps its existing BCH settings independently. See [target setup and authorization](Workshop/ContinuousDeployment.md#custom-deployment-targets).
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
@@ -13,7 +23,7 @@ The action uses AlTool by default, running each app's enabled normal tests in on
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
+The optional `DeployTo<environment>.unpublishOldVersions` setting (default `false`) removes older, uninstalled versions after successful Scope PTE deployment through Automation on BC 25.4+, including fallback. Administration center deployments use Business Central's background cleanup instead. See [old published versions](Workshop/ContinuousDeployment.md#old-published-versions) for details.
 
 ### Settings sources in workflow logs
 
@@ -68,7 +78,7 @@ AL-Go now supports including pre-release versions of Business Central app packag
 
 ### New `unpublishOldVersions` setting for deployment
 
-The `DeployTo<environment>` setting now supports an opt-in `unpublishOldVersions` boolean (default `false`). When enabled, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment, keeping Extension Management clean. This only applies to PTE deployments (Scope PTE / automation API), uses the Automation API v2.0 `Microsoft.NAV.unpublish` action, and is non-fatal (failures are reported as warnings and never fail the deployment).
+The optional `DeployTo<environment>.unpublishOldVersions` setting (default `false`) removes older, uninstalled versions after successful Scope PTE deployment through Automation on BC 25.4+, including fallback. Administration center deployments use Business Central's background cleanup instead. See [old published versions](Workshop/ContinuousDeployment.md#old-published-versions) for details.
 
 ### Expanded AL-Go telemetry dashboard
 

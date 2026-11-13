@@ -88,6 +88,43 @@ New-BcAuthContext -clientID $clientID -clientSecret $clientSecret -tenantID $ten
 
 Paste the value from the clipboard into the "Value" field of the **AuthContext** secret for the environment and you should be good to go.
 
+## PTE deployment authorization
+
+The Automation API's PTE upload (`extensionUpload`) is [deprecated and planned for removal in 2027 release wave 1](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload), so configure the Admin API permissions below before removal because AL-Go's fallback depends on this endpoint.
+
+For **BC 29 or later**, AL-Go prefers administration center publishing for PTEs. To enable it with S2S authentication, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant **tenant admin consent**, and add the client ID to **Authorized Microsoft Entra apps** in the Business Central administration center. Keep the environment API permissions, such as **Automation.ReadWrite.All** and **API.ReadWrite.All** where required, and the Microsoft Entra application registration and permission sets inside each Business Central environment.
+
+With delegated authentication (impersonation), administration center publishing requires appropriate **Business Central administration center access** as well as the environment permissions. The existing **AUTHCONTEXT** credential structure and the commands above remain unchanged. See the official [Business Central administration center API documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api) for authentication and authorization details.
+
+Before dependency installation and primary PTE publishing, AL-Go checks administration center access once by reading the target's installed apps. If this check fails authentication or authorization, AL-Go warns and selects the existing Automation API. Other check failures stop deployment. All PTE publishing and installed-app reads then use the selected API; failures never switch APIs. Dev deployments without PTE dependency packages do not perform this check.
+
+A successful read does not guarantee permission to install apps. If installation or operation tracking later fails, including an authorization error, deployment stops. Update the authorization above to use the preferred publishing path.
+
+This behavior also applies when a **Scope Dev** deployment installs or upgrades a PTE dependency on **BC 29 or later**. Publishing primary apps through the sandbox development endpoint does not itself require the additional authorization. Deployment to earlier BC versions is unchanged.
+
+## Custom deployment targets
+
+For native Admin Center calls to an Embed or other custom service, set the repository settings `deploymentBaseUrl` (the HTTPS API root) and `deploymentApplicationFamily` (the service's exact application family). These apply to installed-app reads, PTE publishing and operation tracking only. For example:
+
+```json
+{
+  "deploymentBaseUrl": "https://api.example.com",
+  "deploymentApplicationFamily": "YourApplicationFamily"
+}
+```
+
+Empty or omitted `deploymentBaseUrl` uses `https://api.businesscentral.dynamics.com`, regardless of BCH settings. The family defaults to `BusinessCentral` and is never inferred from the host. Automation and AppSource operations keep their existing BCH configuration and authentication; configure `bcContainerHelperConfig.apiBaseUrl` separately if needed. The web-client/readiness URL remains `bcContainerHelperConfig.baseUrl`.
+
+Each Deploy run maintains a separate Admin authentication context and reuses its renewed tokens, using the Admin API root as the default OAuth resource without changing the BCH context. Explicit `AUTHCONTEXT` scopes or resource values are preserved, not retargeted; they must authorize the Admin service too. Credentials must support token renewal for that resource, and the service must support the corresponding API contracts and authorization.
+
+## Old published versions
+
+For apps published through the administration center, AL-Go leaves old-version cleanup to Business Central. Older published versions may remain after deployment until background cleanup runs. On a BC 30 sandbox, cleanup was observed after an overnight interval, leaving the installed version and the latest uninstalled version; this is not a guaranteed nightly schedule or retention policy.
+
+The optional `DeployTo<environment>.unpublishOldVersions` boolean (default `false`) does not control background cleanup. When enabled, AL-Go warns and skips explicit unpublish for apps published through the administration center without failing deployment.
+
+For Automation publishing, enabling the setting removes only selected primary apps' uninstalled versions older than their currently installed version after successful **Scope PTE** publishing, including apps skipped because the same or a newer version is installed. This requires **BC 25.4 or later**. Cleanup errors remain warnings, and the setting does not apply to Scope Dev or custom deployments.
+
 ## Custom Deployments
 
 AL-Go can also be setup for custom deployment when you want to deploy to non-SaaS environments. More about this in the advanced section.
