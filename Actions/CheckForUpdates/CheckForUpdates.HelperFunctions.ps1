@@ -231,7 +231,9 @@ function ModifyBuildWorkflows {
     $deploy = $yaml.Get('jobs:/Deploy:/')
     $deployALDoc = $yaml.Get('jobs:/DeployALDoc:/')
     $codeAnalysisUpload = $yaml.Get('jobs:/CodeAnalysisUpload:/')
+    $analyzeCodeCoverage = $yaml.Get('jobs:/AnalyzeCodeCoverage:/')
     $postProcess = $yaml.Get('jobs:/PostProcess:/')
+    $statusCheck = $yaml.Get('jobs:/StatusCheck:/')
     if (!$build) {
         throw "No build job found in the workflow"
     }
@@ -302,6 +304,13 @@ function ModifyBuildWorkflows {
     }
 
     $postProcessNeeds = $needs
+    if ($analyzeCodeCoverage) {
+        $postProcessNeeds += @('AnalyzeCodeCoverage')
+        if ($statusCheck) {
+            $statusCheck.Replace('needs:', "needs: [ $($postProcessNeeds -join ', ') ]")
+            $yaml.Replace('jobs:/StatusCheck:/', $statusCheck.content)
+        }
+    }
     # Modify Deliver and Deploy steps depending on build jobs
     if ($deploy) {
         $deploy.Replace('needs:', "needs: [ $($needs -join ', ') ]")

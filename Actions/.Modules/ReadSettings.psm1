@@ -275,6 +275,9 @@ function GetDefaultSettings
         "useSeparateTestAction"                         = [ordered]@{
             "enabled"                                   = $false
             "testType"                                  = ""
+            "codeCoverageEnabled"                       = $false
+            "codeCoverageGenerateCobertura"             = $true
+            "codeCoverageSummary"                       = "both"
         }
         "doNotRunBcptTests"                             = $false
         "doNotRunPageScriptingTests"                    = $false

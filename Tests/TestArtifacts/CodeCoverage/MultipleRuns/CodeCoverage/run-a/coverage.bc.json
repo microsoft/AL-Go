@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "coverageMode": "line",
+  "complete": true,
+  "diagnostics": [],
+  "sources": [ "src/Shared.Report.al" ],
+  "tests": [
+    {
+      "testId": 10,
+      "codeunitId": 80300,
+      "methodId": 10,
+      "methodName": "First test",
+      "owningAppId": "run-a"
+    }
+  ],
+  "procedureEdges": [
+    {
+      "objectType": 3,
+      "objectId": 50300,
+      "methodId": 100,
+      "testId": 10
+    }
+  ],
+  "methods": [
+    {
+      "objectType": 3,
+      "objectId": 50300,
+      "methodId": 100,
+      "name": "First",
+      "startLine": 10,
+      "endLine": 14,
+      "sourcePath": "src/Shared.Report.al"
+    },
+    {
+      "objectType": 3,
+      "objectId": 50300,
+      "methodId": 101,
+      "name": "Second",
+      "startLine": 20,
+      "endLine": 24,
+      "sourcePath": "src/Shared.Report.al"
+    }
+  ],
+  "lines": [
+    {
+      "objectType": 3,
+      "objectId": 50300,
+      "lineNumber": 11,
+      "lineType": 3,
+      "methodId": 100,
+      "hitCount": 0,
+      "status": 0,
+      "sourcePath": "src/Shared.Report.al"
+    },
+    {
+      "objectType": 3,
+      "objectId": 50300,
+      "lineNumber": 21,
+      "lineType": 3,
+      "methodId": 101,
+      "hitCount": 0,
+      "status": 0,
+      "sourcePath": "src/Shared.Report.al"
+    }
+  ]
+}

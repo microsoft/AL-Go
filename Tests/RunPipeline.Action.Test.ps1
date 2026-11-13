@@ -55,6 +55,15 @@ Describe "RunPipeline Action Tests" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'setCredentialFunction', Justification = 'Used by credential test cases.')]
         $setCredentialFunction = $setCredentialFunctionAst[0].Body.GetScriptBlock()
 
+        $setPlatformVersionFunctionAst = @($runPipelineAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                    $node.Name -eq 'Set-RunPipelineContainerPlatformVersion'
+                }, $true))
+        $setPlatformVersionFunctionAst.Count | Should -Be 1
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'setPlatformVersionFunction', Justification = 'Used by platform handoff test cases.')]
+        $setPlatformVersionFunction = $setPlatformVersionFunctionAst[0].Body.GetScriptBlock()
+
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'credentialCommandAsts', Justification = 'Used by credential ordering tests.')]
         $credentialCommandAsts = @($runPipelineAst.FindAll({
                     param($node)
@@ -90,6 +99,24 @@ Describe "RunPipeline Action Tests" {
         $setCredentialCommands[0].Extent.Text | Should -Match '-runAlPipelineParams \$runAlPipelineParams'
         $setCredentialCommands[0].Extent.Text | Should -Match '-credential \$containerCredential'
         $setCredentialCommands[0].Extent.Text | Should -Match '-exportForRunTests:\$runTestsInSeparateAction'
+    }
+
+    It 'Exports the actual container platform version only after Run-AlPipeline succeeds' {
+        $runAlPipelineCommand = @($runPipelineAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq 'Run-AlPipeline'
+                }, $true))
+        $platformHandoffCommand = @($runPipelineAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq 'Set-RunPipelineContainerPlatformVersion'
+                }, $true))
+
+        $runAlPipelineCommand.Count | Should -Be 1
+        $platformHandoffCommand.Count | Should -Be 1
+        $platformHandoffCommand[0].Extent.StartOffset | Should -BeGreaterThan $runAlPipelineCommand[0].Extent.EndOffset
+        $platformHandoffCommand[0].Extent.Text | Should -Match '-containerName \$containerName'
     }
 
     It 'Derives separate test eligibility from the deterministic reason list' {
@@ -264,6 +291,45 @@ Describe "RunPipeline Action Tests" {
         }
         finally {
             $env:GITHUB_ENV = $previousGitHubEnv
+        }
+    }
+
+    Context 'Container platform version handoff' {
+        BeforeEach {
+            $script:previousGitHubEnv = $env:GITHUB_ENV
+            $env:GITHUB_ENV = Join-Path $TestDrive "$([guid]::NewGuid()).env"
+        }
+
+        AfterEach {
+            $env:GITHUB_ENV = $script:previousGitHubEnv
+        }
+
+        It 'Exports the actual platform version returned by BcContainerHelper' {
+            Mock Get-BcContainerPlatformVersion { return [version]'30.0.56026.0' }
+
+            & $setPlatformVersionFunction -containerName 'build-container'
+
+            Get-Content -LiteralPath $env:GITHUB_ENV -Encoding UTF8 |
+                Should -Be @(
+                    'containerPlatformVersion=30.0.56026.0',
+                    'containerPlatformVersionReason='
+                )
+            Should -Invoke Get-BcContainerPlatformVersion -Times 1 -Exactly -ParameterFilter {
+                $containerOrImageName -eq 'build-container'
+            }
+        }
+
+        It 'Exports a blank version and safe reason without failing when lookup fails' {
+            Mock Get-BcContainerPlatformVersion { throw 'lookup included unsafe details' }
+
+            { & $setPlatformVersionFunction -containerName 'build-container' } | Should -Not -Throw
+
+            $handoff = Get-Content -LiteralPath $env:GITHUB_ENV -Encoding UTF8
+            $handoff | Should -Contain 'containerPlatformVersion='
+            $reason = @($handoff | Where-Object { $_ -like 'containerPlatformVersionReason=*' })
+            $reason.Count | Should -Be 1
+            $reason[0] | Should -Match 'Get-BcContainerPlatformVersion failed'
+            $reason[0] | Should -Not -Match 'unsafe details'
         }
     }
 

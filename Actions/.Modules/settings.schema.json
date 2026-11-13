@@ -471,7 +471,10 @@
             "type": "object",
             "default": {
                 "enabled": false,
-                "testType": ""
+                "testType": "",
+                "codeCoverageEnabled": false,
+                "codeCoverageGenerateCobertura": true,
+                "codeCoverageSummary": "both"
             },
             "description": "PREVIEW: Configuration for running normal tests in a separate RunTests action. See https://aka.ms/ALGoSettings#useSeparateTestAction",
             "properties": {
@@ -484,6 +487,27 @@
                     "type": "string",
                     "default": "",
                     "description": "Optional test type for the separate RunTests action. The built-in AlTool runner supports UnitTest, IntegrationTest, and Uncategorized; blank runs all test types. Custom RunTestsInBcContainer overrides may interpret other values such as Legacy."
+                },
+                "codeCoverageEnabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "When true, the built-in separate RunTests action collects executable-line coverage on container platform 30.0.56026.0 or later. Unsupported or unconfirmed platform versions produce a warning and continue tests without coverage."
+                },
+                "codeCoverageGenerateCobertura": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "When true, produces a Cobertura interoperability artifact in addition to the BC JSON artifact required for AL-Go coverage analysis."
+                },
+                "codeCoverageSummary": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "project",
+                        "repository",
+                        "both"
+                    ],
+                    "default": "both",
+                    "description": "Controls GitHub executable-line coverage visualization when code coverage is enabled: none, project, repository, or both."
                 }
             },
             "additionalProperties": false

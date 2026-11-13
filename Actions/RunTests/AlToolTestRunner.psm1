@@ -13,6 +13,8 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
 Import-Module (Join-Path $PSScriptRoot '..\.Modules\AlToolHelper.psm1' -Resolve) -DisableNameChecking -Force
 
+$alToolResponseFileThreshold = 24000
+
 <#
 .SYNOPSIS
     Resolves the on-prem connection settings (server URL, instance, dev-service port) for a container.
@@ -304,6 +306,7 @@ function ConvertFrom-AlTestGroupsOutput {
 
     $entries = @()
     $hasResults = $false
+    $coverage = $null
     if ($toolResponse.ContainsKey("data") -and $null -ne $toolResponse.data) {
         if ($toolResponse.data -isnot [hashtable]) {
             throw "The structured response contains an invalid ToolResponse data object."
@@ -314,6 +317,25 @@ function ConvertFrom-AlTestGroupsOutput {
             }
             $entries = @($toolResponse.data.results)
             $hasResults = $true
+        }
+        if ($toolResponse.data.ContainsKey("coverage") -and $null -ne $toolResponse.data.coverage) {
+            if ($toolResponse.data.coverage -isnot [hashtable]) {
+                throw "The structured response contains an invalid ToolResponse data.coverage object."
+            }
+            $coverageData = $toolResponse.data.coverage
+            foreach ($requiredProperty in @("diagnostics", "isComplete")) {
+                if (-not $coverageData.ContainsKey($requiredProperty)) {
+                    throw "The structured response coverage object is missing '$requiredProperty'."
+                }
+            }
+            if ($coverageData.diagnostics -isnot [array] -or $coverageData.isComplete -isnot [bool]) {
+                throw "The structured response contains invalid coverage diagnostics or isComplete values."
+            }
+
+            $coverage = @{
+                Diagnostics = @($coverageData.diagnostics)
+                IsComplete  = [bool] $coverageData.isComplete
+            }
         }
     }
     if ($toolResponse.succeeded -and -not $hasResults) {
@@ -360,6 +382,8 @@ function ConvertFrom-AlTestGroupsOutput {
         Results   = $results
         Succeeded = $toolResponse.succeeded
         Message   = $responseMessage
+        Coverage  = $coverage
+        Warnings  = if ($toolResponse.ContainsKey("warnings")) { @($toolResponse.warnings) } else { @() }
     }
 }
 
@@ -412,6 +436,127 @@ function New-AlTestGroupsFile {
     return $testGroupsFile
 }
 
+function Initialize-AlToolCoverageOutput {
+    param(
+        [Parameter(Mandatory = $true)][string] $CoverageOutputPath,
+        [ValidateSet("bc-json", "cobertura")][string[]] $CoverageFormats
+    )
+
+    if ("bc-json" -notin $CoverageFormats) {
+        throw "The bc-json coverage format is required when a coverage output path is supplied."
+    }
+    New-Item -Path $CoverageOutputPath -ItemType Directory -Force | Out-Null
+    foreach ($coverageFileName in @("coverage.bc.json", "coverage.cobertura.xml")) {
+        Remove-Item -LiteralPath (Join-Path $CoverageOutputPath $coverageFileName) `
+            -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Write-EmptyAlToolCoverageArtifacts {
+    param(
+        [Parameter(Mandatory = $true)][string] $CoverageOutputPath,
+        [ValidateSet("bc-json", "cobertura")][string[]] $CoverageFormats
+    )
+
+    Initialize-AlToolCoverageOutput -CoverageOutputPath $CoverageOutputPath `
+        -CoverageFormats $CoverageFormats
+
+    [ordered]@{
+        schemaVersion = "1.0"
+        coverageMode = "line"
+        complete = $true
+        diagnostics = @()
+        sources = @()
+        tests = @()
+        procedureEdges = @()
+        methods = @()
+        lines = @()
+    } | ConvertTo-Json -Depth 5 |
+        Set-Content -LiteralPath (Join-Path $CoverageOutputPath "coverage.bc.json") -Encoding UTF8
+
+    if ("cobertura" -in $CoverageFormats) {
+        $xml = New-Object System.Xml.XmlDocument
+        [void]$xml.AppendChild($xml.CreateXmlDeclaration("1.0", "UTF-8", $null))
+        $coverage = $xml.CreateElement("coverage")
+        $coverageAttributes = [ordered]@{
+            "line-rate" = "1"
+            "branch-rate" = "1"
+            "lines-covered" = "0"
+            "lines-valid" = "0"
+            "branches-covered" = "0"
+            "branches-valid" = "0"
+            "complexity" = "0"
+            "version" = "altool-empty"
+            "timestamp" = "0"
+        }
+        foreach ($attribute in $coverageAttributes.GetEnumerator()) {
+            $coverage.SetAttribute($attribute.Key, $attribute.Value)
+        }
+        [void]$coverage.AppendChild($xml.CreateElement("sources"))
+        [void]$coverage.AppendChild($xml.CreateElement("packages"))
+        [void]$xml.AppendChild($coverage)
+        $xml.Save((Join-Path $CoverageOutputPath "coverage.cobertura.xml"))
+    }
+}
+
+function ConvertTo-AlToolResponseFileArgument {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $Argument
+    )
+
+    if ($Argument.Length -gt 0 -and $Argument -notmatch '[\s"]') {
+        return $Argument
+    }
+
+    $builder = [System.Text.StringBuilder]::new()
+    [void] $builder.Append([char]34)
+    $backslashCount = 0
+    foreach ($character in $Argument.ToCharArray()) {
+        if ($character -eq [char]92) {
+            $backslashCount++
+            continue
+        }
+
+        if ($character -eq [char]34) {
+            [void] $builder.Append([char]92, (($backslashCount * 2) + 1))
+            [void] $builder.Append([char]34)
+        }
+        else {
+            if ($backslashCount -gt 0) {
+                [void] $builder.Append([char]92, $backslashCount)
+            }
+            [void] $builder.Append($character)
+        }
+        $backslashCount = 0
+    }
+
+    if ($backslashCount -gt 0) {
+        [void] $builder.Append([char]92, ($backslashCount * 2))
+    }
+    [void] $builder.Append([char]34)
+    return $builder.ToString()
+}
+
+function New-AlToolResponseFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]] $ArgumentList
+    )
+
+    $responseFilePath = Join-Path ([System.IO.Path]::GetTempPath()) "altool-arguments-$([Guid]::NewGuid().ToString('N')).rsp"
+    $responseFileLines = @($ArgumentList | ForEach-Object {
+            ConvertTo-AlToolResponseFileArgument -Argument "$_"
+        })
+    [System.IO.File]::WriteAllLines(
+        $responseFilePath,
+        [string[]] $responseFileLines,
+        [System.Text.UTF8Encoding]::new($false)
+    )
+    return $responseFilePath
+}
+
 <#
 .SYNOPSIS
     Runs all enabled test groups for one app through one AlTool connection.
@@ -425,10 +570,15 @@ function Invoke-AlRunTestsBatch {
         [Parameter(Mandatory = $true)][object[]] $Codeunits,
         [Parameter(Mandatory = $true)][string] $Company,
         [Parameter(Mandatory = $true)][string] $Tenant,
-        [Parameter(Mandatory = $true)][hashtable] $Connection
+        [Parameter(Mandatory = $true)][hashtable] $Connection,
+        [string] $CoverageOutputPath = "",
+        [ValidateSet("bc-json", "cobertura")][string[]] $CoverageFormats = @(),
+        [string[]] $CoverageSourceRoots = @(),
+        [string[]] $CoverageAppPaths = @()
     )
 
     $testGroupsFile = New-AlTestGroupsFile -Codeunits $Codeunits
+    $responseFilePath = ""
     try {
         $alArgs = @(
             'runtests',
@@ -442,10 +592,46 @@ function Invoke-AlRunTestsBatch {
             '--tenant', $Tenant
         )
 
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        $nativeResult = Invoke-AlNativeCommand -FilePath $AlToolPath -ArgumentList $alArgs
-        $sw.Stop()
+        if (-not [string]::IsNullOrWhiteSpace($CoverageOutputPath)) {
+            Initialize-AlToolCoverageOutput -CoverageOutputPath $CoverageOutputPath `
+                -CoverageFormats $CoverageFormats
+            $alArgs += @('--coverage', 'line', '--coverage-output', $CoverageOutputPath)
+            foreach ($coverageFormat in $CoverageFormats) {
+                $alArgs += @('--coverage-format', $coverageFormat)
+            }
+            foreach ($sourceRoot in $CoverageSourceRoots) {
+                $alArgs += @('--coverage-source-root', $sourceRoot)
+            }
+            $coverageAppPathsSeen = [System.Collections.Generic.HashSet[string]]::new(
+                [System.StringComparer]::OrdinalIgnoreCase
+            )
+            foreach ($coverageAppPath in $CoverageAppPaths) {
+                if ([string]::IsNullOrWhiteSpace($coverageAppPath)) {
+                    continue
+                }
+                $fullCoverageAppPath = [System.IO.Path]::GetFullPath($coverageAppPath)
+                if (-not (Test-Path -LiteralPath $fullCoverageAppPath -PathType Leaf)) {
+                    throw "Code coverage app package '$fullCoverageAppPath' does not exist."
+                }
+                if ($coverageAppPathsSeen.Add($fullCoverageAppPath)) {
+                    $alArgs += @('--coverage-app', $fullCoverageAppPath)
+                }
+            }
+        }
 
+        $nativeArgumentList = @($alArgs)
+        $estimatedCommandLength = $AlToolPath.Length + 1 + (($alArgs | ForEach-Object {
+                    "$_".Length + 3
+                } | Measure-Object -Sum).Sum)
+        if ($estimatedCommandLength -gt $alToolResponseFileThreshold) {
+            $responseFilePath = New-AlToolResponseFile -ArgumentList $alArgs
+            $nativeArgumentList = @("@$responseFilePath")
+            OutputDebug -message "Using an AlTool response file for $($alArgs.Count) arguments."
+        }
+
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        $nativeResult = Invoke-AlNativeCommand -FilePath $AlToolPath -ArgumentList $nativeArgumentList
+        $sw.Stop()
         $standardOutputText = ($nativeResult.StandardOutput -join [Environment]::NewLine).Trim()
         $standardErrorText = ($nativeResult.StandardError -join [Environment]::NewLine).Trim()
         if (-not [string]::IsNullOrWhiteSpace($standardErrorText)) {
@@ -481,6 +667,26 @@ function Invoke-AlRunTestsBatch {
             throw "AlTool protocol failure. $($details -join [Environment]::NewLine)"
         }
 
+        $coverageError = ""
+        if (-not [string]::IsNullOrWhiteSpace($CoverageOutputPath)) {
+            if ($null -eq $parsed.Coverage) {
+                $coverageError = "AlTool coverage failure. The supported server response did not include structured coverage data."
+            }
+            else {
+                $expectedArtifacts = @{
+                    "bc-json"   = "coverage.bc.json"
+                    "cobertura" = "coverage.cobertura.xml"
+                }
+                foreach ($coverageFormat in $CoverageFormats) {
+                    $artifactPath = Join-Path $CoverageOutputPath $expectedArtifacts[$coverageFormat]
+                    if (-not (Test-Path -LiteralPath $artifactPath -PathType Leaf)) {
+                        $coverageError = "AlTool coverage failure. The expected '$coverageFormat' artifact '$artifactPath' was not created."
+                        break
+                    }
+                }
+            }
+        }
+
         if (-not $parsed.Succeeded -and $parsed.Results.Count -eq 0) {
             $details = @()
             if (-not [string]::IsNullOrWhiteSpace($parsed.Message)) {
@@ -500,9 +706,15 @@ function Invoke-AlRunTestsBatch {
             Results    = $parsed.Results
             Succeeded  = [bool] ($parsed.Succeeded -and ($nativeResult.ExitCode -eq 0))
             ElapsedSec = [Math]::Round($sw.Elapsed.TotalSeconds, 3)
+            Coverage   = $parsed.Coverage
+            Warnings   = $parsed.Warnings
+            CoverageError = $coverageError
         }
     }
     finally {
+        if (-not [string]::IsNullOrWhiteSpace($responseFilePath)) {
+            Remove-Item -LiteralPath $responseFilePath -Force -ErrorAction SilentlyContinue
+        }
         Remove-Item -LiteralPath $testGroupsFile -Force -ErrorAction SilentlyContinue
     }
 }
@@ -668,6 +880,17 @@ function Add-JUnitTestSuite {
     Full path to the AlTool executable. The shared helper resolves it when omitted.
 .PARAMETER JUnitResultFileName
     Required JUnit file to create or append.
+.PARAMETER CoverageOutputPath
+    Unique output directory for this app's coverage artifacts.
+.PARAMETER CoverageFormats
+    Coverage artifact formats requested from AlTool.
+.PARAMETER CoverageSourceRoots
+    Existing app and test directories used to resolve source paths in coverage artifacts.
+.PARAMETER CoverageAppPaths
+    Optional compiled app packages used by AlTool as the executable-line inventory.
+.PARAMETER CoverageIsComplete
+    Optional reference receiving null when coverage was not evaluated, true when complete, or false
+    when incomplete.
 .OUTPUTS
     [bool] $true if all executed methods passed; $false otherwise.
 #>
@@ -682,7 +905,12 @@ function Invoke-AlToolTestRun {
         [string] $TestType = "",
         [AllowEmptyCollection()][hashtable[]] $DisabledTests = @(),
         [string] $AlToolPath = "",
-        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName
+        [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string] $JUnitResultFileName,
+        [string] $CoverageOutputPath = "",
+        [ValidateSet("bc-json", "cobertura")][string[]] $CoverageFormats = @(),
+        [string[]] $CoverageSourceRoots = @(),
+        [string[]] $CoverageAppPaths = @(),
+        [ref] $CoverageIsComplete = ([ref] $null)
     )
 
     if ([string]::IsNullOrWhiteSpace($ExtensionId)) {
@@ -694,6 +922,10 @@ function Invoke-AlToolTestRun {
     if ([string]::IsNullOrWhiteSpace($Tenant)) {
         $Tenant = "default"
     }
+    $coverageCompletenessRequested = $PSBoundParameters.ContainsKey("CoverageIsComplete")
+    if ($coverageCompletenessRequested) {
+        $CoverageIsComplete.Value = $null
+    }
 
     try {
         $env:BC_SERVER_USERNAME = $Credential.UserName
@@ -704,6 +936,13 @@ function Invoke-AlToolTestRun {
         Write-Host "Enumerated $($codeunits.Count) test codeunit(s) for app '$AppName'."
         if ($codeunits.Count -eq 0) {
             Write-Host "No test codeunits to run for app '$AppName'; nothing to do."
+            if (-not [string]::IsNullOrWhiteSpace($CoverageOutputPath)) {
+                Write-EmptyAlToolCoverageArtifacts -CoverageOutputPath $CoverageOutputPath `
+                    -CoverageFormats $CoverageFormats
+                if ($coverageCompletenessRequested) {
+                    $CoverageIsComplete.Value = $true
+                }
+            }
             return $true
         }
 
@@ -744,10 +983,50 @@ function Invoke-AlToolTestRun {
             $doc.AppendChild($suites) | Out-Null
         }
 
-        $batch = Invoke-AlRunTestsBatch -AlToolPath $AlToolPath -Codeunits $codeunits -Company $company `
-            -Tenant $Tenant -Connection $connection
+        $batchParameters = @{
+            AlToolPath = $AlToolPath
+            Codeunits  = $codeunits
+            Company    = $company
+            Tenant     = $Tenant
+            Connection = $connection
+        }
+        if (-not [string]::IsNullOrWhiteSpace($CoverageOutputPath)) {
+            $batchParameters.CoverageOutputPath = $CoverageOutputPath
+            $batchParameters.CoverageFormats = @($CoverageFormats)
+            $batchParameters.CoverageSourceRoots = @($CoverageSourceRoots)
+            $batchParameters.CoverageAppPaths = @($CoverageAppPaths)
+        }
+        $batch = Invoke-AlRunTestsBatch @batchParameters
         $batchResults = $batch.Results
         $allPassed = [bool] $batch.Succeeded
+        $batchCoverage = if ($batch.ContainsKey("Coverage")) { $batch.Coverage } else { $null }
+        $batchWarnings = if ($batch.ContainsKey("Warnings")) { @($batch.Warnings) } else { @() }
+        $coverageError = if ($batch.ContainsKey("CoverageError")) { "$($batch.CoverageError)" } else { "" }
+
+        if ($batchCoverage) {
+            if ($coverageCompletenessRequested) {
+                $CoverageIsComplete.Value = [bool] $batchCoverage.IsComplete
+            }
+            $coverageState = if ($batchCoverage.IsComplete) { "complete" } else { "incomplete" }
+            Write-Host "Code coverage for app '$AppName': mode=line, state=$coverageState, artifacts='$CoverageOutputPath'."
+            foreach ($diagnostic in @($batchCoverage.Diagnostics) + $batchWarnings) {
+                if ($null -eq $diagnostic) {
+                    continue
+                }
+                $diagnosticText = if ($diagnostic -is [string]) {
+                    "$diagnostic"
+                }
+                elseif ($diagnostic -is [hashtable] -and $diagnostic.ContainsKey("message")) {
+                    "$($diagnostic.message)"
+                }
+                else {
+                    ConvertTo-Json -InputObject $diagnostic -Depth 5 -Compress
+                }
+                if (-not [string]::IsNullOrWhiteSpace($diagnosticText)) {
+                    OutputWarning -message "Code coverage for app '$AppName': $diagnosticText"
+                }
+            }
+        }
 
         $idx = 0
         foreach ($cu in $codeunits) {
@@ -772,6 +1051,10 @@ function Invoke-AlToolTestRun {
         if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
         $doc.Save($JUnitResultFileName)
         Write-Host "Wrote JUnit results for app '$AppName' to $JUnitResultFileName"
+
+        if (-not [string]::IsNullOrWhiteSpace($coverageError)) {
+            throw $coverageError
+        }
 
         return $allPassed
     }

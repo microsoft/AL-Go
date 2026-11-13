@@ -13,6 +13,14 @@ inputs:
     description: Project folder
     required: false
     default: '.'
+  projectName:
+    description: Project display name
+    required: false
+    default: ''
+  buildMode:
+    description: Build mode used for this project
+    required: false
+    default: 'Default'
   installTestAppsJson:
     description: A path to a JSON-formatted list of test apps to run tests in
     required: false
@@ -25,10 +33,12 @@ runs:
       env:
         _token: ${{ inputs.token }}
         _project: ${{ inputs.project }}
+        _projectName: ${{ inputs.projectName }}
+        _buildMode: ${{ inputs.buildMode }}
         _installTestAppsJson: ${{ inputs.installTestAppsJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "RunTests" -Action {
-          ${{ github.action_path }}/RunTests.ps1 -token $ENV:_token -project $ENV:_project -installTestAppsJson $ENV:_installTestAppsJson
+          ${{ github.action_path }}/RunTests.ps1 -token $ENV:_token -project $ENV:_project -projectName $ENV:_projectName -buildMode $ENV:_buildMode -installTestAppsJson $ENV:_installTestAppsJson
         }
 branding:
   icon: terminal

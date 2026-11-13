@@ -3,10 +3,13 @@
     Helper module for the RunTests action.
 .DESCRIPTION
     Selects and runs normal test apps against the kept-alive build container. AlTool is the default
-    executor; a RunTestsInBcContainer override can replace it.
+    executor. RunTestsInBcContainer overrides retain their historical per-app execution and receive
+    an app-specific code coverage context when coverage is enabled.
 #>
 
 Import-Module (Join-Path $PSScriptRoot 'AlToolTestRunner.psm1' -Resolve) -DisableNameChecking -Force
+Import-Module (Join-Path $PSScriptRoot 'CodeCoverageCoordinator.psm1' -Resolve) `
+    -DisableNameChecking -Force
 
 function Get-TestAppsToRun {
     <#
@@ -21,6 +24,14 @@ function Get-TestAppsToRun {
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
         The full path to the project folder.
+    .PARAMETER baseFolder
+        The full path to the repository root.
+    .PARAMETER project
+        Repository-relative AL-Go project path.
+    .PARAMETER projectName
+        Project display name.
+    .PARAMETER buildMode
+        Build mode used for this project run.
     .PARAMETER installTestAppsJson
         Path to a JSON file with the list of installed test apps.
     #>
@@ -33,7 +44,7 @@ function Get-TestAppsToRun {
     $testAppOutputFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "TestApps"
 
     $testApps = @()
-    $selectedAppPaths = @{}
+    $selectedAppIds = @{}
     $normalTestAppIds = @{}
     foreach ($testFolder in @($settings.testFolders)) {
         $appJsonPath = Join-Path (Join-Path $projectPath $testFolder) "app.json"
@@ -53,7 +64,6 @@ function Get-TestAppsToRun {
     }
 
     if (Test-Path $testAppOutputFolder) {
-        $selectedCompiledAppIds = @{}
         foreach ($compiledApp in @(Get-ChildItem -Path $testAppOutputFolder -Filter "*.app" -File -ErrorAction Stop | Sort-Object FullName)) {
             try {
                 $compiledAppJson = Get-AppJsonFromAppFile -appFile $compiledApp.FullName
@@ -63,7 +73,7 @@ function Get-TestAppsToRun {
                 throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: $($_.Exception.Message)"
             }
 
-            if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedCompiledAppIds.ContainsKey($compiledAppId)) {
+            if ($normalTestAppIds.ContainsKey($compiledAppId) -and -not $selectedAppIds.ContainsKey($compiledAppId)) {
                 $compiledAppName = "$($compiledAppJson.name)"
                 if ([string]::IsNullOrWhiteSpace($compiledAppName)) {
                     throw "Failed to read compiled test app metadata from '$($compiledApp.FullName)'. Error: The compiled app metadata does not contain an app name."
@@ -73,8 +83,7 @@ function Get-TestAppsToRun {
                     Id   = $compiledAppId
                     Name = $compiledAppName
                 }
-                $selectedCompiledAppIds[$compiledAppId] = $true
-                $selectedAppPaths[$compiledApp.FullName] = $true
+                $selectedAppIds[$compiledAppId] = $true
             }
         }
     }
@@ -112,13 +121,13 @@ function Get-TestAppsToRun {
             catch {
                 throw "Failed to read installed test app metadata from '$installedTestAppPath'. Error: $($_.Exception.Message)"
             }
-            if (-not $selectedAppPaths.ContainsKey($installedTestAppPath)) {
+            if (-not $selectedAppIds.ContainsKey($installedAppId)) {
                 $testApps += [PSCustomObject]@{
                     Path = $installedTestAppPath
                     Id   = $installedAppId
                     Name = $installedAppName
                 }
-                $selectedAppPaths[$installedTestAppPath] = $true
+                $selectedAppIds[$installedAppId] = $true
             }
         }
     }
@@ -246,8 +255,10 @@ function Invoke-AlGoTestRun {
     .SYNOPSIS
         Runs the normal tests for an AL-Go project against a kept-alive build container.
     .DESCRIPTION
-        Runs each selected test app with AlTool or a RunTestsInBcContainer override. Preserves
-        TestResults.xml for AnalyzeTests, copies produced results to .buildartifacts, and refreshes
+        Runs each selected test app with AlTool or the original RunTestsInBcContainer override.
+        When coverage is supported, coverage-specific values are added to the existing per-app
+        override parameters. AL-Go owns coverage validation and status finalization.
+        Preserves TestResults.xml for AnalyzeTests, copies results to .buildartifacts, and refreshes
         ContainerEventLog.evtx after every outcome. Event-log capture failures are warnings and do
         not change the test outcome.
     .PARAMETER settings
@@ -266,16 +277,29 @@ function Invoke-AlGoTestRun {
         Full path to the AlTool executable used by the built-in runner.
     .PARAMETER getAlToolPath
         Shared resolver used to discover or install AlTool when alToolPath is omitted.
+    .PARAMETER analyzeRepo
+        Caller-scoped AnalyzeRepo callback used to resolve direct projectsToTest source roots.
+    .PARAMETER containerPlatformVersion
+        Actual build container platform version exported by RunPipeline.
+    .PARAMETER containerPlatformVersionReason
+        Non-sensitive reason supplied when RunPipeline could not determine the platform version.
     #>
     Param(
         [hashtable] $settings,
         [string] $projectPath,
+        [string] $baseFolder = "",
+        [string] $project = ".",
+        [string] $projectName = "",
+        [string] $buildMode = "Default",
         [string] $containerName,
         [System.Management.Automation.PSCredential] $credential,
         [string] $installTestAppsJson = '',
         [scriptblock] $runTestsOverride = $null,
         [string] $alToolPath = '',
-        [scriptblock] $getAlToolPath = $null
+        [scriptblock] $getAlToolPath = $null,
+        [scriptblock] $analyzeRepo = $null,
+        [AllowEmptyString()][string] $containerPlatformVersion = $env:containerPlatformVersion,
+        [AllowEmptyString()][string] $containerPlatformVersionReason = $env:containerPlatformVersionReason
     )
 
     try {
@@ -300,6 +324,42 @@ function Invoke-AlGoTestRun {
             }
         }
 
+        # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
+        $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
+        $testType = if ($settings.ContainsKey("useSeparateTestAction")) {
+            "$($settings.useSeparateTestAction.testType)"
+        }
+        else {
+            ""
+        }
+        $coverageRequested = $settings.ContainsKey("useSeparateTestAction") -and
+            [bool]$settings.useSeparateTestAction.codeCoverageEnabled
+        $coverageSession = $null
+        if ($coverageRequested) {
+            $coverageCapability = Get-AlGoCodeCoverageCapability `
+                -platformVersion $containerPlatformVersion `
+                -platformVersionReason $containerPlatformVersionReason
+            if ($runTestsOverride -and $coverageCapability.Supported -and
+                [string]::IsNullOrWhiteSpace($alToolPath)) {
+                if (-not $getAlToolPath) {
+                    throw "A coverage-aware RunTestsInBcContainer override requires an AlTool path or path resolver."
+                }
+                $alToolPath = & $getAlToolPath
+            }
+            $coverageSession = New-AlGoCodeCoverageSession -settings $settings `
+                -projectPath $projectPath -baseFolder $baseFolder -project $project `
+                -projectName $projectName -buildMode $buildMode `
+                -testApps $testApps -analyzeRepo $analyzeRepo `
+                -capability $coverageCapability
+            if ($coverageSession.Supported) {
+                Write-Host "Code coverage enabled: mode=line, formats=$($coverageSession.Formats -join ','), container platform $containerPlatformVersion."
+                Write-Host "Code coverage artifacts will be retained under '$($coverageSession.RootPath)'."
+            }
+            else {
+                OutputWarning -message "Code coverage is unavailable. $($coverageCapability.Reason) Tests will continue without coverage."
+            }
+        }
+
         if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
             if (-not $getAlToolPath) {
                 throw "The built-in AlTool runner requires an AlTool path or path resolver."
@@ -307,61 +367,159 @@ function Invoke-AlGoTestRun {
             $alToolPath = & $getAlToolPath
         }
 
-        # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
-        $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
-        $testType = if ($settings.ContainsKey("useSeparateTestAction")) { "$($settings.useSeparateTestAction.testType)" } else { "" }
-
         $allTestsPassed = $true
         $testRunError = $null
+        $currentCoverageRun = $null
+        $coverageInvocationActive = $false
         Push-Location $projectPath
         try {
+            $testAppIndex = 0
             foreach ($testApp in $testApps) {
                 Write-Host "Running tests in $($testApp.Name) ($($testApp.Id))"
-                $disabledTests = @(Get-DisabledTestsForApp -settings $settings -projectPath $projectPath -appId "$($testApp.Id)")
+                $disabledTests = @(Get-DisabledTestsForApp -settings $settings `
+                    -projectPath $projectPath -appId "$($testApp.Id)")
+                $currentCoverageRun = if ($coverageSession) {
+                    $coverageSession.Runs[$testAppIndex]
+                }
+                else {
+                    $null
+                }
+                $coverageInvocationActive = $coverageSession -and $coverageSession.Supported
+                $coverageIsComplete = $null
+                $coverageOutputPath = if ($coverageInvocationActive) {
+                    [System.IO.Path]::GetFullPath((
+                            Join-Path $coverageSession.RootPath "$($currentCoverageRun.AppId)"
+                        ))
+                }
+                else {
+                    ""
+                }
+                $coverageSourceRoots = if ($coverageInvocationActive) {
+                    @($coverageSession.SourceRootRecords | ForEach-Object { "$($_.Path)" })
+                }
+                else {
+                    @()
+                }
+                $coverageApplicationIds = if ($coverageInvocationActive) {
+                    @($coverageSession.SourceRootRecords |
+                        Where-Object {
+                            "$($_.Kind)" -eq "app" -and
+                            -not [string]::IsNullOrWhiteSpace("$($_.AppId)")
+                        } |
+                        ForEach-Object { "$($_.AppId)".ToLowerInvariant() } |
+                        Sort-Object -Unique)
+                }
+                else {
+                    @()
+                }
+                if ($coverageInvocationActive) {
+                    $currentCoverageRun.StartedAtUtc = [DateTime]::UtcNow
+                }
 
                 if ($runTestsOverride) {
                     $runTestsParams = @{
-                        "containerName"           = $containerName
-                        "credential"              = $credential
-                        "companyName"             = $settings.companyName
-                        "extensionId"             = $testApp.Id
-                        "appName"                 = $testApp.Name
-                        "disabledTests"           = $disabledTests
-                        "JUnitResultFileName"     = $testResultsFile
+                        "containerName" = $containerName
+                        "credential" = $credential
+                        "companyName" = $settings.companyName
+                        "extensionId" = $testApp.Id
+                        "appName" = $testApp.Name
+                        "disabledTests" = $disabledTests
+                        "JUnitResultFileName" = $testResultsFile
                         "AppendToJUnitResultFile" = $true
-                        "detailed"                = $true
-                        "GitHubActions"           = $gitHubActionsSeverity
-                        "returnTrueIfAllPassed"   = $true
+                        "detailed" = $true
+                        "GitHubActions" = $gitHubActionsSeverity
+                        "returnTrueIfAllPassed" = $true
                     }
-                    if (-not [string]::IsNullOrWhiteSpace($testType)) {
+                    if ($coverageInvocationActive -or -not [string]::IsNullOrWhiteSpace($testType)) {
                         $runTestsParams["testType"] = $testType
                     }
+                    if ($coverageInvocationActive) {
+                        $runTestsParams["codeCoverageFormats"] = @($coverageSession.Formats)
+                        $runTestsParams["codeCoverageSourceRoots"] = @($coverageSourceRoots)
+                        $runTestsParams["codeCoverageApplicationIds"] = @($coverageApplicationIds)
+                        $runTestsParams["codeCoverageOutputPath"] = $coverageOutputPath
+                        $runTestsParams["codeCoverageAlToolModulePath"] = (
+                            Join-Path $PSScriptRoot "AlToolTestRunner.psm1"
+                        )
+                        $runTestsParams["codeCoverageAlToolPath"] = $alToolPath
+                        $runTestsParams["codeCoverageIsComplete"] = $null
+                    }
                     $passed = & $runTestsOverride -parameters $runTestsParams
+                    if ($coverageSession -and $passed -isnot [bool]) {
+                        throw "The coverage-aware RunTestsInBcContainer override must return a Boolean test result."
+                    }
+                    if ($coverageInvocationActive) {
+                        $coverageIsComplete = $runTestsParams.codeCoverageIsComplete
+                    }
                 }
                 else {
-                    $passed = Invoke-AlToolTestRun `
-                        -ContainerName $containerName `
-                        -Credential $credential `
-                        -ExtensionId "$($testApp.Id)" `
-                        -AppName "$($testApp.Name)" `
-                        -CompanyName "$($settings.companyName)" `
-                        -Tenant "default" `
-                        -TestType $testType `
-                        -DisabledTests @($disabledTests) `
-                        -AlToolPath $alToolPath `
-                        -JUnitResultFileName $testResultsFile
+                    $alToolParameters = @{
+                        ContainerName = $containerName
+                        Credential = $credential
+                        ExtensionId = "$($testApp.Id)"
+                        AppName = "$($testApp.Name)"
+                        CompanyName = "$($settings.companyName)"
+                        Tenant = "default"
+                        TestType = $testType
+                        DisabledTests = @($disabledTests)
+                        AlToolPath = $alToolPath
+                        JUnitResultFileName = $testResultsFile
+                    }
+                    if ($coverageInvocationActive) {
+                        $alToolParameters.CoverageOutputPath = $coverageOutputPath
+                        $alToolParameters.CoverageFormats = @($coverageSession.Formats)
+                        $alToolParameters.CoverageSourceRoots = @($coverageSourceRoots)
+                        $alToolParameters.CoverageIsComplete = [ref] $coverageIsComplete
+                    }
+                    $passed = Invoke-AlToolTestRun @alToolParameters
                 }
 
+                if ($coverageSession -and $coverageSession.Supported) {
+                    $coverageInvocationActive = $false
+                    Complete-AlGoCodeCoverageRun -session $coverageSession `
+                        -run $currentCoverageRun `
+                        -coverageIsComplete $coverageIsComplete
+                }
+                $currentCoverageRun = $null
+                $testAppIndex++
                 if (-not $passed) {
                     $allTestsPassed = $false
                 }
             }
         }
         catch {
-            $testRunError = $_
+            $caughtTestRunError = $_
+            if ($coverageInvocationActive -and $currentCoverageRun) {
+                try {
+                    Complete-AlGoCodeCoverageRun -session $coverageSession `
+                        -run $currentCoverageRun -executionFailed
+                }
+                catch {
+                    OutputWarning -message "Failed to record the current code coverage run after test execution failed. $($_.Exception.Message)"
+                }
+            }
+            $testRunError = $caughtTestRunError
         }
         finally {
             Pop-Location
+        }
+        if ($coverageSession) {
+            try {
+                Complete-AlGoCodeCoverageSession -session $coverageSession `
+                    -suppressFailure:([bool]$testRunError)
+            }
+            catch {
+                $ordinaryTestFailure = [bool]$testRunError -or (
+                    -not $allTestsPassed -and -not $settings.treatTestFailuresAsWarnings
+                )
+                if ($ordinaryTestFailure) {
+                    $coverageError = "Code coverage finalization also failed. $($_.Exception.Message)"
+                    Write-Host "::Error::$($coverageError.Replace("`r",'').Replace("`n",' '))"
+                }
+                else {
+                    $testRunError = $_
+                }
+            }
         }
 
         try {

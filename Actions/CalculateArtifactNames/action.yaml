@@ -31,6 +31,9 @@ outputs:
   TestResultsArtifactsName:
     description: Artifacts name for TestResults
     value: ${{ steps.calculateartifactnames.outputs.TestResultsArtifactsName }}
+  CodeCoverageArtifactsName:
+    description: Artifacts name for CodeCoverage
+    value: ${{ steps.calculateartifactnames.outputs.CodeCoverageArtifactsName }}
   BcptTestResultsArtifactsName:
     description: Artifacts name for BcptTestResults
     value: ${{ steps.calculateartifactnames.outputs.BcptTestResultsArtifactsName }}

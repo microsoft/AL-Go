@@ -3,6 +3,10 @@ Param(
     [string] $token,
     [Parameter(HelpMessage = "Project folder", Mandatory = $false)]
     [string] $project = "",
+    [Parameter(HelpMessage = "Project display name", Mandatory = $false)]
+    [string] $projectName = "",
+    [Parameter(HelpMessage = "Build mode used for this project", Mandatory = $false)]
+    [string] $buildMode = "Default",
     [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to run tests in", Mandatory = $false)]
     [string] $installTestAppsJson = ''
 )
@@ -20,6 +24,10 @@ Param(
     The GitHub token running the action. It is exposed to test override scripts as _token.
 .PARAMETER project
     Project folder.
+.PARAMETER projectName
+    Project display name used by repository coverage summaries.
+.PARAMETER buildMode
+    Build mode used by this project run.
 .PARAMETER installTestAppsJson
     A path to a JSON-formatted list of test apps (produced by previous jobs) to run tests in.
 .EXAMPLE
@@ -90,15 +98,27 @@ $settings = $env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse
 
 $settings = AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project -doNotCheckArtifactSetting
 
-# A RunTestsInBcContainer override script, if present, replaces the built-in AlTool test runner.
-$overrideParams = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectPath ".AL-Go") -OverrideScriptNames @("RunTestsInBcContainer")
+$overrideParams = Get-ScriptOverrides -ALGoFolderName (Join-Path $projectPath ".AL-Go") `
+    -OverrideScriptNames @("RunTestsInBcContainer")
 $runTestsOverride = $overrideParams['RunTestsInBcContainer']
+$analyzeRepoForCoverage = {
+    param($settings, $baseFolder, $project)
+    AnalyzeRepo -settings $settings -baseFolder $baseFolder -project $project `
+        -doNotCheckArtifactSetting
+}
 
 Invoke-AlGoTestRun `
     -settings $settings `
     -projectPath $projectPath `
+    -baseFolder $baseFolder `
+    -project $project `
+    -projectName $projectName `
+    -buildMode $buildMode `
     -containerName $containerName `
     -credential $credential `
     -installTestAppsJson $installTestAppsJson `
     -runTestsOverride $runTestsOverride `
-    -getAlToolPath ${function:GetAlToolPath}
+    -getAlToolPath ${function:GetAlToolPath} `
+    -analyzeRepo $analyzeRepoForCoverage `
+    -containerPlatformVersion $ENV:containerPlatformVersion `
+    -containerPlatformVersionReason $ENV:containerPlatformVersionReason

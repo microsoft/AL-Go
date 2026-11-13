@@ -1,0 +1,45 @@
+{
+  "project": "Project1",
+  "projectName": "Project 1",
+  "buildMode": "Default",
+  "formats": [ "bc-json", "cobertura" ],
+  "sourceRoots": [
+    "Project1/App1.abc.Test",
+    "Project1/app1",
+    "Project1/app1.Test"
+  ],
+  "sourceRootDetails": [
+    {
+      "path": "Project1/App1.abc.Test",
+      "kind": "test",
+      "appId": "2ac2061d-0912-4cff-96d6-8498e9aff57f",
+      "appName": "App1.abc.Test"
+    },
+    {
+      "path": "Project1/app1",
+      "kind": "app",
+      "appId": "de201bfc-283e-4813-b5ec-b63e44a72783",
+      "appName": "app1"
+    },
+    {
+      "path": "Project1/app1.Test",
+      "kind": "test",
+      "appId": "be11fd2f-8f16-40b7-bd82-47a87db3534b",
+      "appName": "app1.Test"
+    }
+  ],
+  "runs": [
+    {
+      "appId": "2ac2061d-0912-4cff-96d6-8498e9aff57f",
+      "appName": "App1.abc.Test",
+      "outputDirectory": "CodeCoverage/run-a",
+      "state": "incomplete"
+    },
+    {
+      "appId": "be11fd2f-8f16-40b7-bd82-47a87db3534b",
+      "appName": "app1.Test",
+      "outputDirectory": "CodeCoverage/run-b",
+      "state": "incomplete"
+    }
+  ]
+}

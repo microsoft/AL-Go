@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "coverageMode": "line",
+  "complete": false,
+  "diagnostics": [
+    "No source file was found for AL object 5:32.",
+    "Coverage method identity resolution failed for 'D:\\a\\repo\\repo\\Project1\\App1.abc.Test': D:\\a\\repo\\repo\\Project1\\App1.abc.Test\\HelloWorld.Test.al(9,19): error AL0185: Page 'Customer List' is missing",
+    "Coverage method identity resolution failed for 'D:\\a\\repo\\repo\\Project1\\app1': D:\\a\\repo\\repo\\Project1\\app1\\HelloWorld.al(5,45): error AL0247: The target Page 'Customer List' for the extension object is not found",
+    "Coverage method identity resolution failed for 'D:\\a\\repo\\repo\\Project1\\app1.Test': D:\\a\\repo\\repo\\Project1\\app1.Test\\HelloWorld.Test.al(9,19): error AL0185: Page 'Customer List' is missing"
+  ],
+  "sources": [
+    "external-1\\app1\\HelloWorld.al",
+    "external-2\\app1.Test\\HelloWorld.Test.al",
+    "HelloWorld.Test.al"
+  ],
+  "tests": [
+    { "testId": 2, "codeunitId": 50001, "methodId": 300, "methodName": "Test", "owningAppId": "run-b" }
+  ],
+  "procedureEdges": [
+    { "objectType": 8, "objectId": 55000, "methodId": 200, "testId": 2 },
+    { "objectType": 5, "objectId": 50001, "methodId": 301, "testId": 2 }
+  ],
+  "methods": [
+    { "objectType": 5, "objectId": 50000, "methodId": 100, "name": "TestHelloWorldMessage", "startLine": 10, "endLine": 11, "sourcePath": "HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50000, "methodId": 101, "name": "HelloWorldMessageHandler", "startLine": 12, "endLine": 13, "sourcePath": "HelloWorld.Test.al" },
+    { "objectType": 8, "objectId": 55000, "methodId": 200, "name": "OnOpenPage", "startLine": 20, "endLine": 21, "sourcePath": "external-1\\app1\\HelloWorld.al" },
+    { "objectType": 5, "objectId": 50001, "methodId": 300, "name": "TestHelloWorldMessage", "startLine": 30, "endLine": 33, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "methodId": 301, "name": "HelloWorldMessageHandler", "startLine": 34, "endLine": 37, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" }
+  ],
+  "lines": [
+    { "objectType": 5, "objectId": 32, "lineNumber": 100, "lineType": 3, "methodId": 1, "hitCount": 1, "status": 1, "sourcePath": "" },
+    { "objectType": 5, "objectId": 50000, "lineNumber": 10, "lineType": 3, "methodId": 100, "hitCount": 0, "status": 0, "sourcePath": "HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50000, "lineNumber": 11, "lineType": 3, "methodId": 100, "hitCount": 1, "status": 1, "sourcePath": "HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50000, "lineNumber": 12, "lineType": 3, "methodId": 101, "hitCount": 1, "status": 1, "sourcePath": "HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50000, "lineNumber": 13, "lineType": 3, "methodId": 101, "hitCount": 0, "status": 0, "sourcePath": "HelloWorld.Test.al" },
+    { "objectType": 8, "objectId": 55000, "lineNumber": 20, "lineType": 3, "methodId": 200, "hitCount": 1, "status": 1, "sourcePath": "external-1\\app1\\HelloWorld.al" },
+    { "objectType": 8, "objectId": 55000, "lineNumber": 21, "lineType": 3, "methodId": 200, "hitCount": 0, "status": 0, "sourcePath": "external-1\\app1\\HelloWorld.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 30, "lineType": 3, "methodId": 300, "hitCount": 0, "status": 0, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 31, "lineType": 3, "methodId": 300, "hitCount": 0, "status": 0, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 32, "lineType": 3, "methodId": 300, "hitCount": 1, "status": 1, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 33, "lineType": 3, "methodId": 300, "hitCount": 1, "status": 1, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 34, "lineType": 3, "methodId": 301, "hitCount": 0, "status": 0, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 35, "lineType": 3, "methodId": 301, "hitCount": 0, "status": 0, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 36, "lineType": 3, "methodId": 301, "hitCount": 0, "status": 0, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" },
+    { "objectType": 5, "objectId": 50001, "lineNumber": 37, "lineType": 3, "methodId": 301, "hitCount": 0, "status": 0, "sourcePath": "external-2\\app1.Test\\HelloWorld.Test.al" }
+  ]
+}

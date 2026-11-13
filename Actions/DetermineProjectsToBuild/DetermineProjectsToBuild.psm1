@@ -100,6 +100,8 @@ function ShouldBuildProject {
     Each build dimension is a hashtable with the following keys:
     - project: The name of the AL-Go project
     - buildMode: The build mode to use for the project
+    - codeCoverageExpected: Whether this dimension is expected to produce coverage artifacts
+    - codeCoverageRepositorySummary: Whether this dimension participates in repository coverage analysis
 #>
 function CreateBuildDimensions {
     param(
@@ -122,12 +124,29 @@ function CreateBuildDimensions {
         }
 
         foreach($buildMode in $buildModes) {
+            $buildModeSettings = ReadSettings -project $project -baseFolder $baseFolder -buildMode $buildMode
+            $separateTestSettings = $buildModeSettings.useSeparateTestAction
+            $codeCoverageExpected = [bool]$separateTestSettings.enabled -and
+                [bool]$separateTestSettings.codeCoverageEnabled -and
+                -not [bool]$buildModeSettings.doNotRunTests -and
+                -not [bool]$buildModeSettings.doNotPublishApps -and
+                @($buildModeSettings.additionalCountries).Count -eq 0
+            $codeCoverageRepositorySummary = $codeCoverageExpected -and
+                "$($separateTestSettings.codeCoverageSummary)" -in @("repository", "both")
+            $codeCoverageFormats = @("bc-json")
+            if ([bool]$separateTestSettings.codeCoverageGenerateCobertura) {
+                $codeCoverageFormats += "cobertura"
+            }
+
             $buildDimensions += @{
-                project = $project
-                projectName = $projectSettings.projectName
-                buildMode = $buildMode
-                gitHubRunner = $gitHubRunner
-                githubRunnerShell = $githubRunnerShell
+                project                       = $project
+                projectName                   = $projectSettings.projectName
+                buildMode                     = $buildMode
+                gitHubRunner                  = $gitHubRunner
+                githubRunnerShell             = $githubRunnerShell
+                codeCoverageExpected          = $codeCoverageExpected
+                codeCoverageRepositorySummary = $codeCoverageRepositorySummary
+                codeCoverageFormats           = @($codeCoverageFormats)
             }
         }
     }
@@ -155,6 +174,8 @@ function CreateBuildDimensions {
         - buildDimensions: An array of build dimensions, to be used in a build matrix. Properties of the build dimension are:
             - project: The project to build
             - buildMode: The build mode to use
+            - codeCoverageExpected: Whether coverage artifacts are expected
+            - codeCoverageRepositorySummary: Whether repository coverage analysis is requested
 #>
 function Get-ProjectsToBuild {
     param (

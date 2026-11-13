@@ -34,6 +34,7 @@ none
 | DependenciesArtifactsName | Artifacts name for Dependencies |
 | TestAppsArtifactsName | Artifacts name for TestApps |
 | TestResultsArtifactsName | Artifacts name for TestResults |
+| CodeCoverageArtifactsName | Artifacts name for CodeCoverage |
 | BcptTestResultsArtifactsName | Artifacts name for BcptTestResults |
 | PageScriptingTestResultsArtifactsName | Artifacts name for PageScriptingTestResults |
 | PageScriptingTestResultDetailsArtifactsName | Artifacts name for PageScriptingTestResultDetails |

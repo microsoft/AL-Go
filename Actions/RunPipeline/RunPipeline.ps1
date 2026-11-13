@@ -66,6 +66,38 @@ function Set-RunPipelineContainerCredential {
     }
 }
 
+function Set-RunPipelineContainerPlatformVersion {
+    <#
+    .SYNOPSIS
+        Exports the build container platform version for the separate RunTests action.
+    .DESCRIPTION
+        Looks up the actual platform version after Run-AlPipeline has completed. Lookup failures are
+        exported as a non-sensitive reason so RunTests can warn and continue without code coverage.
+    .PARAMETER containerName
+        Name of the kept-alive build container.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $containerName
+    )
+
+    $containerPlatformVersion = ""
+    $containerPlatformVersionReason = ""
+    try {
+        $containerPlatformVersion = "$(Get-BcContainerPlatformVersion -containerOrImageName $containerName)".Trim()
+        if ([string]::IsNullOrWhiteSpace($containerPlatformVersion)) {
+            $containerPlatformVersionReason = "Get-BcContainerPlatformVersion returned no platform version."
+        }
+    }
+    catch {
+        $containerPlatformVersion = ""
+        $containerPlatformVersionReason = "Get-BcContainerPlatformVersion failed ($($_.Exception.GetType().Name))."
+    }
+
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerPlatformVersion=$containerPlatformVersion"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerPlatformVersionReason=$containerPlatformVersionReason"
+}
+
 function Get-SeparateTestActionIneligibilityReasons {
     <#
     .SYNOPSIS
@@ -634,6 +666,10 @@ try {
         -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
         -keepContainer:$runTestsInSeparateAction `
         -uninstallRemovedApps
+
+    if ($runTestsInSeparateAction) {
+        Set-RunPipelineContainerPlatformVersion -containerName $containerName
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"

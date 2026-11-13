@@ -237,6 +237,8 @@ jobs:
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
+          projectName: ${{ inputs.projectName }}
+          buildMode: ${{ inputs.buildMode }}
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
       - name: Sign
@@ -320,6 +322,25 @@ jobs:
           name: ${{ steps.calculateArtifactsNames.outputs.TestResultsArtifactsName }}
           path: '${{ inputs.project }}/.buildartifacts/TestResults.xml'
           if-no-files-found: ignore
+
+      - name: Publish artifacts - test coverage
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        env:
+          ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/CodeCoverage/**/*',inputs.project)) != '')
+        with:
+          name: ${{ steps.calculateArtifactsNames.outputs.CodeCoverageArtifactsName }}
+          path: '${{ inputs.project }}/.buildartifacts/CodeCoverage/'
+          if-no-files-found: ignore
+
+      - name: Analyze Code Coverage
+        if: (success() || failure()) && (hashFiles(format('{0}/.buildartifacts/CodeCoverage/coverage-status.json',inputs.project)) != '')
+        uses: microsoft/AL-Go-Actions/AnalyzeCodeCoverage@main
+        with:
+          shell: ${{ inputs.shell }}
+          scope: project
+          project: ${{ inputs.project }}
+          coveragePath: '${{ inputs.project }}/.buildartifacts/CodeCoverage/'
 
       - name: Publish artifacts - bcpt test results
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
