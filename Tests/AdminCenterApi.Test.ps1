@@ -527,43 +527,4 @@ Describe 'AL-Go Admin Center API helpers' {
         (Get-Module AdminCenterApi).ExportedFunctions.Keys | Should -Not -Contain 'Get-DeploymentTarget'
     }
 
-    It 'Preserves exception and plain service messages on one log line' {
-        $exception = [System.Exception]::new('403 Forbidden')
-        $record = [System.Management.Automation.ErrorRecord]::new($exception, 'Denied', 'PermissionDenied', $null)
-        $record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new("Permission AdminCenter.ReadWrite.All missing.`nUser not authorized.")
-
-        $message = Get-AdminCenterApiErrorMessage -errorRecord $record
-
-        $message | Should -Match '403 Forbidden'
-        $message | Should -Match 'Permission AdminCenter.ReadWrite.All missing'
-        $message | Should -Match 'User not authorized'
-        $message | Should -Not -Match '[\r\n]'
-    }
-
-    It 'Reads only service error fields rather than arbitrary structured response properties' {
-        $record = [System.Management.Automation.ErrorRecord]::new(
-            [System.Exception]::new('403 Forbidden'),
-            'Denied', 'PermissionDenied', $null)
-        $record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"error":{"code":"AuthorizationFailed","message":"access denied"},"credentials":{"value":"private-arbitrary-value"},"headers":{"Authorization":"private-base64"}}')
-
-        $message = Get-AdminCenterApiErrorMessage -errorRecord $record
-
-        $message | Should -Match '403 Forbidden AuthorizationFailed access denied'
-        $message | Should -Not -Match 'private-arbitrary-value|private-base64|credentials|headers'
-    }
-
-    It 'Does not accept or inspect an authentication context' {
-        (Get-Command Get-AdminCenterApiErrorMessage).Parameters.Keys | Should -Not -Contain 'bcAuthContext'
-    }
-
-    It 'Preserves OAuth error fields without rendering other response properties' {
-        $record = [System.Management.Automation.ErrorRecord]::new(
-            [System.Exception]::new('{"error":"invalid_client","error_description":"Client not authorized","request":{"headers":{"Authorization":"private-header"}}}'),
-            'Denied', 'PermissionDenied', $null)
-
-        $message = Get-AdminCenterApiErrorMessage -errorRecord $record
-
-        $message | Should -Match 'Client not authorized invalid_client'
-        $message | Should -Not -Match 'private-header|request|headers'
-    }
 }

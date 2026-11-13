@@ -331,7 +331,7 @@ function Initialize-PTEPublishingApi {
     }
     catch {
         if (!(Test-AdminCenterAuthorizationError -errorRecord $_)) { throw }
-        $authorizationDetails = Get-AdminCenterApiErrorMessage -errorRecord $_
+        $authorizationDetails = "$_"
         $publishingApi = 'Automation'
         $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -publishingApi $publishingApi)
     }
@@ -404,11 +404,7 @@ function WaitPTEOperation {
                     $serviceError += $operation['error']['message']
                 }
                 $serviceError = @($serviceError | Where-Object { $_ -is [string] }) -join ' '
-                $record = [System.Management.Automation.ErrorRecord]::new(
-                    [System.Exception]::new("PTE operation $operationId for app $appId did not succeed ($status). $serviceError"),
-                    'PTEOperationFailed', 'InvalidResult', $null)
-                $details = Get-AdminCenterApiErrorMessage -errorRecord $record
-                throw [System.Exception]::new($details)
+                throw "PTE operation $operationId for app $appId did not succeed ($status). $serviceError"
             }
         }
         if ($requests -ge $maxStatusRequests -or $timer.Elapsed.TotalSeconds -ge $timeoutSeconds) {
@@ -433,11 +429,10 @@ function WaitPTEOperation {
             $transient = $_.Exception.Data['AdminCenterRequestStarted'] -ne $false -and ($statusCode -in 408,429,500,502,503,504 -or
                 (!$statusCode -and ($_.Exception -is [System.Net.WebException] -or
                     $_.Exception -is [System.Net.Http.HttpRequestException] -or $_.Exception -is [System.TimeoutException])))
-            $details = Get-AdminCenterApiErrorMessage -errorRecord $_
             if (!$transient -or ++$transientErrors -gt 5) {
-                throw "Unable to read PTE operation $operationId for app ${appId}: $details"
+                throw "Unable to read PTE operation $operationId for app ${appId}: $_"
             }
-            OutputWarning -message "Transient error reading PTE operation ${operationId}: $details. Retrying the status request."
+            OutputWarning -message "Transient error reading PTE operation ${operationId}: $_. Retrying the status request."
         }
     }
     throw "Timed out waiting for PTE operation $operationId for app $appId after $timeoutSeconds seconds or $maxStatusRequests status requests. The upload will not be replayed."

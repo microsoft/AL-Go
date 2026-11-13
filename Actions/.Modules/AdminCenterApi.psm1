@@ -89,43 +89,6 @@ function Get-AdminCenterApiUrl {
 
 <#
     .SYNOPSIS
-        Read exception and service error messages without dumping response objects.
-    .PARAMETER errorRecord
-        Error containing exception and optional service response details.
-#>
-function Get-AdminCenterApiErrorMessage {
-    Param(
-        [Parameter(Mandatory = $true)]
-        [System.Management.Automation.ErrorRecord] $errorRecord
-    )
-
-    $messages = @($errorRecord.Exception.Message)
-    if ($errorRecord.ErrorDetails) { $messages += $errorRecord.ErrorDetails.Message }
-    $message = (@(foreach ($text in $messages) {
-        if ($text.TrimStart().StartsWith('{') -or $text.TrimStart().StartsWith('[')) {
-            try {
-                $details = $text | ConvertFrom-Json | ConvertTo-HashTable -recurse
-                if ($details -is [hashtable]) {
-                    if ($details['error'] -is [hashtable]) { $details = $details['error'] }
-                    foreach ($field in @('code', 'message', 'error_description')) {
-                        if ($details[$field] -is [string]) { $details[$field] }
-                    }
-                    if ($details['error'] -is [string]) { $details['error'] }
-                }
-            }
-            catch {
-                'Structured service error details could not be read.'
-            }
-        }
-        else {
-            $text
-        }
-    }) -join ' ')
-    return ($message -replace '[\r\n]+', ' ')
-}
-
-<#
-    .SYNOPSIS
         Send one authenticated Admin Center request without retries.
     .DESCRIPTION
         Preserves HTTP errors and records whether sending was attempted in Exception.Data.
@@ -347,4 +310,4 @@ function Get-AdminCenterInstalledExtensions {
     }
 }
 
-Export-ModuleMember -Function Initialize-AdminCenterAuthContext, Get-AdminCenterApiUrl, Get-AdminCenterApiErrorMessage, Invoke-AdminCenterApi, Install-AdminCenterPTE, Get-AdminCenterAppOperation, Get-AdminCenterInstalledExtensions
+Export-ModuleMember -Function Initialize-AdminCenterAuthContext, Get-AdminCenterApiUrl, Invoke-AdminCenterApi, Install-AdminCenterPTE, Get-AdminCenterAppOperation, Get-AdminCenterInstalledExtensions

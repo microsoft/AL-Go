@@ -66,7 +66,9 @@ InModuleScope Deploy {
                 Mock Get-AdminCenterInstalledExtensions {
                     $exception = [System.Exception]::new('Admin permission missing')
                     $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:probeStatus })
-                    throw $exception
+                    $record = [System.Management.Automation.ErrorRecord]::new($exception, 'ServiceDenied', 'PermissionDenied', $null)
+                    $record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"error":{"message":"Admin permission missing"},"correlationId":"test-correlation"}')
+                    throw $record
                 }
 
                 Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
@@ -76,6 +78,7 @@ InModuleScope Deploy {
                 Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
                     $message -like '*Admin permission missing*permissions*ContinuousDeployment.md#pte-deployment-authorization*throughout this Deploy action*' -and
+                    $message -like '*"correlationId":"test-correlation"*' -and
                     $message -like '*planned for removal in 2027 release wave 1*'
                 }
             }
