@@ -75,8 +75,28 @@ InModuleScope Deploy {
                 Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
                 Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
-                    $message -like '*Admin permission missing*permissions*ContinuousDeployment.md#pte-deployment-authorization*throughout this Deploy action*'
+                    $message -like '*Admin permission missing*permissions*ContinuousDeployment.md#pte-deployment-authorization*throughout this Deploy action*' -and
+                    $message -like '*planned for removal in 2027 release wave 1*'
                 }
+            }
+
+            It 'Does not emit an Admin permission warning below BC 29 after HTTP <statusCode>' -TestCases @(
+                @{ statusCode = 401 }, @{ statusCode = 403 }
+            ) {
+                param($statusCode)
+                $script:application.versionMajor = 28
+                $script:probeStatus = $statusCode
+                Mock Get-AdminCenterInstalledExtensions {
+                    $exception = [System.Exception]::new('Admin permission missing')
+                    $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = $script:probeStatus })
+                    throw $exception
+                }
+
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be Automation
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled OutputWarning -Times 0
             }
 
             It 'Selects Automation for the helper-owned missing-token error' {
@@ -135,6 +155,7 @@ InModuleScope Deploy {
 
                 { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } | Should -Throw '*Automation read failed*'
                 $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled OutputWarning -Times 0
             }
 
             It 'Overwrites the previous choice on each initialization' {
@@ -314,7 +335,7 @@ InModuleScope Deploy {
                     -schemaSyncMode Force
 
                 Assert-MockCalled Publish-AdminCenterPTEApps -Exactly 1 -ParameterFilter {
-                    $bcAuthContext.tenantId -eq 'tenant' -and $environment -eq 'Sandbox' -and
+                    !$PesterBoundParameters.ContainsKey('bcAuthContext') -and $environment -eq 'Sandbox' -and
                     ($appFiles -join ',') -eq 'Apps.zip,Other.app' -and $schemaSyncMode -eq 'Force'
                 }
                 Assert-MockCalled Get-AdminCenterInstalledExtensions -Times 0
@@ -367,21 +388,17 @@ InModuleScope Deploy {
                 Assert-MockCalled Get-BcInstalledExtensions -Times 0
             }
 
-            It 'Passes the same source auth context through snapshot, upload and exact-operation wait' {
-                $script:sourceContext = @{ tenantId = 'tenant' }
-                Mock Get-AdminCenterInstalledExtensions {
-                    [object]::ReferenceEquals($bcAuthContext, $script:sourceContext) | Should -BeTrue
-                    return $script:extensions
+            It 'Leaves original BCH credentials out of native snapshot, upload and operation wait calls' {
+                PublishPTEApps -bcAuthContext @{ tenantId = 'tenant' } -environment Sandbox -appFiles @('App.app')
+
+                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1 -ParameterFilter {
+                    !$PesterBoundParameters.ContainsKey('bcAuthContext')
                 }
-
-                PublishPTEApps -bcAuthContext $script:sourceContext -environment Sandbox -appFiles @('App.app')
-
-                Assert-MockCalled Get-AdminCenterInstalledExtensions -Exactly 1
                 Assert-MockCalled Install-AdminCenterPTE -Exactly 1 -ParameterFilter {
-                    [object]::ReferenceEquals($bcAuthContext, $script:sourceContext)
+                    !$PesterBoundParameters.ContainsKey('bcAuthContext')
                 }
                 Assert-MockCalled WaitPTEOperation -Exactly 1 -ParameterFilter {
-                    [object]::ReferenceEquals($bcAuthContext, $script:sourceContext)
+                    !$PesterBoundParameters.ContainsKey('bcAuthContext')
                 }
                 Assert-MockCalled Get-BcInstalledExtensions -Times 0
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
@@ -392,7 +409,7 @@ InModuleScope Deploy {
                 Mock Copy-AppFilesToFolder { return @($script:copiedApp) }
                 Mock Sort-AppFilesByDependencies { return $appFiles }
 
-                Publish-AdminCenterPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('Apps.zip')
+                Publish-AdminCenterPTEApps -environment Sandbox -appFiles @('Apps.zip')
 
                 Assert-MockCalled Sort-AppFilesByDependencies -Exactly 1 -ParameterFilter {
                     $appFiles.Count -eq 1 -and $appFiles[0] -eq $script:copiedApp -and $excludeRuntimePackages
@@ -652,6 +669,122 @@ InModuleScope Deploy {
             }
         }
 
+        Context "Native installed-app decision safety" {
+            BeforeEach {
+                $script:ptePublishingApi = 'AdminCenter'
+                $script:rawApplication = @{
+                    id = $applicationAppId; name = 'Application'; version = '30.0.0.0'; state = 'installed'; appType = 'global'
+                }
+                $script:rawApp = @{ id = 'app-1'; name = 'App'; version = '1.0.0.0'; state = 'installed'; appType = 'tenant' }
+                # Bind the production normalizer to the same module as the API and consumer mocks.
+                $script:nativeReader = [scriptblock]::Create((Get-Command Get-AdminCenterInstalledExtensions -Module AdminCenterApi).Definition)
+                $script:installedAppResponse = @($script:rawApplication, $script:rawApp)
+                Mock Invoke-AdminCenterApi { return @{ value = $script:installedAppResponse } }
+                Mock Get-AdminCenterInstalledExtensions {
+                    & $script:nativeReader -environment $environment
+                }
+                Mock NewTemporaryFolder { return 'test-app-folder' }
+                Mock Copy-AppFilesToFolder { return @('App.app') }
+                Mock Get-ChildItem { return [PSCustomObject]@{ FullName = 'App.app' } }
+                Mock Sort-AppFilesByDependencies { return @('App.app') }
+                Mock Get-AppJsonFromAppFile { return @{ id = 'app-1'; name = 'App'; version = '2.0.0.0'; idRanges = @(@{ from = 50000 }) } }
+                Mock Install-AdminCenterPTE { return @{ id = 'operation-1'; appId = 'app-1'; status = 'running' } }
+                Mock Install-BcAppFromAppSource { }
+                Mock WaitPTEOperation { }
+                Mock Remove-Item { }
+            }
+
+            It 'Does not require unrelated apps to have names, scopes or usable versions' {
+                $script:installedAppResponse = @($script:rawApplication, @{ id = 'unrelated-app'; version = 'invalid' })
+
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+                PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app')
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Install-AdminCenterPTE -Exactly 1
+                Assert-MockCalled WaitPTEOperation -Exactly 1
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Rejects selected installed version <version> before upload' -TestCases @(
+                @{ version = '1.0' }, @{ version = 'invalid' }
+            ) {
+                param($version)
+                $script:rawApp.version = $version
+
+                { PublishPTEApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } | Should -Throw
+
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled Remove-Item -Exactly 1
+            }
+
+            It 'Resolves Application by its known identity when its name is absent' {
+                $script:rawApplication.Remove('name')
+
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be AdminCenter
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+            }
+
+            It 'Rejects Application version <version> even when its name is absent' -TestCases @(
+                @{ version = '30.0' }, @{ version = 'invalid' }
+            ) {
+                param($version)
+                $script:rawApplication.Remove('name')
+                $script:rawApplication.version = $version
+                $script:ptePublishingApi = ''
+
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } |
+                    Should -Throw '*unique installed Application*'
+
+                $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+            }
+
+            It 'Rejects an invalid selected installed version during primary preflight' {
+                $script:rawApp.version = 'invalid'
+
+                { CheckInstalledApps -bcAuthContext @{} -environment Sandbox -appFiles @('App.app') } | Should -Throw
+
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+            }
+
+            It 'Rejects an invalid installed version before writing a matched <kind> dependency' -TestCases @(
+                @{ kind = 'PTE'; from = 50000 }, @{ kind = 'AppSource'; from = 100000 }
+            ) {
+                param($from)
+                $script:rawApp.version = 'invalid'
+                $script:dependencyFrom = $from
+                Mock Get-AppJsonFromAppFile {
+                    return @{ id = 'app-1'; name = 'App'; version = '2.0.0.0'; idRanges = @(@{ from = $script:dependencyFrom }) }
+                }
+
+                { InstallOrUpgradeApps -bcAuthContext @{} -environment Sandbox -apps @('App.app') -installMode upgrade } | Should -Throw
+
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
+
+            It 'Keeps the Dev-scope AppSource dependency safeguard after normalization' {
+                $script:rawApp.appType = 'dev'
+                Mock Get-AppJsonFromAppFile {
+                    return @{ id = 'app-1'; name = 'App'; version = '2.0.0.0'; idRanges = @(@{ from = 100000 }) }
+                }
+
+                InstallOrUpgradeApps -bcAuthContext @{} -environment Sandbox -apps @('App.app') -installMode upgrade
+
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like '*published in Dev scope*Cannot upgrade*' }
+                Assert-MockCalled Install-BcAppFromAppSource -Times 0
+                Assert-MockCalled Install-AdminCenterPTE -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
+        }
+
         Context "Exact operation polling" {
             BeforeEach {
                 $script:operation = [PSCustomObject]@{ id = 'operation / 1'; appId = 'app-1'; status = 'running'; scheduleKind = 'immediate' }
@@ -662,13 +795,13 @@ InModuleScope Deploy {
             It 'Accepts immediate success without polling' {
                 $script:operation.status = 'succeeded'
 
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 0
             }
 
             It 'Leaves exact-operation target selection to the native request boundary' {
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1 -ParameterFilter {
                     !$PesterBoundParameters.ContainsKey('apiBaseUrl') -and !$PesterBoundParameters.ContainsKey('applicationFamily') -and
@@ -687,7 +820,7 @@ InModuleScope Deploy {
                 $script:operation | Add-Member NoteProperty errorMessage 'Service validation detail'
 
                 try {
-                    WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                    WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
                     throw 'Expected terminal error'
                 }
                 catch {
@@ -703,7 +836,7 @@ InModuleScope Deploy {
                 $script:operation | Add-Member NoteProperty arbitrary 'private-response-field'
 
                 try {
-                    WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                    WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
                     throw 'Expected failure'
                 }
                 catch {
@@ -713,7 +846,7 @@ InModuleScope Deploy {
             }
 
             It 'Polls only the exact returned operation and renews authentication' {
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1 -ParameterFilter {
                     $environment -eq 'Sandbox' -and $appId -eq 'app-1' -and $operationId -eq 'operation / 1' -and $timeoutSeconds -le 30
@@ -722,7 +855,7 @@ InModuleScope Deploy {
             }
 
             It 'Uses the requested shorter polling interval without changing the operation endpoint' {
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' -pollIntervalSeconds 5
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' -pollIntervalSeconds 5
 
                 Assert-MockCalled Start-Sleep -Exactly 1 -ParameterFilter { $Milliseconds -eq 5000 }
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1 -ParameterFilter {
@@ -733,7 +866,7 @@ InModuleScope Deploy {
             It 'Does not count scheduled immediate installation as success' {
                 $script:operation.status = 'scheduled'
 
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1
             }
@@ -745,7 +878,7 @@ InModuleScope Deploy {
                 $script:operation.status = $status
                 $script:operation | Add-Member -NotePropertyName errorMessage -NotePropertyValue 'Service diagnostic'
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*operation / 1*Service diagnostic*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*operation / 1*Service diagnostic*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 0
             }
@@ -761,7 +894,7 @@ InModuleScope Deploy {
                     empty { $script:operation = $null }
                 }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*missing or mismatched*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*missing or mismatched*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 0
             }
@@ -780,7 +913,7 @@ InModuleScope Deploy {
                     }
                 }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Missing or mismatched PTE operation*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Missing or mismatched PTE operation*'
             }
 
             It 'Retries transient status failures and then succeeds without any write' {
@@ -791,7 +924,7 @@ InModuleScope Deploy {
                     return [PSCustomObject]@{ id = 'operation / 1'; appId = 'app-1'; status = 'succeeded' }
                 }
 
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 3
                 Assert-MockCalled OutputWarning -Exactly 2
@@ -800,7 +933,7 @@ InModuleScope Deploy {
             It 'Stops after five consecutive transient retries' {
                 Mock Get-AdminCenterAppOperation { throw [System.TimeoutException]::new('Temporary failure') }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Unable to read PTE operation*Temporary failure*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Unable to read PTE operation*Temporary failure*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 6
                 Assert-MockCalled OutputWarning -Exactly 5
@@ -830,12 +963,12 @@ InModuleScope Deploy {
                 }
 
                 if ($retry) {
-                    WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                    WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
                     Assert-MockCalled Get-AdminCenterAppOperation -Exactly 2
                     Assert-MockCalled OutputWarning -Exactly 1
                 }
                 else {
-                    { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Unable to read PTE operation*'
+                    { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Unable to read PTE operation*'
                     Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1
                     Assert-MockCalled OutputWarning -Times 0
                 }
@@ -850,7 +983,7 @@ InModuleScope Deploy {
                     throw [System.TimeoutException]::new('Transient timeout')
                 }
 
-                WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1'
+                WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 12
                 Assert-MockCalled OutputWarning -Exactly 10
@@ -863,7 +996,7 @@ InModuleScope Deploy {
                     throw $exception
                 }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*403 Forbidden*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*403 Forbidden*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 1
                 Assert-MockCalled OutputWarning -Times 0
@@ -872,7 +1005,7 @@ InModuleScope Deploy {
             It 'Does not retry an authorization status-read failure' {
                 Mock Get-AdminCenterAppOperation { throw '401 Unauthorized' }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Unable to read PTE operation*401 Unauthorized*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Unable to read PTE operation*401 Unauthorized*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 1
                 Assert-MockCalled OutputWarning -Times 0
@@ -881,7 +1014,7 @@ InModuleScope Deploy {
             It 'Bounds status attempts even when the operation remains scheduled' {
                 Mock Get-AdminCenterAppOperation { return [PSCustomObject]@{ id = 'operation / 1'; status = 'scheduled' } }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' -maxStatusRequests 2 } | Should -Throw '*Timed out*2 status requests*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' -maxStatusRequests 2 } | Should -Throw '*Timed out*2 status requests*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 2
             }
@@ -889,7 +1022,7 @@ InModuleScope Deploy {
             It 'Limits the default immediate polling to 360 status requests' {
                 Mock Get-AdminCenterAppOperation { return [PSCustomObject]@{ id = 'operation / 1'; status = 'running' } }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Timed out*1800 seconds or 360 status requests*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' } | Should -Throw '*Timed out*1800 seconds or 360 status requests*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Exactly 360
             }
@@ -897,7 +1030,7 @@ InModuleScope Deploy {
             It 'Honors the elapsed timeout before another status request' {
                 Mock Start-Sleep { [System.Threading.Thread]::Sleep(1100) }
 
-                { WaitPTEOperation -bcAuthContext @{} -environment Sandbox -operation $script:operation -appId 'app-1' -timeoutSeconds 1 } | Should -Throw '*Timed out*1 seconds*'
+                { WaitPTEOperation -environment Sandbox -operation $script:operation -appId 'app-1' -timeoutSeconds 1 } | Should -Throw '*Timed out*1 seconds*'
 
                 Assert-MockCalled Get-AdminCenterAppOperation -Times 0
                 Assert-MockCalled Start-Sleep -Exactly 1 -ParameterFilter { $Milliseconds -gt 0 -and $Milliseconds -le 1000 }

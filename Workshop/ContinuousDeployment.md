@@ -90,6 +90,8 @@ Paste the value from the clipboard into the "Value" field of the **AuthContext**
 
 ## PTE deployment authorization
 
+The Automation API's PTE upload (`extensionUpload`) is [deprecated and planned for removal in 2027 release wave 1](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload), so configure the Admin API permissions below before removal because AL-Go's fallback depends on this endpoint.
+
 For **BC 29 or later**, AL-Go prefers administration center publishing for PTEs. To enable it with S2S authentication, add the **AdminCenter.ReadWrite.All** application permission under **Dynamics 365 Business Central**, grant **tenant admin consent**, and add the client ID to **Authorized Microsoft Entra apps** in the Business Central administration center. Keep the environment API permissions, such as **Automation.ReadWrite.All** and **API.ReadWrite.All** where required, and the Microsoft Entra application registration and permission sets inside each Business Central environment.
 
 With delegated authentication (impersonation), administration center publishing requires appropriate **Business Central administration center access** as well as the environment permissions. The existing **AUTHCONTEXT** credential structure and the commands above remain unchanged. See the official [Business Central administration center API documentation](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/administration-center-api) for authentication and authorization details.

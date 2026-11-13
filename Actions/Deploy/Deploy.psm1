@@ -194,7 +194,7 @@ function CheckIfAppNeedsInstallOrUpgrade {
     $needsUpgrade = $false
     if ($installedApp) {
         $dependencyVersion = [version]::new($appJson.Version)
-        $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+        $installedVersion = [version]::new("$($installedApp.versionMajor).$($installedApp.versionMinor).$($installedApp.versionBuild).$($installedApp.versionRevision)")
         if ($dependencyVersion -gt $installedVersion) {
             $msg = "Dependency app $($appJson.name) is already installed in version $installedVersion, which is lower than $dependencyVersion."
             if ($installMode -eq 'upgrade') {
@@ -246,7 +246,7 @@ function CheckInstalledApps {
         # Check if the version of the installed app is lower than the version in the app file
         if ($installedApp) {
             $currentVersion = [version]::new($appJson.Version)
-            $installedVersion = [version]::new($installedApp.versionMajor, $installedApp.versionMinor, $installedApp.versionBuild, $installedApp.versionRevision)
+            $installedVersion = [version]::new("$($installedApp.versionMajor).$($installedApp.versionMinor).$($installedApp.versionBuild).$($installedApp.versionRevision)")
 
             if ($currentVersion -lt $installedVersion) {
                 OutputWarning -message "App $($appJson.name) is already installed in version $installedVersion, which is higher than $currentVersion, used in app.json. In order to install version $currentVersion, the higher version must be uninstalled first."
@@ -269,7 +269,10 @@ function GetPTEApplicationVersion {
         [string] $environment
     )
 
-    $applications = @($extensions | Where-Object { $_.displayName -eq 'Application' -and $_.isInstalled })
+    $applications = @($extensions | Where-Object {
+        $app = $_ | ConvertTo-HashTable -recurse
+        ($app['displayName'] -eq 'Application' -or $app['id'] -eq $applicationAppId) -and $app['isInstalled']
+    })
     $version = $null
     if ($applications.Count -eq 1) {
         $application = $applications[0] | ConvertTo-HashTable -recurse
@@ -287,7 +290,7 @@ function GetPTEApplicationVersion {
     .SYNOPSIS
         Read installed apps using the selected API, or the original BCH API for non-PTE work.
     .PARAMETER bcAuthContext
-        Business Central authentication context.
+        Original BCH authentication context, used only for Automation reads.
     .PARAMETER environment
         Target environment.
     .PARAMETER publishingApi
@@ -302,7 +305,7 @@ function GetInstalledExtensions {
     )
 
     if ($publishingApi -eq 'AdminCenter') {
-        return Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment
+        return Get-AdminCenterInstalledExtensions -environment $environment
     }
     return Get-BcInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment | Where-Object { $_.isInstalled }
 }
@@ -311,7 +314,7 @@ function GetInstalledExtensions {
     .SYNOPSIS
         Select the PTE publishing API once, before this action publishes any PTEs.
     .PARAMETER bcAuthContext
-        Business Central authentication context.
+        Original BCH authentication context, used only for the Automation authorization fallback.
     .PARAMETER environment
         Target environment.
 #>
@@ -322,19 +325,22 @@ function Initialize-PTEPublishingApi {
     )
 
     $publishingApi = 'AdminCenter'
+    $authorizationDetails = ''
     try {
-        $extensions = @(Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
+        $extensions = @(Get-AdminCenterInstalledExtensions -environment $environment)
     }
     catch {
         if (!(Test-AdminCenterAuthorizationError -errorRecord $_)) { throw }
-        $details = Get-AdminCenterApiErrorMessage -errorRecord $_
-        OutputWarning -message "Admin Center authorization failed: $details. Update your administration center permissions: https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization. Using the Automation API for PTE publishing throughout this Deploy action."
+        $authorizationDetails = Get-AdminCenterApiErrorMessage -errorRecord $_
         $publishingApi = 'Automation'
         $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -publishingApi $publishingApi)
     }
     $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
     if ($applicationVersion -lt [version]'29.0.0.0') {
         $publishingApi = 'Automation'
+    }
+    elseif ($publishingApi -eq 'Automation') {
+        OutputWarning -message "Admin Center authorization failed: $authorizationDetails. Update your administration center permissions: https://github.com/microsoft/AL-Go/blob/main/Workshop/ContinuousDeployment.md#pte-deployment-authorization. Using the Automation API for PTE publishing throughout this Deploy action. Automation PTE upload is planned for removal in 2027 release wave 1."
     }
     Write-Host "Target BC $applicationVersion - using $publishingApi for PTE publishing throughout this Deploy action"
     $script:ptePublishingApi = $publishingApi
@@ -346,8 +352,7 @@ function Initialize-PTEPublishingApi {
     .DESCRIPTION
         Polls only the returned app and operation IDs. An accepted or scheduled immediate install
         is not success. Only transient status-read errors are retried, never the upload.
-    .PARAMETER bcAuthContext
-        Authentication context to renew for each status request.
+        Uses the initialized Admin authentication context.
     .PARAMETER environment
         Target environment.
     .PARAMETER operation
@@ -363,7 +368,6 @@ function Initialize-PTEPublishingApi {
 #>
 function WaitPTEOperation {
     Param(
-        [hashtable] $bcAuthContext,
         [string] $environment,
         $operation,
         [string] $appId,
@@ -416,7 +420,7 @@ function WaitPTEOperation {
         $requests++
         try {
             $requestTimeout = [int][Math]::Max(1, [Math]::Min(30, [Math]::Ceiling($timeoutSeconds - $timer.Elapsed.TotalSeconds)))
-            $operation = Get-AdminCenterAppOperation -bcAuthContext $bcAuthContext -environment $environment `
+            $operation = Get-AdminCenterAppOperation -environment $environment `
                 -appId $appId -operationId $operationId -timeoutSeconds $requestTimeout
             $operation = $operation | ConvertTo-HashTable -recurse
             $transientErrors = 0
@@ -446,7 +450,7 @@ function WaitPTEOperation {
         Delegates the original packages to BcContainerHelper or the Admin Center batch publisher,
         as selected at Deploy initialization before PTE operations. Failures never switch APIs.
     .PARAMETER bcAuthContext
-        Business Central authentication context.
+        Original BCH authentication context, used only by the Automation publisher.
     .PARAMETER environment
         Target Business Central environment name.
     .PARAMETER appFiles
@@ -470,7 +474,7 @@ function PublishPTEApps {
         Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -SchemaSyncMode $schemaSyncMode
     }
     elseif ($script:ptePublishingApi -eq 'AdminCenter') {
-        Publish-AdminCenterPTEApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -schemaSyncMode $schemaSyncMode
+        Publish-AdminCenterPTEApps -environment $environment -appFiles $appFiles -schemaSyncMode $schemaSyncMode
     }
     else {
         throw "Invalid PTE publishing API: $script:ptePublishingApi"
@@ -483,8 +487,7 @@ function PublishPTEApps {
     .DESCRIPTION
         Requires BC 29 or later. Expands packages, excludes runtime packages and orders dependencies.
         Skips same or newer installed versions, and waits for each exact install operation before continuing.
-    .PARAMETER bcAuthContext
-        Business Central authentication context.
+        Uses the initialized Admin authentication context and target.
     .PARAMETER environment
         Target Business Central environment name.
     .PARAMETER appFiles
@@ -494,14 +497,13 @@ function PublishPTEApps {
 #>
 function Publish-AdminCenterPTEApps {
     Param(
-        [hashtable] $bcAuthContext,
         [string] $environment,
         [string[]] $appFiles,
         [ValidateSet('Add', 'Force')]
         [string] $schemaSyncMode = 'Add'
     )
 
-    $extensions = @(Get-AdminCenterInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment)
+    $extensions = @(Get-AdminCenterInstalledExtensions -environment $environment)
     $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
     if ($applicationVersion -lt [version]'29.0.0.0') {
         throw "Admin Center PTE publishing requires BC 29 or later; the selected API will not be changed."
@@ -514,13 +516,14 @@ function Publish-AdminCenterPTEApps {
         foreach ($appFile in $sortedApps) {
             $appJson = Get-AppJsonFromAppFile -appFile $appFile
             $appVersion = [version]$appJson.version
-            $installedVersions = @($extensions | Where-Object { $_.id -eq $appJson.id -and $_.isInstalled } |
-                ForEach-Object { [version]::new($_.versionMajor, $_.versionMinor, $_.versionBuild, $_.versionRevision) })
+            $matchingApps = @($extensions | Where-Object { $_.id -eq $appJson.id })
+            $installedVersions = @($matchingApps | Where-Object { $_.isInstalled } |
+                ForEach-Object { [version]::new("$($_.versionMajor).$($_.versionMinor).$($_.versionBuild).$($_.versionRevision)") })
             if (@($installedVersions | Where-Object { $_ -ge $appVersion }).Count -gt 0) {
                 continue
             }
-            $operation = Install-AdminCenterPTE -bcAuthContext $bcAuthContext -environment $environment -appFile $appFile -syncMode $syncMode
-            WaitPTEOperation -bcAuthContext $bcAuthContext -environment $environment -operation $operation -appId $appJson.id
+            $operation = Install-AdminCenterPTE -environment $environment -appFile $appFile -syncMode $syncMode
+            WaitPTEOperation -environment $environment -operation $operation -appId $appJson.id
         }
     }
     finally {

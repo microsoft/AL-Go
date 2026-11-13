@@ -3,16 +3,15 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 # Pin the contract AL-Go implements; update this with its callers and contract tests.
 $adminCenterApiVersion = 'v2.29'
 $script:adminCenterAuthContext = $null
-$script:adminCenterSourceContext = $null
 $script:adminCenterTarget = $null
 
 <#
     .SYNOPSIS
         Prepare the Admin Center target and authentication context for this Deploy action.
     .DESCRIPTION
-        Native requests using this original BCH context share the owned target and Admin context.
-    .PARAMETER bcAuthContext
-        Original BCH authentication context, retained unchanged.
+        Retains the supplied independent context and target for all native requests.
+    .PARAMETER authContext
+        Dedicated Admin authentication context supplied by the caller, not the original BCH context.
     .PARAMETER settings
         AL-Go settings containing the native API root and application family.
     .PARAMETER preserveScopes
@@ -20,20 +19,19 @@ $script:adminCenterTarget = $null
 #>
 function Initialize-AdminCenterAuthContext {
     Param(
-        [hashtable] $bcAuthContext,
+        [Parameter(Mandatory = $true)]
+        [hashtable] $authContext,
         [hashtable] $settings = @{},
         [switch] $preserveScopes
     )
 
     $target = Get-DeploymentTarget -settings $settings
-    $adminContext = $bcAuthContext.Clone()
-    $scopes = if ($preserveScopes) { $adminContext['Scopes'] } else { "$($target.apiBaseUrl)/" }
-    if ($adminContext['Scopes'] -ne $scopes) {
-        $adminContext['Scopes'] = $scopes
-        $adminContext['UtcExpiresOn'] = [DateTime]::MinValue
+    $scopes = if ($preserveScopes) { $authContext['Scopes'] } else { "$($target.apiBaseUrl)/" }
+    if ($authContext['Scopes'] -ne $scopes) {
+        $authContext['Scopes'] = $scopes
+        $authContext['UtcExpiresOn'] = [DateTime]::MinValue
     }
-    $script:adminCenterAuthContext = $adminContext
-    $script:adminCenterSourceContext = $bcAuthContext
+    $script:adminCenterAuthContext = $authContext
     $script:adminCenterTarget = $target
 }
 
@@ -131,10 +129,8 @@ function Get-AdminCenterApiErrorMessage {
         Send one authenticated Admin Center request without retries.
     .DESCRIPTION
         Preserves HTTP errors and records whether sending was attempted in Exception.Data.
-        Uses the initialized Deploy target unless explicitly overridden and retains renewed authentication.
-        Other callers use standard target defaults and their supplied context without changing action state.
-    .PARAMETER bcAuthContext
-        Authentication context to renew.
+        Requires the dedicated Admin context and target to be initialized before use.
+        Uses that target unless explicitly overridden and retains renewed authentication.
     .PARAMETER environment
         Target environment.
     .PARAMETER path
@@ -154,7 +150,6 @@ function Get-AdminCenterApiErrorMessage {
 #>
 function Invoke-AdminCenterApi {
     Param(
-        [hashtable] $bcAuthContext,
         [string] $environment,
         [string[]] $path,
         [ValidateSet('Get', 'Post')]
@@ -169,22 +164,20 @@ function Invoke-AdminCenterApi {
 
     $requestStarted = $false
     try {
-        $actionContext = $null -ne $script:adminCenterAuthContext -and
-            [object]::ReferenceEquals($bcAuthContext, $script:adminCenterSourceContext)
-        if ($actionContext) {
-            if (!$PSBoundParameters.ContainsKey('apiBaseUrl')) { $apiBaseUrl = $script:adminCenterTarget.apiBaseUrl }
-            if (!$PSBoundParameters.ContainsKey('applicationFamily')) { $applicationFamily = $script:adminCenterTarget.applicationFamily }
+        if ($null -eq $script:adminCenterAuthContext -or $null -eq $script:adminCenterTarget) {
+            throw 'The Admin Center context and target must be initialized before making requests.'
         }
+        if (!$PSBoundParameters.ContainsKey('apiBaseUrl')) { $apiBaseUrl = $script:adminCenterTarget.apiBaseUrl }
+        if (!$PSBoundParameters.ContainsKey('applicationFamily')) { $applicationFamily = $script:adminCenterTarget.applicationFamily }
         $uri = Get-AdminCenterApiUrl -environment $environment -applicationFamily $applicationFamily -apiBaseUrl $apiBaseUrl
         $uri += '/' + (($path | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
-        $adminContext = if ($actionContext) { $script:adminCenterAuthContext } else { $bcAuthContext.Clone() }
-        $authContext = Renew-BcAuthContext -bcAuthContext $adminContext
+        $authContext = Renew-BcAuthContext -bcAuthContext $script:adminCenterAuthContext
         if (!$authContext -or !$authContext['AccessToken']) {
             throw [System.Management.Automation.ErrorRecord]::new(
                 [System.Security.Authentication.AuthenticationException]::new('Authentication failed before Admin Center request.'),
                 'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
         }
-        if ($actionContext) { $script:adminCenterAuthContext = $authContext }
+        $script:adminCenterAuthContext = $authContext
         Write-Host "::add-mask::$($authContext.AccessToken)"
         $parameters = @{
             Uri = $uri
@@ -210,9 +203,7 @@ function Invoke-AdminCenterApi {
         Upload an app package for immediate PTE installation.
     .DESCRIPTION
         Builds and disposes multipart content using binary serialization supported on PowerShell 5 and 7.
-        Makes one upload attempt without retries.
-    .PARAMETER bcAuthContext
-        Authentication context.
+        Makes one upload attempt without retries using the initialized Admin context.
     .PARAMETER environment
         Target environment.
     .PARAMETER appFile
@@ -226,7 +217,6 @@ function Invoke-AdminCenterApi {
 #>
 function Install-AdminCenterPTE {
     Param(
-        [hashtable] $bcAuthContext,
         [string] $environment,
         [string] $appFile,
         [ValidateSet('Add', 'ForceSync')]
@@ -266,8 +256,8 @@ function Install-AdminCenterPTE {
 <#
     .SYNOPSIS
         Read the exact app operation without polling or retrying.
-    .PARAMETER bcAuthContext
-        Authentication context.
+    .DESCRIPTION
+        Uses the initialized Admin authentication context and target.
     .PARAMETER environment
         Target environment.
     .PARAMETER appId
@@ -283,7 +273,6 @@ function Install-AdminCenterPTE {
 #>
 function Get-AdminCenterAppOperation {
     Param(
-        [hashtable] $bcAuthContext,
         [string] $environment,
         [string] $appId,
         [string] $operationId,
@@ -304,12 +293,12 @@ function Get-AdminCenterAppOperation {
         Read installed extensions from Admin Center in the deployment extension format.
     .DESCRIPTION
         Uses the observed id/name/version/state response and accepts the documented appId identity.
-        Returns installed apps only, with full version components for existing deployment checks.
-        Installed, UpdatePending and Updating all describe installed apps. The documented appType
-        is retained as publishedAs so deployment can preserve its Dev-scope dependency safeguard.
-        Missing or malformed installed-app data fails explicitly.
-    .PARAMETER bcAuthContext
-        Authentication context.
+        Returns installed-app records with full version components when valid.
+        The endpoint returns installed apps. The appType is retained as publishedAs so deployment
+        can preserve its Dev-scope dependency safeguard. Records without an unambiguous identity
+        fail explicitly. Invalid or incomplete versions retain empty version components so
+        selected-app version comparisons fail rather than assume a version.
+        Uses the initialized Admin authentication context and target.
     .PARAMETER environment
         Target environment.
     .PARAMETER applicationFamily
@@ -319,7 +308,6 @@ function Get-AdminCenterAppOperation {
 #>
 function Get-AdminCenterInstalledExtensions {
     Param(
-        [hashtable] $bcAuthContext,
         [string] $environment,
         [string] $applicationFamily = 'BusinessCentral',
         [string] $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
@@ -331,30 +319,27 @@ function Get-AdminCenterInstalledExtensions {
         throw 'Admin Center installed-app response must contain an apps array.'
     }
     foreach ($app in $response['value']) {
-        if ($app -isnot [hashtable] -or $app['state'] -isnot [string] -or !$app['state'].Trim()) {
-            throw 'Admin Center app is missing its installation state.'
-        }
-        if ($app['state'] -notin 'installed', 'updatePending', 'updating') {
-            throw 'Admin Center app has an unsupported installation state.'
+        if ($app -isnot [hashtable]) {
+            throw 'Admin Center installed app has missing or invalid identity.'
         }
         $id = if ($app['appId']) { $app['appId'] } else { $app['id'] }
-        $version = $null
         if ($id -isnot [string] -or !$id.Trim() -or
-            ($app['appId'] -and $app['id'] -and $app['appId'] -ne $app['id']) -or
-            $app['name'] -isnot [string] -or !$app['name'].Trim() -or
-            $app['version'] -isnot [string] -or
-            ![version]::TryParse($app['version'], [ref]$version) -or $version.Revision -lt 0 -or
-            $app['appType'] -notin 'global', 'tenant', 'dev') {
-            throw 'Admin Center installed app has missing or invalid identity, name, full version or app type.'
+            ($app['appId'] -and $app['id'] -and $app['appId'] -ne $app['id'])) {
+            throw 'Admin Center installed app has missing or conflicting identity.'
+        }
+        $version = $null
+        if ($app['version'] -isnot [string] -or
+            ![version]::TryParse($app['version'], [ref]$version) -or $version.Revision -lt 0) {
+            $version = $null
         }
         [PSCustomObject]@{
             id = $id
             displayName = $app['name']
-            version = $version.ToString()
-            versionMajor = $version.Major
-            versionMinor = $version.Minor
-            versionBuild = $version.Build
-            versionRevision = $version.Revision
+            version = $app['version']
+            versionMajor = if ($version) { $version.Major } else { $null }
+            versionMinor = if ($version) { $version.Minor } else { $null }
+            versionBuild = if ($version) { $version.Build } else { $null }
+            versionRevision = if ($version) { $version.Revision } else { $null }
             isInstalled = $true
             state = $app['state']
             publishedAs = $app['appType']

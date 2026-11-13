@@ -125,8 +125,6 @@ else {
         if ($null -eq $bcAuthContext) {
             throw "Authentication failed"
         }
-        Initialize-AdminCenterAuthContext -bcAuthContext $bcAuthContext -settings $settings `
-            -preserveScopes:([bool]($authContextParams['scopes'] -or $authContextParams['resource']))
     } catch {
         throw "Authentication failed. $([environment]::Newline) $($_.exception.message)"
     }
@@ -181,6 +179,10 @@ else {
                 }
             }
             if ($scope -eq 'PTE' -or $hasPTEDependencies) {
+                # This copy will eventually be replaced by AL-Go native auth.
+                $adminAuthContext = $bcAuthContext.Clone()
+                Initialize-AdminCenterAuthContext -authContext $adminAuthContext -settings $settings `
+                    -preserveScopes:([bool]($authContextParams['scopes'] -or $authContextParams['resource']))
                 Initialize-PTEPublishingApi -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName
             }
             if ($dependencies) {

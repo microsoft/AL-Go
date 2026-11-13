@@ -10,9 +10,7 @@ Describe 'AL-Go Admin Center API helpers' {
     InModuleScope AdminCenterApi {
         Describe 'Admin Center requests and named endpoints' {
             BeforeEach {
-                $script:adminCenterAuthContext = $null
-                $script:adminCenterSourceContext = $null
-                $script:adminCenterTarget = $null
+                Initialize-AdminCenterAuthContext -authContext @{ tenantId = 'tenant' }
                 $script:packagePath = Join-Path $TestDrive 'Binary Package.app'
                 $script:packageBytes = [byte[]]@(0,128,255,13,10)
                 [IO.File]::WriteAllBytes($script:packagePath, $script:packageBytes)
@@ -23,7 +21,6 @@ Describe 'AL-Go Admin Center API helpers' {
 
             AfterEach {
                 $script:adminCenterAuthContext = $null
-                $script:adminCenterSourceContext = $null
                 $script:adminCenterTarget = $null
             }
 
@@ -47,7 +44,7 @@ Describe 'AL-Go Admin Center API helpers' {
                     return @{ id = 'operation-1' }
                 }
 
-                $result = Install-AdminCenterPTE -bcAuthContext @{ tenantId = 'tenant' } -environment 'QA / East' `
+                $result = Install-AdminCenterPTE -environment 'QA / East' `
                     -apiBaseUrl 'https://api.embed.test/service/' -applicationFamily 'Family / US' -appFile $script:packagePath -syncMode $syncMode
 
                 $result.id | Should -Be 'operation-1'
@@ -69,7 +66,7 @@ Describe 'AL-Go Admin Center API helpers' {
                     return @{ id = 'operation / 1' }
                 }
 
-                Get-AdminCenterAppOperation -bcAuthContext @{} -environment Sandbox -appId 'app / 1' -operationId 'operation / 1' -timeoutSeconds 7 `
+                Get-AdminCenterAppOperation -environment Sandbox -appId 'app / 1' -operationId 'operation / 1' -timeoutSeconds 7 `
                     -apiBaseUrl 'https://api.embed.test' -applicationFamily 'Custom Family'
 
                 Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
@@ -81,7 +78,7 @@ Describe 'AL-Go Admin Center API helpers' {
             It 'Reads installed apps only from the configured root and explicit family' {
                 Mock Invoke-RestMethod { return @{ value = @() } }
 
-                @(Get-AdminCenterInstalledExtensions -bcAuthContext @{} -environment 'QA / East' `
+                @(Get-AdminCenterInstalledExtensions -environment 'QA / East' `
                     -apiBaseUrl 'https://api.embed.test/service/' -applicationFamily 'Custom / Family').Count | Should -Be 0
 
                 Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
@@ -94,7 +91,8 @@ Describe 'AL-Go Admin Center API helpers' {
                     tenantId = 'tenant'; Scopes = 'https://legacy.test/'; AccessToken = 'legacy-token'
                     UtcExpiresOn = [DateTime]::UtcNow.AddHours(1)
                 }
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings @{ deploymentBaseUrl = 'https://admin.test' }
+                $adminContext = $original.Clone()
+                Initialize-AdminCenterAuthContext -authContext $adminContext -settings @{ deploymentBaseUrl = 'https://admin.test' }
                 Mock Renew-BcAuthContext {
                     $bcAuthContext.Scopes | Should -Be 'https://admin.test/'
                     $bcAuthContext.UtcExpiresOn | Should -Be ([DateTime]::MinValue)
@@ -102,7 +100,7 @@ Describe 'AL-Go Admin Center API helpers' {
                     return $bcAuthContext
                 }
 
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps -apiBaseUrl 'https://admin.test'
+                Invoke-AdminCenterApi -environment Sandbox -path apps -apiBaseUrl 'https://admin.test'
 
                 $original.Scopes | Should -Be 'https://legacy.test/'
                 $original.AccessToken | Should -Be 'legacy-token'
@@ -122,19 +120,19 @@ Describe 'AL-Go Admin Center API helpers' {
                     Scopes = 'https://explicit-resource.test/.default'
                     UtcExpiresOn = $expires
                 }
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings @{ deploymentBaseUrl = 'https://admin.test' } -preserveScopes
-                Invoke-AdminCenterApi -environment Sandbox -path apps -apiBaseUrl 'https://admin.test' -bcAuthContext $original
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ deploymentBaseUrl = 'https://admin.test' } -preserveScopes
+                Invoke-AdminCenterApi -environment Sandbox -path apps -apiBaseUrl 'https://admin.test'
                 Assert-MockCalled Renew-BcAuthContext -Exactly 1
             }
 
             It 'Does not mutate the BCH context when Admin renewal fails' {
                 $original = @{ Scopes = 'https://legacy.test/' }
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings @{ deploymentBaseUrl = 'https://admin.test' }
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ deploymentBaseUrl = 'https://admin.test' }
                 Mock Renew-BcAuthContext {
                     $bcAuthContext.Scopes = 'changed-copy'
                     throw [TimeoutException]::new('Renewal timed out')
                 }
-                { Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps } | Should -Throw '*Renewal timed out*'
+                { Invoke-AdminCenterApi -environment Sandbox -path apps } | Should -Throw '*Renewal timed out*'
                 $original.Scopes | Should -Be 'https://legacy.test/'
                 Assert-MockCalled Invoke-RestMethod -Times 0
             }
@@ -147,13 +145,13 @@ Describe 'AL-Go Admin Center API helpers' {
                 $newContext = Get-Command New-BcAuthContext -Module BcContainerHelper
                 $original = & $newContext -tenantID fake-tenant -clientID fake-client -clientSecret fake-secret `
                     -scopes 'https://legacy.test/' -silent
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings @{ deploymentBaseUrl = 'https://admin.test' }
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ deploymentBaseUrl = 'https://admin.test' }
                 Mock Renew-BcAuthContext {
                     $renew = Get-Command Renew-BcAuthContext -Module BcContainerHelper
                     & $renew -bcAuthContext $bcAuthContext -silent
                 }
 
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps -apiBaseUrl 'https://admin.test'
+                Invoke-AdminCenterApi -environment Sandbox -path apps -apiBaseUrl 'https://admin.test'
 
                 Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 1 -ParameterFilter {
                     $Body.scope -eq 'https://admin.test/.default'
@@ -180,7 +178,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 $originalExpiry = $original.UtcExpiresOn
                 $originalConfig = $bcContainerHelperConfig.apiBaseUrl
                 $settings = @{ deploymentBaseUrl = 'https://admin.test'; deploymentApplicationFamily = 'Family / US' }
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings $settings
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings $settings
                 $settings.deploymentBaseUrl = 'https://changed-after-initialization.test'
                 Mock Renew-BcAuthContext {
                     $renew = Get-Command Renew-BcAuthContext -Module BcContainerHelper
@@ -188,9 +186,9 @@ Describe 'AL-Go Admin Center API helpers' {
                 }
                 Mock Invoke-RestMethod { return @{ value = @(); id = 'operation-1' } }
 
-                Get-AdminCenterInstalledExtensions -bcAuthContext $original -environment Sandbox | Out-Null
-                Install-AdminCenterPTE -bcAuthContext $original -environment Sandbox -appFile $script:packagePath | Out-Null
-                Get-AdminCenterAppOperation -bcAuthContext $original -environment Sandbox -appId app -operationId operation | Out-Null
+                Get-AdminCenterInstalledExtensions -environment Sandbox | Out-Null
+                Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath | Out-Null
+                Get-AdminCenterAppOperation -environment Sandbox -appId app -operationId operation | Out-Null
 
                 Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 1 -ParameterFilter {
                     $Body.scope -eq 'https://admin.test/.default'
@@ -203,8 +201,8 @@ Describe 'AL-Go Admin Center API helpers' {
                 Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -like '*/apps/pteInstall' }
                 Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -like '*/apps/app/operations/operation' }
                 $script:adminCenterAuthContext.UtcExpiresOn = [DateTime]::MinValue
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps | Out-Null
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps | Out-Null
+                Invoke-AdminCenterApi -environment Sandbox -path apps | Out-Null
+                Invoke-AdminCenterApi -environment Sandbox -path apps | Out-Null
 
                 Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 2 -ParameterFilter {
                     $Body.scope -eq 'https://admin.test/.default'
@@ -227,44 +225,40 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Parse-JWTtoken -ModuleName BcContainerHelper { return @{ appid = 'fake-client'; exp = 2000000000 } }
                 Mock Invoke-RestMethod -ModuleName BcContainerHelper { return @{ access_token = 'valid-token' } }
                 $original = & $newContext -tenantID fake-tenant -clientID fake-client -clientSecret fake-secret -silent
-                Initialize-AdminCenterAuthContext -bcAuthContext $original
+                Initialize-AdminCenterAuthContext -authContext $original.Clone()
 
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps | Out-Null
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps | Out-Null
+                Invoke-AdminCenterApi -environment Sandbox -path apps | Out-Null
+                Invoke-AdminCenterApi -environment Sandbox -path apps | Out-Null
 
                 Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 1
                 Assert-MockCalled Invoke-RestMethod -Exactly 2 -ParameterFilter { $Headers.Authorization -eq 'Bearer valid-token' }
             }
 
-            It 'Overwrites target and auth together on initialization without affecting direct callers' {
+            It 'Replaces the supplied Admin context and target together on initialization' {
                 $first = @{ Scopes = 'https://first.test/'; AccessToken = 'first-token' }
-                Initialize-AdminCenterAuthContext -bcAuthContext $first -settings @{
+                Initialize-AdminCenterAuthContext -authContext $first -settings @{
                     deploymentBaseUrl = 'https://first-admin.test'; deploymentApplicationFamily = 'FirstFamily'
                 }
                 Mock Renew-BcAuthContext {
                     $bcAuthContext.AccessToken = 'mutated-before-failure'
                     throw [TimeoutException]::new('Renewal timed out')
                 }
-                { Invoke-AdminCenterApi -bcAuthContext $first -environment First -path apps } | Should -Throw '*Renewal timed out*'
-                $first.AccessToken | Should -Be first-token
+                { Invoke-AdminCenterApi -environment First -path apps } | Should -Throw '*Renewal timed out*'
+                $first.AccessToken | Should -Be mutated-before-failure
                 Assert-MockCalled Invoke-RestMethod -Times 0
                 $second = @{ Scopes = 'https://second.test/'; AccessToken = 'second-token' }
-                Initialize-AdminCenterAuthContext -bcAuthContext $second -settings @{
+                Initialize-AdminCenterAuthContext -authContext $second -settings @{
                     deploymentBaseUrl = 'https://second.test'; deploymentApplicationFamily = 'SecondFamily'
                 }
-                [object]::ReferenceEquals($script:adminCenterSourceContext, $second) | Should -BeTrue
-                [object]::ReferenceEquals($script:adminCenterAuthContext, $second) | Should -BeFalse
+                [object]::ReferenceEquals($script:adminCenterAuthContext, $second) | Should -BeTrue
                 Mock Renew-BcAuthContext { return $bcAuthContext }
 
-                Invoke-AdminCenterApi -bcAuthContext $second -environment Second -path apps | Out-Null
-                Invoke-AdminCenterApi -bcAuthContext $first -environment First -path apps | Out-Null
+                Invoke-AdminCenterApi -environment Second -path apps | Out-Null
 
                 Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
                     $Uri -like 'https://second.test/admin/v2.29/applications/SecondFamily/*' -and $Headers.Authorization -eq 'Bearer second-token'
                 }
-                Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
-                    $Uri -like 'https://api.businesscentral.dynamics.com/admin/v2.29/applications/BusinessCentral/*' -and $Headers.Authorization -eq 'Bearer first-token'
-                }
+                Assert-MockCalled Invoke-RestMethod -Exactly 1
                 $script:adminCenterAuthContext.AccessToken | Should -Be second-token
                 $script:adminCenterAuthContext.Scopes | Should -Be 'https://second.test/'
                 $script:adminCenterTarget.apiBaseUrl | Should -Be 'https://second.test'
@@ -272,18 +266,18 @@ Describe 'AL-Go Admin Center API helpers' {
 
             It 'Honors explicit native endpoint overrides independently of action target defaults' {
                 $original = @{ Scopes = 'https://action.test/'; AccessToken = 'action-token' }
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings @{
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{
                     deploymentBaseUrl = 'https://action.test'; deploymentApplicationFamily = 'ActionFamily'
                 }
                 Mock Renew-BcAuthContext { return $bcAuthContext }
                 Mock Invoke-RestMethod { return @{ value = @(); id = 'operation' } }
-                Get-AdminCenterInstalledExtensions -bcAuthContext $original -environment Sandbox `
+                Get-AdminCenterInstalledExtensions -environment Sandbox `
                     -apiBaseUrl 'https://explicit.test' -applicationFamily 'ExplicitFamily' | Out-Null
-                Install-AdminCenterPTE -bcAuthContext $original -environment Sandbox -appFile $script:packagePath `
+                Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath `
                     -apiBaseUrl 'https://api.businesscentral.dynamics.com' | Out-Null
-                Get-AdminCenterAppOperation -bcAuthContext $original -environment Sandbox -appId app -operationId operation `
+                Get-AdminCenterAppOperation -environment Sandbox -appId app -operationId operation `
                     -applicationFamily BusinessCentral | Out-Null
-                Invoke-AdminCenterApi -bcAuthContext $original -environment Sandbox -path apps | Out-Null
+                Invoke-AdminCenterApi -environment Sandbox -path apps | Out-Null
 
                 Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
                     $Uri -eq 'https://explicit.test/admin/v2.29/applications/ExplicitFamily/environments/Sandbox/apps'
@@ -301,24 +295,14 @@ Describe 'AL-Go Admin Center API helpers' {
                 $script:adminCenterAuthContext.Scopes | Should -Be 'https://action.test/'
             }
 
-            It 'Keeps an unrelated direct callers explicit target and token separate from action state' {
-                $original = @{ Scopes = 'https://action.test/'; AccessToken = 'action-token' }
-                Initialize-AdminCenterAuthContext -bcAuthContext $original -settings @{
-                    deploymentBaseUrl = 'https://action.test'; deploymentApplicationFamily = 'ActionFamily'
-                }
-                $direct = @{ Scopes = 'https://direct.test/'; AccessToken = 'direct-token' }
-                Mock Renew-BcAuthContext { return $bcAuthContext }
-                Mock Invoke-RestMethod { return @{ value = @() } }
+            It 'Fails before renewal or HTTP when the native context has not been initialized' {
+                $script:adminCenterAuthContext = $null
+                $script:adminCenterTarget = $null
 
-                Get-AdminCenterInstalledExtensions -bcAuthContext $direct -environment Sandbox `
-                    -apiBaseUrl 'https://direct.test' -applicationFamily DirectFamily | Out-Null
+                { Get-AdminCenterInstalledExtensions -environment Sandbox } | Should -Throw '*must be initialized*'
 
-                Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
-                    $Uri -eq 'https://direct.test/admin/v2.29/applications/DirectFamily/environments/Sandbox/apps' -and
-                    $Headers.Authorization -eq 'Bearer direct-token'
-                }
-                $script:adminCenterAuthContext.AccessToken | Should -Be action-token
-                $script:adminCenterTarget.apiBaseUrl | Should -Be 'https://action.test'
+                Assert-MockCalled Renew-BcAuthContext -Times 0
+                Assert-MockCalled Invoke-RestMethod -Times 0
             }
 
             It 'Normalizes <identityField> and installed <state> apps including <appType> scope' -TestCases @(
@@ -332,7 +316,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 $script:appResponse[$identityField] = 'c1335042-3002-4257-bf8a-75c898ccb1b8'
                 Mock Invoke-RestMethod { return [PSCustomObject]@{ value = @([PSCustomObject]$script:appResponse) } }
 
-                $apps = @(Get-AdminCenterInstalledExtensions -bcAuthContext @{ tenantId = 'tenant' } -environment 'QA / East' -applicationFamily 'Family / US')
+                $apps = @(Get-AdminCenterInstalledExtensions -environment 'QA / East' -applicationFamily 'Family / US')
 
                 $apps.Count | Should -Be 1
                 $apps[0].id | Should -Be 'c1335042-3002-4257-bf8a-75c898ccb1b8'
@@ -353,40 +337,49 @@ Describe 'AL-Go Admin Center API helpers' {
 
             It 'Accepts an empty apps array without inventing installed apps' {
                 Mock Invoke-RestMethod { return @{ value = @() } }
-                @(Get-AdminCenterInstalledExtensions -bcAuthContext @{} -environment Sandbox).Count | Should -Be 0
+                @(Get-AdminCenterInstalledExtensions -environment Sandbox).Count | Should -Be 0
             }
 
             It 'Rejects malformed installed-app data: <problem>' -TestCases @(
-                @{ problem = 'missing array' }, @{ problem = 'missing identity' }, @{ problem = 'conflicting identity' },
-                @{ problem = 'missing name' }, @{ problem = 'missing state' }, @{ problem = 'unknown state' },
-                @{ problem = 'uninstalled' }, @{ problem = 'incomplete version' }, @{ problem = 'invalid version' },
-                @{ problem = 'unknown scope' }
+                @{ problem = 'missing array' }, @{ problem = 'missing identity' }, @{ problem = 'conflicting identity' }
             ) {
                 param($problem)
                 $script:appResponse = @{ id = 'app'; name = 'Application'; version = '30.0.57777.0'; state = 'installed'; appType = 'global' }
                 switch ($problem) {
                     'missing identity' { $script:appResponse.Remove('id') }
                     'conflicting identity' { $script:appResponse.appId = 'different-app' }
-                    'missing name' { $script:appResponse.Remove('name') }
-                    'missing state' { $script:appResponse.Remove('state') }
-                    'unknown state' { $script:appResponse.state = 'unknown' }
-                    'uninstalled' { $script:appResponse.state = 'uninstalled' }
-                    'incomplete version' { $script:appResponse.version = '30.0' }
-                    'invalid version' { $script:appResponse.version = 'unknown' }
-                    'unknown scope' { $script:appResponse.appType = 'unknown' }
                 }
                 Mock Invoke-RestMethod { return @{ value = @($script:appResponse) } }
                 if ($problem -eq 'missing array') { Mock Invoke-RestMethod { return @{} } }
 
-                { Get-AdminCenterInstalledExtensions -bcAuthContext @{} -environment Sandbox } | Should -Throw '*Admin Center*'
+                { Get-AdminCenterInstalledExtensions -environment Sandbox } | Should -Throw '*Admin Center*'
                 Assert-MockCalled Invoke-RestMethod -Exactly 1
+            }
+
+            It 'Preserves <version> without inventing full version components' -TestCases @(
+                @{ version = '30.0' }, @{ version = 'invalid' }
+            ) {
+                param($version)
+                $script:appResponse = @{ id = 'unrelated-app'; version = $version }
+                Mock Invoke-RestMethod { return @{ value = @($script:appResponse) } }
+
+                $apps = @(Get-AdminCenterInstalledExtensions -environment Sandbox)
+
+                $apps.Count | Should -Be 1
+                $apps[0].id | Should -Be 'unrelated-app'
+                $apps[0].isInstalled | Should -BeTrue
+                $apps[0].version | Should -Be $version
+                $apps[0].versionMajor | Should -BeNullOrEmpty
+                $apps[0].versionMinor | Should -BeNullOrEmpty
+                $apps[0].versionBuild | Should -BeNullOrEmpty
+                $apps[0].versionRevision | Should -BeNullOrEmpty
             }
 
             It 'Marks authentication renewal failures as not sent without trying HTTP' {
                 Mock Renew-BcAuthContext { throw [System.TimeoutException]::new('Renewal failed') }
 
                 try {
-                    Install-AdminCenterPTE -bcAuthContext @{} -environment Sandbox -appFile $script:packagePath
+                    Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath
                     throw 'Expected failure'
                 }
                 catch {
@@ -401,7 +394,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Renew-BcAuthContext { return @{} }
 
                 try {
-                    Get-AdminCenterAppOperation -bcAuthContext @{} -environment Sandbox -appId app -operationId operation
+                    Get-AdminCenterAppOperation -environment Sandbox -appId app -operationId operation
                     throw 'Expected failure'
                 }
                 catch {
@@ -425,7 +418,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 }
 
                 try {
-                    Invoke-AdminCenterApi -bcAuthContext @{} -environment Sandbox -path @('apps','pteInstall') -method $method
+                    Invoke-AdminCenterApi -environment Sandbox -path @('apps','pteInstall') -method $method
                     throw 'Expected failure'
                 }
                 catch {
@@ -441,7 +434,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Invoke-RestMethod { throw [System.TimeoutException]::new('Response lost') }
 
                 try {
-                    Install-AdminCenterPTE -bcAuthContext @{} -environment Sandbox -appFile $script:packagePath
+                    Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath
                     throw 'Expected failure'
                 }
                 catch {
@@ -457,7 +450,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Invoke-AdminCenterApi { throw 'Request must not be called' }
 
                 try {
-                    Install-AdminCenterPTE -bcAuthContext @{} -environment Sandbox -appFile (Join-Path $TestDrive 'Missing.app')
+                    Install-AdminCenterPTE -environment Sandbox -appFile (Join-Path $TestDrive 'Missing.app')
                     throw 'Expected failure'
                 }
                 catch {
