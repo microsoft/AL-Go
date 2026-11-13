@@ -1342,7 +1342,7 @@ Describe "AnalyzeCodeCoverage" {
 
     It "declares the focused composite action contract" {
         $yaml = (Get-Content -LiteralPath $actionYamlPath -Raw -Encoding UTF8).Replace("`r", "")
-        $yaml | Should -Match "(?ms)^  shell:.*?^    default: pwsh$"
+        $yaml | Should -Match "(?ms)^  shell:.*?^    default: powershell$"
         $yaml | Should -Match "(?ms)^  scope:.*?^    required: true$"
         $yaml | Should -Match "(?ms)^  project:.*?^    default: '\.'$"
         $yaml | Should -Match "(?ms)^  coveragePath:.*?^    required: true$"

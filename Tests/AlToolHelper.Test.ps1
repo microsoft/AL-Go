@@ -26,28 +26,12 @@ Describe 'AlToolHelper.psm1 Tests' {
                     Set-Content -LiteralPath $Path -Value 'test executable' -Encoding ASCII
                     return $Path
                 }
-
-                function New-TestAlToolPackageStore {
-                    param(
-                        [string] $ToolDirectory,
-                        [string] $NuGetVersion = '30.0.43.45776-beta'
-                    )
-
-                    $packageStorePath = Join-Path (
-                        Join-Path (
-                            Join-Path $ToolDirectory '.store'
-                        ) 'microsoft.dynamics.businesscentral.development.tools'
-                    ) $NuGetVersion
-                    New-Item -Path $packageStorePath -ItemType Directory -Force | Out-Null
-                    return $packageStorePath
-                }
             }
 
             BeforeEach {
                 $script:alToolEnvironmentVariables = @(
                     'AlToolPath',
                     'GITHUB_ENV',
-                    'GITHUB_JOB',
                     'GITHUB_REPOSITORY_ID',
                     'GITHUB_RUN_ATTEMPT',
                     'GITHUB_RUN_ID',
@@ -65,7 +49,6 @@ Describe 'AlToolHelper.psm1 Tests' {
                 $env:GITHUB_REPOSITORY_ID = '67890'
                 $env:GITHUB_RUN_ID = '12345'
                 $env:GITHUB_RUN_ATTEMPT = '2'
-                $env:GITHUB_JOB = 'build'
 
                 $script:expectedToolDirectory = Get-AlToolInstallDirectory
                 $script:expectedAlToolPath = Join-Path $script:expectedToolDirectory (Get-AlToolExecutableName)
@@ -74,14 +57,12 @@ Describe 'AlToolHelper.psm1 Tests' {
                 }
                 $script:fakeAlToolPath = Join-Path $TestDrive (Get-AlToolExecutableName)
                 New-TestAlToolExecutable -Path $script:fakeAlToolPath | Out-Null
-                $script:expectedNuGetVersion = '30.0.43.45776-beta'
-                $script:expectedAlVersion = '30.0.43.45776+testcommit'
 
                 Mock Invoke-AlNativeCommand {
                     return [PSCustomObject]@{
-                        StandardOutput = [string[]]@($script:expectedAlVersion)
+                        StandardOutput = [string[]]@('1.2.3')
                         StandardError  = [string[]]@()
-                        Output         = [string[]]@($script:expectedAlVersion)
+                        Output         = [string[]]@('1.2.3')
                         ExitCode       = [int] 0
                     }
                 }
@@ -114,7 +95,6 @@ Describe 'AlToolHelper.psm1 Tests' {
 
             It 'Reuses the executable from the expected run directory and persists it for later steps' {
                 New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
 
                 $resolvedPath = GetAlToolPath
 
@@ -133,7 +113,6 @@ Describe 'AlToolHelper.psm1 Tests' {
             It 'Recovers from a missing persisted path through the expected run directory' {
                 $env:AlToolPath = Join-Path $TestDrive 'missing-al'
                 New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
 
                 GetAlToolPath | Should -Be $script:expectedAlToolPath
 
@@ -143,58 +122,7 @@ Describe 'AlToolHelper.psm1 Tests' {
                 }
             }
 
-            It 'Replaces a cached executable when the exact pinned package store is missing' {
-                New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                Mock Invoke-AlNativeCommand {
-                    if ($FilePath -eq 'dotnet') {
-                        New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                        New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
-                        return [PSCustomObject]@{
-                            StandardOutput = [string[]]@()
-                            StandardError  = [string[]]@()
-                            Output         = [string[]]@()
-                            ExitCode       = [int] 0
-                        }
-                    }
-                    return [PSCustomObject]@{
-                        StandardOutput = [string[]]@($script:expectedAlVersion)
-                        StandardError  = [string[]]@()
-                        Output         = [string[]]@($script:expectedAlVersion)
-                        ExitCode       = [int] 0
-                    }
-                }
-
-                GetAlToolPath | Should -Be $script:expectedAlToolPath
-
-                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
-                    $FilePath -eq 'dotnet' -and
-                    $ArgumentList[3] -eq '--version' -and
-                    $ArgumentList[4] -eq $script:expectedNuGetVersion
-                }
-            }
-
-            It 'Accepts a valid explicit AlTool override with a different version' {
-                $env:AlToolPath = $script:fakeAlToolPath
-                Mock Invoke-AlNativeCommand {
-                    return [PSCustomObject]@{
-                        StandardOutput = [string[]]@('30.0.0.0+development')
-                        StandardError  = [string[]]@()
-                        Output         = [string[]]@('30.0.0.0+development')
-                        ExitCode       = [int] 0
-                    }
-                }
-
-                GetAlToolPath | Should -Be $script:fakeAlToolPath
-
-                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
-                    $FilePath -eq $script:fakeAlToolPath -and $ArgumentList[0] -eq '--version'
-                }
-                Should -Invoke Invoke-AlNativeCommand -Times 0 -Exactly -ParameterFilter {
-                    $FilePath -eq 'dotnet'
-                }
-            }
-
-            It 'Installs the exact preview tool into the deterministic job directory only once' {
+            It 'Installs the prerelease tool into the deterministic run directory only once' {
                 $pathBefore = $env:PATH
                 Mock Get-Command { throw 'Global AlTool discovery must not run.' } -ParameterFilter { $Name -eq 'al' }
                 Mock New-Object { throw 'An installation mutex must not be created.' } -ParameterFilter {
@@ -203,7 +131,6 @@ Describe 'AlToolHelper.psm1 Tests' {
                 Mock Invoke-AlNativeCommand {
                     if ($FilePath -eq 'dotnet') {
                         New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                        New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
                         return [PSCustomObject]@{
                             StandardOutput = [string[]]@()
                             StandardError  = [string[]]@()
@@ -212,9 +139,9 @@ Describe 'AlToolHelper.psm1 Tests' {
                         }
                     }
                     return [PSCustomObject]@{
-                        StandardOutput = [string[]]@($script:expectedAlVersion)
+                        StandardOutput = [string[]]@('1.2.3')
                         StandardError  = [string[]]@()
-                        Output         = [string[]]@($script:expectedAlVersion)
+                        Output         = [string[]]@('1.2.3')
                         ExitCode       = [int] 0
                     }
                 }
@@ -224,14 +151,13 @@ Describe 'AlToolHelper.psm1 Tests' {
 
                 Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
                     $FilePath -eq 'dotnet' -and
-                    $ArgumentList.Count -eq 7 -and
+                    $ArgumentList.Count -eq 6 -and
                     $ArgumentList[0] -eq 'tool' -and
                     $ArgumentList[1] -eq 'install' -and
                     $ArgumentList[2] -eq 'Microsoft.Dynamics.BusinessCentral.Development.Tools' -and
-                    $ArgumentList[3] -eq '--version' -and
-                    $ArgumentList[4] -eq $script:expectedNuGetVersion -and
-                    $ArgumentList[5] -eq '--tool-path' -and
-                    $ArgumentList[6] -eq $script:expectedToolDirectory
+                    $ArgumentList[3] -eq '--prerelease' -and
+                    $ArgumentList[4] -eq '--tool-path' -and
+                    $ArgumentList[5] -eq $script:expectedToolDirectory
                 }
                 Should -Invoke Get-Command -Times 0 -Exactly -ParameterFilter { $Name -eq 'al' }
                 Should -Invoke New-Object -Times 0 -Exactly -ParameterFilter {
@@ -240,53 +166,37 @@ Describe 'AlToolHelper.psm1 Tests' {
                 $env:PATH | Should -Be $pathBefore
             }
 
-            It 'Returns a deterministic sanitized directory for the current GitHub job' {
-                $env:GITHUB_RUN_ID = 'run/12'
-                $env:GITHUB_RUN_ATTEMPT = 'attempt 3'
-                $env:GITHUB_JOB = 'build\matrix:us'
-
+            It 'Returns a deterministic directory for the current GitHub run attempt' {
                 $firstPath = Get-AlToolInstallDirectory
                 $secondPath = Get-AlToolInstallDirectory
 
-                $rawJobIdentity = 'run-run/12-attempt-attempt 3-job-build\matrix:us'
-                $expectedIdentity = "$(ConvertTo-AlToolPathSegment -Value $rawJobIdentity)-$(Get-AlToolIdentityHash -Value $rawJobIdentity)"
                 $firstPath | Should -Be $secondPath
                 $firstPath | Should -Be (
                     Join-Path (Join-Path ([System.IO.Path]::GetFullPath($env:RUNNER_TEMP)) 'AL-Go-AlTool') `
-                        $expectedIdentity
+                        '67890-12345-2'
                 )
             }
 
-            It 'Uses different directories for distinct GitHub job identities' {
+            It 'Uses a different directory for a later run attempt' {
                 $firstPath = Get-AlToolInstallDirectory
-                $env:GITHUB_JOB = 'test'
+                $env:GITHUB_RUN_ATTEMPT = '3'
                 $secondPath = Get-AlToolInstallDirectory
 
                 $firstPath | Should -Not -Be $secondPath
             }
 
-            It 'Keeps distinct identities separate when their sanitized or truncated text matches' {
-                $env:GITHUB_JOB = "$('a' * 80)/one"
-                $firstPath = Get-AlToolInstallDirectory
-                $env:GITHUB_JOB = "$('a' * 80):one"
-                $secondPath = Get-AlToolInstallDirectory
-
-                $firstPath | Should -Not -Be $secondPath
-            }
-
-            It 'Uses a deterministic local fallback outside GitHub Actions' {
+            It 'Uses the shared system temporary directory outside GitHub Actions' {
                 Remove-Item Env:\RUNNER_TEMP -ErrorAction SilentlyContinue
                 Remove-Item Env:\GITHUB_REPOSITORY_ID -ErrorAction SilentlyContinue
                 Remove-Item Env:\GITHUB_RUN_ID -ErrorAction SilentlyContinue
                 Remove-Item Env:\GITHUB_RUN_ATTEMPT -ErrorAction SilentlyContinue
-                Remove-Item Env:\GITHUB_JOB -ErrorAction SilentlyContinue
 
                 $firstPath = Get-AlToolInstallDirectory
                 $secondPath = Get-AlToolInstallDirectory
                 $firstPath | Should -Be $secondPath
-                $firstPath | Should -BeLike (
-                    Join-Path (Join-Path ([System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())) 'AL-Go-AlTool') `
-                        'local-*'
+                $firstPath | Should -Be $secondPath
+                $firstPath | Should -Be (
+                    Join-Path ([System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())) 'AL-Go-AlTool'
                 )
             }
 
@@ -313,7 +223,6 @@ Describe 'AlToolHelper.psm1 Tests' {
                         Test-Path -LiteralPath $staleFile | Should -BeFalse
                         Test-Path -LiteralPath $neighborFile | Should -BeTrue
                         New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                        New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
                         return [PSCustomObject]@{
                             StandardOutput = [string[]]@()
                             StandardError  = [string[]]@()
@@ -322,9 +231,9 @@ Describe 'AlToolHelper.psm1 Tests' {
                         }
                     }
                     return [PSCustomObject]@{
-                        StandardOutput = [string[]]@($script:expectedAlVersion)
+                        StandardOutput = [string[]]@('1.2.3')
                         StandardError  = [string[]]@()
-                        Output         = [string[]]@($script:expectedAlVersion)
+                        Output         = [string[]]@('1.2.3')
                         ExitCode       = [int] 0
                     }
                 }
@@ -335,49 +244,9 @@ Describe 'AlToolHelper.psm1 Tests' {
                 Test-Path -LiteralPath $neighborFile | Should -BeTrue
             }
 
-            It 'Replaces a cached executable that reports a different version' {
-                New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
-                $script:versionCalls = 0
-                Mock Invoke-AlNativeCommand {
-                    if ($FilePath -eq 'dotnet') {
-                        New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                        New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
-                        return [PSCustomObject]@{
-                            StandardOutput = [string[]]@()
-                            StandardError  = [string[]]@()
-                            Output         = [string[]]@()
-                            ExitCode       = [int] 0
-                        }
-                    }
-                    $script:versionCalls++
-                    $version = if ($script:versionCalls -eq 1) {
-                        '30.0.42.0-beta'
-                    }
-                    else {
-                        $script:expectedAlVersion
-                    }
-                    return [PSCustomObject]@{
-                        StandardOutput = [string[]]@($version)
-                        StandardError  = [string[]]@()
-                        Output         = [string[]]@($version)
-                        ExitCode       = [int] 0
-                    }
-                }
-
-                GetAlToolPath | Should -Be $script:expectedAlToolPath
-
-                Should -Invoke Invoke-AlNativeCommand -Times 1 -Exactly -ParameterFilter {
-                    $FilePath -eq 'dotnet' -and
-                    $ArgumentList[3] -eq '--version' -and
-                    $ArgumentList[4] -eq $script:expectedNuGetVersion
-                }
-            }
-
             It 'Reports a failed run-scoped installation with its output' {
                 Mock Invoke-AlNativeCommand {
                     if ($FilePath -eq 'dotnet') {
-                        New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
                         return [PSCustomObject]@{
                             StandardOutput = [string[]]@()
                             StandardError  = [string[]]@('install stderr')
@@ -407,18 +276,7 @@ Describe 'AlToolHelper.psm1 Tests' {
 
             It 'Reports AlTool version failure explicitly' {
                 New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
                 Mock Invoke-AlNativeCommand {
-                    if ($FilePath -eq 'dotnet') {
-                        New-TestAlToolExecutable -Path $script:expectedAlToolPath | Out-Null
-                        New-TestAlToolPackageStore -ToolDirectory $script:expectedToolDirectory | Out-Null
-                        return [PSCustomObject]@{
-                            StandardOutput = [string[]]@()
-                            StandardError  = [string[]]@()
-                            Output         = [string[]]@()
-                            ExitCode       = [int] 0
-                        }
-                    }
                     return [PSCustomObject]@{
                         StandardOutput = [string[]]@()
                         StandardError  = [string[]]@('version stderr')

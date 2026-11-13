@@ -50,10 +50,10 @@ Describe "RunTests Action Tests" {
         $script:previousSettings = $ENV:Settings
     }
 
-    It "uses PowerShell 7 by default for background code coverage compaction" {
+    It "preserves the user-selectable PowerShell 5 default" {
         $actionYaml = Get-Content -LiteralPath (Join-Path $scriptRoot "action.yaml") `
             -Raw -Encoding UTF8
-        $actionYaml | Should -Match '(?ms)inputs:\s+shell:.*?default: pwsh'
+        $actionYaml | Should -Match '(?ms)inputs:\s+shell:.*?default: powershell'
     }
 
     AfterEach {
@@ -115,7 +115,7 @@ Describe "RunTests Action Tests" {
         $outputs = [ordered]@{
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript `
-            -outputs $outputs -defaultShell 'pwsh'
+            -outputs $outputs -defaultShell 'powershell'
     }
 
     It 'Loads the original runner override and delegates event log capture to the module' {

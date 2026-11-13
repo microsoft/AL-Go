@@ -39,7 +39,7 @@ Describe "AnalyzeCodeCoverage workflow wiring" {
         $job | Should -Match "pattern: '\*-\*CodeCoverage-\*'"
         $job | Should -Match 'continue-on-error: true'
         $job | Should -Not -Match 'merge-multiple'
-        $job | Should -Match 'shell: pwsh'
+        $job | Should -Match 'shell: \$\{\{ inputs\.shell \}\}'
         $job | Should -Match 'scope: repository'
         $job | Should -Match 'buildOrderJson: \$\{\{ needs\.Initialization\.outputs\.buildOrderJson \}\}'
 
@@ -65,11 +65,11 @@ Describe "AnalyzeCodeCoverage workflow wiring" {
             )
 
             $runTestsStep.Success | Should -BeTrue
-            $runTestsStep.Value | Should -Match 'shell: pwsh'
+            $runTestsStep.Value | Should -Match 'shell: \$\{\{ inputs\.shell \}\}'
             $downloadDependenciesStep.Success | Should -BeTrue
             $downloadDependenciesStep.Value | Should -Match 'shell: \$\{\{ inputs\.shell \}\}'
             $content | Should -Match '(?ms)- name: Analyze Code Coverage.*?scope: project'
-            $content | Should -Match '(?ms)- name: Analyze Code Coverage.*?shell: pwsh'
+            $content | Should -Match '(?ms)- name: Analyze Code Coverage.*?shell: \$\{\{ inputs\.shell \}\}'
             $content | Should -Match "coveragePath: '\$\{\{ inputs\.project \}\}/\.buildartifacts/CodeCoverage/'"
             $content | Should -Match 'CodeCoverage/coverage-status\.json'
         }

@@ -225,7 +225,7 @@ jobs:
         if: success() || failure()
         uses: microsoft/AL-Go-Actions/AnalyzeCodeCoverage@main
         with:
-          shell: pwsh
+          shell: ${{ inputs.shell }}
           scope: repository
           coveragePath: '${{ github.workspace }}/.buildartifacts/DownloadedCodeCoverage/'
           buildOrderJson: ${{ needs.Initialization.outputs.buildOrderJson }}
