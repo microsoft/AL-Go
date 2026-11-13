@@ -13,6 +13,36 @@ Describe "Get-ProjectsToBuild" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 
+    It 'selects projects using <settingsSource> settings' -TestCases @(
+        @{ settingsSource = 'explicit'; expectedProject = 'Project2' }
+        @{ settingsSource = 'environment'; expectedProject = 'Project1' }
+    ) {
+        param($settingsSource, $expectedProject)
+
+        $originalSettings = $env:Settings
+        try {
+            New-Item -Path "$baseFolder/Project1/.AL-Go/settings.json" -type File -Force
+            New-Item -Path "$baseFolder/Project2/.AL-Go/settings.json" -type File -Force
+
+            $environmentSettings = @{ fullBuildPatterns = @(); projects = @('Project1'); powerPlatformSolutionFolder = ''; useProjectDependencies = $false }
+            $env:Settings = ConvertTo-Json $environmentSettings -Depth 99 -Compress
+            $expectedEnvironmentSettings = $env:Settings
+            $parameters = @{ baseFolder = $baseFolder }
+            if ($settingsSource -eq 'explicit') {
+                $parameters.settings = @{ projects = @('Project2') }
+            }
+
+            $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild @parameters
+
+            $allProjects | Should -BeExactly @($expectedProject)
+            $projectsToBuild | Should -BeExactly @($expectedProject)
+            $env:Settings | Should -BeExactly $expectedEnvironmentSettings
+        }
+        finally {
+            $env:Settings = $originalSettings
+        }
+    }
+
     It 'loads a single project in the root folder' {
         New-Item -Path "$baseFolder/.AL-Go/settings.json" -type File -Force
 
