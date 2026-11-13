@@ -27,6 +27,33 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settingsSchema.properties.skipDraftPullRequests.default | Should -BeFalse
         }
 
+        It 'Requires all PR build jobs by default and defines optional wildcard patterns as a string array' {
+            . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+            $settings = GetDefaultSettings
+            $settings.optionalPatternForPrValidation.Count | Should -Be 0
+            $settingsSchema = $schema | ConvertFrom-Json | ConvertTo-HashTable -recurse
+            $settingsSchema.properties.optionalPatternForPrValidation.type | Should -Be 'array'
+            $settingsSchema.properties.optionalPatternForPrValidation.items.type | Should -Be 'string'
+            $settingsSchema.properties.optionalPatternForPrValidation.default.Count | Should -Be 0
+        }
+
+        It 'Merges optional patterns from variables and matching conditional settings' {
+            $settings = ReadSettings -baseFolder $TestDrive -repoName 'owner/repo' -project '' `
+                -workflowName 'Pull Request Build' -trigger 'pull_request' `
+                -orgSettingsVariableValue '{"optionalPatternForPrValidation":["*NextMinor*"]}' `
+                -repoSettingsVariableValue '{"optionalPatternForPrValidation":["*NextMajor*"],"ConditionalSettings":[{"triggers":["pull_request"],"settings":{"optionalPatternForPrValidation":["*Preview*"]}}]}' `
+                -environmentSettingsVariableValue ''
+            $settings.optionalPatternForPrValidation | Should -Be @('*NextMinor*', '*NextMajor*', '*Preview*')
+        }
+
+        It 'Supports overwriting optional patterns with an empty array' {
+            $settings = ReadSettings -baseFolder $TestDrive -repoName 'owner/repo' -project '' `
+                -workflowName '' -orgSettingsVariableValue '{"optionalPatternForPrValidation":["*NextMinor*"]}' `
+                -repoSettingsVariableValue '{"overwriteSettings":["optionalPatternForPrValidation"],"optionalPatternForPrValidation":[]}' `
+                -environmentSettingsVariableValue ''
+            $settings.optionalPatternForPrValidation.Count | Should -Be 0
+        }
+
         It 'Reads settings from all settings locations' {
             Mock Write-Host { }
             Mock Out-Host { }
