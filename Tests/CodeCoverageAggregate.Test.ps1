@@ -35,7 +35,6 @@ Describe "Code coverage aggregate" {
                 projectName = "Project"
                 buildMode = "Default"
                 formats = @("bc-json")
-                sourceRoots = @("App")
                 sourceRootDetails = @([ordered]@{
                         path = "App"
                         kind = "app"
@@ -43,6 +42,11 @@ Describe "Code coverage aggregate" {
                         appName = "Regular App"
                     })
                 runs = @($runs)
+            }
+            foreach ($run in $status.runs) {
+                if (-not $run.Contains("diagnostics")) {
+                    $run["diagnostics"] = @()
+                }
             }
             $status | ConvertTo-Json -Depth 10 |
                 Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
@@ -93,7 +97,7 @@ Describe "Code coverage aggregate" {
 
             return @{
                 Mode = "line"
-                SourceRoots = @($status.sourceRoots)
+                SourceRoots = @($status.sourceRootDetails | ForEach-Object { $_.path })
                 SourceRootDetails = @($status.sourceRootDetails)
             }
         }
@@ -130,18 +134,12 @@ Describe "Code coverage aggregate" {
                 $sequence++
             }
             $aggregate = Complete-CodeCoverageAggregateWorker -worker $worker
-            foreach ($assessment in @($aggregate.RunAssessments)) {
-                $run = $status.runs[[int]$assessment.Sequence]
-                $run | Add-Member -NotePropertyName lineReasons `
-                    -NotePropertyValue @($assessment.LineReasons)
-                $run | Add-Member -NotePropertyName notices `
-                    -NotePropertyValue @($assessment.Notices)
-                $run | Add-Member -NotePropertyName lineGlobalUnsafe `
-                    -NotePropertyValue ([bool]$assessment.LineGlobalUnsafe)
-                $run | Add-Member -NotePropertyName lineAffectedSources `
-                    -NotePropertyValue @($assessment.LineAffectedSources)
-                $run | Add-Member -NotePropertyName excludedLineFacts `
-                    -NotePropertyValue ([int]$assessment.ExcludedLineFacts)
+            $diagnosticIndex = 0
+            foreach ($run in @($status.runs)) {
+                if ("$($run.state)" -in @("complete", "incomplete")) {
+                    $run.diagnostics = @($aggregate.RunDiagnostics[$diagnosticIndex].Diagnostics)
+                    $diagnosticIndex++
+                }
             }
             $status | Add-Member -NotePropertyName aggregate `
                 -NotePropertyValue "coverage-aggregate.bin.gz"
@@ -176,13 +174,11 @@ Describe "Code coverage aggregate" {
                 projectName = $project
                 buildMode = "Default"
                 formats = @("bc-json")
-                sourceRoots = @("Shared")
                 sourceRootDetails = $details
                 runs = @([ordered]@{
                         appId = "$project-run"; appName = "$project tests"
                         outputDirectory = "CodeCoverage/$project-run"; state = "complete"
-                        lineReasons = @(); notices = @(); lineGlobalUnsafe = $false
-                        lineAffectedSources = @(); excludedLineFacts = 0
+                        diagnostics = @()
                     })
                 aggregate = "coverage-aggregate.bin.gz"
             } | ConvertTo-Json -Depth 10 |
@@ -220,13 +216,10 @@ Describe "Code coverage aggregate" {
         }
         Test-Path -LiteralPath $publishedPath | Should -BeFalse
         $aggregate = Complete-CodeCoverageAggregateWorker -worker $worker
-        foreach ($assessment in @($aggregate.RunAssessments)) {
-            $run = $status.runs[[int]$assessment.Sequence]
-            $run["lineReasons"] = @($assessment.LineReasons)
-            $run["notices"] = @($assessment.Notices)
-            $run["lineGlobalUnsafe"] = [bool]$assessment.LineGlobalUnsafe
-            $run["lineAffectedSources"] = @($assessment.LineAffectedSources)
-            $run["excludedLineFacts"] = [int]$assessment.ExcludedLineFacts
+        for ($index = 0; $index -lt @($aggregate.RunDiagnostics).Count; $index++) {
+            $status.runs[$index]["diagnostics"] = @(
+                $aggregate.RunDiagnostics[$index].Diagnostics
+            )
         }
         $status["aggregate"] = "coverage-aggregate.bin.gz"
         $status | ConvertTo-Json -Depth 10 |
@@ -234,9 +227,9 @@ Describe "Code coverage aggregate" {
         Remove-Item -LiteralPath $reportA, $reportB -Force
 
         $aggregateModel = Get-ProjectCoverageModel `
-            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+            -CoveragePath (Split-Path $coverageRoot -Parent)
 
-        $aggregateModel.LineComplete | Should -BeTrue
+        $aggregateModel.Reasons | Should -BeNullOrEmpty
         $aggregateMetrics = Get-CoverageMetrics $aggregateModel.Lines
         $aggregateMetrics.Total | Should -Be 1
         $aggregateMetrics.Covered | Should -Be 1
@@ -274,7 +267,7 @@ Describe "Code coverage aggregate" {
         Test-Path -LiteralPath "$publishedPath.tmp" | Should -BeFalse
     }
 
-    It "preserves incomplete diagnostic scoping and project Markdown" {
+    It "preserves incomplete diagnostics while showing project metrics" {
         $fixtureRoot = Join-Path $PSScriptRoot "TestArtifacts\CodeCoverage\ScopedIncomplete"
         $aggregateArtifact = Join-Path $TestDrive "ScopedAggregate"
         Copy-Item -LiteralPath (Join-Path $fixtureRoot "Artifact") -Destination $aggregateArtifact -Recurse
@@ -282,15 +275,15 @@ Describe "Code coverage aggregate" {
 
         Convert-RawArtifactToAggregate -artifactRoot $aggregateArtifact `
             -repositoryRoot $repositoryRoot
-        $aggregateModel = Get-ProjectCoverageModel -CoveragePath $aggregateArtifact `
-            -RepositoryRoot $repositoryRoot
+        $aggregateModel = Get-ProjectCoverageModel -CoveragePath $aggregateArtifact
 
-        $aggregateModel.LineComplete | Should -BeTrue
         $aggregateModel.Reasons | Should -BeNullOrEmpty
-        $aggregateModel.LineReasons | Should -BeNullOrEmpty
-        $aggregateModel.Notices.Count | Should -Be 6
-        $aggregateModel.ExcludedLineFacts | Should -Be 2
-        New-ProjectCoverageSummary $aggregateModel | Should -Match "50\.0%"
+        $aggregateModel.IncompleteRuns.Count | Should -Be 2
+        $aggregateModel.Diagnostics.Count | Should -BeGreaterThan 0
+        $summary = New-ProjectCoverageSummary $aggregateModel
+        $summary | Should -Match "50\.0%"
+        $summary | Should -Match "globally incomplete coverage"
+        $summary | Should -Match "coverage diagnostics"
         @(Get-ChildItem -LiteralPath $aggregateArtifact -Filter "coverage.bc.json" -File -Recurse).Count |
             Should -Be 0
     }
@@ -344,23 +337,18 @@ Describe "Code coverage aggregate" {
         ) -hitCount 1
         $aggregatePath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
         Set-Content -LiteralPath $aggregatePath -Value "not gzip" -Encoding UTF8
-        $status.runs[0]["lineReasons"] = @()
-        $status.runs[0]["notices"] = @()
-        $status.runs[0]["lineGlobalUnsafe"] = $false
-        $status.runs[0]["lineAffectedSources"] = @()
-        $status.runs[0]["excludedLineFacts"] = 0
         $status["aggregate"] = "coverage-aggregate.bin.gz"
         $status | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
 
         $model = Get-ProjectCoverageModel `
-            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+            -CoveragePath (Split-Path $coverageRoot -Parent)
 
-        $model.LineComplete | Should -BeFalse
+        $model.Reasons | Should -Not -BeNullOrEmpty
         $model.Reasons -join " " | Should -Match "published code coverage aggregate is invalid"
     }
 
-    It "requires run assessments from status when an aggregate is published" {
+    It "uses a plain diagnostics array from status" {
         $repositoryRoot = New-AggregateRepository -name "MissingAssessment"
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
@@ -368,6 +356,7 @@ Describe "Code coverage aggregate" {
             [ordered]@{
                 appId = "run-a"; appName = "Run A"
                 outputDirectory = "CodeCoverage/run-a"; state = "complete"
+                diagnostics = @("AlTool diagnostic")
             }
         )
         Write-CodeCoverageAggregateFile `
@@ -378,10 +367,11 @@ Describe "Code coverage aggregate" {
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
 
         $model = Get-ProjectCoverageModel `
-            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+            -CoveragePath (Split-Path $coverageRoot -Parent)
 
-        $model.LineComplete | Should -BeFalse
-        $model.Reasons -join " " | Should -Match "missing the run assessment"
+        $model.Reasons | Should -BeNullOrEmpty
+        $model.Diagnostics | Should -Be @("AlTool diagnostic")
+        New-ProjectCoverageSummary $model | Should -Match "AlTool diagnostic"
     }
 
     It "rejects aggregate references other than the fixed filename" {
@@ -392,8 +382,7 @@ Describe "Code coverage aggregate" {
             [ordered]@{
                 appId = "run-a"; appName = "Run A"
                 outputDirectory = "CodeCoverage/run-a"; state = "complete"
-                lineReasons = @(); notices = @(); lineGlobalUnsafe = $false
-                lineAffectedSources = @(); excludedLineFacts = 0
+                diagnostics = @()
             }
         )
         $status["aggregate"] = "../coverage-aggregate.bin.gz"
@@ -401,9 +390,9 @@ Describe "Code coverage aggregate" {
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
 
         $model = Get-ProjectCoverageModel `
-            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+            -CoveragePath (Split-Path $coverageRoot -Parent)
 
-        $model.LineComplete | Should -BeFalse
+        $model.Reasons | Should -Not -BeNullOrEmpty
         $model.Reasons -join " " | Should -Match "aggregate reference is invalid"
     }
 
@@ -443,13 +432,13 @@ Describe "Code coverage aggregate" {
             }) | ConvertTo-Json -Depth 10
 
         $model = Get-RepositoryCoverageModel -CoveragePath $downloads `
-            -BuildOrderJson $buildOrder -RepositoryRoot $TestDrive
+            -BuildOrderJson $buildOrder
 
-        $model.LineComplete | Should -BeTrue
+        $model.Reasons | Should -BeNullOrEmpty
         $model.Lines.Count | Should -Be 1
         (Get-CoverageMetrics $model.Lines).Covered | Should -Be 1
         $summary = New-RepositoryCoverageSummary $model
-        $summary | Should -Match "\| A \| Default \| complete \| 0\.0% \|"
-        $summary | Should -Match "\| B \| Default \| complete \| 100\.0% \|"
+        $summary | Should -Match "\| A \| Default \| available \| 0\.0% \|"
+        $summary | Should -Match "\| B \| Default \| available \| 100\.0% \|"
     }
 }

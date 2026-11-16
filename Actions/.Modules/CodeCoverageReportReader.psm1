@@ -16,29 +16,6 @@ function Get-CoverageArray {
     return @($Value)
 }
 
-function ConvertTo-CoverageInteger {
-    <#
-    .SYNOPSIS
-        Converts a coverage JSON scalar to an integer.
-    #>
-    Param($Value)
-
-    if ($Value -is [Newtonsoft.Json.Linq.JValue]) {
-        if ($Value.Type -eq [Newtonsoft.Json.Linq.JTokenType]::Integer) {
-            return [int]$Value.Value
-        }
-        if ($Value.Type -ne [Newtonsoft.Json.Linq.JTokenType]::String) {
-            throw "Expected an integer."
-        }
-        $Value = [string]$Value.Value
-    }
-    $converted = 0
-    if ($null -eq $Value -or -not [int]::TryParse("$Value", [ref] $converted)) {
-        throw "Expected an integer."
-    }
-    return $converted
-}
-
 function ConvertTo-CoverageSourceIdentity {
     <#
     .SYNOPSIS
@@ -230,14 +207,7 @@ function Read-BcCoverageReport {
     $extractedLineCount = 0
     $acceptedLineCount = 0
     $newLineCount = 0
-    $scope = @{
-        IncludedLineObjects = @{}
-        IncludedLineSources = @{}
-        ExcludedLineObjects = @{}
-        ApplicationLines = @{}
-        LineReasons = @()
-        ExcludedLineFacts = 0
-    }
+    $scope = @{ ApplicationLines = @{} }
     $sourceCache = if ($null -ne $SourceMappingCache) {
         $SourceMappingCache
     }
@@ -246,9 +216,6 @@ function Read-BcCoverageReport {
             [System.StringComparer]::OrdinalIgnoreCase
         )
     }
-    $seenExcludedLines = [System.Collections.Generic.HashSet[string]]::new(
-        [System.StringComparer]::Ordinal
-    )
     $collectApplicationLines = $RequestedMode -eq "line" -and $null -ne $Model
     $normalizedRepositoryRoot = ""
     $normalizedSourceRoots = @()
@@ -396,35 +363,13 @@ function Read-BcCoverageReport {
                                     throw [System.IO.InvalidDataException]::new("shape")
                                 }
                                 $line = [Newtonsoft.Json.Linq.JObject]::Load($jsonReader)
-                                $objectTypeToken = $line["objectType"]
-                                $objectIdToken = $line["objectId"]
-                                $lineNumberToken = $line["lineNumber"]
-                                $lineTypeToken = $line["lineType"]
-                                $methodIdToken = $line["methodId"]
-                                $hitCountToken = $line["hitCount"]
-                                $statusToken = $line["status"]
-                                $sourcePathToken = $line["sourcePath"]
-                                if ($null -eq $objectTypeToken -or
-                                    $null -eq $objectIdToken -or
-                                    $null -eq $lineNumberToken -or
-                                    $null -eq $lineTypeToken -or
-                                    $null -eq $methodIdToken -or
-                                    $null -eq $hitCountToken -or
-                                    $null -eq $statusToken -or
-                                    $null -eq $sourcePathToken -or
-                                    $sourcePathToken.Type -ne
-                                    [Newtonsoft.Json.Linq.JTokenType]::String) {
-                                    throw [System.IO.InvalidDataException]::new("shape")
-                                }
                                 try {
-                                    $objectType = ConvertTo-CoverageInteger $objectTypeToken
-                                    $objectId = ConvertTo-CoverageInteger $objectIdToken
-                                    $lineNumber = ConvertTo-CoverageInteger $lineNumberToken
-                                    $lineType = ConvertTo-CoverageInteger $lineTypeToken
-                                    [void](ConvertTo-CoverageInteger $methodIdToken)
-                                    $hitCount = ConvertTo-CoverageInteger $hitCountToken
-                                    [void](ConvertTo-CoverageInteger $statusToken)
-                                    $sourcePath = [string]$sourcePathToken
+                                    $objectType = [int]$line["objectType"]
+                                    $objectId = [int]$line["objectId"]
+                                    $lineNumber = [int]$line["lineNumber"]
+                                    $lineType = [int]$line["lineType"]
+                                    $hitCount = [int]$line["hitCount"]
+                                    $sourcePath = [string]$line["sourcePath"]
                                 }
                                 catch {
                                     throw [System.IO.InvalidDataException]::new("shape")
@@ -434,7 +379,6 @@ function Read-BcCoverageReport {
                                     continue
                                 }
 
-                                $objectKey = "$objectType|$objectId"
                                 $source = $null
                                 if (-not $sourceCache.TryGetValue($sourcePath, [ref]$source)) {
                                     $rawIdentity = ConvertTo-CoverageSourceIdentity $sourcePath
@@ -451,7 +395,6 @@ function Read-BcCoverageReport {
                                             -RepositoryRoot $normalizedRepositoryRoot `
                                             -NormalizedRoots $normalizedSourceRoots
                                     }
-                                    $source.RawIdentity = $rawIdentity
                                     $source.AppRootIdentity = ""
                                     if ($collectApplicationLines -and $source.Included) {
                                         $detail = $null
@@ -471,15 +414,7 @@ function Read-BcCoverageReport {
                                     }
                                     $sourceCache[$sourcePath] = $source
                                 }
-                                else {
-                                    $rawIdentity = "$($source.RawIdentity)"
-                                }
                                 if ($source.Included) {
-                                    if (-not $scope.IncludedLineObjects.ContainsKey($objectKey)) {
-                                        $scope.IncludedLineObjects[$objectKey] = $true
-                                        $scope.IncludedLineSources[$objectKey] = @{}
-                                        $scope.IncludedLineSources[$objectKey][$source.Identity] = $true
-                                    }
                                     $rootIdentity = "$($source.AppRootIdentity)"
                                     if ($collectApplicationLines -and
                                         -not [string]::IsNullOrWhiteSpace($rootIdentity)) {
@@ -518,18 +453,6 @@ function Read-BcCoverageReport {
                                                 $scope.ApplicationLines[$rootIdentity][$factKey] = $true
                                             }
                                         }
-                                    }
-                                }
-                                else {
-                                    $scope.ExcludedLineObjects[$objectKey] = $true
-                                    if ($collectApplicationLines -and
-                                        $seenExcludedLines.Add(
-                                            "$rawIdentity|$objectType|$objectId|$lineNumber")) {
-                                        $scope.ExcludedLineFacts++
-                                    }
-                                    if ($collectApplicationLines -and
-                                        $source.LocalMappingFailed) {
-                                        $scope.LineReasons += "A repository source path could not be validated."
                                     }
                                 }
                             }
@@ -625,93 +548,6 @@ function Read-BcCoverageReport {
             $extractedLineCount,
             $acceptedLineCount,
             $outcome)
-    }
-}
-
-function Get-CoverageDiagnosticAssessment {
-    <#
-    .SYNOPSIS
-        Classifies coverage diagnostics against included and excluded sources.
-    #>
-    Param(
-        [hashtable] $Report,
-        [hashtable] $Scope
-    )
-
-    $lineReasons = @($Scope.LineReasons)
-    $notices = @()
-    $lineGlobalUnsafe = $Scope.LineReasons.Count -gt 0
-    $lineAffectedSources = @{}
-    $ignoredDiagnostics = 0
-    $diagnostics = @(Get-CoverageArray $Report.diagnostics | ForEach-Object { "$_" })
-    if (-not [bool]$Report.complete) {
-        $notices += "The BC JSON report declares global enrichment incomplete."
-    }
-
-    foreach ($diagnostic in $diagnostics) {
-        if ($diagnostic -match "^Coverage source root '.+' contains no AL source files\.$") {
-            $ignoredDiagnostics++
-            continue
-        }
-
-        if ($diagnostic -match '^AL object ([0-9]+):([0-9]+) is defined by multiple source files and was not enriched\.$') {
-            $ignoredDiagnostics++
-            continue
-        }
-
-        $objectKey = ""
-        if ($diagnostic -match '^No source file was found for AL object ([0-9]+):([0-9]+)\.$') {
-            $objectKey = "$($matches[1])|$($matches[2])"
-        }
-        if (-not [string]::IsNullOrWhiteSpace($objectKey)) {
-            $hasIncludedLine = $Scope.IncludedLineObjects.ContainsKey($objectKey)
-            $hasExcludedFact = $Scope.ExcludedLineObjects.ContainsKey($objectKey)
-            if (-not $hasIncludedLine -and $hasExcludedFact) {
-                $ignoredDiagnostics++
-                continue
-            }
-            if ($hasIncludedLine) {
-                if ($Scope.IncludedLineSources.ContainsKey($objectKey)) {
-                    foreach ($sourceIdentity in $Scope.IncludedLineSources[$objectKey].Keys) {
-                        $lineAffectedSources[$sourceIdentity] = $true
-                    }
-                }
-                else {
-                    $lineGlobalUnsafe = $true
-                }
-            }
-            if (-not $hasIncludedLine) {
-                $lineReasons += "A coverage source diagnostic could not be safely scoped."
-                $lineGlobalUnsafe = $true
-            }
-            continue
-        }
-
-        if ($diagnostic -match '^[0-9]+ server coverage lines were not found in the supplied source\.$') {
-            $lineReasons += "Server coverage lines could not be mapped to the supplied source."
-            $lineGlobalUnsafe = $true
-            continue
-        }
-
-        if ($diagnostic.StartsWith("Coverage method identity resolution failed for '",
-                [System.StringComparison]::Ordinal)) {
-            $ignoredDiagnostics++
-            continue
-        }
-
-        $lineReasons += "A coverage diagnostic could not be safely scoped."
-        $lineGlobalUnsafe = $true
-    }
-
-    if ($ignoredDiagnostics -gt 0) {
-        $notices += "Ignored $ignoredDiagnostics diagnostics that do not affect repository-scoped line coverage."
-    }
-
-    return @{
-        LineReasons = @($lineReasons | Select-Object -Unique)
-        LineGlobalUnsafe = $lineGlobalUnsafe
-        LineAffectedSources = @($lineAffectedSources.Keys)
-        Notices = @($notices | Select-Object -Unique)
     }
 }
 
@@ -859,8 +695,8 @@ function Resolve-RepositoryCoverageSource {
     }
 }
 
-Export-ModuleMember -Function Get-CoverageArray, ConvertTo-CoverageInteger,
+Export-ModuleMember -Function Get-CoverageArray,
     ConvertTo-CoverageSourceIdentity, Test-PathInsideRoot, Get-NormalizedCoverageSourceRoots,
     Resolve-CoverageSourceRootDetail, Resolve-ExistingCoverageSource,
     Resolve-NormalizedRepositoryCoverageSource, Resolve-RepositoryCoverageSource,
-    Read-BcCoverageReport, Get-CoverageDiagnosticAssessment
+    Read-BcCoverageReport

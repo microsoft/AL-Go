@@ -97,7 +97,7 @@ The reader:
 - Builds a semantic key from source identity, object type, object ID, and line number.
 - OR-unions covered state so a line covered by any test-app run is covered in the final project
   result.
-- Records line-safety reasons separately from informational notices.
+- Retains AlTool diagnostics as unclassified strings for later warnings.
 
 Keeping parsing and the union in the child avoids loading multi-gigabyte reports in the PowerShell 5
 parent process and avoids parsing every report twice.
@@ -122,11 +122,10 @@ The coordinator is the only status writer. Status records:
 
 - Project identity and source-root attribution.
 - One final entry for each selected test app.
-- Per-run state, completeness assessment, line-safety reasons, notices, and excluded-line count.
+- Per-run state and raw AlTool diagnostics.
 - The fixed aggregate filename only after successful compaction.
 
-Status is also written through a temporary file and moved into place. Missing or invalid run
-assessment data makes coverage unavailable rather than inventing a partial result.
+Status is also written through a temporary file and moved into place.
 
 ## Failure behavior
 
@@ -152,8 +151,12 @@ downloads the expected project artifacts, uses build dimensions marked with
 double-counting.
 
 Only regular application roots from `appFolders` contribute to percentages and uncovered-object
-lists. Test roots and external sources remain excluded. Percentages are shown only when line
-coverage is complete.
+lists. Test roots and external sources remain excluded. Available line facts always contribute to
+metrics, including facts from globally incomplete reports. The summary lists globally incomplete
+runs and distinct AlTool diagnostics as warnings.
+
+Coverage is unavailable only for hard failures such as a missing or failed run, unreadable status,
+missing or invalid aggregate, or an expected repository dimension without a matching artifact.
 
 Repository analyzer jobs depend on all expanded build jobs. They do not check out the repository
 because source attribution was already validated during compaction in the checked-out build job.

@@ -3,7 +3,6 @@
   "projectName": "Multiple runs project",
   "buildMode": "Default",
   "formats": [ "bc-json", "cobertura" ],
-  "sourceRoots": [ "src" ],
   "sourceRootDetails": [
     {
       "path": "src",
@@ -17,13 +16,15 @@
       "appId": "run-a",
       "appName": "Test run A",
       "outputDirectory": "CodeCoverage/run-a",
-      "state": "complete"
+      "state": "complete",
+      "diagnostics": []
     },
     {
       "appId": "run-b",
       "appName": "Test run B",
       "outputDirectory": "CodeCoverage/run-b",
-      "state": "complete"
+      "state": "complete",
+      "diagnostics": []
     }
   ]
 }

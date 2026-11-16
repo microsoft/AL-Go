@@ -35,7 +35,7 @@ function Invoke-CodeCoverageAggregateWorker {
     $semanticLines = @{}
     $semanticRootOrder = [System.Collections.Generic.List[string]]::new()
     $semanticLineCount = 0
-    $runAssessments = [System.Collections.Generic.List[object]]::new()
+    $runDiagnostics = [System.Collections.Generic.List[object]]::new()
     $sourceMappingCache = [System.Collections.Generic.Dictionary[string,object]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
     )
@@ -66,25 +66,18 @@ function Invoke-CodeCoverageAggregateWorker {
             if ([bool]$reportResult.Data.complete -ne [bool]$descriptor.Complete) {
                 throw "Compaction report completeness does not match the runner result."
             }
-            $assessment = Get-CoverageDiagnosticAssessment -Report $reportResult.Data `
-                -Scope $reportResult.Scope
-            $runAssessments.Add([PSCustomObject]@{
-                    Sequence = [int]$descriptor.Sequence
-                    AppId = "$($descriptor.AppId)"
-                    AppName = "$($descriptor.AppName)"
-                    State = if ([bool]$descriptor.Complete) { "complete" } else { "incomplete" }
-                    LineReasons = @($assessment.LineReasons)
-                    Notices = @($assessment.Notices)
-                    LineGlobalUnsafe = [bool]$assessment.LineGlobalUnsafe
-                    LineAffectedSources = @($assessment.LineAffectedSources)
-                    ExcludedLineFacts = [int]$reportResult.Scope.ExcludedLineFacts
+            $runDiagnostics.Add([PSCustomObject]@{
+                    Diagnostics = @(
+                        Get-CoverageArray $reportResult.Data.diagnostics |
+                            ForEach-Object { "$_" }
+                    )
                 })
             $stopwatch.Stop()
             $totalParseMilliseconds += $stopwatch.Elapsed.TotalMilliseconds
             $semanticLineCount += [int]$reportResult.NewLineCount
             $culture = [System.Globalization.CultureInfo]::InvariantCulture
             Write-Host ("Code coverage compactor report {0}: size={1} MiB, parse={2}s, extracted={3}, accepted={4}, new={5}, aggregate={6}." -f
-                "$($descriptor.AppId)",
+                $runDiagnostics.Count,
                 ($file.Length / 1MB).ToString("0.0", $culture),
                 ($stopwatch.Elapsed.TotalMilliseconds / 1000).ToString("0.000", $culture),
                 [int]$reportResult.ExtractedLineCount,
@@ -100,12 +93,11 @@ function Invoke-CodeCoverageAggregateWorker {
         $publishedFile = Get-Item -LiteralPath $publishedPath
         return @{
             Aggregate = @{
-                RunCount = $runAssessments.Count
                 LineCount = $semanticLineCount
                 SizeBytes = [long]$publishedFile.Length
                 TotalParseMilliseconds = $totalParseMilliseconds
             }
-            RunAssessments = @($runAssessments)
+            RunDiagnostics = @($runDiagnostics)
         }
     }
     finally {
@@ -140,7 +132,7 @@ function Invoke-CodeCoverageAggregateProcess {
         @{
             Succeeded = $true
             Aggregate = $workerResult.Aggregate
-            RunAssessments = @($workerResult.RunAssessments)
+            RunDiagnostics = @($workerResult.RunDiagnostics)
         } | ConvertTo-Json -Depth 20 -Compress |
             Set-Content -LiteralPath $resultPath -Encoding UTF8
     }
@@ -288,7 +280,7 @@ function Complete-CodeCoverageAggregateWorker {
         foreach ($property in @($result.Aggregate.PSObject.Properties)) {
             $aggregate[$property.Name] = $property.Value
         }
-        $aggregate["RunAssessments"] = @($result.RunAssessments)
+        $aggregate["RunDiagnostics"] = @($result.RunDiagnostics)
         return $aggregate
     }
     finally {

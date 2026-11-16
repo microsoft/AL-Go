@@ -83,8 +83,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                 [string] $appId
             )
 
-            $normalizedAppId = ([guid]$appId).ToString()
-            return @($session.Runs | Where-Object { $_.AppId -eq $normalizedAppId })[0]
+            return @($session.Runs | Where-Object { $_.AppId -eq $appId })[0]
         }
 
         function New-CoordinatorArtifactFixture {
@@ -229,11 +228,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status.PSObject.Properties.Name | Should -Not -Contain "mode"
         $status.PSObject.Properties.Name | Should -Contain "aggregate"
         $status.aggregate | Should -Be "coverage-aggregate.bin.gz"
-        $status.runs[0].lineReasons | Should -BeNullOrEmpty
-        $status.runs[0].notices | Should -BeNullOrEmpty
-        $status.runs[0].lineGlobalUnsafe | Should -BeFalse
-        $status.runs[0].lineAffectedSources | Should -BeNullOrEmpty
-        $status.runs[0].excludedLineFacts | Should -Be 0
+        $status.runs[0].diagnostics | Should -BeNullOrEmpty
         Test-Path -LiteralPath (
             Join-Path $context.coverageOutputPath "coverage.bc.json"
         ) | Should -BeFalse
@@ -304,7 +299,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $model = Get-ProjectCoverageModel -CoveragePath $session.RootPath `
             -RepositoryRoot $projectPath
 
-        $model.LineComplete | Should -BeTrue
+        $model.Reasons | Should -BeNullOrEmpty
         $model.Runs.Count | Should -Be 2
         $model.Runs[0].ContainsKey("Lines") | Should -BeFalse
         $model.Runs[1].ContainsKey("Lines") | Should -BeFalse
@@ -360,23 +355,6 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         } | Should -Not -Throw
         { Complete-AlGoCodeCoverageSession -session $session } |
             Should -Throw "*completeness does not match the runner result*"
-    }
-
-    It 'Rejects duplicate completion clearly' {
-        $projectPath = New-CoordinatorProject
-        $session = New-CoordinatorSession -projectPath $projectPath
-        $knownAppId = "22222222-2222-2222-2222-222222222222"
-        $run = Get-CoordinatorRun -session $session -appId $knownAppId
-        $context = New-CoordinatorArtifactFixture -session $session -run $run
-        Write-CoordinatorCoverageArtifacts -context $context
-        Complete-AlGoCodeCoverageRun -session $session -run $run `
-            -coverageIsComplete $context.coverageIsComplete
-
-        {
-            Complete-AlGoCodeCoverageRun -session $session -run $run `
-                -coverageIsComplete $true
-        } | Should -Throw "*cannot complete from state 'complete'*"
-        Complete-AlGoCodeCoverageSession -session $session
     }
 
     It 'Retains raw BC JSON after successful compaction when runner debug is enabled' {
@@ -438,27 +416,18 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status.PSObject.Properties.Name | Should -Not -Contain "aggregate"
     }
 
-    It 'Rejects invalid run assessments returned by the worker' {
+    It 'Publishes raw diagnostics returned by the worker' {
         Mock -ModuleName CodeCoverageCoordinator Start-CodeCoverageCompactorInternal {
             return @{}
         }
         Mock -ModuleName CodeCoverageCoordinator Add-CodeCoverageAggregateWorkItem {}
         Mock -ModuleName CodeCoverageCoordinator Complete-CodeCoverageAggregateWorker {
             return @{
-                RunCount = 1
                 LineCount = 0
                 SizeBytes = 1
                 TotalParseMilliseconds = 1
-                RunAssessments = @([PSCustomObject]@{
-                        Sequence = 0
-                        AppId = "wrong-app"
-                        AppName = "Test App"
-                        State = "complete"
-                        LineReasons = @()
-                        Notices = @()
-                        LineGlobalUnsafe = $false
-                        LineAffectedSources = @()
-                        ExcludedLineFacts = 0
+                RunDiagnostics = @([PSCustomObject]@{
+                        Diagnostics = @("AlTool diagnostic")
                     })
             }
         }
@@ -471,15 +440,15 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
 
         Complete-AlGoCodeCoverageRun -session $session -run $run `
             -coverageIsComplete $context.coverageIsComplete
-        { Complete-AlGoCodeCoverageSession -session $session } |
-            Should -Throw "*run assessment does not match the session*"
+        Complete-AlGoCodeCoverageSession -session $session
 
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
-        $status.PSObject.Properties.Name | Should -Not -Contain "aggregate"
+        $status.runs[0].diagnostics | Should -Be @("AlTool diagnostic")
+        $status.PSObject.Properties.Name | Should -Contain "aggregate"
         Test-Path -LiteralPath (
             Join-Path $context.coverageOutputPath "coverage.bc.json"
-        ) | Should -BeTrue
+        ) | Should -BeFalse
     }
 
     It 'Retains failed-run raw coverage when a later compactor handoff fails' {
@@ -495,20 +464,11 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         }
         Mock -ModuleName CodeCoverageCoordinator Complete-CodeCoverageAggregateWorker {
             return @{
-                RunCount = 1
                 LineCount = 0
                 SizeBytes = 1
                 TotalParseMilliseconds = 1
-                RunAssessments = @([PSCustomObject]@{
-                        Sequence = 0
-                        AppId = "22222222-2222-2222-2222-222222222222"
-                        AppName = "First Test App"
-                        State = "complete"
-                        LineReasons = @()
-                        Notices = @()
-                        LineGlobalUnsafe = $false
-                        LineAffectedSources = @()
-                        ExcludedLineFacts = 0
+                RunDiagnostics = @([PSCustomObject]@{
+                        Diagnostics = @()
                     })
             }
         }
@@ -605,26 +565,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status.runs[0].state | Should -Be "failed"
     }
 
-    It 'Rejects duplicate app identities' {
-        $projectPath = New-CoordinatorProject
-        $testApps = @(
-            [PSCustomObject]@{
-                Id = "22222222-2222-2222-2222-222222222222"
-                Name = "Test App"
-                Path = Join-Path $projectPath "Test.app"
-            },
-            [PSCustomObject]@{
-                Id = "22222222-2222-2222-2222-222222222222".ToUpperInvariant()
-                Name = "Duplicate"
-                Path = Join-Path $projectPath "Duplicate.app"
-            }
-        )
-
-        { New-CoordinatorSession -projectPath $projectPath -testApps $testApps } |
-            Should -Throw "*duplicated*"
-    }
-
-    It 'Normalizes selected app IDs for contexts and output directories' {
+    It 'Preserves selected app IDs for contexts and output directories' {
         $projectPath = New-CoordinatorProject
         $testApps = @(
             [PSCustomObject]@{
@@ -638,23 +579,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $run = Get-CoordinatorRun -session $session -appId $testApps[0].Id
         $context = New-CoordinatorArtifactFixture -session $session -run $run
 
-        $run.AppId | Should -Be "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        $run.AppId | Should -Be "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
         Split-Path -Path $context.coverageOutputPath -Leaf |
-            Should -Be "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-    }
-
-    It 'Rejects invalid selected app identities' {
-        $projectPath = New-CoordinatorProject
-        $testApps = @(
-            [PSCustomObject]@{
-                Id = "not-an-app-id"
-                Name = "Invalid Test App"
-                Path = Join-Path $projectPath "Invalid.Test.app"
-            }
-        )
-
-        { New-CoordinatorSession -projectPath $projectPath -testApps $testApps } |
-            Should -Throw "*Selected test app ID 'not-an-app-id' is invalid*"
+            Should -Be "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
     }
 
     It 'Resolves direct projectsToTest roots before creating run contexts' {

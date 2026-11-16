@@ -1337,16 +1337,15 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus = Get-Content -LiteralPath (Join-Path $coverageRoot 'coverage-status.json') `
                 -Raw -Encoding UTF8 | ConvertFrom-Json
             $coverageStatus.PSObject.Properties.Name |
-                Should -Be @('project', 'projectName', 'buildMode', 'formats', 'sourceRoots',
+                Should -Be @('project', 'projectName', 'buildMode', 'formats',
                     'sourceRootDetails', 'runs', 'aggregate')
             $coverageStatus.project | Should -Be 'Projects/Coverage'
             $coverageStatus.projectName | Should -Be 'Coverage Project'
             $coverageStatus.buildMode | Should -Be 'Clean'
             $coverageStatus.formats | Should -Be @('bc-json', 'cobertura')
-            $coverageStatus.sourceRoots | Should -Be @('App', 'TestApp1', 'TestApp2')
             $coverageStatus.sourceRootDetails.Count | Should -Be 3
             @($coverageStatus.sourceRootDetails | ForEach-Object { $_.path }) |
-                Should -Be $coverageStatus.sourceRoots
+                Should -Be @('App', 'TestApp1', 'TestApp2')
             @($coverageStatus.sourceRootDetails | ForEach-Object { $_.kind }) |
                 Should -Be @('app', 'test', 'test')
             $coverageStatus.sourceRootDetails[0].appId |
@@ -1355,16 +1354,11 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus.runs.Count | Should -Be 2
             $coverageStatus.runs[0].PSObject.Properties.Name |
                 Should -Be @(
-                    'appId', 'appName', 'outputDirectory', 'state', 'lineReasons', 'notices',
-                    'lineGlobalUnsafe', 'lineAffectedSources', 'excludedLineFacts'
+                    'appId', 'appName', 'outputDirectory', 'state', 'diagnostics'
                 )
             $coverageStatus.runs[0].appId | Should -Be $appOneId
             $coverageStatus.runs[0].outputDirectory | Should -Be "CodeCoverage/$appOneId"
-            $coverageStatus.runs[0].lineReasons.Count | Should -Be 0
-            $coverageStatus.runs[0].notices.Count | Should -Be 0
-            $coverageStatus.runs[0].lineGlobalUnsafe | Should -BeFalse
-            $coverageStatus.runs[0].lineAffectedSources.Count | Should -Be 0
-            $coverageStatus.runs[0].excludedLineFacts | Should -Be 0
+            $coverageStatus.runs[0].diagnostics.Count | Should -Be 0
             $coverageStatusByAppId = @{}
             foreach ($run in $coverageStatus.runs) {
                 $coverageStatusByAppId[$run.appId] = $run.state
@@ -1375,7 +1369,7 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus.aggregate | Should -Be 'coverage-aggregate.bin.gz'
             @(Get-ChildItem -LiteralPath $coverageRoot -Filter 'coverage.bc.json' -File -Recurse).Count |
                 Should -Be 0
-            ($coverageStatus | ConvertTo-Json -Depth 5) | Should -Not -Match 'admin|password|diagnostic'
+            ($coverageStatus | ConvertTo-Json -Depth 5) | Should -Not -Match 'admin|password'
             Remove-Item -Path $projectPath -Recurse -Force
         }
 

@@ -6,11 +6,11 @@ For the end-to-end collection, compaction, artifact, and analysis lifecycle, see
 
 Project summaries are emitted only when `useSeparateTestAction.codeCoverageSummary` is `project` or `both`. Repository execution is expected to be workflow-gated and uses the expected build dimensions in `buildOrderJson`.
 
-Summaries report executable-line coverage for authoritative regular `appFolders` only. Facts from `testFolders`, external Microsoft objects, and procedure enrichment do not contribute to visualization metrics or completeness.
+Summaries report executable-line coverage for authoritative regular `appFolders` only. Facts from `testFolders`, external Microsoft objects, and procedure enrichment do not contribute to visualization metrics.
 
-Each app row and headline unions canonical line facts across all relevant test-app runs without double-counting. Coverage is complete only when every expected regular app is safely attributable and every required run and requested build dimension is available. Unknown or regular-app line inventory and mapping failures recorded during compaction make the affected app and aggregate unavailable.
+Each app row and headline unions canonical line facts across all relevant test-app runs without double-counting. Available line facts always contribute to metrics, including facts from globally incomplete reports. Summaries show globally incomplete runs and distinct AlTool diagnostics as warnings.
 
-The shared RunTests coverage coordinator remains the only writer of `coverage-status.json`. Built-in execution and coverage-aware `RunTestsInBcContainer.ps1` overrides contribute one AL-Go-owned run per selected test app. A missing or failed app run remains unsafe. A PowerShell 7 child process validates source mappings in the checked-out build job, stores per-run assessments in status, and compacts the semantic line union into the versioned `coverage-aggregate.bin.gz` before artifact upload. The analyzer consumes only that status and aggregate contract. A missing, corrupt, or invalid aggregate fails closed.
+The shared RunTests coverage coordinator remains the only writer of `coverage-status.json`. Built-in execution and coverage-aware `RunTestsInBcContainer.ps1` overrides contribute one AL-Go-owned run per selected test app. A PowerShell 7 child process validates source mappings in the checked-out build job, stores raw per-run diagnostics in status, and compacts the semantic line union into the versioned `coverage-aggregate.bin.gz` before artifact upload. The analyzer consumes only that status and aggregate contract. Coverage is unavailable for hard failures such as a missing or failed run, unreadable status, missing or invalid aggregate, or an expected repository dimension without a matching artifact.
 
 ## Inputs
 

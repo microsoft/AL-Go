@@ -30,7 +30,9 @@ Import-Module (Join-Path $PSScriptRoot "AnalyzeCodeCoverage.psm1" -Resolve) -For
 function Write-CoverageAnalysisDetails {
     Param([hashtable] $Model)
 
-    $details = @($Model.Reasons) + @($Model.LineReasons) + @($Model.Notices)
+    $details = @($Model.Reasons) + @(
+        $Model.IncompleteRuns | ForEach-Object { "Globally incomplete coverage run: $_" }
+    )
     foreach ($detail in @($details | Select-Object -Unique)) {
         Write-Host "Code coverage analysis detail: $detail"
     }
