@@ -11,6 +11,8 @@ Describe "RunPipeline Action Tests" {
         $scriptPath = Join-Path $scriptRoot $scriptName
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+        Import-Module (Join-Path $scriptRoot "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) `
+            -Force -DisableNameChecking
 
         $tokens = $null
         $parseErrors = $null
@@ -27,15 +29,6 @@ Describe "RunPipeline Action Tests" {
                     $node.Left.Extent.Text -eq '$runTestsInSeparateAction'
                 }, $true))
         $eligibilityAssignments.Count | Should -Be 1
-
-        $eligibilityFunctionAst = @($runPipelineAst.FindAll({
-                    param($node)
-                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
-                    $node.Name -eq 'Get-SeparateTestActionIneligibilityReasons'
-                }, $true))
-        $eligibilityFunctionAst.Count | Should -Be 1
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'eligibilityFunction', Justification = 'Used by eligibility test cases.')]
-        $eligibilityFunction = $eligibilityFunctionAst[0].Body.GetScriptBlock()
 
         $newCredentialFunctionAst = @($runPipelineAst.FindAll({
                     param($node)
@@ -123,6 +116,7 @@ Describe "RunPipeline Action Tests" {
         $eligibilityAssignments[0].Right.Extent.Text |
             Should -Be '$settings.useSeparateTestAction.enabled -and $separateTestActionIneligibilityReasons.Count -eq 0'
         $actionScript | Should -Match ([regex]::Escape('$separateTestActionIneligibilityReasons -join ''; '''))
+        $actionScript | Should -Match 'ImportTestDataInBcContainer requires RunPipeline'
     }
 
     It 'Computes eligibility and configures the container credential for <Name>' -TestCases @(
@@ -249,10 +243,14 @@ Describe "RunPipeline Action Tests" {
             if ($HasImportTestData) {
                 $runAlPipelineParams.ImportTestDataInBcContainer = {}
             }
-            $ineligibilityReasons = @(& $eligibilityFunction `
+            $ineligibilityReasons = @(Get-SeparateTestActionIneligibilityReasons `
                     -settings $settings `
-                    -additionalCountries @($AdditionalCountries) `
-                    -runAlPipelineParams $runAlPipelineParams)
+                    -additionalCountries @($AdditionalCountries))
+            if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
+                $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
+                $ineligibilityReasons +=
+                    "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
+            }
             ($ineligibilityReasons -join '; ') | Should -Be $ExpectedReason
             $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and $ineligibilityReasons.Count -eq 0
             $runTestsInSeparateAction | Should -Be $Expected

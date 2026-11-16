@@ -36,6 +36,7 @@ Describe "AnalyzeCodeCoverage workflow wiring" {
         $yaml.GetProperty('jobs:/Initialization:/outputs:/githubRunnerShell:') |
             Should -Be '${{ steps.ReadSettings.outputs.GitHubRunnerShell }}'
         $job.content | Should -Contain '    continue-on-error: true'
+        $job.content | Should -Not -Contain '      - name: Checkout'
         $job.content | Should -Contain "      pattern: '*-*CodeCoverage-*'"
         $job.content | Should -Not -Match 'merge-multiple'
         $job.content | Should -Contain '      shell: ${{ needs.Initialization.outputs.githubRunnerShell }}'

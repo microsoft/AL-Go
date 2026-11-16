@@ -9,7 +9,7 @@ The implementation deliberately separates four responsibilities:
 1. The coverage coordinator validates each app's output and manages the coverage session.
 1. A single background compactor streams valid BC JSON reports into one AL-Go aggregate for later analysis.
 
-AnalyzeCodeCoverage runs after RunTests and artifact upload. It reads the final status and either consumes the aggregate or uses historical raw BC JSON reports.
+AnalyzeCodeCoverage runs after RunTests and artifact upload. It consumes the final status and compact aggregate without checking out or re-reading repository source.
 
 ## End-to-end workflow
 
@@ -106,7 +106,7 @@ sequenceDiagram
     RunTests-->>Workflow: Test outcome and artifacts
     Workflow->>Workflow: Upload CodeCoverage artifact
     Workflow->>Analyzer: Analyze project coverage
-    Analyzer->>Analyzer: Prefer aggregate, otherwise read historical raw reports
+    Analyzer->>Analyzer: Validate status and compact aggregate
 ```
 
 ## Concurrency model
@@ -204,8 +204,9 @@ The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads
 | `Complete-CodeCoverageAggregateWorker` | Session completion | During final drain | Closes standard input, waits for the child process, reads its temporary result file, and disposes worker resources. |
 | `Write-CodeCoverageStatusInternal` | Session completion | Once | Atomically publishes the final status. There are no intermediate status writes. |
 | `AnalyzeCodeCoverage.ps1` | Project step or repository job | After coverage artifact publication | Loads settings, builds the requested model, logs details, and appends Markdown to the job summary. |
-| `Get-ProjectCoverageModelFromStatus` | Analyzer | Once per status file | Validates status and the referenced aggregate, or reads historical raw reports when no aggregate reference exists. |
+| `Get-ProjectCoverageModelFromStatus` | Analyzer | Once per status file | Validates status, per-run assessments, and the required compact aggregate. |
 | `Get-RepositoryCoverageModel` | Repository analyzer | Once after artifact download | Checks expected build dimensions and combines project application models without double-counting semantic lines. |
+| `Get-SeparateTestActionIneligibilityReasons` | Build dimension creation and RunPipeline | Once per build mode | Returns static blockers shared by coverage expectation and actual separate-test execution. RunPipeline adds its callback-dependent blocker after final callback construction. |
 
 ## Per-app runner paths
 
@@ -352,13 +353,13 @@ The aggregate is an AL-Go contract, not an AlTool schema 1.0 document. It contai
 
 `Get-ProjectCoverageModelFromStatus` treats the status as authoritative:
 
-- If status has no aggregate reference, it reads per-run `coverage.bc.json`. This preserves compatibility with historical artifacts; current compaction failures still fail the RunTests action.
-- If status references the fixed aggregate, it validates the versioned magic header, line count, semantic records, gzip EOF, application roots, and per-run assessments recorded in status.
-- A declared but missing, corrupt, or invalid aggregate fails closed. The analyzer does not silently fall back to raw reports after an aggregate was published.
+- Status must reference the fixed aggregate.
+- The analyzer validates the versioned magic header, line count, semantic records, gzip EOF, application roots, and per-run assessments recorded in status.
+- A missing, corrupt, or invalid aggregate fails closed. The analyzer never falls back to raw reports.
 
 Only regular application roots contribute to rates and uncovered-object tables. Status preserves the diagnostic assessment and excluded-fact accounting for test roots and external objects, but those facts do not affect application percentages.
 
-Repository analysis verifies the expected project and build-mode dimensions from `buildOrderJson`, then unions canonical lines across valid project models.
+Repository analysis uses only build dimensions that statically qualify for separate tests, request code coverage, and request a repository summary. It verifies their project and build-mode identities, then unions canonical lines across valid project models. A requested dimension without a matching artifact is reported as unavailable coverage. The repository analysis job does not check out source because mapping and source existence were already validated by the compactor in the build job.
 
 ## Failure and cleanup rules
 
@@ -400,7 +401,7 @@ When changing this flow:
 1. Keep the parent as the only status writer.
 1. Do not delete raw reports before aggregate publication, validation, and durable status reference.
 1. Preserve deterministic source-root, run, and semantic-line ordering.
-1. Keep aggregate and historical raw analyzer paths equivalent.
+1. Keep the status and aggregate reader aligned with the coordinator and compactor contracts.
 1. Test complete, incomplete, failed-test-valid-coverage, zero-codeunit, duplicate-line, diagnostics, multi-run, and repository cases.
 1. Test worker startup, input drain, worker failure, version and EOF corruption, atomic publication, cleanup, and hard failure.
 1. Run RunTests and analyzer suites from both PowerShell 7 and Windows PowerShell 5.1 parents.

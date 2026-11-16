@@ -1,7 +1,6 @@
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
-    -DisableNameChecking
+. (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageAggregateFormat.psm1" -Resolve) `
     -DisableNameChecking
 
@@ -17,84 +16,43 @@ $script:CoverageObjectTypeNames = @{
 $script:MaximumValueLength = 160
 $script:MaximumSummaryBytes = 900KB
 
-function Read-BcCoverageReport {
-    <#
-    .SYNOPSIS
-        Reads and validates one BC JSON coverage report.
-    #>
-    Param(
-        [string] $Path,
-        [hashtable] $Model = $null,
-        [AllowEmptyString()][string] $RequestedMode = "",
-        [AllowEmptyString()][string] $RepositoryRoot = "",
-        [hashtable] $SemanticLineUnion = $null,
-        [System.Collections.Generic.List[string]] $SemanticRootOrder = $null,
-        [System.Collections.Generic.Dictionary[string,object]] $SourceMappingCache = $null
-    )
+function Get-CoverageArray {
+    Param($Value)
 
-    CodeCoverageReportReader\Read-BcCoverageReport @PSBoundParameters
-}
-
-function Get-CoverageDiagnosticAssessment {
-    <#
-    .SYNOPSIS
-        Classifies coverage diagnostics for line coverage safety.
-    #>
-    Param(
-        [hashtable] $Report,
-        [hashtable] $Scope
-    )
-
-    CodeCoverageReportReader\Get-CoverageDiagnosticAssessment @PSBoundParameters
-}
-
-function Resolve-RepositoryCoverageSource {
-    <#
-    .SYNOPSIS
-        Resolves an exported source path to a repository source file.
-    #>
-    Param(
-        [AllowEmptyString()][string] $SourcePath,
-        [string] $RepositoryRoot,
-        [string[]] $SourceRoots = @()
-    )
-
-    CodeCoverageReportReader\Resolve-RepositoryCoverageSource @PSBoundParameters
-}
-
-function ConvertTo-CoverageHashtable {
-    <#
-    .SYNOPSIS
-        Recursively converts JSON objects to hashtables.
-    #>
-    Param(
-        [Parameter(ValueFromPipeline = $true)]
-        $InputObject
-    )
-
-    Process {
-        if ($null -eq $InputObject) {
-            return $null
-        }
-        if ($InputObject -is [System.Collections.IDictionary]) {
-            $result = @{}
-            foreach ($key in $InputObject.Keys) {
-                $result["$key"] = ConvertTo-CoverageHashtable -InputObject $InputObject[$key]
-            }
-            return $result
-        }
-        if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
-            $result = @{}
-            foreach ($property in $InputObject.PSObject.Properties) {
-                $result[$property.Name] = ConvertTo-CoverageHashtable -InputObject $property.Value
-            }
-            return $result
-        }
-        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-            return ,@($InputObject | ForEach-Object { ConvertTo-CoverageHashtable -InputObject $_ })
-        }
-        return $InputObject
+    if ($null -eq $Value) {
+        return @()
     }
+    if ($Value -is [string] -or $Value -isnot [System.Collections.IEnumerable]) {
+        throw "Expected an array."
+    }
+    return @($Value)
+}
+
+function Resolve-CoverageSourceRootDetail {
+    Param(
+        [string] $SourceIdentity,
+        [object[]] $SourceRootDetails
+    )
+
+    $source = "$SourceIdentity".Replace('\', '/').Trim('/').ToLowerInvariant()
+    $matchingDetails = @()
+    foreach ($detail in $SourceRootDetails) {
+        $root = "$($detail.Identity)"
+        if ($root -eq "." -or $source -eq $root -or $source.StartsWith(
+                "$root/", [System.StringComparison]::OrdinalIgnoreCase)) {
+            $matchingDetails += $detail
+        }
+    }
+    if ($matchingDetails.Count -eq 0) {
+        return $null
+    }
+    $ordered = @($matchingDetails |
+        Sort-Object @{ Expression = { "$($_.Identity)".Length }; Descending = $true })
+    if ($ordered.Count -gt 1 -and
+        "$($ordered[0].Identity)".Length -eq "$($ordered[1].Identity)".Length) {
+        return $null
+    }
+    return $ordered[0]
 }
 
 function ConvertTo-SafeCoverageText {
@@ -185,7 +143,7 @@ function Read-CoverageJson {
     try {
         $data = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 |
             ConvertFrom-Json |
-            ConvertTo-CoverageHashtable
+            ConvertTo-HashTable -recurse
         if ($data -isnot [System.Collections.IDictionary]) {
             throw "The JSON root must be an object."
         }
@@ -276,10 +234,7 @@ function Get-CoverageSourceRootDetails {
 }
 
 function New-CoverageApplicationModels {
-    Param(
-        [object[]] $SourceRootDetails,
-        [string] $Mode
-    )
+    Param([object[]] $SourceRootDetails)
 
     $apps = @()
     foreach ($detail in $SourceRootDetails) {
@@ -295,7 +250,7 @@ function New-CoverageApplicationModels {
             RootIdentity = "$($detail.Identity)"
             AppId = "$($detail.AppId)"
             AppName = $appName
-            LineComplete = $Mode -in @("line", "all")
+            LineComplete = $true
             Lines = @{}
         }
     }
@@ -353,34 +308,6 @@ function Merge-CoverageRunIntoApplications {
     }
 }
 
-function Resolve-CoverageReportPath {
-    Param(
-        [string] $StatusPath,
-        [AllowEmptyString()][string] $OutputDirectory
-    )
-
-    if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-        return ""
-    }
-
-    $statusDirectory = Split-Path -Path $StatusPath -Parent
-    $artifactRoot = Split-Path -Path $statusDirectory -Parent
-    $relativeOutput = $OutputDirectory.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
-    $leafOutput = Split-Path -Path $relativeOutput -Leaf
-    $candidates = @(
-        (Join-Path (Join-Path $artifactRoot $relativeOutput) "coverage.bc.json"),
-        (Join-Path (Join-Path $statusDirectory $leafOutput) "coverage.bc.json"),
-        (Join-Path (Join-Path $statusDirectory $relativeOutput) "coverage.bc.json")
-    )
-    foreach ($candidate in $candidates) {
-        if ((Test-PathInsideRoot -Path $candidate -Root $artifactRoot) -and
-            (Test-Path -LiteralPath $candidate -PathType Leaf)) {
-            return [System.IO.Path]::GetFullPath($candidate)
-        }
-    }
-    return ""
-}
-
 function Merge-CoverageLine {
     Param(
         [System.Collections.IDictionary] $Lines,
@@ -404,7 +331,6 @@ function New-EmptyProjectCoverageModel {
     )
 
     return @{
-        Complete = $false
         Reasons = @()
         LineComplete = $false
         LineReasons = @()
@@ -412,8 +338,6 @@ function New-EmptyProjectCoverageModel {
         Project = $Project
         ProjectName = $ProjectName
         BuildMode = $BuildMode
-        Mode = "line"
-        Formats = @()
         SourceRoots = @()
         SourceRootDetails = @()
         ApplicationMetadataAvailable = $false
@@ -428,8 +352,7 @@ function New-EmptyProjectCoverageModel {
 function Get-ProjectCoverageModelFromStatus {
     Param(
         [string] $StatusPath,
-        [hashtable] $ExpectedDimension = $null,
-        [AllowEmptyString()][string] $RepositoryRoot = ""
+        [hashtable] $ExpectedDimension = $null
     )
 
     $fallbackProject = if ($ExpectedDimension) { "$($ExpectedDimension.project)" } else { "." }
@@ -444,14 +367,13 @@ function Get-ProjectCoverageModelFromStatus {
     }
 
     $status = $statusJson.Data
-    foreach ($property in @("project", "projectName", "buildMode", "formats", "sourceRoots", "runs")) {
+    foreach ($property in @("project", "projectName", "buildMode", "sourceRoots", "runs")) {
         if (-not $status.Contains($property)) {
             $model.Reasons = @("Coverage status is missing required data.")
             return $model
         }
     }
     try {
-        $formats = @(Get-CoverageArray $status.formats | ForEach-Object { "$_".ToLowerInvariant() })
         $sourceRoots = @(Get-CoverageArray $status.sourceRoots | ForEach-Object { "$_" })
         $statusRuns = @(Get-CoverageArray $status.runs)
     }
@@ -463,7 +385,6 @@ function Get-ProjectCoverageModelFromStatus {
     $model.Project = "$($status.project)"
     $model.ProjectName = "$($status.projectName)"
     $model.BuildMode = "$($status.buildMode)"
-    $model.Formats = $formats
     $model.SourceRoots = $sourceRoots
     $model.SourceRootDetails = @(Get-CoverageSourceRootDetails -Status $status -SourceRoots $sourceRoots)
     if ($status.Contains("sourceRootDetails")) {
@@ -477,30 +398,8 @@ function Get-ProjectCoverageModelFromStatus {
             $model.ApplicationMetadataAvailable = $false
         }
     }
-    $model.Apps = @(New-CoverageApplicationModels -SourceRootDetails $model.SourceRootDetails `
-        -Mode $model.Mode)
-    if (-not [string]::IsNullOrWhiteSpace($RepositoryRoot) -and
-        $model.ApplicationMetadataAvailable) {
-        $normalizedRoots = @(Get-NormalizedCoverageSourceRoots -RepositoryRoot $RepositoryRoot `
-            -SourceRoots $model.SourceRoots)
-        foreach ($app in $model.Apps) {
-            $rootIndex = -1
-            for ($index = 0; $index -lt $model.SourceRootDetails.Count; $index++) {
-                if ("$($model.SourceRootDetails[$index].Identity)" -eq "$($app.RootIdentity)") {
-                    $rootIndex = $index
-                    break
-                }
-            }
-            if ($rootIndex -lt 0 -or -not [bool]$normalizedRoots[$rootIndex].Valid) {
-                $app.LineComplete = $false
-            }
-        }
-    }
+    $model.Apps = @(New-CoverageApplicationModels -SourceRootDetails $model.SourceRootDetails)
     $reasons = @()
-
-    if ("bc-json" -notin $formats) {
-        $reasons += "The bc-json coverage format was not requested."
-    }
 
     if ($ExpectedDimension) {
         if ((ConvertTo-CoverageDimensionIdentity "$($ExpectedDimension.project)") -ne
@@ -508,41 +407,22 @@ function Get-ProjectCoverageModelFromStatus {
             "$($ExpectedDimension.buildMode)" -ine $model.BuildMode) {
             $reasons += "Coverage status does not match the expected project and build mode."
         }
-        try {
-            $expectedFormats = @(Get-CoverageArray $ExpectedDimension.codeCoverageFormats |
-                ForEach-Object { "$_".ToLowerInvariant() })
-            foreach ($expectedFormat in $expectedFormats) {
-                if ($expectedFormat -notin $formats) {
-                    $reasons += "Coverage formats do not match the expected build dimension."
-                    break
-                }
-            }
-            if ("bc-json" -notin $expectedFormats) {
-                $reasons += "The expected build dimension does not request bc-json."
-            }
-        }
-        catch {
-            $reasons += "The expected coverage formats are invalid."
-        }
-        if (-not [bool]$ExpectedDimension.codeCoverageExpected) {
-            $reasons += "The build dimension does not expect code coverage."
-        }
     }
 
-    $projectReasons = @($reasons)
-    $aggregateAuthoritative = $status.Contains("aggregate")
     $aggregateResult = $null
-    $aggregatePath = ""
-    if ($aggregateAuthoritative) {
+    if (-not $status.Contains("aggregate")) {
+        $reasons += "The published code coverage aggregate is missing."
+    }
+    else {
         try {
             if ($status.aggregate -isnot [string] -or
                 "$($status.aggregate)" -cne "coverage-aggregate.bin.gz") {
                 throw "Coverage aggregate reference is invalid."
             }
             $statusDirectory = Split-Path -Path $StatusPath -Parent
-            $aggregatePath = [System.IO.Path]::GetFullPath(
+            $aggregateResult = Read-CodeCoverageAggregate -path ([System.IO.Path]::GetFullPath(
                 (Join-Path $statusDirectory "$($status.aggregate)"))
-            $aggregateResult = Read-CodeCoverageAggregate -path $aggregatePath
+            )
             if (-not $aggregateResult.Valid) {
                 throw $aggregateResult.Reason
             }
@@ -563,10 +443,10 @@ function Get-ProjectCoverageModelFromStatus {
         catch {
             $aggregateResult = $null
             $aggregateReason = "The published code coverage aggregate is invalid. $($_.Exception.Message)"
-            $projectReasons += $aggregateReason
             $reasons += $aggregateReason
         }
     }
+    $projectReasons = @($reasons)
     $runModels = @()
     foreach ($run in $statusRuns) {
         if ($run -isnot [System.Collections.IDictionary]) {
@@ -576,7 +456,6 @@ function Get-ProjectCoverageModelFromStatus {
         $appId = if ($run.Contains("appId")) { "$($run.appId)" } else { "" }
         $appName = if ($run.Contains("appName")) { "$($run.appName)" } else { "" }
         $state = if ($run.Contains("state")) { "$($run.state)".ToLowerInvariant() } else { "unknown" }
-        $outputDirectory = if ($run.Contains("outputDirectory")) { "$($run.outputDirectory)" } else { "" }
         $runReasons = @()
         if ($state -notin @("pending", "running", "complete", "incomplete", "failed", "unsupported")) {
             $runReasons += "Run state is invalid."
@@ -589,7 +468,6 @@ function Get-ProjectCoverageModelFromStatus {
             $runNotices += "Run output is globally incomplete and was evaluated by repository scope."
         }
 
-        $reportPath = ""
         $scope = @{
             IncludedLineObjects = @{}
             IncludedLineSources = @{}
@@ -601,78 +479,40 @@ function Get-ProjectCoverageModelFromStatus {
         $runLineReasons = @()
         $lineGlobalUnsafe = $false
         $lineAffectedSources = @()
-        if ($runReasons.Count -eq 0 -and "bc-json" -in $formats -and $aggregateAuthoritative) {
-            $reportPath = $aggregatePath
-            if (-not $aggregateResult) {
-                $runReasons += "The published code coverage aggregate is invalid."
-            }
-            else {
-                foreach ($property in @(
-                        "lineReasons", "notices", "lineGlobalUnsafe",
-                        "lineAffectedSources", "excludedLineFacts"
-                    )) {
-                    if (-not $run.Contains($property)) {
-                        $runReasons += "Coverage status is missing the run assessment."
-                        break
-                    }
+        if ($runReasons.Count -eq 0) {
+            foreach ($property in @(
+                    "lineReasons", "notices", "lineGlobalUnsafe",
+                    "lineAffectedSources", "excludedLineFacts"
+                )) {
+                if (-not $run.Contains($property)) {
+                    $runReasons += "Coverage status is missing the run assessment."
+                    break
                 }
-                if ($runReasons.Count -eq 0 -and $run.lineGlobalUnsafe -isnot [bool]) {
+            }
+            if ($runReasons.Count -eq 0 -and $run.lineGlobalUnsafe -isnot [bool]) {
+                $runReasons += "Coverage status contains an invalid run assessment."
+            }
+            $excludedLineFacts = 0
+            if ($runReasons.Count -eq 0 -and
+                (-not [int]::TryParse("$($run.excludedLineFacts)", [ref]$excludedLineFacts) -or
+                    $excludedLineFacts -lt 0)) {
+                $runReasons += "Coverage status contains an invalid run assessment."
+            }
+            if ($runReasons.Count -eq 0) {
+                try {
+                    $model.ExcludedLineFacts += $excludedLineFacts
+                    $runLineReasons += @(Get-CoverageArray $run.lineReasons |
+                        ForEach-Object { "$_" })
+                    $runNotices += @(Get-CoverageArray $run.notices |
+                        ForEach-Object { "$_" })
+                    $lineGlobalUnsafe = [bool]$run.lineGlobalUnsafe
+                    $lineAffectedSources = @(Get-CoverageArray $run.lineAffectedSources |
+                        ForEach-Object { "$_" })
+                }
+                catch {
                     $runReasons += "Coverage status contains an invalid run assessment."
                 }
-                $excludedLineFacts = 0
-                if ($runReasons.Count -eq 0 -and
-                    (-not [int]::TryParse("$($run.excludedLineFacts)", [ref]$excludedLineFacts) -or
-                        $excludedLineFacts -lt 0)) {
-                    $runReasons += "Coverage status contains an invalid run assessment."
-                }
-                if ($runReasons.Count -eq 0) {
-                    try {
-                        $model.ExcludedLineFacts += $excludedLineFacts
-                        $runLineReasons += @(Get-CoverageArray $run.lineReasons |
-                            ForEach-Object { "$_" })
-                        $runNotices += @(Get-CoverageArray $run.notices |
-                            ForEach-Object { "$_" })
-                        $lineGlobalUnsafe = [bool]$run.lineGlobalUnsafe
-                        $lineAffectedSources = @(Get-CoverageArray $run.lineAffectedSources |
-                            ForEach-Object { "$_" })
-                    }
-                    catch {
-                        $runReasons += "Coverage status contains an invalid run assessment."
-                    }
-                }
             }
-        }
-        elseif ($runReasons.Count -eq 0 -and "bc-json" -in $formats) {
-            $reportPath = Resolve-CoverageReportPath -StatusPath $StatusPath -OutputDirectory $outputDirectory
-            if ([string]::IsNullOrWhiteSpace($reportPath)) {
-                $runReasons += "The bc-json report is missing."
-            }
-            else {
-                $reportResult = Read-BcCoverageReport -Path $reportPath -Model $model `
-                    -RequestedMode $model.Mode -RepositoryRoot $RepositoryRoot
-                if (-not $reportResult.Valid) {
-                    $runReasons += $reportResult.Reason
-                }
-                else {
-                    $report = $reportResult.Data
-                    if ("$($report.coverageMode)".ToLowerInvariant() -ne $model.Mode) {
-                        $runReasons += "Coverage report mode does not match the status mode."
-                    }
-                    if ($runReasons.Count -eq 0) {
-                        $scope = $reportResult.Scope
-                        $model.ExcludedLineFacts += [int]$scope.ExcludedLineFacts
-                        $assessment = Get-CoverageDiagnosticAssessment -Report $report `
-                            -Scope $scope
-                        $runLineReasons += $assessment.LineReasons
-                        $runNotices += $assessment.Notices
-                        $lineGlobalUnsafe = [bool]$assessment.LineGlobalUnsafe
-                        $lineAffectedSources = @($assessment.LineAffectedSources)
-                    }
-                }
-            }
-        }
-        else {
-            $runReasons += "No bc-json report was requested."
         }
 
         $runLineComplete = $projectReasons.Count -eq 0 -and $runReasons.Count -eq 0 -and
@@ -695,8 +535,6 @@ function Get-ProjectCoverageModelFromStatus {
             AppId = $appId
             AppName = $appName
             State = $state
-            OutputDirectory = $outputDirectory
-            ReportPath = $reportPath
             LineComplete = $runLineComplete
             Reasons = @($runReasons)
             LineReasons = @($runLineReasons | Select-Object -Unique)
@@ -743,7 +581,6 @@ function Get-ProjectCoverageModelFromStatus {
             }
         }
     }
-    $model.Complete = $model.LineComplete
     return $model
 }
 
@@ -754,8 +591,7 @@ function Get-ProjectCoverageModel {
     #>
     Param(
         [string] $CoveragePath,
-        [string] $Project = ".",
-        [AllowEmptyString()][string] $RepositoryRoot = ""
+        [string] $Project = "."
     )
 
     $statusFiles = @(Get-CoverageStatusFiles -CoveragePath $CoveragePath)
@@ -769,15 +605,17 @@ function Get-ProjectCoverageModel {
         }
         return $model
     }
-    return Get-ProjectCoverageModelFromStatus -StatusPath $statusFiles[0] -RepositoryRoot $RepositoryRoot
+    return Get-ProjectCoverageModelFromStatus -StatusPath $statusFiles[0]
 }
 
 function Get-ExpectedCoverageDimensions {
     Param([string] $BuildOrderJson)
 
     try {
-        $buildOrder = $BuildOrderJson | ConvertFrom-Json | ConvertTo-CoverageHashtable
-        $entries = @($buildOrder)
+        $buildOrderWrapper = "{`"entries`":$BuildOrderJson}" |
+            ConvertFrom-Json |
+            ConvertTo-HashTable -recurse
+        $entries = @(Get-CoverageArray $buildOrderWrapper.entries)
         if ($entries.Count -eq 0) {
             throw "Missing build dimensions."
         }
@@ -871,12 +709,10 @@ function Get-RepositoryCoverageModel {
     #>
     Param(
         [string] $CoveragePath,
-        [string] $BuildOrderJson,
-        [string] $RepositoryRoot
+        [string] $BuildOrderJson
     )
 
     $repositoryModel = @{
-        Complete = $false
         Reasons = @()
         LineComplete = $false
         LineReasons = @()
@@ -884,7 +720,6 @@ function Get-RepositoryCoverageModel {
         Projects = @()
         Apps = @()
         Lines = @{}
-        Mode = ""
         ExcludedLineFacts = 0
     }
     $expectedResult = Get-ExpectedCoverageDimensions -BuildOrderJson $BuildOrderJson
@@ -914,8 +749,8 @@ function Get-RepositoryCoverageModel {
     $projectModels = @()
     $reasons = @()
     foreach ($dimension in $dimensions) {
-        $requiredProperties = @("project", "projectName", "buildMode", "codeCoverageExpected",
-            "codeCoverageRepositorySummary", "codeCoverageFormats")
+        $requiredProperties = @("project", "projectName", "buildMode",
+            "codeCoverageRepositorySummary")
         $missingProperty = $false
         foreach ($property in $requiredProperties) {
             if ($dimension -isnot [System.Collections.IDictionary] -or -not $dimension.Contains($property)) {
@@ -953,7 +788,7 @@ function Get-RepositoryCoverageModel {
         }
 
         $projectModel = Get-ProjectCoverageModelFromStatus -StatusPath $statusMatches[0].Path `
-            -ExpectedDimension $dimension -RepositoryRoot $RepositoryRoot
+            -ExpectedDimension $dimension
         $projectModels += $projectModel
         foreach ($reason in $projectModel.Reasons) {
             $reasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
@@ -984,7 +819,6 @@ function Get-RepositoryCoverageModel {
         }
     }
     $repositoryModel.LineComplete = $repositoryModel.LineReasons.Count -eq 0
-    $repositoryModel.Complete = $repositoryModel.LineComplete
     return $repositoryModel
 }
 
@@ -1110,9 +944,9 @@ function Add-CoverageOverviewMarkdown {
         [hashtable] $Model
     )
 
-    if (-not $Model.Complete) {
+    if (-not $Model.LineComplete) {
         [void]$Builder.AppendLine("> [!WARNING]")
-        [void]$Builder.AppendLine("> Coverage data is incomplete. Available metrics are shown only when they can be calculated safely. See the action logs for details. Raw CodeCoverage reports are retained only for debug reruns.")
+        [void]$Builder.AppendLine("> Coverage data is incomplete. Available metrics are shown only when they can be calculated safely. See the action logs and retained coverage artifacts for details.")
         [void]$Builder.AppendLine()
     }
     if ($Model.LineComplete) {
@@ -1121,7 +955,7 @@ function Add-CoverageOverviewMarkdown {
             -DenominatorName "executable lines" -UncoveredName "uncovered"
     }
     else {
-        [void]$Builder.AppendLine("**Line coverage:** unavailable (coverage data is incomplete or could not be evaluated safely; see the action logs for details; raw CodeCoverage reports are retained only for debug reruns)")
+        [void]$Builder.AppendLine("**Line coverage:** unavailable (coverage data is incomplete or could not be evaluated safely; see the action logs and retained coverage artifacts for details)")
         [void]$Builder.AppendLine()
     }
 }
@@ -1247,7 +1081,7 @@ function New-RepositoryCoverageSummary {
     [void]$builder.AppendLine("| Project | Build mode | Status | Line rate |")
     [void]$builder.AppendLine("| :-- | :-- | :-- | --: |")
     foreach ($projectModel in @($Model.Projects)) {
-        $status = if ($projectModel.Complete) {
+        $status = if ($projectModel.LineComplete) {
             "complete"
         }
         else {
@@ -1281,9 +1115,8 @@ function New-RepositoryCoverageSummary {
     return Limit-CoverageSummary -Summary $builder.ToString()
 }
 
-Export-ModuleMember -Function ConvertTo-CoverageHashtable, ConvertTo-SafeCoverageText,
-    Limit-CoverageSummary, Test-CodeCoverageSummaryRequested, Read-BcCoverageReport,
-    Get-CoverageDiagnosticAssessment,
+Export-ModuleMember -Function ConvertTo-SafeCoverageText,
+    Limit-CoverageSummary, Test-CodeCoverageSummaryRequested,
     Get-ProjectCoverageModel, Get-RepositoryCoverageModel,
-    Resolve-RepositoryCoverageSource, Resolve-CoverageObjectAttribution,
+    Resolve-CoverageObjectAttribution,
     Get-CoverageMetrics, New-ProjectCoverageSummary, New-RepositoryCoverageSummary

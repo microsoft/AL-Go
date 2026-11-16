@@ -13,13 +13,13 @@ Describe "Get-ProjectsToBuild" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 
-    It 'Adds consumed code coverage metadata to build dimensions for summary scope <Summary>' -TestCases @(
-        @{ Summary = 'none'; ExpectedRepositorySummary = $false; GenerateCobertura = $true; ExpectedFormats = @('bc-json', 'cobertura') }
-        @{ Summary = 'project'; ExpectedRepositorySummary = $false; GenerateCobertura = $true; ExpectedFormats = @('bc-json', 'cobertura') }
-        @{ Summary = 'repository'; ExpectedRepositorySummary = $true; GenerateCobertura = $false; ExpectedFormats = @('bc-json') }
-        @{ Summary = 'both'; ExpectedRepositorySummary = $true; GenerateCobertura = $true; ExpectedFormats = @('bc-json', 'cobertura') }
+    It 'Adds only repository coverage participation to build dimensions for summary scope <Summary>' -TestCases @(
+        @{ Summary = 'none'; ExpectedRepositorySummary = $false }
+        @{ Summary = 'project'; ExpectedRepositorySummary = $false }
+        @{ Summary = 'repository'; ExpectedRepositorySummary = $true }
+        @{ Summary = 'both'; ExpectedRepositorySummary = $true }
     ) {
-        param($Summary, $ExpectedRepositorySummary, $GenerateCobertura, $ExpectedFormats)
+        param($Summary, $ExpectedRepositorySummary)
 
         $coverageDimensionSettings = @{
             githubRunner          = 'windows-latest'
@@ -27,12 +27,12 @@ Describe "Get-ProjectsToBuild" {
             buildModes            = @('Default')
             projectName           = 'Coverage Project'
             doNotRunTests         = $false
+            doNotBuildTests       = $false
             doNotPublishApps      = $false
             additionalCountries   = @()
             useSeparateTestAction = @{
                 enabled                       = $true
                 codeCoverageEnabled           = $true
-                codeCoverageGenerateCobertura = $GenerateCobertura
                 codeCoverageSummary           = $Summary
             }
         }
@@ -47,25 +47,32 @@ Describe "Get-ProjectsToBuild" {
             })
 
         $dimensions.Count | Should -Be 1
-        $dimensions[0].codeCoverageExpected | Should -BeTrue
         $dimensions[0].codeCoverageRepositorySummary | Should -Be $ExpectedRepositorySummary
+        $dimensions[0].ContainsKey('codeCoverageExpected') | Should -BeFalse
         $dimensions[0].ContainsKey('codeCoverageMode') | Should -BeFalse
-        $dimensions[0].codeCoverageFormats | Should -Be $ExpectedFormats
+        $dimensions[0].ContainsKey('codeCoverageFormats') | Should -BeFalse
     }
 
-    It 'Does not expect coverage when separate execution cannot collect it' {
+    It 'Does not request repository coverage when separate execution is blocked by <Case>' -TestCases @(
+        @{ Case = 'disabled normal tests'; DoNotRunTests = $true }
+        @{ Case = 'disabled test builds'; DoNotBuildTests = $true }
+        @{ Case = 'disabled app publication'; DoNotPublishApps = $true }
+        @{ Case = 'additional countries'; AdditionalCountries = @('dk') }
+    ) {
+        param($DoNotRunTests, $DoNotBuildTests, $DoNotPublishApps, $AdditionalCountries)
+
         $coverageDimensionSettings = @{
             githubRunner          = 'windows-latest'
             githubRunnerShell     = 'powershell'
             buildModes            = @('Default')
             projectName           = 'Coverage Project'
-            doNotRunTests         = $false
-            doNotPublishApps      = $false
-            additionalCountries   = @('dk')
+            doNotRunTests         = [bool]$DoNotRunTests
+            doNotBuildTests       = [bool]$DoNotBuildTests
+            doNotPublishApps      = [bool]$DoNotPublishApps
+            additionalCountries   = @($AdditionalCountries)
             useSeparateTestAction = @{
                 enabled                       = $true
                 codeCoverageEnabled           = $true
-                codeCoverageGenerateCobertura = $false
                 codeCoverageSummary           = 'both'
             }
         }
@@ -79,8 +86,9 @@ Describe "Get-ProjectsToBuild" {
                 CreateBuildDimensions -projects @('CoverageProject') -baseFolder $BaseFolder
             })[0]
 
-        $dimension.codeCoverageExpected | Should -BeFalse
         $dimension.codeCoverageRepositorySummary | Should -BeFalse
+        $dimension.ContainsKey('codeCoverageExpected') | Should -BeFalse
+        $dimension.ContainsKey('codeCoverageFormats') | Should -BeFalse
     }
 
     It 'loads a single project in the root folder' {

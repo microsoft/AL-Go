@@ -67,14 +67,14 @@ if ($scope -eq "project") {
     }
     if ($writeSummary) {
         $model = Get-ProjectCoverageModel -CoveragePath $resolvedCoveragePath `
-            -Project $project -RepositoryRoot $workspace
+            -Project $project
         Write-CoverageAnalysisDetails -Model $model
         $summary = New-ProjectCoverageSummary -Model $model
     }
 }
 else {
     $model = Get-RepositoryCoverageModel -CoveragePath $resolvedCoveragePath `
-        -BuildOrderJson $buildOrderJson -RepositoryRoot $workspace
+        -BuildOrderJson $buildOrderJson
     Write-CoverageAnalysisDetails -Model $model
     $summary = New-RepositoryCoverageSummary -Model $model
 }

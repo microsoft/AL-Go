@@ -1,6 +1,42 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 <#
+.SYNOPSIS
+    Gets static reasons that prevent tests from running in the separate RunTests action.
+.PARAMETER settings
+    The analyzed AL-Go settings.
+.PARAMETER additionalCountries
+    Additional countries configured for the build.
+.OUTPUTS
+    An ordered array of deterministic ineligibility reasons.
+#>
+function Get-SeparateTestActionIneligibilityReasons {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $settings,
+        [AllowNull()]
+        [AllowEmptyCollection()]
+        [AllowEmptyString()]
+        [string[]] $additionalCountries
+    )
+
+    $reasons = @()
+    if ($settings.doNotRunTests) {
+        $reasons += "doNotRunTests is enabled"
+    }
+    if ($settings.doNotBuildTests) {
+        $reasons += "doNotBuildTests is enabled"
+    }
+    if ($settings.doNotPublishApps) {
+        $reasons += "doNotPublishApps is enabled"
+    }
+    if (@($additionalCountries | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
+        $reasons += "additionalCountries is configured"
+    }
+    return @($reasons)
+}
+
+<#
     .Synopsis
         Gets the modified files in a GitHub pull request.
 #>
@@ -100,7 +136,6 @@ function ShouldBuildProject {
     Each build dimension is a hashtable with the following keys:
     - project: The name of the AL-Go project
     - buildMode: The build mode to use for the project
-    - codeCoverageExpected: Whether this dimension is expected to produce coverage artifacts
     - codeCoverageRepositorySummary: Whether this dimension participates in repository coverage analysis
 #>
 function CreateBuildDimensions {
@@ -126,17 +161,14 @@ function CreateBuildDimensions {
         foreach($buildMode in $buildModes) {
             $buildModeSettings = ReadSettings -project $project -baseFolder $baseFolder -buildMode $buildMode
             $separateTestSettings = $buildModeSettings.useSeparateTestAction
-            $codeCoverageExpected = [bool]$separateTestSettings.enabled -and
+            $separateTestActionIneligibilityReasons = @(
+                Get-SeparateTestActionIneligibilityReasons -settings $buildModeSettings `
+                    -additionalCountries @($buildModeSettings.additionalCountries)
+            )
+            $codeCoverageRepositorySummary = [bool]$separateTestSettings.enabled -and
                 [bool]$separateTestSettings.codeCoverageEnabled -and
-                -not [bool]$buildModeSettings.doNotRunTests -and
-                -not [bool]$buildModeSettings.doNotPublishApps -and
-                @($buildModeSettings.additionalCountries).Count -eq 0
-            $codeCoverageRepositorySummary = $codeCoverageExpected -and
+                $separateTestActionIneligibilityReasons.Count -eq 0 -and
                 "$($separateTestSettings.codeCoverageSummary)" -in @("repository", "both")
-            $codeCoverageFormats = @("bc-json")
-            if ([bool]$separateTestSettings.codeCoverageGenerateCobertura) {
-                $codeCoverageFormats += "cobertura"
-            }
 
             $buildDimensions += @{
                 project                       = $project
@@ -144,9 +176,7 @@ function CreateBuildDimensions {
                 buildMode                     = $buildMode
                 gitHubRunner                  = $gitHubRunner
                 githubRunnerShell             = $githubRunnerShell
-                codeCoverageExpected          = $codeCoverageExpected
                 codeCoverageRepositorySummary = $codeCoverageRepositorySummary
-                codeCoverageFormats           = @($codeCoverageFormats)
             }
         }
     }
@@ -174,7 +204,6 @@ function CreateBuildDimensions {
         - buildDimensions: An array of build dimensions, to be used in a build matrix. Properties of the build dimension are:
             - project: The project to build
             - buildMode: The build mode to use
-            - codeCoverageExpected: Whether coverage artifacts are expected
             - codeCoverageRepositorySummary: Whether repository coverage analysis is requested
 #>
 function Get-ProjectsToBuild {

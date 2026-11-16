@@ -98,52 +98,6 @@ function Set-RunPipelineContainerPlatformVersion {
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerPlatformVersionReason=$containerPlatformVersionReason"
 }
 
-function Get-SeparateTestActionIneligibilityReasons {
-    <#
-    .SYNOPSIS
-        Gets the reasons normal tests must remain in RunPipeline.
-    .DESCRIPTION
-        Returns deterministic reasons that prevent normal tests from being deferred to the separate
-        RunTests action. The final Run-AlPipeline parameters are inspected so custom and generated
-        ImportTestDataInBcContainer callbacks are handled consistently.
-    .PARAMETER settings
-        The analyzed AL-Go settings.
-    .PARAMETER additionalCountries
-        Additional countries configured for the build.
-    .PARAMETER runAlPipelineParams
-        The final Run-AlPipeline parameter hashtable.
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [hashtable] $settings,
-        [AllowNull()]
-        [AllowEmptyCollection()]
-        [AllowEmptyString()]
-        [string[]] $additionalCountries,
-        [Parameter(Mandatory = $true)]
-        [hashtable] $runAlPipelineParams
-    )
-
-    $reasons = @()
-    if ($settings.doNotRunTests) {
-        $reasons += "doNotRunTests is enabled"
-    }
-    if ($settings.doNotBuildTests) {
-        $reasons += "doNotBuildTests is enabled"
-    }
-    if ($settings.doNotPublishApps) {
-        $reasons += "doNotPublishApps is enabled"
-    }
-    if (@($additionalCountries | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
-        $reasons += "additionalCountries is configured"
-    }
-    if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
-        $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
-        $reasons += "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
-    }
-    return @($reasons)
-}
-
 $containerBaseFolder = $null
 $projectPath = $null
 
@@ -603,8 +557,12 @@ try {
     # yet be reproduced after the build.
     $separateTestActionIneligibilityReasons = @(Get-SeparateTestActionIneligibilityReasons `
         -settings $settings `
-        -additionalCountries @($additionalCountries) `
-        -runAlPipelineParams $runAlPipelineParams)
+        -additionalCountries @($additionalCountries))
+    if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
+        $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
+        $separateTestActionIneligibilityReasons +=
+            "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
+    }
     $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and $separateTestActionIneligibilityReasons.Count -eq 0
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "runTestsInSeparateAction=$runTestsInSeparateAction"
 
