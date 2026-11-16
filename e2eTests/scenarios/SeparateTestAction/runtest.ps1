@@ -94,7 +94,7 @@ $repoPath = ""
 $expectedTestCaseName = "SeparateTestActionE2E"
 $scenarioError = $null
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 if (Test-E2ERepositoryExists -repository $repository) {
     throw "Refusing to use existing repository $repository for the E2E scenario."
 }

@@ -5,6 +5,7 @@ $defaultApplication = "27.0.0.0"
 $defaultRuntime = "16.0"
 $defaultPublisher = "MS Test"
 $lastTokenRefresh = 0
+$ghTokenWorkflow = ""
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking -Global
 . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
@@ -13,6 +14,12 @@ function GetDefaultPublisher() {
     return $defaultPublisher
 }
 
+<#
+.SYNOPSIS
+Initializes E2E authentication and the default repository.
+.PARAMETER ghTokenWorkflow
+Credential to provision in test repositories before their first workflow runs.
+#>
 function SetTokenAndRepository {
     Param(
         [string] $githubOwner,
@@ -20,13 +27,18 @@ function SetTokenAndRepository {
         [string] $appId,
         [string] $appKey,
         [string] $repository,
+        [string] $ghTokenWorkflow,
         [switch] $github
     )
 
     $script:githubOwner = $githubOwner
     $script:defaultRepository = $repository
+    $script:ghTokenWorkflow = $ghTokenWorkflow.Replace("`r", '').Replace("`n", '')
 
     if ($github) {
+        if ($script:ghTokenWorkflow) {
+            Write-Host "::add-mask::$($script:ghTokenWorkflow)"
+        }
         invoke-git config --global user.email "$githubOwner@users.noreply.github.com"
         invoke-git config --global user.name "$githubOwner"
         invoke-git config --global hub.protocol https
@@ -348,6 +360,9 @@ function SetRepositorySecret {
     Write-Host -ForegroundColor Yellow "`nSet Secret $name in $repository"
     $value = $value.Replace("`r", '').Replace("`n", '')
     gh secret set $name -b $value --repo $repository
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to set secret $name in $repository."
+    }
 }
 
 function CreateNewAppInFolder {
@@ -414,7 +429,7 @@ function CreateAlGoRepository {
         [string[]] $projects = @(),
         [string] $contentPath,
         [scriptBlock] $contentScript,
-        [switch] $private,
+        [switch] $private = $true,
         [switch] $linux,
         [string] $branch = "main",
         [hashtable] $addRepoSettings = @{}
@@ -422,6 +437,9 @@ function CreateAlGoRepository {
 
     if (!$repository) {
         $repository = $defaultRepository
+    }
+    if (-not $script:ghTokenWorkflow) {
+        throw "ALGOAUTHAPP is required to initialize workflow authentication in $repository."
     }
     $waitMinutes = 0
     if ($github) {
@@ -461,16 +479,26 @@ function CreateAlGoRepository {
     Start-Sleep -seconds 10
     Set-Location '*'
 
-    $templateUrl = "$templateRepo/archive/refs/heads/$templateBranch.zip"
+    $templateRepository = ([Uri]$templateRepo).AbsolutePath.Trim('/')
+    $templateUrl = "https://api.github.com/repos/$templateRepository/zipball/$([Uri]::EscapeDataString($templateBranch))"
     Write-Host "Downloading template from $templateUrl"
     $zipFileName = Join-Path $tempPath "$([GUID]::NewGuid().ToString()).zip"
-    [System.Net.WebClient]::new().DownloadFile($templateUrl, $zipFileName)
-
     $tempRepoPath = Join-Path $tempPath ([GUID]::NewGuid().ToString())
-    Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
-    Copy-Item (Join-Path (Get-Item "$tempRepoPath/*/$templateFolder").FullName '*') -Destination . -Recurse -Force
-    Remove-Item -Path $tempRepoPath -Force -Recurse
-    Remove-Item -Path $zipFileName -Force
+    try {
+        RefreshToken -repository $repository
+        $headers = GetHeaders -token $ENV:GH_TOKEN -repository $templateRepository
+        InvokeWebRequest -Headers $headers -Uri $templateUrl -OutFile $zipFileName
+        Expand-Archive -Path $zipFileName -DestinationPath $tempRepoPath
+        Copy-Item (Join-Path (Get-Item "$tempRepoPath/*/$templateFolder").FullName '*') -Destination . -Recurse -Force
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempRepoPath) {
+            Remove-Item -LiteralPath $tempRepoPath -Force -Recurse
+        }
+        if (Test-Path -LiteralPath $zipFileName) {
+            Remove-Item -LiteralPath $zipFileName -Force
+        }
+    }
     if ($templateFolder) {
         # This is a direct AL-Go development repository
         # Replace URL's + references to microsoft/AL-Go-Actions with $templateOwner/AL-Go/Actions
@@ -547,6 +575,15 @@ function CreateAlGoRepository {
     }
 
     RefreshToken -repository $repository
+
+    $settings = Get-Content $repoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -recurse
+    $secretName = 'GHTOKENWORKFLOW'
+    if ($settings.ContainsKey('ghTokenWorkflowSecretName')) {
+        $secretName = $settings.ghTokenWorkflowSecretName
+    }
+    if ($secretName) {
+        SetRepositorySecret -repository $repository -name $secretName -value $script:ghTokenWorkflow
+    }
 
     invoke-git -silent add *
     invoke-git -silent commit --allow-empty -m 'init'

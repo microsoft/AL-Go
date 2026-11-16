@@ -12,7 +12,7 @@ Param(
     [string] $adminCenterApiCredentials = ($global:SecureadminCenterApiCredentials | Get-PlainText),
     [switch] $multiProject,
     [switch] $appSourceApp,
-    [switch] $private,
+    [switch] $private = $true,
     [switch] $linux,
     [switch] $useCompilerFolder
 )
@@ -103,7 +103,7 @@ else {
 $template = "https://github.com/$template"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 
 # Create repo
 # Set DoNotPublishApps to true until we have test apps and set useCompilerFolder

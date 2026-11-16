@@ -125,6 +125,10 @@ In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end
   - SpecialCharacters - testing that various settings (+ publisher name and app name) can contain special national characters
   - and more...
 
+E2E setup creates private temporary template repositories, and test fixtures default to private repositories. The existing public/private matrix jobs and `includePrivateRepos` input remain separate, but both use private repositories by default. Normal AL-Go publication is unchanged.
+
+Template archives are downloaded through the authenticated GitHub API using the E2E identity. Each test repository receives the `ALGOAUTHAPP` credential as its workflow-token secret before the first push, so its initial CI/CD run can check for updates from private templates. Configured `ghTokenWorkflowSecretName` overrides are honored.
+
 In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
 
 - You need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
@@ -147,13 +151,16 @@ In your personal fork, you can now run the end to end tests, if the following pr
 
 - You need the following secrets:
 
-  - **ALGOAUTHAPP** needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_.
+  - **ALGOAUTHAPP** needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_. This App must also be installed on all repositories in the test organization, including the private temporary templates. It can be a different App from `E2E_APP_ID`.
   - **AdminCenterApiCredentials** needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
   - **E2E_PRIVATE_KEY** a private key for the GitHub app installed on the GitHub organization used for testing
   - **E2EAZURECREDENTIALS** a federated credential set up as described [here](secrets.md#federated-credential)
   - **E2E_GHPACKAGESPAT** a classic PAT with the following permissions: write:packages, delete:packages
 
 Run the End to end tests by running the *End to end tests* workflow and specify your organization in the corresponding field.
+
+Private test repositories require Actions capacity and organization policies that allow the tested features, including GitHub Pages and Copilot review. The package token must have access to packages associated with private fixtures. The ReferenceDocumentation scenario expects to read the deployed Pages site without an interactive sign-in; repository visibility and Pages site access are separate settings. Authentication does not bypass repository-creation or release-review policies.
+
 End to end testing will create a lot of repositories called tmpXYZ, where XYZ is a random letter combination. If End to end tests are failing, the tmp repositories are NOT removed, but can be used for troubleshooting.
 You can run the *Cleanup after failed E2E* workflow to cleanup these repositories.
 

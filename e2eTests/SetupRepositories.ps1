@@ -23,12 +23,19 @@ $config = [ordered]@{
     "defaultBcContainerHelperVersion" = $bcContainerHelperVersion
 }
 
-. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -DirectCommit $true
+. (Join-Path $PSScriptRoot "..\Internal\Deploy.ps1") -config $config -DirectCommit $true -private
 
-# Disable GitHub Actions on the PTE/AppSource/Actions repositories to prevent workflows from running
-foreach ($repo in @($actionsRepo, $perTenantExtensionRepo, $appSourceAppRepo)) {
+# Non-Microsoft deployments use the source AL-Go actions instead of a separate Actions repository.
+$repositories = @($perTenantExtensionRepo, $appSourceAppRepo)
+if ($githubOwner -eq 'microsoft') {
+    $repositories += $actionsRepo
+}
+foreach ($repo in $repositories) {
     Write-Host "Disabling GitHub Actions for $githubOwner/$repo"
     gh api --method PUT /repos/$githubOwner/$repo/actions/permissions -F enabled=false
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to disable GitHub Actions for $githubOwner/$repo."
+    }
 }
 
 Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "actionsRepo=$actionsRepo"

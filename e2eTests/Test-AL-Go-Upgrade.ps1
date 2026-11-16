@@ -12,7 +12,7 @@ Param(
     [string] $release = "v2.2",
     [string] $template = $global:pteTemplate,
     [switch] $appSourceApp,
-    [switch] $private
+    [switch] $private = $true
 )
 
 Write-Host -ForegroundColor Yellow @'
@@ -62,7 +62,7 @@ else {
 $template = "https://github.com/$template"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 
 # Create repo
 CreateAlGoRepository -github:$github -template "$($orgTemplate)@$($release)" -contentPath (Join-Path $PSScriptRoot $contentPath) -branch $branch -private:$private
