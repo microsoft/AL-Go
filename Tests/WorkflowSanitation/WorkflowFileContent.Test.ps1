@@ -34,6 +34,63 @@ Describe "PreGateCheck in PullRequestHandler should use runs-on: windows-latest"
     }
 }
 
+Describe "Draft pull request builds" {
+    It 'Only skips draft PRs when opted in for <Template> with <Trigger>' -TestCases @(
+        @{ Template = 'Per Tenant Extension'; Trigger = 'pull_request' }
+        @{ Template = 'AppSource App'; Trigger = 'pull_request' }
+        @{ Template = 'Per Tenant Extension'; Trigger = 'pull_request_target' }
+        @{ Template = 'AppSource App'; Trigger = 'pull_request_target' }
+    ) {
+        param($Template, $Trigger)
+        . (Join-Path $PSScriptRoot '..\..\Actions\CheckForUpdates\yamlclass.ps1')
+        . (Join-Path $PSScriptRoot '..\..\Actions\CheckForUpdates\CheckForUpdates.HelperFunctions.ps1')
+        foreach ($depth in @(0, 1, 3)) {
+            foreach ($enabled in @($null, $false, $true)) {
+                $yaml = [Yaml]::Load((Join-Path $PSScriptRoot "..\..\Templates\$Template\.github\workflows\PullRequestHandler.yaml"))
+                if ($depth -gt 0) {
+                    ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP $false
+                }
+                $originalConditions = @{}
+                foreach ($job in $yaml.GetNextLevel('jobs:/')) {
+                    $originalConditions[$job] = $yaml.GetProperty("jobs:/$job/if:")
+                }
+                $settings = @{
+                    pullRequestTrigger = $Trigger
+                    CICDPullRequestBranches = @('main')
+                }
+                if ($null -ne $enabled) { $settings.skipDraftPullRequests = $enabled }
+                ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $settings
+                $yaml.Get('on:/merge_group:') | Should -Not -BeNullOrEmpty
+                if ($enabled) {
+                    $yaml.GetPropertyArray("on:/${Trigger}:/types:") | Should -Be @('opened', 'reopened', 'synchronize', 'ready_for_review')
+                }
+                else {
+                    $yaml.Get("on:/${Trigger}:/types:") | Should -BeNullOrEmpty
+                }
+                foreach ($job in $yaml.GetNextLevel('jobs:/')) {
+                    $condition = $yaml.GetProperty("jobs:/$job/if:")
+                    if ($enabled -and $job -ne 'PregateCheck:') {
+                        $condition | Should -Be "(github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($($originalConditions[$job]))"
+                    }
+                    else {
+                        $condition | Should -Be $originalConditions[$job]
+                    }
+                }
+            }
+        }
+    }
+
+    It 'Does not add a draft guard to generated CI/CD builds' {
+        . (Join-Path $PSScriptRoot '..\..\Actions\CheckForUpdates\yamlclass.ps1')
+        . (Join-Path $PSScriptRoot '..\..\Actions\CheckForUpdates\CheckForUpdates.HelperFunctions.ps1')
+        $yaml = [Yaml]::Load((Join-Path $PSScriptRoot '..\..\Templates\Per Tenant Extension\.github\workflows\CICD.yaml'))
+        ModifyBuildWorkflows -yaml $yaml -depth 3 -includeBuildPP $false
+        foreach ($job in @('Build1', 'Build2', 'Build')) {
+            $yaml.GetProperty("jobs:/${job}:/if:") | Should -Not -Match 'pull_request\.draft'
+        }
+    }
+}
+
 Describe "GitHub event payload should not be used in code" {
     It 'Check for GitHub event payload in code' {
         Push-Location (Join-Path $PSScriptRoot "..\..")

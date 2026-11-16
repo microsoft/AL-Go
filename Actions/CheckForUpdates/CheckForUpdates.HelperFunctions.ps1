@@ -151,6 +151,16 @@ function ModifyPullRequestHandlerWorkflow {
 
     # update the branches: line with the new branches
     $yaml.Replace("on:/$($repoSettings.pullRequestTrigger):/branches:", "branches: [ '$($CICDPullRequestBranches -join "', '")' ]")
+
+    if ($repoSettings.ContainsKey('skipDraftPullRequests') -and $repoSettings.skipDraftPullRequests) {
+        $yaml.Add("on:/$($repoSettings.pullRequestTrigger):/", 'types: [ opened, reopened, synchronize, ready_for_review ]')
+        # Only AL-Go jobs are present here; custom jobs are appended afterwards and remain user-managed.
+        # Preserve fork validation even when draft build jobs are skipped.
+        foreach ($job in $yaml.GetNextLevel('jobs:/') | Where-Object { $_ -ne 'PregateCheck:' }) {
+            $condition = $yaml.GetProperty("jobs:/$job/if:")
+            $yaml.Replace("jobs:/$job/if:", "if: (github.event_name == 'merge_group' || github.event.pull_request.draft == false) && ($condition)")
+        }
+    }
 }
 
 <#
@@ -616,10 +626,6 @@ function GetWorkflowContentWithChangesFromSettings {
         ModifyCICDWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
-    if ($baseName -eq "PullRequestHandler") {
-        ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
-    }
-
     if (
         $repoSettings.Keys -contains 'CodeReviewAgent' -and
         $repoSettings.CodeReviewAgent -is [System.Collections.IDictionary] -and
@@ -657,6 +663,10 @@ function GetWorkflowContentWithChangesFromSettings {
     if ($baseName -eq 'PullRequestHandler' -or $baseName -eq 'CICD' -or $baseName -eq 'Current' -or $baseName -eq 'NextMinor' -or $baseName -eq 'NextMajor') {
         $includeBuildPP = $repoSettings.type -eq 'PTE' -and $repoSettings.powerPlatformSolutionFolder -ne ''
         ModifyBuildWorkflows -yaml $yaml -depth $depth -includeBuildPP $includeBuildPP
+    }
+
+    if ($baseName -eq "PullRequestHandler") {
+        ModifyPullRequestHandlerWorkflow -yaml $yaml -repoSettings $repoSettings
     }
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {

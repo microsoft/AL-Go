@@ -960,7 +960,9 @@ function CheckBuildJobsInWorkflowRun {
     while($true) {
         $jobsURI = "$api_url/repos/$repository/actions/runs/$workflowRunId/jobs?per_page=$per_page&page=$page"
         Write-Host "- $jobsURI"
-        $workflowJobs = (InvokeWebRequest -Headers $headers -Uri $jobsURI).Content | ConvertFrom-Json
+        $workflowJobs = (Invoke-CommandWithRetry -RetryCount 3 -FirstDelay 5 -ScriptBlock {
+            InvokeWebRequest -Headers $headers -Uri $jobsURI
+        }).Content | ConvertFrom-Json
 
         if($workflowJobs.jobs.Count -eq 0) {
             # No more jobs, breaking out of the loop
@@ -1020,7 +1022,9 @@ function FindLatestSuccessfulCICDRun {
         while($true) {
             $runsURI = "$api_url/repos/$repository/actions/runs?per_page=$per_page&page=$page&exclude_pull_requests=true&status=completed&branch=$encodedBranch&created=$encodedCreated"
             Write-Host "- $runsURI"
-            $response = InvokeWebRequest -Headers $headers -Uri $runsURI
+            $response = Invoke-CommandWithRetry -RetryCount 3 -FirstDelay 5 -ScriptBlock {
+                InvokeWebRequest -Headers $headers -Uri $runsURI
+            }
             $workflowRuns = $response.Content | ConvertFrom-Json
             $CICDRuns = @($workflowRuns.workflow_runs | Where-Object { $_.name.Trim() -eq 'CI/CD' })
             Write-Host "Baseline discovery attempt $attempt/$maxAttempts, page ${page}: $($workflowRuns.workflow_runs.Count) workflow runs, $($CICDRuns.Count) CI/CD runs."
@@ -1118,7 +1122,9 @@ function GetArtifactsFromWorkflowRun {
         $branch = $Script:WorkflowRunBranchCache["$repository/$workflowRun"]
     }
     else {
-        $workflowRunInfo = (InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun").Content | ConvertFrom-Json
+        $workflowRunInfo = (Invoke-CommandWithRetry -RetryCount 3 -FirstDelay 5 -ScriptBlock {
+            InvokeWebRequest -Headers $headers -Uri "$api_url/repos/$repository/actions/runs/$workflowRun"
+        }).Content | ConvertFrom-Json
         $branch = $workflowRunInfo.head_branch
         $branch = $branch.Replace('\', '_').Replace('/', '_')
         $Script:WorkflowRunBranchCache["$repository/$workflowRun"] = $branch
@@ -1128,7 +1134,9 @@ function GetArtifactsFromWorkflowRun {
     # Get the artifacts from the the workflow run
     while($true) {
         $artifactsURI = "$api_url/repos/$repository/actions/runs/$workflowRun/artifacts?per_page=$per_page&page=$page"
-        $artifacts = (InvokeWebRequest -Headers $headers -Uri $artifactsURI).Content | ConvertFrom-Json
+        $artifacts = (Invoke-CommandWithRetry -RetryCount 3 -FirstDelay 5 -ScriptBlock {
+            InvokeWebRequest -Headers $headers -Uri $artifactsURI
+        }).Content | ConvertFrom-Json
 
         if($artifacts.artifacts.Count -eq 0) {
             Write-Host "No more artifacts found for workflow run $workflowRun"
@@ -1264,7 +1272,9 @@ function GetArtifacts {
         }
         $uri = "$api_url/repos/$repository/actions/artifacts?per_page=$($per_page)&page=$($page_no)"
         Write-Host $uri
-        $artifacts = (InvokeWebRequest -Headers $headers -Uri $uri).Content | ConvertFrom-Json
+        $artifacts = (Invoke-CommandWithRetry -RetryCount 3 -FirstDelay 5 -ScriptBlock {
+            InvokeWebRequest -Headers $headers -Uri $uri
+        }).Content | ConvertFrom-Json
         # If no artifacts are read, we are done
         if ($artifacts.artifacts.Count -eq 0) {
             break

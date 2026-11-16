@@ -42,6 +42,24 @@
 
    ![Success](https://github.com/user-attachments/assets/47a6f189-5322-4539-bc92-d4fcf24cbdcf)
 
+## Disabling individual tests <a id="disabledTests"></a>
+
+To skip specific AL test methods without disabling the entire test run, add either:
+
+- `disabledTests.json` in a test app folder or any of its subfolders. It applies only to that app.
+- `<appId>.disabledTests.json` anywhere under the AL-Go project folder, using the test app's ID from app.json. This also works for installed test apps whose source is not in the project.
+
+Files contain an array of AL codeunit names and method names. `method` can be a string or an array:
+
+```json
+[
+    { "codeunitName": "Sales Tests", "method": "PostInvoice" },
+    { "codeunitName": "Purchase Tests", "method": ["PostOrder", "PostCreditMemo"] }
+]
+```
+
+All matching files are combined. This convention is supported by Run-AlPipeline and the separate RunTests action. Tests are still compiled; only the listed methods are excluded from execution.
+
 ______________________________________________________________________
 
 [back](../README.md)
