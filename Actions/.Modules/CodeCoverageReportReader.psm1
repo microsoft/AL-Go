@@ -1,7 +1,5 @@
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-$script:SupportedCoverageModes = @("all", "line", "procedure")
-
 function Get-CoverageArray {
     Param($Value)
 
@@ -15,8 +13,21 @@ function Get-CoverageArray {
 }
 
 function ConvertTo-CoverageInteger {
+    <#
+    .SYNOPSIS
+        Converts a coverage JSON scalar to an integer.
+    #>
     Param($Value)
 
+    if ($Value -is [Newtonsoft.Json.Linq.JValue]) {
+        if ($Value.Type -eq [Newtonsoft.Json.Linq.JTokenType]::Integer) {
+            return [int]$Value.Value
+        }
+        if ($Value.Type -ne [Newtonsoft.Json.Linq.JTokenType]::String) {
+            throw "Expected an integer."
+        }
+        $Value = [string]$Value.Value
+    }
     $converted = 0
     if ($null -eq $Value -or -not [int]::TryParse("$Value", [ref] $converted)) {
         throw "Expected an integer."
@@ -47,11 +58,6 @@ function ConvertTo-CoverageSourceIdentity {
     return $normalized.ToLowerInvariant()
 }
 
-function Test-CoverageMode {
-    Param([AllowEmptyString()][string] $Mode)
-    return $Mode -in $script:SupportedCoverageModes
-}
-
 function Test-PathInsideRoot {
     Param(
         [string] $Path,
@@ -77,46 +83,6 @@ function Test-PathInsideRoot {
     }
     catch {
         return $false
-    }
-}
-
-function Test-CoveragePathWithoutReparsePoint {
-    Param(
-        [string] $Path,
-        [string] $Root
-    )
-
-    $current = [System.IO.Path]::GetFullPath($Path).TrimEnd(
-        [System.IO.Path]::DirectorySeparatorChar,
-        [System.IO.Path]::AltDirectorySeparatorChar)
-    $rootPath = [System.IO.Path]::GetFullPath($Root).TrimEnd(
-        [System.IO.Path]::DirectorySeparatorChar,
-        [System.IO.Path]::AltDirectorySeparatorChar)
-    $comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
-        [System.StringComparison]::OrdinalIgnoreCase
-    }
-    else {
-        [System.StringComparison]::Ordinal
-    }
-
-    while ($true) {
-        if (-not (Test-Path -LiteralPath $current)) {
-            return $false
-        }
-        $attributes = [System.IO.File]::GetAttributes($current)
-        if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-            return $false
-        }
-        if ($current.Equals($rootPath, $comparison)) {
-            return $true
-        }
-        $parent = [System.IO.Path]::GetDirectoryName($current)
-        if ([string]::IsNullOrWhiteSpace($parent) -or $parent.Equals($current, $comparison)) {
-            return $false
-        }
-        $current = $parent.TrimEnd(
-            [System.IO.Path]::DirectorySeparatorChar,
-            [System.IO.Path]::AltDirectorySeparatorChar)
     }
 }
 
@@ -148,8 +114,7 @@ function Get-NormalizedCoverageSourceRoots {
             $candidate = Join-Path $repositoryPath $relative.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
             if ((Test-Path -LiteralPath $candidate -PathType Container)) {
                 $resolved = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $candidate).ProviderPath)
-                if ((Test-PathInsideRoot -Path $resolved -Root $repositoryPath) -and
-                    (Test-CoveragePathWithoutReparsePoint -Path $resolved -Root $repositoryPath)) {
+                if (Test-PathInsideRoot -Path $resolved -Root $repositoryPath) {
                     $entry.FullPath = $resolved
                     $entry.Valid = $true
                 }
@@ -205,10 +170,6 @@ function Resolve-ExistingCoverageSource {
         -not (Test-PathInsideRoot -Path $resolved -Root $SourceRoot)) {
         return $null
     }
-    if (-not (Test-CoveragePathWithoutReparsePoint -Path $resolved -Root $RepositoryRoot)) {
-        return $null
-    }
-
     $identity = $resolved.Substring($RepositoryRoot.Length).TrimStart(
         [System.IO.Path]::DirectorySeparatorChar,
         [System.IO.Path]::AltDirectorySeparatorChar).Replace('\', '/').ToLowerInvariant()
@@ -232,21 +193,18 @@ function Read-BcCoverageReport {
         [AllowEmptyString()][string] $RepositoryRoot = "",
         [hashtable] $SemanticLineUnion = $null,
         [System.Collections.Generic.List[string]] $SemanticRootOrder = $null,
-        [switch] $MetadataOnly
+        [System.Collections.Generic.Dictionary[string,object]] $SourceMappingCache = $null
     )
 
     $file = Get-Item -LiteralPath $Path
-    $readerType = $null
-    if ($PSVersionTable.PSVersion.Major -ge 7) {
-        $readerType = [type]::GetType("Newtonsoft.Json.JsonTextReader, Newtonsoft.Json", $false)
-        if (-not $readerType) {
-            $readerType = [AppDomain]::CurrentDomain.GetAssemblies() |
-                ForEach-Object { $_.GetType("Newtonsoft.Json.JsonTextReader", $false) } |
-                Where-Object { $_ } |
-                Select-Object -First 1
-        }
+    $readerType = [type]::GetType("Newtonsoft.Json.JsonTextReader, Newtonsoft.Json", $false)
+    if (-not $readerType) {
+        $readerType = [AppDomain]::CurrentDomain.GetAssemblies() |
+            ForEach-Object { $_.GetType("Newtonsoft.Json.JsonTextReader", $false) } |
+            Where-Object { $_ } |
+            Select-Object -First 1
     }
-    $readerName = if ($readerType) { "Newtonsoft.Json" } else { "ConvertFrom-Json" }
+    $readerName = "Newtonsoft.Json"
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $outcome = "failed"
     $extractedLineCount = 0
@@ -260,14 +218,18 @@ function Read-BcCoverageReport {
         LineReasons = @()
         ExcludedLineFacts = 0
     }
-    $sourceCache = [System.Collections.Generic.Dictionary[string,object]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase
-    )
+    $sourceCache = if ($null -ne $SourceMappingCache) {
+        $SourceMappingCache
+    }
+    else {
+        [System.Collections.Generic.Dictionary[string,object]]::new(
+            [System.StringComparer]::OrdinalIgnoreCase
+        )
+    }
     $seenExcludedLines = [System.Collections.Generic.HashSet[string]]::new(
         [System.StringComparer]::Ordinal
     )
-    $collectApplicationLines = -not $MetadataOnly -and
-        $RequestedMode -in @("line", "all") -and $null -ne $Model
+    $collectApplicationLines = $RequestedMode -eq "line" -and $null -ne $Model
     $normalizedRepositoryRoot = ""
     $normalizedSourceRoots = @()
     if (-not [string]::IsNullOrWhiteSpace($RepositoryRoot) -and $null -ne $Model) {
@@ -293,26 +255,23 @@ function Read-BcCoverageReport {
         complete = $null
         diagnostics = @()
     }
-    $requiredRootProperties = if ($MetadataOnly) {
-        @("schemaVersion", "coverageMode", "complete")
-    }
-    else {
-        @(
-            "schemaVersion", "coverageMode", "complete", "diagnostics", "sources",
-            "tests", "procedureEdges", "methods", "lines"
-        )
-    }
+    $requiredRootProperties = @(
+        "schemaVersion", "coverageMode", "complete", "diagnostics", "sources",
+        "tests", "procedureEdges", "methods", "lines"
+    )
     $seenRootProperties = [System.Collections.Generic.HashSet[string]]::new(
         [System.StringComparer]::Ordinal
     )
 
     try {
-        if ($readerType) {
-            $fileStream = $null
-            $textReader = $null
-            $jsonReader = $null
-            try {
-                $fileStream = [System.IO.FileStream]::new(
+        if (-not $readerType) {
+            throw [System.IO.InvalidDataException]::new("reader")
+        }
+        $fileStream = $null
+        $textReader = $null
+        $jsonReader = $null
+        try {
+            $fileStream = [System.IO.FileStream]::new(
                     $file.FullName,
                     [System.IO.FileMode]::Open,
                     [System.IO.FileAccess]::Read,
@@ -333,9 +292,6 @@ function Read-BcCoverageReport {
 
                 $rootComplete = $false
                 while ($jsonReader.Read()) {
-                    if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::Comment) {
-                        throw [System.IO.InvalidDataException]::new("corrupt")
-                    }
                     if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::EndObject -and
                         $jsonReader.Depth -eq 0) {
                         $rootComplete = $true
@@ -348,9 +304,6 @@ function Read-BcCoverageReport {
 
                     $propertyName = "$($jsonReader.Value)"
                     if (-not $jsonReader.Read()) {
-                        throw [System.IO.InvalidDataException]::new("corrupt")
-                    }
-                    if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::Comment) {
                         throw [System.IO.InvalidDataException]::new("corrupt")
                     }
                     if ($propertyName -cnotin $requiredRootProperties) {
@@ -390,9 +343,6 @@ function Read-BcCoverageReport {
                             }
                             $diagnostics = @()
                             while ($jsonReader.Read()) {
-                                if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::Comment) {
-                                    throw [System.IO.InvalidDataException]::new("corrupt")
-                                }
                                 if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::EndArray) {
                                     break
                                 }
@@ -419,9 +369,6 @@ function Read-BcCoverageReport {
                                 throw [System.IO.InvalidDataException]::new("shape")
                             }
                             while ($jsonReader.Read()) {
-                                if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::Comment) {
-                                    throw [System.IO.InvalidDataException]::new("corrupt")
-                                }
                                 if ($jsonReader.TokenType -eq [Newtonsoft.Json.JsonToken]::EndArray) {
                                     break
                                 }
@@ -445,47 +392,18 @@ function Read-BcCoverageReport {
                                     $null -eq $hitCountToken -or
                                     $null -eq $statusToken -or
                                     $null -eq $sourcePathToken -or
-                                    ($objectTypeToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $objectTypeToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    ($objectIdToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $objectIdToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    ($lineNumberToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $lineNumberToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    ($lineTypeToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $lineTypeToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    ($methodIdToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $methodIdToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    ($hitCountToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $hitCountToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    ($statusToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::Integer -and
-                                        $statusToken.Type -ne
-                                        [Newtonsoft.Json.Linq.JTokenType]::String) -or
-                                    $sourcePathToken.Type -in @(
-                                        [Newtonsoft.Json.Linq.JTokenType]::Array,
-                                        [Newtonsoft.Json.Linq.JTokenType]::Object)) {
+                                    $sourcePathToken.Type -ne
+                                    [Newtonsoft.Json.Linq.JTokenType]::String) {
                                     throw [System.IO.InvalidDataException]::new("shape")
                                 }
                                 try {
-                                    $objectType = [int]$objectTypeToken
-                                    $objectId = [int]$objectIdToken
-                                    $lineNumber = [int]$lineNumberToken
-                                    $lineType = [int]$lineTypeToken
-                                    [void][int]$methodIdToken
-                                    $hitCount = [int]$hitCountToken
-                                    [void][int]$statusToken
+                                    $objectType = ConvertTo-CoverageInteger $objectTypeToken
+                                    $objectId = ConvertTo-CoverageInteger $objectIdToken
+                                    $lineNumber = ConvertTo-CoverageInteger $lineNumberToken
+                                    $lineType = ConvertTo-CoverageInteger $lineTypeToken
+                                    [void](ConvertTo-CoverageInteger $methodIdToken)
+                                    $hitCount = ConvertTo-CoverageInteger $hitCountToken
+                                    [void](ConvertTo-CoverageInteger $statusToken)
                                     $sourcePath = [string]$sourcePathToken
                                 }
                                 catch {
@@ -601,185 +519,17 @@ function Read-BcCoverageReport {
                 if (-not $rootComplete -or $jsonReader.Read()) {
                     throw [System.IO.InvalidDataException]::new("corrupt")
                 }
-            }
-            finally {
-                if ($jsonReader) {
-                    $jsonReader.Dispose()
-                }
-                if ($textReader) {
-                    $textReader.Dispose()
-                }
-                if ($fileStream) {
-                    $fileStream.Dispose()
-                }
-            }
         }
-        else {
-            $report = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 |
-                ConvertFrom-Json -ErrorAction Stop
-            if ($report -isnot [System.Management.Automation.PSCustomObject]) {
-                throw [System.IO.InvalidDataException]::new("corrupt")
+        finally {
+            if ($jsonReader) {
+                $jsonReader.Dispose()
             }
-            foreach ($propertyName in $requiredRootProperties) {
-                $properties = @($report.PSObject.Properties | Where-Object {
-                        $_.Name -ceq $propertyName
-                    })
-                if ($properties.Count -ne 1) {
-                    $failureKind = if ($propertyName -eq "schemaVersion") { "schema" }
-                        elseif ($propertyName -eq "coverageMode") { "mode" }
-                        elseif ($propertyName -eq "complete") { "complete" }
-                        else { "shape" }
-                    throw [System.IO.InvalidDataException]::new($failureKind)
-                }
-                $seenRootProperties.Add($propertyName) | Out-Null
+            if ($textReader) {
+                $textReader.Dispose()
             }
-            if ($report.schemaVersion -isnot [string]) {
-                throw [System.IO.InvalidDataException]::new("schema")
+            if ($fileStream) {
+                $fileStream.Dispose()
             }
-            if ($report.coverageMode -isnot [string]) {
-                throw [System.IO.InvalidDataException]::new("mode")
-            }
-            if ($report.complete -isnot [bool]) {
-                throw [System.IO.InvalidDataException]::new("complete")
-            }
-            $reportData.schemaVersion = "$($report.schemaVersion)"
-            $reportData.coverageMode = "$($report.coverageMode)"
-            $reportData.complete = [bool]$report.complete
-            if (-not $MetadataOnly) {
-                try {
-                    foreach ($propertyName in @(
-                            "diagnostics", "sources", "tests", "procedureEdges", "methods", "lines")) {
-                        [void](Get-CoverageArray $report.$propertyName)
-                    }
-                    $reportData.diagnostics = @(
-                        Get-CoverageArray $report.diagnostics | ForEach-Object { "$_" }
-                    )
-                    foreach ($line in @(Get-CoverageArray $report.lines)) {
-                    foreach ($propertyName in @(
-                            "objectType", "objectId", "lineNumber", "lineType",
-                            "methodId", "hitCount", "status", "sourcePath")) {
-                        if ($null -eq $line.PSObject.Properties[$propertyName]) {
-                            throw [System.IO.InvalidDataException]::new("shape")
-                        }
-                    }
-                    $objectType = ConvertTo-CoverageInteger $line.objectType
-                    $objectId = ConvertTo-CoverageInteger $line.objectId
-                    $lineNumber = ConvertTo-CoverageInteger $line.lineNumber
-                    $lineType = ConvertTo-CoverageInteger $line.lineType
-                    [void](ConvertTo-CoverageInteger $line.methodId)
-                    $hitCount = ConvertTo-CoverageInteger $line.hitCount
-                    [void](ConvertTo-CoverageInteger $line.status)
-                    $sourcePath = "$($line.sourcePath)"
-                    $extractedLineCount++
-                    if ($lineType -ne 3) {
-                        continue
-                    }
-
-                    $objectKey = "$objectType|$objectId"
-                    $source = $null
-                    if (-not $sourceCache.TryGetValue($sourcePath, [ref]$source)) {
-                        $rawIdentity = ConvertTo-CoverageSourceIdentity $sourcePath
-                        $source = if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
-                            @{
-                                Included = -not [string]::IsNullOrWhiteSpace($sourcePath)
-                                Identity = $rawIdentity
-                                LocalMappingFailed = $false
-                            }
-                        }
-                        else {
-                            Resolve-NormalizedRepositoryCoverageSource `
-                                -SourcePath $sourcePath `
-                                -RepositoryRoot $normalizedRepositoryRoot `
-                                -NormalizedRoots $normalizedSourceRoots
-                        }
-                        $source.RawIdentity = $rawIdentity
-                        $source.AppRootIdentity = ""
-                        if ($collectApplicationLines -and $source.Included) {
-                            $detail = $null
-                            if ($source.Contains("SourceRootIndex") -and
-                                [int]$source.SourceRootIndex -ge 0 -and
-                                [int]$source.SourceRootIndex -lt $Model.SourceRootDetails.Count) {
-                                $detail = $Model.SourceRootDetails[[int]$source.SourceRootIndex]
-                            }
-                            else {
-                                $detail = Resolve-CoverageSourceRootDetail `
-                                    -SourceIdentity $source.Identity `
-                                    -SourceRootDetails $Model.SourceRootDetails
-                            }
-                            if ($detail -and "$($detail.Kind)" -eq "app") {
-                                $source.AppRootIdentity = "$($detail.Identity)"
-                            }
-                        }
-                        $sourceCache[$sourcePath] = $source
-                    }
-                    else {
-                        $rawIdentity = "$($source.RawIdentity)"
-                    }
-                    if ($source.Included) {
-                        if (-not $scope.IncludedLineObjects.ContainsKey($objectKey)) {
-                            $scope.IncludedLineObjects[$objectKey] = $true
-                            $scope.IncludedLineSources[$objectKey] = @{}
-                            $scope.IncludedLineSources[$objectKey][$source.Identity] = $true
-                        }
-                        $rootIdentity = "$($source.AppRootIdentity)"
-                        if ($collectApplicationLines -and
-                            -not [string]::IsNullOrWhiteSpace($rootIdentity)) {
-                            $factKey = "$($source.Identity)|$objectType|$objectId|$lineNumber"
-                            if ($null -ne $SemanticLineUnion) {
-                                if (-not $SemanticLineUnion.ContainsKey($rootIdentity)) {
-                                    $SemanticLineUnion[$rootIdentity] =
-                                        [System.Collections.Generic.Dictionary[string,bool]]::new(
-                                            [System.StringComparer]::Ordinal)
-                                    if ($null -ne $SemanticRootOrder) {
-                                        $SemanticRootOrder.Add($rootIdentity)
-                                    }
-                                }
-                                $rootLines = $SemanticLineUnion[$rootIdentity]
-                                if (-not $rootLines.ContainsKey($factKey)) {
-                                    $acceptedLineCount++
-                                    $newLineCount++
-                                    $rootLines.Add($factKey, $hitCount -gt 0)
-                                }
-                                elseif ($hitCount -gt 0) {
-                                    $rootLines[$factKey] = $true
-                                }
-                            }
-                            else {
-                                if (-not $scope.ApplicationLines.ContainsKey($rootIdentity)) {
-                                    $scope.ApplicationLines[$rootIdentity] = @{}
-                                }
-                                if (-not $scope.ApplicationLines[$rootIdentity].ContainsKey($factKey)) {
-                                    $acceptedLineCount++
-                                    $scope.ApplicationLines[$rootIdentity][$factKey] = $hitCount -gt 0
-                                }
-                                elseif ($hitCount -gt 0) {
-                                    $scope.ApplicationLines[$rootIdentity][$factKey] = $true
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        $scope.ExcludedLineObjects[$objectKey] = $true
-                        if ($collectApplicationLines -and
-                            $seenExcludedLines.Add(
-                                "$rawIdentity|$objectType|$objectId|$lineNumber")) {
-                            $scope.ExcludedLineFacts++
-                        }
-                        if ($collectApplicationLines -and $source.LocalMappingFailed) {
-                            $scope.LineReasons +=
-                                "A repository source path could not be validated."
-                        }
-                    }
-                    }
-                }
-                catch {
-                    if ($_.Exception -is [System.IO.InvalidDataException]) {
-                        throw
-                    }
-                    throw [System.IO.InvalidDataException]::new("shape")
-                }
-            }
-            $report = $null
         }
 
         foreach ($propertyName in $requiredRootProperties) {
@@ -794,7 +544,7 @@ function Read-BcCoverageReport {
         if ("$($reportData.schemaVersion)" -ne "1.0") {
             throw [System.IO.InvalidDataException]::new("schema")
         }
-        if (-not (Test-CoverageMode "$($reportData.coverageMode)")) {
+        if ("$($reportData.coverageMode)" -ne "line") {
             throw [System.IO.InvalidDataException]::new("mode")
         }
 
@@ -830,6 +580,7 @@ function Read-BcCoverageReport {
             "mode" { "Coverage report mode is not supported." }
             "complete" { "Coverage report completeness value is invalid." }
             "shape" { "Coverage report does not match schemaVersion 1.0." }
+            "reader" { "The Newtonsoft JSON streaming reader is unavailable." }
             default { "Coverage report JSON is corrupt or invalid." }
         }
         return @{
@@ -847,9 +598,7 @@ function Read-BcCoverageReport {
     finally {
         $stopwatch.Stop()
         $culture = [System.Globalization.CultureInfo]::InvariantCulture
-        $operation = if ($MetadataOnly) { "metadata validation" } else { "analysis" }
-        Write-Host ("BC JSON {0}: reader={1}, size={2} MiB, elapsed={3}s, extractedLines={4}, acceptedLines={5}, outcome={6}." -f
-            $operation,
+        Write-Host ("BC JSON analysis: reader={0}, size={1} MiB, elapsed={2}s, extractedLines={3}, acceptedLines={4}, outcome={5}." -f
             $readerName,
             ($file.Length / 1MB).ToString("0.0", $culture),
             $stopwatch.Elapsed.TotalSeconds.ToString("0.000", $culture),
@@ -1087,8 +836,7 @@ function Resolve-RepositoryCoverageSource {
 }
 
 Export-ModuleMember -Function Get-CoverageArray, ConvertTo-CoverageInteger,
-    ConvertTo-CoverageSourceIdentity, Test-CoverageMode, Test-PathInsideRoot,
-    Test-CoveragePathWithoutReparsePoint, Get-NormalizedCoverageSourceRoots,
+    ConvertTo-CoverageSourceIdentity, Test-PathInsideRoot, Get-NormalizedCoverageSourceRoots,
     Resolve-CoverageSourceRootDetail, Resolve-ExistingCoverageSource,
     Resolve-NormalizedRepositoryCoverageSource, Resolve-RepositoryCoverageSource,
     Read-BcCoverageReport, Get-CoverageDiagnosticAssessment

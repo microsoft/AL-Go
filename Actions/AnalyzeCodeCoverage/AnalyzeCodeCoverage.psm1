@@ -25,7 +25,7 @@ function Read-BcCoverageReport {
         [AllowEmptyString()][string] $RepositoryRoot = "",
         [hashtable] $SemanticLineUnion = $null,
         [System.Collections.Generic.List[string]] $SemanticRootOrder = $null,
-        [switch] $MetadataOnly
+        [System.Collections.Generic.Dictionary[string,object]] $SourceMappingCache = $null
     )
 
     CodeCoverageReportReader\Read-BcCoverageReport @PSBoundParameters

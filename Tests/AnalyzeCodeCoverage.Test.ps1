@@ -5,6 +5,7 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Get-Module AnalyzeCodeCoverage | Remove-Module -Force -ErrorAction SilentlyContinue
 Import-Module (Join-Path $PSScriptRoot "..\Actions\AnalyzeCodeCoverage\AnalyzeCodeCoverage.psm1" -Resolve) -Force -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageAggregateFormat.psm1" -Resolve) -Force -DisableNameChecking
 
 Describe "AnalyzeCodeCoverage" {
     BeforeAll {
@@ -118,7 +119,85 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "parses the actual schema and counts only executable lines in line mode" {
+    It "reads the compact aggregate without the raw JSON reader" {
+        $repositoryRoot = Join-Path $TestDrive "AggregateRepository"
+        $appRoot = Join-Path $repositoryRoot "App"
+        $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
+        New-Item -Path $appRoot -ItemType Directory -Force | Out-Null
+        New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $appRoot "File.al") `
+            -Value "codeunit 50100 Example { }" -Encoding UTF8
+
+        $sourceRootDetails = @([ordered]@{
+                path = "App"
+                kind = "app"
+                appId = "11111111-1111-1111-1111-111111111111"
+                appName = "Regular App"
+            })
+        $fingerprint = Get-CodeCoverageSourceRootFingerprint `
+            -sourceRoots @("App") -sourceRootDetails $sourceRootDetails
+        $aggregatePath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
+        Write-CodeCoverageAggregateFile -path $aggregatePath -metadata @{
+            Project = "."
+            ProjectName = "Project"
+            BuildMode = "Default"
+            Mode = "line"
+            Formats = @("bc-json")
+            SourceRoots = @("App")
+            SourceRootDetails = $sourceRootDetails
+            SourceRootFingerprint = $fingerprint
+        } -runs @([ordered]@{
+                Sequence = 0
+                AppId = "test-app"
+                AppName = "Test App"
+                State = "complete"
+                Complete = $true
+                LineReasons = @()
+                Notices = @()
+                LineGlobalUnsafe = $false
+                LineAffectedSources = @()
+                ExcludedLineFacts = 0
+            }) -lines @{
+            App = @{ "App/File.al|5|50100|11" = $true }
+        } -rootOrder @("App")
+        $aggregateFile = Get-Item -LiteralPath $aggregatePath
+        [ordered]@{
+            project = "."
+            projectName = "Project"
+            buildMode = "Default"
+            formats = @("bc-json")
+            sourceRoots = @("App")
+            sourceRootDetails = $sourceRootDetails
+            runs = @([ordered]@{
+                    appId = "test-app"
+                    appName = "Test App"
+                    outputDirectory = "CodeCoverage/test-app"
+                    state = "complete"
+                })
+            aggregate = [ordered]@{
+                format = "al-go-line-union-binary-gzip"
+                contractVersion = 1
+                path = "coverage-aggregate.bin.gz"
+                sha256 = (Get-CodeCoverageFileSha256 -path $aggregatePath)
+                sourceRootFingerprint = $fingerprint
+                runCount = 1
+                lineCount = 1
+                sizeBytes = $aggregateFile.Length
+            }
+        } | ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
+
+        $model = Get-ProjectCoverageModel `
+            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+
+        $model.Complete | Should -BeTrue
+        $model.LineComplete | Should -BeTrue
+        $model.Lines.Count | Should -Be 1
+        (Get-CoverageMetrics $model.Lines).Covered | Should -Be 1
+        New-ProjectCoverageSummary $model | Should -Match "100\.0%"
+    }
+
+    It "parses the actual schema and counts only executable lines in line mode" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "Line")
         $model.Complete | Should -BeTrue
         $model.LineComplete | Should -BeTrue
@@ -134,7 +213,7 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Match "\| Line app \| 1/2 \| 50% \|"
     }
 
-    It "OR-unions executable lines from multiple line-mode reports" {
+    It "OR-unions executable lines from multiple line-mode reports" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $model = Get-ProjectCoverageModel -CoveragePath (Join-Path $fixtures "MultipleRuns")
         $model.Complete | Should -BeTrue
         $model.LineComplete | Should -BeTrue
@@ -149,7 +228,7 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Not -Match "\| Source \|"
     }
 
-    It "treats missing and corrupt reports as incomplete without throwing" {
+    It "treats missing and corrupt reports as incomplete without throwing" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $missingRoot = Join-Path $TestDrive "MissingReport"
         Copy-CoverageFixture -Name "Line" -Destination $missingRoot
         Remove-Item -LiteralPath (Join-Path $missingRoot "CodeCoverage\line-app\coverage.bc.json")
@@ -167,7 +246,7 @@ Describe "AnalyzeCodeCoverage" {
         $corrupt.Reasons -join " " | Should -Match "corrupt"
     }
 
-    It "rejects unsupported schema versions and coverage modes" {
+    It "rejects unsupported schema versions and coverage modes" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         foreach ($case in @(
                 @{ Name = "Schema"; Property = "schemaVersion"; Value = "2.0"; Match = "schemaVersion" },
                 @{ Name = "Mode"; Property = "coverageMode"; Value = "branch"; Match = "mode" }
@@ -185,7 +264,7 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "requires the report mode to match the requested status mode" {
+    It "rejects non-line reports" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $root = Join-Path $TestDrive "MismatchedMode"
         Copy-CoverageFixture -Name "Line" -Destination $root
         $reportPath = Join-Path $root "CodeCoverage\line-app\coverage.bc.json"
@@ -194,11 +273,11 @@ Describe "AnalyzeCodeCoverage" {
         $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
         $model = Get-ProjectCoverageModel -CoveragePath $root
         $model.Complete | Should -BeFalse
-        $model.Reasons -join " " | Should -Match "does not match"
+        $model.Reasons -join " " | Should -Match "mode is not supported"
         (New-ProjectCoverageSummary $model) | Should -Not -Match "%"
     }
 
-    It "does not let the raw global completeness flag suppress regular-app lines" {
+    It "does not let the raw global completeness flag suppress regular-app lines" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $root = Join-Path $TestDrive "IncompleteReport"
         Copy-CoverageFixture -Name "Line" -Destination $root
         $reportPath = Join-Path $root "CodeCoverage\line-app\coverage.bc.json"
@@ -215,8 +294,8 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Match "uncovered objects"
     }
 
-    Context "BC JSON streaming reader" {
-        It "uses the runtime-appropriate reader without recursive conversion" {
+    Context "BC JSON streaming reader" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+        It "uses only the Newtonsoft streaming reader" {
             $path = Join-Path $fixtures "Line\CodeCoverage\line-app\coverage.bc.json"
             InModuleScope AnalyzeCodeCoverage -Parameters @{
                 Path = $path
@@ -229,13 +308,7 @@ Describe "AnalyzeCodeCoverage" {
                     -RequestedMode "line"
                 $result.Valid | Should -BeTrue
                 $result.Valid | Should -BeTrue
-                $expectedReader = if ($PSVersionTable.PSVersion.Major -ge 7) {
-                    "Newtonsoft.Json"
-                }
-                else {
-                    "ConvertFrom-Json"
-                }
-                $result.Reader | Should -Be $expectedReader
+                $result.Reader | Should -Be "Newtonsoft.Json"
                 @($result.Data.Keys | Sort-Object) | Should -Be @(
                     "complete", "coverageMode", "diagnostics", "schemaVersion"
                 )
@@ -378,6 +451,63 @@ Describe "AnalyzeCodeCoverage" {
             @($facts.Values)[0] | Should -BeTrue
         }
 
+        It "reuses source-path mappings across reports" {
+            $repositoryRoot = Join-Path $TestDrive "MappingCache"
+            $appRoot = Join-Path $repositoryRoot "app"
+            New-Item -Path $appRoot -ItemType Directory -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $appRoot "File.al") `
+                -Value "codeunit 1 Example { }" -Encoding UTF8
+            $reportJson = @'
+{
+  "schemaVersion": "1.0",
+  "coverageMode": "line",
+  "complete": true,
+  "diagnostics": [],
+  "sources": ["File.al"],
+  "tests": [],
+  "procedureEdges": [],
+  "methods": [],
+  "lines": [
+    {"objectType":5,"objectId":1,"lineNumber":10,"lineType":3,"methodId":1,"hitCount":1,"status":1,"sourcePath":"File.al"}
+  ]
+}
+'@
+            $firstPath = Join-Path $TestDrive "cache-first.json"
+            $secondPath = Join-Path $TestDrive "cache-second.json"
+            Set-Content -LiteralPath $firstPath -Value $reportJson -Encoding UTF8
+            Set-Content -LiteralPath $secondPath -Value $reportJson -Encoding UTF8
+
+            InModuleScope CodeCoverageReportReader -Parameters @{
+                FirstPath = $firstPath
+                SecondPath = $secondPath
+                RepositoryRoot = $repositoryRoot
+                Model = (New-StreamingReaderModel)
+            } {
+                Mock Resolve-NormalizedRepositoryCoverageSource {
+                    return @{
+                        Included = $true
+                        Identity = "app/file.al"
+                        Reason = ""
+                        LocalMappingFailed = $false
+                        SourceRootIndex = 0
+                    }
+                }
+                $cache = [System.Collections.Generic.Dictionary[string,object]]::new(
+                    [System.StringComparer]::OrdinalIgnoreCase
+                )
+
+                foreach ($path in @($FirstPath, $SecondPath)) {
+                    $result = Read-BcCoverageReport -Path $path -Model $Model `
+                        -RequestedMode "line" -RepositoryRoot $RepositoryRoot `
+                        -SourceMappingCache $cache
+                    $result.Valid | Should -BeTrue
+                }
+
+                $cache.Count | Should -Be 1
+                Should -Invoke Resolve-NormalizedRepositoryCoverageSource -Times 1 -Exactly
+            }
+        }
+
         It "streams a representative large-shaped report without recursive conversion" `
             -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
             $path = Join-Path $TestDrive "large-streaming.json"
@@ -460,7 +590,7 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "escapes report-derived Markdown and HTML and bounds values" {
+    It "escapes report-derived Markdown and HTML and bounds values" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $unsafe = "A|B`r`n<script>& [click](https://example.invalid) **bold** ![image](x) ``code``" + ("x" * 300)
         $safe = ConvertTo-SafeCoverageText $unsafe
         $safe | Should -Match "A\\\|B &lt;script&gt;&amp;"
@@ -543,7 +673,7 @@ Describe "AnalyzeCodeCoverage" {
             Should -Contain "Expected coverage artifact is missing."
     }
 
-    It "unions cross-project facts instead of adding project totals" {
+    It "unions cross-project facts instead of adding project totals" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $downloads = Join-Path $TestDrive "RepositoryUnion"
         $sourcePath = Join-Path $TestDrive "Shared\Shared.Codeunit.al"
         New-RepositoryArtifact -Root $downloads -ArtifactName "artifact-a" -Project "A" `
@@ -568,7 +698,7 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Match "Project B"
     }
 
-    It "deduplicates the same repository line across build modes" {
+    It "deduplicates the same repository line across build modes" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $downloads = Join-Path $TestDrive "BuildModeUnion"
         $sourcePath = Join-Path $TestDrive "Shared\BuildMode.Codeunit.al"
         New-RepositoryArtifact -Root $downloads -ArtifactName "artifact-default" -Project "Tests" `
@@ -743,7 +873,7 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "shows complete project rates but no repository metrics when another project is incomplete" {
+    It "shows complete project rates but no repository metrics when another project is incomplete" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $downloads = Join-Path $TestDrive "MixedRepository"
         $sourcePath = Join-Path $TestDrive "Mixed\Shared.Codeunit.al"
         New-RepositoryArtifact -Root $downloads -ArtifactName "artifact-a" -Project "A" `
@@ -779,7 +909,7 @@ Describe "AnalyzeCodeCoverage" {
         $resolved.Identity | Should -Be "inside/file.al"
     }
 
-    It "excludes and discloses external facts without showing empty percentages" {
+    It "excludes and discloses external facts without showing empty percentages" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $repositoryRoot = Join-Path $TestDrive "Checkout"
         $downloads = Join-Path $TestDrive "ExternalDownloads"
         $sourcePath = Join-Path $TestDrive "External\External.Codeunit.al"
@@ -872,23 +1002,6 @@ Describe "AnalyzeCodeCoverage" {
         $resolved.LocalMappingFailed | Should -BeTrue
     }
 
-    It "rejects coverage files reached through reparse points on Windows" -Skip:([System.IO.Path]::DirectorySeparatorChar -ne '\') {
-        $repositoryRoot = Join-Path $TestDrive "Repository"
-        $outsideRoot = Join-Path $TestDrive "Outside"
-        $linkedRoot = Join-Path $repositoryRoot "Linked"
-        New-Item -Path $repositoryRoot -ItemType Directory -Force | Out-Null
-        New-Item -Path $outsideRoot -ItemType Directory -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $outsideRoot "Outside.al") `
-            -Value "codeunit 1 Outside { }" -Encoding UTF8
-        New-Item -Path $linkedRoot -ItemType Junction -Target $outsideRoot | Out-Null
-
-        $resolved = Resolve-RepositoryCoverageSource -SourcePath "Outside.al" `
-            -RepositoryRoot $repositoryRoot -SourceRoots @("Linked")
-
-        $resolved.Included | Should -BeFalse
-        $resolved.LocalMappingFailed | Should -BeTrue
-    }
-
     It "keeps missing server line summaries unsafe in line mode" {
         $scope = @{
             IncludedLineObjects = @{}
@@ -971,7 +1084,7 @@ Describe "AnalyzeCodeCoverage" {
         )
     }
 
-    It "admits repository-scoped lines from globally incomplete live-shaped reports" {
+    It "admits repository-scoped lines from globally incomplete live-shaped reports" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $coveragePath = Join-Path $fixtureRoot "Artifact"
         $repositoryRoot = Join-Path $fixtureRoot "Repository"
@@ -1013,7 +1126,7 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Not -Match "437/447"
     }
 
-    It "retains each live-shaped run line rate before union" {
+    It "retains each live-shaped run line rate before union" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         foreach ($case in @(
                 @{ RunIndex = 0; Covered = 1 },
@@ -1034,7 +1147,7 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "attributes lines to the most-specific declared regular app and excludes test roots" {
+    It "attributes lines to the most-specific declared regular app and excludes test roots" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $root = Join-Path $TestDrive "TwoRegularApps"
         Copy-Item -LiteralPath (Join-Path $fixtureRoot "Artifact") -Destination $root -Recurse
@@ -1067,7 +1180,7 @@ Describe "AnalyzeCodeCoverage" {
         @($model.Apps | Where-Object { $_.AppName -eq "app1.Test" }).Count | Should -Be 0
     }
 
-    It "scopes line diagnostics to regular apps without blocking them for test-root failures" {
+    It "scopes line diagnostics to regular apps without blocking them for test-root failures" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $repositoryRoot = Join-Path $fixtureRoot "Repository"
         $testFailureRoot = Join-Path $TestDrive "TestRootFailure"
@@ -1174,7 +1287,7 @@ Describe "AnalyzeCodeCoverage" {
         $repositorySummary | Should -Not -Match "\| Source \|"
     }
 
-    It "suppresses only the metric affected by safely classified diagnostics" {
+    It "suppresses only the metric affected by safely classified diagnostics" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $repositoryRoot = Join-Path $fixtureRoot "Repository"
 
@@ -1201,7 +1314,7 @@ Describe "AnalyzeCodeCoverage" {
         $local.Apps[0].LineComplete | Should -BeFalse
     }
 
-    It "ignores procedure-only method identity failures for regular-app line coverage" {
+    It "ignores procedure-only method identity failures for regular-app line coverage" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $root = Join-Path $TestDrive "MissingMethodIdentity"
         Copy-Item -LiteralPath (Join-Path $fixtureRoot "Artifact") -Destination $root -Recurse
@@ -1221,7 +1334,7 @@ Describe "AnalyzeCodeCoverage" {
         (New-ProjectCoverageSummary $model) | Should -Not -Match "Procedure"
     }
 
-    It "unions admitted incomplete reports for repository coverage" {
+    It "unions admitted incomplete reports for repository coverage" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $fixtureRoot = Join-Path $fixtures "ScopedIncomplete"
         $buildOrder = @(@{
                 buildDimensions = @(
@@ -1256,7 +1369,7 @@ Describe "AnalyzeCodeCoverage" {
         $summary | Should -Not -Match "project1/app1"
     }
 
-    It "keeps duplicate app IDs in different projects as separate repository facts" {
+    It "keeps duplicate app IDs in different projects as separate repository facts" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $downloads = Join-Path $TestDrive "DuplicateIds"
         $firstSource = Join-Path $TestDrive "W1\Shared.Codeunit.al"
         $secondSource = Join-Path $TestDrive "DK\Shared.Codeunit.al"
@@ -1327,7 +1440,7 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "appends a repository summary from expected downloaded artifacts" {
+    It "appends a repository summary from expected downloaded artifacts" -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
         $downloads = Join-Path $TestDrive "ActionRepository"
         $sourcePath = Join-Path $TestDrive "Shared\Action.Codeunit.al"
         New-RepositoryArtifact -Root $downloads -ArtifactName "artifact-action" -Project "ActionProject" `

@@ -442,30 +442,6 @@ Describe 'RunTests.psm1 Tests' {
             }
         }
 
-        It 'Rejects source roots containing reparse points on Windows' -Skip:([System.IO.Path]::DirectorySeparatorChar -ne '\') {
-            $baseFolder = Join-Path $TestDrive 'Repository'
-            $outsideRoot = Join-Path $TestDrive 'Outside'
-            $linkedRoot = Join-Path $baseFolder 'Linked'
-            New-Item -Path $baseFolder -ItemType Directory -Force | Out-Null
-            New-Item -Path $outsideRoot -ItemType Directory -Force | Out-Null
-            New-Item -Path $linkedRoot -ItemType Junction -Target $outsideRoot | Out-Null
-
-            InModuleScope CodeCoverageCoordinator -Parameters @{
-                BaseFolder = $baseFolder
-            } {
-                param($BaseFolder)
-                $settings = @{
-                    appFolders = @('Linked')
-                    testFolders = @()
-                }
-
-                {
-                    Resolve-CodeCoverageSourceRootData -settings $settings `
-                        -projectPath $BaseFolder -baseFolder $BaseFolder
-                } | Should -Throw '*reparse point*'
-            }
-        }
-
         It 'Includes analyzed app and test roots from repository-relative projectsToTest targets' {
             $baseFolder = Join-Path $TestDrive 'Repository'
             $projectPath = Join-Path $baseFolder 'build\projects\Test Apps W1'

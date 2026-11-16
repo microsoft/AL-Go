@@ -37,6 +37,9 @@ function Invoke-CodeCoverageAggregateWorker {
     $semanticLineCount = 0
     $runAssessments = [System.Collections.Generic.List[object]]::new()
     $telemetry = [System.Collections.Generic.List[object]]::new()
+    $sourceMappingCache = [System.Collections.Generic.Dictionary[string,object]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
     $totalParseMilliseconds = [double]0
 
     try {
@@ -55,7 +58,8 @@ function Invoke-CodeCoverageAggregateWorker {
             $file = Get-Item -LiteralPath "$($descriptor.ReportPath)"
             $reportResult = Read-BcCoverageReport -Path $file.FullName -Model $model `
                 -RequestedMode "$($metadata.Mode)" -RepositoryRoot $repositoryRoot `
-                -SemanticLineUnion $semanticLines -SemanticRootOrder $semanticRootOrder
+                -SemanticLineUnion $semanticLines -SemanticRootOrder $semanticRootOrder `
+                -SourceMappingCache $sourceMappingCache
             if (-not $reportResult.Valid) {
                 throw "Compaction rejected '$($file.FullName)'. $($reportResult.Reason)"
             }
@@ -63,7 +67,7 @@ function Invoke-CodeCoverageAggregateWorker {
                 throw "Compaction report mode does not match the session mode."
             }
             if ([bool]$reportResult.Data.complete -ne [bool]$descriptor.Complete) {
-                throw "Compaction report completeness does not match the validated run."
+                throw "Compaction report completeness does not match the runner result."
             }
             $assessment = Get-CoverageDiagnosticAssessment -Report $reportResult.Data `
                 -Scope $reportResult.Scope

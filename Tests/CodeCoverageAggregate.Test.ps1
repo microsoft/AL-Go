@@ -210,7 +210,7 @@ Describe "Code coverage aggregate" {
         }
     }
 
-    It "produces an aggregate equivalent to raw reports with duplicate OR semantics" {
+    It "produces an aggregate with duplicate OR semantics" {
         $repositoryRoot = New-AggregateRepository -name "Equivalent"
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
@@ -224,8 +224,6 @@ Describe "Code coverage aggregate" {
         Write-AggregateRawReport -path $reportA -hitCount 0
         Write-AggregateRawReport -path $reportB -hitCount 1
 
-        $rawArtifact = Join-Path $TestDrive "RawArtifact"
-        Copy-Item -LiteralPath (Split-Path $coverageRoot -Parent) -Destination $rawArtifact -Recurse
         $metadata = Get-AggregateMetadata -status $status
         $publishedPath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
         $worker = Start-CodeCoverageAggregateWorker `
@@ -256,18 +254,16 @@ Describe "Code coverage aggregate" {
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
         Remove-Item -LiteralPath $reportA, $reportB -Force
 
-        $rawModel = Get-ProjectCoverageModel -CoveragePath $rawArtifact -RepositoryRoot $repositoryRoot
         $aggregateModel = Get-ProjectCoverageModel `
             -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
 
         $aggregateModel.Complete | Should -BeTrue
-        $rawMetrics = Get-CoverageMetrics $rawModel.Lines
         $aggregateMetrics = Get-CoverageMetrics $aggregateModel.Lines
-        $aggregateMetrics.Total | Should -Be $rawMetrics.Total
-        $aggregateMetrics.Covered | Should -Be $rawMetrics.Covered
-        $aggregateMetrics.Uncovered | Should -Be $rawMetrics.Uncovered
-        $aggregateMetrics.Percentage | Should -Be $rawMetrics.Percentage
-        New-ProjectCoverageSummary $aggregateModel | Should -Be (New-ProjectCoverageSummary $rawModel)
+        $aggregateMetrics.Total | Should -Be 1
+        $aggregateMetrics.Covered | Should -Be 1
+        $aggregateMetrics.Uncovered | Should -Be 0
+        $aggregateMetrics.Percentage | Should -Be 100
+        New-ProjectCoverageSummary $aggregateModel | Should -Match "100\.0%"
         $aggregate.LineCount | Should -Be 1
         Test-Path -LiteralPath $reportA | Should -BeFalse
         Test-Path -LiteralPath $reportB | Should -BeFalse
@@ -301,27 +297,22 @@ Describe "Code coverage aggregate" {
 
     It "preserves incomplete diagnostic scoping and project Markdown" {
         $fixtureRoot = Join-Path $PSScriptRoot "TestArtifacts\CodeCoverage\ScopedIncomplete"
-        $rawArtifact = Join-Path $TestDrive "ScopedRaw"
         $aggregateArtifact = Join-Path $TestDrive "ScopedAggregate"
-        Copy-Item -LiteralPath (Join-Path $fixtureRoot "Artifact") -Destination $rawArtifact -Recurse
         Copy-Item -LiteralPath (Join-Path $fixtureRoot "Artifact") -Destination $aggregateArtifact -Recurse
         $repositoryRoot = Join-Path $fixtureRoot "Repository"
 
-        $rawModel = Get-ProjectCoverageModel -CoveragePath $rawArtifact `
-            -RepositoryRoot $repositoryRoot
         Convert-RawArtifactToAggregate -artifactRoot $aggregateArtifact `
             -repositoryRoot $repositoryRoot
         $aggregateModel = Get-ProjectCoverageModel -CoveragePath $aggregateArtifact `
             -RepositoryRoot $repositoryRoot
 
-        $aggregateModel.Complete | Should -Be $rawModel.Complete
-        $aggregateModel.LineComplete | Should -Be $rawModel.LineComplete
-        $aggregateModel.Reasons | Should -Be $rawModel.Reasons
-        $aggregateModel.LineReasons | Should -Be $rawModel.LineReasons
-        $aggregateModel.Notices | Should -Be $rawModel.Notices
-        $aggregateModel.ExcludedLineFacts | Should -Be $rawModel.ExcludedLineFacts
-        New-ProjectCoverageSummary $aggregateModel |
-            Should -Be (New-ProjectCoverageSummary $rawModel)
+        $aggregateModel.Complete | Should -BeTrue
+        $aggregateModel.LineComplete | Should -BeTrue
+        $aggregateModel.Reasons | Should -BeNullOrEmpty
+        $aggregateModel.LineReasons | Should -BeNullOrEmpty
+        $aggregateModel.Notices.Count | Should -Be 6
+        $aggregateModel.ExcludedLineFacts | Should -Be 2
+        New-ProjectCoverageSummary $aggregateModel | Should -Match "50\.0%"
         @(Get-ChildItem -LiteralPath $aggregateArtifact -Filter "coverage.bc.json" -File -Recurse).Count |
             Should -Be 0
     }

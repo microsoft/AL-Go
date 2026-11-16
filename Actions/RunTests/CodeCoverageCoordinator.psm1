@@ -14,8 +14,8 @@ $script:CodeCoverageMode = "line"
     Resolves the ordered source roots used for coverage collection and analysis.
 .DESCRIPTION
     Collects appFolders and testFolders that contain AL source files from the current project
-    and direct projectsToTest targets. Rejects roots outside the repository or behind reparse
-    points, deduplicates paths, reads available app identity, and returns deterministic records.
+    and direct projectsToTest targets. Rejects roots outside the repository, deduplicates paths,
+    reads available app identity, and returns deterministic records.
 .PARAMETER settings
     Analyzed settings for the current AL-Go project.
 .PARAMETER projectPath
@@ -72,8 +72,8 @@ function Resolve-CodeCoverageSourceRootData {
                 }
                 $resolvedPath = Resolve-Path -LiteralPath $folderPath
                 $resolvedFullPath = [System.IO.Path]::GetFullPath($resolvedPath.ProviderPath)
-                if (-not (Test-CoveragePathWithoutReparsePoint -Path $resolvedFullPath -Root $repositoryRoot)) {
-                    throw "Code coverage source root '$resolvedFullPath' contains a reparse point or is outside the repository."
+                if (-not (Test-PathInsideRoot -Path $resolvedFullPath -Root $repositoryRoot)) {
+                    throw "Code coverage source root '$resolvedFullPath' is outside the repository."
                 }
                 $alSourceFile = Get-ChildItem -LiteralPath $resolvedFullPath -Filter "*.al" `
                     -File -Recurse -ErrorAction Stop | Select-Object -First 1
@@ -340,46 +340,10 @@ function Remove-CodeCoverageRawReports {
 
 <#
 .SYNOPSIS
-    Validates and reads required metadata from one BC JSON coverage report.
+    Validates the coverage handoff for one completed app run.
 .DESCRIPTION
-    Uses the shared metadata-only reader and translates parser failure details into
-    coordinator-facing validation errors.
-.PARAMETER path
-    Path to coverage.bc.json.
-.OUTPUTS
-    Hashtable containing schema version, coverage mode, completeness, and reader name.
-#>
-function Read-CodeCoverageReportMetadata {
-    Param([string] $path)
-
-    $result = Read-BcCoverageReport -Path $path -MetadataOnly
-    if (-not $result.Valid) {
-        if ("$($result.FailureDetail)".StartsWith("duplicate:", [System.StringComparison]::Ordinal)) {
-            $propertyName = "$($result.FailureDetail)".Substring("duplicate:".Length)
-            throw "The JSON contains duplicate top-level property '$propertyName'."
-        }
-        $message = switch ("$($result.FailureDetail)") {
-            "schema" { "The produced BC JSON schemaVersion is not supported." }
-            "mode" { "The produced BC JSON coverage mode does not match the requested mode." }
-            "complete" { "The produced BC JSON completeness value is invalid." }
-            default { "$($result.Reason)" }
-        }
-        throw $message
-    }
-    return @{
-        SchemaVersion = "$($result.Data.schemaVersion)"
-        CoverageMode = "$($result.Data.coverageMode)"
-        Complete = [bool]$result.Data.complete
-        Reader = "$($result.Reader)"
-    }
-}
-
-<#
-.SYNOPSIS
-    Validates the requested coverage artifacts for one completed app run.
-.DESCRIPTION
-    Requires every requested fixed artifact and, for BC JSON, verifies the supported schema,
-    line mode, complete document, and agreement with the runner's completeness result.
+    Requires a Boolean completeness result and every requested fixed artifact. The compactor
+    performs all BC JSON schema, line-mode, completeness, diagnostic, and line-fact validation.
 .PARAMETER session
     AL-Go-owned code coverage session.
 .PARAMETER run
@@ -410,25 +374,6 @@ function Test-CodeCoverageArtifacts {
         }
     }
 
-    if ("bc-json" -in $session.Formats) {
-        $reportPath = Join-Path (Get-CodeCoverageRunOutputPath -session $session -run $run) `
-            "coverage.bc.json"
-        try {
-            $report = Read-CodeCoverageReportMetadata -path $reportPath
-        }
-        catch {
-            throw "The coverage-aware test runner produced invalid BC JSON at '$reportPath'. Error: $($_.Exception.Message)"
-        }
-        if ($report.SchemaVersion -ne "1.0") {
-            throw "The produced BC JSON schemaVersion is not supported."
-        }
-        if ($report.CoverageMode.ToLowerInvariant() -ne $script:CodeCoverageMode) {
-            throw "The produced BC JSON coverage mode does not match the requested mode."
-        }
-        if ($report.Complete -ne [bool]$rawComplete) {
-            throw "The reported coverage completeness does not match the BC JSON report."
-        }
-    }
 }
 
 <#

@@ -39,7 +39,7 @@ flowchart TD
     ORCH --> SESSION --> LOOP
     LOOP --> TOOL --> AL --> COMPLETE
     COMPLETE -->|next app| LOOP
-    COMPLETE -->|validated JSON descriptor| PIPE --> WORKER
+    COMPLETE -->|report descriptor| PIPE --> WORKER
     LOOP --> FINAL
     WORKER --> AGG
     FINAL --> STATUS
@@ -84,8 +84,8 @@ sequenceDiagram
         AlTool-->>Runner: Structured result and coverage files
         Runner-->>RunTests: Boolean test result and completeness
         RunTests->>Coordinator: Complete-AlGoCodeCoverageRun
-        Coordinator->>Coordinator: Validate artifacts and BC JSON metadata
-        alt First valid BC JSON report
+        Coordinator->>Coordinator: Validate completeness handoff and artifact existence
+        alt First existing BC JSON report
             Coordinator->>Worker: Start-CodeCoverageAggregateWorker
         end
         Coordinator->>Pipe: Add-CodeCoverageAggregateWorkItem
@@ -116,7 +116,7 @@ sequenceDiagram
 - Test apps are producers and run sequentially in `Invoke-AlGoTestRun`. There is no parallel AlTool test execution within one project job.
 - Compaction has exactly one consumer. `Start-CodeCoverageAggregateWorker` starts one persistent `pwsh -NoProfile -NonInteractive` child process.
 - The producer sends one compact JSON descriptor per report through redirected standard input. Child stdout and stderr remain attached to the action log.
-- The worker is started lazily after the first report passes artifact and metadata validation.
+- The worker is started lazily after the first report passes handoff and artifact validation.
 - Each subsequent valid report is streamed as an immutable descriptor. The parent immediately proceeds to the next app.
 - The worker parses one report at a time. There is no parser pool and no concurrent mutation of the semantic line union.
 - `Complete-AlGoCodeCoverageSession` closes standard input and waits for the worker. This final drain is the only point where RunTests must wait for outstanding compaction.
@@ -147,7 +147,7 @@ Keeping every report until artifact upload and then parsing them in AnalyzeCodeC
 
 ### Chosen design
 
-RunTests starts one long-lived PowerShell 7 child process after the first report has passed metadata validation. Each completed app contributes one immutable JSON descriptor through redirected standard input. The worker consumes descriptors in order and streams one report at a time while the parent starts the next test app.
+RunTests starts one long-lived PowerShell 7 child process after the first report has passed handoff and artifact validation. Each completed app contributes one immutable JSON descriptor through redirected standard input. The worker consumes descriptors in order and streams one report at a time while the parent starts the next test app.
 
 The worker keeps one canonical executable-line union. Line identity is based on the resolved source and executable line identity, and duplicate facts use OR semantics: a line is covered if any run reports a positive hit count. Per-run completeness and diagnostic assessments remain separate so merging repeated lines does not erase whether an individual report was incomplete or unsafe.
 
@@ -195,9 +195,9 @@ The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads
 | `Resolve-CodeCoverageSourceRootData` | Session creation | Once for a supported session | Collects app and test roots containing AL source files from the project and direct `projectsToTest`, rejects unsafe paths, deduplicates, and sorts roots. |
 | `Invoke-AlToolTestRun` | App loop or opted-in override | Once per selected test app | Enumerates tests, invokes AlTool, appends JUnit, surfaces diagnostics, and returns test success plus coverage completeness. |
 | `Invoke-AlRunTestsBatch` | `Invoke-AlToolTestRun` | Once per app with test codeunits | Builds the `al runtests` arguments, uses a temporary response file when the native command would be too large, invokes the process, and parses its structured output. |
-| `Complete-AlGoCodeCoverageRun` | App loop | Immediately after one supported invocation | Validates fixed artifacts and metadata, assigns the final run state, starts the worker if needed, and streams the report descriptor. |
-| `Test-CodeCoverageArtifacts` | Per-run completion | Before streaming | Checks requested files, schema version, mode, and agreement between structured completeness and BC JSON. |
-| `Start-CodeCoverageAggregateWorker` | Per-run completion | Lazily for the first valid BC JSON report | Starts one persistent PowerShell 7 child process with redirected standard input. |
+| `Complete-AlGoCodeCoverageRun` | App loop | Immediately after one supported invocation | Validates the Boolean completeness handoff and fixed artifacts, assigns the provisional run state, starts the worker if needed, and streams the report descriptor. |
+| `Test-CodeCoverageArtifacts` | Per-run completion | Before streaming | Checks the Boolean completeness handoff and requested fixed files without parsing BC JSON. |
+| `Start-CodeCoverageAggregateWorker` | Per-run completion | Lazily for the first existing BC JSON report | Starts one persistent PowerShell 7 child process with redirected standard input. |
 | `Add-CodeCoverageAggregateWorkItem` | Per-run completion | Once per valid complete or incomplete report | Writes sequence, app identity, state, completeness, and raw report path as compact JSON. |
 | `Invoke-CodeCoverageAggregateWorker` | Child process | Until standard input closes | Streams reports, evaluates diagnostics, and maintains the canonical OR-covered semantic line union. |
 | `Complete-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once after the app loop, including error paths | Resolves unfinished states, drains compaction, writes final status, performs safe cleanup, and enforces coverage failures. |
@@ -280,21 +280,18 @@ After each runner invocation, the coordinator validates:
 
 - The runner supplied a Boolean completeness value.
 - Every requested fixed artifact exists.
-- BC JSON is a valid complete document.
-- `schemaVersion` is `1.0`.
-- Report mode is `line`.
-- Structured and file completeness agree.
 
-The run becomes `complete`, `incomplete`, or `failed`. Test pass or failure is independent from coverage completeness, so a failed test app can still contribute valid coverage.
+The run becomes provisionally `complete`, `incomplete`, or `failed`. Test pass or failure is independent from coverage completeness, so a failed test app can still contribute valid coverage. The worker is authoritative for the report contents.
 
 ### 4. Background compaction
 
 For every streamed report descriptor, the worker:
 
 1. Streams the report with `Read-BcCoverageReport`.
-1. Validates the full JSON document and required schema.
+1. Validates the full JSON document, required schema 1.0 fields, line mode, Boolean completeness, and agreement with the runner handoff.
 1. Discards unused test, method, procedure-edge, and source payload after validation.
 1. Resolves executable lines to the ordered source roots.
+1. Reuses source-path mappings across reports so each unique path reaches the filesystem once.
 1. Evaluates diagnostic effects for included and excluded sources.
 1. Merges lines by canonical semantic identity.
 
