@@ -390,16 +390,23 @@ Describe 'AL-Go Admin Center API helpers' {
                 Assert-MockCalled Invoke-RestMethod -Times 0
             }
 
-            It 'Rejects authentication without a token before sending' {
-                Mock Renew-BcAuthContext { return @{} }
+            It 'Rejects renewal result <result> without a token before sending' -TestCases @(
+                @{ result = 'null' }, @{ result = 'empty context' }
+            ) {
+                param($result)
+                $script:renewalResult = $result
+                Mock Renew-BcAuthContext {
+                    if ($script:renewalResult -eq 'null') { return $null }
+                    return @{}
+                }
 
                 try {
                     Get-AdminCenterAppOperation -environment Sandbox -appId app -operationId operation
                     throw 'Expected failure'
                 }
                 catch {
-                    $_.Exception.Message | Should -BeLike '*Authentication failed*'
-                    ($_.FullyQualifiedErrorId -split ',')[0] | Should -Be 'AdminCenterAuthenticationFailed'
+                    $_.Exception.Message | Should -BeLike '*token renewal returned no access token*'
+                    $_.Exception | Should -Not -BeOfType ([System.Security.Authentication.AuthenticationException])
                     $_.Exception.Data['AdminCenterRequestStarted'] | Should -BeFalse
                 }
                 Assert-MockCalled Invoke-RestMethod -Times 0

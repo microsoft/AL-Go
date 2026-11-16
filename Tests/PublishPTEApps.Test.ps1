@@ -102,16 +102,32 @@ InModuleScope Deploy {
                 Assert-MockCalled OutputWarning -Times 0
             }
 
-            It 'Selects Automation for the helper-owned missing-token error' {
+            It 'Does not classify an unexplained missing token as authorization rejection' {
                 Mock Get-AdminCenterInstalledExtensions {
                     throw [System.Management.Automation.ErrorRecord]::new(
                         [System.Security.Authentication.AuthenticationException]::new('Token missing'),
                         'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
                 }
 
-                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
-                $script:ptePublishingApi | Should -Be Automation
-                Assert-MockCalled OutputWarning -Exactly 1
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } |
+                    Should -Throw '*Token missing*'
+                $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Stops the initial probe when BCH renewal returns no token' {
+                Mock Get-AdminCenterInstalledExtensions {
+                    throw 'Admin Center token renewal returned no access token before sending the request.'
+                }
+
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } |
+                    Should -Throw '*token renewal returned no access token*'
+
+                $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled OutputWarning -Times 0
+                Assert-MockCalled Invoke-RestMethod -Times 0
             }
 
             It 'Does not mistake a probe <problem> for an authorization setup failure' -TestCases @(
@@ -514,6 +530,53 @@ InModuleScope AdminCenterApi {
             Mock Install-AdminCenterPTEApp { return @{ id = 'operation-1'; appId = 'app-1'; status = 'running' } }
             Mock Get-AdminCenterAppOperation { throw 'Unexpected operation read' }
         }
+        Context 'Application version resolution' {
+            BeforeEach {
+                $script:application.id = $applicationAppId
+            }
+
+            It 'Prefers the known Application ID over an unrelated app with the same name' {
+                $unrelated = $script:application.Clone()
+                $unrelated.id = 'unrelated-app'
+                $unrelated.versionMajor = 28
+
+                GetPTEApplicationVersion -extensions @($unrelated, $script:application) -environment Sandbox |
+                    Should -Be ([version]'30.0.0.0')
+            }
+
+            It 'Retains name-only compatibility when the known Application ID is absent' {
+                $script:application.id = 'legacy-id'
+
+                GetPTEApplicationVersion -extensions @($script:application) -environment Sandbox |
+                    Should -Be ([version]'30.0.0.0')
+            }
+
+            It 'Rejects duplicate known Application IDs despite an unambiguous name-only record' {
+                $named = $script:application.Clone()
+                $named.id = 'other-id'
+
+                { GetPTEApplicationVersion -extensions @($script:application, $script:application.Clone(), $named) -environment Sandbox } |
+                    Should -Throw '*unique installed Application*'
+            }
+
+            It 'Rejects authoritative version <version> instead of using a valid name-only record' -TestCases @(
+                @{ version = 'invalid' }, @{ version = 'incomplete' }
+            ) {
+                param($version)
+                $named = $script:application.Clone()
+                $named.id = 'other-id'
+                if ($version -eq 'invalid') {
+                    $script:application.versionMajor = 'invalid'
+                }
+                else {
+                    $script:application.Remove('versionRevision')
+                }
+
+                { GetPTEApplicationVersion -extensions @($script:application, $named) -environment Sandbox } |
+                    Should -Throw '*unique installed Application*'
+            }
+        }
+
         Context 'Native batch preparation and installation' {
             BeforeEach {
                 Mock NewTemporaryFolder { return 'test-app-folder' }

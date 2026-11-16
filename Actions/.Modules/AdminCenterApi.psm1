@@ -138,9 +138,7 @@ function Invoke-AdminCenterApi {
         $uri += '/' + (($path | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
         $authContext = Renew-BcAuthContext -bcAuthContext $script:adminCenterAuthContext
         if (!$authContext -or !$authContext['AccessToken']) {
-            throw [System.Management.Automation.ErrorRecord]::new(
-                [System.Security.Authentication.AuthenticationException]::new('Authentication failed before Admin Center request.'),
-                'AdminCenterAuthenticationFailed', 'AuthenticationError', $null)
+            throw 'Admin Center token renewal returned no access token before sending the request.'
         }
         $script:adminCenterAuthContext = $authContext
         Write-Host "::add-mask::$($authContext.AccessToken)"
@@ -327,10 +325,12 @@ function GetPTEApplicationVersion {
         [string] $environment
     )
 
-    $applications = @($extensions | Where-Object {
-        $app = $_ | ConvertTo-HashTable -recurse
-        ($app['displayName'] -eq 'Application' -or $app['id'] -eq $applicationAppId) -and $app['isInstalled']
-    })
+    $installedApps = @($extensions | ForEach-Object { $_ | ConvertTo-HashTable -recurse } |
+        Where-Object { $_['isInstalled'] })
+    $applications = @($installedApps | Where-Object { $_['id'] -eq $applicationAppId })
+    if (!$applications.Count) {
+        $applications = @($installedApps | Where-Object { $_['displayName'] -eq 'Application' })
+    }
     $version = $null
     if ($applications.Count -eq 1) {
         $application = $applications[0] | ConvertTo-HashTable -recurse

@@ -10,8 +10,7 @@ function Test-AdminCenterAuthorizationError {
     if ($errorRecord.Exception.PSObject.Properties['Response'] -and $errorRecord.Exception.Response) {
         $statusCode = [int]$errorRecord.Exception.Response.StatusCode
     }
-    return $statusCode -in 401,403 -or
-        ($errorRecord.FullyQualifiedErrorId -split ',')[0] -eq 'AdminCenterAuthenticationFailed'
+    return $statusCode -in 401,403
 }
 
 <#
