@@ -1,421 +1,169 @@
-# RunTests code coverage architecture
+# Separate test code coverage architecture
 
-This document describes the developer-facing control flow, concurrency model, file contracts, and failure behavior for code coverage in the separate RunTests action.
+This document describes the final code coverage flow for the separate `RunTests` action.
+The implementation collects executable-line coverage, compacts all selected test-app runs into one
+project artifact, and renders project or repository summaries from that compact artifact.
 
-The implementation deliberately separates four responsibilities:
+## Activation and capability
 
-1. RunTests selects test apps and invokes each app's tests.
-1. AlTool runs tests and produces JUnit and coverage output.
-1. The coverage coordinator validates each app's output and manages the coverage session.
-1. A single background compactor streams valid BC JSON reports into one AL-Go aggregate for later analysis.
+Coverage is controlled by the flat `useSeparateTestAction` object:
 
-AnalyzeCodeCoverage runs after RunTests and artifact upload. It consumes the final status and compact aggregate without checking out or re-reading repository source.
+- `codeCoverageEnabled` enables collection.
+- `codeCoverageGenerateCobertura` adds a Cobertura interoperability file. BC JSON is always requested
+  because it is the input to AL-Go analysis.
+- `codeCoverageSummary` selects `none`, `project`, `repository`, or `both`.
 
-## End-to-end workflow
+Collection is supported only when:
 
-```mermaid
-flowchart TD
-    RP[RunPipeline builds apps and keeps the container alive]
-    RT[Run Tests workflow step]
-    ENTRY[RunTests.ps1]
-    ORCH[Invoke-AlGoTestRun]
-    SESSION[New-AlGoCodeCoverageSession]
-    LOOP[Sequential loop over selected test apps]
-    TOOL[Invoke-AlToolTestRun or project override]
-    AL[al runtests]
-    COMPLETE[Complete-AlGoCodeCoverageRun]
-    PIPE[Redirected standard input]
-    WORKER[One persistent pwsh compactor process]
-    FINAL[Complete-AlGoCodeCoverageSession]
-    STATUS[coverage-status.json]
-    AGG[coverage-aggregate.bin.gz]
-    RAW[Per-app coverage.bc.json]
-    COB[Per-app coverage.cobertura.xml]
-    UPLOAD[Publish CodeCoverage artifact]
-    PROJECT[AnalyzeCodeCoverage project scope]
-    REPOJOB[AnalyzeCodeCoverage repository job]
+- The kept-alive Business Central container reports platform version `30.0.56026.0` or later.
+- A PowerShell 7 `pwsh` executable is available for the coverage worker.
 
-    RP --> RT --> ENTRY --> ORCH
-    ORCH --> SESSION --> LOOP
-    LOOP --> TOOL --> AL --> COMPLETE
-    COMPLETE -->|next app| LOOP
-    COMPLETE -->|report descriptor| PIPE --> WORKER
-    LOOP --> FINAL
-    WORKER --> AGG
-    FINAL --> STATUS
-    FINAL -->|aggregate published and referenced| AGG
-    FINAL -->|aggregate success deletes raw JSON| RAW
-    FINAL -->|always retains requested Cobertura| COB
-    STATUS --> UPLOAD
-    AGG --> UPLOAD
-    RAW -->|debug or failed compaction diagnostics| UPLOAD
-    COB --> UPLOAD
-    UPLOAD --> PROJECT
-    UPLOAD --> REPOJOB
-```
+RunPipeline reads the actual container platform version after a successful build and passes it to
+RunTests. Missing, malformed, old, or unavailable capability information produces a GitHub warning
+and tests continue without coverage. Once capability is confirmed, collection and compaction errors
+are real failures and do not trigger a noncoverage retry.
 
-The workflow uploads the CodeCoverage artifact before running the project summary. Repository summaries run in a separate job after the build jobs and download every matching CodeCoverage artifact.
+## Session flow
 
-## Detailed call sequence
+RunTests performs these steps once for each project:
 
-```mermaid
-sequenceDiagram
-    participant Workflow as Build workflow
-    participant Entry as RunTests.ps1
-    participant RunTests as Invoke-AlGoTestRun
-    participant Coordinator as Coverage coordinator
-    participant Runner as AlTool runner or override
-    participant AlTool as al runtests
-    participant Pipe as Redirected stdin
-    participant Worker as Persistent pwsh compactor
-    participant Analyzer as AnalyzeCodeCoverage
+1. Resolve existing AL source roots from the current project and direct `projectsToTest` projects.
+1. Create `.buildartifacts/CodeCoverage`.
+1. Start one persistent `pwsh -NoProfile -NonInteractive` worker.
+1. Run each selected test app sequentially.
+1. Write each app's fixed AlTool files to a stable, app-specific directory.
+1. Send the completed BC JSON report descriptor to the worker through redirected standard input.
+1. Close worker input, wait for compaction, and publish final status.
 
-    Workflow->>Entry: Run Tests step with pwsh
-    Entry->>Entry: Read settings and AnalyzeRepo
-    Entry->>RunTests: Invoke-AlGoTestRun
-    RunTests->>RunTests: Get-TestAppsToRun
-    RunTests->>Coordinator: Get-AlGoCodeCoverageCapability
-    RunTests->>Coordinator: New-AlGoCodeCoverageSession
-    Coordinator-->>RunTests: Ordered runs, roots, and session state
-
-    loop One selected test app at a time
-        RunTests->>Runner: Invoke tests for current app
-        Runner->>AlTool: al runtests with JUnit and coverage arguments
-        AlTool-->>Runner: Structured result and coverage files
-        Runner-->>RunTests: Boolean test result and completeness
-        RunTests->>Coordinator: Complete-AlGoCodeCoverageRun
-        Coordinator->>Coordinator: Validate completeness handoff and artifact existence
-        alt First existing BC JSON report
-            Coordinator->>Worker: Start-CodeCoverageAggregateWorker
-        end
-        Coordinator->>Pipe: Add-CodeCoverageAggregateWorkItem
-        Pipe-->>Worker: One compact JSON descriptor
-        Note over RunTests,Worker: Parent starts the next app while the worker parses the previous report
-        Worker->>Worker: Read-BcCoverageReport and merge semantic lines
-        Worker-->>RunTests: Compactor log output
-    end
-
-    RunTests->>Coordinator: Complete-AlGoCodeCoverageSession
-    Coordinator->>Pipe: Close standard input
-    Coordinator->>Worker: Complete-CodeCoverageAggregateWorker
-    Worker->>Worker: Write and atomically publish versioned aggregate
-    Worker-->>Coordinator: Temporary JSON result file
-    Coordinator->>Coordinator: Write final coverage-status.json
-    Coordinator->>Coordinator: Delete raw BC JSON only after status references aggregate
-    Coordinator-->>RunTests: Finalized
-    RunTests-->>Workflow: Test outcome and artifacts
-    Workflow->>Workflow: Upload CodeCoverage artifact
-    Workflow->>Analyzer: Analyze project coverage
-    Analyzer->>Analyzer: Validate status and compact aggregate
-```
-
-## Concurrency model
-
-### Inside one RunTests action
-
-- Test apps are producers and run sequentially in `Invoke-AlGoTestRun`. There is no parallel AlTool test execution within one project job.
-- Compaction has exactly one consumer. `Start-CodeCoverageAggregateWorker` starts one persistent `pwsh -NoProfile -NonInteractive` child process.
-- The producer sends one compact JSON descriptor per report through redirected standard input. Child stdout and stderr remain attached to the action log.
-- The worker is started lazily after the first report passes handoff and artifact validation.
-- Each subsequent valid report is streamed as an immutable descriptor. The parent immediately proceeds to the next app.
-- The worker parses one report at a time. There is no parser pool and no concurrent mutation of the semantic line union.
-- `Complete-AlGoCodeCoverageSession` closes standard input and waits for the worker. This final drain is the only point where RunTests must wait for outstanding compaction.
-- The parent is the only writer of `coverage-status.json`. The worker never writes status.
-
-This design overlaps CPU and I/O-heavy report parsing with the next AlTool test run while avoiding locks around the aggregate model.
-
-## Why RunTests compacts reports in parallel
-
-### The repeated-data problem
-
-Each selected test app is a separate AlTool invocation. AL-Go passes the same ordered source-root set to every invocation:
-
-- App and test folders that contain AL source files from the current project.
-- App and test folders that contain AL source files from direct `projectsToTest` projects.
-
-The source roots let AlTool map runtime coverage facts back to repository files. They are intentionally project-scoped rather than test-app-scoped because a test can execute code across multiple applications and transitive platform dependencies.
-
-Large projects can produce enough source-root and compiler-package arguments to exceed the Windows native command-line limit. `Invoke-AlRunTestsBatch` detects large argument sets, writes the arguments to a temporary UTF-8 AlTool response file, invokes `al runtests` with the single `@<file>` argument, and removes the file after the process exits. Connection credentials remain environment-based and are never written to the response file.
-
-This means per-app BC JSON reports can contain large, overlapping executable-line inventories. A commonly used application can appear in many reports even though each invocation ran a different test app. In a repository such as BCApps, shared dependencies such as Base Application are exercised by many test apps, so the same semantic lines can be repeated across several very large reports.
-
-Keeping every report until artifact upload and then parsing them in AnalyzeCodeCoverage has three costs:
-
-1. The artifact contains repeated line data.
-1. The analyzer must parse every large report after the tests have already finished.
-1. The runner pays the full parsing latency at the end instead of overlapping it with useful test execution.
-
-### Chosen design
-
-RunTests starts one long-lived PowerShell 7 child process after the first report has passed handoff and artifact validation. Each completed app contributes one immutable JSON descriptor through redirected standard input. The worker consumes descriptors in order and streams one report at a time while the parent starts the next test app.
-
-The worker keeps one canonical executable-line union. Line identity is based on the resolved source and executable line identity, and duplicate facts use OR semantics: a line is covered if any run reports a positive hit count. Per-run completeness and diagnostic assessments remain separate so merging repeated lines does not erase whether an individual report was incomplete or unsafe.
-
-After the producer closes standard input, the worker drains remaining reports and atomically publishes the aggregate. Raw BC JSON reports are deleted only after the aggregate has been written, validated, and referenced by the final status. `RUNNER_DEBUG=1` retains raw reports. Compaction failure retains raw reports for diagnosis and fails coverage.
-
-This design provides the following benefits:
-
-- Each successful raw report receives one full semantic parse.
-- Parsing can overlap the next app's AlTool execution.
-- Repeated line data is collapsed before artifact upload.
-- AnalyzeCodeCoverage reads the compact aggregate instead of reparsing all raw reports.
-- One worker owns the union, so no parser pool, merge locks, or concurrent aggregate mutation are required.
-
-The first implementation does not reduce peak runner disk usage because raw reports remain until durable aggregate publication. It reduces final waiting time and published artifact size while preserving failure diagnostics.
-
-### Alternative considered: test-app-specific source roots
-
-An alternative was to determine which applications each test app can exercise and pass only those source roots to AlTool. That could reduce duplication when test apps have small, disjoint dependency graphs.
-
-AL-Go does not use that approach because computing the exact runtime coverage boundary is difficult and error-prone:
-
-- Dependencies are transitive and can differ from the directly declared test-app dependencies.
-- Tests can call shared libraries, platform applications, and code reached through events or other indirect paths.
-- Repository project relationships do not necessarily describe every application loaded in the test environment.
-- An incomplete dependency calculation could omit valid coverage facts and create false confidence in the summary.
-- In BCApps, many test apps depend directly or indirectly on Base Application and other common applications, so dependency-scoped roots would still include much of the same large source set and provide limited reduction.
-
-Project-scoped roots plus semantic compaction favor correctness and deterministic source mapping. The compactor removes the resulting duplication without requiring AL-Go to predict the full runtime dependency graph or changing AlTool and platform behavior.
-
-### Across workflow jobs
-
-Build matrix jobs can run in parallel. Each project and build-mode job owns its own coverage directory, session, input pipe, and worker. No compactor is shared across jobs.
-
-The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads their artifacts and merges project models logically for the repository summary. It does not modify the uploaded artifacts.
-
-## Function call map
-
-| Function or step | Called by | When it runs | Responsibility |
-| :-- | :-- | :-- | :-- |
-| `RunTests.ps1` | RunTests composite action | Once per project build job | Reads settings, reconnects to the kept container, loads overrides, and calls the module orchestrator. |
-| `Invoke-AlGoTestRun` | `RunTests.ps1` | Once per project build job | Selects apps, creates the coverage session, runs every app sequentially, finalizes coverage, preserves JUnit, and reports the test outcome. |
-| `Get-TestAppsToRun` | `Invoke-AlGoTestRun` | Before session creation | Selects compiled test apps and optionally installed test apps. |
-| `Get-AlGoCodeCoverageCapability` | `Invoke-AlGoTestRun` | Once when coverage is requested | Accepts coverage only for container platform 30.0.56026.0 or later with `pwsh` available. |
-| `New-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once before the app loop | Resolves ordered source roots, regular application IDs, and per-app sequence and output-path records. |
-| `Resolve-CodeCoverageSourceRootData` | Session creation | Once for a supported session | Collects app and test roots containing AL source files from the project and direct `projectsToTest`, rejects unsafe paths, deduplicates, and sorts roots. |
-| `Invoke-AlToolTestRun` | App loop or opted-in override | Once per selected test app | Enumerates tests, invokes AlTool, appends JUnit, surfaces diagnostics, and returns test success plus coverage completeness. |
-| `Invoke-AlRunTestsBatch` | `Invoke-AlToolTestRun` | Once per app with test codeunits | Builds the `al runtests` arguments, uses a temporary response file when the native command would be too large, invokes the process, and parses its structured output. |
-| `Complete-AlGoCodeCoverageRun` | App loop | Immediately after one supported invocation | Validates the Boolean completeness handoff and fixed artifacts, assigns the provisional run state, starts the worker if needed, and streams the report descriptor. |
-| `Test-CodeCoverageArtifacts` | Per-run completion | Before streaming | Checks the Boolean completeness handoff and requested fixed files without parsing BC JSON. |
-| `Start-CodeCoverageAggregateWorker` | Per-run completion | Lazily for the first existing BC JSON report | Starts one persistent PowerShell 7 child process with redirected standard input. |
-| `Add-CodeCoverageAggregateWorkItem` | Per-run completion | Once per valid complete or incomplete report | Writes sequence, app identity, state, completeness, and raw report path as compact JSON. |
-| `Invoke-CodeCoverageAggregateWorker` | Child process | Until standard input closes | Streams reports, evaluates diagnostics, and maintains the canonical OR-covered semantic line union. |
-| `Complete-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once after the app loop, including error paths | Resolves unfinished states, drains compaction, writes final status, performs safe cleanup, and enforces coverage failures. |
-| `Complete-CodeCoverageAggregateWorker` | Session completion | During final drain | Closes standard input, waits for the child process, reads its temporary result file, and disposes worker resources. |
-| `Write-CodeCoverageStatusInternal` | Session completion | Once | Atomically publishes the final status. There are no intermediate status writes. |
-| `AnalyzeCodeCoverage.ps1` | Project step or repository job | After coverage artifact publication | Loads settings, builds the requested model, logs details, and appends Markdown to the job summary. |
-| `Get-ProjectCoverageModelFromStatus` | Analyzer | Once per status file | Validates status, per-run assessments, and the required compact aggregate. |
-| `Get-RepositoryCoverageModel` | Repository analyzer | Once after artifact download | Checks expected build dimensions and combines project application models without double-counting semantic lines. |
-| `Get-SeparateTestActionIneligibilityReasons` | Build dimension creation and RunPipeline | Once per build mode | Returns static blockers shared by coverage expectation and actual separate-test execution. RunPipeline adds its callback-dependent blocker after final callback construction. |
-
-## Per-app runner paths
-
-### Built-in runner
-
-`Invoke-AlToolTestRun` performs these steps:
-
-1. Set the container username and password only in process environment variables.
-1. Enumerate enabled test codeunits through BcContainerHelper and apply `testType` and disabled-test filtering.
-1. Create empty valid JUnit and coverage artifacts when the app has zero test codeunits.
-1. Resolve the container connection and company.
-1. Call `Invoke-AlRunTestsBatch`.
-1. Append test results to the shared project `TestResults.xml`.
-1. Return a Boolean test result.
-1. Remove credential environment variables in `finally`.
-
-When coverage is supported, `Invoke-AlRunTestsBatch` adds:
+Per-app directories prevent AlTool's fixed filenames from overwriting earlier reports:
 
 ```text
---coverage line
---coverage-output <per-app-directory>
---coverage-format <format>
---coverage-source-root <ordered-root>
+.buildartifacts/
+  CodeCoverage/
+    <app-id>/
+      coverage.bc.json
+      coverage.cobertura.xml
+    coverage-aggregate.bin.gz
+    coverage-status.json
 ```
 
-The format and source-root flags are repeated for every configured value.
+Cobertura files exist only when requested. Raw BC JSON files are deleted after successful compaction
+unless `RUNNER_DEBUG=1`. They are retained when compaction fails.
 
-An AlTool exit code of 1 can represent failed tests. Valid coverage and JUnit data are still processed. Unexpected native failures, invalid structured output, or missing structured coverage data throw. Fixed artifact existence is validated once by the coordinator after either runner returns.
+## Runner integration
 
-### Project override
+The built-in runner invokes AlTool once per selected test app with:
 
-A coverage-aware `.AL-Go/RunTestsInBcContainer.ps1` receives:
+- `--coverage line`
+- The app-specific `--coverage-output` directory.
+- `--coverage-format bc-json`.
+- Optional `--coverage-format cobertura`.
+- Every resolved `--coverage-source-root`.
 
-- Historical test parameters in `$parameters`.
-- Coverage-only values in the same hashtable when coverage is supported.
+Large argument sets use a temporary UTF-8 response file. It contains no credentials and is deleted
+after the AlTool invocation.
 
-The coverage values are `codeCoverageFormats`, `codeCoverageSourceRoots`, `codeCoverageApplicationIds`, `codeCoverageOutputPath`, `codeCoverageAlToolModulePath`, `codeCoverageAlToolPath`, and `codeCoverageIsComplete`. The formats always include `bc-json`; `cobertura` is included when `codeCoverageGenerateCobertura` is true. The override runs once per app and must return a Boolean test result. For supported coverage it must write coverage into `codeCoverageOutputPath` and set `codeCoverageIsComplete`. AL-Go retains ownership of artifact validation, run state, compaction, and status publication.
+An existing `.AL-Go/RunTestsInBcContainer.ps1` override keeps its historical single-hashtable
+signature. When coverage is supported, AL-Go adds:
 
-When coverage is disabled or unsupported, AL-Go omits the coverage values and the override runs with the historical parameter shape.
+- `codeCoverageOutputPath`
+- `codeCoverageFormats`
+- `codeCoverageSourceRoots`
+- `codeCoverageApplicationIds`
+- `codeCoverageAlToolModulePath`
+- `codeCoverageAlToolPath`
+- `codeCoverageIsComplete`
 
-## Coverage session lifecycle
+The override must use the provided output directory, return its historical Boolean test result, and
+set `codeCoverageIsComplete` to a Boolean. It should use its existing noncoverage behavior when
+`codeCoverageOutputPath` is absent.
 
-### 1. Capability
+`Invoke-AlToolTestRun` also supports optional `CoverageAppPaths` for compatible preview AlTool builds
+that require compiler-instrumented packages. AL-Go does not populate this parameter in the built-in
+path.
 
-Coverage is requested only when `useSeparateTestAction.codeCoverageEnabled` is true. The container platform handoff must parse as version 30.0.56026.0 or later.
+## Worker and reader
 
-If the platform is missing, malformed, or older:
+`CodeCoverageAggregateWorker.ps1` is a small child-process entry point. It imports the shared
+streaming reader, accepts one JSON descriptor per input line, and keeps the semantic line union in
+the child process.
 
-- A warning explains the requirement.
-- Tests continue without coverage arguments.
-- The final status records each selected app as `unsupported`.
+The reader:
 
-### 2. Session construction
+- Requires BC JSON schema `1.0` and line mode.
+- Requires the report completeness value to be Boolean.
+- Validates source attribution against source roots recorded by RunTests.
+- Rejects ambiguous duplicate roots and invalid source mappings.
+- Builds a semantic key from source identity, object type, object ID, and line number.
+- OR-unions covered state so a line covered by any test-app run is covered in the final project
+  result.
+- Records line-safety reasons separately from informational notices.
 
-The session contains:
+Keeping parsing and the union in the child avoids loading multi-gigabyte reports in the PowerShell 5
+parent process and avoids parsing every report twice.
 
-- Project identity and build mode.
-- Requested formats. Executable-line mode is a module constant.
-- Ordered absolute source roots and sorted regular application IDs passed to every supported runner.
-- Ordered repository-relative source roots and source-root details.
-- One ordered run record per app containing its sequence, normalized app identity, final state, and absolute output path.
-- The canonical coverage root for status and aggregate publication.
-- The repository root needed by the streaming reader.
-- Optional live PowerShell 7 child-process state.
+## Published contracts
 
-Source-root order is deterministic. It is part of the report mapping contract recorded in status.
+### `coverage-aggregate.bin.gz`
 
-RunTests passes the stored session roots and application IDs plus the current run's stored output path directly to the built-in runner or custom override. It does not recompute coverage inputs inside the app loop. A custom override reports completeness through `codeCoverageIsComplete`.
+The aggregate is a gzip-compressed binary stream containing:
 
-### 3. Per-app completion
+- The versioned `ALGOCOV1` magic header.
+- One declared semantic line count.
+- Root identity, semantic line key, and covered state for every retained line.
 
-After each runner invocation, the coordinator validates:
+The writer publishes to a temporary file and moves it to the fixed filename only after successful
+completion. Readers validate the header, records, declared count, and gzip end-of-stream. There is no
+raw-report analyzer fallback.
 
-- The runner supplied a Boolean completeness value.
-- Every requested fixed artifact exists.
+### `coverage-status.json`
 
-The run becomes provisionally `complete`, `incomplete`, or `failed`. Test pass or failure is independent from coverage completeness, so a failed test app can still contribute valid coverage. The worker is authoritative for the report contents.
+The coordinator is the only status writer. Status records:
 
-### 4. Background compaction
+- Project identity and source-root attribution.
+- One final entry for each selected test app.
+- Per-run state, completeness assessment, line-safety reasons, notices, and excluded-line count.
+- The fixed aggregate filename only after successful compaction.
 
-For every streamed report descriptor, the worker:
+Status is also written through a temporary file and moved into place. Missing or invalid run
+assessment data makes coverage unavailable rather than inventing a partial result.
 
-1. Streams the report with `Read-BcCoverageReport`.
-1. Validates the full JSON document, required schema 1.0 fields, line mode, Boolean completeness, and agreement with the runner handoff.
-1. Discards unused test, method, procedure-edge, and source payload after validation.
-1. Resolves executable lines to the ordered source roots.
-1. Reuses source-path mappings across reports so each unique path reaches the filesystem once.
-1. Evaluates diagnostic effects for included and excluded sources.
-1. Merges lines by canonical semantic identity.
+## Failure behavior
 
-Duplicate line facts use OR semantics: a semantic line is covered when any duplicate has a positive hit count.
-Duplicate-object and method-identity enrichment diagnostics are notices because they do not remove an otherwise exported executable line. A server missing-line summary remains globally unsafe because its omitted lines have no structured source identities that AL-Go can validate.
+Test outcome and coverage completeness are independent:
 
-The worker retains only:
+- Failed tests may still produce valid coverage and are included in the aggregate.
+- A test failure remains a test failure even when coverage succeeds.
+- Missing or invalid expected coverage files fail coverage.
+- Worker, reader, or aggregate publication failures fail coverage and retain raw BC JSON.
+- If tests and coverage both fail, the test failure remains primary and the coverage failure is
+  emitted as an additional GitHub error.
 
-- Per-run diagnostic assessments.
-- The semantic executable-line union.
-- Root ordering needed for deterministic output.
+Coverage is not downgraded after capability has been confirmed.
 
-### 5. Final publication
+## Analysis and workflow fan-in
 
-The worker writes the versioned line union to a unique temporary path and atomically moves it to `coverage-aggregate.bin.gz`. The aggregate contains only the `ALGOCOV1` magic header, one line count, and root, semantic-line-key, and covered records. The reader consumes through gzip EOF so truncated or trailing decompressed data fails validation.
+`AnalyzeCodeCoverage` consumes only `coverage-status.json` and
+`coverage-aggregate.bin.gz`.
 
-The parent then:
+Project summaries are rendered from the project's artifact when requested. Repository analysis
+downloads the expected project artifacts, uses build dimensions marked with
+`codeCoverageRepositorySummary`, and unions semantic line facts across projects without
+double-counting.
 
-1. Validates and attaches one worker assessment to every valid run.
-1. Writes one final `coverage-status.json` through a temporary file and atomic move.
-1. Deletes per-app `coverage.bc.json` only after status durably references the aggregate.
-1. Retains per-app Cobertura output.
-1. Reports concise session totals.
+Only regular application roots from `appFolders` contribute to percentages and uncovered-object
+lists. Test roots and external sources remain excluded. Percentages are shown only when line
+coverage is complete.
 
-## On-disk contracts
+Repository analyzer jobs depend on all expanded build jobs. They do not check out the repository
+because source attribution was already validated during compaction in the checked-out build job.
 
-Successful compaction normally leaves:
-
-```text
-.buildartifacts/CodeCoverage/
-|-- coverage-status.json
-|-- coverage-aggregate.bin.gz
-|-- <test-app-guid>/
-|   `-- coverage.cobertura.xml
-`-- <another-test-app-guid>/
-    `-- coverage.cobertura.xml
-```
-
-Debug runs and failed compaction retain raw reports:
-
-```text
-.buildartifacts/CodeCoverage/
-|-- coverage-status.json
-|-- <test-app-guid>/
-|   |-- coverage.bc.json
-|   `-- coverage.cobertura.xml
-`-- <another-test-app-guid>/
-    |-- coverage.bc.json
-    `-- coverage.cobertura.xml
-```
-
-`coverage-status.json` contains project metadata, ordered source roots, final run states, and per-run line assessments. Successful compaction adds the fixed `coverage-aggregate.bin.gz` reference.
-
-The aggregate is an AL-Go contract, not an AlTool schema 1.0 document. It contains only the semantic executable-line union required to reproduce project and repository line summaries without reparsing raw reports.
-
-## Analyzer selection and validation
-
-`Get-ProjectCoverageModelFromStatus` treats the status as authoritative:
-
-- Status must reference the fixed aggregate.
-- The analyzer validates the versioned magic header, line count, semantic records, gzip EOF, application roots, and per-run assessments recorded in status.
-- A missing, corrupt, or invalid aggregate fails closed. The analyzer never falls back to raw reports.
-
-Only regular application roots contribute to rates and uncovered-object tables. Status preserves the diagnostic assessment and excluded-fact accounting for test roots and external objects, but those facts do not affect application percentages.
-
-Repository analysis uses only build dimensions that statically qualify for separate tests, request code coverage, and request a repository summary. It verifies their project and build-mode identities, then unions canonical lines across valid project models. A requested dimension without a matching artifact is reported as unavailable coverage. The repository analysis job does not check out source because mapping and source existence were already validated by the compactor in the build job.
-
-## Failure and cleanup rules
-
-| Condition | Test execution | Coverage result | Raw BC JSON |
-| :-- | :-- | :-- | :-- |
-| Coverage disabled | Unchanged | No session or status | Not created |
-| Unsupported platform or missing `pwsh` | Runs normally | Final `unsupported` states and one warning | Not created |
-| Test assertions fail but coverage is valid | Test result remains failed or warning per settings | Valid report is compacted and analyzed | Deleted after aggregate publication |
-| Supported coverage output is missing or invalid | Fails closed | Run becomes `failed` and its output is not authoritative | Retained |
-| Worker input or parse fails | Fails coverage | Status has no aggregate reference | Retained |
-| Aggregate publication or worker-result validation fails | Fails coverage | Status has no aggregate reference | Retained |
-| Status cannot reference a valid aggregate | Fails coverage | No successful coverage result is published | Retained |
-| Aggregate succeeds but raw deletion fails | Warning | Aggregate remains authoritative | Undeleted files may also be uploaded |
-| Earlier ordinary test failure exists | Ordinary test failure wins and coverage failure is emitted as an error | Best available final status is written | Retained as needed |
-
-## Logging
-
-Per-report compactor logs include:
-
-- App ID and report bytes.
-- Parse duration.
-- Extracted, accepted, new, and aggregate line counts.
-
-Session completion logs include:
-
-- Run and line counts.
-- Total active parse time.
-- Final drain time.
-- Aggregate size.
-- Removed raw bytes.
-
-No report content or credentials are logged.
-
-## Change checklist
-
-When changing this flow:
-
-1. Keep test app execution and test-result semantics independent from coverage completeness.
-1. Keep the parent as the only status writer.
-1. Do not delete raw reports before aggregate publication, validation, and durable status reference.
-1. Preserve deterministic source-root, run, and semantic-line ordering.
-1. Keep the status and aggregate reader aligned with the coordinator and compactor contracts.
-1. Test complete, incomplete, failed-test-valid-coverage, zero-codeunit, duplicate-line, diagnostics, multi-run, and repository cases.
-1. Test worker startup, input drain, worker failure, version and EOF corruption, atomic publication, cleanup, and hard failure.
-1. Run RunTests and analyzer suites from both PowerShell 7 and Windows PowerShell 5.1 parents.
-
-The primary implementation and tests are:
+## Main implementation files
 
 - `Actions/RunTests/RunTests.psm1`
 - `Actions/RunTests/CodeCoverageCoordinator.psm1`
+- `Actions/RunTests/CodeCoverageAggregateWorker.ps1`
 - `Actions/RunTests/AlToolTestRunner.psm1`
-- `Actions/.Modules/CodeCoverageAggregate.psm1`
-- `Actions/.Modules/CodeCoverageAggregateFormat.psm1`
 - `Actions/.Modules/CodeCoverageReportReader.psm1`
+- `Actions/.Modules/CodeCoverageAggregateFormat.psm1`
 - `Actions/AnalyzeCodeCoverage/AnalyzeCodeCoverage.psm1`
-- `Tests/RunTests.Test.ps1`
-- `Tests/CodeCoverageCoordinator.Test.ps1`
-- `Tests/CodeCoverageAggregate.Test.ps1`
-- `Tests/AnalyzeCodeCoverage.Test.ps1`

@@ -10,7 +10,7 @@ Summaries report executable-line coverage for authoritative regular `appFolders`
 
 Each app row and headline unions canonical line facts across all relevant test-app runs without double-counting. Coverage is complete only when every expected regular app is safely attributable and every required run and requested build dimension is available. Unknown or regular-app line inventory and mapping failures recorded during compaction make the affected app and aggregate unavailable.
 
-The shared RunTests coverage coordinator remains the only writer of `coverage-status.json`. Built-in execution and coverage-aware `RunTestsInBcContainer.ps1` overrides contribute one AL-Go-owned run per selected test app. A missing or failed app run remains unsafe. RunTests validates source mappings in the checked-out build job, stores per-run assessments in status, and compacts the semantic line union into the versioned `coverage-aggregate.bin.gz` before artifact upload. The analyzer consumes only that status and aggregate contract. A missing, corrupt, or invalid aggregate fails closed.
+The shared RunTests coverage coordinator remains the only writer of `coverage-status.json`. Built-in execution and coverage-aware `RunTestsInBcContainer.ps1` overrides contribute one AL-Go-owned run per selected test app. A missing or failed app run remains unsafe. A PowerShell 7 child process validates source mappings in the checked-out build job, stores per-run assessments in status, and compacts the semantic line union into the versioned `coverage-aggregate.bin.gz` before artifact upload. The analyzer consumes only that status and aggregate contract. A missing, corrupt, or invalid aggregate fails closed.
 
 ## Inputs
 

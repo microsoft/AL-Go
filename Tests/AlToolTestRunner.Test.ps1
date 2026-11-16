@@ -69,13 +69,6 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Should -Be @('Invoke-AlToolTestRun')
         }
 
-        It 'Does not contain an HTTP coverage capability probe' {
-            $moduleText = Get-Content -LiteralPath (
-                Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1'
-            ) -Raw -Encoding UTF8
-
-            $moduleText | Should -Not -Match 'Invoke-RestMethod|/dev/metadata|WebApiVersion'
-        }
     }
 
     Context 'Get-DisabledTestKeySet' {

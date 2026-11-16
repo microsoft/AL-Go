@@ -50,12 +50,6 @@ Describe "RunTests Action Tests" {
         $script:previousSettings = $ENV:Settings
     }
 
-    It "preserves the user-selectable PowerShell 5 default" {
-        $actionYaml = Get-Content -LiteralPath (Join-Path $scriptRoot "action.yaml") `
-            -Raw -Encoding UTF8
-        $actionYaml | Should -Match '(?ms)inputs:\s+shell:.*?default: powershell'
-    }
-
     AfterEach {
         if ($null -eq $script:previousContainerCredential) {
             Remove-Item Env:\containerCredential -ErrorAction SilentlyContinue

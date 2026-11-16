@@ -304,7 +304,6 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $model = Get-ProjectCoverageModel -CoveragePath $session.RootPath `
             -RepositoryRoot $projectPath
 
-        $model.Complete | Should -BeTrue
         $model.LineComplete | Should -BeTrue
         $model.Runs.Count | Should -Be 2
         $model.Runs[0].ContainsKey("Lines") | Should -BeFalse

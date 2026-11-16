@@ -491,7 +491,7 @@
                 "codeCoverageEnabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "When true, the built-in separate RunTests action collects executable-line coverage on container platform 30.0.56026.0 or later. Unsupported or unconfirmed platform versions produce a warning and continue tests without coverage."
+                    "description": "When true, the separate RunTests action collects executable-line coverage on container platform 30.0.56026.0 or later when PowerShell 7 is available for compaction. Unsupported or unconfirmed capability produces a warning and continues tests without coverage."
                 },
                 "codeCoverageGenerateCobertura": {
                     "type": "boolean",

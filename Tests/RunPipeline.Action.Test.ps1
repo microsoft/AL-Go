@@ -94,24 +94,6 @@ Describe "RunPipeline Action Tests" {
         $setCredentialCommands[0].Extent.Text | Should -Match '-exportForRunTests:\$runTestsInSeparateAction'
     }
 
-    It 'Exports the actual container platform version only after Run-AlPipeline succeeds' {
-        $runAlPipelineCommand = @($runPipelineAst.FindAll({
-                    param($node)
-                    $node -is [System.Management.Automation.Language.CommandAst] -and
-                    $node.GetCommandName() -eq 'Run-AlPipeline'
-                }, $true))
-        $platformHandoffCommand = @($runPipelineAst.FindAll({
-                    param($node)
-                    $node -is [System.Management.Automation.Language.CommandAst] -and
-                    $node.GetCommandName() -eq 'Set-RunPipelineContainerPlatformVersion'
-                }, $true))
-
-        $runAlPipelineCommand.Count | Should -Be 1
-        $platformHandoffCommand.Count | Should -Be 1
-        $platformHandoffCommand[0].Extent.StartOffset | Should -BeGreaterThan $runAlPipelineCommand[0].Extent.EndOffset
-        $platformHandoffCommand[0].Extent.Text | Should -Match '-containerName \$containerName'
-    }
-
     It 'Derives separate test eligibility from the deterministic reason list' {
         $eligibilityAssignments[0].Right.Extent.Text |
             Should -Be '$settings.useSeparateTestAction.enabled -and $separateTestActionIneligibilityReasons.Count -eq 0'

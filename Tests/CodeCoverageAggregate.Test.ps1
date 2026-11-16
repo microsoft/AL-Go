@@ -236,7 +236,7 @@ Describe "Code coverage aggregate" {
         $aggregateModel = Get-ProjectCoverageModel `
             -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
 
-        $aggregateModel.Complete | Should -BeTrue
+        $aggregateModel.LineComplete | Should -BeTrue
         $aggregateMetrics = Get-CoverageMetrics $aggregateModel.Lines
         $aggregateMetrics.Total | Should -Be 1
         $aggregateMetrics.Covered | Should -Be 1
@@ -285,7 +285,6 @@ Describe "Code coverage aggregate" {
         $aggregateModel = Get-ProjectCoverageModel -CoveragePath $aggregateArtifact `
             -RepositoryRoot $repositoryRoot
 
-        $aggregateModel.Complete | Should -BeTrue
         $aggregateModel.LineComplete | Should -BeTrue
         $aggregateModel.Reasons | Should -BeNullOrEmpty
         $aggregateModel.LineReasons | Should -BeNullOrEmpty
@@ -357,7 +356,7 @@ Describe "Code coverage aggregate" {
         $model = Get-ProjectCoverageModel `
             -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
 
-        $model.Complete | Should -BeFalse
+        $model.LineComplete | Should -BeFalse
         $model.Reasons -join " " | Should -Match "published code coverage aggregate is invalid"
     }
 
@@ -381,7 +380,7 @@ Describe "Code coverage aggregate" {
         $model = Get-ProjectCoverageModel `
             -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
 
-        $model.Complete | Should -BeFalse
+        $model.LineComplete | Should -BeFalse
         $model.Reasons -join " " | Should -Match "missing the run assessment"
     }
 
@@ -404,7 +403,7 @@ Describe "Code coverage aggregate" {
         $model = Get-ProjectCoverageModel `
             -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
 
-        $model.Complete | Should -BeFalse
+        $model.LineComplete | Should -BeFalse
         $model.Reasons -join " " | Should -Match "aggregate reference is invalid"
     }
 
@@ -434,13 +433,11 @@ Describe "Code coverage aggregate" {
                 buildDimensions = @(
                     @{
                         project = "A"; projectName = "A"; buildMode = "Default"
-                        codeCoverageExpected = $true; codeCoverageRepositorySummary = $true
-                        codeCoverageFormats = @("bc-json")
+                        codeCoverageRepositorySummary = $true
                     },
                     @{
                         project = "B"; projectName = "B"; buildMode = "Default"
-                        codeCoverageExpected = $true; codeCoverageRepositorySummary = $true
-                        codeCoverageFormats = @("bc-json")
+                        codeCoverageRepositorySummary = $true
                     }
                 )
             }) | ConvertTo-Json -Depth 10
@@ -448,9 +445,11 @@ Describe "Code coverage aggregate" {
         $model = Get-RepositoryCoverageModel -CoveragePath $downloads `
             -BuildOrderJson $buildOrder -RepositoryRoot $TestDrive
 
-        $model.Complete | Should -BeTrue
+        $model.LineComplete | Should -BeTrue
         $model.Lines.Count | Should -Be 1
         (Get-CoverageMetrics $model.Lines).Covered | Should -Be 1
-        New-RepositoryCoverageSummary $model | Should -Match "Project A|A"
+        $summary = New-RepositoryCoverageSummary $model
+        $summary | Should -Match "\| A \| Default \| complete \| 0\.0% \|"
+        $summary | Should -Match "\| B \| Default \| complete \| 100\.0% \|"
     }
 }

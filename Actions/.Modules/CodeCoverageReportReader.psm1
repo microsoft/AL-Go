@@ -1,6 +1,10 @@
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 function Get-CoverageArray {
+    <#
+    .SYNOPSIS
+        Normalizes a coverage value to an array.
+    #>
     Param($Value)
 
     if ($null -eq $Value) {
@@ -59,6 +63,10 @@ function ConvertTo-CoverageSourceIdentity {
 }
 
 function Test-PathInsideRoot {
+    <#
+    .SYNOPSIS
+        Tests whether a path is contained by a root path.
+    #>
     Param(
         [string] $Path,
         [string] $Root
@@ -87,6 +95,10 @@ function Test-PathInsideRoot {
 }
 
 function Get-NormalizedCoverageSourceRoots {
+    <#
+    .SYNOPSIS
+        Returns validated, deduplicated coverage source roots.
+    #>
     Param(
         [string] $RepositoryRoot,
         [string[]] $SourceRoots
@@ -126,6 +138,10 @@ function Get-NormalizedCoverageSourceRoots {
 }
 
 function Resolve-CoverageSourceRootDetail {
+    <#
+    .SYNOPSIS
+        Resolves the source-root detail that owns a coverage source.
+    #>
     Param(
         [string] $SourceIdentity,
         [object[]] $SourceRootDetails
@@ -153,6 +169,10 @@ function Resolve-CoverageSourceRootDetail {
 }
 
 function Resolve-ExistingCoverageSource {
+    <#
+    .SYNOPSIS
+        Resolves an existing source file beneath the repository and source root.
+    #>
     Param(
         [string] $Candidate,
         [string] $RepositoryRoot,
@@ -696,6 +716,10 @@ function Get-CoverageDiagnosticAssessment {
 }
 
 function Resolve-NormalizedRepositoryCoverageSource {
+    <#
+    .SYNOPSIS
+        Maps a coverage source to its normalized repository-relative identity.
+    #>
     Param(
         [AllowEmptyString()][string] $SourcePath,
         [AllowEmptyString()][string] $RepositoryRoot,

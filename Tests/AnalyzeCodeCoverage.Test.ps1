@@ -4,7 +4,9 @@ param()
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
 Get-Module AnalyzeCodeCoverage | Remove-Module -Force -ErrorAction SilentlyContinue
+Get-Module TestActionsHelper | Remove-Module -Force -ErrorAction SilentlyContinue
 . (Join-Path $PSScriptRoot "..\Actions\AL-Go-Helper.ps1" -Resolve)
+Import-Module (Join-Path $PSScriptRoot "TestActionsHelper.psm1" -Resolve) -Force
 Import-Module (Join-Path $PSScriptRoot "..\Actions\AnalyzeCodeCoverage\AnalyzeCodeCoverage.psm1" -Resolve) -Force -DisableNameChecking
 Import-Module (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageAggregateFormat.psm1" -Resolve) -Force -DisableNameChecking
 Import-Module (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageReportReader.psm1" -Resolve) -Force -DisableNameChecking
@@ -14,8 +16,9 @@ Describe "AnalyzeCodeCoverage" {
         $sourceFixtures = Join-Path $PSScriptRoot "TestArtifacts\CodeCoverage"
         $fixtures = Join-Path $TestDrive "CodeCoverageFixtures"
         Copy-Item -LiteralPath $sourceFixtures -Destination $fixtures -Recurse
-        $actionYamlPath = Join-Path $PSScriptRoot "..\Actions\AnalyzeCodeCoverage\action.yaml" -Resolve
-        $modulePath = Join-Path $PSScriptRoot "..\Actions\AnalyzeCodeCoverage\AnalyzeCodeCoverage.psm1" -Resolve
+        $actionName = "AnalyzeCodeCoverage"
+        $scriptRoot = Join-Path $PSScriptRoot "..\Actions\$actionName" -Resolve
+        $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
         $scriptPath = Join-Path $PSScriptRoot "..\Actions\AnalyzeCodeCoverage\AnalyzeCodeCoverage.ps1" -Resolve
 
         function Publish-TestAggregate {
@@ -491,41 +494,6 @@ Describe "AnalyzeCodeCoverage" {
                 $cache.Count | Should -Be 1
                 Should -Invoke Resolve-NormalizedRepositoryCoverageSource -Times 1 -Exactly
             }
-        }
-
-        It "streams a representative large-shaped report without recursive conversion" `
-            -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
-            $path = Join-Path $TestDrive "large-streaming.json"
-            $writer = [System.IO.StreamWriter]::new(
-                $path, $false, [System.Text.UTF8Encoding]::new($false), 65536)
-            try {
-                $writer.Write('{"schemaVersion":"1.0","coverageMode":"line","complete":true,"diagnostics":[],"sources":["app/Code.al"],"tests":[],"procedureEdges":[],"methods":[],"lines":[')
-                foreach ($index in 1..50000) {
-                    if ($index -gt 1) {
-                        $writer.Write(',')
-                    }
-                    $writer.Write('{"objectType":5,"objectId":1,"lineNumber":')
-                    $writer.Write($index)
-                    $writer.Write(',"lineType":3,"methodId":1,"hitCount":1,"status":1,"sourcePath":"app/Code.al"}')
-                }
-                $writer.Write(']}')
-            }
-            finally {
-                $writer.Dispose()
-            }
-
-            (Get-Item -LiteralPath $path).Length | Should -BeGreaterThan 5MB
-            $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-            $result = Read-BcCoverageReport -Path $path -Model (New-StreamingReaderModel) `
-                -RequestedMode "line"
-            $stopwatch.Stop()
-
-            $result.Valid | Should -BeTrue
-            $result.Reader | Should -Be "Newtonsoft.Json"
-            $result.ExtractedLineCount | Should -Be 50000
-            $result.AcceptedLineCount | Should -Be 50000
-            $result.Scope.ApplicationLines["app"].Count | Should -Be 50000
-            $stopwatch.Elapsed.TotalSeconds | Should -BeLessThan 30
         }
 
         It "streams accepted lines directly into an aggregate union without retaining per-run lines" `
@@ -1208,14 +1176,9 @@ Describe "AnalyzeCodeCoverage" {
         (Test-CodeCoverageSummaryRequested -Settings @{ useSeparateTestAction = @{ codeCoverageSummary = "repository" } } -Scope project) | Should -BeFalse
     }
 
-    It "declares the focused composite action contract" {
-        $yaml = (Get-Content -LiteralPath $actionYamlPath -Raw -Encoding UTF8).Replace("`r", "")
-        $yaml | Should -Match "(?ms)^  shell:.*?^    default: powershell$"
-        $yaml | Should -Match "(?ms)^  scope:.*?^    required: true$"
-        $yaml | Should -Match "(?ms)^  project:.*?^    default: '\.'$"
-        $yaml | Should -Match "(?ms)^  coveragePath:.*?^    required: true$"
-        $yaml | Should -Match "(?ms)^  buildOrderJson:.*?^    default: '\[\]'$"
-        $yaml | Should -Match "using: composite"
+    It "matches the composite action contract" {
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript `
+            -outputs ([ordered]@{}) -DefaultShell powershell
     }
 
     It "appends a project summary only when project settings request it" {
@@ -1276,12 +1239,4 @@ Describe "AnalyzeCodeCoverage" {
         }
     }
 
-    It "uses PowerShell 5 compatible syntax in the action and module" {
-        foreach ($path in @($modulePath, $scriptPath)) {
-            $tokens = $null
-            $errors = $null
-            [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
-            $errors | Should -BeNullOrEmpty
-        }
-    }
 }

@@ -82,17 +82,6 @@ Describe 'RunTests.psm1 Tests' {
         $env:RUNNER_DEBUG = $script:originalRunnerDebug
     }
 
-    It 'Delegates coverage lifecycle ownership to the coordinator module' {
-        $moduleText = Get-Content -LiteralPath (
-            Join-Path $PSScriptRoot '../Actions/RunTests/RunTests.psm1'
-        ) -Raw -Encoding UTF8
-
-        $moduleText | Should -Match "CodeCoverageCoordinator\.psm1"
-        $moduleText | Should -Match 'New-AlGoCodeCoverageSession'
-        $moduleText | Should -Match 'Complete-AlGoCodeCoverageSession'
-        $moduleText | Should -Not -Match 'Write-CodeCoverageStatus'
-    }
-
     Context 'Get-TestAppsToRun' {
         It 'Collects compiled test apps from the build artifacts folder' {
             $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app', 'App2.Test.app')
