@@ -257,37 +257,6 @@ function CheckInstalledApps {
 
 <#
     .SYNOPSIS
-        Resolve the target BC version from its installed Application extension.
-    .PARAMETER extensions
-        Extensions returned by the read-only environment API.
-    .PARAMETER environment
-        Target environment name, used in failure diagnostics.
-#>
-function GetPTEApplicationVersion {
-    Param(
-        [object[]] $extensions,
-        [string] $environment
-    )
-
-    $applications = @($extensions | Where-Object {
-        $app = $_ | ConvertTo-HashTable -recurse
-        ($app['displayName'] -eq 'Application' -or $app['id'] -eq $applicationAppId) -and $app['isInstalled']
-    })
-    $version = $null
-    if ($applications.Count -eq 1) {
-        $application = $applications[0] | ConvertTo-HashTable -recurse
-        $parts = @('versionMajor', 'versionMinor', 'versionBuild', 'versionRevision' | ForEach-Object {
-            if ($application.ContainsKey($_)) { [string]$application[$_] }
-        })
-        if ($parts.Count -eq 4 -and [version]::TryParse(($parts -join '.'), [ref]$version)) {
-            return $version
-        }
-    }
-    throw "Could not determine the Business Central version in environment $environment from a unique installed Application extension."
-}
-
-<#
-    .SYNOPSIS
         Read installed apps using the selected API, or the original BCH API for non-PTE work.
     .PARAMETER bcAuthContext
         Original BCH authentication context, used only for Automation reads.
@@ -348,98 +317,6 @@ function Initialize-PTEPublishingApi {
 
 <#
     .SYNOPSIS
-        Wait for the exact Admin Center PTE operation to complete successfully.
-    .DESCRIPTION
-        Polls only the returned app and operation IDs. An accepted or scheduled immediate install
-        is not success. Only transient status-read errors are retried, never the upload.
-        Uses the initialized Admin authentication context.
-    .PARAMETER environment
-        Target environment.
-    .PARAMETER operation
-        Upload response containing the operation id, appId and status.
-    .PARAMETER appId
-        Expected app ID from the package.
-    .PARAMETER timeoutSeconds
-        Maximum elapsed polling time. Defaults to 30 minutes.
-    .PARAMETER maxStatusRequests
-        Maximum number of status requests. Defaults to 360.
-    .PARAMETER pollIntervalSeconds
-        Delay between status requests. Defaults to 30 seconds, capped by the remaining timeout.
-#>
-function WaitPTEOperation {
-    Param(
-        [string] $environment,
-        $operation,
-        [string] $appId,
-        [ValidateRange(1, 1800)]
-        [int] $timeoutSeconds = 1800,
-        [ValidateRange(1, 360)]
-        [int] $maxStatusRequests = 360,
-        [ValidateRange(0, 30)]
-        [int] $pollIntervalSeconds = 30
-    )
-
-    $operation = $operation | ConvertTo-HashTable -recurse
-    if ($operation -isnot [hashtable] -or !$operation['id'] -or $operation['appId'] -ne $appId) {
-        throw "PTE upload returned missing or mismatched app/operation details for app $appId. The upload will not be replayed."
-    }
-    $operationId = [string]$operation['id']
-    $timer = [System.Diagnostics.Stopwatch]::StartNew()
-    $transientErrors = 0
-    $requests = 0
-    while ($true) {
-        if ($operation -isnot [hashtable] -or $operation['id'] -ne $operationId -or
-            ($operation.ContainsKey('appId') -and $operation['appId'] -ne $appId)) {
-            throw "Missing or mismatched PTE operation $operationId for app $appId."
-        }
-        $status = [string]$operation['status']
-        Write-Host "PTE operation $operationId for app ${appId}: $status"
-        switch ($status) {
-            'succeeded' { return }
-            'scheduled' {}
-            'running' {}
-            default {
-                $serviceError = @($operation['errorMessage'])
-                if ($operation['error'] -is [hashtable]) {
-                    $serviceError += $operation['error']['message']
-                }
-                $serviceError = @($serviceError | Where-Object { $_ -is [string] }) -join ' '
-                throw "PTE operation $operationId for app $appId did not succeed ($status). $serviceError"
-            }
-        }
-        if ($requests -ge $maxStatusRequests -or $timer.Elapsed.TotalSeconds -ge $timeoutSeconds) {
-            break
-        }
-        $sleepSeconds = [Math]::Min($pollIntervalSeconds, [Math]::Max(0, $timeoutSeconds - $timer.Elapsed.TotalSeconds))
-        Start-Sleep -Milliseconds ([int][Math]::Ceiling($sleepSeconds * 1000))
-        if ($timer.Elapsed.TotalSeconds -ge $timeoutSeconds) { break }
-        $requests++
-        try {
-            $requestTimeout = [int][Math]::Max(1, [Math]::Min(30, [Math]::Ceiling($timeoutSeconds - $timer.Elapsed.TotalSeconds)))
-            $operation = Get-AdminCenterAppOperation -environment $environment `
-                -appId $appId -operationId $operationId -timeoutSeconds $requestTimeout
-            $operation = $operation | ConvertTo-HashTable -recurse
-            $transientErrors = 0
-        }
-        catch {
-            $statusCode = 0
-            if ($_.Exception.PSObject.Properties['Response'] -and $_.Exception.Response) {
-                $statusCode = [int]$_.Exception.Response.StatusCode
-            }
-            $transient = $_.Exception.Data['AdminCenterRequestStarted'] -ne $false -and ($statusCode -in 408,429,500,502,503,504 -or
-                (!$statusCode -and ($_.Exception -is [System.Net.WebException] -or
-                    $_.Exception -is [System.Net.Http.HttpRequestException] -or $_.Exception -is [System.TimeoutException])))
-            if (!$transient -or ++$transientErrors -gt 5) {
-                throw "Unable to read PTE operation $operationId for app ${appId}: $_"
-            }
-            OutputWarning -message "Transient error reading PTE operation ${operationId}: $_. Retrying the status request."
-        }
-    }
-    throw "Timed out waiting for PTE operation $operationId for app $appId after $timeoutSeconds seconds or $maxStatusRequests status requests. The upload will not be replayed."
-}
-
-<#
-    .SYNOPSIS
         Publish primary apps or PTE dependencies through the action-selected API.
     .DESCRIPTION
         Delegates the original packages to BcContainerHelper or the Admin Center batch publisher,
@@ -469,60 +346,10 @@ function PublishPTEApps {
         Publish-PerTenantExtensionApps -bcAuthContext $bcAuthContext -environment $environment -appFiles $appFiles -SchemaSyncMode $schemaSyncMode
     }
     elseif ($script:ptePublishingApi -eq 'AdminCenter') {
-        Publish-AdminCenterPTEApps -environment $environment -appFiles $appFiles -schemaSyncMode $schemaSyncMode
+        Install-AdminCenterPTEApps -environment $environment -appFiles $appFiles -schemaSyncMode $schemaSyncMode
     }
     else {
         throw "Invalid PTE publishing API: $script:ptePublishingApi"
-    }
-}
-
-<#
-    .SYNOPSIS
-        Publish a batch of PTE packages through Admin Center.
-    .DESCRIPTION
-        Requires BC 29 or later. Expands packages, excludes runtime packages and orders dependencies.
-        Skips same or newer installed versions, and waits for each exact install operation before continuing.
-        Uses the initialized Admin authentication context and target.
-    .PARAMETER environment
-        Target Business Central environment name.
-    .PARAMETER appFiles
-        App packages or archives to publish.
-    .PARAMETER schemaSyncMode
-        Existing helper-compatible sync mode: Add or Force (mapped to ForceSync).
-#>
-function Publish-AdminCenterPTEApps {
-    Param(
-        [string] $environment,
-        [string[]] $appFiles,
-        [ValidateSet('Add', 'Force')]
-        [string] $schemaSyncMode = 'Add'
-    )
-
-    $extensions = @(Get-AdminCenterInstalledExtensions -environment $environment)
-    $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
-    if ($applicationVersion -lt [version]'29.0.0.0') {
-        throw "Admin Center PTE publishing requires BC 29 or later; the selected API will not be changed."
-    }
-    $tempPath = NewTemporaryFolder
-    try {
-        $copiedApps = @(Copy-AppFilesToFolder -appFiles $appFiles -folder $tempPath)
-        $sortedApps = @(Sort-AppFilesByDependencies -appFiles $copiedApps -excludeRuntimePackages)
-        $syncMode = if ($schemaSyncMode -eq 'Force') { 'ForceSync' } else { 'Add' }
-        foreach ($appFile in $sortedApps) {
-            $appJson = Get-AppJsonFromAppFile -appFile $appFile
-            $appVersion = [version]$appJson.version
-            $matchingApps = @($extensions | Where-Object { $_.id -eq $appJson.id })
-            $installedVersions = @($matchingApps | Where-Object { $_.isInstalled } |
-                ForEach-Object { [version]::new("$($_.versionMajor).$($_.versionMinor).$($_.versionBuild).$($_.versionRevision)") })
-            if (@($installedVersions | Where-Object { $_ -ge $appVersion }).Count -gt 0) {
-                continue
-            }
-            $operation = Install-AdminCenterPTE -environment $environment -appFile $appFile -syncMode $syncMode
-            WaitPTEOperation -environment $environment -operation $operation -appId $appJson.id
-        }
-    }
-    finally {
-        Remove-Item -LiteralPath $tempPath -Force -Recurse
     }
 }
 

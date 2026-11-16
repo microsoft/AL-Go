@@ -44,7 +44,7 @@ Describe 'AL-Go Admin Center API helpers' {
                     return @{ id = 'operation-1' }
                 }
 
-                $result = Install-AdminCenterPTE -environment 'QA / East' `
+                $result = Install-AdminCenterPTEApp -environment 'QA / East' `
                     -apiBaseUrl 'https://api.embed.test/service/' -applicationFamily 'Family / US' -appFile $script:packagePath -syncMode $syncMode
 
                 $result.id | Should -Be 'operation-1'
@@ -187,7 +187,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Invoke-RestMethod { return @{ value = @(); id = 'operation-1' } }
 
                 Get-AdminCenterInstalledExtensions -environment Sandbox | Out-Null
-                Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath | Out-Null
+                Install-AdminCenterPTEApp -environment Sandbox -appFile $script:packagePath | Out-Null
                 Get-AdminCenterAppOperation -environment Sandbox -appId app -operationId operation | Out-Null
 
                 Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 1 -ParameterFilter {
@@ -273,7 +273,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Invoke-RestMethod { return @{ value = @(); id = 'operation' } }
                 Get-AdminCenterInstalledExtensions -environment Sandbox `
                     -apiBaseUrl 'https://explicit.test' -applicationFamily 'ExplicitFamily' | Out-Null
-                Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath `
+                Install-AdminCenterPTEApp -environment Sandbox -appFile $script:packagePath `
                     -apiBaseUrl 'https://api.businesscentral.dynamics.com' | Out-Null
                 Get-AdminCenterAppOperation -environment Sandbox -appId app -operationId operation `
                     -applicationFamily BusinessCentral | Out-Null
@@ -379,7 +379,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Renew-BcAuthContext { throw [System.TimeoutException]::new('Renewal failed') }
 
                 try {
-                    Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath
+                    Install-AdminCenterPTEApp -environment Sandbox -appFile $script:packagePath
                     throw 'Expected failure'
                 }
                 catch {
@@ -434,7 +434,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Invoke-RestMethod { throw [System.TimeoutException]::new('Response lost') }
 
                 try {
-                    Install-AdminCenterPTE -environment Sandbox -appFile $script:packagePath
+                    Install-AdminCenterPTEApp -environment Sandbox -appFile $script:packagePath
                     throw 'Expected failure'
                 }
                 catch {
@@ -450,7 +450,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Mock Invoke-AdminCenterApi { throw 'Request must not be called' }
 
                 try {
-                    Install-AdminCenterPTE -environment Sandbox -appFile (Join-Path $TestDrive 'Missing.app')
+                    Install-AdminCenterPTEApp -environment Sandbox -appFile (Join-Path $TestDrive 'Missing.app')
                     throw 'Expected failure'
                 }
                 catch {
