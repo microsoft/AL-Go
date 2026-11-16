@@ -2,8 +2,6 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageAggregate.psm1" -Resolve) `
     -DisableNameChecking
-Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageAggregateFormat.psm1" -Resolve) `
-    -DisableNameChecking
 Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
     -DisableNameChecking
 
@@ -166,7 +164,7 @@ function Resolve-CodeCoverageSourceRootData {
 
 <#
 .SYNOPSIS
-    Converts internal source-root records to the portable status and aggregate shape.
+    Converts internal source-root records to the portable status shape.
 .PARAMETER sourceRootRecords
     Internal source-root records returned by Resolve-CodeCoverageSourceRootData.
 .OUTPUTS
@@ -238,12 +236,12 @@ function Get-CodeCoverageRunOutputPath {
 .SYNOPSIS
     Atomically writes the final AL-Go coverage status manifest.
 .DESCRIPTION
-    Serializes final run states, source-root metadata, and the optional validated aggregate
-    descriptor to a temporary file before moving it to coverage-status.json.
+    Serializes final run states, assessments, source-root metadata, and the optional fixed
+    aggregate reference to a temporary file before moving it to coverage-status.json.
 .PARAMETER session
     Finalized AL-Go-owned code coverage session.
 .PARAMETER aggregate
-    Optional validated aggregate descriptor returned by the background compactor.
+    Optional aggregate result returned by the background compactor.
 #>
 function Write-CodeCoverageStatusInternal {
     Param(
@@ -256,12 +254,20 @@ function Write-CodeCoverageStatusInternal {
     try {
         $runs = @(
             foreach ($run in @($session.Runs)) {
-                [ordered]@{
+                $runStatus = [ordered]@{
                     appId = "$($run.AppId)"
                     appName = "$($run.AppName)"
                     outputDirectory = "CodeCoverage/$($run.AppId)"
                     state = if ($session.Supported) { "$($run.State)" } else { "unsupported" }
                 }
+                if ($aggregate -and $run.State -in @("complete", "incomplete")) {
+                    $runStatus["lineReasons"] = @($run.LineReasons)
+                    $runStatus["notices"] = @($run.Notices)
+                    $runStatus["lineGlobalUnsafe"] = [bool]$run.LineGlobalUnsafe
+                    $runStatus["lineAffectedSources"] = @($run.LineAffectedSources)
+                    $runStatus["excludedLineFacts"] = [int]$run.ExcludedLineFacts
+                }
+                $runStatus
             }
         )
         $status = [ordered]@{
@@ -274,16 +280,7 @@ function Write-CodeCoverageStatusInternal {
             runs = @($runs)
         }
         if ($aggregate) {
-            $status["aggregate"] = [ordered]@{
-                format = "$($aggregate.Format)"
-                contractVersion = [int]$aggregate.ContractVersion
-                path = "$($aggregate.Path)"
-                sha256 = "$($aggregate.Sha256)"
-                sourceRootFingerprint = "$($aggregate.SourceRootFingerprint)"
-                runCount = [int]$aggregate.RunCount
-                lineCount = [int]$aggregate.LineCount
-                sizeBytes = [long]$aggregate.SizeBytes
-            }
+            $status["aggregate"] = "coverage-aggregate.bin.gz"
         }
         ConvertTo-Json -InputObject $status -Depth 6 |
             Set-Content -LiteralPath $temporaryPath -Encoding UTF8
@@ -292,27 +289,6 @@ function Write-CodeCoverageStatusInternal {
     finally {
         Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
     }
-}
-
-<#
-.SYNOPSIS
-    Drains and logs available per-report compactor telemetry.
-.DESCRIPTION
-    Moves report events from the worker's concurrent event queue into session telemetry for
-    final overlap calculation while writing concise GitHub action log output.
-.PARAMETER session
-    AL-Go-owned code coverage session containing the active compactor.
-#>
-function Write-CodeCoverageCompactorEvents {
-    Param([hashtable] $session)
-
-    if (-not $session.Compactor -or -not $session.Compactor.ContainsKey("Telemetry")) {
-        return
-    }
-    foreach ($telemetryEvent in @($session.Compactor.Telemetry)) {
-        $session.CompactorTelemetry.Add($telemetryEvent)
-    }
-    $session.Compactor.Telemetry = @()
 }
 
 <#
@@ -550,7 +526,6 @@ function New-AlGoCodeCoverageSession {
         Runs = @($runs)
         Compactor = $null
         CompactorFailure = ""
-        CompactorTelemetry = [System.Collections.Generic.List[object]]::new()
     }
     return $session
 }
@@ -559,8 +534,8 @@ function New-AlGoCodeCoverageSession {
 .SYNOPSIS
     Starts the single background aggregate worker for a supported session.
 .DESCRIPTION
-    Builds immutable aggregate metadata from the session, derives temporary and published
-    paths, and starts the PowerShell 7 worker that consumes validated report descriptors.
+    Builds immutable reader metadata from the session, derives temporary and published paths,
+    and starts the PowerShell 7 worker that consumes validated report descriptors.
 .PARAMETER session
     Supported AL-Go-owned code coverage session requesting BC JSON.
 .OUTPUTS
@@ -571,18 +546,11 @@ function Start-CodeCoverageCompactorInternal {
 
     $sourceRootDetails = @(Get-CodeCoverageSourceRootDetails $session.SourceRootRecords)
     $sourceRoots = @($session.SourceRootRecords | ForEach-Object { "$($_.RelativePath)" })
-    $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-        -sourceRoots $sourceRoots -sourceRootDetails $sourceRootDetails
     $aggregatePath = Get-CodeCoverageAggregatePath -session $session
     $metadata = @{
-        Project = "$($session.Project)"
-        ProjectName = "$($session.ProjectName)"
-        BuildMode = "$($session.BuildMode)"
         Mode = $script:CodeCoverageMode
-        Formats = @($session.Formats)
         SourceRoots = @($sourceRoots)
         SourceRootDetails = @($sourceRootDetails)
-        SourceRootFingerprint = $fingerprint
     }
     return Start-CodeCoverageAggregateWorker `
         -readerModulePath (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
@@ -661,7 +629,6 @@ function Complete-AlGoCodeCoverageRun {
                 throw "Code coverage compaction could not accept app '$($run.AppName)'. $($session.CompactorFailure)"
             }
         }
-        Write-CodeCoverageCompactorEvents -session $session
     }
     catch {
         $run.State = "failed"
@@ -712,7 +679,6 @@ function Complete-AlGoCodeCoverageSession {
         $drainStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $aggregate = Complete-CodeCoverageAggregateWorker -worker $session.Compactor
-            Write-CodeCoverageCompactorEvents -session $session
             if (-not [string]::IsNullOrWhiteSpace($session.CompactorFailure)) {
                 throw $session.CompactorFailure
             }
@@ -721,6 +687,41 @@ function Complete-AlGoCodeCoverageSession {
                 }).Count
             if (-not $aggregate -or [int]$aggregate.RunCount -ne $expectedRunCount) {
                 throw "The code coverage aggregate does not contain every valid run."
+            }
+            $assessments = @($aggregate.RunAssessments)
+            if ($assessments.Count -ne $expectedRunCount) {
+                throw "The code coverage compactor did not assess every valid run."
+            }
+            $seenSequences = [System.Collections.Generic.HashSet[int]]::new()
+            foreach ($assessment in $assessments) {
+                $sequence = 0
+                if (-not [int]::TryParse("$($assessment.Sequence)", [ref]$sequence) -or
+                    $sequence -lt 0 -or $sequence -ge $session.Runs.Count -or
+                    -not $seenSequences.Add($sequence)) {
+                    throw "The code coverage compactor returned an invalid run assessment."
+                }
+                $run = $session.Runs[$sequence]
+                if ("$($assessment.AppId)" -cne "$($run.AppId)" -or
+                    "$($assessment.AppName)" -cne "$($run.AppName)" -or
+                    "$($assessment.State)".ToLowerInvariant() -cne "$($run.State)") {
+                    throw "The code coverage compactor run assessment does not match the session."
+                }
+                if ($assessment.LineGlobalUnsafe -isnot [bool]) {
+                    throw "The code coverage compactor returned an invalid run assessment."
+                }
+                $excludedLineFacts = 0
+                if (-not [int]::TryParse(
+                        "$($assessment.ExcludedLineFacts)", [ref]$excludedLineFacts) -or
+                    $excludedLineFacts -lt 0) {
+                    throw "The code coverage compactor returned an invalid run assessment."
+                }
+                $run["LineReasons"] = @($assessment.LineReasons | ForEach-Object { "$_" })
+                $run["Notices"] = @($assessment.Notices | ForEach-Object { "$_" })
+                $run["LineGlobalUnsafe"] = [bool]$assessment.LineGlobalUnsafe
+                $run["LineAffectedSources"] = @(
+                    $assessment.LineAffectedSources | ForEach-Object { "$_" }
+                )
+                $run["ExcludedLineFacts"] = $excludedLineFacts
             }
         }
         catch {
@@ -755,30 +756,14 @@ function Complete-AlGoCodeCoverageSession {
         }
         $drainStopwatch.Stop()
 
-        $overlappedReports = 0
-        foreach ($telemetry in @($session.CompactorTelemetry)) {
-            $parseStart = [DateTime]$telemetry.ParseStartedAtUtc
-            $parseEnd = [DateTime]$telemetry.ParseEndedAtUtc
-            if (@($session.Runs | Where-Object {
-                        $candidate = $_
-                        $candidate.ContainsKey("StartedAtUtc") -and
-                        [DateTime]$candidate.StartedAtUtc -lt $parseEnd -and
-                        ($candidate.ContainsKey("CompletedAtUtc") -eq $false -or
-                            [DateTime]$candidate.CompletedAtUtc -gt $parseStart) -and
-                        "$($candidate.AppId)" -ne "$($telemetry.AppId)"
-                    }).Count -gt 0) {
-                $overlappedReports++
-            }
-        }
         $culture = [System.Globalization.CultureInfo]::InvariantCulture
-        Write-Host ("Code coverage compaction complete: runs={0}, lines={1}, activeParse={2}s, finalDrain={3}s, aggregateSize={4} MiB, rawRemoved={5} MiB, parserProducerOverlap={6}/{0}, outcome=passed." -f
+        Write-Host ("Code coverage compaction complete: runs={0}, lines={1}, parse={2}s, finalDrain={3}s, aggregateSize={4} MiB, rawRemoved={5} MiB, outcome=passed." -f
             $aggregate.RunCount,
             $aggregate.LineCount,
             ([double]$aggregate.TotalParseMilliseconds / 1000).ToString("0.000", $culture),
             $drainStopwatch.Elapsed.TotalSeconds.ToString("0.000", $culture),
             ([long]$aggregate.SizeBytes / 1MB).ToString("0.0", $culture),
-            ($removedBytes / 1MB).ToString("0.0", $culture),
-            $overlappedReports)
+            ($removedBytes / 1MB).ToString("0.0", $culture))
     }
     if ($failureReasons.Count -gt 0 -and ($compactionFailed -or -not $suppressFailure)) {
         throw ($failureReasons | Select-Object -Unique) -join " "

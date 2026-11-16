@@ -21,13 +21,13 @@ function Invoke-CodeCoverageAggregateWorker {
         SourceRoots = @($metadata.SourceRoots)
         SourceRootDetails = @(
             foreach ($detail in @($metadata.SourceRootDetails)) {
-                $path = "$(Get-CodeCoverageAggregateProperty -value $detail -name 'path')".Replace('\', '/').Trim('/')
+                $path = "$($detail.path)".Replace('\', '/').Trim('/')
                 @{
                     Path = $path
                     Identity = $path.ToLowerInvariant()
-                    Kind = "$(Get-CodeCoverageAggregateProperty -value $detail -name 'kind')".ToLowerInvariant()
-                    AppId = "$(Get-CodeCoverageAggregateProperty -value $detail -name 'appId')"
-                    AppName = "$(Get-CodeCoverageAggregateProperty -value $detail -name 'appName')"
+                    Kind = "$($detail.kind)".ToLowerInvariant()
+                    AppId = "$($detail.appId)"
+                    AppName = "$($detail.appName)"
                 }
             }
         )
@@ -36,7 +36,6 @@ function Invoke-CodeCoverageAggregateWorker {
     $semanticRootOrder = [System.Collections.Generic.List[string]]::new()
     $semanticLineCount = 0
     $runAssessments = [System.Collections.Generic.List[object]]::new()
-    $telemetry = [System.Collections.Generic.List[object]]::new()
     $sourceMappingCache = [System.Collections.Generic.Dictionary[string,object]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
     )
@@ -52,9 +51,7 @@ function Invoke-CodeCoverageAggregateWorker {
                 continue
             }
             $descriptor = $descriptorJson | ConvertFrom-Json -AsHashtable
-            $parseStartedAt = [DateTime]::UtcNow
             $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-            $memoryBefore = [System.Diagnostics.Process]::GetCurrentProcess().PrivateMemorySize64
             $file = Get-Item -LiteralPath "$($descriptor.ReportPath)"
             $reportResult = Read-BcCoverageReport -Path $file.FullName -Model $model `
                 -RequestedMode "$($metadata.Mode)" -RepositoryRoot $repositoryRoot `
@@ -76,7 +73,6 @@ function Invoke-CodeCoverageAggregateWorker {
                     AppId = "$($descriptor.AppId)"
                     AppName = "$($descriptor.AppName)"
                     State = if ([bool]$descriptor.Complete) { "complete" } else { "incomplete" }
-                    Complete = [bool]$descriptor.Complete
                     LineReasons = @($assessment.LineReasons)
                     Notices = @($assessment.Notices)
                     LineGlobalUnsafe = [bool]$assessment.LineGlobalUnsafe
@@ -84,69 +80,32 @@ function Invoke-CodeCoverageAggregateWorker {
                     ExcludedLineFacts = [int]$reportResult.Scope.ExcludedLineFacts
                 })
             $stopwatch.Stop()
-            $parseEndedAt = [DateTime]::UtcNow
             $totalParseMilliseconds += $stopwatch.Elapsed.TotalMilliseconds
             $semanticLineCount += [int]$reportResult.NewLineCount
-            $memoryAfter = [System.Diagnostics.Process]::GetCurrentProcess().PrivateMemorySize64
-            $reportTelemetry = [PSCustomObject]@{
-                Type = "report"
-                AppId = "$($descriptor.AppId)"
-                Bytes = [long]$file.Length
-                QueueWaitMilliseconds = ($parseStartedAt - [DateTime]$descriptor.EnqueuedAtUtc).TotalMilliseconds
-                QueueDepthAtEnqueue = [int]$descriptor.QueueDepthAtEnqueue
-                ParseMilliseconds = $stopwatch.Elapsed.TotalMilliseconds
-                ParseStartedAtUtc = $parseStartedAt
-                ParseEndedAtUtc = $parseEndedAt
-                ExtractedLineCount = [int]$reportResult.ExtractedLineCount
-                AcceptedLineCount = [int]$reportResult.AcceptedLineCount
-                NewLineCount = [int]$reportResult.NewLineCount
-                AggregateLineCount = $semanticLineCount
-                MemoryBeforeBytes = [long]$memoryBefore
-                MemoryAfterBytes = [long]$memoryAfter
-            }
-            $telemetry.Add($reportTelemetry)
             $culture = [System.Globalization.CultureInfo]::InvariantCulture
-            Write-Host ("Code coverage compactor report {0}: size={1} MiB, queueWait={2}s, queueDepth={3}, parse={4}s, extracted={5}, accepted={6}, new={7}, aggregate={8}, memoryBefore={9} MiB, memoryAfter={10} MiB." -f
-                $reportTelemetry.AppId,
-                ($reportTelemetry.Bytes / 1MB).ToString("0.0", $culture),
-                ($reportTelemetry.QueueWaitMilliseconds / 1000).ToString("0.000", $culture),
-                $reportTelemetry.QueueDepthAtEnqueue,
-                ($reportTelemetry.ParseMilliseconds / 1000).ToString("0.000", $culture),
-                $reportTelemetry.ExtractedLineCount,
-                $reportTelemetry.AcceptedLineCount,
-                $reportTelemetry.NewLineCount,
-                $reportTelemetry.AggregateLineCount,
-                ($reportTelemetry.MemoryBeforeBytes / 1MB).ToString("0.0", $culture),
-                ($reportTelemetry.MemoryAfterBytes / 1MB).ToString("0.0", $culture))
+            Write-Host ("Code coverage compactor report {0}: size={1} MiB, parse={2}s, extracted={3}, accepted={4}, new={5}, aggregate={6}." -f
+                "$($descriptor.AppId)",
+                ($file.Length / 1MB).ToString("0.0", $culture),
+                ($stopwatch.Elapsed.TotalMilliseconds / 1000).ToString("0.000", $culture),
+                [int]$reportResult.ExtractedLineCount,
+                [int]$reportResult.AcceptedLineCount,
+                [int]$reportResult.NewLineCount,
+                $semanticLineCount)
         }
 
         Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
-        Write-CodeCoverageAggregateFile -path $temporaryPath -metadata $metadata `
-            -runs @($runAssessments) -lines $semanticLines -rootOrder $semanticRootOrder
-        $sha256 = Get-CodeCoverageFileSha256 -path $temporaryPath
-        $validation = Read-CodeCoverageAggregate -path $temporaryPath `
-            -expectedSha256 $sha256 `
-            -expectedSourceRootFingerprint "$($metadata.SourceRootFingerprint)" `
-            -ValidateOnly
-        if (-not $validation.Valid -or $validation.LineCount -ne $semanticLineCount -or
-            $validation.Runs.Count -ne $runAssessments.Count) {
-            throw "The generated code coverage aggregate failed validation. $($validation.Reason)"
-        }
+        Write-CodeCoverageAggregateFile -path $temporaryPath -lines $semanticLines `
+            -rootOrder $semanticRootOrder
         [System.IO.File]::Move($temporaryPath, $publishedPath, $true)
         $publishedFile = Get-Item -LiteralPath $publishedPath
         return @{
             Aggregate = @{
-                Format = "al-go-line-union-binary-gzip"
-                ContractVersion = 1
-                Path = [System.IO.Path]::GetFileName($publishedPath)
-                Sha256 = $sha256
-                SourceRootFingerprint = "$($metadata.SourceRootFingerprint)"
                 RunCount = $runAssessments.Count
                 LineCount = $semanticLineCount
                 SizeBytes = [long]$publishedFile.Length
                 TotalParseMilliseconds = $totalParseMilliseconds
             }
-            Telemetry = @($telemetry)
+            RunAssessments = @($runAssessments)
         }
     }
     finally {
@@ -181,7 +140,7 @@ function Invoke-CodeCoverageAggregateProcess {
         @{
             Succeeded = $true
             Aggregate = $workerResult.Aggregate
-            Telemetry = @($workerResult.Telemetry)
+            RunAssessments = @($workerResult.RunAssessments)
         } | ConvertTo-Json -Depth 20 -Compress |
             Set-Content -LiteralPath $resultPath -Encoding UTF8
     }
@@ -264,8 +223,6 @@ function Start-CodeCoverageAggregateWorker {
             Input = $process.StandardInput
             ConfigPath = $configPath
             ResultPath = $resultPath
-            EnqueuedCount = 0
-            Telemetry = @()
         }
     }
     catch {
@@ -290,12 +247,9 @@ function Add-CodeCoverageAggregateWorkItem {
     if (-not $worker -or $worker.Process.HasExited) {
         throw "The code coverage aggregate worker is not accepting reports."
     }
-    $descriptor.EnqueuedAtUtc = [DateTime]::UtcNow
-    $descriptor.QueueDepthAtEnqueue = [int]$worker.EnqueuedCount
     $descriptorJson = $descriptor | ConvertTo-Json -Depth 10 -Compress
     try {
         $worker.Input.WriteLine($descriptorJson)
-        $worker.EnqueuedCount = [int]$worker.EnqueuedCount + 1
     }
     catch {
         throw "The code coverage aggregate worker stopped accepting reports. $($_.Exception.Message)"
@@ -330,11 +284,11 @@ function Complete-CodeCoverageAggregateWorker {
         if (-not $result.Aggregate) {
             throw "Code coverage aggregate worker returned an invalid result."
         }
-        $worker.Telemetry = @($result.Telemetry)
         $aggregate = @{}
         foreach ($property in @($result.Aggregate.PSObject.Properties)) {
             $aggregate[$property.Name] = $property.Value
         }
+        $aggregate["RunAssessments"] = @($result.RunAssessments)
         return $aggregate
     }
     finally {

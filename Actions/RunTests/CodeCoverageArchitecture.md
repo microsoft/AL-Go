@@ -98,7 +98,7 @@ sequenceDiagram
     RunTests->>Coordinator: Complete-AlGoCodeCoverageSession
     Coordinator->>Pipe: Close standard input
     Coordinator->>Worker: Complete-CodeCoverageAggregateWorker
-    Worker->>Worker: Write, checksum, validate, and atomically publish aggregate
+    Worker->>Worker: Write and atomically publish versioned aggregate
     Worker-->>Coordinator: Temporary JSON result file
     Coordinator->>Coordinator: Write final coverage-status.json
     Coordinator->>Coordinator: Delete raw BC JSON only after status references aggregate
@@ -204,7 +204,7 @@ The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads
 | `Complete-CodeCoverageAggregateWorker` | Session completion | During final drain | Closes standard input, waits for the child process, reads its temporary result file, and disposes worker resources. |
 | `Write-CodeCoverageStatusInternal` | Session completion | Once | Atomically publishes the final status. There are no intermediate status writes. |
 | `AnalyzeCodeCoverage.ps1` | Project step or repository job | After coverage artifact publication | Loads settings, builds the requested model, logs details, and appends Markdown to the job summary. |
-| `Get-ProjectCoverageModelFromStatus` | Analyzer | Once per status file | Validates status and aggregate contracts, or reads raw reports when no aggregate descriptor exists. |
+| `Get-ProjectCoverageModelFromStatus` | Analyzer | Once per status file | Validates status and the referenced aggregate, or reads historical raw reports when no aggregate reference exists. |
 | `Get-RepositoryCoverageModel` | Repository analyzer | Once after artifact download | Checks expected build dimensions and combines project application models without double-counting semantic lines. |
 
 ## Per-app runner paths
@@ -270,7 +270,7 @@ The session contains:
 - The repository root needed by the streaming reader.
 - Optional live PowerShell 7 child-process state.
 
-Source-root order is deterministic. It is part of the report mapping contract and the aggregate fingerprint.
+Source-root order is deterministic. It is part of the report mapping contract recorded in status.
 
 RunTests derives each app's output path from the session root and app ID. Built-in execution reads session-wide formats and source roots directly. A custom override receives the same values as temporary `codeCoverage*` entries in its existing parameter hashtable and reports completeness through `codeCoverageIsComplete`. These invocation values are not retained in the per-app run record.
 
@@ -300,22 +300,21 @@ Duplicate-object and method-identity enrichment diagnostics are notices because 
 
 The worker retains only:
 
-- Global aggregate metadata.
 - Per-run diagnostic assessments.
 - The semantic executable-line union.
-- Ordering and telemetry needed for deterministic output.
+- Root ordering needed for deterministic output.
 
 ### 5. Final publication
 
-The worker writes the aggregate to a unique temporary path, calculates its SHA-256, validates the temporary file and source-root fingerprint, and atomically moves it to `coverage-aggregate.bin.gz`.
+The worker writes the versioned line union to a unique temporary path and atomically moves it to `coverage-aggregate.bin.gz`. The aggregate contains only the `ALGOCOV1` magic header, one line count, and root, semantic-line-key, and covered records. The reader consumes through gzip EOF so truncated or trailing decompressed data fails validation.
 
 The parent then:
 
-1. Verifies that the aggregate contains every valid run.
+1. Validates and attaches one worker assessment to every valid run.
 1. Writes one final `coverage-status.json` through a temporary file and atomic move.
 1. Deletes per-app `coverage.bc.json` only after status durably references the aggregate.
 1. Retains per-app Cobertura output.
-1. Reports session and overlap telemetry.
+1. Reports concise session totals.
 
 ## On-disk contracts
 
@@ -344,19 +343,19 @@ Debug runs and failed compaction retain raw reports:
     `-- coverage.cobertura.xml
 ```
 
-`coverage-status.json` contains project metadata, ordered source roots, final run states, and an optional aggregate descriptor. The descriptor includes the format, contract version, relative path, checksum, source-root fingerprint, run count, line count, and size.
+`coverage-status.json` contains project metadata, ordered source roots, final run states, and per-run line assessments. Successful compaction adds the fixed `coverage-aggregate.bin.gz` reference.
 
-The aggregate is an AL-Go contract, not an AlTool schema 1.0 document. It contains the data required to reproduce existing project and repository line summaries without reparsing raw reports.
+The aggregate is an AL-Go contract, not an AlTool schema 1.0 document. It contains only the semantic executable-line union required to reproduce project and repository line summaries without reparsing raw reports.
 
 ## Analyzer selection and validation
 
 `Get-ProjectCoverageModelFromStatus` treats the status as authoritative:
 
-- If status has no aggregate descriptor, it reads per-run `coverage.bc.json`. This preserves compatibility with historical artifacts; current compaction failures still fail the RunTests action.
-- If status has an aggregate descriptor, it validates the descriptor, path containment, checksum, source-root fingerprint, header metadata, run identities, counts, and size.
-- A declared but missing, corrupt, or mismatched aggregate fails closed. The analyzer does not silently fall back to raw reports after an aggregate was published.
+- If status has no aggregate reference, it reads per-run `coverage.bc.json`. This preserves compatibility with historical artifacts; current compaction failures still fail the RunTests action.
+- If status references the fixed aggregate, it validates the versioned magic header, line count, semantic records, gzip EOF, application roots, and per-run assessments recorded in status.
+- A declared but missing, corrupt, or invalid aggregate fails closed. The analyzer does not silently fall back to raw reports after an aggregate was published.
 
-Only regular application roots contribute to rates and uncovered-object tables. The aggregate preserves the diagnostic assessment and excluded-fact accounting for test roots and external objects, but those facts do not affect application percentages.
+Only regular application roots contribute to rates and uncovered-object tables. Status preserves the diagnostic assessment and excluded-fact accounting for test roots and external objects, but those facts do not affect application percentages.
 
 Repository analysis verifies the expected project and build-mode dimensions from `buildOrderJson`, then unions canonical lines across valid project models.
 
@@ -368,21 +367,19 @@ Repository analysis verifies the expected project and build-mode dimensions from
 | Unsupported platform or missing `pwsh` | Runs normally | Final `unsupported` states and one warning | Not created |
 | Test assertions fail but coverage is valid | Test result remains failed or warning per settings | Valid report is compacted and analyzed | Deleted after aggregate publication |
 | Supported coverage output is missing or invalid | Fails closed | Run becomes `failed` and its output is not authoritative | Retained |
-| Worker input or parse fails | Fails coverage | Status has no aggregate descriptor | Retained |
-| Aggregate validation or publication fails | Fails coverage | Status has no aggregate descriptor | Retained |
+| Worker input or parse fails | Fails coverage | Status has no aggregate reference | Retained |
+| Aggregate publication or worker-result validation fails | Fails coverage | Status has no aggregate reference | Retained |
 | Status cannot reference a valid aggregate | Fails coverage | No successful coverage result is published | Retained |
 | Aggregate succeeds but raw deletion fails | Warning | Aggregate remains authoritative | Undeleted files may also be uploaded |
 | Earlier ordinary test failure exists | Ordinary test failure wins and coverage failure is emitted as an error | Best available final status is written | Retained as needed |
 
-## Telemetry
+## Logging
 
 Per-report compactor logs include:
 
 - App ID and report bytes.
-- Queue wait and queue depth.
 - Parse duration.
 - Extracted, accepted, new, and aggregate line counts.
-- Process private memory before and after parsing.
 
 Session completion logs include:
 
@@ -391,7 +388,6 @@ Session completion logs include:
 - Final drain time.
 - Aggregate size.
 - Removed raw bytes.
-- Number of reports whose parsing overlapped another app's test execution.
 
 No report content or credentials are logged.
 
@@ -405,7 +401,7 @@ When changing this flow:
 1. Preserve deterministic source-root, run, and semantic-line ordering.
 1. Keep aggregate and historical raw analyzer paths equivalent.
 1. Test complete, incomplete, failed-test-valid-coverage, zero-codeunit, duplicate-line, diagnostics, multi-run, and repository cases.
-1. Test worker startup, input drain, worker failure, corruption, fingerprint mismatch, atomic publication, cleanup, and hard failure.
+1. Test worker startup, input drain, worker failure, version and EOF corruption, atomic publication, cleanup, and hard failure.
 1. Run RunTests and analyzer suites from both PowerShell 7 and Windows PowerShell 5.1 parents.
 
 The primary implementation and tests are:

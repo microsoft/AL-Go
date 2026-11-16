@@ -177,7 +177,6 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             "BuildMode",
             "Compactor",
             "CompactorFailure",
-            "CompactorTelemetry",
             "Formats",
             "Project",
             "ProjectName",
@@ -214,6 +213,12 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status.formats | Should -Be @("bc-json", "cobertura")
         $status.PSObject.Properties.Name | Should -Not -Contain "mode"
         $status.PSObject.Properties.Name | Should -Contain "aggregate"
+        $status.aggregate | Should -Be "coverage-aggregate.bin.gz"
+        $status.runs[0].lineReasons | Should -BeNullOrEmpty
+        $status.runs[0].notices | Should -BeNullOrEmpty
+        $status.runs[0].lineGlobalUnsafe | Should -BeFalse
+        $status.runs[0].lineAffectedSources | Should -BeNullOrEmpty
+        $status.runs[0].excludedLineFacts | Should -Be 0
         Test-Path -LiteralPath (
             Join-Path $context.coverageOutputPath "coverage.bc.json"
         ) | Should -BeFalse
@@ -390,7 +395,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         Param($Case, $SuppressFailure)
 
         Mock -ModuleName CodeCoverageCoordinator Start-CodeCoverageCompactorInternal {
-            return @{ Telemetry = @() }
+            return @{}
         }
         Mock -ModuleName CodeCoverageCoordinator Add-CodeCoverageAggregateWorkItem {}
         Mock -ModuleName CodeCoverageCoordinator Complete-CodeCoverageAggregateWorker {
@@ -417,6 +422,50 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
         $status.PSObject.Properties.Name | Should -Not -Contain "aggregate"
+    }
+
+    It 'Rejects invalid run assessments returned by the worker' {
+        Mock -ModuleName CodeCoverageCoordinator Start-CodeCoverageCompactorInternal {
+            return @{}
+        }
+        Mock -ModuleName CodeCoverageCoordinator Add-CodeCoverageAggregateWorkItem {}
+        Mock -ModuleName CodeCoverageCoordinator Complete-CodeCoverageAggregateWorker {
+            return @{
+                RunCount = 1
+                LineCount = 0
+                SizeBytes = 1
+                TotalParseMilliseconds = 1
+                RunAssessments = @([PSCustomObject]@{
+                        Sequence = 0
+                        AppId = "wrong-app"
+                        AppName = "Test App"
+                        State = "complete"
+                        LineReasons = @()
+                        Notices = @()
+                        LineGlobalUnsafe = $false
+                        LineAffectedSources = @()
+                        ExcludedLineFacts = 0
+                    })
+            }
+        }
+        $projectPath = New-CoordinatorProject
+        $session = New-CoordinatorSession -projectPath $projectPath
+        $run = Get-CoordinatorRun -session $session `
+            -appId "22222222-2222-2222-2222-222222222222"
+        $context = New-CoordinatorArtifactFixture -session $session -run $run
+        Write-CoordinatorCoverageArtifacts -context $context
+
+        Complete-AlGoCodeCoverageRun -session $session -run $run `
+            -coverageIsComplete $context.coverageIsComplete
+        { Complete-AlGoCodeCoverageSession -session $session } |
+            Should -Throw "*run assessment does not match the session*"
+
+        $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
+            -Raw -Encoding UTF8 | ConvertFrom-Json
+        $status.PSObject.Properties.Name | Should -Not -Contain "aggregate"
+        Test-Path -LiteralPath (
+            Join-Path $context.coverageOutputPath "coverage.bc.json"
+        ) | Should -BeTrue
     }
 
     It 'Rejects unsupported schema versions and unexpected coverage modes' -TestCases @(

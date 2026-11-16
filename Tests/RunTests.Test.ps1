@@ -1365,9 +1365,17 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus.sourceRootDetails[0].appName | Should -Be 'Coverage App'
             $coverageStatus.runs.Count | Should -Be 2
             $coverageStatus.runs[0].PSObject.Properties.Name |
-                Should -Be @('appId', 'appName', 'outputDirectory', 'state')
+                Should -Be @(
+                    'appId', 'appName', 'outputDirectory', 'state', 'lineReasons', 'notices',
+                    'lineGlobalUnsafe', 'lineAffectedSources', 'excludedLineFacts'
+                )
             $coverageStatus.runs[0].appId | Should -Be $appOneId
             $coverageStatus.runs[0].outputDirectory | Should -Be "CodeCoverage/$appOneId"
+            $coverageStatus.runs[0].lineReasons.Count | Should -Be 0
+            $coverageStatus.runs[0].notices.Count | Should -Be 0
+            $coverageStatus.runs[0].lineGlobalUnsafe | Should -BeFalse
+            $coverageStatus.runs[0].lineAffectedSources.Count | Should -Be 0
+            $coverageStatus.runs[0].excludedLineFacts | Should -Be 0
             $coverageStatusByAppId = @{}
             foreach ($run in $coverageStatus.runs) {
                 $coverageStatusByAppId[$run.appId] = $run.state
@@ -1375,6 +1383,7 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatusByAppId[$appOneId] | Should -Be 'complete'
             $coverageStatusByAppId[$appTwoId] | Should -Be 'incomplete'
             @($coverageStatus.PSObject.Properties.Name) | Should -Contain 'aggregate'
+            $coverageStatus.aggregate | Should -Be 'coverage-aggregate.bin.gz'
             @(Get-ChildItem -LiteralPath $coverageRoot -Filter 'coverage.bc.json' -File -Recurse).Count |
                 Should -Be 0
             ($coverageStatus | ConvertTo-Json -Depth 5) | Should -Not -Match 'admin|password|diagnostic'
@@ -2042,7 +2051,7 @@ Describe 'RunTests.psm1 Tests' {
             ) -Raw -Encoding UTF8 | ConvertFrom-Json
             $status.runs[0].state | Should -Be 'complete'
             $coverageRoot = Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
-            $status.aggregate.format | Should -Be 'al-go-line-union-binary-gzip'
+            $status.aggregate | Should -Be 'coverage-aggregate.bin.gz'
             Test-Path -LiteralPath (
                 Join-Path $coverageRoot 'coverage-aggregate.bin.gz'
             ) | Should -BeTrue

@@ -91,17 +91,10 @@ Describe "Code coverage aggregate" {
         function Get-AggregateMetadata {
             Param([object] $status)
 
-            $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-                -sourceRoots @($status.sourceRoots) -sourceRootDetails @($status.sourceRootDetails)
             return @{
-                Project = "$($status.project)"
-                ProjectName = "$($status.projectName)"
-                BuildMode = "$($status.buildMode)"
                 Mode = "line"
-                Formats = @($status.formats)
                 SourceRoots = @($status.sourceRoots)
                 SourceRootDetails = @($status.sourceRootDetails)
-                SourceRootFingerprint = $fingerprint
             }
         }
 
@@ -137,16 +130,21 @@ Describe "Code coverage aggregate" {
                 $sequence++
             }
             $aggregate = Complete-CodeCoverageAggregateWorker -worker $worker
-            $status | Add-Member -NotePropertyName aggregate -NotePropertyValue ([PSCustomObject]@{
-                    format = $aggregate.Format
-                    contractVersion = $aggregate.ContractVersion
-                    path = $aggregate.Path
-                    sha256 = $aggregate.Sha256
-                    sourceRootFingerprint = $aggregate.SourceRootFingerprint
-                    runCount = $aggregate.RunCount
-                    lineCount = $aggregate.LineCount
-                    sizeBytes = $aggregate.SizeBytes
-                })
+            foreach ($assessment in @($aggregate.RunAssessments)) {
+                $run = $status.runs[[int]$assessment.Sequence]
+                $run | Add-Member -NotePropertyName lineReasons `
+                    -NotePropertyValue @($assessment.LineReasons)
+                $run | Add-Member -NotePropertyName notices `
+                    -NotePropertyValue @($assessment.Notices)
+                $run | Add-Member -NotePropertyName lineGlobalUnsafe `
+                    -NotePropertyValue ([bool]$assessment.LineGlobalUnsafe)
+                $run | Add-Member -NotePropertyName lineAffectedSources `
+                    -NotePropertyValue @($assessment.LineAffectedSources)
+                $run | Add-Member -NotePropertyName excludedLineFacts `
+                    -NotePropertyValue ([int]$assessment.ExcludedLineFacts)
+            }
+            $status | Add-Member -NotePropertyName aggregate `
+                -NotePropertyValue "coverage-aggregate.bin.gz"
             $status | ConvertTo-Json -Depth 10 |
                 Set-Content -LiteralPath $statusPath -Encoding UTF8
             foreach ($rawReport in @(Get-ChildItem -LiteralPath $coverageRoot `
@@ -169,21 +167,10 @@ Describe "Code coverage aggregate" {
             $details = @([ordered]@{
                     path = "Shared"; kind = "app"; appId = $appId; appName = "$project app"
                 })
-            $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-                -sourceRoots @("Shared") -sourceRootDetails $details
             $aggregatePath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
-            Write-CodeCoverageAggregateFile -path $aggregatePath -metadata @{
-                Project = $project; ProjectName = $project; BuildMode = "Default"; Mode = "line"
-                Formats = @("bc-json"); SourceRoots = @("Shared"); SourceRootDetails = $details
-                SourceRootFingerprint = $fingerprint
-            } -runs @([PSCustomObject]@{
-                    Sequence = 0; AppId = "$project-run"; AppName = "$project tests"; State = "complete"
-                    Complete = $true; LineReasons = @(); Notices = @()
-                    LineGlobalUnsafe = $false; LineAffectedSources = @(); ExcludedLineFacts = 0
-                }) -lines @{
+            Write-CodeCoverageAggregateFile -path $aggregatePath -lines @{
                 "shared" = @{ "shared/file.al|5|1|10" = $covered }
             }
-            $aggregateFile = Get-Item -LiteralPath $aggregatePath
             [ordered]@{
                 project = $project
                 projectName = $project
@@ -194,17 +181,10 @@ Describe "Code coverage aggregate" {
                 runs = @([ordered]@{
                         appId = "$project-run"; appName = "$project tests"
                         outputDirectory = "CodeCoverage/$project-run"; state = "complete"
+                        lineReasons = @(); notices = @(); lineGlobalUnsafe = $false
+                        lineAffectedSources = @(); excludedLineFacts = 0
                     })
-                aggregate = [ordered]@{
-                    format = "al-go-line-union-binary-gzip"
-                    contractVersion = 1
-                    path = "coverage-aggregate.bin.gz"
-                    sha256 = (Get-FileHash -LiteralPath $aggregatePath -Algorithm SHA256).Hash.ToLowerInvariant()
-                    sourceRootFingerprint = $fingerprint
-                    runCount = 1
-                    lineCount = 1
-                    sizeBytes = $aggregateFile.Length
-                }
+                aggregate = "coverage-aggregate.bin.gz"
             } | ConvertTo-Json -Depth 10 |
                 Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
         }
@@ -240,16 +220,15 @@ Describe "Code coverage aggregate" {
         }
         Test-Path -LiteralPath $publishedPath | Should -BeFalse
         $aggregate = Complete-CodeCoverageAggregateWorker -worker $worker
-        $status["aggregate"] = [ordered]@{
-            format = $aggregate.Format
-            contractVersion = $aggregate.ContractVersion
-            path = $aggregate.Path
-            sha256 = $aggregate.Sha256
-            sourceRootFingerprint = $aggregate.SourceRootFingerprint
-            runCount = $aggregate.RunCount
-            lineCount = $aggregate.LineCount
-            sizeBytes = $aggregate.SizeBytes
+        foreach ($assessment in @($aggregate.RunAssessments)) {
+            $run = $status.runs[[int]$assessment.Sequence]
+            $run["lineReasons"] = @($assessment.LineReasons)
+            $run["notices"] = @($assessment.Notices)
+            $run["lineGlobalUnsafe"] = [bool]$assessment.LineGlobalUnsafe
+            $run["lineAffectedSources"] = @($assessment.LineAffectedSources)
+            $run["excludedLineFacts"] = [int]$assessment.ExcludedLineFacts
         }
+        $status["aggregate"] = "coverage-aggregate.bin.gz"
         $status | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
         Remove-Item -LiteralPath $reportA, $reportB -Force
@@ -317,28 +296,41 @@ Describe "Code coverage aggregate" {
             Should -Be 0
     }
 
-    It "fails closed for a source-root fingerprint mismatch" {
-        $path = Join-Path $TestDrive "fingerprint.bin.gz"
-        $metadata = @{
-            Project = "."
-            ProjectName = "Project"
-            BuildMode = "Default"
-            Mode = "line"
-            Formats = @("bc-json")
-            SourceRoots = @("App")
-            SourceRootDetails = @([ordered]@{
-                    path = "App"; kind = "app"; appId = "app"; appName = "App"
-                })
-            SourceRootFingerprint = "expected"
+    It "rejects trailing decompressed data" {
+        $path = Join-Path $TestDrive "trailing.bin.gz"
+        $fileStream = [System.IO.File]::Create($path)
+        $gzipStream = [System.IO.Compression.GZipStream]::new(
+            $fileStream, [System.IO.Compression.CompressionLevel]::Fastest, $false)
+        try {
+            $writer = [System.IO.BinaryWriter]::new($gzipStream)
+            $writer.Write([System.Text.Encoding]::ASCII.GetBytes("ALGOCOV1"))
+            $writer.Write([long]0)
+            $writer.Write([byte]1)
+            $writer.Dispose()
+        }
+        finally {
+            if ($gzipStream) { $gzipStream.Dispose() }
+            if ($fileStream) { $fileStream.Dispose() }
         }
 
-        Write-CodeCoverageAggregateFile -path $path -metadata $metadata -runs @() -lines @{}
-
-        $result = Read-CodeCoverageAggregate -path $path `
-            -expectedSourceRootFingerprint "different"
+        $result = Read-CodeCoverageAggregate -path $path
 
         $result.Valid | Should -BeFalse
-        $result.Reason | Should -Match "fingerprint"
+        $result.Reason | Should -Match "corrupt"
+    }
+
+    It "rejects truncated compressed data" {
+        $path = Join-Path $TestDrive "truncated.bin.gz"
+        Write-CodeCoverageAggregateFile -path $path -lines @{
+            "app" = @{ "app/file.al|5|1|10" = $true }
+        }
+        $bytes = [System.IO.File]::ReadAllBytes($path)
+        [System.IO.File]::WriteAllBytes($path, $bytes[0..($bytes.Length - 5)])
+
+        $result = Read-CodeCoverageAggregate -path $path
+
+        $result.Valid | Should -BeFalse
+        $result.Reason | Should -Match "corrupt"
     }
 
     It "does not fall back to raw reports when a published aggregate is corrupt" {
@@ -353,18 +345,12 @@ Describe "Code coverage aggregate" {
         ) -hitCount 1
         $aggregatePath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
         Set-Content -LiteralPath $aggregatePath -Value "not gzip" -Encoding UTF8
-        $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-            -sourceRoots @($status.sourceRoots) -sourceRootDetails @($status.sourceRootDetails)
-        $status["aggregate"] = [ordered]@{
-            format = "al-go-line-union-binary-gzip"
-            contractVersion = 1
-            path = "coverage-aggregate.bin.gz"
-            sha256 = (Get-FileHash -LiteralPath $aggregatePath -Algorithm SHA256).Hash.ToLowerInvariant()
-            sourceRootFingerprint = $fingerprint
-            runCount = 1
-            lineCount = 1
-            sizeBytes = (Get-Item -LiteralPath $aggregatePath).Length
-        }
+        $status.runs[0]["lineReasons"] = @()
+        $status.runs[0]["notices"] = @()
+        $status.runs[0]["lineGlobalUnsafe"] = $false
+        $status.runs[0]["lineAffectedSources"] = @()
+        $status.runs[0]["excludedLineFacts"] = 0
+        $status["aggregate"] = "coverage-aggregate.bin.gz"
         $status | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
 
@@ -375,30 +361,62 @@ Describe "Code coverage aggregate" {
         $model.Reasons -join " " | Should -Match "published code coverage aggregate is invalid"
     }
 
+    It "requires run assessments from status when an aggregate is published" {
+        $repositoryRoot = New-AggregateRepository -name "MissingAssessment"
+        $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
+        New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
+        $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
+            [ordered]@{
+                appId = "run-a"; appName = "Run A"
+                outputDirectory = "CodeCoverage/run-a"; state = "complete"
+            }
+        )
+        Write-CodeCoverageAggregateFile `
+            -path (Join-Path $coverageRoot "coverage-aggregate.bin.gz") `
+            -lines @{ "app" = @{ "app/file.al|5|50100|11" = $true } }
+        $status["aggregate"] = "coverage-aggregate.bin.gz"
+        $status | ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
+
+        $model = Get-ProjectCoverageModel `
+            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+
+        $model.Complete | Should -BeFalse
+        $model.Reasons -join " " | Should -Match "missing the run assessment"
+    }
+
+    It "rejects aggregate references other than the fixed filename" {
+        $repositoryRoot = New-AggregateRepository -name "InvalidReference"
+        $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
+        New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
+        $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
+            [ordered]@{
+                appId = "run-a"; appName = "Run A"
+                outputDirectory = "CodeCoverage/run-a"; state = "complete"
+                lineReasons = @(); notices = @(); lineGlobalUnsafe = $false
+                lineAffectedSources = @(); excludedLineFacts = 0
+            }
+        )
+        $status["aggregate"] = "../coverage-aggregate.bin.gz"
+        $status | ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
+
+        $model = Get-ProjectCoverageModel `
+            -CoveragePath (Split-Path $coverageRoot -Parent) -RepositoryRoot $repositoryRoot
+
+        $model.Complete | Should -BeFalse
+        $model.Reasons -join " " | Should -Match "aggregate reference is invalid"
+    }
+
     It "reads the versioned aggregate on Windows PowerShell compatible APIs" {
         $path = Join-Path $TestDrive "portable.bin.gz"
-        $details = @([ordered]@{
-                path = "App"; kind = "app"; appId = "app"; appName = "App"
-            })
-        $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-            -sourceRoots @("App") -sourceRootDetails $details
         $lines = @{ "app" = @{ "app/file.al|5|1|10" = $true } }
-        Write-CodeCoverageAggregateFile -path $path -metadata @{
-            Project = "."; ProjectName = "Project"; BuildMode = "Default"; Mode = "line"
-            Formats = @("bc-json"); SourceRoots = @("App"); SourceRootDetails = $details
-            SourceRootFingerprint = $fingerprint
-        } -runs @([PSCustomObject]@{
-                Sequence = 0; AppId = "run"; AppName = "Run"; State = "complete"
-                Complete = $true; LineReasons = @(); Notices = @()
-                LineGlobalUnsafe = $false; LineAffectedSources = @(); ExcludedLineFacts = 0
-            }) -lines $lines
+        Write-CodeCoverageAggregateFile -path $path -lines $lines
 
-        $result = Read-CodeCoverageAggregate -path $path `
-            -expectedSourceRootFingerprint $fingerprint
+        $result = Read-CodeCoverageAggregate -path $path
 
         $result.Valid | Should -BeTrue
         $result.LineCount | Should -Be 1
-        $result.Runs.Count | Should -Be 1
         $result.ApplicationLines["app"]["app/file.al|5|1|10"] | Should -BeTrue
     }
 

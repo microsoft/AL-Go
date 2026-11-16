@@ -18,6 +18,10 @@ $script:MaximumValueLength = 160
 $script:MaximumSummaryBytes = 900KB
 
 function Read-BcCoverageReport {
+    <#
+    .SYNOPSIS
+        Reads and validates one BC JSON coverage report.
+    #>
     Param(
         [string] $Path,
         [hashtable] $Model = $null,
@@ -32,6 +36,10 @@ function Read-BcCoverageReport {
 }
 
 function Get-CoverageDiagnosticAssessment {
+    <#
+    .SYNOPSIS
+        Classifies coverage diagnostics for line coverage safety.
+    #>
     Param(
         [hashtable] $Report,
         [hashtable] $Scope
@@ -41,6 +49,10 @@ function Get-CoverageDiagnosticAssessment {
 }
 
 function Resolve-RepositoryCoverageSource {
+    <#
+    .SYNOPSIS
+        Resolves an exported source path to a repository source file.
+    #>
     Param(
         [AllowEmptyString()][string] $SourcePath,
         [string] $RepositoryRoot,
@@ -523,63 +535,16 @@ function Get-ProjectCoverageModelFromStatus {
     $aggregatePath = ""
     if ($aggregateAuthoritative) {
         try {
-            if ($status.aggregate -isnot [System.Collections.IDictionary]) {
-                throw "Coverage aggregate descriptor is invalid."
-            }
-            foreach ($property in @(
-                    "format", "contractVersion", "path", "sha256",
-                    "sourceRootFingerprint", "runCount", "lineCount", "sizeBytes"
-                )) {
-                if (-not $status.aggregate.Contains($property)) {
-                    throw "Coverage aggregate descriptor is missing required data."
-                }
-            }
-            if ("$($status.aggregate.format)" -cne "al-go-line-union-binary-gzip" -or
-                [int]$status.aggregate.contractVersion -ne 1) {
-                throw "Coverage aggregate format is not supported."
-            }
-            $relativeAggregatePath = "$($status.aggregate.path)".Replace('\', '/')
-            if ([string]::IsNullOrWhiteSpace($relativeAggregatePath) -or
-                [System.IO.Path]::IsPathRooted($relativeAggregatePath) -or
-                $relativeAggregatePath -match '(^|/)\.\.(/|$)') {
-                throw "Coverage aggregate path is invalid."
+            if ($status.aggregate -isnot [string] -or
+                "$($status.aggregate)" -cne "coverage-aggregate.bin.gz") {
+                throw "Coverage aggregate reference is invalid."
             }
             $statusDirectory = Split-Path -Path $StatusPath -Parent
             $aggregatePath = [System.IO.Path]::GetFullPath(
-                (Join-Path $statusDirectory $relativeAggregatePath.Replace(
-                        '/', [System.IO.Path]::DirectorySeparatorChar)))
-            $statusRoot = [System.IO.Path]::GetFullPath($statusDirectory)
-            if (-not (Test-PathInsideRoot -Path $aggregatePath -Root $statusRoot)) {
-                throw "Coverage aggregate path is outside the status directory."
-            }
-            $declaredDetails = @(Get-CoverageArray $status.sourceRootDetails)
-            $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-                -sourceRoots $sourceRoots -sourceRootDetails $declaredDetails
-            if ($fingerprint -cne "$($status.aggregate.sourceRootFingerprint)") {
-                throw "Coverage aggregate source-root fingerprint does not match the status."
-            }
-            $aggregateResult = Read-CodeCoverageAggregate -path $aggregatePath `
-                -expectedSha256 "$($status.aggregate.sha256)" `
-                -expectedSourceRootFingerprint $fingerprint
+                (Join-Path $statusDirectory "$($status.aggregate)"))
+            $aggregateResult = Read-CodeCoverageAggregate -path $aggregatePath
             if (-not $aggregateResult.Valid) {
                 throw $aggregateResult.Reason
-            }
-            if ([int]$status.aggregate.runCount -ne $aggregateResult.Runs.Count -or
-                [int]$status.aggregate.lineCount -ne $aggregateResult.LineCount -or
-                [long]$status.aggregate.sizeBytes -ne (Get-Item -LiteralPath $aggregatePath).Length) {
-                throw "Coverage aggregate descriptor does not match the published aggregate."
-            }
-            $aggregateHeader = $aggregateResult.Header | ConvertTo-CoverageHashtable
-            if ("$($aggregateHeader.project)" -cne $model.Project -or
-                "$($aggregateHeader.projectName)" -cne $model.ProjectName -or
-                "$($aggregateHeader.buildMode)" -cne $model.BuildMode -or
-                "$($aggregateHeader.mode)".ToLowerInvariant() -cne $model.Mode) {
-                throw "Coverage aggregate metadata does not match the status."
-            }
-            $aggregateFormats = @(Get-CoverageArray $aggregateHeader.formats |
-                ForEach-Object { "$_".ToLowerInvariant() })
-            if (($aggregateFormats -join [char]0x1f) -cne ($formats -join [char]0x1f)) {
-                throw "Coverage aggregate formats do not match the status."
             }
             $appsByRoot = @{}
             foreach ($app in $model.Apps) {
@@ -594,19 +559,12 @@ function Get-ProjectCoverageModelFromStatus {
                         -Covered ([bool]$aggregateResult.ApplicationLines[$rootIdentity][$key])
                 }
             }
-            $validRunIds = @($statusRuns | Where-Object {
-                    $_ -is [System.Collections.IDictionary] -and
-                    $_.Contains("appId") -and
-                    "$($_.state)".ToLowerInvariant() -in @("complete", "incomplete")
-                } | ForEach-Object { "$($_.appId)" })
-            if ($aggregateResult.Runs.Count -ne $validRunIds.Count -or
-                @($aggregateResult.Runs.Keys | Where-Object { $_ -notin $validRunIds }).Count -gt 0) {
-                throw "Coverage aggregate run identities do not match the status."
-            }
         }
         catch {
             $aggregateResult = $null
-            $projectReasons += "The published code coverage aggregate is invalid. $($_.Exception.Message)"
+            $aggregateReason = "The published code coverage aggregate is invalid. $($_.Exception.Message)"
+            $projectReasons += $aggregateReason
+            $reasons += $aggregateReason
         }
     }
     $runModels = @()
@@ -648,25 +606,39 @@ function Get-ProjectCoverageModelFromStatus {
             if (-not $aggregateResult) {
                 $runReasons += "The published code coverage aggregate is invalid."
             }
-            elseif (-not $aggregateResult.Runs.ContainsKey($appId)) {
-                $runReasons += "The code coverage aggregate is missing the run assessment."
-            }
             else {
-                $aggregateRun = $aggregateResult.Runs[$appId] | ConvertTo-CoverageHashtable
-                if ("$($aggregateRun.appName)" -cne $appName -or
-                    "$($aggregateRun.state)".ToLowerInvariant() -cne $state -or
-                    [bool]$aggregateRun.complete -ne ($state -eq "complete")) {
-                    $runReasons += "The code coverage aggregate run does not match the status."
+                foreach ($property in @(
+                        "lineReasons", "notices", "lineGlobalUnsafe",
+                        "lineAffectedSources", "excludedLineFacts"
+                    )) {
+                    if (-not $run.Contains($property)) {
+                        $runReasons += "Coverage status is missing the run assessment."
+                        break
+                    }
                 }
-                else {
-                    $model.ExcludedLineFacts += [int]$aggregateRun.excludedLineFacts
-                    $runLineReasons += @(Get-CoverageArray $aggregateRun.lineReasons |
-                        ForEach-Object { "$_" })
-                    $runNotices += @(Get-CoverageArray $aggregateRun.notices |
-                        ForEach-Object { "$_" })
-                    $lineGlobalUnsafe = [bool]$aggregateRun.lineGlobalUnsafe
-                    $lineAffectedSources = @(Get-CoverageArray $aggregateRun.lineAffectedSources |
-                        ForEach-Object { "$_" })
+                if ($runReasons.Count -eq 0 -and $run.lineGlobalUnsafe -isnot [bool]) {
+                    $runReasons += "Coverage status contains an invalid run assessment."
+                }
+                $excludedLineFacts = 0
+                if ($runReasons.Count -eq 0 -and
+                    (-not [int]::TryParse("$($run.excludedLineFacts)", [ref]$excludedLineFacts) -or
+                        $excludedLineFacts -lt 0)) {
+                    $runReasons += "Coverage status contains an invalid run assessment."
+                }
+                if ($runReasons.Count -eq 0) {
+                    try {
+                        $model.ExcludedLineFacts += $excludedLineFacts
+                        $runLineReasons += @(Get-CoverageArray $run.lineReasons |
+                            ForEach-Object { "$_" })
+                        $runNotices += @(Get-CoverageArray $run.notices |
+                            ForEach-Object { "$_" })
+                        $lineGlobalUnsafe = [bool]$run.lineGlobalUnsafe
+                        $lineAffectedSources = @(Get-CoverageArray $run.lineAffectedSources |
+                            ForEach-Object { "$_" })
+                    }
+                    catch {
+                        $runReasons += "Coverage status contains an invalid run assessment."
+                    }
                 }
             }
         }

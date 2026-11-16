@@ -134,33 +134,10 @@ Describe "AnalyzeCodeCoverage" {
                 appId = "11111111-1111-1111-1111-111111111111"
                 appName = "Regular App"
             })
-        $fingerprint = Get-CodeCoverageSourceRootFingerprint `
-            -sourceRoots @("App") -sourceRootDetails $sourceRootDetails
         $aggregatePath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
-        Write-CodeCoverageAggregateFile -path $aggregatePath -metadata @{
-            Project = "."
-            ProjectName = "Project"
-            BuildMode = "Default"
-            Mode = "line"
-            Formats = @("bc-json")
-            SourceRoots = @("App")
-            SourceRootDetails = $sourceRootDetails
-            SourceRootFingerprint = $fingerprint
-        } -runs @([ordered]@{
-                Sequence = 0
-                AppId = "test-app"
-                AppName = "Test App"
-                State = "complete"
-                Complete = $true
-                LineReasons = @()
-                Notices = @()
-                LineGlobalUnsafe = $false
-                LineAffectedSources = @()
-                ExcludedLineFacts = 0
-            }) -lines @{
+        Write-CodeCoverageAggregateFile -path $aggregatePath -lines @{
             App = @{ "App/File.al|5|50100|11" = $true }
         } -rootOrder @("App")
-        $aggregateFile = Get-Item -LiteralPath $aggregatePath
         [ordered]@{
             project = "."
             projectName = "Project"
@@ -173,17 +150,13 @@ Describe "AnalyzeCodeCoverage" {
                     appName = "Test App"
                     outputDirectory = "CodeCoverage/test-app"
                     state = "complete"
+                    lineReasons = @()
+                    notices = @()
+                    lineGlobalUnsafe = $false
+                    lineAffectedSources = @()
+                    excludedLineFacts = 0
                 })
-            aggregate = [ordered]@{
-                format = "al-go-line-union-binary-gzip"
-                contractVersion = 1
-                path = "coverage-aggregate.bin.gz"
-                sha256 = (Get-CodeCoverageFileSha256 -path $aggregatePath)
-                sourceRootFingerprint = $fingerprint
-                runCount = 1
-                lineCount = 1
-                sizeBytes = $aggregateFile.Length
-            }
+            aggregate = "coverage-aggregate.bin.gz"
         } | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $coverageRoot "coverage-status.json") -Encoding UTF8
 
