@@ -768,7 +768,7 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 Should -BeTrue
         }
 
-        It 'Returns a supported-server coverage export failure for deferred handling' {
+        It 'Leaves fixed coverage artifact validation to the coordinator' {
             $script:coverageOutputPath = Join-Path $TestDrive 'coverage-missing-artifact'
             Mock -ModuleName AlToolTestRunner Invoke-AlNativeCommand {
                 $stdout = @{
@@ -804,7 +804,8 @@ Describe 'AlToolTestRunner.psm1 Tests' {
                 $result = Invoke-AlRunTestsBatch -AlToolPath 'C:\dotnet-tools\al.exe' -Codeunits $Codeunits `
                     -Company 'CRONUS' -Tenant 'default' -Connection $Connection `
                     -CoverageOutputPath $OutputPath -CoverageFormats @('bc-json')
-                $result.CoverageError | Should -BeLike '*coverage failure*expected*coverage.bc.json*'
+                $result.CoverageError | Should -BeNullOrEmpty
+                $result.Coverage.IsComplete | Should -BeFalse
                 $result.Results['130001'][0].Outcome | Should -Be 'Pass'
             }
         }
@@ -1387,7 +1388,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                     ElapsedSec    = 0.1
                     Coverage      = $null
                     Warnings      = @()
-                    CoverageError = 'AlTool coverage failure. Expected report was not created.'
+                    CoverageError = 'AlTool coverage failure. Structured coverage data was missing.'
                 }
             }
 

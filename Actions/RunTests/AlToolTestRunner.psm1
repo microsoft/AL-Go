@@ -672,19 +672,6 @@ function Invoke-AlRunTestsBatch {
             if ($null -eq $parsed.Coverage) {
                 $coverageError = "AlTool coverage failure. The supported server response did not include structured coverage data."
             }
-            else {
-                $expectedArtifacts = @{
-                    "bc-json"   = "coverage.bc.json"
-                    "cobertura" = "coverage.cobertura.xml"
-                }
-                foreach ($coverageFormat in $CoverageFormats) {
-                    $artifactPath = Join-Path $CoverageOutputPath $expectedArtifacts[$coverageFormat]
-                    if (-not (Test-Path -LiteralPath $artifactPath -PathType Leaf)) {
-                        $coverageError = "AlTool coverage failure. The expected '$coverageFormat' artifact '$artifactPath' was not created."
-                        break
-                    }
-                }
-            }
         }
 
         if (-not $parsed.Succeeded -and $parsed.Results.Count -eq 0) {

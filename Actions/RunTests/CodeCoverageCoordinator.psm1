@@ -215,25 +215,6 @@ function Get-CodeCoverageAggregatePath {
 
 <#
 .SYNOPSIS
-    Returns the isolated coverage output path for one test app.
-.PARAMETER session
-    AL-Go-owned code coverage session.
-.PARAMETER run
-    AL-Go-owned run record containing the normalized app ID.
-.OUTPUTS
-    Absolute per-app coverage output directory.
-#>
-function Get-CodeCoverageRunOutputPath {
-    Param(
-        [hashtable] $session,
-        [hashtable] $run
-    )
-
-    return [System.IO.Path]::GetFullPath((Join-Path $session.RootPath "$($run.AppId)"))
-}
-
-<#
-.SYNOPSIS
     Atomically writes the final AL-Go coverage status manifest.
 .DESCRIPTION
     Serializes final run states, assessments, source-root metadata, and the optional fixed
@@ -293,7 +274,7 @@ function Write-CodeCoverageStatusInternal {
 
 <#
 .SYNOPSIS
-    Deletes raw per-app BC JSON reports after durable aggregate publication.
+    Deletes raw BC JSON reports for successfully compacted runs.
 .PARAMETER session
     Finalized AL-Go-owned code coverage session.
 .OUTPUTS
@@ -304,8 +285,10 @@ function Remove-CodeCoverageRawReports {
 
     $removedBytes = [long]0
     foreach ($run in @($session.Runs)) {
-        $reportPath = Join-Path (Get-CodeCoverageRunOutputPath -session $session -run $run) `
-            "coverage.bc.json"
+        if ($run.State -notin @("complete", "incomplete")) {
+            continue
+        }
+        $reportPath = Join-Path $run.OutputPath "coverage.bc.json"
         if (Test-Path -LiteralPath $reportPath -PathType Leaf) {
             $removedBytes += (Get-Item -LiteralPath $reportPath).Length
             Remove-Item -LiteralPath $reportPath -Force
@@ -343,8 +326,7 @@ function Test-CodeCoverageArtifacts {
         "cobertura" = "coverage.cobertura.xml"
     }
     foreach ($coverageFormat in @($session.Formats)) {
-        $artifactPath = Join-Path (Get-CodeCoverageRunOutputPath -session $session -run $run) `
-            $expectedArtifacts[$coverageFormat]
+        $artifactPath = Join-Path $run.OutputPath $expectedArtifacts[$coverageFormat]
         if (-not (Test-Path -LiteralPath $artifactPath -PathType Leaf)) {
             throw "The expected '$coverageFormat' coverage artifact '$artifactPath' was not created."
         }
@@ -424,8 +406,8 @@ function Get-AlGoCodeCoverageCapability {
     Creates the AL-Go-owned code coverage session for one project test run.
 .DESCRIPTION
     Resolves authoritative ordered source roots while AnalyzeRepo is in scope and creates one
-    minimal ordered run record per selected test app. Output paths and override contexts are
-    derived only when needed.
+    ordered run record per selected test app. Reusable source roots, application IDs, sequence
+    numbers, and output paths are resolved once for the session.
 .PARAMETER settings
     Analyzed AL-Go settings for the project.
 .PARAMETER projectPath
@@ -463,10 +445,6 @@ function New-AlGoCodeCoverageSession {
     if ([string]::IsNullOrWhiteSpace($baseFolder)) {
         $baseFolder = $projectPath
     }
-    if (-not $capability -or -not $capability.ContainsKey("Supported") -or
-        -not $capability.ContainsKey("Reason")) {
-        throw "A valid code coverage capability result is required."
-    }
     $generateCobertura = $true
     if ($settings.ContainsKey("useSeparateTestAction") -and
         $settings.useSeparateTestAction.ContainsKey("codeCoverageGenerateCobertura")) {
@@ -488,11 +466,20 @@ function New-AlGoCodeCoverageSession {
         $sourceRootData = @(Resolve-CodeCoverageSourceRootData -settings $settings `
             -projectPath $projectPath -baseFolder $baseFolder -analyzeRepo $analyzeRepo)
     }
+    $sourceRoots = @($sourceRootData | ForEach-Object { "$($_.Path)" })
+    $applicationIds = @($sourceRootData |
+        Where-Object {
+            "$($_.Kind)" -eq "app" -and
+            -not [string]::IsNullOrWhiteSpace("$($_.AppId)")
+        } |
+        ForEach-Object { "$($_.AppId)".ToLowerInvariant() } |
+        Sort-Object -Unique)
 
     $runs = [System.Collections.Generic.List[object]]::new()
     $appIds = [System.Collections.Generic.HashSet[string]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
     )
+    $testAppSequence = 0
     foreach ($testApp in @($testApps)) {
         $candidateAppId = "$($testApp.Id)"
         if ([string]::IsNullOrWhiteSpace($candidateAppId)) {
@@ -507,10 +494,13 @@ function New-AlGoCodeCoverageSession {
             throw "Selected test app ID '$candidateAppId' is duplicated."
         }
         $runs.Add(@{
+                Sequence = $testAppSequence
                 AppId = $appId
                 AppName = "$($testApp.Name)"
+                OutputPath = [System.IO.Path]::GetFullPath((Join-Path $coverageRoot $appId))
                 State = ""
             })
+        $testAppSequence++
     }
 
     $session = @{
@@ -523,9 +513,10 @@ function New-AlGoCodeCoverageSession {
         RootPath = $coverageRoot
         RepositoryRoot = [System.IO.Path]::GetFullPath($baseFolder)
         SourceRootRecords = @($sourceRootData)
+        SourceRoots = @($sourceRoots)
+        ApplicationIds = @($applicationIds)
         Runs = @($runs)
         Compactor = $null
-        CompactorFailure = ""
     }
     return $session
 }
@@ -565,68 +556,49 @@ function Start-CodeCoverageCompactorInternal {
 .SYNOPSIS
     Completes and validates one test app's code coverage run.
 .DESCRIPTION
-    Validates required artifacts and BC JSON metadata. Test pass or failure does not affect coverage
-    completeness, so failed tests can retain valid coverage.
+    Validates the completeness handoff and required fixed artifacts before handing BC JSON to the
+    compactor. Test pass or failure does not affect coverage completeness, so failed tests can
+    retain valid coverage.
 .PARAMETER session
     AL-Go-owned session returned by New-AlGoCodeCoverageSession.
 .PARAMETER run
     AL-Go-owned run record for the current test app.
 .PARAMETER coverageIsComplete
     Completeness value returned by the current built-in runner or override invocation.
-.PARAMETER executionFailed
-    Marks an invocation that failed before valid coverage could be produced.
 #>
 function Complete-AlGoCodeCoverageRun {
     Param(
         [hashtable] $session,
         [hashtable] $run,
-        $coverageIsComplete = $null,
-        [switch] $executionFailed
+        $coverageIsComplete = $null
     )
 
-    if (-not $session -or -not $session.ContainsKey("Runs") -or -not $run) {
-        throw "The code coverage session is invalid or uses an unsupported coordinator contract."
-    }
     if (-not $session.Supported) {
         return
     }
     if (-not [string]::IsNullOrWhiteSpace("$($run.State)")) {
         throw "Code coverage for test app '$($run.AppId)' cannot complete from state '$($run.State)'."
     }
-    if ($executionFailed) {
-        $run.State = "failed"
-        $run.CompletedAtUtc = [DateTime]::UtcNow
-        return
-    }
     try {
         Test-CodeCoverageArtifacts -session $session -run $run `
             -rawComplete $coverageIsComplete
         $run.State = if ([bool]$coverageIsComplete) { "complete" } else { "incomplete" }
-        $run.CompletedAtUtc = [DateTime]::UtcNow
-        if ("bc-json" -in $session.Formats -and
-            [string]::IsNullOrWhiteSpace($session.CompactorFailure)) {
+        if ("bc-json" -in $session.Formats) {
             try {
                 if (-not $session.Compactor) {
                     $session.Compactor = Start-CodeCoverageCompactorInternal -session $session
                     Write-Host "Started one PowerShell 7 code coverage compactor worker."
                 }
-                $sequence = [array]::IndexOf([object[]]$session.Runs, $run)
-                if ($sequence -lt 0) {
-                    throw "The code coverage run is not part of the supplied session."
-                }
                 Add-CodeCoverageAggregateWorkItem -worker $session.Compactor -descriptor @{
-                    Sequence = $sequence
+                    Sequence = [int]$run.Sequence
                     AppId = "$($run.AppId)"
                     AppName = "$($run.AppName)"
                     Complete = [bool]$coverageIsComplete
-                    ReportPath = Join-Path (
-                        Get-CodeCoverageRunOutputPath -session $session -run $run
-                    ) "coverage.bc.json"
+                    ReportPath = Join-Path $run.OutputPath "coverage.bc.json"
                 }
             }
             catch {
-                $session.CompactorFailure = $_.Exception.Message
-                throw "Code coverage compaction could not accept app '$($run.AppName)'. $($session.CompactorFailure)"
+                throw "Code coverage compaction could not accept app '$($run.AppName)'. $($_.Exception.Message)"
             }
         }
     }
@@ -654,10 +626,6 @@ function Complete-AlGoCodeCoverageSession {
         [switch] $suppressFailure
     )
 
-    if (-not $session -or -not $session.ContainsKey("Runs")) {
-        throw "The code coverage session is invalid or uses an unsupported coordinator contract."
-    }
-
     $failureReasons = @()
     if ($session.Supported) {
         foreach ($run in @($session.Runs)) {
@@ -679,9 +647,6 @@ function Complete-AlGoCodeCoverageSession {
         $drainStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $aggregate = Complete-CodeCoverageAggregateWorker -worker $session.Compactor
-            if (-not [string]::IsNullOrWhiteSpace($session.CompactorFailure)) {
-                throw $session.CompactorFailure
-            }
             $expectedRunCount = @($session.Runs | Where-Object {
                     $_.State -in @("complete", "incomplete")
                 }).Count

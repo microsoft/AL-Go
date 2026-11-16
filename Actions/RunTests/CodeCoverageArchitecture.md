@@ -191,7 +191,7 @@ The repository AnalyzeCodeCoverage job starts after the build jobs. It downloads
 | `Invoke-AlGoTestRun` | `RunTests.ps1` | Once per project build job | Selects apps, creates the coverage session, runs every app sequentially, finalizes coverage, preserves JUnit, and reports the test outcome. |
 | `Get-TestAppsToRun` | `Invoke-AlGoTestRun` | Before session creation | Selects compiled test apps and optionally installed test apps. |
 | `Get-AlGoCodeCoverageCapability` | `Invoke-AlGoTestRun` | Once when coverage is requested | Accepts coverage only for container platform 30.0.56026.0 or later with `pwsh` available. |
-| `New-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once before the app loop | Resolves ordered source roots and creates minimal ordered per-app run records. |
+| `New-AlGoCodeCoverageSession` | `Invoke-AlGoTestRun` | Once before the app loop | Resolves ordered source roots, regular application IDs, and per-app sequence and output-path records. |
 | `Resolve-CodeCoverageSourceRootData` | Session creation | Once for a supported session | Collects app and test roots containing AL source files from the project and direct `projectsToTest`, rejects unsafe paths, deduplicates, and sorts roots. |
 | `Invoke-AlToolTestRun` | App loop or opted-in override | Once per selected test app | Enumerates tests, invokes AlTool, appends JUnit, surfaces diagnostics, and returns test success plus coverage completeness. |
 | `Invoke-AlRunTestsBatch` | `Invoke-AlToolTestRun` | Once per app with test codeunits | Builds the `al runtests` arguments, uses a temporary response file when the native command would be too large, invokes the process, and parses its structured output. |
@@ -233,7 +233,7 @@ When coverage is supported, `Invoke-AlRunTestsBatch` adds:
 
 The format and source-root flags are repeated for every configured value.
 
-An AlTool exit code of 1 can represent failed tests. Valid coverage and JUnit data are still processed. Unexpected native failures, invalid structured output, or missing requested coverage output throw.
+An AlTool exit code of 1 can represent failed tests. Valid coverage and JUnit data are still processed. Unexpected native failures, invalid structured output, or missing structured coverage data throw. Fixed artifact existence is validated once by the coordinator after either runner returns.
 
 ### Project override
 
@@ -242,7 +242,7 @@ A coverage-aware `.AL-Go/RunTestsInBcContainer.ps1` receives:
 - Historical test parameters in `$parameters`.
 - Coverage-only values in the same hashtable when coverage is supported.
 
-The coverage values are `codeCoverageFormats`, `codeCoverageSourceRoots`, `codeCoverageOutputPath`, `codeCoverageAlToolModulePath`, `codeCoverageAlToolPath`, and `codeCoverageIsComplete`. The formats always include `bc-json`; `cobertura` is included when `codeCoverageGenerateCobertura` is true. The override runs once per app and must return a Boolean test result. For supported coverage it must write coverage into `codeCoverageOutputPath` and set `codeCoverageIsComplete`. AL-Go retains ownership of artifact validation, run state, compaction, and status publication.
+The coverage values are `codeCoverageFormats`, `codeCoverageSourceRoots`, `codeCoverageApplicationIds`, `codeCoverageOutputPath`, `codeCoverageAlToolModulePath`, `codeCoverageAlToolPath`, and `codeCoverageIsComplete`. The formats always include `bc-json`; `cobertura` is included when `codeCoverageGenerateCobertura` is true. The override runs once per app and must return a Boolean test result. For supported coverage it must write coverage into `codeCoverageOutputPath` and set `codeCoverageIsComplete`. AL-Go retains ownership of artifact validation, run state, compaction, and status publication.
 
 When coverage is disabled or unsupported, AL-Go omits the coverage values and the override runs with the historical parameter shape.
 
@@ -264,15 +264,16 @@ The session contains:
 
 - Project identity and build mode.
 - Requested formats. Executable-line mode is a module constant.
+- Ordered absolute source roots and sorted regular application IDs passed to every supported runner.
 - Ordered repository-relative source roots and source-root details.
-- One minimal ordered run record per app.
-- The canonical coverage root from which per-app, status, and aggregate paths are derived.
+- One ordered run record per app containing its sequence, normalized app identity, final state, and absolute output path.
+- The canonical coverage root for status and aggregate publication.
 - The repository root needed by the streaming reader.
 - Optional live PowerShell 7 child-process state.
 
 Source-root order is deterministic. It is part of the report mapping contract recorded in status.
 
-RunTests derives each app's output path from the session root and app ID. Built-in execution reads session-wide formats and source roots directly. A custom override receives the same values as temporary `codeCoverage*` entries in its existing parameter hashtable and reports completeness through `codeCoverageIsComplete`. These invocation values are not retained in the per-app run record.
+RunTests passes the stored session roots and application IDs plus the current run's stored output path directly to the built-in runner or custom override. It does not recompute coverage inputs inside the app loop. A custom override reports completeness through `codeCoverageIsComplete`.
 
 ### 3. Per-app completion
 

@@ -369,8 +369,6 @@ function Invoke-AlGoTestRun {
 
         $allTestsPassed = $true
         $testRunError = $null
-        $currentCoverageRun = $null
-        $coverageInvocationActive = $false
         Push-Location $projectPath
         try {
             $testAppIndex = 0
@@ -378,43 +376,13 @@ function Invoke-AlGoTestRun {
                 Write-Host "Running tests in $($testApp.Name) ($($testApp.Id))"
                 $disabledTests = @(Get-DisabledTestsForApp -settings $settings `
                     -projectPath $projectPath -appId "$($testApp.Id)")
-                $currentCoverageRun = if ($coverageSession) {
+                $currentCoverageRun = if ($coverageSession -and $coverageSession.Supported) {
                     $coverageSession.Runs[$testAppIndex]
                 }
                 else {
                     $null
                 }
-                $coverageInvocationActive = $coverageSession -and $coverageSession.Supported
                 $coverageIsComplete = $null
-                $coverageOutputPath = if ($coverageInvocationActive) {
-                    [System.IO.Path]::GetFullPath((
-                            Join-Path $coverageSession.RootPath "$($currentCoverageRun.AppId)"
-                        ))
-                }
-                else {
-                    ""
-                }
-                $coverageSourceRoots = if ($coverageInvocationActive) {
-                    @($coverageSession.SourceRootRecords | ForEach-Object { "$($_.Path)" })
-                }
-                else {
-                    @()
-                }
-                $coverageApplicationIds = if ($coverageInvocationActive) {
-                    @($coverageSession.SourceRootRecords |
-                        Where-Object {
-                            "$($_.Kind)" -eq "app" -and
-                            -not [string]::IsNullOrWhiteSpace("$($_.AppId)")
-                        } |
-                        ForEach-Object { "$($_.AppId)".ToLowerInvariant() } |
-                        Sort-Object -Unique)
-                }
-                else {
-                    @()
-                }
-                if ($coverageInvocationActive) {
-                    $currentCoverageRun.StartedAtUtc = [DateTime]::UtcNow
-                }
 
                 if ($runTestsOverride) {
                     $runTestsParams = @{
@@ -430,14 +398,16 @@ function Invoke-AlGoTestRun {
                         "GitHubActions" = $gitHubActionsSeverity
                         "returnTrueIfAllPassed" = $true
                     }
-                    if ($coverageInvocationActive -or -not [string]::IsNullOrWhiteSpace($testType)) {
+                    if ($currentCoverageRun -or -not [string]::IsNullOrWhiteSpace($testType)) {
                         $runTestsParams["testType"] = $testType
                     }
-                    if ($coverageInvocationActive) {
+                    if ($currentCoverageRun) {
                         $runTestsParams["codeCoverageFormats"] = @($coverageSession.Formats)
-                        $runTestsParams["codeCoverageSourceRoots"] = @($coverageSourceRoots)
-                        $runTestsParams["codeCoverageApplicationIds"] = @($coverageApplicationIds)
-                        $runTestsParams["codeCoverageOutputPath"] = $coverageOutputPath
+                        $runTestsParams["codeCoverageSourceRoots"] = @($coverageSession.SourceRoots)
+                        $runTestsParams["codeCoverageApplicationIds"] = @(
+                            $coverageSession.ApplicationIds
+                        )
+                        $runTestsParams["codeCoverageOutputPath"] = $currentCoverageRun.OutputPath
                         $runTestsParams["codeCoverageAlToolModulePath"] = (
                             Join-Path $PSScriptRoot "AlToolTestRunner.psm1"
                         )
@@ -445,10 +415,10 @@ function Invoke-AlGoTestRun {
                         $runTestsParams["codeCoverageIsComplete"] = $null
                     }
                     $passed = & $runTestsOverride -parameters $runTestsParams
-                    if ($coverageSession -and $passed -isnot [bool]) {
+                    if ($currentCoverageRun -and $passed -isnot [bool]) {
                         throw "The coverage-aware RunTestsInBcContainer override must return a Boolean test result."
                     }
-                    if ($coverageInvocationActive) {
+                    if ($currentCoverageRun) {
                         $coverageIsComplete = $runTestsParams.codeCoverageIsComplete
                     }
                 }
@@ -465,22 +435,20 @@ function Invoke-AlGoTestRun {
                         AlToolPath = $alToolPath
                         JUnitResultFileName = $testResultsFile
                     }
-                    if ($coverageInvocationActive) {
-                        $alToolParameters.CoverageOutputPath = $coverageOutputPath
+                    if ($currentCoverageRun) {
+                        $alToolParameters.CoverageOutputPath = $currentCoverageRun.OutputPath
                         $alToolParameters.CoverageFormats = @($coverageSession.Formats)
-                        $alToolParameters.CoverageSourceRoots = @($coverageSourceRoots)
+                        $alToolParameters.CoverageSourceRoots = @($coverageSession.SourceRoots)
                         $alToolParameters.CoverageIsComplete = [ref] $coverageIsComplete
                     }
                     $passed = Invoke-AlToolTestRun @alToolParameters
                 }
 
-                if ($coverageSession -and $coverageSession.Supported) {
-                    $coverageInvocationActive = $false
+                if ($currentCoverageRun) {
                     Complete-AlGoCodeCoverageRun -session $coverageSession `
                         -run $currentCoverageRun `
                         -coverageIsComplete $coverageIsComplete
                 }
-                $currentCoverageRun = $null
                 $testAppIndex++
                 if (-not $passed) {
                     $allTestsPassed = $false
@@ -488,17 +456,7 @@ function Invoke-AlGoTestRun {
             }
         }
         catch {
-            $caughtTestRunError = $_
-            if ($coverageInvocationActive -and $currentCoverageRun) {
-                try {
-                    Complete-AlGoCodeCoverageRun -session $coverageSession `
-                        -run $currentCoverageRun -executionFailed
-                }
-                catch {
-                    OutputWarning -message "Failed to record the current code coverage run after test execution failed. $($_.Exception.Message)"
-                }
-            }
-            $testRunError = $caughtTestRunError
+            $testRunError = $_
         }
         finally {
             Pop-Location

@@ -1390,6 +1390,41 @@ Describe 'RunTests.psm1 Tests' {
             Remove-Item -Path $projectPath -Recurse -Force
         }
 
+        It 'Uses coordinator artifact validation for the built-in runner' {
+            Mock -ModuleName RunTests Invoke-AlToolTestRun {
+                $CoverageIsComplete.Value = $true
+                return $true
+            }
+            $projectPath = New-TestProject -CompiledTestApps @('App1.Test.app')
+            $settings = @{
+                doNotRunTests = $false
+                runTestsInAllInstalledTestApps = $false
+                companyName = ''
+                treatTestFailuresAsWarnings = $false
+                testFolders = @(Get-TestFoldersForProject -ProjectPath $projectPath)
+                useSeparateTestAction = @{
+                    enabled = $true
+                    testType = ''
+                    codeCoverageEnabled = $true
+                    codeCoverageGenerateCobertura = $false
+                }
+            }
+
+            {
+                Invoke-AlGoTestRun -settings $settings -projectPath $projectPath `
+                    -containerName 'test' -credential $testCredential `
+                    -alToolPath 'C:\dotnet-tools\al.exe' `
+                    -containerPlatformVersion '30.0.56026.0'
+            } | Should -Throw "*expected 'bc-json' coverage artifact*"
+
+            $status = Get-Content -LiteralPath (
+                Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage') `
+                    'coverage-status.json'
+            ) -Raw -Encoding UTF8 | ConvertFrom-Json
+            $status.runs[0].state | Should -Be 'failed'
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
         It 'Warns and runs normally without coverage when <Case>' -TestCases @(
             @{
                 Case            = 'the platform is below the boundary'
@@ -1536,7 +1571,17 @@ Describe 'RunTests.psm1 Tests' {
                     Formats = @('bc-json')
                     RootPath = Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
                     SourceRootRecords = @()
-                    Runs = @(@{ AppId = $appId; AppName = 'App1.Test'; State = '' })
+                    SourceRoots = @()
+                    ApplicationIds = @()
+                    Runs = @(@{
+                            Sequence = 0
+                            AppId = $appId
+                            AppName = 'App1.Test'
+                            OutputPath = Join-Path (
+                                Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
+                            ) $appId
+                            State = ''
+                        })
                 }
             }
             Mock -ModuleName RunTests Invoke-AlToolTestRun { return $false }

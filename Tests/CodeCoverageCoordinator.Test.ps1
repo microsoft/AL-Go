@@ -94,9 +94,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             )
 
             return @{
-                coverageOutputPath = [System.IO.Path]::GetFullPath((
-                        Join-Path $session.RootPath "$($run.AppId)"
-                    ))
+                coverageOutputPath = $run.OutputPath
                 formats = @($session.Formats)
                 coverageIsComplete = $null
             }
@@ -174,9 +172,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $secondContext = New-CoordinatorArtifactFixture -session $session -run $second
         $firstContext.coverageOutputPath | Should -Not -Be $secondContext.coverageOutputPath
         @($session.Keys | Sort-Object) | Should -Be @(
+            "ApplicationIds",
             "BuildMode",
             "Compactor",
-            "CompactorFailure",
             "Formats",
             "Project",
             "ProjectName",
@@ -185,10 +183,27 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             "RootPath",
             "Runs",
             "SourceRootRecords",
+            "SourceRoots",
             "Supported"
         )
         @($session.Runs).Count | Should -Be 2
-        @($first.Keys | Sort-Object) | Should -Be @("AppId", "AppName", "State")
+        @($first.Keys | Sort-Object) |
+            Should -Be @("AppId", "AppName", "OutputPath", "Sequence", "State")
+        $first.Sequence | Should -Be 0
+        $second.Sequence | Should -Be 1
+        $first.OutputPath | Should -Be (
+            Join-Path $session.RootPath "22222222-2222-2222-2222-222222222222"
+        )
+        $second.OutputPath | Should -Be (
+            Join-Path $session.RootPath "33333333-3333-3333-3333-333333333333"
+        )
+        $session.SourceRoots | Should -Be @(
+            (Join-Path $projectPath "App"),
+            (Join-Path $projectPath "Test")
+        )
+        $session.ApplicationIds | Should -Be @(
+            "11111111-1111-1111-1111-111111111111"
+        )
         $first.State | Should -BeNullOrEmpty
         $second.State | Should -BeNullOrEmpty
         Test-Path -LiteralPath (Get-CoordinatorStatusPath $session) | Should -BeFalse
@@ -466,6 +481,77 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         Test-Path -LiteralPath (
             Join-Path $context.coverageOutputPath "coverage.bc.json"
         ) | Should -BeTrue
+    }
+
+    It 'Retains failed-run raw coverage when a later compactor handoff fails' {
+        $script:addWorkItemCalls = 0
+        Mock -ModuleName CodeCoverageCoordinator Start-CodeCoverageCompactorInternal {
+            return @{}
+        }
+        Mock -ModuleName CodeCoverageCoordinator Add-CodeCoverageAggregateWorkItem {
+            $script:addWorkItemCalls++
+            if ($script:addWorkItemCalls -eq 2) {
+                throw "input failed"
+            }
+        }
+        Mock -ModuleName CodeCoverageCoordinator Complete-CodeCoverageAggregateWorker {
+            return @{
+                RunCount = 1
+                LineCount = 0
+                SizeBytes = 1
+                TotalParseMilliseconds = 1
+                RunAssessments = @([PSCustomObject]@{
+                        Sequence = 0
+                        AppId = "22222222-2222-2222-2222-222222222222"
+                        AppName = "First Test App"
+                        State = "complete"
+                        LineReasons = @()
+                        Notices = @()
+                        LineGlobalUnsafe = $false
+                        LineAffectedSources = @()
+                        ExcludedLineFacts = 0
+                    })
+            }
+        }
+        $projectPath = New-CoordinatorProject
+        $testApps = @(
+            [PSCustomObject]@{
+                Id = "22222222-2222-2222-2222-222222222222"
+                Name = "First Test App"
+                Path = Join-Path $projectPath "First.Test.app"
+            },
+            [PSCustomObject]@{
+                Id = "33333333-3333-3333-3333-333333333333"
+                Name = "Second Test App"
+                Path = Join-Path $projectPath "Second.Test.app"
+            }
+        )
+        $session = New-CoordinatorSession -projectPath $projectPath -testApps $testApps
+        $firstRun = $session.Runs[0]
+        $secondRun = $session.Runs[1]
+        $firstContext = New-CoordinatorArtifactFixture -session $session -run $firstRun
+        $secondContext = New-CoordinatorArtifactFixture -session $session -run $secondRun
+        Write-CoordinatorCoverageArtifacts -context $firstContext
+        Write-CoordinatorCoverageArtifacts -context $secondContext
+
+        Complete-AlGoCodeCoverageRun -session $session -run $firstRun `
+            -coverageIsComplete $firstContext.coverageIsComplete
+        {
+            Complete-AlGoCodeCoverageRun -session $session -run $secondRun `
+                -coverageIsComplete $secondContext.coverageIsComplete
+        } | Should -Throw "*could not accept app*input failed*"
+        Complete-AlGoCodeCoverageSession -session $session -suppressFailure
+
+        Test-Path -LiteralPath (
+            Join-Path $firstRun.OutputPath "coverage.bc.json"
+        ) | Should -BeFalse
+        Test-Path -LiteralPath (
+            Join-Path $secondRun.OutputPath "coverage.bc.json"
+        ) | Should -BeTrue
+        $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
+            -Raw -Encoding UTF8 | ConvertFrom-Json
+        $status.aggregate | Should -Be "coverage-aggregate.bin.gz"
+        @($status.runs.state) | Should -Be @("complete", "failed")
     }
 
     It 'Rejects unsupported schema versions and unexpected coverage modes' -TestCases @(
