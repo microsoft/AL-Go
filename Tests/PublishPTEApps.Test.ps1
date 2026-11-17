@@ -698,7 +698,10 @@ InModuleScope AdminCenterApi {
                 Assert-MockCalled WaitPTEOperation -Times 0
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
                 Assert-MockCalled OutputWarning -Times 0
-                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like '*already installed*' }
+                Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter {
+                    $Object -eq "Skipping App v2.0.0.0: version $version.0.0.0 is already installed."
+                }
+                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Successfully installed*' }
             }
 
             It 'Upgrades an older installed app even if an uninstalled newer package is present' {
@@ -731,10 +734,14 @@ InModuleScope AdminCenterApi {
                     param($appId)
                     $script:events += "complete:$appId"
                 }
+                Mock Write-Host {
+                    param($Object)
+                    $script:events += "log:$Object"
+                }
 
                 Install-AdminCenterPTEApps -environment 'Sandbox' -appFiles @('Apps.zip')
 
-                ($script:events -join ',') | Should -Be 'read:Dependency.app,upload:Dependency.app,complete:Dependency.app,read:Dependent.app,upload:Dependent.app,complete:Dependent.app'
+                ($script:events -join ',') | Should -Be 'read:Dependency.app,log:Publishing and installing Dependency.app v2.0.0.0,upload:Dependency.app,complete:Dependency.app,log:Successfully installed Dependency.app v2.0.0.0,read:Dependent.app,log:Publishing and installing Dependent.app v2.0.0.0,upload:Dependent.app,complete:Dependent.app,log:Successfully installed Dependent.app v2.0.0.0'
                 Assert-MockCalled Sort-AppFilesByDependencies -Exactly 1 -ParameterFilter { $excludeRuntimePackages -and $appFiles.Count -eq 3 }
                 Assert-MockCalled Install-AdminCenterPTEApp -Times 0 -ParameterFilter { $appFile -eq 'Runtime.app' }
             }
@@ -754,6 +761,8 @@ InModuleScope AdminCenterApi {
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
                 Assert-MockCalled Install-AdminCenterPTEApp -Exactly 1
                 Assert-MockCalled Remove-Item -Exactly 1
+                Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'Publishing and installing App v2.0.0.0' }
+                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Successfully installed*' }
             }
 
             It 'Never changes route after upload HTTP <statusCode>, including the first upload' -TestCases @(

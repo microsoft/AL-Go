@@ -5,6 +5,7 @@ Deploy Apps to online environment
 ## PTE publishing
 
 Deploys PTEs in dependency order, skipping app versions already installed or superseded.
+Native publishing logs each app's name and version when installation starts and succeeds, or the installed version when it skips the app.
 
 On BC 29+, PTE deployment checks administration center access first and selects Automation only for authentication or authorization failures. The selected API is used throughout the action. Configure the [required authorization](../../Workshop/ContinuousDeployment.md#pte-deployment-authorization). Primary-app Dev publishing is unchanged.
 

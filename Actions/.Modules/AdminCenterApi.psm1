@@ -476,10 +476,13 @@ function Install-AdminCenterPTEApps {
             $installedVersions = @($matchingApps | Where-Object { $_.isInstalled } |
                 ForEach-Object { [version]::new("$($_.versionMajor).$($_.versionMinor).$($_.versionBuild).$($_.versionRevision)") })
             if (@($installedVersions | Where-Object { $_ -ge $appVersion }).Count -gt 0) {
+                Write-Host "Skipping $($appJson.name) v${appVersion}: version $($installedVersions | Sort-Object -Descending | Select-Object -First 1) is already installed."
                 continue
             }
+            Write-Host "Publishing and installing $($appJson.name) v$appVersion"
             $operation = Install-AdminCenterPTEApp -environment $environment -appFile $appFile -syncMode $syncMode
             WaitPTEOperation -environment $environment -operation $operation -appId $appJson.id
+            Write-Host "Successfully installed $($appJson.name) v$appVersion"
         }
     }
     finally {
