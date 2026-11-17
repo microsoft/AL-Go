@@ -7,6 +7,8 @@ Param(
     [string] $projectName = "",
     [Parameter(HelpMessage = "Build mode used for this project", Mandatory = $false)]
     [string] $buildMode = "Default",
+    [Parameter(HelpMessage = "A path to a JSON-formatted list of apps installed from project dependencies", Mandatory = $false)]
+    [string] $installAppsJson = '',
     [Parameter(HelpMessage = "A path to a JSON-formatted list of test apps to run tests in", Mandatory = $false)]
     [string] $installTestAppsJson = ''
 )
@@ -28,6 +30,8 @@ Param(
     Project display name used by repository coverage summaries.
 .PARAMETER buildMode
     Build mode used by this project run.
+.PARAMETER installAppsJson
+    A path to a JSON-formatted list of apps installed from project dependencies.
 .PARAMETER installTestAppsJson
     A path to a JSON-formatted list of test apps (produced by previous jobs) to run tests in.
 .EXAMPLE
@@ -116,6 +120,7 @@ Invoke-AlGoTestRun `
     -buildMode $buildMode `
     -containerName $containerName `
     -credential $credential `
+    -installAppsJson $installAppsJson `
     -installTestAppsJson $installTestAppsJson `
     -runTestsOverride $runTestsOverride `
     -getAlToolPath ${function:GetAlToolPath} `

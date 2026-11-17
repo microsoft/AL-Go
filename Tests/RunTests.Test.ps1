@@ -61,6 +61,27 @@ Describe 'RunTests.psm1 Tests' {
 
             return @($script:testFoldersByProject[$ProjectPath])
         }
+
+        function Add-CompiledRegularApp {
+            Param(
+                [string] $ProjectPath,
+                [string] $FileName,
+                [string] $Id,
+                [string] $Name,
+                [string] $FolderName = "Apps"
+            )
+
+            $appsFolder = Join-Path (Join-Path $ProjectPath ".buildartifacts") $FolderName
+            New-Item -Path $appsFolder -ItemType Directory -Force | Out-Null
+            $appPath = Join-Path $appsFolder $FileName
+            New-Item -Path $appPath -ItemType File -Force | Out-Null
+            $script:compiledAppMetadataByPath[[System.IO.Path]::GetFullPath($appPath)] =
+                [PSCustomObject]@{
+                    id = $Id
+                    name = $Name
+                }
+            return [System.IO.Path]::GetFullPath($appPath)
+        }
     }
 
     BeforeEach {
@@ -603,6 +624,54 @@ Describe 'RunTests.psm1 Tests' {
             }
         }
 
+    }
+
+    Context 'Resolve-CodeCoverageAppPaths' {
+        It 'Uses only matching repository app packages from build output and downloaded dependencies' {
+            $projectPath = New-TestProject
+            $appId = '11111111-1111-1111-1111-111111111111'
+            $dependencyId = '22222222-2222-2222-2222-222222222222'
+            $appPath = Add-CompiledRegularApp -ProjectPath $projectPath `
+                -FileName 'Repository App.app' -Id $appId -Name 'Repository App'
+            $dependencyPath = Add-CompiledRegularApp -ProjectPath $projectPath `
+                -FileName 'Repository Dependency.app' -Id $dependencyId `
+                -Name 'Repository Dependency' -FolderName 'DownloadedApps'
+            $externalPath = Add-CompiledRegularApp -ProjectPath $projectPath `
+                -FileName 'External Dependency.app' `
+                -Id '33333333-3333-3333-3333-333333333333' -Name 'External Dependency' `
+                -FolderName 'DownloadedApps'
+            $installAppsJson = Join-Path $projectPath 'installApps.json'
+            @($dependencyPath, $externalPath) | ConvertTo-Json |
+                Set-Content -LiteralPath $installAppsJson -Encoding UTF8
+
+            InModuleScope RunTests -Parameters @{
+                ProjectPath = $projectPath
+                ApplicationIds = @($dependencyId, $appId)
+                ExpectedAppPath = $appPath
+                ExpectedDependencyPath = $dependencyPath
+                InstallAppsJson = $installAppsJson
+            } {
+                @(Resolve-CodeCoverageAppPaths -projectPath $ProjectPath `
+                        -applicationIds $ApplicationIds `
+                        -installAppsJson $InstallAppsJson) |
+                    Should -Be @($ExpectedAppPath, $ExpectedDependencyPath)
+            }
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
+
+        It 'Fails when a repository app package is missing from the current build' {
+            $projectPath = New-TestProject
+
+            InModuleScope RunTests -Parameters @{ ProjectPath = $projectPath } {
+                {
+                    Resolve-CodeCoverageAppPaths -projectPath $ProjectPath `
+                        -applicationIds @('11111111-1111-1111-1111-111111111111')
+                } | Should -Throw "*Could not find the compiled app package*"
+            }
+
+            Remove-Item -Path $projectPath -Recurse -Force
+        }
     }
 
     Context 'Get-AlGoCodeCoverageCapability' {
@@ -1217,6 +1286,7 @@ Describe 'RunTests.psm1 Tests' {
                     $CoverageOutputPath,
                     [string[]] $CoverageFormats,
                     [string[]] $CoverageSourceRoots,
+                    [string[]] $CoverageAppPaths,
                     [ref] $CoverageIsComplete
                 )
                 $coverageRootAtInvocation = Split-Path -Path $CoverageOutputPath -Parent
@@ -1229,6 +1299,7 @@ Describe 'RunTests.psm1 Tests' {
                     CoverageOutputPath = $CoverageOutputPath
                     CoverageFormats    = @($CoverageFormats)
                     CoverageSourceRoots = @($CoverageSourceRoots)
+                    CoverageAppPaths = @($CoverageAppPaths)
                 }
                 $script:coverageInvocation++
                 $isComplete = ($script:coverageInvocation -eq 1)
@@ -1259,12 +1330,18 @@ Describe 'RunTests.psm1 Tests' {
                 'App2.Test.app' = $appTwoId
             }
             New-Item -Path (Join-Path $projectPath 'App') -ItemType Directory -Force | Out-Null
+            $coverageAppId = '11111111-1111-1111-1111-111111111111'
             @{
-                id = '11111111-1111-1111-1111-111111111111'
+                id = $coverageAppId
                 name = 'Coverage App'
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $projectPath 'App\app.json') -Encoding UTF8
             Set-Content -LiteralPath (Join-Path $projectPath 'App\CoverageApp.al') `
                 -Value "codeunit 50100 CoverageApp { }" -Encoding UTF8
+            $coverageAppPath = Add-CompiledRegularApp -ProjectPath $projectPath `
+                -FileName 'Coverage App.app' -Id $coverageAppId -Name 'Coverage App'
+            $externalAppPath = Add-CompiledRegularApp -ProjectPath $projectPath `
+                -FileName 'Library Assert.app' -Id 'dd0be2ea-f733-4d65-bb34-a28f4624fb14' `
+                -Name 'Library Assert'
             $testFolders = @(Get-TestFoldersForProject -ProjectPath $projectPath)
             $settings = @{
                 doNotRunTests                  = $false
@@ -1300,6 +1377,9 @@ Describe 'RunTests.psm1 Tests' {
                 )
             }
             $script:capturedCoverageRuns[0].CoverageSourceRoots.Count | Should -Be 3
+            $script:capturedCoverageRuns[0].CoverageAppPaths | Should -Be @($coverageAppPath)
+            $script:capturedCoverageRuns[1].CoverageAppPaths | Should -Be @($coverageAppPath)
+            $script:capturedCoverageRuns[0].CoverageAppPaths | Should -Not -Contain $externalAppPath
             $script:capturedCoverageRuns[0].CoverageOutputPath |
                 Should -Be (Join-Path (Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage') $appOneId)
             $script:capturedCoverageRuns[1].CoverageOutputPath |

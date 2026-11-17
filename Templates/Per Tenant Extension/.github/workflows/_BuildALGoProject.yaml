@@ -239,6 +239,7 @@ jobs:
           project: ${{ inputs.project }}
           projectName: ${{ inputs.projectName }}
           buildMode: ${{ inputs.buildMode }}
+          installAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
           installTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
       - name: Sign

@@ -28,6 +28,7 @@ are real failures and do not trigger a noncoverage retry.
 RunTests performs these steps once for each project:
 
 1. Resolve existing AL source roots from the current project and direct `projectsToTest` projects.
+1. Map every regular source-root application ID to one compiled package from the current build.
 1. Create `.buildartifacts/CodeCoverage`.
 1. Start one persistent `pwsh -NoProfile -NonInteractive` worker.
 1. Run each selected test app sequentially.
@@ -60,9 +61,16 @@ The built-in runner invokes AlTool once per selected test app with:
 - `--coverage-format bc-json`.
 - Optional `--coverage-format cobertura`.
 - Every resolved `--coverage-source-root`.
+- One `--coverage-app` for each compiled regular application represented by repository source roots.
 
 Large argument sets use a temporary UTF-8 response file. It contains no credentials and is deleted
 after the AlTool invocation.
+
+The built-in runner resolves app packages from the current project's `.buildartifacts/Apps` folder
+and the downloaded project-dependency app list already used by the build. Matching is by application
+ID and requires exactly one package per regular repository app. Packages for Microsoft or other
+external dependencies are not passed unless that application also has a regular repository source
+root. The boundary is repository inventory, not publisher identity.
 
 An existing `.AL-Go/RunTestsInBcContainer.ps1` override keeps its historical single-hashtable
 signature. When coverage is supported, AL-Go adds:
@@ -79,9 +87,10 @@ The override must use the provided output directory, return its historical Boole
 set `codeCoverageIsComplete` to a Boolean. It should use its existing noncoverage behavior when
 `codeCoverageOutputPath` is absent.
 
-`Invoke-AlToolTestRun` also supports optional `CoverageAppPaths` for compatible preview AlTool builds
-that require compiler-instrumented packages. AL-Go does not populate this parameter in the built-in
-path.
+`Invoke-AlToolTestRun` supports `CoverageAppPaths` for the compiled packages that define the
+executable-line inventory. The built-in path supplies them automatically. Overrides receive
+`codeCoverageApplicationIds` and are responsible for mapping those IDs to packages from the same
+build and server revision.
 
 ## Worker and reader
 

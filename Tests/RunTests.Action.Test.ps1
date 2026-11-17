@@ -225,13 +225,15 @@ Describe "RunTests Action Tests" {
         Mock Get-ScriptOverrides { return @{} }
         Mock Invoke-AlGoTestRun {}
 
-        & $scriptPath
+        $installAppsJson = Join-Path $TestDrive 'installed-apps.json'
+        & $scriptPath -installAppsJson $installAppsJson
 
         Should -Invoke AnalyzeRepo -Times 1 -Exactly
         Should -Invoke GetAlToolPath -Times 0 -Exactly
         Should -Invoke Invoke-AlGoTestRun -Times 1 -Exactly -ParameterFilter {
             $getAlToolPath -is [scriptblock] -and
             $analyzeRepo -is [scriptblock] -and
+            $installAppsJson -eq (Join-Path $TestDrive 'installed-apps.json') -and
             $containerPlatformVersion -eq '30.0.56026.0' -and
             $containerPlatformVersionReason -eq ''
         }
