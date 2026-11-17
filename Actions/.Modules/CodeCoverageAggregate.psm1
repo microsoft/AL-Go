@@ -16,9 +16,8 @@ function Invoke-CodeCoverageAggregateWorker {
         [string] $publishedPath
     )
 
-    Import-Module $readerModulePath -Force -DisableNameChecking
+    Import-Module $readerModulePath -DisableNameChecking
     $model = @{
-        SourceRoots = @($metadata.SourceRoots)
         SourceRootDetails = @(
             foreach ($detail in @($metadata.SourceRootDetails)) {
                 $path = "$($detail.path)".Replace('\', '/').Trim('/')
@@ -32,10 +31,10 @@ function Invoke-CodeCoverageAggregateWorker {
             }
         )
     }
+    $model.SourceRoots = @($model.SourceRootDetails | ForEach-Object { $_.Path })
     $semanticLines = @{}
-    $semanticRootOrder = [System.Collections.Generic.List[string]]::new()
     $semanticLineCount = 0
-    $runDiagnostics = [System.Collections.Generic.List[object]]::new()
+    $runDiagnostics = @{}
     $sourceMappingCache = [System.Collections.Generic.Dictionary[string,object]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
     )
@@ -47,48 +46,43 @@ function Invoke-CodeCoverageAggregateWorker {
             if ($null -eq $descriptorJson) {
                 break
             }
+            $descriptorJson = $descriptorJson.TrimStart([char]0xFEFF)
             if ([string]::IsNullOrWhiteSpace($descriptorJson)) {
                 continue
             }
             $descriptor = $descriptorJson | ConvertFrom-Json -AsHashtable
             $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
             $file = Get-Item -LiteralPath "$($descriptor.ReportPath)"
-            $reportResult = Read-BcCoverageReport -Path $file.FullName -Model $model `
-                -RequestedMode "$($metadata.Mode)" -RepositoryRoot $repositoryRoot `
-                -SemanticLineUnion $semanticLines -SemanticRootOrder $semanticRootOrder `
-                -SourceMappingCache $sourceMappingCache
-            if (-not $reportResult.Valid) {
-                throw "Compaction rejected '$($file.FullName)'. $($reportResult.Reason)"
+            try {
+                $reportResult = Read-BcCoverageReport -Path $file.FullName -Model $model `
+                    -RepositoryRoot $repositoryRoot -SemanticLineUnion $semanticLines `
+                    -SourceMappingCache $sourceMappingCache
             }
-            if ("$($reportResult.Data.coverageMode)".ToLowerInvariant() -ne "$($metadata.Mode)") {
-                throw "Compaction report mode does not match the session mode."
+            catch {
+                throw "Compaction rejected '$($file.FullName)'. $($_.Exception.Message)"
             }
             if ([bool]$reportResult.Data.complete -ne [bool]$descriptor.Complete) {
                 throw "Compaction report completeness does not match the runner result."
             }
-            $runDiagnostics.Add([PSCustomObject]@{
-                    Diagnostics = @(
-                        Get-CoverageArray $reportResult.Data.diagnostics |
-                            ForEach-Object { "$_" }
-                    )
-                })
+            $runDiagnostics["$($descriptor.AppId)"] = @(
+                Get-CoverageArray $reportResult.Data.diagnostics |
+                    ForEach-Object { "$_" }
+            )
             $stopwatch.Stop()
             $totalParseMilliseconds += $stopwatch.Elapsed.TotalMilliseconds
             $semanticLineCount += [int]$reportResult.NewLineCount
             $culture = [System.Globalization.CultureInfo]::InvariantCulture
-            Write-Host ("Code coverage compactor report {0}: size={1} MiB, parse={2}s, extracted={3}, accepted={4}, new={5}, aggregate={6}." -f
+            Write-Host ("Code coverage compactor report {0}: size={1} MiB, parse={2}s, extracted={3}, new={4}, aggregate={5}." -f
                 $runDiagnostics.Count,
                 ($file.Length / 1MB).ToString("0.0", $culture),
                 ($stopwatch.Elapsed.TotalMilliseconds / 1000).ToString("0.000", $culture),
                 [int]$reportResult.ExtractedLineCount,
-                [int]$reportResult.AcceptedLineCount,
                 [int]$reportResult.NewLineCount,
                 $semanticLineCount)
         }
 
         Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
-        Write-CodeCoverageAggregateFile -path $temporaryPath -lines $semanticLines `
-            -rootOrder $semanticRootOrder
+        Write-CodeCoverageAggregateFile -path $temporaryPath -lines $semanticLines
         [System.IO.File]::Move($temporaryPath, $publishedPath, $true)
         $publishedFile = Get-Item -LiteralPath $publishedPath
         return @{
@@ -97,7 +91,7 @@ function Invoke-CodeCoverageAggregateWorker {
                 SizeBytes = [long]$publishedFile.Length
                 TotalParseMilliseconds = $totalParseMilliseconds
             }
-            RunDiagnostics = @($runDiagnostics)
+            RunDiagnostics = $runDiagnostics
         }
     }
     finally {
@@ -132,7 +126,7 @@ function Invoke-CodeCoverageAggregateProcess {
         @{
             Succeeded = $true
             Aggregate = $workerResult.Aggregate
-            RunDiagnostics = @($workerResult.RunDiagnostics)
+            RunDiagnostics = $workerResult.RunDiagnostics
         } | ConvertTo-Json -Depth 20 -Compress |
             Set-Content -LiteralPath $resultPath -Encoding UTF8
     }
@@ -146,20 +140,6 @@ function Invoke-CodeCoverageAggregateProcess {
     }
 }
 
-function Get-CodeCoveragePwshPath {
-    Param([string] $pwshPath)
-
-    if (-not [string]::IsNullOrWhiteSpace($pwshPath)) {
-        return $pwshPath
-    }
-    $pwshCommand = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue |
-        Select-Object -First 1
-    if (-not $pwshCommand) {
-        throw "PowerShell 7 (pwsh) is required for code coverage compaction."
-    }
-    return "$($pwshCommand.Source)"
-}
-
 function Start-CodeCoverageAggregateWorker {
     <#
     .SYNOPSIS
@@ -171,10 +151,9 @@ function Start-CodeCoverageAggregateWorker {
         [hashtable] $metadata,
         [string] $temporaryPath,
         [string] $publishedPath,
-        [string] $pwshPath = ""
+        [string] $pwshPath
     )
 
-    $pwshPath = Get-CodeCoveragePwshPath -pwshPath $pwshPath
     $workerId = [Guid]::NewGuid().ToString("N")
     $workerDirectory = Split-Path -Path $temporaryPath -Parent
     $configPath = Join-Path $workerDirectory ".coverage-worker-$workerId.config.json"
@@ -280,7 +259,11 @@ function Complete-CodeCoverageAggregateWorker {
         foreach ($property in @($result.Aggregate.PSObject.Properties)) {
             $aggregate[$property.Name] = $property.Value
         }
-        $aggregate["RunDiagnostics"] = @($result.RunDiagnostics)
+        $runDiagnostics = @{}
+        foreach ($property in @($result.RunDiagnostics.PSObject.Properties)) {
+            $runDiagnostics[$property.Name] = @($property.Value | ForEach-Object { "$_" })
+        }
+        $aggregate["RunDiagnostics"] = $runDiagnostics
         return $aggregate
     }
     finally {

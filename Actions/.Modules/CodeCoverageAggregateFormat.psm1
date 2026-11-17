@@ -1,16 +1,5 @@
 $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
 
-function Get-CodeCoverageBinaryStringLength {
-    Param([string] $value)
-
-    $byteCount = [System.Text.Encoding]::UTF8.GetByteCount($value)
-    $prefixLength = 1
-    for ($remaining = $byteCount; $remaining -ge 128; $remaining = $remaining -shr 7) {
-        $prefixLength++
-    }
-    return [long]$byteCount + $prefixLength
-}
-
 function Write-CodeCoverageAggregateFile {
     <#
     .SYNOPSIS
@@ -18,8 +7,7 @@ function Write-CodeCoverageAggregateFile {
     #>
     Param(
         [string] $path,
-        [System.Collections.IDictionary] $lines,
-        [string[]] $rootOrder = @()
+        [System.Collections.IDictionary] $lines
     )
 
     $fileStream = $null
@@ -43,25 +31,10 @@ function Write-CodeCoverageAggregateFile {
             $false)
 
         $writer.Write([System.Text.Encoding]::ASCII.GetBytes("ALGOCOV1"))
-        [string[]]$orderedRoots = @(
-            if ($rootOrder.Count -gt 0) {
-                if ($rootOrder.Count -ne $lines.Count) {
-                    throw "Code coverage aggregate root order does not match its semantic lines."
-                }
-                $rootOrder
-            }
-            else {
-                $roots = [string[]]@($lines.Keys)
-                [System.Array]::Sort($roots, [System.StringComparer]::Ordinal)
-                $roots
-            }
-        )
+        [string[]]$orderedRoots = @($lines.Keys)
+        [System.Array]::Sort($orderedRoots, [System.StringComparer]::Ordinal)
         $lineCount = [long]0
         foreach ($root in $orderedRoots) {
-            if ([string]::IsNullOrWhiteSpace($root) -or
-                $lines[$root] -isnot [System.Collections.IDictionary]) {
-                throw "Code coverage aggregate contains an invalid semantic line root."
-            }
             $lineCount += $lines[$root].Count
         }
         $writer.Write($lineCount)
@@ -122,7 +95,6 @@ function Read-CodeCoverageAggregate {
             if ($lineCount -lt 0) {
                 throw [System.IO.InvalidDataException]::new("count")
             }
-            $uncompressedLength = [long]16
             for ([long]$lineIndex = 0; $lineIndex -lt $lineCount; $lineIndex++) {
                 $root = $reader.ReadString()
                 $key = $reader.ReadString()
@@ -138,27 +110,9 @@ function Read-CodeCoverageAggregate {
                     throw [System.IO.InvalidDataException]::new("shape")
                 }
                 $applicationLines[$root][$key] = $covered
-                $uncompressedLength += Get-CodeCoverageBinaryStringLength -value $root
-                $uncompressedLength += Get-CodeCoverageBinaryStringLength -value $key
-                $uncompressedLength++
             }
             if ($gzipStream.ReadByte() -ne -1) {
                 throw [System.IO.InvalidDataException]::new("shape")
-            }
-            if ($fileStream.Length -lt 4) {
-                throw [System.IO.InvalidDataException]::new("length")
-            }
-            $null = $fileStream.Seek(-4, [System.IO.SeekOrigin]::End)
-            $lengthBytes = [byte[]]::new(4)
-            if ($fileStream.Read($lengthBytes, 0, 4) -ne 4) {
-                throw [System.IO.InvalidDataException]::new("length")
-            }
-            if (-not [System.BitConverter]::IsLittleEndian) {
-                [System.Array]::Reverse($lengthBytes)
-            }
-            $declaredLength = [System.BitConverter]::ToUInt32($lengthBytes, 0)
-            if ($declaredLength -ne [uint32]($uncompressedLength % 4294967296)) {
-                throw [System.IO.InvalidDataException]::new("length")
             }
             return @{
                 Valid = $true

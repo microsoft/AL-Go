@@ -32,7 +32,8 @@ RunTests performs these steps once for each project:
 1. Start one persistent `pwsh -NoProfile -NonInteractive` worker.
 1. Run each selected test app sequentially.
 1. Write each app's fixed AlTool files to a stable, app-specific directory.
-1. Send the completed BC JSON report descriptor to the worker through redirected standard input.
+1. Send the app ID, completeness state, and completed BC JSON report path to the worker through
+   redirected standard input.
 1. Close worker input, wait for compaction, and publish final status.
 
 Per-app directories prevent AlTool's fixed filenames from overwriting earlier reports:
@@ -99,6 +100,8 @@ The reader:
   result.
 - Retains AlTool diagnostics as unclassified strings for later warnings.
 
+The worker returns diagnostics keyed by app ID, so completion order does not affect run attribution.
+
 Keeping parsing and the union in the child avoids loading multi-gigabyte reports in the PowerShell 5
 parent process and avoids parsing every report twice.
 
@@ -113,8 +116,8 @@ The aggregate is a gzip-compressed binary stream containing:
 - Root identity, semantic line key, and covered state for every retained line.
 
 The writer publishes to a temporary file and moves it to the fixed filename only after successful
-completion. Readers validate the header, records, declared count, and gzip end-of-stream. There is no
-raw-report analyzer fallback.
+completion. Readers validate successful decompression, the header, records, and declared count.
+There is no raw-report analyzer fallback.
 
 ### `coverage-status.json`
 

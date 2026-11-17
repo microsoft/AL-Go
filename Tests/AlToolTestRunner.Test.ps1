@@ -1180,8 +1180,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                     Results    = @{ '130001' = @(
                             @{ MethodName = 'TestOne'; Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' }
                         ) }
-                    Succeeded  = $true
-                    ElapsedSec = 0.1
+                    Succeeded     = $true
+                    ElapsedSec    = 0.1
+                    Coverage      = $null
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
             Mock -ModuleName AlToolTestRunner OutputWarning {}
@@ -1328,7 +1331,8 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                         Diagnostics = @('source note')
                         IsComplete  = $false
                     }
-                    Warnings   = @('tool warning')
+                    Warnings      = @('tool warning')
+                    CoverageError = ""
                 }
             }
 
@@ -1358,7 +1362,8 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                         Diagnostics = @()
                         IsComplete  = $true
                     }
-                    Warnings   = @()
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
 
@@ -1407,8 +1412,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                         '130001' = @(@{ MethodName = 'TestOne'; Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' })
                         '130002' = @(@{ MethodName = 'TestTwo'; Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' })
                     }
-                    Succeeded  = $true
-                    ElapsedSec = 0.1
+                    Succeeded     = $true
+                    ElapsedSec    = 0.1
+                    Coverage      = $null
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
 
@@ -1440,8 +1448,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                             @{ MethodName = 'Failing'; Outcome = 'Fail'; Ms = 2; Message = 'primary failure'; Stacktrace = 'stack' },
                             @{ MethodName = 'Skipped'; Outcome = 'Skip'; Ms = 0; Message = ''; Stacktrace = '' }
                         ) }
-                    Succeeded  = $false
-                    ElapsedSec = 0.1
+                    Succeeded     = $false
+                    ElapsedSec    = 0.1
+                    Coverage      = $null
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
 
@@ -1464,8 +1475,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                     Results    = @{ '130001' = @(
                             @{ MethodName = 'Reported'; Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' }
                         ) }
-                    Succeeded  = $false
-                    ElapsedSec = 0.1
+                    Succeeded     = $false
+                    ElapsedSec    = 0.1
+                    Coverage      = $null
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
 
@@ -1486,8 +1500,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                     Results    = @{ '130001' = @(
                             @{ MethodName = 'TestOne'; Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' }
                         ) }
-                    Succeeded  = $false
-                    ElapsedSec = 0.1
+                    Succeeded     = $false
+                    ElapsedSec    = 0.1
+                    Coverage      = $null
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
 
@@ -1508,8 +1525,11 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                             @{ MethodName = 'Duplicate'; Outcome = 'Pass'; Ms = 1; Message = ''; Stacktrace = '' },
                             @{ MethodName = 'Duplicate'; Outcome = 'Fail'; Ms = 2; Message = 'second occurrence failed'; Stacktrace = 'stack' }
                         ) }
-                    Succeeded  = $false
-                    ElapsedSec = 0.1
+                    Succeeded     = $false
+                    ElapsedSec    = 0.1
+                    Coverage      = $null
+                    Warnings      = @()
+                    CoverageError = ""
                 }
             }
 

@@ -493,33 +493,6 @@ Describe 'RunTests.psm1 Tests' {
             }
         }
 
-        It 'Requires the AnalyzeRepo callback for projectsToTest source roots' {
-            $baseFolder = Join-Path $TestDrive 'Repository'
-            $projectPath = Join-Path $baseFolder 'Project'
-            $targetProjectPath = Join-Path $baseFolder 'Target'
-            New-Item -Path $projectPath -ItemType Directory -Force | Out-Null
-            New-Item -Path $targetProjectPath -ItemType Directory -Force | Out-Null
-            $settings = @{
-                appFolders = @()
-                testFolders = @()
-                projectsToTest = @('Target')
-            }
-
-            InModuleScope CodeCoverageCoordinator -Parameters @{
-                Settings = $settings
-                ProjectPath = $projectPath
-                BaseFolder = $baseFolder
-            } {
-                param($Settings, $ProjectPath, $BaseFolder)
-                Mock ReadSettings { return @{ appFolders = @(); testFolders = @() } }
-
-                {
-                    Resolve-CodeCoverageSourceRootData -settings $Settings `
-                        -projectPath $ProjectPath -baseFolder $BaseFolder
-                } | Should -Throw 'Analyzing projectsToTest source roots requires the AnalyzeRepo callback.'
-            }
-        }
-
         It 'Deduplicates exact target roots but retains parent, nested, and localized paths' {
             $baseFolder = Join-Path $TestDrive 'Repository'
             $projectPath = Join-Path $baseFolder 'build\projects\Test Apps W1'
@@ -593,8 +566,8 @@ Describe 'RunTests.psm1 Tests' {
                 $roots | Should -Contain ([System.IO.Path]::GetFullPath((Join-Path $BaseFolder 'src\App')))
                 $roots | Should -Contain ([System.IO.Path]::GetFullPath((Join-Path $BaseFolder 'src\App\Nested')))
                 $roots | Should -Contain ([System.IO.Path]::GetFullPath((Join-Path $BaseFolder 'src\Localized')))
-                Should -Invoke ReadSettings -Times 2 -Exactly
-                $script:analyzeRepoCalls | Should -Be 2
+                Should -Invoke ReadSettings -Times 3 -Exactly
+                $script:analyzeRepoCalls | Should -Be 3
             }
         }
 
@@ -1337,12 +1310,11 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus = Get-Content -LiteralPath (Join-Path $coverageRoot 'coverage-status.json') `
                 -Raw -Encoding UTF8 | ConvertFrom-Json
             $coverageStatus.PSObject.Properties.Name |
-                Should -Be @('project', 'projectName', 'buildMode', 'formats',
+                Should -Be @('project', 'projectName', 'buildMode',
                     'sourceRootDetails', 'runs', 'aggregate')
             $coverageStatus.project | Should -Be 'Projects/Coverage'
             $coverageStatus.projectName | Should -Be 'Coverage Project'
             $coverageStatus.buildMode | Should -Be 'Clean'
-            $coverageStatus.formats | Should -Be @('bc-json', 'cobertura')
             $coverageStatus.sourceRootDetails.Count | Should -Be 3
             @($coverageStatus.sourceRootDetails | ForEach-Object { $_.path }) |
                 Should -Be @('App', 'TestApp1', 'TestApp2')
@@ -1354,10 +1326,9 @@ Describe 'RunTests.psm1 Tests' {
             $coverageStatus.runs.Count | Should -Be 2
             $coverageStatus.runs[0].PSObject.Properties.Name |
                 Should -Be @(
-                    'appId', 'appName', 'outputDirectory', 'state', 'diagnostics'
+                    'appId', 'appName', 'state', 'diagnostics'
                 )
             $coverageStatus.runs[0].appId | Should -Be $appOneId
-            $coverageStatus.runs[0].outputDirectory | Should -Be "CodeCoverage/$appOneId"
             $coverageStatus.runs[0].diagnostics.Count | Should -Be 0
             $coverageStatusByAppId = @{}
             foreach ($run in $coverageStatus.runs) {
@@ -1554,10 +1525,8 @@ Describe 'RunTests.psm1 Tests' {
                     Formats = @('bc-json')
                     RootPath = Join-Path (Join-Path $projectPath '.buildartifacts') 'CodeCoverage'
                     SourceRootRecords = @()
-                    SourceRoots = @()
                     ApplicationIds = @()
                     Runs = @(@{
-                            Sequence = 0
                             AppId = $appId
                             AppName = 'App1.Test'
                             OutputPath = Join-Path (

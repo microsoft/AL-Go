@@ -16,6 +16,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         Import-Module (
             Join-Path $PSScriptRoot '../Actions/RunTests/CodeCoverageCoordinator.psm1' -Resolve
         ) -DisableNameChecking -Force
+        Import-Module (
+            Join-Path $PSScriptRoot '../Actions/RunTests/AlToolTestRunner.psm1' -Resolve
+        ) -DisableNameChecking
 
         function New-CoordinatorProject {
             Param([string] $name = "Project")
@@ -182,21 +185,18 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             "RootPath",
             "Runs",
             "SourceRootRecords",
-            "SourceRoots",
             "Supported"
         )
         @($session.Runs).Count | Should -Be 2
         @($first.Keys | Sort-Object) |
-            Should -Be @("AppId", "AppName", "OutputPath", "Sequence", "State")
-        $first.Sequence | Should -Be 0
-        $second.Sequence | Should -Be 1
+            Should -Be @("AppId", "AppName", "OutputPath", "State")
         $first.OutputPath | Should -Be (
             Join-Path $session.RootPath "22222222-2222-2222-2222-222222222222"
         )
         $second.OutputPath | Should -Be (
             Join-Path $session.RootPath "33333333-3333-3333-3333-333333333333"
         )
-        $session.SourceRoots | Should -Be @(
+        @($session.SourceRootRecords.Path) | Should -Be @(
             (Join-Path $projectPath "App"),
             (Join-Path $projectPath "Test")
         )
@@ -224,7 +224,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
         $status.runs[0].state | Should -Be "complete"
-        $status.formats | Should -Be @("bc-json", "cobertura")
+        $status.PSObject.Properties.Name | Should -Not -Contain "formats"
         $status.PSObject.Properties.Name | Should -Not -Contain "mode"
         $status.PSObject.Properties.Name | Should -Contain "aggregate"
         $status.aggregate | Should -Be "coverage-aggregate.bin.gz"
@@ -300,9 +300,6 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             -RepositoryRoot $projectPath
 
         $model.Reasons | Should -BeNullOrEmpty
-        $model.Runs.Count | Should -Be 2
-        $model.Runs[0].ContainsKey("Lines") | Should -BeFalse
-        $model.Runs[1].ContainsKey("Lines") | Should -BeFalse
         $model.Lines.Count | Should -Be 1
         $metrics = Get-CoverageMetrics $model.Lines
         $metrics.Covered | Should -Be 1
@@ -324,7 +321,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
         $status.runs[0].state | Should -Be "incomplete"
-        $status.formats | Should -Be @("bc-json")
+        $status.PSObject.Properties.Name | Should -Not -Contain "formats"
     }
 
     It 'Fails closed when required artifacts are missing' {
@@ -416,7 +413,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $status.PSObject.Properties.Name | Should -Not -Contain "aggregate"
     }
 
-    It 'Publishes raw diagnostics returned by the worker' {
+    It 'Publishes worker diagnostics by app ID when reports complete out of order' {
         Mock -ModuleName CodeCoverageCoordinator Start-CodeCoverageCompactorInternal {
             return @{}
         }
@@ -426,29 +423,40 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                 LineCount = 0
                 SizeBytes = 1
                 TotalParseMilliseconds = 1
-                RunDiagnostics = @([PSCustomObject]@{
-                        Diagnostics = @("AlTool diagnostic")
-                    })
+                RunDiagnostics = @{
+                    "33333333-3333-3333-3333-333333333333" = @("Second diagnostic")
+                    "22222222-2222-2222-2222-222222222222" = @("First diagnostic")
+                }
             }
         }
         $projectPath = New-CoordinatorProject
-        $session = New-CoordinatorSession -projectPath $projectPath
-        $run = Get-CoordinatorRun -session $session `
-            -appId "22222222-2222-2222-2222-222222222222"
-        $context = New-CoordinatorArtifactFixture -session $session -run $run
-        Write-CoordinatorCoverageArtifacts -context $context
+        $testApps = @(
+            [PSCustomObject]@{
+                Id = "22222222-2222-2222-2222-222222222222"
+                Name = "First Test App"
+                Path = Join-Path $projectPath "First.Test.app"
+            },
+            [PSCustomObject]@{
+                Id = "33333333-3333-3333-3333-333333333333"
+                Name = "Second Test App"
+                Path = Join-Path $projectPath "Second.Test.app"
+            }
+        )
+        $session = New-CoordinatorSession -projectPath $projectPath -testApps $testApps
+        foreach ($run in @($session.Runs | Sort-Object AppId -Descending)) {
+            $context = New-CoordinatorArtifactFixture -session $session -run $run
+            Write-CoordinatorCoverageArtifacts -context $context
+            Complete-AlGoCodeCoverageRun -session $session -run $run `
+                -coverageIsComplete $context.coverageIsComplete
+        }
 
-        Complete-AlGoCodeCoverageRun -session $session -run $run `
-            -coverageIsComplete $context.coverageIsComplete
         Complete-AlGoCodeCoverageSession -session $session
 
         $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
             -Raw -Encoding UTF8 | ConvertFrom-Json
-        $status.runs[0].diagnostics | Should -Be @("AlTool diagnostic")
+        $status.runs[0].diagnostics | Should -Be @("First diagnostic")
+        $status.runs[1].diagnostics | Should -Be @("Second diagnostic")
         $status.PSObject.Properties.Name | Should -Contain "aggregate"
-        Test-Path -LiteralPath (
-            Join-Path $context.coverageOutputPath "coverage.bc.json"
-        ) | Should -BeFalse
     }
 
     It 'Retains failed-run raw coverage when a later compactor handoff fails' {
@@ -467,9 +475,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                 LineCount = 0
                 SizeBytes = 1
                 TotalParseMilliseconds = 1
-                RunDiagnostics = @([PSCustomObject]@{
-                        Diagnostics = @()
-                    })
+                RunDiagnostics = @{
+                    "22222222-2222-2222-2222-222222222222" = @()
+                }
             }
         }
         $projectPath = New-CoordinatorProject
@@ -541,10 +549,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             -platformVersion "30.0.56025.999"
         $run = Get-CoordinatorRun -session $session `
             -appId "22222222-2222-2222-2222-222222222222"
-        $context = New-CoordinatorArtifactFixture -session $session -run $run
 
-        $context.supported | Should -BeFalse
-        $context.sourceRoots.Count | Should -Be 0
+        $session.Supported | Should -BeFalse
+        $session.SourceRootRecords.Count | Should -Be 0
         { Complete-AlGoCodeCoverageRun -session $session -run $run } |
             Should -Not -Throw
         { Complete-AlGoCodeCoverageSession -session $session } | Should -Not -Throw

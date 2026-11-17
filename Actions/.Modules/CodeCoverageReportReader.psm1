@@ -16,29 +16,6 @@ function Get-CoverageArray {
     return @($Value)
 }
 
-function ConvertTo-CoverageSourceIdentity {
-    <#
-    .SYNOPSIS
-        Normalizes a report source path for semantic keys within one project.
-    #>
-    Param(
-        [AllowEmptyString()]
-        [string] $SourcePath
-    )
-
-    if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-        return ""
-    }
-    $normalized = $SourcePath.Trim().Replace('\', '/')
-    while ($normalized.Contains("//")) {
-        $normalized = $normalized.Replace("//", "/")
-    }
-    while ($normalized.StartsWith("./", [System.StringComparison]::Ordinal)) {
-        $normalized = $normalized.Substring(2)
-    }
-    return $normalized.ToLowerInvariant()
-}
-
 function Test-PathInsideRoot {
     <#
     .SYNOPSIS
@@ -114,37 +91,6 @@ function Get-NormalizedCoverageSourceRoots {
     return @($result)
 }
 
-function Resolve-CoverageSourceRootDetail {
-    <#
-    .SYNOPSIS
-        Resolves the source-root detail that owns a coverage source.
-    #>
-    Param(
-        [string] $SourceIdentity,
-        [object[]] $SourceRootDetails
-    )
-
-    $source = "$SourceIdentity".Replace('\', '/').Trim('/').ToLowerInvariant()
-    $matchingDetails = @()
-    foreach ($detail in $SourceRootDetails) {
-        $root = "$($detail.Identity)"
-        if ($root -eq "." -or $source -eq $root -or $source.StartsWith(
-                "$root/", [System.StringComparison]::OrdinalIgnoreCase)) {
-            $matchingDetails += $detail
-        }
-    }
-    if ($matchingDetails.Count -eq 0) {
-        return $null
-    }
-    $ordered = @($matchingDetails |
-        Sort-Object @{ Expression = { "$($_.Identity)".Length }; Descending = $true })
-    if ($ordered.Count -gt 1 -and
-        "$($ordered[0].Identity)".Length -eq "$($ordered[1].Identity)".Length) {
-        return $null
-    }
-    return $ordered[0]
-}
-
 function Resolve-ExistingCoverageSource {
     <#
     .SYNOPSIS
@@ -173,8 +119,6 @@ function Resolve-ExistingCoverageSource {
     return @{
         Included = $true
         Identity = $identity
-        Reason = ""
-        LocalMappingFailed = $false
     }
 }
 
@@ -185,29 +129,15 @@ function Read-BcCoverageReport {
     #>
     Param(
         [string] $Path,
-        [hashtable] $Model = $null,
-        [AllowEmptyString()][string] $RequestedMode = "",
-        [AllowEmptyString()][string] $RepositoryRoot = "",
-        [hashtable] $SemanticLineUnion = $null,
-        [System.Collections.Generic.List[string]] $SemanticRootOrder = $null,
+        [hashtable] $Model,
+        [string] $RepositoryRoot,
+        [hashtable] $SemanticLineUnion,
         [System.Collections.Generic.Dictionary[string,object]] $SourceMappingCache = $null
     )
 
     $file = Get-Item -LiteralPath $Path
-    $readerType = [type]::GetType("Newtonsoft.Json.JsonTextReader, Newtonsoft.Json", $false)
-    if (-not $readerType) {
-        $readerType = [AppDomain]::CurrentDomain.GetAssemblies() |
-            ForEach-Object { $_.GetType("Newtonsoft.Json.JsonTextReader", $false) } |
-            Where-Object { $_ } |
-            Select-Object -First 1
-    }
-    $readerName = "Newtonsoft.Json"
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    $outcome = "failed"
     $extractedLineCount = 0
-    $acceptedLineCount = 0
     $newLineCount = 0
-    $scope = @{ ApplicationLines = @{} }
     $sourceCache = if ($null -ne $SourceMappingCache) {
         $SourceMappingCache
     }
@@ -216,26 +146,15 @@ function Read-BcCoverageReport {
             [System.StringComparer]::OrdinalIgnoreCase
         )
     }
-    $collectApplicationLines = $RequestedMode -eq "line" -and $null -ne $Model
-    $normalizedRepositoryRoot = ""
-    $normalizedSourceRoots = @()
-    if (-not [string]::IsNullOrWhiteSpace($RepositoryRoot) -and $null -ne $Model) {
-        try {
-            $normalizedRepositoryRoot = [System.IO.Path]::GetFullPath(
-                (Resolve-Path -LiteralPath $RepositoryRoot).ProviderPath
-            ).TrimEnd(
-                [System.IO.Path]::DirectorySeparatorChar,
-                [System.IO.Path]::AltDirectorySeparatorChar)
-            $normalizedSourceRoots = @(
-                Get-NormalizedCoverageSourceRoots -RepositoryRoot $normalizedRepositoryRoot `
-                    -SourceRoots $Model.SourceRoots
-            )
-        }
-        catch {
-            $normalizedRepositoryRoot = ""
-            $normalizedSourceRoots = @()
-        }
-    }
+    $normalizedRepositoryRoot = [System.IO.Path]::GetFullPath(
+        (Resolve-Path -LiteralPath $RepositoryRoot).ProviderPath
+    ).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar)
+    $normalizedSourceRoots = @(
+        Get-NormalizedCoverageSourceRoots -RepositoryRoot $normalizedRepositoryRoot `
+            -SourceRoots $Model.SourceRoots
+    )
     $reportData = @{
         schemaVersion = $null
         coverageMode = $null
@@ -251,9 +170,6 @@ function Read-BcCoverageReport {
     )
 
     try {
-        if (-not $readerType) {
-            throw [System.IO.InvalidDataException]::new("reader")
-        }
         $fileStream = $null
         $textReader = $null
         $jsonReader = $null
@@ -302,7 +218,7 @@ function Read-BcCoverageReport {
                         continue
                     }
                     if (-not $seenRootProperties.Add($propertyName)) {
-                        throw [System.IO.InvalidDataException]::new("duplicate:$propertyName")
+                        throw [System.IO.InvalidDataException]::new("shape")
                     }
 
                     switch -CaseSensitive ($propertyName) {
@@ -381,33 +297,13 @@ function Read-BcCoverageReport {
 
                                 $source = $null
                                 if (-not $sourceCache.TryGetValue($sourcePath, [ref]$source)) {
-                                    $rawIdentity = ConvertTo-CoverageSourceIdentity $sourcePath
-                                    $source = if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
-                                        @{
-                                            Included = -not [string]::IsNullOrWhiteSpace($sourcePath)
-                                            Identity = $rawIdentity
-                                            LocalMappingFailed = $false
-                                        }
-                                    }
-                                    else {
-                                        Resolve-NormalizedRepositoryCoverageSource `
-                                            -SourcePath $sourcePath `
-                                            -RepositoryRoot $normalizedRepositoryRoot `
-                                            -NormalizedRoots $normalizedSourceRoots
-                                    }
-                                    $source.AppRootIdentity = ""
-                                    if ($collectApplicationLines -and $source.Included) {
-                                        $detail = $null
-                                        if ($source.Contains("SourceRootIndex") -and
-                                            [int]$source.SourceRootIndex -ge 0 -and
-                                            [int]$source.SourceRootIndex -lt $Model.SourceRootDetails.Count) {
-                                            $detail = $Model.SourceRootDetails[[int]$source.SourceRootIndex]
-                                        }
-                                        else {
-                                            $detail = Resolve-CoverageSourceRootDetail `
-                                                -SourceIdentity $source.Identity `
-                                                -SourceRootDetails $Model.SourceRootDetails
-                                        }
+                                    $source = Resolve-NormalizedRepositoryCoverageSource `
+                                        -SourcePath $sourcePath `
+                                        -RepositoryRoot $normalizedRepositoryRoot `
+                                        -NormalizedRoots $normalizedSourceRoots
+                                    if ($source.Included) {
+                                        $detail = $Model.SourceRootDetails[[int]$source.SourceRootIndex]
+                                        $source.AppRootIdentity = ""
                                         if ($detail -and "$($detail.Kind)" -eq "app") {
                                             $source.AppRootIdentity = "$($detail.Identity)"
                                         }
@@ -416,42 +312,20 @@ function Read-BcCoverageReport {
                                 }
                                 if ($source.Included) {
                                     $rootIdentity = "$($source.AppRootIdentity)"
-                                    if ($collectApplicationLines -and
-                                        -not [string]::IsNullOrWhiteSpace($rootIdentity)) {
+                                    if (-not [string]::IsNullOrWhiteSpace($rootIdentity)) {
                                         $factKey = "$($source.Identity)|$objectType|$objectId|$lineNumber"
-                                        if ($null -ne $SemanticLineUnion) {
-                                            if (-not $SemanticLineUnion.ContainsKey($rootIdentity)) {
-                                                $SemanticLineUnion[$rootIdentity] =
-                                                    [System.Collections.Generic.Dictionary[string,bool]]::new(
-                                                        [System.StringComparer]::Ordinal)
-                                                if ($null -ne $SemanticRootOrder) {
-                                                    $SemanticRootOrder.Add($rootIdentity)
-                                                }
-                                            }
-                                            $rootLines = $SemanticLineUnion[$rootIdentity]
-                                            if (-not $rootLines.ContainsKey($factKey)) {
-                                                $acceptedLineCount++
-                                                $newLineCount++
-                                                $rootLines.Add($factKey, $hitCount -gt 0)
-                                            }
-                                            elseif ($hitCount -gt 0) {
-                                                $rootLines[$factKey] = $true
-                                            }
+                                        if (-not $SemanticLineUnion.ContainsKey($rootIdentity)) {
+                                            $SemanticLineUnion[$rootIdentity] =
+                                                [System.Collections.Generic.Dictionary[string,bool]]::new(
+                                                    [System.StringComparer]::Ordinal)
                                         }
-                                        else {
-                                            if (-not $scope.ApplicationLines.ContainsKey($rootIdentity)) {
-                                                $scope.ApplicationLines[$rootIdentity] =
-                                                    [System.Collections.Generic.Dictionary[string,bool]]::new(
-                                                        [System.StringComparer]::Ordinal)
-                                            }
-                                            if (-not $scope.ApplicationLines[$rootIdentity].ContainsKey($factKey)) {
-                                                $acceptedLineCount++
-                                                $scope.ApplicationLines[$rootIdentity].Add(
-                                                    $factKey, $hitCount -gt 0)
-                                            }
-                                            elseif ($hitCount -gt 0) {
-                                                $scope.ApplicationLines[$rootIdentity][$factKey] = $true
-                                            }
+                                        $rootLines = $SemanticLineUnion[$rootIdentity]
+                                        if (-not $rootLines.ContainsKey($factKey)) {
+                                            $newLineCount++
+                                            $rootLines.Add($factKey, $hitCount -gt 0)
+                                        }
+                                        elseif ($hitCount -gt 0) {
+                                            $rootLines[$factKey] = $true
                                         }
                                     }
                                 }
@@ -491,63 +365,27 @@ function Read-BcCoverageReport {
             throw [System.IO.InvalidDataException]::new("mode")
         }
 
-        $outcome = "passed"
         return @{
-            Valid = $true
             Data = $reportData
-            Scope = $scope
-            Reader = $readerName
             ExtractedLineCount = $extractedLineCount
-            AcceptedLineCount = $acceptedLineCount
             NewLineCount = $newLineCount
-            FailureDetail = ""
-            Reason = ""
         }
     }
     catch {
-        $failureDetail = if ($_.Exception -is [System.IO.InvalidDataException]) {
+        $failureKind = if ($_.Exception -is [System.IO.InvalidDataException]) {
             "$($_.Exception.Message)"
         }
         else {
             "corrupt"
-        }
-        $failureKind = if ($failureDetail.StartsWith(
-                "duplicate:", [System.StringComparison]::Ordinal)) {
-            "shape"
-        }
-        else {
-            $failureDetail
         }
         $reason = switch ($failureKind) {
             "schema" { "Coverage report schemaVersion is not supported." }
             "mode" { "Coverage report mode is not supported." }
             "complete" { "Coverage report completeness value is invalid." }
             "shape" { "Coverage report does not match schemaVersion 1.0." }
-            "reader" { "The Newtonsoft JSON streaming reader is unavailable." }
             default { "Coverage report JSON is corrupt or invalid." }
         }
-        return @{
-            Valid = $false
-            Data = $null
-            Scope = $null
-            Reader = $readerName
-            ExtractedLineCount = $extractedLineCount
-            AcceptedLineCount = $acceptedLineCount
-            NewLineCount = $newLineCount
-            FailureDetail = $failureDetail
-            Reason = $reason
-        }
-    }
-    finally {
-        $stopwatch.Stop()
-        $culture = [System.Globalization.CultureInfo]::InvariantCulture
-        Write-Host ("BC JSON analysis: reader={0}, size={1} MiB, elapsed={2}s, extractedLines={3}, acceptedLines={4}, outcome={5}." -f
-            $readerName,
-            ($file.Length / 1MB).ToString("0.0", $culture),
-            $stopwatch.Elapsed.TotalSeconds.ToString("0.000", $culture),
-            $extractedLineCount,
-            $acceptedLineCount,
-            $outcome)
+        throw $reason
     }
 }
 
@@ -563,10 +401,10 @@ function Resolve-NormalizedRepositoryCoverageSource {
     )
 
     if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-        return @{ Included = $false; Identity = ""; Reason = "blank source path"; LocalMappingFailed = $false }
+        return @{ Included = $false }
     }
     if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
-        return @{ Included = $false; Identity = ""; Reason = "source path is invalid"; LocalMappingFailed = $true }
+        return @{ Included = $false }
     }
     try {
         $normalizedSource = $SourcePath.Trim().Replace('\', '/')
@@ -607,25 +445,25 @@ function Resolve-NormalizedRepositoryCoverageSource {
                         $resolved.SourceRootIndex = $rootIndex
                         return $resolved
                     }
-                    return @{ Included = $false; Identity = ""; Reason = "source path could not be validated"; LocalMappingFailed = $true }
+                    return @{ Included = $false }
                 }
             }
-            return @{ Included = $false; Identity = ""; Reason = "source path is external"; LocalMappingFailed = $false }
+            return @{ Included = $false }
         }
 
         $relativeSource = $normalizedSource.TrimStart('/')
         if ($relativeSource -match '(^|/)\.\.(/|$)') {
-            return @{ Included = $false; Identity = ""; Reason = "source path is invalid"; LocalMappingFailed = $true }
+            return @{ Included = $false }
         }
         if ($relativeSource -match '^external-([0-9]+)/(.+)$') {
             $rootIndex = [int]$matches[1]
             $externalPath = $matches[2]
             if ($rootIndex -le 0 -or $rootIndex -ge $NormalizedRoots.Count) {
-                return @{ Included = $false; Identity = ""; Reason = "external source-root index is invalid"; LocalMappingFailed = $true }
+                return @{ Included = $false }
             }
             $separatorIndex = $externalPath.IndexOf('/')
             if ($separatorIndex -le 0 -or $separatorIndex -eq $externalPath.Length - 1) {
-                return @{ Included = $false; Identity = ""; Reason = "external source path is invalid"; LocalMappingFailed = $true }
+                return @{ Included = $false }
             }
             $rootName = $externalPath.Substring(0, $separatorIndex)
             $rootRelativePath = $externalPath.Substring($separatorIndex + 1)
@@ -633,7 +471,7 @@ function Resolve-NormalizedRepositoryCoverageSource {
             if (-not $sourceRoot.Valid -or
                 -not $rootName.Equals(
                     $sourceRoot.Name, [System.StringComparison]::OrdinalIgnoreCase)) {
-                return @{ Included = $false; Identity = ""; Reason = "external source-root name is invalid"; LocalMappingFailed = $true }
+                return @{ Included = $false }
             }
             $candidate = Join-Path $sourceRoot.FullPath `
                 $rootRelativePath.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
@@ -643,15 +481,15 @@ function Resolve-NormalizedRepositoryCoverageSource {
                 $resolved.SourceRootIndex = $rootIndex
                 return $resolved
             }
-            return @{ Included = $false; Identity = ""; Reason = "external source path could not be validated"; LocalMappingFailed = $true }
+            return @{ Included = $false }
         }
 
         if ($NormalizedRoots.Count -eq 0) {
-            return @{ Included = $false; Identity = ""; Reason = "no source roots were recorded"; LocalMappingFailed = $false }
+            return @{ Included = $false }
         }
         $primaryRoot = $NormalizedRoots[0]
         if (-not $primaryRoot.Valid) {
-            return @{ Included = $false; Identity = ""; Reason = "primary source root is invalid"; LocalMappingFailed = $true }
+            return @{ Included = $false }
         }
         $candidate = Join-Path $primaryRoot.FullPath `
             $relativeSource.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
@@ -661,42 +499,14 @@ function Resolve-NormalizedRepositoryCoverageSource {
             $resolved.SourceRootIndex = 0
             return $resolved
         }
-        return @{ Included = $false; Identity = ""; Reason = "primary source path could not be validated"; LocalMappingFailed = $true }
+        return @{ Included = $false }
     }
     catch {
-        return @{ Included = $false; Identity = ""; Reason = "source path is invalid"; LocalMappingFailed = $true }
-    }
-}
-
-function Resolve-RepositoryCoverageSource {
-    <#
-    .SYNOPSIS
-        Maps a report source path to an existing repository file using the recorded source roots.
-    .DESCRIPTION
-        Exporter paths are decoded from the exact recorded source-root order. Other absolute or
-        repository-relative paths are matched against the most-specific recorded source root.
-    #>
-    Param(
-        [AllowEmptyString()][string] $SourcePath,
-        [string] $RepositoryRoot,
-        [string[]] $SourceRoots = @()
-    )
-
-    try {
-        $fullRoot = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $RepositoryRoot).ProviderPath).TrimEnd(
-            [System.IO.Path]::DirectorySeparatorChar,
-            [System.IO.Path]::AltDirectorySeparatorChar)
-        $normalizedRoots = @(Get-NormalizedCoverageSourceRoots -RepositoryRoot $fullRoot -SourceRoots $SourceRoots)
-        return Resolve-NormalizedRepositoryCoverageSource -SourcePath $SourcePath `
-            -RepositoryRoot $fullRoot -NormalizedRoots $normalizedRoots
-    }
-    catch {
-        return @{ Included = $false; Identity = ""; Reason = "source path is invalid"; LocalMappingFailed = $true }
+        return @{ Included = $false }
     }
 }
 
 Export-ModuleMember -Function Get-CoverageArray,
-    ConvertTo-CoverageSourceIdentity, Test-PathInsideRoot, Get-NormalizedCoverageSourceRoots,
-    Resolve-CoverageSourceRootDetail, Resolve-ExistingCoverageSource,
-    Resolve-NormalizedRepositoryCoverageSource, Resolve-RepositoryCoverageSource,
+    Test-PathInsideRoot, Get-NormalizedCoverageSourceRoots,
+    Resolve-ExistingCoverageSource, Resolve-NormalizedRepositoryCoverageSource,
     Read-BcCoverageReport

@@ -34,7 +34,6 @@ Describe "Code coverage aggregate" {
                 project = "."
                 projectName = "Project"
                 buildMode = "Default"
-                formats = @("bc-json")
                 sourceRootDetails = @([ordered]@{
                         path = "App"
                         kind = "app"
@@ -96,8 +95,6 @@ Describe "Code coverage aggregate" {
             Param([object] $status)
 
             return @{
-                Mode = "line"
-                SourceRoots = @($status.sourceRootDetails | ForEach-Object { $_.path })
                 SourceRootDetails = @($status.sourceRootDetails)
             }
         }
@@ -116,29 +113,26 @@ Describe "Code coverage aggregate" {
             $worker = Start-CodeCoverageAggregateWorker `
                 -readerModulePath (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
                 -repositoryRoot $repositoryRoot -metadata $metadata `
-                -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath
-            $sequence = 0
-            foreach ($run in @($status.runs)) {
+                -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath `
+                -pwshPath (Get-Command pwsh).Source
+            $rawReports = @(
+                Get-ChildItem -LiteralPath $coverageRoot -Filter "coverage.bc.json" -File -Recurse |
+                    Sort-Object FullName
+            )
+            for ($runIndex = 0; $runIndex -lt @($status.runs).Count; $runIndex++) {
+                $run = $status.runs[$runIndex]
                 if ("$($run.state)" -in @("complete", "incomplete")) {
                     Add-CodeCoverageAggregateWorkItem -worker $worker -descriptor @{
-                        Sequence = $sequence
                         AppId = "$($run.appId)"
-                        AppName = "$($run.appName)"
-                        State = "$($run.state)"
                         Complete = "$($run.state)" -eq "complete"
-                        ReportPath = Join-Path (Join-Path $coverageRoot (
-                                Split-Path "$($run.outputDirectory)" -Leaf)) "coverage.bc.json"
+                        ReportPath = $rawReports[$runIndex].FullName
                     }
                 }
-
-                $sequence++
             }
             $aggregate = Complete-CodeCoverageAggregateWorker -worker $worker
-            $diagnosticIndex = 0
             foreach ($run in @($status.runs)) {
-                if ("$($run.state)" -in @("complete", "incomplete")) {
-                    $run.diagnostics = @($aggregate.RunDiagnostics[$diagnosticIndex].Diagnostics)
-                    $diagnosticIndex++
+                if ($aggregate.RunDiagnostics.ContainsKey("$($run.appId)")) {
+                    $run.diagnostics = @($aggregate.RunDiagnostics["$($run.appId)"])
                 }
             }
             $status | Add-Member -NotePropertyName aggregate `
@@ -173,11 +167,10 @@ Describe "Code coverage aggregate" {
                 project = $project
                 projectName = $project
                 buildMode = "Default"
-                formats = @("bc-json")
                 sourceRootDetails = $details
                 runs = @([ordered]@{
                         appId = "$project-run"; appName = "$project tests"
-                        outputDirectory = "CodeCoverage/$project-run"; state = "complete"
+                        state = "complete"
                         diagnostics = @()
                     })
                 aggregate = "coverage-aggregate.bin.gz"
@@ -191,8 +184,8 @@ Describe "Code coverage aggregate" {
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
         $runs = @(
-            [ordered]@{ appId = "run-a"; appName = "Run A"; outputDirectory = "CodeCoverage/run-a"; state = "complete" },
-            [ordered]@{ appId = "run-b"; appName = "Run B"; outputDirectory = "CodeCoverage/run-b"; state = "complete" }
+            [ordered]@{ appId = "run-a"; appName = "Run A"; state = "complete" },
+            [ordered]@{ appId = "run-b"; appName = "Run B"; state = "complete" }
         )
         $status = New-AggregateStatus -coverageRoot $coverageRoot -runs $runs
         $reportA = Join-Path $coverageRoot "run-a\coverage.bc.json"
@@ -205,21 +198,20 @@ Describe "Code coverage aggregate" {
         $worker = Start-CodeCoverageAggregateWorker `
             -readerModulePath (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
             -repositoryRoot $repositoryRoot -metadata $metadata `
-            -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath
+            -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath `
+            -pwshPath (Get-Command pwsh).Source
         Add-CodeCoverageAggregateWorkItem -worker $worker -descriptor @{
-            Sequence = 0; AppId = "run-a"; AppName = "Run A"; State = "complete"
+            AppId = "run-a"
             Complete = $true; ReportPath = $reportA
         }
         Add-CodeCoverageAggregateWorkItem -worker $worker -descriptor @{
-            Sequence = 1; AppId = "run-b"; AppName = "Run B"; State = "complete"
+            AppId = "run-b"
             Complete = $true; ReportPath = $reportB
         }
         Test-Path -LiteralPath $publishedPath | Should -BeFalse
         $aggregate = Complete-CodeCoverageAggregateWorker -worker $worker
-        for ($index = 0; $index -lt @($aggregate.RunDiagnostics).Count; $index++) {
-            $status.runs[$index]["diagnostics"] = @(
-                $aggregate.RunDiagnostics[$index].Diagnostics
-            )
+        foreach ($run in $status.runs) {
+            $run["diagnostics"] = @($aggregate.RunDiagnostics["$($run.appId)"])
         }
         $status["aggregate"] = "coverage-aggregate.bin.gz"
         $status | ConvertTo-Json -Depth 10 |
@@ -241,12 +233,45 @@ Describe "Code coverage aggregate" {
         Test-Path -LiteralPath $reportB | Should -BeFalse
     }
 
+    It "accepts a UTF-8 BOM on the first redirected input descriptor" `
+        -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+        $repositoryRoot = New-AggregateRepository -name "InputBom"
+        $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
+        New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
+        $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
+            [ordered]@{
+                appId = "run-a"
+                appName = "Run A"
+                state = "complete"
+            }
+        )
+        $reportPath = Join-Path $coverageRoot "run-a\coverage.bc.json"
+        Write-AggregateRawReport -path $reportPath -hitCount 1
+        $publishedPath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
+        $descriptor = @{
+            AppId = "run-a"
+            Complete = $true
+            ReportPath = $reportPath
+        } | ConvertTo-Json -Compress
+        $inputReader = [System.IO.StringReader]::new(
+            [string]::Concat([char]0xFEFF, $descriptor, [Environment]::NewLine)
+        )
+
+        $result = Invoke-CodeCoverageAggregateWorker -inputReader $inputReader `
+            -readerModulePath (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
+            -repositoryRoot $repositoryRoot -metadata (Get-AggregateMetadata -status $status) `
+            -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath
+
+        $result.Aggregate.LineCount | Should -Be 1
+        Test-Path -LiteralPath $publishedPath | Should -BeTrue
+    }
+
     It "retains raw input and publishes nothing when the worker rejects corrupt JSON" {
         $repositoryRoot = New-AggregateRepository -name "Corrupt"
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
         $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
-            [ordered]@{ appId = "run-a"; appName = "Run A"; outputDirectory = "CodeCoverage/run-a"; state = "complete" }
+            [ordered]@{ appId = "run-a"; appName = "Run A"; state = "complete" }
         )
         $reportPath = Join-Path $coverageRoot "run-a\coverage.bc.json"
         New-Item -Path (Split-Path $reportPath -Parent) -ItemType Directory -Force | Out-Null
@@ -255,9 +280,10 @@ Describe "Code coverage aggregate" {
         $worker = Start-CodeCoverageAggregateWorker `
             -readerModulePath (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
             -repositoryRoot $repositoryRoot -metadata (Get-AggregateMetadata -status $status) `
-            -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath
+            -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath `
+            -pwshPath (Get-Command pwsh).Source
         Add-CodeCoverageAggregateWorkItem -worker $worker -descriptor @{
-            Sequence = 0; AppId = "run-a"; AppName = "Run A"; State = "complete"
+            AppId = "run-a"
             Complete = $true; ReportPath = $reportPath
         }
 
@@ -317,7 +343,7 @@ Describe "Code coverage aggregate" {
             "app" = @{ "app/file.al|5|1|10" = $true }
         }
         $bytes = [System.IO.File]::ReadAllBytes($path)
-        [System.IO.File]::WriteAllBytes($path, $bytes[0..($bytes.Length - 5)])
+        [System.IO.File]::WriteAllBytes($path, $bytes[0..([int]($bytes.Length / 2))])
 
         $result = Read-CodeCoverageAggregate -path $path
 
@@ -330,7 +356,7 @@ Describe "Code coverage aggregate" {
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
         New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
         $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
-            [ordered]@{ appId = "run-a"; appName = "Run A"; outputDirectory = "CodeCoverage/run-a"; state = "complete" }
+            [ordered]@{ appId = "run-a"; appName = "Run A"; state = "complete" }
         )
         Write-AggregateRawReport -path (
             Join-Path $coverageRoot "run-a\coverage.bc.json"
@@ -355,7 +381,7 @@ Describe "Code coverage aggregate" {
         $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
             [ordered]@{
                 appId = "run-a"; appName = "Run A"
-                outputDirectory = "CodeCoverage/run-a"; state = "complete"
+                state = "complete"
                 diagnostics = @("AlTool diagnostic")
             }
         )
@@ -381,7 +407,7 @@ Describe "Code coverage aggregate" {
         $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
             [ordered]@{
                 appId = "run-a"; appName = "Run A"
-                outputDirectory = "CodeCoverage/run-a"; state = "complete"
+                state = "complete"
                 diagnostics = @()
             }
         )

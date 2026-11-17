@@ -16,7 +16,6 @@ $script:CoverageObjectTypeNames = @{
     9 = "Query"
 }
 $script:MaximumValueLength = 160
-$script:MaximumSummaryBytes = 900KB
 
 function ConvertTo-SafeCoverageText {
     <#
@@ -42,38 +41,6 @@ function ConvertTo-SafeCoverageText {
     return $text
 }
 
-function Limit-CoverageSummary {
-    <#
-    .SYNOPSIS
-        Bounds a summary by UTF-8 byte length.
-    #>
-    Param(
-        [AllowEmptyString()]
-        [string] $Summary,
-        [int] $MaximumBytes = $script:MaximumSummaryBytes
-    )
-
-    $encoding = [System.Text.Encoding]::UTF8
-    if ($encoding.GetByteCount($Summary) -le $MaximumBytes) {
-        return $Summary
-    }
-
-    $suffix = "`n`n_Summary truncated to stay within the GitHub job summary limit._"
-    $available = [Math]::Max(0, $MaximumBytes - $encoding.GetByteCount($suffix))
-    $low = 0
-    $high = $Summary.Length
-    while ($low -lt $high) {
-        $middle = [int][Math]::Ceiling(($low + $high) / 2.0)
-        if ($encoding.GetByteCount($Summary.Substring(0, $middle)) -le $available) {
-            $low = $middle
-        }
-        else {
-            $high = $middle - 1
-        }
-    }
-    return $Summary.Substring(0, $low) + $suffix
-}
-
 function Test-CodeCoverageSummaryRequested {
     <#
     .SYNOPSIS
@@ -85,15 +52,7 @@ function Test-CodeCoverageSummaryRequested {
         [string] $Scope
     )
 
-    if (-not $Settings.ContainsKey("useSeparateTestAction")) {
-        return $false
-    }
-    $separateSettings = $Settings.useSeparateTestAction
-    if ($separateSettings -isnot [System.Collections.IDictionary] -or
-        -not $separateSettings.Contains("codeCoverageSummary")) {
-        return $false
-    }
-    $requested = "$($separateSettings.codeCoverageSummary)".ToLowerInvariant()
+    $requested = "$($Settings.useSeparateTestAction.codeCoverageSummary)".ToLowerInvariant()
     return $requested -eq "both" -or $requested -eq $Scope
 }
 
@@ -177,7 +136,6 @@ function New-CoverageApplicationModels {
             $appName = @("$($detail.Path)" -split '/')[-1]
         }
         $apps += @{
-            Root = "$($detail.Path)"
             RootIdentity = "$($detail.Identity)"
             AppId = "$($detail.AppId)"
             AppName = $appName
@@ -216,25 +174,15 @@ function New-EmptyProjectCoverageModel {
         Project = $Project
         ProjectName = $ProjectName
         BuildMode = $BuildMode
-        SourceRootDetails = @()
-        Runs = @()
         Apps = @()
         Lines = @{}
-        StatusPath = ""
     }
 }
 
 function Get-ProjectCoverageModelFromStatus {
-    Param(
-        [string] $StatusPath,
-        [hashtable] $ExpectedDimension = $null
-    )
+    Param([string] $StatusPath)
 
-    $fallbackProject = if ($ExpectedDimension) { "$($ExpectedDimension.project)" } else { "." }
-    $fallbackName = if ($ExpectedDimension) { "$($ExpectedDimension.projectName)" } else { "" }
-    $fallbackBuildMode = if ($ExpectedDimension) { "$($ExpectedDimension.buildMode)" } else { "" }
-    $model = New-EmptyProjectCoverageModel -Project $fallbackProject -ProjectName $fallbackName -BuildMode $fallbackBuildMode
-    $model.StatusPath = $StatusPath
+    $model = New-EmptyProjectCoverageModel -Project "." -ProjectName "" -BuildMode ""
     $statusJson = Read-CoverageJson -Path $StatusPath -Kind "Coverage status"
     if (-not $statusJson.Valid) {
         $model.Reasons = @($statusJson.Reason)
@@ -252,17 +200,9 @@ function Get-ProjectCoverageModelFromStatus {
     $model.Project = "$($status.project)"
     $model.ProjectName = "$($status.projectName)"
     $model.BuildMode = "$($status.buildMode)"
-    $model.SourceRootDetails = @(Get-CoverageSourceRootDetails -Status $status)
-    $model.Apps = @(New-CoverageApplicationModels -SourceRootDetails $model.SourceRootDetails)
+    $sourceRootDetails = @(Get-CoverageSourceRootDetails -Status $status)
+    $model.Apps = @(New-CoverageApplicationModels -SourceRootDetails $sourceRootDetails)
     $reasons = @()
-
-    if ($ExpectedDimension) {
-        if ((ConvertTo-CoverageDimensionIdentity "$($ExpectedDimension.project)") -ne
-                (ConvertTo-CoverageDimensionIdentity $model.Project) -or
-            "$($ExpectedDimension.buildMode)" -ine $model.BuildMode) {
-            $reasons += "Coverage status does not match the expected project and build mode."
-        }
-    }
 
     $aggregateResult = $null
     if (-not $status.Contains("aggregate")) {
@@ -299,9 +239,7 @@ function Get-ProjectCoverageModelFromStatus {
     }
 
     $statusRuns = @(Get-CoverageArray $status.runs)
-    $runModels = @()
     foreach ($run in $statusRuns) {
-        $appId = "$($run.appId)"
         $appName = "$($run.appName)"
         $state = "$($run.state)".ToLowerInvariant()
         $diagnostics = @(Get-CoverageArray $run.diagnostics | ForEach-Object { "$_" })
@@ -312,22 +250,11 @@ function Get-ProjectCoverageModelFromStatus {
             $model.IncompleteRuns += $appName
         }
         $model.Diagnostics += $diagnostics
-        $runModels += @{
-            AppId = $appId
-            AppName = $appName
-            State = $state
-            Diagnostics = @($diagnostics)
-        }
     }
     if ($statusRuns.Count -eq 0) {
         $reasons += "Coverage status contains no test-app runs."
     }
 
-    $model.Runs = @($runModels)
-    $model.Apps = @($model.Apps |
-        Sort-Object @{ Expression = { "$($_.AppName)".ToLowerInvariant() }; Descending = $false },
-                    @{ Expression = "AppId"; Descending = $false },
-                    @{ Expression = "RootIdentity"; Descending = $false })
     $model.Reasons = @($reasons | Select-Object -Unique)
     $model.Diagnostics = @($model.Diagnostics | Select-Object -Unique)
     $model.IncompleteRuns = @($model.IncompleteRuns | Select-Object -Unique)
@@ -377,10 +304,6 @@ function Get-ExpectedCoverageDimensions {
         }
         $dimensions = @()
         foreach ($entry in $entries) {
-            if ($entry -isnot [System.Collections.IDictionary] -or
-                -not $entry.Contains("buildDimensions")) {
-                throw "Missing build dimensions."
-            }
             $dimensions += @(Get-CoverageArray $entry.buildDimensions)
         }
         return @{
@@ -436,11 +359,7 @@ function Get-RepositoryApplications {
         }
     }
 
-    return @($applications.Values |
-        Sort-Object @{ Expression = { "$($_.Project)".ToLowerInvariant() }; Descending = $false },
-                    @{ Expression = { "$($_.AppName)".ToLowerInvariant() }; Descending = $false },
-                    @{ Expression = "AppId"; Descending = $false },
-                    @{ Expression = "RootIdentity"; Descending = $false })
+    return @($applications.Values)
 }
 
 function Get-RepositoryCoverageModel {
@@ -490,22 +409,6 @@ function Get-RepositoryCoverageModel {
 
     $projectModels = @()
     foreach ($dimension in $dimensions) {
-        $requiredProperties = @("project", "projectName", "buildMode",
-            "codeCoverageRepositorySummary")
-        $missingProperty = $false
-        foreach ($property in $requiredProperties) {
-            if ($dimension -isnot [System.Collections.IDictionary] -or -not $dimension.Contains($property)) {
-                $missingProperty = $true
-            }
-        }
-        if ($missingProperty) {
-            $invalidModel = New-EmptyProjectCoverageModel -Project "Unknown" -ProjectName "" -BuildMode ""
-            $invalidModel.Reasons = @("Expected build dimension is missing required data.")
-            $projectModels += $invalidModel
-            $reasons += "An expected build dimension is invalid."
-            continue
-        }
-
         $statusMatches = @($statusEntries | Where-Object {
                 (ConvertTo-CoverageDimensionIdentity $_.Project) -eq
                     (ConvertTo-CoverageDimensionIdentity "$($dimension.project)") -and
@@ -526,8 +429,7 @@ function Get-RepositoryCoverageModel {
             continue
         }
 
-        $projectModel = Get-ProjectCoverageModelFromStatus -StatusPath $statusMatches[0].Path `
-            -ExpectedDimension $dimension
+        $projectModel = Get-ProjectCoverageModelFromStatus -StatusPath $statusMatches[0].Path
         $projectModels += $projectModel
         foreach ($reason in $projectModel.Reasons) {
             $reasons += "$($projectModel.Project) [$($projectModel.BuildMode)]: $reason"
@@ -608,7 +510,6 @@ function Resolve-CoverageObjectAttribution {
     return @{
         Object = "$objectTypeName $ObjectId"
         Name = $name
-        Source = $SourcePath
     }
 }
 
@@ -812,7 +713,7 @@ function New-ProjectCoverageSummary {
     if ($Model.Reasons.Count -eq 0) {
         Add-UncoveredObjectsMarkdown -Builder $builder -Lines $Model.Lines
     }
-    return Limit-CoverageSummary -Summary $builder.ToString()
+    return $builder.ToString()
 }
 
 function New-RepositoryCoverageSummary {
@@ -863,11 +764,11 @@ function New-RepositoryCoverageSummary {
     if ($Model.Reasons.Count -eq 0) {
         Add-UncoveredObjectsMarkdown -Builder $builder -Lines $Model.Lines
     }
-    return Limit-CoverageSummary -Summary $builder.ToString()
+    return $builder.ToString()
 }
 
 Export-ModuleMember -Function ConvertTo-SafeCoverageText,
-    Limit-CoverageSummary, Test-CodeCoverageSummaryRequested,
+    Test-CodeCoverageSummaryRequested,
     Get-ProjectCoverageModel, Get-RepositoryCoverageModel,
     Resolve-CoverageObjectAttribution,
     Get-CoverageMetrics, New-ProjectCoverageSummary, New-RepositoryCoverageSummary

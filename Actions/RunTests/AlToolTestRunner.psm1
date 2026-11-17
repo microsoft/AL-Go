@@ -986,9 +986,9 @@ function Invoke-AlToolTestRun {
         $batch = Invoke-AlRunTestsBatch @batchParameters
         $batchResults = $batch.Results
         $allPassed = [bool] $batch.Succeeded
-        $batchCoverage = if ($batch.ContainsKey("Coverage")) { $batch.Coverage } else { $null }
-        $batchWarnings = if ($batch.ContainsKey("Warnings")) { @($batch.Warnings) } else { @() }
-        $coverageError = if ($batch.ContainsKey("CoverageError")) { "$($batch.CoverageError)" } else { "" }
+        $batchCoverage = $batch.Coverage
+        $batchWarnings = @($batch.Warnings)
+        $coverageError = "$($batch.CoverageError)"
 
         if ($batchCoverage) {
             if ($coverageCompletenessRequested) {

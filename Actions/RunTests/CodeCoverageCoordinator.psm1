@@ -5,8 +5,6 @@ Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageAggregate.psm1" 
 Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
     -DisableNameChecking
 
-$script:CodeCoverageMode = "line"
-
 <#
 .SYNOPSIS
     Resolves the ordered source roots used for coverage collection and analysis.
@@ -39,22 +37,27 @@ function Resolve-CodeCoverageSourceRootData {
     $sourceRoots = [System.Collections.Generic.Dictionary[string,object]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
     )
-    $addProjectRoots = {
-        param(
-            [hashtable] $projectSettings,
-            [string] $sourceProjectPath
-        )
 
+    $projects = @(@{
+            Settings = $settings
+            Path = $projectPath
+        })
+    foreach ($targetProject in $settings["projectsToTest"]) {
+        $targetSettings = ReadSettings -project "$targetProject" -baseFolder $baseFolder |
+            ConvertTo-HashTable -recurse
+        $targetSettings = & $analyzeRepo -settings $targetSettings `
+            -baseFolder $baseFolder -project "$targetProject"
+        $projects += @{
+            Settings = $targetSettings
+            Path = [System.IO.Path]::GetFullPath((Join-Path $baseFolder "$targetProject"))
+        }
+    }
+
+    foreach ($sourceProject in $projects) {
         foreach ($folderSetting in @("appFolders", "testFolders")) {
             $kind = if ($folderSetting -eq "appFolders") { "app" } else { "test" }
-            if (-not $projectSettings.ContainsKey($folderSetting)) {
-                continue
-            }
-            foreach ($folder in @($projectSettings[$folderSetting])) {
-                if ([string]::IsNullOrWhiteSpace("$folder")) {
-                    continue
-                }
-                $folderPath = [System.IO.Path]::GetFullPath((Join-Path $sourceProjectPath "$folder"))
+            foreach ($folder in $sourceProject.Settings[$folderSetting]) {
+                $folderPath = [System.IO.Path]::GetFullPath((Join-Path $sourceProject.Path "$folder"))
                 if (-not (Test-Path -LiteralPath $folderPath -PathType Container)) {
                     continue
                 }
@@ -106,31 +109,6 @@ function Resolve-CodeCoverageSourceRootData {
                 }
                 $sourceRoots[$resolvedFullPath].Kinds[$kind] = $true
             }
-        }
-    }
-
-    & $addProjectRoots -projectSettings $settings -sourceProjectPath $projectPath
-
-    $visitedTargets = [System.Collections.Generic.HashSet[string]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase
-    )
-    if ($settings.ContainsKey("projectsToTest")) {
-        foreach ($targetProject in @($settings.projectsToTest)) {
-            if ([string]::IsNullOrWhiteSpace("$targetProject")) {
-                continue
-            }
-            $targetProjectPath = [System.IO.Path]::GetFullPath((Join-Path $baseFolder "$targetProject"))
-            if (-not $visitedTargets.Add($targetProjectPath)) {
-                continue
-            }
-            $targetSettings = ReadSettings -project "$targetProject" -baseFolder $baseFolder |
-                ConvertTo-HashTable -recurse
-            if (-not $analyzeRepo) {
-                throw "Analyzing projectsToTest source roots requires the AnalyzeRepo callback."
-            }
-            $targetSettings = & $analyzeRepo -settings $targetSettings `
-                -baseFolder $baseFolder -project "$targetProject"
-            & $addProjectRoots -projectSettings $targetSettings -sourceProjectPath $targetProjectPath
         }
     }
 
@@ -204,21 +182,19 @@ function Write-CodeCoverageStatusInternal {
     New-Item -Path $session.RootPath -ItemType Directory -Force | Out-Null
     $temporaryPath = Join-Path $session.RootPath "coverage-status.$([Guid]::NewGuid().ToString('N')).tmp"
     try {
-        $diagnosticIndex = 0
         $runs = @(
             foreach ($run in @($session.Runs)) {
                 $diagnostics = @()
-                if ($aggregate -and $run.State -in @("complete", "incomplete")) {
+                if ($aggregate -and
+                    $aggregate.RunDiagnostics.ContainsKey("$($run.AppId)")) {
                     $diagnostics = @(
-                        $aggregate.RunDiagnostics[$diagnosticIndex].Diagnostics |
+                        $aggregate.RunDiagnostics["$($run.AppId)"] |
                             ForEach-Object { "$_" }
                     )
-                    $diagnosticIndex++
                 }
                 $runStatus = [ordered]@{
                     appId = "$($run.AppId)"
                     appName = "$($run.AppName)"
-                    outputDirectory = "CodeCoverage/$($run.AppId)"
                     state = if ($session.Supported) { "$($run.State)" } else { "unsupported" }
                     diagnostics = @($diagnostics)
                 }
@@ -229,7 +205,6 @@ function Write-CodeCoverageStatusInternal {
             project = "$($session.Project)"
             projectName = "$($session.ProjectName)"
             buildMode = "$($session.BuildMode)"
-            formats = @($session.Formats)
             sourceRootDetails = @(Get-CodeCoverageSourceRootDetails $session.SourceRootRecords)
             runs = @($runs)
         }
@@ -366,8 +341,8 @@ function Get-AlGoCodeCoverageCapability {
     Creates the AL-Go-owned code coverage session for one project test run.
 .DESCRIPTION
     Resolves authoritative ordered source roots while AnalyzeRepo is in scope and creates one
-    ordered run record per selected test app. Reusable source roots, application IDs, sequence
-    numbers, and output paths are resolved once for the session.
+    run record per selected test app. Reusable source roots, application IDs, and output paths
+    are resolved once for the session.
 .PARAMETER settings
     Analyzed AL-Go settings for the project.
 .PARAMETER projectPath
@@ -422,7 +397,6 @@ function New-AlGoCodeCoverageSession {
         $sourceRootData = @(Resolve-CodeCoverageSourceRootData -settings $settings `
             -projectPath $projectPath -baseFolder $baseFolder -analyzeRepo $analyzeRepo)
     }
-    $sourceRoots = @($sourceRootData | ForEach-Object { "$($_.Path)" })
     $applicationIds = @($sourceRootData |
         Where-Object {
             "$($_.Kind)" -eq "app" -and
@@ -432,17 +406,14 @@ function New-AlGoCodeCoverageSession {
         Sort-Object -Unique)
 
     $runs = [System.Collections.Generic.List[object]]::new()
-    $testAppSequence = 0
     foreach ($testApp in @($testApps)) {
         $appId = "$($testApp.Id)"
         $runs.Add(@{
-                Sequence = $testAppSequence
                 AppId = $appId
                 AppName = "$($testApp.Name)"
                 OutputPath = [System.IO.Path]::GetFullPath((Join-Path $coverageRoot $appId))
                 State = ""
             })
-        $testAppSequence++
     }
 
     $session = @{
@@ -455,7 +426,6 @@ function New-AlGoCodeCoverageSession {
         RootPath = $coverageRoot
         RepositoryRoot = [System.IO.Path]::GetFullPath($baseFolder)
         SourceRootRecords = @($sourceRootData)
-        SourceRoots = @($sourceRoots)
         ApplicationIds = @($applicationIds)
         Runs = @($runs)
         Compactor = $null
@@ -471,11 +441,8 @@ function Start-CodeCoverageCompactorInternal {
     Param([hashtable] $session)
 
     $sourceRootDetails = @(Get-CodeCoverageSourceRootDetails $session.SourceRootRecords)
-    $sourceRoots = @($session.SourceRootRecords | ForEach-Object { "$($_.RelativePath)" })
     $aggregatePath = Get-CodeCoverageAggregatePath -session $session
     $metadata = @{
-        Mode = $script:CodeCoverageMode
-        SourceRoots = @($sourceRoots)
         SourceRootDetails = @($sourceRootDetails)
     }
     return Start-CodeCoverageAggregateWorker `
@@ -515,20 +482,19 @@ function Complete-AlGoCodeCoverageRun {
         Test-CodeCoverageArtifacts -session $session -run $run `
             -rawComplete $coverageIsComplete
         $run.State = if ([bool]$coverageIsComplete) { "complete" } else { "incomplete" }
-        if ("bc-json" -in $session.Formats) {
-            try {
-                if (-not $session.Compactor) {
-                    $session.Compactor = Start-CodeCoverageCompactorInternal -session $session
-                    Write-Host "Started one PowerShell 7 code coverage compactor worker."
-                }
-                Add-CodeCoverageAggregateWorkItem -worker $session.Compactor -descriptor @{
-                    Complete = [bool]$coverageIsComplete
-                    ReportPath = Join-Path $run.OutputPath "coverage.bc.json"
-                }
+        try {
+            if (-not $session.Compactor) {
+                $session.Compactor = Start-CodeCoverageCompactorInternal -session $session
+                Write-Host "Started one PowerShell 7 code coverage compactor worker."
             }
-            catch {
-                throw "Code coverage compaction could not accept app '$($run.AppName)'. $($_.Exception.Message)"
+            Add-CodeCoverageAggregateWorkItem -worker $session.Compactor -descriptor @{
+                AppId = "$($run.AppId)"
+                Complete = [bool]$coverageIsComplete
+                ReportPath = Join-Path $run.OutputPath "coverage.bc.json"
             }
+        }
+        catch {
+            throw "Code coverage compaction could not accept app '$($run.AppName)'. $($_.Exception.Message)"
         }
     }
     catch {
@@ -611,7 +577,7 @@ function Complete-AlGoCodeCoverageSession {
 
         $culture = [System.Globalization.CultureInfo]::InvariantCulture
         Write-Host ("Code coverage compaction complete: runs={0}, lines={1}, parse={2}s, finalDrain={3}s, aggregateSize={4} MiB, rawRemoved={5} MiB, outcome=passed." -f
-            @($aggregate.RunDiagnostics).Count,
+            $aggregate.RunDiagnostics.Count,
             $aggregate.LineCount,
             ([double]$aggregate.TotalParseMilliseconds / 1000).ToString("0.000", $culture),
             $drainStopwatch.Elapsed.TotalSeconds.ToString("0.000", $culture),

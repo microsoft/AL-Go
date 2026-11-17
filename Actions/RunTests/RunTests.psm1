@@ -326,14 +326,8 @@ function Invoke-AlGoTestRun {
 
         # Test failures surface as warnings when treatTestFailuresAsWarnings is set, otherwise as errors.
         $gitHubActionsSeverity = if ($settings.treatTestFailuresAsWarnings) { 'warning' } else { 'error' }
-        $testType = if ($settings.ContainsKey("useSeparateTestAction")) {
-            "$($settings.useSeparateTestAction.testType)"
-        }
-        else {
-            ""
-        }
-        $coverageRequested = $settings.ContainsKey("useSeparateTestAction") -and
-            [bool]$settings.useSeparateTestAction.codeCoverageEnabled
+        $testType = "$($settings.useSeparateTestAction.testType)"
+        $coverageRequested = [bool]$settings.useSeparateTestAction.codeCoverageEnabled
         $coverageSession = $null
         if ($coverageRequested) {
             $coverageCapability = Get-AlGoCodeCoverageCapability `
@@ -358,6 +352,12 @@ function Invoke-AlGoTestRun {
             else {
                 OutputWarning -message "Code coverage is unavailable. $($coverageCapability.Reason) Tests will continue without coverage."
             }
+        }
+        $coverageSourceRoots = if ($coverageSession) {
+            @($coverageSession.SourceRootRecords | ForEach-Object { "$($_.Path)" })
+        }
+        else {
+            @()
         }
 
         if (-not $runTestsOverride -and [string]::IsNullOrWhiteSpace($alToolPath)) {
@@ -403,7 +403,7 @@ function Invoke-AlGoTestRun {
                     }
                     if ($currentCoverageRun) {
                         $runTestsParams["codeCoverageFormats"] = @($coverageSession.Formats)
-                        $runTestsParams["codeCoverageSourceRoots"] = @($coverageSession.SourceRoots)
+                        $runTestsParams["codeCoverageSourceRoots"] = @($coverageSourceRoots)
                         $runTestsParams["codeCoverageApplicationIds"] = @(
                             $coverageSession.ApplicationIds
                         )
@@ -438,7 +438,7 @@ function Invoke-AlGoTestRun {
                     if ($currentCoverageRun) {
                         $alToolParameters.CoverageOutputPath = $currentCoverageRun.OutputPath
                         $alToolParameters.CoverageFormats = @($coverageSession.Formats)
-                        $alToolParameters.CoverageSourceRoots = @($coverageSession.SourceRoots)
+                        $alToolParameters.CoverageSourceRoots = @($coverageSourceRoots)
                         $alToolParameters.CoverageIsComplete = [ref] $coverageIsComplete
                     }
                     $passed = Invoke-AlToolTestRun @alToolParameters

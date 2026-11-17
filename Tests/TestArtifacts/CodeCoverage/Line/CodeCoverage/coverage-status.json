@@ -2,7 +2,6 @@
   "project": "LineProject",
   "projectName": "Line project",
   "buildMode": "Default",
-  "formats": [ "bc-json" ],
   "sourceRootDetails": [
     {
       "path": "src",
@@ -15,7 +14,6 @@
     {
       "appId": "line-app",
       "appName": "Line Tests",
-      "outputDirectory": "CodeCoverage/line-app",
       "state": "complete",
       "diagnostics": []
     }
