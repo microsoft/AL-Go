@@ -135,89 +135,6 @@ function Get-TestAppsToRun {
     return @($testApps)
 }
 
-function Resolve-CodeCoverageAppPaths {
-    <#
-    .SYNOPSIS
-        Resolves compiled packages for the repository applications included in coverage.
-    #>
-    Param(
-        [string] $projectPath,
-        [string[]] $applicationIds,
-        [string] $installAppsJson = ""
-    )
-
-    if (@($applicationIds).Count -eq 0) {
-        return @()
-    }
-
-    $requiredAppIds = [System.Collections.Generic.Dictionary[string,string]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase
-    )
-    foreach ($applicationId in @($applicationIds)) {
-        $requiredAppIds["$applicationId"] = "$applicationId"
-    }
-
-    $candidatePaths = [System.Collections.Generic.HashSet[string]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase
-    )
-    $appsFolder = Join-Path (Join-Path $projectPath ".buildartifacts") "Apps"
-    if (Test-Path -LiteralPath $appsFolder -PathType Container) {
-        foreach ($package in @(Get-ChildItem -LiteralPath $appsFolder -Filter "*.app" `
-                    -File -Recurse -ErrorAction Stop)) {
-            $null = $candidatePaths.Add([System.IO.Path]::GetFullPath($package.FullName))
-        }
-    }
-    if (-not [string]::IsNullOrWhiteSpace($installAppsJson)) {
-        try {
-            $installedApps = Get-Content -LiteralPath $installAppsJson -Raw -Encoding UTF8 `
-                -ErrorAction Stop | ConvertFrom-Json
-        }
-        catch {
-            throw "Failed to parse code coverage dependency app list '$installAppsJson'. Error: $($_.Exception.Message)"
-        }
-        foreach ($installedApp in @($installedApps)) {
-            $installedAppPath = "$installedApp".Trim('(', ')')
-            if (-not [string]::IsNullOrWhiteSpace($installedAppPath) -and
-                (Test-Path -LiteralPath $installedAppPath -PathType Leaf)) {
-                $null = $candidatePaths.Add([System.IO.Path]::GetFullPath($installedAppPath))
-            }
-        }
-    }
-
-    $packagesByAppId = [System.Collections.Generic.Dictionary[string,object]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase
-    )
-    foreach ($packagePath in @($candidatePaths | Sort-Object)) {
-        try {
-            $packageAppJson = Get-AppJsonFromAppFile -appFile $packagePath
-            $packageAppId = "$($packageAppJson.id)"
-        }
-        catch {
-            throw "Failed to read code coverage app metadata from '$packagePath'. Error: $($_.Exception.Message)"
-        }
-        if (-not $requiredAppIds.ContainsKey($packageAppId)) {
-            continue
-        }
-        if (-not $packagesByAppId.ContainsKey($packageAppId)) {
-            $packagesByAppId[$packageAppId] = [System.Collections.Generic.List[string]]::new()
-        }
-        $packagesByAppId[$packageAppId].Add($packagePath)
-    }
-
-    $coverageAppPaths = @()
-    foreach ($applicationId in @($requiredAppIds.Values | Sort-Object)) {
-        if (-not $packagesByAppId.ContainsKey($applicationId)) {
-            throw "Could not find the compiled app package for repository application '$applicationId' in the current build output or installed project-dependency app list."
-        }
-        $matchingPackages = @($packagesByAppId[$applicationId])
-        if ($matchingPackages.Count -ne 1) {
-            throw "Found $($matchingPackages.Count) compiled app packages for repository application '$applicationId'. Expected exactly one package from the current build."
-        }
-        $coverageAppPaths += $matchingPackages[0]
-    }
-    return @($coverageAppPaths)
-}
-
 function Get-DisabledTestsForApp {
     <#
     .SYNOPSIS
@@ -354,8 +271,6 @@ function Invoke-AlGoTestRun {
         The credential used to connect to the build container.
     .PARAMETER installTestAppsJson
         Path to a JSON file with the list of installed test apps.
-    .PARAMETER installAppsJson
-        Path to a JSON file with apps installed from project dependencies.
     .PARAMETER runTestsOverride
         Optional scriptblock overriding the built-in AlTool test runner (RunTestsInBcContainer).
     .PARAMETER alToolPath
@@ -378,7 +293,6 @@ function Invoke-AlGoTestRun {
         [string] $buildMode = "Default",
         [string] $containerName,
         [System.Management.Automation.PSCredential] $credential,
-        [string] $installAppsJson = '',
         [string] $installTestAppsJson = '',
         [scriptblock] $runTestsOverride = $null,
         [string] $alToolPath = '',
@@ -440,16 +354,9 @@ function Invoke-AlGoTestRun {
             }
         }
         $coverageSourceRoots = if ($coverageSession) {
-            @($coverageSession.SourceRootRecords | ForEach-Object { "$($_.Path)" })
-        }
-        else {
-            @()
-        }
-        $coverageAppPaths = if ($coverageSession -and $coverageSession.Supported -and
-            -not $runTestsOverride) {
-            @(Resolve-CodeCoverageAppPaths -projectPath $projectPath `
-                    -applicationIds $coverageSession.ApplicationIds `
-                    -installAppsJson $installAppsJson)
+            @($coverageSession.SourceRootRecords |
+                Where-Object { "$($_.Kind)" -eq "app" } |
+                ForEach-Object { "$($_.Path)" })
         }
         else {
             @()
@@ -534,7 +441,6 @@ function Invoke-AlGoTestRun {
                         $alToolParameters.CoverageOutputPath = $currentCoverageRun.OutputPath
                         $alToolParameters.CoverageFormats = @($coverageSession.Formats)
                         $alToolParameters.CoverageSourceRoots = @($coverageSourceRoots)
-                        $alToolParameters.CoverageAppPaths = @($coverageAppPaths)
                         $alToolParameters.CoverageIsComplete = [ref] $coverageIsComplete
                     }
                     $passed = Invoke-AlToolTestRun @alToolParameters

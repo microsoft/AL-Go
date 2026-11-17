@@ -266,6 +266,57 @@ Describe "Code coverage aggregate" {
         Test-Path -LiteralPath $publishedPath | Should -BeTrue
     }
 
+    It "excludes external missing-source diagnostics without hiding repository diagnostics" `
+        -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+        $repositoryRoot = New-AggregateRepository -name "ExternalDiagnostics"
+        $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"
+        New-Item -Path $coverageRoot -ItemType Directory -Force | Out-Null
+        $status = New-AggregateStatus -coverageRoot $coverageRoot -runs @(
+            [ordered]@{ appId = "external"; appName = "External"; state = "incomplete" },
+            [ordered]@{ appId = "repository"; appName = "Repository"; state = "incomplete" }
+        )
+        $externalReport = Join-Path $coverageRoot "external\coverage.bc.json"
+        $repositoryReport = Join-Path $coverageRoot "repository\coverage.bc.json"
+        Write-AggregateRawReport -path $externalReport -hitCount 1 -complete $false `
+            -diagnostics @("No source file was found for AL object 5:130002.")
+        Write-AggregateRawReport -path $repositoryReport -hitCount 1 -complete $false `
+            -diagnostics @(
+                "No source file was found for AL object 5:50100.",
+                "Coverage method identity resolution failed for 'App'."
+            )
+        $publishedPath = Join-Path $coverageRoot "coverage-aggregate.bin.gz"
+        $inputReader = [System.IO.StringReader]::new(
+            (@(
+                    @{
+                        AppId = "external"
+                        Complete = $false
+                        ReportPath = $externalReport
+                    } | ConvertTo-Json -Compress
+                    @{
+                        AppId = "repository"
+                        Complete = $false
+                        ReportPath = $repositoryReport
+                    } | ConvertTo-Json -Compress
+                ) -join [Environment]::NewLine)
+        )
+        $metadata = Get-AggregateMetadata -status $status
+        $metadata.ApplicationObjectIdRanges = @(@{ From = 50000; To = 50100 })
+
+        $result = Invoke-CodeCoverageAggregateWorker -inputReader $inputReader `
+            -readerModulePath (Join-Path $PSScriptRoot "..\Actions\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
+            -repositoryRoot $repositoryRoot -metadata $metadata `
+            -temporaryPath "$publishedPath.tmp" -publishedPath $publishedPath
+
+        $result.RunCompleteness.external | Should -BeTrue
+        $result.RunDiagnostics.external | Should -BeNullOrEmpty
+        $result.RunCompleteness.repository | Should -BeFalse
+        $result.RunDiagnostics.repository | Should -Be @(
+            "No source file was found for AL object 5:50100.",
+            "Coverage method identity resolution failed for 'App'."
+        )
+        $result.Aggregate.LineCount | Should -Be 1
+    }
+
     It "retains raw input and publishes nothing when the worker rejects corrupt JSON" {
         $repositoryRoot = New-AggregateRepository -name "Corrupt"
         $coverageRoot = Join-Path $repositoryRoot ".buildartifacts\CodeCoverage"

@@ -32,9 +32,32 @@ function Invoke-CodeCoverageAggregateWorker {
         )
     }
     $model.SourceRoots = @($model.SourceRootDetails | ForEach-Object { $_.Path })
+    $applicationObjectIdRanges = if ($metadata.ContainsKey("ApplicationObjectIdRanges")) {
+        @($metadata.ApplicationObjectIdRanges)
+    }
+    else {
+        @()
+    }
+    $isExternalMissingSourceDiagnostic = {
+        Param([string] $diagnostic)
+
+        $validRanges = @($applicationObjectIdRanges | Where-Object { $null -ne $_ })
+        if ($validRanges.Count -eq 0 -or
+            $diagnostic -notmatch '^\s*No source file was found for AL object \d+:(?<ObjectId>\d+)\.\s*$') {
+            return $false
+        }
+        $objectId = [int]$Matches.ObjectId
+        foreach ($idRange in $validRanges) {
+            if ($objectId -ge [int]$idRange["From"] -and $objectId -le [int]$idRange["To"]) {
+                return $false
+            }
+        }
+        return $true
+    }
     $semanticLines = @{}
     $semanticLineCount = 0
     $runDiagnostics = @{}
+    $runCompleteness = @{}
     $sourceMappingCache = [System.Collections.Generic.Dictionary[string,object]]::new(
         [System.StringComparer]::OrdinalIgnoreCase
     )
@@ -64,9 +87,19 @@ function Invoke-CodeCoverageAggregateWorker {
             if ([bool]$reportResult.Data.complete -ne [bool]$descriptor.Complete) {
                 throw "Compaction report completeness does not match the runner result."
             }
-            $runDiagnostics["$($descriptor.AppId)"] = @(
+            $rawDiagnostics = @(
                 Get-CoverageArray $reportResult.Data.diagnostics |
                     ForEach-Object { "$_" }
+            )
+            $filteredDiagnostics = @(
+                $rawDiagnostics | Where-Object {
+                    -not (& $isExternalMissingSourceDiagnostic "$_")
+                }
+            )
+            $runDiagnostics["$($descriptor.AppId)"] = @($filteredDiagnostics)
+            $runCompleteness["$($descriptor.AppId)"] = [bool](
+                [bool]$reportResult.Data.complete -or
+                ($rawDiagnostics.Count -gt 0 -and $filteredDiagnostics.Count -eq 0)
             )
             $stopwatch.Stop()
             $totalParseMilliseconds += $stopwatch.Elapsed.TotalMilliseconds
@@ -92,6 +125,7 @@ function Invoke-CodeCoverageAggregateWorker {
                 TotalParseMilliseconds = $totalParseMilliseconds
             }
             RunDiagnostics = $runDiagnostics
+            RunCompleteness = $runCompleteness
         }
     }
     finally {
@@ -127,6 +161,7 @@ function Invoke-CodeCoverageAggregateProcess {
             Succeeded = $true
             Aggregate = $workerResult.Aggregate
             RunDiagnostics = $workerResult.RunDiagnostics
+            RunCompleteness = $workerResult.RunCompleteness
         } | ConvertTo-Json -Depth 20 -Compress |
             Set-Content -LiteralPath $resultPath -Encoding UTF8
     }
@@ -264,6 +299,11 @@ function Complete-CodeCoverageAggregateWorker {
             $runDiagnostics[$property.Name] = @($property.Value | ForEach-Object { "$_" })
         }
         $aggregate["RunDiagnostics"] = $runDiagnostics
+        $runCompleteness = @{}
+        foreach ($property in @($result.RunCompleteness.PSObject.Properties)) {
+            $runCompleteness[$property.Name] = [bool]$property.Value
+        }
+        $aggregate["RunCompleteness"] = $runCompleteness
         return $aggregate
     }
     finally {

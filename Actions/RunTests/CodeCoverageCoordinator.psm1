@@ -149,6 +149,32 @@ function Get-CodeCoverageSourceRootDetails {
     )
 }
 
+function Get-CodeCoverageApplicationObjectIdRanges {
+    <#
+    .SYNOPSIS
+        Returns object ID ranges owned by regular repository applications.
+    #>
+    Param([object[]] $sourceRootRecords)
+
+    $ranges = @()
+    foreach ($sourceRoot in @($sourceRootRecords |
+            Where-Object { "$($_.Kind)" -eq "app" })) {
+        $appJsonPath = Join-Path "$($sourceRoot.Path)" "app.json"
+        $appJson = Get-Content -LiteralPath $appJsonPath -Raw -Encoding UTF8 |
+            ConvertFrom-Json | ConvertTo-HashTable -recurse
+        foreach ($idRange in @($appJson["idRanges"])) {
+            if ($null -eq $idRange) {
+                continue
+            }
+            $ranges += @{
+                From = [int]$idRange["from"]
+                To = [int]$idRange["to"]
+            }
+        }
+    }
+    return @($ranges | Sort-Object From, To -Unique)
+}
+
 <#
 .SYNOPSIS
     Returns the final coverage status path for a session.
@@ -404,6 +430,9 @@ function New-AlGoCodeCoverageSession {
         } |
         ForEach-Object { "$($_.AppId)".ToLowerInvariant() } |
         Sort-Object -Unique)
+    $applicationObjectIdRanges = @(
+        Get-CodeCoverageApplicationObjectIdRanges $sourceRootData
+    )
 
     $runs = [System.Collections.Generic.List[object]]::new()
     foreach ($testApp in @($testApps)) {
@@ -427,6 +456,7 @@ function New-AlGoCodeCoverageSession {
         RepositoryRoot = [System.IO.Path]::GetFullPath($baseFolder)
         SourceRootRecords = @($sourceRootData)
         ApplicationIds = @($applicationIds)
+        ApplicationObjectIdRanges = @($applicationObjectIdRanges)
         Runs = @($runs)
         Compactor = $null
     }
@@ -444,6 +474,7 @@ function Start-CodeCoverageCompactorInternal {
     $aggregatePath = Get-CodeCoverageAggregatePath -session $session
     $metadata = @{
         SourceRootDetails = @($sourceRootDetails)
+        ApplicationObjectIdRanges = @($session.ApplicationObjectIdRanges)
     }
     return Start-CodeCoverageAggregateWorker `
         -readerModulePath (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageReportReader.psm1" -Resolve) `
@@ -542,6 +573,12 @@ function Complete-AlGoCodeCoverageSession {
         $drainStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $aggregate = Complete-CodeCoverageAggregateWorker -worker $session.Compactor
+            foreach ($run in @($session.Runs | Where-Object { $_.State -eq "incomplete" })) {
+                if ($aggregate.RunCompleteness.ContainsKey("$($run.AppId)") -and
+                    [bool]$aggregate.RunCompleteness["$($run.AppId)"]) {
+                    $run.State = "complete"
+                }
+            }
         }
         catch {
             $compactionFailed = $true

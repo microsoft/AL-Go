@@ -996,7 +996,7 @@ function Invoke-AlToolTestRun {
             }
             $coverageState = if ($batchCoverage.IsComplete) { "complete" } else { "incomplete" }
             Write-Host "Code coverage for app '$AppName': mode=line, state=$coverageState, artifacts='$CoverageOutputPath'."
-            foreach ($diagnostic in @($batchCoverage.Diagnostics) + $batchWarnings) {
+            foreach ($diagnostic in $batchWarnings) {
                 if ($null -eq $diagnostic) {
                     continue
                 }

@@ -28,7 +28,6 @@ are real failures and do not trigger a noncoverage retry.
 RunTests performs these steps once for each project:
 
 1. Resolve existing AL source roots from the current project and direct `projectsToTest` projects.
-1. Map every regular source-root application ID to one compiled package from the current build.
 1. Create `.buildartifacts/CodeCoverage`.
 1. Start one persistent `pwsh -NoProfile -NonInteractive` worker.
 1. Run each selected test app sequentially.
@@ -60,17 +59,10 @@ The built-in runner invokes AlTool once per selected test app with:
 - The app-specific `--coverage-output` directory.
 - `--coverage-format bc-json`.
 - Optional `--coverage-format cobertura`.
-- Every resolved `--coverage-source-root`.
-- One `--coverage-app` for each compiled regular application represented by repository source roots.
+- Every resolved regular application `--coverage-source-root`.
 
 Large argument sets use a temporary UTF-8 response file. It contains no credentials and is deleted
 after the AlTool invocation.
-
-The built-in runner resolves app packages from the current project's `.buildartifacts/Apps` folder
-and the downloaded project-dependency app list already used by the build. Matching is by application
-ID and requires exactly one package per regular repository app. Packages for Microsoft or other
-external dependencies are not passed unless that application also has a regular repository source
-root. The boundary is repository inventory, not publisher identity.
 
 An existing `.AL-Go/RunTestsInBcContainer.ps1` override keeps its historical single-hashtable
 signature. When coverage is supported, AL-Go adds:
@@ -87,10 +79,9 @@ The override must use the provided output directory, return its historical Boole
 set `codeCoverageIsComplete` to a Boolean. It should use its existing noncoverage behavior when
 `codeCoverageOutputPath` is absent.
 
-`Invoke-AlToolTestRun` supports `CoverageAppPaths` for the compiled packages that define the
-executable-line inventory. The built-in path supplies them automatically. Overrides receive
-`codeCoverageApplicationIds` and are responsible for mapping those IDs to packages from the same
-build and server revision.
+`Invoke-AlToolTestRun` also supports optional `CoverageAppPaths` for compatible preview AlTool builds
+that require compiler-instrumented packages. AL-Go does not populate this parameter in the built-in
+path.
 
 ## Worker and reader
 
@@ -109,7 +100,9 @@ The reader:
   result.
 - Retains AlTool diagnostics as unclassified strings for later warnings.
 
-The worker returns diagnostics keyed by app ID, so completion order does not affect run attribution.
+The worker is the sole owner of structured coverage diagnostics and returns them keyed by app ID,
+so completion order does not affect run attribution. The runner emits only top-level AlTool
+warnings.
 
 Keeping parsing and the union in the child avoids loading multi-gigabyte reports in the PowerShell 5
 parent process and avoids parsing every report twice.
@@ -163,9 +156,13 @@ downloads the expected project artifacts, uses build dimensions marked with
 double-counting.
 
 Only regular application roots from `appFolders` contribute to percentages and uncovered-object
-lists. Test roots and external sources remain excluded. Available line facts always contribute to
-metrics, including facts from globally incomplete reports. The summary lists globally incomplete
-runs and distinct AlTool diagnostics as warnings.
+lists or are passed to AlTool as coverage source roots. Test roots and external sources remain
+excluded. The compactor suppresses only AlTool's exact missing-source diagnostic for object IDs
+outside every regular repository application's declared `idRanges`. If these external diagnostics
+fully explain an incomplete report, the run is treated as complete. Repository-owned missing
+sources and all other diagnostics remain visible. Available line facts always contribute to
+metrics, including facts from genuinely incomplete reports. The summary lists globally incomplete
+runs and distinct remaining AlTool diagnostics as warnings.
 
 Coverage is unavailable only for hard failures such as a missing or failed run, unreadable status,
 missing or invalid aggregate, or an expected repository dimension without a matching artifact.

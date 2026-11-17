@@ -1310,7 +1310,7 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             Should -Invoke -ModuleName AlToolTestRunner Get-AlToolCompany -Times 0 -Exactly
         }
 
-        It 'Returns incomplete coverage state and logs structured diagnostics' {
+        It 'Returns incomplete coverage state and logs only top-level warnings' {
             $coverageOutputPath = Join-Path (Join-Path $TestDrive 'CodeCoverage') 'test-run'
             $script:coverageAppPath = Join-Path $TestDrive 'Coverage.app'
             Set-Content -LiteralPath $script:coverageAppPath -Value 'coverage-app' -Encoding UTF8
@@ -1328,7 +1328,10 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
                     Succeeded  = $true
                     ElapsedSec = 0.1
                     Coverage   = @{
-                        Diagnostics = @('source note')
+                        Diagnostics = @(
+                            'No source file was found for AL object 5:130002.',
+                            'source note'
+                        )
                         IsComplete  = $false
                     }
                     Warnings      = @('tool warning')
@@ -1339,7 +1342,12 @@ Invoke-AlToolTestRun $($parameterExpressions.Values -join ' ')
             Invoke-AlToolTestRun @script:testRunParameters | Should -BeTrue
 
             $coverageIsComplete | Should -BeFalse
-            Should -Invoke -ModuleName AlToolTestRunner OutputWarning -Times 2 -Exactly
+            Should -Invoke -ModuleName AlToolTestRunner OutputWarning -Times 1 -Exactly -ParameterFilter {
+                $message -like '*tool warning*'
+            }
+            Should -Invoke -ModuleName AlToolTestRunner OutputWarning -Times 0 -Exactly -ParameterFilter {
+                $message -like '*130002*' -or $message -like '*source note*'
+            }
             Should -Invoke -ModuleName AlToolTestRunner Invoke-AlRunTestsBatch -Times 1 -Exactly -ParameterFilter {
                 @($CoverageAppPaths).Count -eq 1 -and $CoverageAppPaths[0] -eq $script:coverageAppPath
             }

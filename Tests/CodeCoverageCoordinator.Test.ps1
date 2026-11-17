@@ -31,10 +31,12 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
             @{
                 id = "11111111-1111-1111-1111-111111111111"
                 name = "Regular App"
+                idRanges = @(@{ from = 50100; to = 50149 })
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $appPath "app.json") -Encoding UTF8
             @{
                 id = "22222222-2222-2222-2222-222222222222"
                 name = "Test App"
+                idRanges = @(@{ from = 50150; to = 50199 })
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $testPath "app.json") -Encoding UTF8
             Set-Content -LiteralPath (Join-Path $appPath "App.al") `
                 -Value "codeunit 50100 App { }" -Encoding UTF8
@@ -113,7 +115,8 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                 [hashtable] $context,
                 [bool] $complete = $true,
                 [string] $schemaVersion = "1.0",
-                [string] $coverageMode = "line"
+                [string] $coverageMode = "line",
+                [string[]] $diagnostics = @()
             )
 
             New-Item -Path $context.coverageOutputPath -ItemType Directory -Force | Out-Null
@@ -122,7 +125,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                     schemaVersion = $schemaVersion
                     coverageMode = $coverageMode
                     complete = $complete
-                    diagnostics = @()
+                    diagnostics = @($diagnostics)
                     sources = @()
                     tests = @()
                     procedureEdges = @()
@@ -175,6 +178,7 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $firstContext.coverageOutputPath | Should -Not -Be $secondContext.coverageOutputPath
         @($session.Keys | Sort-Object) | Should -Be @(
             "ApplicationIds",
+            "ApplicationObjectIdRanges",
             "BuildMode",
             "Compactor",
             "Formats",
@@ -203,6 +207,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         $session.ApplicationIds | Should -Be @(
             "11111111-1111-1111-1111-111111111111"
         )
+        $session.ApplicationObjectIdRanges.Count | Should -Be 1
+        $session.ApplicationObjectIdRanges[0].From | Should -Be 50100
+        $session.ApplicationObjectIdRanges[0].To | Should -Be 50149
         $first.State | Should -BeNullOrEmpty
         $second.State | Should -BeNullOrEmpty
         Test-Path -LiteralPath (Get-CoordinatorStatusPath $session) | Should -BeFalse
@@ -232,6 +239,25 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         Test-Path -LiteralPath (
             Join-Path $context.coverageOutputPath "coverage.bc.json"
         ) | Should -BeFalse
+    }
+
+    It 'Treats external missing-source diagnostics as complete repository coverage' {
+        $projectPath = New-CoordinatorProject
+        $session = New-CoordinatorSession -projectPath $projectPath
+        $run = Get-CoordinatorRun -session $session `
+            -appId "22222222-2222-2222-2222-222222222222"
+        $context = New-CoordinatorArtifactFixture -session $session -run $run
+        Write-CoordinatorCoverageArtifacts -context $context -complete $false `
+            -diagnostics @("No source file was found for AL object 5:130002.")
+
+        Complete-AlGoCodeCoverageRun -session $session -run $run `
+            -coverageIsComplete $context.coverageIsComplete
+        Complete-AlGoCodeCoverageSession -session $session
+
+        $status = Get-Content -LiteralPath (Get-CoordinatorStatusPath $session) `
+            -Raw -Encoding UTF8 | ConvertFrom-Json
+        $status.runs[0].state | Should -Be "complete"
+        $status.runs[0].diagnostics | Should -BeNullOrEmpty
     }
 
 
@@ -427,6 +453,10 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                     "33333333-3333-3333-3333-333333333333" = @("Second diagnostic")
                     "22222222-2222-2222-2222-222222222222" = @("First diagnostic")
                 }
+                RunCompleteness = @{
+                    "33333333-3333-3333-3333-333333333333" = $true
+                    "22222222-2222-2222-2222-222222222222" = $true
+                }
             }
         }
         $projectPath = New-CoordinatorProject
@@ -477,6 +507,9 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
                 TotalParseMilliseconds = 1
                 RunDiagnostics = @{
                     "22222222-2222-2222-2222-222222222222" = @()
+                }
+                RunCompleteness = @{
+                    "22222222-2222-2222-2222-222222222222" = $true
                 }
             }
         }
