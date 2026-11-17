@@ -21,6 +21,10 @@ function ConvertTo-SafeCoverageText {
     <#
     .SYNOPSIS
         Escapes an untrusted value for Markdown and embedded HTML.
+    .PARAMETER Value
+        Value to convert to safe single-line text.
+    .PARAMETER MaximumLength
+        Maximum output length before truncation.
     #>
     Param(
         $Value,
@@ -45,6 +49,10 @@ function Test-CodeCoverageSummaryRequested {
     <#
     .SYNOPSIS
         Tests whether project settings request the supplied summary scope.
+    .PARAMETER Settings
+        Analyzed AL-Go settings containing useSeparateTestAction.
+    .PARAMETER Scope
+        Summary scope to test.
     #>
     Param(
         [hashtable] $Settings,
@@ -57,6 +65,14 @@ function Test-CodeCoverageSummaryRequested {
 }
 
 function Read-CoverageJson {
+    <#
+    .SYNOPSIS
+        Reads a coverage JSON object without throwing for invalid content.
+    .PARAMETER Path
+        Path to the JSON file.
+    .PARAMETER Kind
+        Display name used in an invalid-JSON reason.
+    #>
     Param(
         [string] $Path,
         [string] $Kind
@@ -85,11 +101,23 @@ function Read-CoverageJson {
 }
 
 function ConvertTo-CoverageDimensionIdentity {
+    <#
+    .SYNOPSIS
+        Normalizes a project path for coverage-dimension matching.
+    .PARAMETER Value
+        Project path or dimension value to normalize.
+    #>
     Param([AllowEmptyString()][string] $Value)
     return $Value.Replace('\', '/').Trim('/').ToLowerInvariant()
 }
 
 function Get-CoverageStatusFiles {
+    <#
+    .SYNOPSIS
+        Finds coverage status manifests beneath a file or directory path.
+    .PARAMETER CoveragePath
+        Coverage status file or directory to search recursively.
+    #>
     Param([string] $CoveragePath)
 
     if (-not (Test-Path -LiteralPath $CoveragePath)) {
@@ -107,6 +135,12 @@ function Get-CoverageStatusFiles {
 }
 
 function Get-CoverageSourceRootDetails {
+    <#
+    .SYNOPSIS
+        Normalizes portable source-root details from a coverage status manifest.
+    .PARAMETER Status
+        Coverage status manifest containing sourceRootDetails.
+    #>
     Param([hashtable] $Status)
 
     return @(
@@ -124,6 +158,12 @@ function Get-CoverageSourceRootDetails {
 }
 
 function New-CoverageApplicationModels {
+    <#
+    .SYNOPSIS
+        Creates empty application coverage models for regular source roots.
+    .PARAMETER SourceRootDetails
+        Normalized source-root details from the coverage status manifest.
+    #>
     Param([object[]] $SourceRootDetails)
 
     $apps = @()
@@ -146,6 +186,16 @@ function New-CoverageApplicationModels {
 }
 
 function Merge-CoverageLine {
+    <#
+    .SYNOPSIS
+        Merges one executable-line fact using covered-wins semantics.
+    .PARAMETER Lines
+        Destination dictionary of semantic line facts.
+    .PARAMETER Key
+        Semantic line identity.
+    .PARAMETER Covered
+        Whether the line was covered in the contributing aggregate.
+    #>
     Param(
         [System.Collections.IDictionary] $Lines,
         [string] $Key,
@@ -161,6 +211,16 @@ function Merge-CoverageLine {
 }
 
 function New-EmptyProjectCoverageModel {
+    <#
+    .SYNOPSIS
+        Creates an empty project coverage model for an expected dimension.
+    .PARAMETER Project
+        Repository-relative project path.
+    .PARAMETER ProjectName
+        Project display name.
+    .PARAMETER BuildMode
+        Build mode associated with the project dimension.
+    #>
     Param(
         [string] $Project,
         [string] $ProjectName,
@@ -180,6 +240,12 @@ function New-EmptyProjectCoverageModel {
 }
 
 function Get-ProjectCoverageModelFromStatus {
+    <#
+    .SYNOPSIS
+        Builds a project coverage model from one status manifest and aggregate.
+    .PARAMETER StatusPath
+        Path to the coverage-status.json manifest.
+    #>
     Param([string] $StatusPath)
 
     $model = New-EmptyProjectCoverageModel -Project "." -ProjectName "" -BuildMode ""
@@ -271,6 +337,10 @@ function Get-ProjectCoverageModel {
     <#
     .SYNOPSIS
         Builds the project aggregate without throwing for incomplete coverage data.
+    .PARAMETER CoveragePath
+        Coverage status file or directory for the project.
+    .PARAMETER Project
+        Project path used when no unique status manifest is available.
     #>
     Param(
         [string] $CoveragePath,
@@ -292,6 +362,12 @@ function Get-ProjectCoverageModel {
 }
 
 function Get-ExpectedCoverageDimensions {
+    <#
+    .SYNOPSIS
+        Extracts repository-summary coverage dimensions from build-order JSON.
+    .PARAMETER BuildOrderJson
+        Serialized build-order entries produced by DetermineProjectsToBuild.
+    #>
     Param([string] $BuildOrderJson)
 
     try {
@@ -326,6 +402,12 @@ function Get-ExpectedCoverageDimensions {
 }
 
 function Get-RepositoryApplications {
+    <#
+    .SYNOPSIS
+        Combines project application models into repository application models.
+    .PARAMETER ProjectModels
+        Project coverage models to combine.
+    #>
     Param([object[]] $ProjectModels)
 
     $applications = @{}
@@ -366,6 +448,10 @@ function Get-RepositoryCoverageModel {
     <#
     .SYNOPSIS
         Builds a repository aggregate from expected build dimensions and downloaded artifacts.
+    .PARAMETER CoveragePath
+        Directory containing downloaded project coverage artifacts.
+    .PARAMETER BuildOrderJson
+        Build-order JSON used to identify expected coverage dimensions.
     #>
     Param(
         [string] $CoveragePath,
@@ -458,6 +544,8 @@ function Get-CoverageMetrics {
     <#
     .SYNOPSIS
         Calculates covered, uncovered, total, and percentage values for semantic facts.
+    .PARAMETER Facts
+        Dictionary whose Boolean values indicate covered lines.
     #>
     Param([hashtable] $Facts)
 
@@ -481,6 +569,12 @@ function Resolve-CoverageObjectAttribution {
     <#
     .SYNOPSIS
         Resolves display attribution for one covered object.
+    .PARAMETER ObjectType
+        Numeric Business Central object type.
+    .PARAMETER ObjectId
+        Business Central object ID.
+    .PARAMETER SourcePath
+        Repository-relative source path used to derive the object name.
     #>
     Param(
         [int] $ObjectType,
@@ -514,6 +608,12 @@ function Resolve-CoverageObjectAttribution {
 }
 
 function Get-UncoveredObjectRows {
+    <#
+    .SYNOPSIS
+        Returns the ten objects with the most uncovered executable lines.
+    .PARAMETER Lines
+        Semantic line facts keyed by source path, object type, object ID, and line number.
+    #>
     Param([hashtable] $Lines)
 
     $objects = @{}
@@ -552,6 +652,20 @@ function Get-UncoveredObjectRows {
 }
 
 function Add-CoverageMetricMarkdown {
+    <#
+    .SYNOPSIS
+        Appends one formatted coverage metric to a Markdown summary.
+    .PARAMETER Builder
+        Summary string builder to update.
+    .PARAMETER Label
+        Metric display label.
+    .PARAMETER Metrics
+        Coverage metrics returned by Get-CoverageMetrics.
+    .PARAMETER DenominatorName
+        Label for the total facts.
+    .PARAMETER UncoveredName
+        Label for uncovered facts.
+    #>
     Param(
         [System.Text.StringBuilder] $Builder,
         [string] $Label,
@@ -570,6 +684,14 @@ function Add-CoverageMetricMarkdown {
 }
 
 function Add-CoverageOverviewMarkdown {
+    <#
+    .SYNOPSIS
+        Appends availability, line coverage, and diagnostic details to a summary.
+    .PARAMETER Builder
+        Summary string builder to update.
+    .PARAMETER Model
+        Project or repository coverage model.
+    #>
     Param(
         [System.Text.StringBuilder] $Builder,
         [hashtable] $Model
@@ -610,6 +732,18 @@ function Add-CoverageOverviewMarkdown {
 }
 
 function Add-ApplicationCoverageTable {
+    <#
+    .SYNOPSIS
+        Appends an application coverage table to a Markdown summary.
+    .PARAMETER Builder
+        Summary string builder to update.
+    .PARAMETER Applications
+        Application coverage models to render.
+    .PARAMETER IncludeProject
+        Includes a project column for repository summaries.
+    .PARAMETER Unavailable
+        Renders coverage values as unavailable.
+    #>
     Param(
         [System.Text.StringBuilder] $Builder,
         [object[]] $Applications,
@@ -660,6 +794,14 @@ function Add-ApplicationCoverageTable {
 }
 
 function Add-UncoveredObjectsMarkdown {
+    <#
+    .SYNOPSIS
+        Appends the top uncovered objects section to a Markdown summary.
+    .PARAMETER Builder
+        Summary string builder to update.
+    .PARAMETER Lines
+        Semantic line facts used to rank uncovered objects.
+    #>
     Param(
         [System.Text.StringBuilder] $Builder,
         [hashtable] $Lines
@@ -688,7 +830,9 @@ function Add-UncoveredObjectsMarkdown {
 function New-ProjectCoverageSummary {
     <#
     .SYNOPSIS
-        Renders a bounded project coverage summary.
+        Renders a project coverage summary.
+    .PARAMETER Model
+        Project coverage model to render.
     #>
     Param([hashtable] $Model)
 
@@ -719,7 +863,9 @@ function New-ProjectCoverageSummary {
 function New-RepositoryCoverageSummary {
     <#
     .SYNOPSIS
-        Renders a bounded repository coverage summary.
+        Renders a repository coverage summary.
+    .PARAMETER Model
+        Repository coverage model to render.
     #>
     Param([hashtable] $Model)
 

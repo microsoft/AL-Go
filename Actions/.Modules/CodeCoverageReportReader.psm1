@@ -4,6 +4,8 @@ function Get-CoverageArray {
     <#
     .SYNOPSIS
         Normalizes a coverage value to an array.
+    .PARAMETER Value
+        Coverage value that must be an enumerable collection or null.
     #>
     Param($Value)
 
@@ -20,6 +22,10 @@ function Test-PathInsideRoot {
     <#
     .SYNOPSIS
         Tests whether a path is contained by a root path.
+    .PARAMETER Path
+        Path to test.
+    .PARAMETER Root
+        Root directory that must contain the path.
     #>
     Param(
         [string] $Path,
@@ -52,6 +58,10 @@ function Get-NormalizedCoverageSourceRoots {
     <#
     .SYNOPSIS
         Returns validated, deduplicated coverage source roots.
+    .PARAMETER RepositoryRoot
+        Absolute repository root containing the configured source roots.
+    .PARAMETER SourceRoots
+        Repository-relative source-root paths from coverage metadata.
     #>
     Param(
         [string] $RepositoryRoot,
@@ -95,6 +105,12 @@ function Resolve-ExistingCoverageSource {
     <#
     .SYNOPSIS
         Resolves an existing source file beneath the repository and source root.
+    .PARAMETER Candidate
+        Candidate source-file path.
+    .PARAMETER RepositoryRoot
+        Absolute repository root that must contain the source file.
+    .PARAMETER SourceRoot
+        Optional source root that must also contain the source file.
     #>
     Param(
         [string] $Candidate,
@@ -126,6 +142,16 @@ function Read-BcCoverageReport {
     <#
     .SYNOPSIS
         Parses and validates a Business Central coverage schema 1.0 report.
+    .PARAMETER Path
+        Path to the BC JSON coverage report.
+    .PARAMETER Model
+        Coverage metadata containing source-root paths and application attribution.
+    .PARAMETER RepositoryRoot
+        Absolute repository root used to resolve source paths.
+    .PARAMETER SemanticLineUnion
+        Aggregate dictionary updated with executable-line coverage facts.
+    .PARAMETER SourceMappingCache
+        Optional shared cache of report source paths and their repository mappings.
     #>
     Param(
         [string] $Path,
@@ -393,6 +419,12 @@ function Resolve-NormalizedRepositoryCoverageSource {
     <#
     .SYNOPSIS
         Maps a coverage source to its normalized repository-relative identity.
+    .PARAMETER SourcePath
+        Source path emitted by AlTool.
+    .PARAMETER RepositoryRoot
+        Absolute repository root used for source validation.
+    .PARAMETER NormalizedRoots
+        Validated source-root records returned by Get-NormalizedCoverageSourceRoots.
     #>
     Param(
         [AllowEmptyString()][string] $SourcePath,

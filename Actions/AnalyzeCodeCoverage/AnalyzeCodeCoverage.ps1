@@ -28,6 +28,12 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 Import-Module (Join-Path $PSScriptRoot "AnalyzeCodeCoverage.psm1" -Resolve) -Force -DisableNameChecking
 
 function Write-CoverageAnalysisDetails {
+    <#
+    .SYNOPSIS
+        Writes coverage availability and incomplete-run details to the action log.
+    .PARAMETER Model
+        Project or repository coverage model to describe.
+    #>
     Param([hashtable] $Model)
 
     $details = @($Model.Reasons) + @(

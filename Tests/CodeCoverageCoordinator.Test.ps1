@@ -215,6 +215,68 @@ Describe 'CodeCoverageCoordinator.psm1 Tests' {
         Test-Path -LiteralPath (Get-CoordinatorStatusPath $session) | Should -BeFalse
     }
 
+    It 'Uses the app-only AlTool root order when decoding a second application source' {
+        $projectPath = New-CoordinatorProject
+        $session = New-CoordinatorSession -projectPath $projectPath
+        $secondAppPath = Join-Path $projectPath "SecondApp"
+        $secondTestPath = Join-Path $projectPath "SecondTest"
+        New-Item -Path $secondAppPath -ItemType Directory -Force | Out-Null
+        New-Item -Path $secondTestPath -ItemType Directory -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $secondAppPath "Second.al") `
+            -Value "codeunit 50200 Second { }" -Encoding UTF8
+        $session.SourceRootRecords = @(
+            $session.SourceRootRecords[0],
+            $session.SourceRootRecords[1],
+            @{
+                Path = $secondAppPath
+                RelativePath = "SecondApp"
+                Kind = "app"
+                AppId = "33333333-3333-3333-3333-333333333333"
+                AppName = "Second App"
+            },
+            @{
+                Path = $secondTestPath
+                RelativePath = "SecondTest"
+                Kind = "test"
+                AppId = "44444444-4444-4444-4444-444444444444"
+                AppName = "Second Test"
+            }
+        )
+
+        $result = InModuleScope CodeCoverageCoordinator -Parameters @{ Session = $session } {
+            Mock Start-CodeCoverageAggregateWorker {
+                Param(
+                    $readerModulePath,
+                    $repositoryRoot,
+                    $metadata,
+                    $temporaryPath,
+                    $publishedPath,
+                    $pwshPath
+                )
+
+                return @{ Metadata = $metadata }
+            }
+
+            $worker = Start-CodeCoverageCompactorInternal -session $Session
+            $normalizedRoots = @(
+                Get-NormalizedCoverageSourceRoots -RepositoryRoot $Session.RepositoryRoot `
+                    -SourceRoots @($worker.Metadata.SourceRootDetails.path)
+            )
+            return @{
+                Metadata = $worker.Metadata
+                Resolved = Resolve-NormalizedRepositoryCoverageSource `
+                    -SourcePath "external-1\SecondApp\Second.al" `
+                    -RepositoryRoot $Session.RepositoryRoot -NormalizedRoots $normalizedRoots
+            }
+        }
+
+        @($result.Metadata.SourceRootDetails.path) | Should -Be @("App", "SecondApp")
+        @($result.Metadata.SourceRootDetails.kind) | Should -Be @("app", "app")
+        $result.Resolved.Included | Should -BeTrue
+        $result.Resolved.SourceRootIndex | Should -Be 1
+        $result.Resolved.Identity | Should -Be "secondapp/second.al"
+    }
+
     It 'Validates both formats and finalizes complete coverage' {
         $projectPath = New-CoordinatorProject
         $session = New-CoordinatorSession -projectPath $projectPath `

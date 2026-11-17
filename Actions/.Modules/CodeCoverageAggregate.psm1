@@ -6,6 +6,18 @@ function Invoke-CodeCoverageAggregateWorker {
     <#
     .SYNOPSIS
         Consumes streamed raw report descriptors and publishes their semantic line union.
+    .PARAMETER inputReader
+        Reader that supplies one JSON report descriptor per line.
+    .PARAMETER readerModulePath
+        Path to the coverage report reader module loaded by the worker.
+    .PARAMETER repositoryRoot
+        Absolute repository root used to resolve covered source files.
+    .PARAMETER metadata
+        Source-root and application ID-range metadata for the aggregate.
+    .PARAMETER temporaryPath
+        Temporary path used while writing the aggregate.
+    .PARAMETER publishedPath
+        Final path for the atomically published aggregate.
     #>
     Param(
         [System.IO.TextReader] $inputReader,
@@ -179,6 +191,18 @@ function Start-CodeCoverageAggregateWorker {
     <#
     .SYNOPSIS
         Starts the persistent PowerShell 7 coverage compactor for a test session.
+    .PARAMETER readerModulePath
+        Path to the coverage report reader module loaded by the worker.
+    .PARAMETER repositoryRoot
+        Absolute repository root used to resolve covered source files.
+    .PARAMETER metadata
+        Source-root and application ID-range metadata for the aggregate.
+    .PARAMETER temporaryPath
+        Temporary path used while writing the aggregate.
+    .PARAMETER publishedPath
+        Final path for the atomically published aggregate.
+    .PARAMETER pwshPath
+        Path to the PowerShell 7 executable that hosts the worker.
     #>
     Param(
         [string] $readerModulePath,
@@ -244,6 +268,10 @@ function Add-CodeCoverageAggregateWorkItem {
     <#
     .SYNOPSIS
         Streams one immutable validated report descriptor to the compactor.
+    .PARAMETER worker
+        Worker state returned by Start-CodeCoverageAggregateWorker.
+    .PARAMETER descriptor
+        Report descriptor containing the app ID, report path, and completeness value.
     #>
     Param(
         [hashtable] $worker,
@@ -266,6 +294,8 @@ function Complete-CodeCoverageAggregateWorker {
     <#
     .SYNOPSIS
         Closes, waits for, and disposes the child-process compactor.
+    .PARAMETER worker
+        Worker state returned by Start-CodeCoverageAggregateWorker.
     #>
     Param([hashtable] $worker)
 

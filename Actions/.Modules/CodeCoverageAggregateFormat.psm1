@@ -4,6 +4,10 @@ function Write-CodeCoverageAggregateFile {
     <#
     .SYNOPSIS
         Writes the versioned compressed AL-Go coverage line union.
+    .PARAMETER path
+        Destination path for the compressed aggregate file.
+    .PARAMETER lines
+        Covered-state dictionaries grouped by application source-root identity.
     #>
     Param(
         [string] $path,
@@ -65,6 +69,8 @@ function Read-CodeCoverageAggregate {
     <#
     .SYNOPSIS
         Reads and validates a published AL-Go coverage line union.
+    .PARAMETER path
+        Path to the compressed aggregate file.
     #>
     Param([string] $path)
 

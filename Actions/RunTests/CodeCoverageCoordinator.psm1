@@ -7,11 +7,19 @@ Import-Module (Join-Path $PSScriptRoot "..\.Modules\CodeCoverageReportReader.psm
 
 <#
 .SYNOPSIS
-    Resolves the ordered source roots used for coverage collection and analysis.
+    Resolves ordered repository source-root metadata for coverage collection and analysis.
 .DESCRIPTION
     Collects appFolders and testFolders that contain AL source files from the current project
     and direct projectsToTest targets. Rejects roots outside the repository, deduplicates paths,
     reads available app identity, and returns deterministic records.
+.PARAMETER settings
+    Analyzed settings for the current project.
+.PARAMETER projectPath
+    Absolute path to the current project.
+.PARAMETER baseFolder
+    Absolute repository root used to resolve projectsToTest and reject outside paths.
+.PARAMETER analyzeRepo
+    Callback used to analyze settings for each direct projectsToTest target.
 #>
 function Resolve-CodeCoverageSourceRootData {
     Param(
@@ -133,6 +141,8 @@ function Resolve-CodeCoverageSourceRootData {
 <#
 .SYNOPSIS
     Converts internal source-root records to the portable status shape.
+.PARAMETER sourceRootRecords
+    Ordered source-root records returned by Resolve-CodeCoverageSourceRootData.
 #>
 function Get-CodeCoverageSourceRootDetails {
     Param([object[]] $sourceRootRecords)
@@ -153,6 +163,8 @@ function Get-CodeCoverageApplicationObjectIdRanges {
     <#
     .SYNOPSIS
         Returns object ID ranges owned by regular repository applications.
+    .PARAMETER sourceRootRecords
+        Source-root records whose regular application roots contain app.json files.
     #>
     Param([object[]] $sourceRootRecords)
 
@@ -178,6 +190,8 @@ function Get-CodeCoverageApplicationObjectIdRanges {
 <#
 .SYNOPSIS
     Returns the final coverage status path for a session.
+.PARAMETER session
+    Coverage session containing the output root path.
 #>
 function Get-CodeCoverageStatusPath {
     Param([hashtable] $session)
@@ -188,6 +202,8 @@ function Get-CodeCoverageStatusPath {
 <#
 .SYNOPSIS
     Returns the published aggregate path for a session.
+.PARAMETER session
+    Coverage session containing the output root path.
 #>
 function Get-CodeCoverageAggregatePath {
     Param([hashtable] $session)
@@ -198,6 +214,10 @@ function Get-CodeCoverageAggregatePath {
 <#
 .SYNOPSIS
     Atomically writes the final AL-Go coverage status manifest.
+.PARAMETER session
+    Coverage session containing source roots and per-app run state.
+.PARAMETER aggregate
+    Optional completed aggregate metadata and per-run diagnostics.
 #>
 function Write-CodeCoverageStatusInternal {
     Param(
@@ -249,6 +269,8 @@ function Write-CodeCoverageStatusInternal {
 <#
 .SYNOPSIS
     Deletes raw BC JSON reports for successfully compacted runs.
+.PARAMETER session
+    Coverage session containing per-app output paths and run states.
 #>
 function Remove-CodeCoverageRawReports {
     Param([hashtable] $session)
@@ -270,6 +292,12 @@ function Remove-CodeCoverageRawReports {
 <#
 .SYNOPSIS
     Validates the coverage handoff for one completed app run.
+.PARAMETER session
+    Coverage session containing the required output formats.
+.PARAMETER run
+    Per-app run record containing its unique output path.
+.PARAMETER rawComplete
+    Boolean completeness value reported by AlTool.
 #>
 function Test-CodeCoverageArtifacts {
     Param(
@@ -466,11 +494,16 @@ function New-AlGoCodeCoverageSession {
 <#
 .SYNOPSIS
     Starts the single background aggregate worker for a supported session.
+.PARAMETER session
+    Supported coverage session containing source metadata and PowerShell 7 path.
 #>
 function Start-CodeCoverageCompactorInternal {
     Param([hashtable] $session)
 
-    $sourceRootDetails = @(Get-CodeCoverageSourceRootDetails $session.SourceRootRecords)
+    $applicationSourceRootRecords = @(
+        $session.SourceRootRecords | Where-Object { "$($_.Kind)" -eq "app" }
+    )
+    $sourceRootDetails = @(Get-CodeCoverageSourceRootDetails $applicationSourceRootRecords)
     $aggregatePath = Get-CodeCoverageAggregatePath -session $session
     $metadata = @{
         SourceRootDetails = @($sourceRootDetails)

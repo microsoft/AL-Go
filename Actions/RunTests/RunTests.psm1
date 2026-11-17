@@ -24,14 +24,6 @@ function Get-TestAppsToRun {
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
         The full path to the project folder.
-    .PARAMETER baseFolder
-        The full path to the repository root.
-    .PARAMETER project
-        Repository-relative AL-Go project path.
-    .PARAMETER projectName
-        Project display name.
-    .PARAMETER buildMode
-        Build mode used for this project run.
     .PARAMETER installTestAppsJson
         Path to a JSON file with the list of installed test apps.
     #>
@@ -265,6 +257,14 @@ function Invoke-AlGoTestRun {
         The (analyzed) AL-Go settings hashtable.
     .PARAMETER projectPath
         The full path to the project folder.
+    .PARAMETER baseFolder
+        The full path to the repository root.
+    .PARAMETER project
+        Repository-relative AL-Go project path.
+    .PARAMETER projectName
+        Project display name.
+    .PARAMETER buildMode
+        Build mode used for this project run.
     .PARAMETER containerName
         The name of the build container to run the tests against.
     .PARAMETER credential

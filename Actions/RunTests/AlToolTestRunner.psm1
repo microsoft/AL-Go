@@ -437,6 +437,14 @@ function New-AlTestGroupsFile {
 }
 
 function Initialize-AlToolCoverageOutput {
+    <#
+    .SYNOPSIS
+        Prepares an empty output directory for one AlTool coverage run.
+    .PARAMETER CoverageOutputPath
+        Directory where AlTool writes fixed-name coverage artifacts.
+    .PARAMETER CoverageFormats
+        Coverage formats expected from the run.
+    #>
     param(
         [Parameter(Mandatory = $true)][string] $CoverageOutputPath,
         [ValidateSet("bc-json", "cobertura")][string[]] $CoverageFormats
@@ -453,6 +461,14 @@ function Initialize-AlToolCoverageOutput {
 }
 
 function Write-EmptyAlToolCoverageArtifacts {
+    <#
+    .SYNOPSIS
+        Writes valid empty coverage artifacts for a run with no enabled tests.
+    .PARAMETER CoverageOutputPath
+        Directory where the empty coverage artifacts are written.
+    .PARAMETER CoverageFormats
+        Coverage formats to create.
+    #>
     param(
         [Parameter(Mandatory = $true)][string] $CoverageOutputPath,
         [ValidateSet("bc-json", "cobertura")][string[]] $CoverageFormats
@@ -500,6 +516,12 @@ function Write-EmptyAlToolCoverageArtifacts {
 }
 
 function ConvertTo-AlToolResponseFileArgument {
+    <#
+    .SYNOPSIS
+        Escapes one native argument for an AlTool response file.
+    .PARAMETER Argument
+        Argument value to escape.
+    #>
     param(
         [Parameter(Mandatory = $true)]
         [AllowEmptyString()]
@@ -540,6 +562,12 @@ function ConvertTo-AlToolResponseFileArgument {
 }
 
 function New-AlToolResponseFile {
+    <#
+    .SYNOPSIS
+        Writes AlTool arguments to a temporary UTF-8 response file.
+    .PARAMETER ArgumentList
+        Native AlTool arguments to write in order.
+    #>
     param(
         [Parameter(Mandatory = $true)]
         [string[]] $ArgumentList
@@ -563,6 +591,24 @@ function New-AlToolResponseFile {
 .DESCRIPTION
     Valid structured results are returned for JUnit generation. Invalid structured output terminates
     as one protocol failure.
+.PARAMETER AlToolPath
+    Full path to the AlTool executable.
+.PARAMETER Codeunits
+    Enabled test codeunits and methods for the current test app.
+.PARAMETER Company
+    Business Central company in which to run tests.
+.PARAMETER Tenant
+    Business Central tenant for the test connection.
+.PARAMETER Connection
+    Authenticated server connection details.
+.PARAMETER CoverageOutputPath
+    Optional unique directory for coverage artifacts from this test app.
+.PARAMETER CoverageFormats
+    Coverage formats to request when coverage is enabled.
+.PARAMETER CoverageSourceRoots
+    Source directories used by AlTool to resolve repository coverage.
+.PARAMETER CoverageAppPaths
+    Optional application package paths for AlTool versions that support package attribution.
 #>
 function Invoke-AlRunTestsBatch {
     param(
