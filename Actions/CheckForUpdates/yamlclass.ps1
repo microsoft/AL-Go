@@ -320,6 +320,22 @@ class Yaml {
         return $result
     }
 
+    [void] MarkCustomJobsAsTemplate() {
+        $customJobs = @($this.GetCustomJobsFromYaml('CustomJob*') | Where-Object { $_.Origin -eq [CustomizationOrigin]::FinalRepository })
+        $comment = [Yaml]::GetComment([CustomizationOrigin]::TemplateRepository)
+        foreach ($customJob in $customJobs) {
+            for ($i = 0; $i -lt $this.content.Count; $i++) {
+                if ($this.content[$i].Trim() -eq "$($customJob.Name):") {
+                    if ($i -gt 0 -and $this.content[$i - 1].Trim() -eq $comment) {
+                        break
+                    }
+                    $this.Insert($i, @("  $comment"))
+                    break
+                }
+            }
+        }
+    }
+
     <#
         Add custom jobs to the YAML content
         This function will add the custom jobs to the YAML content

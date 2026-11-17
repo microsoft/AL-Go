@@ -227,6 +227,16 @@ Repositories based on your custom template will notify you that changes are avai
 > [!TIP]
 > You can setup the Update AL-Go System Files workflow to run on a schedule to uptake new releases of AL-Go for GitHub regularly.
 
+### Multi-level template inheritance
+
+A custom template repository can itself be based on another custom template repository, to any depth (for example repository → customer template → partner template → AL-Go). When updating a repository, AL-Go downloads only its directly configured template. The direct template's checked-in files and workflows, along with its `.github/AL-Go-TemplateRepoSettings.doNotEdit.json` and `.github/AL-Go-TemplateProjectSettings.doNotEdit.json` snapshots, carry forward the state inherited from its own template.
+
+- **Settings:** inherited settings are flattened in ancestor-to-parent order into one snapshot; your repository's settings are applied afterward. Effective `protectedSettings` and `overwriteSettings` are retained. `ConditionalSettings` stay ordered and are evaluated after the flattened values in the consuming repository's context. Settings-source logs report the direct parent snapshot.
+- **Workflows:** the direct template's checked-in workflow is the source. Custom jobs inherited from any ancestor remain in that workflow and are not removed when the repository updates its system files. New custom jobs from the direct template are marked as template jobs; duplicate custom job names between the direct template and repository fail with a descriptive error.
+- **Files:** the direct template's checked-in files are the source, including files inherited from its ancestors. Its `customALGoFiles` settings govern the files it contributes.
+
+Existing single-template setups continue to work as before. Run **Update AL-Go System Files** in a template repository before its downstream repositories to propagate updated inherited files and settings.
+
 ## Using custom template files
 
 When updating AL-Go for GitHub, only specific system files from the template repository are synced to your end repository by default. Files such as `README.md`, `.gitignore`, and other documentation or non-system files are not updated by AL-Go for GitHub. By default, AL-Go syncs workflow files in `.github/workflows`, PowerShell scripts in `.github` and `.AL-Go`, and configuration files required for AL-Go operations. When using custom template repositories, you may need to add additional files related to AL-Go for GitHub, such as script overrides, complementary workflows, or centrally managed files not part of the official AL-Go templates.

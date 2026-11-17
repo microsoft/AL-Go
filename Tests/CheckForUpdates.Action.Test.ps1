@@ -11,6 +11,134 @@ Describe "CheckForUpdates Action Tests" {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName "$actionName.ps1"
     }
+    Describe 'Direct-parent custom template inheritance' {
+        BeforeAll {
+            $actionRoot = Join-Path $PSScriptRoot '..\Actions\CheckForUpdates' -Resolve
+            . (Join-Path $actionRoot 'yamlclass.ps1')
+            . (Join-Path $actionRoot 'CheckForUpdates.HelperFunctions.ps1')
+
+            function New-TestTemplate {
+                param([string] $url, [string] $folder)
+                $repoFolder = Join-Path $folder 'repo'
+                New-Item -ItemType Directory -Path (Join-Path $repoFolder '.github/workflows') -Force | Out-Null
+                $script:testTemplateFolders[$url] = $folder
+            }
+        }
+
+        BeforeEach {
+            $script:testTemplateFolders = @{}
+            $script:testTemplateDownloads = @()
+            Mock DownloadTemplateRepository {
+                param($token, $templateUrl, $templateSha, $downloadLatest)
+                $script:testTemplateDownloads += @{ url = $templateUrl; sha = $templateSha.Value; latest = $downloadLatest }
+                if (-not $templateSha.Value -or $downloadLatest) {
+                    $templateSha.Value = "downloaded-$($script:testTemplateDownloads.Count)"
+                }
+                return $script:testTemplateFolders[$templateUrl]
+            }
+        }
+
+        It 'Downloads only the direct parent even when it points to a grandparent' {
+            $parentUrl = 'https://github.com/acme/parent@main'
+            New-TestTemplate -url $parentUrl -folder (Join-Path $TestDrive 'parent')
+            @{ templateUrl = 'https://github.com/acme/grandparent@main' } |
+                ConvertTo-Json | Set-Content -Path (Join-Path $TestDrive 'parent/repo/.github/AL-Go-Settings.json') -Encoding UTF8
+
+            $template = GetTemplateRepository -token 'test-token' -templateUrl $parentUrl -templateSha 'parent-pin' -downloadLatest:$false -repoType 'PTE'
+
+            $script:testTemplateDownloads.Count | Should -Be 1
+            $script:testTemplateDownloads[0].url | Should -Be $parentUrl
+            $script:testTemplateDownloads[0].sha | Should -Be 'parent-pin'
+            $template.repoSettings.PSObject.Properties.Name | Should -Not -Contain 'templateUrl'
+        }
+
+        It 'Uses inherited settings snapshots before the direct parent settings' {
+            $parentUrl = 'https://github.com/acme/parent@main'
+            New-TestTemplate -url $parentUrl -folder (Join-Path $TestDrive 'settings-parent')
+            $repoFolder = Join-Path $TestDrive 'settings-parent/repo'
+            New-Item -ItemType Directory -Path (Join-Path $repoFolder '.AL-Go') -Force | Out-Null
+            @{
+                templateUrl = 'https://github.com/acme/grandparent@main'
+                country = 'parent'
+                installApps = @('parent1')
+                overwriteSettings = @('installApps')
+            } | ConvertTo-Json | Set-Content -Path (Join-Path $repoFolder '.github/AL-Go-Settings.json') -Encoding UTF8
+            @{
+                templateLayers = @(
+                    @{ country = 'grandparent'; protectedSettings = @('country'); installApps = @('base1', 'base2') }
+                )
+            } | ConvertTo-Json -Depth 20 | Set-Content -Path (Join-Path $repoFolder '.github/AL-Go-TemplateRepoSettings.doNotEdit.json') -Encoding UTF8
+            @{
+                templateLayers = @(
+                    @{ projectSetting = 'grandparent' }
+                )
+            } | ConvertTo-Json -Depth 20 | Set-Content -Path (Join-Path $repoFolder '.github/AL-Go-TemplateProjectSettings.doNotEdit.json') -Encoding UTF8
+            @{ projectSetting = 'parent' } | ConvertTo-Json | Set-Content -Path (Join-Path $repoFolder '.AL-Go/settings.json') -Encoding UTF8
+
+            $template = GetTemplateRepository -token 'test-token' -templateUrl $parentUrl -templateSha '' -downloadLatest $true -repoType 'PTE'
+            $repoSnapshot = GetTemplateSettingsContent -template $template -kind repo | ConvertFrom-Json
+            $projectSnapshot = GetTemplateSettingsContent -template $template -kind project | ConvertFrom-Json
+
+            $repoSnapshot.PSObject.Properties.Name | Should -Not -Contain 'templateLayers'
+            $repoSnapshot.country | Should -Be 'grandparent'
+            $repoSnapshot.protectedSettings | Should -Contain 'country'
+            $repoSnapshot.installApps | Should -Be @('parent1')
+            $repoSnapshot.overwriteSettings | Should -Contain 'installApps'
+            $projectSnapshot.PSObject.Properties.Name | Should -Not -Contain 'templateLayers'
+            $projectSnapshot.projectSetting | Should -Be 'parent'
+        }
+
+        It 'Keeps ancestor jobs and marks direct-parent jobs as template jobs' {
+            $workflow = @(
+                'jobs:',
+                '  # DO NOT EDIT. The following job was added through a custom template.',
+                '  CustomJob-Ancestor:',
+                '    runs-on: ubuntu-latest',
+                '  CustomJob-Parent:',
+                '    runs-on: ubuntu-latest'
+            ) -join "`n"
+            $definedJobs = @{}
+            MarkTemplateCustomJobs -srcContent ([ref]$workflow) -definedBy $definedJobs -levelName 'https://github.com/acme/parent@main'
+
+            $workflow | Should -Match 'CustomJob-Ancestor'
+            $workflow | Should -Match '  # DO NOT EDIT\. The following job was added through a custom template\.\r?\n  CustomJob-Parent:'
+            $definedJobs.Keys | Should -Contain 'CustomJob-Ancestor'
+            $definedJobs.Keys | Should -Contain 'CustomJob-Parent'
+
+            $finalRepoWorkflow = Join-Path $TestDrive 'final-repo-workflow.yaml'
+            @(
+                'jobs:',
+                '  CustomJob-Ancestor:',
+                '    runs-on: ubuntu-latest'
+            ) | Set-Content $finalRepoWorkflow -Encoding UTF8
+            { AssertNoDuplicateFinalCustomJobs -yamlFile $finalRepoWorkflow -definedBy $definedJobs } |
+                Should -Throw "*CustomJob-Ancestor* repository*https://github.com/acme/parent@main*"
+        }
+
+        It 'Uses files already checked in to the direct parent and applies its exclusions' {
+            $parent = Join-Path $TestDrive 'files-parent/repo'
+            New-Item -ItemType Directory -Path (Join-Path $parent '.github/workflows') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $parent 'custom') -Force | Out-Null
+            Set-Content -Path (Join-Path $parent '.github/workflows/AncestorWorkflow.yaml') -Value 'name: inherited' -Encoding UTF8
+            Set-Content -Path (Join-Path $parent 'custom/ancestor.txt') -Value 'inherited' -Encoding UTF8
+            Set-Content -Path (Join-Path $parent 'custom/excluded.txt') -Value 'excluded' -Encoding UTF8
+            $settings = @{
+                type = 'PTE'
+                powerPlatformSolutionFolder = ''
+                unusedALGoSystemFiles = @()
+                customALGoFiles = @{
+                    filesToInclude = @(@{ sourceFolder = 'custom'; filter = '*.txt'; destinationFolder = 'custom' })
+                    filesToExclude = @(@{ sourceFolder = 'custom'; filter = 'excluded.txt'; destinationFolder = 'custom' })
+                }
+            }
+            $included, $excluded = GetFilesToUpdate -settings $settings -projects @('.') -baseFolder $TestDrive -templateFolder $parent -originalTemplateFolder $parent
+            $included.destinationFullPath | Should -Contain (Join-Path $TestDrive '.github/workflows/AncestorWorkflow.yaml')
+            $included.destinationFullPath | Should -Contain (Join-Path $TestDrive 'custom/ancestor.txt')
+            $path = Join-Path $TestDrive 'custom/excluded.txt'
+            $included.destinationFullPath | Should -Not -Contain $path
+            $excluded.destinationFullPath | Should -Contain $path
+        }
+    }
 
     It 'Compile Action' {
         Invoke-Expression $actionScript

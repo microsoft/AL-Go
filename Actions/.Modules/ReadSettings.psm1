@@ -18,7 +18,8 @@ function MergeCustomObjectIntoOrderedDictionary {
         [System.Collections.Specialized.OrderedDictionary] $dst,
         [PSCustomObject] $src,
         [string] $context = 'settings',
-        [hashtable] $metadata = @{}
+        [hashtable] $metadata = @{},
+        [bool] $trackOverwrittenSettings = $false
     )
 
     OutputDebug "Applying $context"
@@ -65,6 +66,13 @@ function MergeCustomObjectIntoOrderedDictionary {
                 OutputDebug "Overwriting setting $prop"
                 $dst.Remove($prop)
                 $metadata.properties.Remove($prop)
+            }
+
+            if ($trackOverwrittenSettings -and $src.PSObject.Properties.Name -contains $prop) {
+                if (-not $metadata.properties.Contains($prop)) {
+                    $metadata.properties[$prop] = @{}
+                }
+                $metadata.properties[$prop].overwritten = $true
             }
         }
     }
@@ -153,7 +161,7 @@ function MergeCustomObjectIntoOrderedDictionary {
             }
 
             if ($srcPropType -eq "PSCustomObject" -and $dstPropType -eq "OrderedDictionary") {
-                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp -context "$context > $prop" -metadata $metadata.properties[$prop]
+                MergeCustomObjectIntoOrderedDictionary -dst $dst."$prop" -src $srcProp -context "$context > $prop" -metadata $metadata.properties[$prop] -trackOverwrittenSettings:$trackOverwrittenSettings
             }
             elseif ($dstPropType -ne $srcPropType -and !($srcPropType -eq "Int64" -and $dstPropType -eq "Int32")) {
                 # Under Linux, the Int fields read from the .json file will be Int64, while the settings defaults will be Int32
@@ -185,6 +193,49 @@ function MergeCustomObjectIntoOrderedDictionary {
             }
         }
     }
+}
+
+function AddTemplateSettingsControls {
+    Param(
+        [System.Collections.Specialized.OrderedDictionary] $settings,
+        [hashtable] $metadata
+    )
+
+    $propertyMetadata = $metadata.properties
+    $protected = @($propertyMetadata.GetEnumerator() | Where-Object { $_.Value.protected } | Select-Object -ExpandProperty Key)
+    if ($protected.Count -gt 0) {
+        $settings['protectedSettings'] = $protected
+    }
+
+    $overwritten = @($propertyMetadata.GetEnumerator() | Where-Object { $_.Value.overwritten } | Select-Object -ExpandProperty Key)
+    if ($overwritten.Count -gt 0) {
+        $settings['overwriteSettings'] = $overwritten
+    }
+
+    foreach ($property in @($settings.Keys)) {
+        $value = $settings[$property]
+        $childMetadata = $propertyMetadata[$property]
+        if ($value -is [System.Collections.Specialized.OrderedDictionary] -and $childMetadata -and $childMetadata.ContainsKey('properties')) {
+            AddTemplateSettingsControls -settings $value -metadata $childMetadata
+        }
+    }
+}
+
+function MergeTemplateSettingsLayers {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [object[]] $layers
+    )
+
+    $settings = [ordered]@{}
+    $metadata = @{ properties = @{} }
+    foreach ($layer in $layers) {
+        if ($layer) {
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $layer -context 'settings custom template snapshot' -metadata $metadata -trackOverwrittenSettings:$true
+        }
+    }
+    AddTemplateSettingsControls -settings $settings -metadata $metadata
+    return $settings
 }
 
 function GetDefaultSettings
@@ -417,6 +468,32 @@ function GetDefaultSettings
     .PARAMETER metadata
         Optional hashtable populated with setting sources, protection status, and skipped sources.
 #>
+# Expands legacy custom template snapshots into one settings source per stored layer.
+# New snapshots are flattened; retaining this reader supports repositories not yet updated by the new updater.
+function ExpandTemplateLayers {
+    Param(
+        $settingsObject,
+        [string] $source
+    )
+
+    if ($settingsObject -and $settingsObject.PSObject.Properties.Name -contains 'templateLayers') {
+        $layers = @($settingsObject.templateLayers)
+        for ($i = 0; $i -lt $layers.Count; $i++) {
+            @{
+                "Source" = "$source (level $($i + 1) of $($layers.Count))"
+                "Type" = "File"
+                "Settings" = $layers[$i]
+            }
+        }
+        return
+    }
+    @{
+        "Source" = $source
+        "Type" = "File"
+        "Settings" = $settingsObject
+    }
+}
+
 function ReadSettings {
     Param(
         [string] $baseFolder = "$ENV:GITHUB_WORKSPACE",
@@ -502,11 +579,7 @@ function ReadSettings {
 
     # Read settings from the custom template repository settings file
     $customTemplateRepoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateRepoSettingsFile)
-    $settingsObjects += @{
-        "Source" = "$CustomTemplateRepoSettingsFile"
-        "Type" = "File"
-        "Settings" = $customTemplateRepoSettingsObject
-    }
+    $settingsObjects += @(ExpandTemplateLayers -settingsObject $customTemplateRepoSettingsObject -source $CustomTemplateRepoSettingsFile)
 
     # Read settings from repository settings file
     $repoSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $RepoSettingsFile)
@@ -528,11 +601,7 @@ function ReadSettings {
 
     if ($project) {
         $customTemplateProjectSettingsObject = GetSettingsObject -Path (Join-Path $baseFolder $CustomTemplateProjectSettingsFile)
-        $settingsObjects += @{
-            "Source" = "$CustomTemplateProjectSettingsFile"
-            "Type" = "File"
-            "Settings" = $customTemplateProjectSettingsObject
-        }
+        $settingsObjects += @(ExpandTemplateLayers -settingsObject $customTemplateProjectSettingsObject -source $CustomTemplateProjectSettingsFile)
 
         # Read settings from project settings file
         $projectFolder = Join-Path $baseFolder $project -Resolve
@@ -825,5 +894,5 @@ function SanitizeWorkflowName {
     return $workflowName.Trim().Split([System.IO.Path]::getInvalidFileNameChars()) -join ""
 }
 
-Export-ModuleMember -Function ReadSettings, OutputSettingsSources, OutputSettingsNotices
+Export-ModuleMember -Function ReadSettings, OutputSettingsSources, OutputSettingsNotices, MergeTemplateSettingsLayers
 Export-ModuleMember -Variable ALGoFolderName, ALGoSettingsFile, RepoSettingsFile, CustomTemplateRepoSettingsFile, CustomTemplateProjectSettingsFile, RepoSettingsFileName, ALGoSettingsFileName, CustomTemplateRepoSettingsFileName, CustomTemplateProjectSettingsFileName

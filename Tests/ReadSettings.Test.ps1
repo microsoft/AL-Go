@@ -1625,6 +1625,156 @@ InModuleScope ReadSettings { # Allows testing of private functions
         }
     }
 
+    Describe 'ReadSettings with legacy layered custom template settings' {
+        BeforeAll {
+            function Write-Json($relativePath, $object) {
+                $object | ConvertTo-Json -Depth 99 | Set-Content -Path (Join-Path $script:tempName $relativePath) -Encoding UTF8
+            }
+
+            function Read-TestSettings {
+                ReadSettings -baseFolder $script:tempName -repoName 'repo' -project '.' -buildMode 'Default' -workflowName 'wf' -userName 'user' -branchName 'main' -trigger 'push' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -environmentName '' -customSettings ''
+            }
+        }
+
+        BeforeEach {
+            Mock Write-Host { }
+            Mock Out-Host { }
+            $script:tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            New-Item (Join-Path $script:tempName '.github') -ItemType Directory | Out-Null
+        }
+
+        AfterEach {
+            Remove-Item -Path $script:tempName -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        It 'Applies layers in order, base first, closest template wins, repo wins last' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(@{ property1 = 'base'; property2 = 'base'; property3 = 'base' }, @{ property1 = 'middle'; property2 = 'middle' }) }
+            Write-Json '.github/AL-Go-Settings.json' @{ property1 = 'repo' }
+            $settings = Read-TestSettings
+            $settings.property1 | Should -Be 'repo'
+            $settings.property2 | Should -Be 'middle'
+            $settings.property3 | Should -Be 'base'
+        }
+
+        It 'Keeps protectedSettings of a parent layer protected against child layers and the repo' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(@{ 'runs-on' = 'protected-runner'; protectedSettings = @('runs-on') }, @{ 'runs-on' = 'middle-runner' }) }
+            Write-Json '.github/AL-Go-Settings.json' @{ 'runs-on' = 'repo-runner' }
+            (Read-TestSettings).'runs-on' | Should -Be 'protected-runner'
+        }
+
+        It 'Honors overwriteSettings of a child layer on array settings of its parent layer' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(@{ installApps = @('base1', 'base2') }, @{ installApps = @('middle1'); overwriteSettings = @('installApps') }) }
+            (Read-TestSettings).installApps | Should -Be @('middle1')
+        }
+
+        It 'Merges arrays across layers without overwriteSettings' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(@{ installApps = @('base1') }, @{ installApps = @('middle1') }) }
+            (Read-TestSettings).installApps | Should -Be @('base1', 'middle1')
+        }
+
+        It 'Applies ConditionalSettings of each layer right after that layer, so a later layer overrides an earlier conditional' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(
+                    @{ property1 = 'base'; ConditionalSettings = @(@{ branches = @('main'); settings = @{ property1 = 'base-conditional' } }) },
+                    @{ property1 = 'middle' }) }
+            (Read-TestSettings).property1 | Should -Be 'middle'
+        }
+
+        It 'Applies a layer ConditionalSettings over earlier layers when the branch matches' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(
+                    @{ property1 = 'base' },
+                    @{ property1 = 'middle'; ConditionalSettings = @(@{ branches = @('main'); settings = @{ property1 = 'middle-conditional' } }) }) }
+            (Read-TestSettings).property1 | Should -Be 'middle-conditional'
+        }
+
+        It 'Ignores a layer ConditionalSettings when the branch does not match' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ templateLayers = @(
+                    @{ property1 = 'base' },
+                    @{ property1 = 'middle'; ConditionalSettings = @(@{ branches = @('release/*'); settings = @{ property1 = 'middle-conditional' } }) }) }
+            (Read-TestSettings).property1 | Should -Be 'middle'
+        }
+
+        It 'Reads a single-layer file (no templateLayers) as before' {
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' @{ property1 = 'template'; property2 = 'template'; protectedSettings = @('property2') }
+            Write-Json '.github/AL-Go-Settings.json' @{ property1 = 'repo'; property2 = 'repo' }
+            $settings = Read-TestSettings
+            $settings.property1 | Should -Be 'repo'
+            $settings.property2 | Should -Be 'template'
+        }
+
+        It 'Applies layered project template settings before the project settings' {
+            New-Item (Join-Path $script:tempName '.AL-Go') -ItemType Directory | Out-Null
+            Write-Json '.github/AL-Go-TemplateProjectSettings.doNotEdit.json' @{ templateLayers = @(@{ property1 = 'base'; property2 = 'base' }, @{ property1 = 'middle' }) }
+            Write-Json '.AL-Go/settings.json' @{ property2 = 'project' }
+            $settings = Read-TestSettings
+            $settings.property1 | Should -Be 'middle'
+            $settings.property2 | Should -Be 'project'
+        }
+    }
+
+    Describe 'ReadSettings with flattened custom template settings' {
+        BeforeAll {
+            function Write-Json($relativePath, $object) {
+                $object | ConvertTo-Json -Depth 99 | Set-Content -Path (Join-Path $script:tempName $relativePath) -Encoding UTF8
+            }
+        }
+
+        BeforeEach {
+            Mock Write-Host { }
+            Mock Out-Host { }
+            $script:tempName = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            New-Item (Join-Path $script:tempName '.github') -ItemType Directory | Out-Null
+        }
+
+        AfterEach {
+            Remove-Item -Path $script:tempName -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        It 'Reads one flattened source with effective protection, overwrite, and ordered conditional settings' {
+            $layers = @(
+                (@{
+                    protectedValue = 'ancestor'
+                    protectedSettings = @('protectedValue')
+                    installApps = @('base1', 'base2')
+                    conditionalValue = 'base'
+                    ConditionalSettings = @(@{ branches = @('main'); settings = @{ conditionalValue = 'ancestor-conditional' } })
+                    nested = @{ nestedValue = 'ancestor'; protectedSettings = @('nestedValue'); installApps = @('nested-base') }
+                } | ConvertTo-Json -Depth 99 | ConvertFrom-Json),
+                (@{
+                    protectedValue = 'parent'
+                    installApps = @('parent')
+                    overwriteSettings = @('installApps')
+                    conditionalValue = 'parent'
+                    ConditionalSettings = @(@{ branches = @('main'); settings = @{ conditionalValue = 'parent-conditional' } })
+                    nested = @{ nestedValue = 'parent'; installApps = @('nested-parent'); overwriteSettings = @('installApps') }
+                } | ConvertTo-Json -Depth 99 | ConvertFrom-Json)
+            )
+            $snapshot = MergeTemplateSettingsLayers -layers $layers
+            $snapshot.PSObject.Properties.Name | Should -Not -Contain 'templateLayers'
+            $snapshot.protectedValue | Should -Be 'ancestor'
+            $snapshot.protectedSettings | Should -Contain 'protectedValue'
+            $snapshot.installApps | Should -Be @('parent')
+            $snapshot.overwriteSettings | Should -Contain 'installApps'
+            $snapshot.nested.nestedValue | Should -Be 'ancestor'
+            $snapshot.nested.protectedSettings | Should -Contain 'nestedValue'
+            $snapshot.nested.installApps | Should -Be @('nested-parent')
+            $snapshot.nested.overwriteSettings | Should -Contain 'installApps'
+            $snapshot.ConditionalSettings.Count | Should -Be 2
+            Write-Json '.github/AL-Go-TemplateRepoSettings.doNotEdit.json' $snapshot
+            Write-Json '.github/AL-Go-Settings.json' @{ protectedValue = 'repository' }
+
+            $metadata = @{}
+            $settings = ReadSettings -baseFolder $script:tempName -repoName 'repo' -project '' -workflowName '' -userName '' -branchName 'main' -orgSettingsVariableValue '{"installApps":["organization"]}' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -environmentName '' -metadata $metadata
+
+            $settings.protectedValue | Should -Be 'ancestor'
+            $settings.installApps | Should -Be @('parent')
+            $settings.conditionalValue | Should -Be 'parent-conditional'
+            $metadata.properties.ConditionalSettings.sources | Should -Be @("settings $CustomTemplateRepoSettingsFile (File)")
+
+            $releaseSettings = ReadSettings -baseFolder $script:tempName -repoName 'repo' -project '' -workflowName '' -userName '' -branchName 'release' -orgSettingsVariableValue '' -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -environmentName ''
+            $releaseSettings.conditionalValue | Should -Be 'parent'
+        }
+    }
+
     Describe 'OutputSettingsSources' {
         It 'Prints effective sources, unknowns, and nested protection without values' {
             Mock Write-Host { }
