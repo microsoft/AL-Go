@@ -40,6 +40,8 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 
 ### Issues
 
+- Issue 2405 - AppSource publishing now submits only the highest available version of each library app by app ID across project apps and included dependencies. Duplicate versions and packages with the main app's ID are excluded from library submissions.
+
 - Issue 2454 - Fix separate test execution on Windows PowerShell 5.1 when an app contains multiple test codeunits, preserving each codeunit's ID and test methods.
 
 - Issue 2417 - Fix workspace compilation with versioning strategy 3 to preserve each app's build number instead of failing with "build ('-1') must be a non-negative value". Explicit build number zero is now applied correctly.

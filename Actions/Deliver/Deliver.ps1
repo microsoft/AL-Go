@@ -422,6 +422,11 @@ foreach ($thisProject in $sortedProjectList) {
                 } | ForEach-Object { $_.FullName })
             }
 
+            if (-not $appFile) {
+                throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
+            }
+            $libraryAppFiles = @(Get-AppSourceLibraryAppFile -appFile $appFile -libraryAppFiles $libraryAppFiles)
+
             Write-Host "Main App File:"
             Write-Host "- $([System.IO.Path]::GetFileName($appFile))"
             Write-Host "Library App Files:"
@@ -430,9 +435,6 @@ foreach ($thisProject in $sortedProjectList) {
             }
             else {
                 $libraryAppFiles | ForEach-Object { Write-Host "- $([System.IO.Path]::GetFileName($_))" }
-            }
-            if (-not $appFile) {
-                throw "Unable to locate main app file ($mainAppFileName doesn't exist)"
             }
             Write-Host "Submitting to AppSource"
             $status = New-AppSourceSubmission -authContext $authContext -productId $projectSettings.deliverToAppSource.productId -appFile $appFile -libraryAppFiles $libraryAppFiles -doNotWait -autoPromote:$goLive -Force
