@@ -1190,6 +1190,37 @@ function GetTemplateSettingsContent {
     return (($mergedSettings | ConvertTo-Json -Depth 99) -replace "`r`n", "`n")
 }
 
+function UpdateTemplateSettingsFileLists {
+    Param(
+        [array] $filesToInclude,
+        [array] $filesToExclude,
+        [string] $baseFolder,
+        [string] $templateFolder,
+        [hashtable[]] $templateSettings
+    )
+
+    foreach ($settingsFile in $templateSettings) {
+        $destination = Join-Path (Join-Path $baseFolder '.github') $settingsFile.name
+        $existing = @($filesToInclude | Where-Object { $_.destinationFullPath -eq $destination })
+        if ($settingsFile.content) {
+            if ($existing) {
+                $existing | ForEach-Object { $_.type = $settingsFile.type }
+            }
+            else {
+                $filesToInclude += @{ sourceFullPath = $templateFolder; originalSourceFullPath = $null; type = $settingsFile.type; destinationFullPath = $destination }
+            }
+            continue
+        }
+
+        $filesToInclude = @($filesToInclude | Where-Object { $_.destinationFullPath -ne $destination })
+        if ((Test-Path -Path $destination -PathType Leaf) -and -not ($filesToExclude | Where-Object { $_.destinationFullPath -eq $destination })) {
+            $filesToExclude += @{ sourceFullPath = $destination; destinationFullPath = $destination; type = $settingsFile.type }
+        }
+    }
+
+    return @{ filesToInclude = @($filesToInclude); filesToExclude = @($filesToExclude) }
+}
+
 function GetOwnCustomJobs {
     Param(
         [string] $yamlFile

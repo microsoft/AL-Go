@@ -109,18 +109,13 @@ $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSet
 $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
 if (-not $isDirectALGo) {
     # Generate the doNotEdit settings snapshots from the direct parent's inherited snapshots and own settings
-    foreach ($templateSettings in @(@{ name = $CustomTemplateRepoSettingsFileName; type = 'templateRepoSettings'; content = $templateRepoSettingsContent }, @{ name = $CustomTemplateProjectSettingsFileName; type = 'templateProjectSettings'; content = $templateProjectSettingsContent })) {
-        $dstFullPath = Join-Path (Join-Path $baseFolder '.github') $templateSettings.name
-        $existing = @($filesToInclude | Where-Object { $_.destinationFullPath -eq $dstFullPath })
-        if ($existing) {
-            $existing | ForEach-Object { $_.type = $templateSettings.type }
-        }
-        elseif ($templateSettings.content) {
-            $filesToInclude += @(@{ 'sourceFullPath' = $templateFolder; 'originalSourceFullPath' = $null; 'type' = $templateSettings.type; 'destinationFullPath' = $dstFullPath })
-        }
-    }
-    # Remove generated settings files that no longer have any content
-    $filesToInclude = @($filesToInclude | Where-Object { -not (($_.type -eq 'templateRepoSettings' -and -not $templateRepoSettingsContent) -or ($_.type -eq 'templateProjectSettings' -and -not $templateProjectSettingsContent)) })
+    $templateSettingsFiles = @(
+        @{ name = $CustomTemplateRepoSettingsFileName; type = 'templateRepoSettings'; content = $templateRepoSettingsContent }
+        @{ name = $CustomTemplateProjectSettingsFileName; type = 'templateProjectSettings'; content = $templateProjectSettingsContent }
+    )
+    $fileLists = UpdateTemplateSettingsFileLists -filesToInclude $filesToInclude -filesToExclude $filesToExclude -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettingsFiles
+    $filesToInclude = $fileLists.filesToInclude
+    $filesToExclude = $fileLists.filesToExclude
 }
 
 # $updateFiles will hold an array of files, which needs to be updated

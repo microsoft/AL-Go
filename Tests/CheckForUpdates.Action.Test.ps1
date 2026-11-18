@@ -88,6 +88,20 @@ Describe "CheckForUpdates Action Tests" {
             $projectSnapshot.projectSetting | Should -Be 'parent'
         }
 
+        It 'Schedules existing inherited settings snapshots for removal when the parent no longer contributes them' {
+            $destination = Join-Path $TestDrive (Join-Path '.github' $CustomTemplateRepoSettingsFileName)
+            New-Item -ItemType Directory -Path (Split-Path $destination) -Force | Out-Null
+            Set-Content -Path $destination -Value '{"obsolete":"value"}' -Encoding UTF8
+            $filesToInclude = @(@{ sourceFullPath = 'template-settings.json'; destinationFullPath = $destination; type = '' })
+
+            $fileLists = UpdateTemplateSettingsFileLists -filesToInclude $filesToInclude -filesToExclude @() -baseFolder $TestDrive -templateFolder 'template' -templateSettings @(
+                @{ name = $CustomTemplateRepoSettingsFileName; type = 'templateRepoSettings'; content = $null }
+            )
+
+            $fileLists.filesToInclude | Should -BeNullOrEmpty
+            $fileLists.filesToExclude.destinationFullPath | Should -Contain $destination
+        }
+
         It 'Keeps ancestor jobs and marks direct-parent jobs as template jobs' {
             $workflow = @(
                 'jobs:',
