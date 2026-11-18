@@ -6,7 +6,9 @@ Read settings for AL-Go workflows
 
 ### ENV variables
 
-none
+| Name | Description |
+| :-- | :-- |
+| GITHUB_TOKEN | Optional token used to read repository custom properties when `githubToken` is not supplied. |
 
 ### Parameters
 
