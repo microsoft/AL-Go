@@ -41,6 +41,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineDeploymentEnvironments
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _getEnvironments: ${{ inputs.getEnvironments }}
         _type: ${{ inputs.type }}
         _createEnvIfNotExists: ${{ inputs.createEnvIfNotExists }}

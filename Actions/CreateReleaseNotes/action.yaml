@@ -33,6 +33,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: createreleasenotes
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _token: ${{ inputs.token }}
         _buildVersion: ${{ inputs.buildVersion }}
         _tag_name: ${{ inputs.tag_name }}

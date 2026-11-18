@@ -39,6 +39,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: readsettings
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ inputs.githubToken || env.GITHUB_TOKEN || github.token }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _workflowName: ${{ inputs.workflowName }}

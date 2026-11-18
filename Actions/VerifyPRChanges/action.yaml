@@ -23,6 +23,7 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _token: ${{ inputs.token }}
         _prBaseRepository: ${{ inputs.prBaseRepository }}
         _pullRequestId: ${{ inputs.pullRequestId }}

@@ -37,6 +37,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: Deploy
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _token: ${{ inputs.token }}
         _environmentName: ${{ inputs.environmentName }}
         _artifactsFolder: ${{ inputs.artifactsFolder }}

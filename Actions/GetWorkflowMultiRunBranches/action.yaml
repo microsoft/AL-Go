@@ -24,6 +24,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: GetWorkflowMultiRunBranches
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _workflowEventName: ${{ inputs.workflowEventName }}
         _includeBranches: ${{ inputs.includeBranches }}
       run: |

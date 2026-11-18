@@ -10,6 +10,8 @@ runs:
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DumpWorkflowInfo" -Action {
           ${{ github.action_path }}/DumpWorkflowInfo.ps1

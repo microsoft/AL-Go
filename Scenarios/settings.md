@@ -218,6 +218,7 @@ Example:
 GitHub custom properties are read from the repository identified by `GITHUB_REPOSITORY` (the base/target repository for pull request workflows) through `GET /repos/{owner}/{repo}/properties/values`. The workflow token must have read access to that repository; the standard `ReadSettings` action uses `github.token`. The request is made only when a property condition is evaluated. API, authentication, and permission errors (including HTTP 403/404) fail settings resolution and are not treated as missing properties. Property values are metadata, not secrets.
 
 Actions that re-read settings internally, including project discovery and dependency/build processing, also provide `github.token` through a step-scoped `GITHUB_TOKEN` environment variable unless one is already supplied.
+Action telemetry uses a step-scoped token for its settings lookup, including when telemetry settings are conditional.
 
 The fetched values are cached per GitHub API host and repository for the lifetime of the current PowerShell process. Changes made while that process is running are not observed by later `ReadSettings` calls in the same process; a new workflow run reads a fresh snapshot. Local callers can either provide a `customProperties` map directly to `ReadSettings`, or configure `GITHUB_API_URL`, `GITHUB_TOKEN`, and the full `owner/repository` name to use the API.
 

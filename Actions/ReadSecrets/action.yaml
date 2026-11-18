@@ -29,6 +29,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: ReadSecrets
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _getSecrets: ${{ inputs.getSecrets }}
         _useGhTokenWorkflowForPush: ${{ inputs.useGhTokenWorkflowForPush }}
       run: |

@@ -40,6 +40,7 @@ runs:
     - name: Update Power Platform Files
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _solutionFolder: ${{ inputs.solutionFolder }}
         _companyId: ${{ inputs.companyId }}
         _environmentName: ${{ inputs.environmentName }}

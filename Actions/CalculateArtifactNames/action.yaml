@@ -59,6 +59,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: calculateartifactnames
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _suffix: ${{ inputs.suffix }}

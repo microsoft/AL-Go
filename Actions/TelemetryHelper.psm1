@@ -130,7 +130,11 @@ function AddTelemetryEvent()
         Add-TelemetryProperty -Hashtable $Data -Key 'GitHubHostingType' -Value (Get-GitHubHostingType)
         Add-TelemetryProperty -Hashtable $Data -Key 'RepositoryIsFork' -Value (Get-RepositoryIsFork)
 
-        $repoSettings = ReadSettings
+        $telemetryToken = $ENV:_ALGO_TELEMETRY_TOKEN
+        if (-not $telemetryToken) {
+            $telemetryToken = $ENV:GITHUB_TOKEN
+        }
+        $repoSettings = ReadSettings -githubToken $telemetryToken
         if ($repoSettings.microsoftTelemetryConnectionString -ne '') {
             Write-Host "Enabling Microsoft telemetry..."
             $MicrosoftTelemetryClient = Get-ApplicationInsightsTelemetryClient -TelemetryConnectionString $repoSettings.microsoftTelemetryConnectionString

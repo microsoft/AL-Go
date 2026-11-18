@@ -4,6 +4,8 @@ Conditional settings can now include a `customProperties` object to match organi
 
 Actions that re-read settings during project discovery, dependency resolution, builds, delivery, and system-file updates also expose the workflow token to nested settings calls. This prevents unauthenticated custom-property requests (404 for private/internal repositories); an explicitly supplied `GITHUB_TOKEN` environment variable takes precedence.
 
+Telemetry settings are also resolved using the action's step-scoped token, so custom-property conditions do not prevent telemetry from being sent for private or internal repositories.
+
 Update all repositories that consume central conditional settings before enabling this condition. Older AL-Go versions ignore unknown condition keys and may apply a block without enforcing its property restriction. Property changes affect runtime settings on a later run; generated workflow settings such as `workflowSchedule` still require **Update AL-Go System Files**.
 
 ### Optional draft PR build skipping

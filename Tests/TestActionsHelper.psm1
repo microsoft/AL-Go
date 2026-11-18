@@ -90,6 +90,12 @@ function YamlTest {
     if ($WithSettingsToken) {
         $envLines.AppendLine('        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}') | Out-Null
     }
+    elseif ($actionName -eq 'ReadSettings') {
+        $envLines.AppendLine('        _ALGO_TELEMETRY_TOKEN: ${{ inputs.githubToken || env.GITHUB_TOKEN || github.token }}') | Out-Null
+    }
+    else {
+        $envLines.AppendLine('        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}') | Out-Null
+    }
     if ($cmd.Parameters.Count -gt 0) {
         $cmd.Parameters.GetEnumerator() | ForEach-Object {
             $name = $_.Key

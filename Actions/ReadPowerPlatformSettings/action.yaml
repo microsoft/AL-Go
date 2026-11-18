@@ -43,6 +43,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: ReadPowerPlatformSettings
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _deploymentEnvironmentsJson: ${{ inputs.deploymentEnvironmentsJson }}
         _environmentName: ${{ inputs.environmentName }}
       run: |

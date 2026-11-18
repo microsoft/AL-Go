@@ -40,6 +40,7 @@ runs:
     - name: Set Actions Repo and Ref
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         actionsRepo: ${{ github.action_repository }}
         actionsRef: ${{ github.action_ref }}
       run: |
@@ -65,6 +66,7 @@ runs:
     - name: Set up new branch for changes
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
         _updateBranch: ${{ inputs.updateBranch }}
@@ -113,6 +115,7 @@ runs:
     - name: Commit to git repository
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _actor: ${{ inputs.actor }}
         _token: ${{ inputs.token }}
         _solutionFolder: ${{ inputs.solutionFolder }}

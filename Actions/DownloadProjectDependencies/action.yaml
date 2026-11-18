@@ -33,6 +33,7 @@ runs:
       id: computePattern
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _project: ${{ inputs.project }}
         _projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
       run: |
