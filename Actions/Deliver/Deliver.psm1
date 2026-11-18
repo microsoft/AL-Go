@@ -55,4 +55,50 @@ function Get-ProjectsInDeliveryOrder {
     return $sortedProjectList
 }
 
-Export-ModuleMember -Function Get-ProjectsInDeliveryOrder
+<#
+.SYNOPSIS
+Select library app files for an AppSource submission.
+
+.DESCRIPTION
+Keeps the highest version of each library app, identified by its app ID.
+Excludes packages with the main app's ID and preserves the first package when versions are equal.
+
+.PARAMETER appFile
+The main app package being submitted.
+
+.PARAMETER libraryAppFiles
+Library app packages from the project's apps and included dependencies.
+
+.OUTPUTS
+Paths to library app packages with unique app IDs.
+#>
+function Get-AppSourceLibraryAppFile {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string] $appFile,
+
+        [string[]] $libraryAppFiles = @()
+    )
+
+    $mainAppId = [guid](Get-AppJsonFromAppFile -appFile $appFile).id
+    $selectedApps = [ordered]@{}
+    foreach ($libraryAppFile in $libraryAppFiles) {
+        $appJson = Get-AppJsonFromAppFile -appFile $libraryAppFile
+        $appId = ([guid]$appJson.id).ToString()
+        if ([guid]$appId -eq $mainAppId) {
+            continue
+        }
+
+        $appVersion = [version]$appJson.version
+        if (!$selectedApps.Contains($appId) -or $appVersion -gt $selectedApps[$appId].version) {
+            $selectedApps[$appId] = @{
+                path = $libraryAppFile
+                version = $appVersion
+            }
+        }
+    }
+
+    $selectedApps.Values | ForEach-Object { $_.path }
+}
+
+Export-ModuleMember -Function Get-ProjectsInDeliveryOrder, Get-AppSourceLibraryAppFile

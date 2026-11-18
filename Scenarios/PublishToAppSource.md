@@ -73,6 +73,8 @@ The other properties in the deliverToAppSource structure are **optional** and de
 > [!NOTE]
 > The includeDependencies requires you to also set `generateDependencyArtifact` to `true` (like shown above). GenerateDependencyArtifact will create a build and a release artifact with the dependent apps used for building the app. includeDependencies will include a number of these apps as library apps when submitting.
 
+When publishing, AL-Go combines the project's library apps with the included dependencies and submits only the highest available version of each library app, identified by its app ID. If the same version appears more than once, the first package is retained, with project library apps considered before included dependencies. Packages with the main app's ID are excluded from the library apps; the selected main app is unchanged. The dependency build and release artifacts themselves are unchanged.
+
 > [!NOTE]
 > When having multiple projects in an AL-Go for GitHub repository, you should set `UseProjectDependencies` to `true` in the **repository settings file** *(.github/AL-Go-Settings.json)* and run Update AL-Go System Files to only build the library apps once and reuse them in the depending projects.
 

@@ -114,3 +114,94 @@ Describe "Deliver Module - Get-ProjectsInDeliveryOrder Tests" {
         Remove-Item $baseFolder -Force -Recurse -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Deliver Module - Get-AppSourceLibraryAppFile Tests" {
+    BeforeAll {
+        . (Join-Path -Path $PSScriptRoot -ChildPath "../Actions/AL-Go-Helper.ps1" -Resolve)
+        DownloadAndImportBcContainerHelper -baseFolder $([System.IO.Path]::GetTempPath())
+        Import-Module (Join-Path $PSScriptRoot "../Actions/Deliver/Deliver.psm1" -Resolve) -Force -DisableNameChecking
+    }
+
+    BeforeEach {
+        Mock Get-AppJsonFromAppFile -ModuleName Deliver {
+            Param($appFile)
+
+            switch ($appFile) {
+                'Main.app' {
+                    return @{ id = '11111111-1111-1111-1111-111111111111'; version = '2.0.0.0' }
+                }
+                'Main-Dependency.app' {
+                    return @{ id = '11111111-1111-1111-1111-111111111111'; version = '3.0.0.0' }
+                }
+                'A.app' {
+                    return @{
+                        id = '22222222-2222-2222-2222-222222222222'
+                        version = '1.0.0.0'
+                        dependencies = @(@{ id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; version = '1.1.0.0' })
+                    }
+                }
+                'X-Old.app' {
+                    return @{ id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; version = '1.1.0.0' }
+                }
+                'X-New.app' {
+                    return @{ id = 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA'; version = '1.2.0.0' }
+                }
+                'X-Renamed.app' {
+                    return @{ id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; version = '1.10.0.0' }
+                }
+                'X-Copy.app' {
+                    return @{ id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; version = '1.2.0.0' }
+                }
+                default {
+                    throw "Unable to read app metadata from $appFile"
+                }
+            }
+        }
+    }
+
+    It 'keeps only X 1.2 when A references X 1.1 and both X versions are included' -TestCases @(
+        @{ appFiles = @('X-Old.app', 'A.app', 'X-New.app') }
+        @{ appFiles = @('X-New.app', 'A.app', 'X-Old.app') }
+    ) {
+        Param($appFiles)
+
+        $result = @(Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles $appFiles)
+
+        $result | Should -BeExactly @('X-New.app', 'A.app')
+    }
+
+    It 'compares manifest versions numerically even when the package name changes' {
+        $result = @(Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles @('X-New.app', 'X-Renamed.app'))
+
+        $result | Should -BeExactly @('X-Renamed.app')
+    }
+
+    It 'keeps the first package when different paths contain the same app version' {
+        $result = @(Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles @('X-New.app', 'X-Copy.app', 'X-New.app'))
+
+        $result | Should -BeExactly @('X-New.app')
+    }
+
+    It 'excludes the main app ID from libraries without replacing the selected main package' {
+        $result = @(Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles @('Main.app', 'A.app', 'Main-Dependency.app'))
+
+        $result | Should -BeExactly @('A.app')
+    }
+
+    It 'preserves distinct library apps and their order' {
+        $result = @(Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles @('A.app', 'X-New.app'))
+
+        $result | Should -BeExactly @('A.app', 'X-New.app')
+    }
+
+    It 'returns no library files when none are included' {
+        $result = @(Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles @())
+
+        $result.Count | Should -Be 0
+    }
+
+    It 'propagates unreadable package errors instead of submitting an incomplete set of libraries' {
+        { Get-AppSourceLibraryAppFile -appFile 'Main.app' -libraryAppFiles @('A.app', 'Corrupt.app') } |
+            Should -Throw '*Unable to read app metadata from Corrupt.app*'
+    }
+}
