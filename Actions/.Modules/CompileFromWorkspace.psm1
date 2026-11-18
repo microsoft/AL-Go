@@ -914,7 +914,7 @@ function New-WorkspaceFromFolders {
 .PARAMETER MajorMinorVersion
     The major and minor version to set in the app.json files (e.g., "1.2"). If not provided, the existing major and minor version will be retained.
 .PARAMETER BuildNumber
-    The build number to set in the app.json files. If not provided, the existing build number will be retained.
+    The build number to set in the app.json files. When MajorMinorVersion is not provided, -1 or an omitted build number retains the existing build number. Zero is a valid build number.
 .PARAMETER RevisionNumber
     The revision number to set in the app.json files. If not provided, the existing revision number will be retained.
 #>
@@ -950,7 +950,7 @@ function Update-AppJsonProperties {
             } else {
                 # If MajorMinorVersion is not provided, retain the existing major and minor version from app.json and update build and revision numbers based on provided parameters (or retain existing if not provided)
                 $currentAppJsonVersion = [System.Version]$appJsonContent.Version
-                if ($BuildNumber -eq 0) {
+                if ($BuildNumber -eq -1 -or -not $PSBoundParameters.ContainsKey('BuildNumber')) {
        	            $version = [System.Version]::new($currentAppJsonVersion.Major, $currentAppJsonVersion.Minor, $currentAppJsonVersion.Build, $RevisionNumber)
                 } else {
                     $version = [System.Version]::new($currentAppJsonVersion.Major, $currentAppJsonVersion.Minor, $BuildNumber, $RevisionNumber)
