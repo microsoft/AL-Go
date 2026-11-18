@@ -488,6 +488,28 @@ Describe "CheckForUpdates Action: CheckForUpdates.HelperFunctions.ps1" {
         ($yaml.Get('jobs:/CreateRelease:/steps:/- name: Create release/with:/shell:').content -join '') | Should -Be 'shell: pwsh'
     }
 
+    It 'Updates the template URL description when the source shows <PreviousSource>' -TestCases @(
+        @{ PreviousSource = '{TEMPLATEURL}' }
+        @{ PreviousSource = 'https://github.com/acme/ancestor@main' }
+    ) {
+        param($PreviousSource)
+        . (Join-Path $scriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+        $template = Join-Path $PSScriptRoot '..\Templates\Per Tenant Extension\.github\workflows\UpdateGitHubGoSystemFiles.yaml'
+        $source = Join-Path $TestDrive 'UpdateGitHubGoSystemFiles.yaml'
+        (Get-Content -Path $template -Raw -Encoding UTF8).Replace('{TEMPLATEURL}', $PreviousSource) |
+            Set-Content -Path $source -Encoding UTF8
+        Mock ReadSettings { @{ 'runs-on' = 'windows-latest'; shell = 'powershell' } }
+        $templateUrl = 'https://github.com/acme/parent@release/v1'
+
+        $modified = GetWorkflowContentWithChangesFromSettings -srcFile $source -repoSettings @{} -depth 1 -templateUrl $templateUrl
+
+        $yaml = [Yaml]::new($modified.Split("`n"))
+        foreach ($trigger in @('workflow_dispatch', 'workflow_call')) {
+            $yaml.GetProperty("on:/${trigger}:/inputs:/templateUrl:/description:") |
+                Should -Be "Template Repository URL (current is $templateUrl)"
+        }
+    }
+
     It 'Applies draft skipping after generating dependency builds when enabled is <Enabled>' -TestCases @(
         @{ Enabled = $false }
         @{ Enabled = $true }

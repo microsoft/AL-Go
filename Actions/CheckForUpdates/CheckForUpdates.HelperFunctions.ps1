@@ -567,7 +567,8 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth
+        [int] $depth,
+        [string] $templateUrl
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -671,6 +672,15 @@ function GetWorkflowContentWithChangesFromSettings {
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {
         ModifyUpdateALGoSystemFiles -yaml $yaml -repoSettings $repoSettings
+        if ($templateUrl) {
+            # A custom template's checked-in workflow already has its own update source in place of {TEMPLATEURL}.
+            foreach ($trigger in @('workflow_dispatch', 'workflow_call')) {
+                $descriptionPath = "on:/${trigger}:/inputs:/templateUrl:/description:"
+                if ($yaml.GetProperty($descriptionPath) -cmatch '^Template Repository URL \(current is .*\)$') {
+                    $yaml.Replace($descriptionPath, "description: Template Repository URL (current is $templateUrl)")
+                }
+            }
+        }
     }
 
     # Apply workflow input defaults from settings

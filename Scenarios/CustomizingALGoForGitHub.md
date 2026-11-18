@@ -236,6 +236,7 @@ A custom template repository can itself be based on another custom template repo
 - **Files:** the direct template's checked-in files are the source, including files inherited from its ancestors. Its `customALGoFiles` settings govern the files it contributes.
 
 Existing single-template setups continue to work as before. Run **Update AL-Go System Files** in a template repository before its downstream repositories to propagate updated inherited files and settings.
+The workflow's `templateUrl` input description shows the direct template used for the last applied update, not that template's own upstream source.
 
 ## Using custom template files
 

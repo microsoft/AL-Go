@@ -157,8 +157,7 @@ foreach($fileToInclude in $filesToInclude) {
     switch ($type) {
         "workflow" {
             # For workflow files, we might need to modify the file based on the settings
-            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth
-            # Replace static placeholders
+            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth -templateUrl $templateUrl
             $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
         }
         "settings" {
