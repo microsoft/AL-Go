@@ -19,7 +19,7 @@ function MergeCustomObjectIntoOrderedDictionary {
         [PSCustomObject] $src,
         [string] $context = 'settings',
         [hashtable] $metadata = @{},
-        [bool] $trackOverwrittenSettings = $false
+        [switch] $trackOverwrittenSettings
     )
 
     OutputDebug "Applying $context"
