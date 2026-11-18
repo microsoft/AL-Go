@@ -23,7 +23,8 @@ Describe "ReadSettings Action Tests" {
             "GitHubRunnerJson" = "GitHubRunner in compressed Json format"
             "GitHubRunnerShell" = "Shell for GitHubRunner jobs"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs `
+            -inputEnvOverrides @{ githubToken = '${{ inputs.githubToken || env.GITHUB_TOKEN || github.token }}' }
     }
 
     It 'Emits skipped settings and a single balanced sources group' {

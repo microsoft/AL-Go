@@ -61,7 +61,8 @@ function YamlTest {
         $outputs = @{},
         [ValidateSet('powershell', 'pwsh')]
         [string] $DefaultShell = 'powershell',
-        [switch] $ContinueOnError
+        [switch] $ContinueOnError,
+        [hashtable] $inputEnvOverrides = @{}
     )
 
     $emptyActionScript = "function emptyAction {`n[CmdletBinding()]`nParam()`n}`n"
@@ -95,7 +96,11 @@ function YamlTest {
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 if ($name -ne 'GitHubSecrets') {
-                    $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                    $inputExpression = "`${{ inputs.$($name) }}"
+                    if ($inputEnvOverrides.ContainsKey($name)) {
+                        $inputExpression = $inputEnvOverrides[$name]
+                    }
+                    $envLines.AppendLine("        _$($name): $inputExpression")
                 }
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 if ($type -eq "System.String" -or $type -eq "System.Int32") {

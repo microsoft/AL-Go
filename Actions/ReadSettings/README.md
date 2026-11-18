@@ -17,6 +17,9 @@ none
 | buildMode | | Build mode. Only set when called from \_BuildALGoProject | Default |
 | workflowName | | Workflow name for which the settings are to be read | github.workflow |
 | get | | Specifies which properties to get from the settings file, default is all | |
+| githubToken | | Token used to read repository custom properties. Defaults to `GITHUB_TOKEN` or the workflow token. | |
+
+Repository custom properties are fetched only when a matching `ConditionalSettings` block uses the `customProperties` condition. The token must have read access to the target repository; API and permission errors fail the action instead of being treated as missing properties.
 
 ## OUTPUT
 

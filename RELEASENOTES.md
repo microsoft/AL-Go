@@ -1,3 +1,9 @@
+### Conditional settings by GitHub repository custom properties
+
+Conditional settings can now include a `customProperties` object to match organization-defined repository metadata. All listed properties must match; each property's allowed-value array uses OR matching, supports case-insensitive wildcard patterns, and matches any value of a multi-select property. Missing and `null` properties do not match, unknown condition keys fail settings resolution, and API/authentication failures stop settings resolution. The `ReadSettings` action uses the workflow token and fetches properties only when needed.
+
+Update all repositories that consume central conditional settings before enabling this condition. Older AL-Go versions ignore unknown condition keys and may apply a block without enforcing its property restriction. Property changes affect runtime settings on a later run; generated workflow settings such as `workflowSchedule` still require **Update AL-Go System Files**.
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).

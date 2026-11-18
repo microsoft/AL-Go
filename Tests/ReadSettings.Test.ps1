@@ -1693,4 +1693,182 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Should -Invoke OutputNotice -Times 0 -Exactly
         }
     }
+
+    Describe 'Conditional settings custom properties' {
+        BeforeEach {
+            $script:CustomPropertiesCache.Clear()
+        }
+
+        It 'Matches multiple properties, alternatives, wildcards, multi-select values, booleans, and existing conditions' {
+            $orgSettings = @{
+                ConditionalSettings = @(
+                    @{
+                        customProperties = @{
+                            profile = @('strict', 'regulated*')
+                            area = @('finance')
+                            capabilities = @('release-*')
+                            enabled = @('true')
+                        }
+                        branches = @('main')
+                        settings = @{
+                            country = 'de'
+                            additionalCountries = @('de', 'at')
+                        }
+                    }
+                    @{
+                        customProperties = @{ profile = @('strict') }
+                        settings = @{
+                            overwriteSettings = @('additionalCountries')
+                            additionalCountries = @('ch')
+                        }
+                    }
+                )
+            } | ConvertTo-Json -Depth 99
+            $customProperties = @{
+                profile = 'Strict'
+                area = 'Finance'
+                capabilities = @('build', 'release-2026')
+                enabled = $true
+            }
+
+            $settings = ReadSettings -baseFolder $TestDrive -project '' -repoName 'owner/repository' `
+                -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $orgSettings `
+                -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -customProperties $customProperties
+
+            $settings.country | Should -Be 'de'
+            $settings.additionalCountries | Should -Be @('ch')
+        }
+
+        It 'Does not match missing or null values and does not request properties for a different branch' {
+            Mock GetHeaders { @{ Authorization = 'token test' } }
+            $orgSettings = @{
+                ConditionalSettings = @(
+                    @{
+                        customProperties = @{ missing = @('value') }
+                        settings = @{ country = 'de' }
+                    }
+                    @{
+                        customProperties = @{ unset = @('value') }
+                        settings = @{ companyName = 'ShouldNotApply' }
+                    }
+                    @{
+                        customProperties = @{ profile = @('strict') }
+                        branches = @('release/*')
+                        settings = @{ country = 'ch' }
+                    }
+                )
+            } | ConvertTo-Json -Depth 99
+
+            $settings = ReadSettings -baseFolder $TestDrive -project '' -repoName 'owner/repository' `
+                -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $orgSettings `
+                -repoSettingsVariableValue '' -environmentSettingsVariableValue '' `
+                -customProperties @{ unset = $null; profile = 'strict' }
+
+            $settings.country | Should -Not -Be 'de'
+            $settings.country | Should -Not -Be 'ch'
+            $settings.companyName | Should -Not -Be 'ShouldNotApply'
+            Should -Invoke GetHeaders -Times 0 -Exactly
+        }
+
+        It 'Fetches once per API host and repository and retains the owner-qualified repository' {
+            Mock GetHeaders { @{ Authorization = 'token test' } }
+            Mock InvokeWebRequest {
+                [PSCustomObject]@{ Content = '[{"property_name":"profile","value":"strict"}]' }
+            }
+            $orgSettings = @{
+                ConditionalSettings = @(
+                    @{ customProperties = @{ profile = @('strict') }; settings = @{ country = 'de' } }
+                )
+            } | ConvertTo-Json -Depth 99
+            $parameters = @{
+                baseFolder = $TestDrive
+                project = ''
+                repoName = 'Owner/Repository'
+                workflowName = ''
+                branchName = 'main'
+                userName = ''
+                orgSettingsVariableValue = $orgSettings
+                repoSettingsVariableValue = ''
+                environmentSettingsVariableValue = ''
+                githubToken = 'test-token'
+                githubApiUrl = 'https://api.example.test'
+            }
+
+            (ReadSettings @parameters).country | Should -Be 'de'
+            (ReadSettings @parameters).country | Should -Be 'de'
+
+            Should -Invoke GetHeaders -Times 1 -Exactly -ParameterFilter {
+                $repository -eq 'Owner/Repository' -and $api_url -eq 'https://api.example.test' -and
+                $permissions.metadata -eq 'read'
+            }
+            Should -Invoke InvokeWebRequest -Times 1 -Exactly -ParameterFilter {
+                $uri -eq 'https://api.example.test/repos/Owner/Repository/properties/values'
+            }
+        }
+
+        It 'Keeps cached values isolated by API host and repository' {
+            Mock GetHeaders { @{ Authorization = 'token test' } }
+            Mock InvokeWebRequest {
+                [PSCustomObject]@{ Content = '[{"property_name":"profile","value":"strict"}]' }
+            }
+
+            GetRepositoryCustomProperties -apiUrl 'https://api.one.test' -repository 'owner/repo' -token 'token' | Out-Null
+            GetRepositoryCustomProperties -apiUrl 'https://api.two.test' -repository 'owner/repo' -token 'token' | Out-Null
+            GetRepositoryCustomProperties -apiUrl 'https://api.one.test' -repository 'owner/other' -token 'token' | Out-Null
+
+            Should -Invoke InvokeWebRequest -Times 3 -Exactly
+        }
+
+        It 'Reports API failures instead of treating them as missing properties' {
+            Mock GetHeaders { @{ Authorization = 'token test' } }
+            Mock InvokeWebRequest { throw '403 Forbidden' }
+            $orgSettings = @{
+                ConditionalSettings = @(
+                    @{ customProperties = @{ profile = @('strict') }; settings = @{ country = 'de' } }
+                )
+            } | ConvertTo-Json -Depth 99
+
+            {
+                ReadSettings -baseFolder $TestDrive -project '' -repoName 'owner/repository' `
+                    -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $orgSettings `
+                    -repoSettingsVariableValue '' -environmentSettingsVariableValue '' `
+                    -githubToken 'test-token' -githubApiUrl 'https://api.example.test'
+            } | Should -Throw '*Failed to read GitHub custom properties*403 Forbidden*'
+        }
+
+        It 'Rejects unsupported condition names and malformed custom property allowlists' {
+            $unknownCondition = @{
+                ConditionalSettings = @(
+                    @{ customProperty = @{ profile = @('strict') }; settings = @{ country = 'de' } }
+                )
+            } | ConvertTo-Json -Depth 99
+            {
+                ReadSettings -baseFolder $TestDrive -project '' -repoName 'owner/repository' `
+                    -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $unknownCondition `
+                    -repoSettingsVariableValue '' -environmentSettingsVariableValue ''
+            } | Should -Throw '*Unsupported ConditionalSettings condition*customProperty*'
+
+            $emptyAllowlist = @{
+                ConditionalSettings = @(
+                    @{ customProperties = @{ profile = @() }; settings = @{ country = 'de' } }
+                )
+            } | ConvertTo-Json -Depth 99
+            {
+                ReadSettings -baseFolder $TestDrive -project '' -repoName 'owner/repository' `
+                    -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $emptyAllowlist `
+                    -repoSettingsVariableValue '' -environmentSettingsVariableValue '' -customProperties @{}
+            } | Should -Throw '*must be a non-empty array*'
+
+            $invalidUnmatchedCondition = @{
+                ConditionalSettings = @(
+                    @{ branches = @('release/*'); customProperties = @{ profile = 'strict' }; settings = @{ country = 'de' } }
+                )
+            } | ConvertTo-Json -Depth 99
+            {
+                ReadSettings -baseFolder $TestDrive -project '' -repoName 'owner/repository' `
+                    -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $invalidUnmatchedCondition `
+                    -repoSettingsVariableValue '' -environmentSettingsVariableValue ''
+            } | Should -Throw '*must be a non-empty array*'
+        }
+    }
 }
