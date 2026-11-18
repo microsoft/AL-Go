@@ -1,6 +1,12 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath ".\AL-Go-Helper.ps1" -Resolve)
 Import-Module (Join-Path $PSScriptRoot '.\Github-Helper.psm1' -Resolve)
 
+# Keep the token in this module rather than exposing it to action child processes.
+$script:telemetryToken = $ENV:_ALGO_TELEMETRY_TOKEN
+if ($ENV:_ALGO_TELEMETRY_TOKEN) {
+    Remove-Item Env:\_ALGO_TELEMETRY_TOKEN
+}
+
 #region Loading telemetry helper
 function DownloadNugetPackage($PackageName, $PackageVersion) {
     $nugetPackagePath = Join-Path "$ENV:RUNNER_TEMP" "/.nuget/packages/$PackageName/$PackageVersion/"
@@ -130,7 +136,7 @@ function AddTelemetryEvent()
         Add-TelemetryProperty -Hashtable $Data -Key 'GitHubHostingType' -Value (Get-GitHubHostingType)
         Add-TelemetryProperty -Hashtable $Data -Key 'RepositoryIsFork' -Value (Get-RepositoryIsFork)
 
-        $telemetryToken = $ENV:_ALGO_TELEMETRY_TOKEN
+        $telemetryToken = $script:telemetryToken
         if (-not $telemetryToken) {
             $telemetryToken = $ENV:GITHUB_TOKEN
         }

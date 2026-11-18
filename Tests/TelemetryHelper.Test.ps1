@@ -6,6 +6,27 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 Import-Module (Join-Path $PSScriptRoot '../Actions/TelemetryHelper.psm1') -Force -DisableNameChecking
 
 Describe 'Action telemetry authentication' {
+    It 'Keeps the telemetry token out of the action environment after module import' {
+        $previousToken = $env:_ALGO_TELEMETRY_TOKEN
+        $previousModulePath = $env:_ALGO_TEST_MODULE
+        try {
+            $env:_ALGO_TELEMETRY_TOKEN = 'telemetry-token'
+            $env:_ALGO_TEST_MODULE = (Join-Path $PSScriptRoot '../Actions/TelemetryHelper.psm1' -Resolve)
+            $powerShellPath = (Get-Process -Id $PID).Path
+            & $powerShellPath -NoLogo -NoProfile -NonInteractive -Command @'
+$ErrorActionPreference = 'Stop'
+Import-Module $env:_ALGO_TEST_MODULE -Force -DisableNameChecking
+if ($env:_ALGO_TELEMETRY_TOKEN) { exit 1 }
+& (Get-Module TelemetryHelper) { if ($script:telemetryToken -ne 'telemetry-token') { exit 2 } }
+'@
+            $LASTEXITCODE | Should -Be 0
+        }
+        finally {
+            $env:_ALGO_TELEMETRY_TOKEN = $previousToken
+            $env:_ALGO_TEST_MODULE = $previousModulePath
+        }
+    }
+
     It 'Provides a scoped token to every telemetry wrapper step' {
         $actionFiles = Get-ChildItem -Path (Join-Path $PSScriptRoot '../Actions') -Filter 'action.yaml' -Recurse
         $wrapperSteps = 0
@@ -264,10 +285,10 @@ Describe 'Repository environment telemetry' {
         }
 
         It 'Uses the action telemetry token when resolving conditional settings' {
-            $savedTelemetryToken = $env:_ALGO_TELEMETRY_TOKEN
+            $savedTelemetryToken = $script:telemetryToken
             $savedGitHubToken = $env:GITHUB_TOKEN
             try {
-                $env:_ALGO_TELEMETRY_TOKEN = 'telemetry-token'
+                $script:telemetryToken = 'telemetry-token'
                 $env:GITHUB_TOKEN = 'workflow-token'
                 Mock ReadSettings { return @{ microsoftTelemetryConnectionString = ''; partnerTelemetryConnectionString = '' } }
                 Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'BcContainerHelper' }
@@ -278,16 +299,16 @@ Describe 'Repository environment telemetry' {
                 Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Failed to log telemetry event:*' }
             }
             finally {
-                $env:_ALGO_TELEMETRY_TOKEN = $savedTelemetryToken
+                $script:telemetryToken = $savedTelemetryToken
                 $env:GITHUB_TOKEN = $savedGitHubToken
             }
         }
 
         It 'Falls back to the existing GitHub token for telemetry settings' {
-            $savedTelemetryToken = $env:_ALGO_TELEMETRY_TOKEN
+            $savedTelemetryToken = $script:telemetryToken
             $savedGitHubToken = $env:GITHUB_TOKEN
             try {
-                $env:_ALGO_TELEMETRY_TOKEN = ''
+                $script:telemetryToken = ''
                 $env:GITHUB_TOKEN = 'workflow-token'
                 Mock ReadSettings { return @{ microsoftTelemetryConnectionString = ''; partnerTelemetryConnectionString = '' } }
                 Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'BcContainerHelper' }
@@ -297,18 +318,19 @@ Describe 'Repository environment telemetry' {
                 Assert-MockCalled ReadSettings -Times 1 -Exactly -ParameterFilter { $githubToken -eq 'workflow-token' }
             }
             finally {
-                $env:_ALGO_TELEMETRY_TOKEN = $savedTelemetryToken
+                $script:telemetryToken = $savedTelemetryToken
                 $env:GITHUB_TOKEN = $savedGitHubToken
             }
         }
 
         It 'Resolves telemetry settings through an authenticated custom-property request' {
+            $savedTelemetryToken = $script:telemetryToken
             $savedEnvironment = @{}
-            foreach ($name in @('_ALGO_TELEMETRY_TOKEN', 'GITHUB_TOKEN', 'GITHUB_API_URL', 'GITHUB_REPOSITORY', 'GITHUB_WORKSPACE', 'ALGoOrgSettings', 'ALGoRepoSettings', 'ALGoEnvSettings')) {
+            foreach ($name in @('GITHUB_TOKEN', 'GITHUB_API_URL', 'GITHUB_REPOSITORY', 'GITHUB_WORKSPACE', 'ALGoOrgSettings', 'ALGoRepoSettings', 'ALGoEnvSettings')) {
                 $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
             }
             try {
-                $env:_ALGO_TELEMETRY_TOKEN = 'telemetry-token'
+                $script:telemetryToken = 'telemetry-token'
                 $env:GITHUB_TOKEN = ''
                 $env:GITHUB_API_URL = 'https://api.example.test'
                 $env:GITHUB_REPOSITORY = 'owner/telemetry-test'
@@ -344,6 +366,7 @@ Describe 'Repository environment telemetry' {
                 Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Failed to log telemetry event:*' }
             }
             finally {
+                $script:telemetryToken = $savedTelemetryToken
                 foreach ($name in $savedEnvironment.Keys) {
                     [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name])
                 }
