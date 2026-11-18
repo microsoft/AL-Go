@@ -19,7 +19,7 @@ Describe "CheckForUpdates Action Tests" {
     It 'Test action.yaml matches script' {
         $outputs = [ordered]@{
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs -WithSettingsToken
     }
 
     It 'Test that Update AL-Go System Files uses fixes runs-on' {

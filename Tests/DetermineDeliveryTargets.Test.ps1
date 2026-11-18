@@ -33,7 +33,7 @@ Describe "DetermineDeliveryTargets Action Test" {
             "DeliveryTargetsJson" = "An array of Delivery Targets in compressed JSON format"
             "ContextSecrets" = "A comma-separated list of Context Secret names used"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs -WithSettingsToken
     }
 
     # PTE with NuGetContext secret defined, should yield NuGet

@@ -2,6 +2,8 @@
 
 Conditional settings can now include a `customProperties` object to match organization-defined repository metadata. All listed properties must match; each property's allowed-value array uses OR matching, supports case-insensitive wildcard patterns, and matches any value of a multi-select property. Missing and `null` properties do not match, unknown condition keys fail settings resolution, and API/authentication failures stop settings resolution. The `ReadSettings` action uses the workflow token and fetches properties only when needed.
 
+Actions that re-read settings during project discovery, dependency resolution, builds, delivery, and system-file updates also expose the workflow token to nested settings calls. This prevents unauthenticated custom-property requests (404 for private/internal repositories); an explicitly supplied `GITHUB_TOKEN` environment variable takes precedence.
+
 Update all repositories that consume central conditional settings before enabling this condition. Older AL-Go versions ignore unknown condition keys and may apply a block without enforcing its property restriction. Property changes affect runtime settings on a later run; generated workflow settings such as `workflowSchedule` still require **Update AL-Go System Files**.
 
 ### Optional draft PR build skipping

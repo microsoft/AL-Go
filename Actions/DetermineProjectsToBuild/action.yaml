@@ -39,6 +39,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineProjectsToBuild
       env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _maxBuildDepth: ${{ inputs.maxBuildDepth }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DetermineProjectsToBuild" -Action {

@@ -52,6 +52,8 @@ Require the action's run step to be non-blocking.
 
 .PARAMETER DefaultShell
 Expected default shell for the action.
+.PARAMETER WithSettingsToken
+Require the workflow-token fallback for nested settings calls.
 #>
 function YamlTest {
     Param(
@@ -62,6 +64,7 @@ function YamlTest {
         [ValidateSet('powershell', 'pwsh')]
         [string] $DefaultShell = 'powershell',
         [switch] $ContinueOnError,
+        [switch] $WithSettingsToken,
         [hashtable] $inputEnvOverrides = @{}
     )
 
@@ -84,6 +87,9 @@ function YamlTest {
     $parameterString = ""
     $warningLines = @()
     $envLines = [System.Text.StringBuilder]::new()
+    if ($WithSettingsToken) {
+        $envLines.AppendLine('        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}') | Out-Null
+    }
     if ($cmd.Parameters.Count -gt 0) {
         $cmd.Parameters.GetEnumerator() | ForEach-Object {
             $name = $_.Key

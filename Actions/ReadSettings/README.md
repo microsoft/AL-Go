@@ -21,6 +21,8 @@ none
 
 Repository custom properties are fetched only when a matching `ConditionalSettings` block uses the `customProperties` condition. The token must have read access to the target repository; API and permission errors fail the action instead of being treated as missing properties.
 
+Actions that re-read settings internally (for example, `DetermineProjectsToBuild`) provide the workflow token through their step's `GITHUB_TOKEN` environment variable. An existing `GITHUB_TOKEN` environment variable takes precedence. The token is not persisted to later steps.
+
 ## OUTPUT
 
 ### ENV variables

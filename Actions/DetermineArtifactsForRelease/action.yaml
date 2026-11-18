@@ -31,6 +31,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineArtifactsForRelease
       env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _buildVersion: ${{ inputs.buildVersion }}
         _GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         _TOKENFORPUSH: ${{ inputs.TOKENFORPUSH }}
