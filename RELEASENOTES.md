@@ -1,3 +1,9 @@
+### Optional builds for PR validation
+
+The new `optionalPatternsForPrValidation` setting (default `[]`) lets PTE and AppSource repositories make selected build-matrix failures non-blocking for the aggregate **Pull Request Status Check**, including merge-group runs. Case-insensitive PowerShell wildcard patterns match full GitHub job names. Eligible names must also match `Build * (*) / *`; custom jobs following this convention also qualify. Optional failures emit warnings; jobs outside this convention remain required. Individual optional jobs and the workflow run can still be red, so rulesets should require the aggregate check. Update AL-Go system files for the new input wiring. See [optionalPatternsForPrValidation](Scenarios/settings.md#optionalPatternsForPrValidation).
+
+The PullRequestStatusCheck action exposes `failedOptionalJobs`, a JSON array of failed optional build job names (`[]` when none qualify), for consumption by later steps or via job outputs. The output is also written when required job failures cause the check to fail.
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).

@@ -322,6 +322,7 @@ function GetDefaultSettings
         }
         "pullRequestTrigger"                            = "pull_request"
         "skipDraftPullRequests"                         = $false
+        "optionalPatternsForPrValidation"               = @()
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
             "DurationError"                             = 25
