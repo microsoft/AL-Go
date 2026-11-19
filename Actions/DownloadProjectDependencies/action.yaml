@@ -19,6 +19,10 @@ inputs:
     description: The ID of the workflow run that was used as baseline for the current build
     required: false
     default: '0'
+  projectsJson:
+    description: A JSON-formatted array of the projects built in the current workflow run. If a dependency project is in this list, its artifacts from the current workflow run are required and the action fails if they cannot be found
+    required: false
+    default: '[]'
 outputs:
   DownloadedApps:
     description: A path to a JSON-formatted list of apps to install
@@ -96,9 +100,10 @@ runs:
         _destinationPath: ${{ github.workspace }}/.dependencies
         _gitHubToken: ${{ github.token }}
         _baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+        _projectsJson: ${{ inputs.projectsJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "DownloadProjectDependencies" -Action {
-          ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectDependenciesJson $ENV:_projectDependenciesJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
+          ${{ github.action_path }}/DownloadProjectDependencies.Action.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -projectDependenciesJson $ENV:_projectDependenciesJson -baselineWorkflowRunId $ENV:_baselineWorkflowRunId -projectsJson $ENV:_projectsJson -baseFolder $ENV:_baseFolder -destinationPath $ENV:_destinationPath -token $ENV:_gitHubToken
         }
 branding:
   icon: terminal

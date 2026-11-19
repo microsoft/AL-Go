@@ -181,6 +181,10 @@ function GetDependencies {
                         # Check whether Apps/TestApps exists before determining that project isn't built
                         $altDownloadName = Join-Path $saveToPath "$project-$branchName-$altMask-*"
                         if (!(Test-Path $altDownloadName -PathType Container)) {
+                            if (($dependency.PSObject.Properties.Name -contains 'builtInThisRun' -or ($dependency -is [hashtable] -and $dependency.ContainsKey('builtInThisRun'))) -and $dependency.builtInThisRun) {
+                                # The project was built in this workflow run, so falling back to baseline artifacts would use stale apps
+                                throw "Project '$project' was built in this workflow run, but its $currentMask artifacts could not be found. The artifacts may have expired (see shortLivedArtifactsRetentionDays). Re-run all jobs or push a new commit to rebuild the dependencies."
+                            }
                             Write-Host "$project not built, downloading from artifacts"
                             $missingProjects += @($project)
                         }

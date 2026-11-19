@@ -5,6 +5,7 @@
     [string] $buildMode = 'Default',
     [string] $projectDependenciesJson,
     [string] $baselineWorkflowRunID = '0',
+    [string] $projectsJson = '[]',
     [string] $destinationPath,
     [string] $token
 )
@@ -38,6 +39,7 @@ function DownloadDependenciesFromCurrentBuild {
         $projectDependencies,
         $buildMode,
         $baselineWorkflowRunID,
+        $projectsBuiltInThisRun = @(),
         $destinationPath,
         $token
     )
@@ -64,6 +66,16 @@ function DownloadDependenciesFromCurrentBuild {
             $dependencyBuildMode = 'Default';
         }
 
+        # The dependency artifacts must exist in this run if the dependency project is built (for this build mode) in this run
+        $dependencyBuildModes = @($dependencyProjectSettings.buildModes)
+        if ($dependencyBuildModes.Count -eq 0) {
+            $dependencyBuildModes = @('Default')
+        }
+        $builtInThisRun = ($projectsBuiltInThisRun -contains $dependencyProject) -and ($dependencyBuildModes -contains $dependencyBuildMode)
+        if ($builtInThisRun) {
+            Write-Host "Project '$dependencyProject' ($dependencyBuildMode) is built in this workflow run, artifacts from this run are required"
+        }
+
         $headBranch = $ENV:GITHUB_HEAD_REF
         # $ENV:GITHUB_HEAD_REF is specified only for pull requests, so if it is not specified, use GITHUB_REF_NAME
         if (!$headBranch) {
@@ -85,6 +97,7 @@ function DownloadDependenciesFromCurrentBuild {
             "branch"          = $headBranch
             "baseBranch"      = $baseBranch
             "baselineWorkflowID" = $baselineWorkflowRunID
+            "builtInThisRun"  = $builtInThisRun
             "authTokenSecret" = $token
         })
     }
@@ -122,7 +135,12 @@ $downloadedDependencies = @()
 
 Write-Host "::group::Downloading project dependencies from current build"
 $projectDependencies = $projectDependenciesJson | ConvertFrom-Json | ConvertTo-HashTable
-$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectDependencies $projectDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -destinationPath $destinationPath -token $token
+$projectsBuiltInThisRun = @()
+if ($projectsJson) {
+    $parsedProjects = $projectsJson | ConvertFrom-Json
+    $projectsBuiltInThisRun = @($parsedProjects | ForEach-Object { $_ })
+}
+$downloadedDependencies += DownloadDependenciesFromCurrentBuild -baseFolder $baseFolder -project $project -projectDependencies $projectDependencies -buildMode $buildMode -baselineWorkflowRunID $baselineWorkflowRunID -projectsBuiltInThisRun $projectsBuiltInThisRun -destinationPath $destinationPath -token $token
 Write-Host "::endgroup::"
 
 Write-Host "::group::Downloading project dependencies from probing paths"

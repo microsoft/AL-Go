@@ -199,6 +199,7 @@ jobs:
       buildMode: ${{ matrix.buildMode }}
       skippedProjectsJson: ${{ needs.Initialization.outputs.skippedProjects }}
       projectDependenciesJson: ${{ needs.Initialization.outputs.projectDependenciesJson }}
+      projectsJson: ${{ needs.Initialization.outputs.projects }}
       baselineWorkflowRunId: ${{ needs.Initialization.outputs.baselineWorkflowRunId }}
       baselineWorkflowSHA: ${{ needs.Initialization.outputs.baselineWorkflowSHA }}
       secrets: 'licenseFileUrl,codeSignCertificateUrl,*codeSignCertificatePassword,keyVaultCertificateUrl,*keyVaultCertificatePassword,keyVaultClientId,gitHubPackagesContext,applicationInsightsConnectionString'

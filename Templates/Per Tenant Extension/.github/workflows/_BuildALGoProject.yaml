@@ -51,6 +51,11 @@ on:
         required: false
         default: ''
         type: string
+      projectsJson:
+        description: An array of the AL-Go projects built in the current workflow run in compressed JSON format
+        required: false
+        default: '[]'
+        type: string
       secrets:
         description: A comma-separated string with the names of the secrets, required for the workflow.
         required: false
@@ -174,6 +179,7 @@ jobs:
           buildMode: ${{ inputs.buildMode }}
           projectDependenciesJson: ${{ inputs.projectDependenciesJson }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
+          projectsJson: ${{ inputs.artifactsRetentionDays >= 0 && inputs.projectsJson || '[]' }}
 
       - name: Download Previous Release
         id: DownloadPreviousRelease
