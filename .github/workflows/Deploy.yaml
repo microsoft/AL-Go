@@ -125,7 +125,7 @@ jobs:
     needs: [ CheckEndToEnd, Inputs ]
     environment: Production
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Harden Runner
         if: github.repository_owner == 'microsoft'
@@ -202,8 +202,21 @@ jobs:
             exit 1
           }
 
+  CreateRelease:
+    runs-on: [ ubuntu-latest ]
+    needs: [ Deploy, Inputs ]
+    if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Calculate Release Notes
-        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
         run: |
           $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-StrictMode -Version 2.0
           $releaseNotesFile = Join-Path $env:GITHUB_WORKSPACE "RELEASENOTES.md"
@@ -213,7 +226,6 @@ jobs:
           Add-Content -encoding UTF8 -Path $env:GITHUB_ENV -Value "ReleaseNotes=$([Uri]::EscapeDataString($releaseNotes))"
 
       - name: Create release
-        if: github.repository_owner == 'microsoft' && needs.Inputs.outputs.createRelease == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: createrelease
         env:

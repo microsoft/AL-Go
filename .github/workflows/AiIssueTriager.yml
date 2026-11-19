@@ -2,6 +2,10 @@ name: AI Issue Triager
 on:
   issues:
     types: [labeled]
+
+permissions:
+  contents: read
+
 jobs:
   ai-assessment:
     if: github.event.label.name == 'AI Review'
