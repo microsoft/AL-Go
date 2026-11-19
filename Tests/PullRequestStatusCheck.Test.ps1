@@ -110,7 +110,7 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Patterns = '["no match","*NextMinor*"]' }
         ) {
             param($Patterns)
-            & $scriptPath -optionalPatternForPrValidationJson $Patterns
+            & $scriptPath -optionalPatternsForPrValidationJson $Patterns
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -eq "Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
@@ -122,14 +122,14 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Patterns = '["no match"]' }
         ) {
             param($Patterns)
-            { & $scriptPath -optionalPatternForPrValidationJson $Patterns } |
+            { & $scriptPath -optionalPatternsForPrValidationJson $Patterns } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $optionalJobName"
             (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() | Should -Be 'failedOptionalJobs=[]'
         }
 
         It 'Warns about optional failures and only reports required failures across pages' {
             $jobsJson = '[{"jobs":[{"name":"Build Alpha (NextMinor) / Alpha (NextMinor)","conclusion":"failure"}]},{"jobs":[{"name":"Build Beta (Default) / Beta (Default)","conclusion":"failure"}]}]'
-            { & $scriptPath -optionalPatternForPrValidationJson '["*NextMinor*"]' } |
+            { & $scriptPath -optionalPatternsForPrValidationJson '["*NextMinor*"]' } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $requiredJobName"
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
@@ -149,7 +149,7 @@ Describe "PullRequestStatusCheck Action Tests" {
                     @{ name = $optionalJobName; conclusion = 'cancelled' }
                 ) }
             ) -Depth 10
-            & $scriptPath -optionalPatternForPrValidationJson '["*"]'
+            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
             $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName, $escapedJobName) -Compress)
         }
@@ -165,7 +165,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
-            { & $scriptPath -optionalPatternForPrValidationJson '["*"]' } |
+            { & $scriptPath -optionalPatternsForPrValidationJson '["*"]' } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $Name"
         }
 
@@ -174,7 +174,7 @@ Describe "PullRequestStatusCheck Action Tests" {
                 @{ name = $optionalJobName; conclusion = 'failure' }
                 @{ name = 'Initialization'; conclusion = 'failure' }
             ) } -Depth 10
-            { & $scriptPath -optionalPatternForPrValidationJson '["*"]' } |
+            { & $scriptPath -optionalPatternsForPrValidationJson '["*"]' } |
                 Should -Throw -ExpectedMessage 'PR Build failed. Failing jobs: Initialization'
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
@@ -187,7 +187,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
-            & $scriptPath -optionalPatternForPrValidationJson '["*"]'
+            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
 
@@ -200,7 +200,7 @@ Describe "PullRequestStatusCheck Action Tests" {
                 @{ name = $optionalJobName; conclusion = 'failure' }
                 @{ name = $optionalJobName; conclusion = $Conclusion }
             ) } -Depth 10
-            & $scriptPath -optionalPatternForPrValidationJson '["*"]'
+            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
             Assert-MockCalled OutputWarning -Exactly $Warnings -ParameterFilter { $message -eq "Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
         }
@@ -213,7 +213,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Conclusion)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = 'Initialization'; conclusion = $Conclusion }) } -Depth 10
-            & $scriptPath -optionalPatternForPrValidationJson '["*"]'
+            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
         }
 
@@ -227,7 +227,7 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Patterns = '[' }
         ) {
             param($Patterns)
-            { & $scriptPath -optionalPatternForPrValidationJson $Patterns } | Should -Throw
+            { & $scriptPath -optionalPatternsForPrValidationJson $Patterns } | Should -Throw
             Assert-MockCalled gh -Exactly 0
         }
     }

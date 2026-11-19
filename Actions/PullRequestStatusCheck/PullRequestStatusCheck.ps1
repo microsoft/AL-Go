@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(HelpMessage = "Optional build job wildcard patterns in JSON array format")]
-    [string] $optionalPatternForPrValidationJson = '[]'
+    [string] $optionalPatternsForPrValidationJson = '[]'
 )
 
 . (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
@@ -80,16 +80,16 @@ function PullRequestStatusCheck() {
     }
 }
 
-if ($optionalPatternForPrValidationJson -notmatch '^\s*\[') {
-    throw "optionalPatternForPrValidationJson must be a JSON array."
+if ($optionalPatternsForPrValidationJson -notmatch '^\s*\[') {
+    throw "optionalPatternsForPrValidationJson must be a JSON array."
 }
 # Validate the standalone input before embedding it; object properties preserve arrays on PS5 and PS7.
-$null = $optionalPatternForPrValidationJson | ConvertFrom-Json
-$inputsJson = "{`"optionalPatterns`":$optionalPatternForPrValidationJson}"
+$null = $optionalPatternsForPrValidationJson | ConvertFrom-Json
+$inputsJson = "{`"optionalPatterns`":$optionalPatternsForPrValidationJson}"
 $parsedInputs = $inputsJson | ConvertFrom-Json
 $optionalPatterns = @($parsedInputs.optionalPatterns)
 if (@($optionalPatterns | Where-Object { $_ -isnot [string] }).Count -gt 0) {
-    throw "optionalPatternForPrValidationJson must contain only strings."
+    throw "optionalPatternsForPrValidationJson must contain only strings."
 }
 $parsedInputs = $parsedInputs | ConvertTo-HashTable -recurse
 $optionalPatterns = @($parsedInputs.optionalPatterns)

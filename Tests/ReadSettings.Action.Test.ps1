@@ -48,18 +48,18 @@ Describe "ReadSettings Action Tests" {
             $env:GITHUB_EVENT_NAME = 'pull_request'
             $env:ALGoOrgSettings = ''
             $env:ALGoEnvSettings = ''
-            $env:ALGoRepoSettings = "{`"optionalPatternForPrValidation`":$Patterns}"
+            $env:ALGoRepoSettings = "{`"optionalPatternsForPrValidation`":$Patterns}"
             Mock Write-Host {}
             & $scriptPath -workflowName '' -project ''
             $settingsLine = Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 |
                 Where-Object { $_ -like 'Settings=*' }
             $exportedSettings = $settingsLine.Substring('Settings='.Length) | ConvertFrom-Json | ConvertTo-HashTable -recurse
-            (ConvertTo-Json -InputObject @($exportedSettings.optionalPatternForPrValidation) -Compress) | Should -Be $Patterns
-            @(Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Where-Object { $_ -like 'optionalPatternForPrValidationJson=*' }).Count | Should -Be 0
+            (ConvertTo-Json -InputObject @($exportedSettings.optionalPatternsForPrValidation) -Compress) | Should -Be $Patterns
+            @(Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Where-Object { $_ -like 'optionalPatternsForPrValidationJson=*' }).Count | Should -Be 0
             Set-Content -Path $env:GITHUB_ENV -Value '' -Encoding UTF8
-            & $scriptPath -workflowName '' -project '' -get 'country,optionalPatternForPrValidation'
+            & $scriptPath -workflowName '' -project '' -get 'country,optionalPatternsForPrValidation'
             $patternsArray = ($Patterns | ConvertFrom-Json)
-            Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Should -Contain "optionalPatternForPrValidation=$patternsArray"
+            Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Should -Contain "optionalPatternsForPrValidation=$patternsArray"
             Get-Content -Path $env:GITHUB_ENV -Encoding UTF8 | Should -Contain 'country=us'
             @(Get-Content -Path $env:GITHUB_OUTPUT -Encoding UTF8 | Where-Object { $_ }).Count | Should -Be 4
         }

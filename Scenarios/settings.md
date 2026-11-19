@@ -167,13 +167,13 @@ The following settings are only allowed in workflow specific settings files or i
 
 | Name | Description | Default value |
 | :-- | :-- | :-- |
-| <a id="optionalPatternForPrValidation"></a>optionalPatternForPrValidation | Optional array of strings containing case-insensitive PowerShell wildcard patterns (`*`, `?`, and character sets) matching full GitHub build-matrix job names. Matching failed builds emit warnings instead of blocking **Pull Request Status Check**. Non-build jobs always remain required. Honored by the **Pull Request Build** workflows, including merge-group runs; not by CI/CD or the Current, NextMinor, and NextMajor workflows. Read in the StatusCheck job from organization, repository, workflow, and root project settings, without aggregating settings from individual matrix projects. | `[]` |
+| <a id="optionalPatternsForPrValidation"></a>optionalPatternsForPrValidation | Optional array of strings containing case-insensitive PowerShell wildcard patterns (`*`, `?`, and character sets) matching full GitHub build-matrix job names. Matching failed builds emit warnings instead of blocking **Pull Request Status Check**. Non-build jobs always remain required. Honored by the **Pull Request Build** workflows, including merge-group runs; not by CI/CD or the Current, NextMinor, and NextMajor workflows. Read in the StatusCheck job from organization, repository, workflow, and root project settings, without aggregating settings from individual matrix projects. | `[]` |
 
 For example, when a build mode is named `NextMinor`, configure:
 
 ```json
 {
-    "optionalPatternForPrValidation": ["Build * (NextMinor) / *"]
+    "optionalPatternsForPrValidation": ["Build * (NextMinor) / *"]
 }
 ```
 

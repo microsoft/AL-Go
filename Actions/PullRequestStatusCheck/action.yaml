@@ -5,7 +5,7 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
-  optionalPatternForPrValidationJson:
+  optionalPatternsForPrValidationJson:
     description: Optional build job wildcard patterns in JSON array format
     required: false
     default: '[]'
@@ -20,10 +20,10 @@ runs:
       shell: ${{ inputs.shell }}
       id: pullrequeststatuscheck
       env:
-        _optionalPatternForPrValidationJson: ${{ inputs.optionalPatternForPrValidationJson }}
+        _optionalPatternsForPrValidationJson: ${{ inputs.optionalPatternsForPrValidationJson }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PullRequestStatusCheck" -Action {
-          ${{ github.action_path }}/PullRequestStatusCheck.ps1 -optionalPatternForPrValidationJson $ENV:_optionalPatternForPrValidationJson
+          ${{ github.action_path }}/PullRequestStatusCheck.ps1 -optionalPatternsForPrValidationJson $ENV:_optionalPatternsForPrValidationJson
         }
 branding:
   icon: terminal

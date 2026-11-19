@@ -30,28 +30,28 @@ InModuleScope ReadSettings { # Allows testing of private functions
         It 'Requires all PR build jobs by default and defines optional wildcard patterns as a string array' {
             . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
             $settings = GetDefaultSettings
-            $settings.optionalPatternForPrValidation.Count | Should -Be 0
+            $settings.optionalPatternsForPrValidation.Count | Should -Be 0
             $settingsSchema = $schema | ConvertFrom-Json | ConvertTo-HashTable -recurse
-            $settingsSchema.properties.optionalPatternForPrValidation.type | Should -Be 'array'
-            $settingsSchema.properties.optionalPatternForPrValidation.items.type | Should -Be 'string'
-            $settingsSchema.properties.optionalPatternForPrValidation.default.Count | Should -Be 0
+            $settingsSchema.properties.optionalPatternsForPrValidation.type | Should -Be 'array'
+            $settingsSchema.properties.optionalPatternsForPrValidation.items.type | Should -Be 'string'
+            $settingsSchema.properties.optionalPatternsForPrValidation.default.Count | Should -Be 0
         }
 
         It 'Merges optional patterns from variables and matching conditional settings' {
             $settings = ReadSettings -baseFolder $TestDrive -repoName 'owner/repo' -project '' `
                 -workflowName 'Pull Request Build' -trigger 'pull_request' `
-                -orgSettingsVariableValue '{"optionalPatternForPrValidation":["*NextMinor*"]}' `
-                -repoSettingsVariableValue '{"optionalPatternForPrValidation":["*NextMajor*"],"ConditionalSettings":[{"triggers":["pull_request"],"settings":{"optionalPatternForPrValidation":["*Preview*"]}}]}' `
+                -orgSettingsVariableValue '{"optionalPatternsForPrValidation":["*NextMinor*"]}' `
+                -repoSettingsVariableValue '{"optionalPatternsForPrValidation":["*NextMajor*"],"ConditionalSettings":[{"triggers":["pull_request"],"settings":{"optionalPatternsForPrValidation":["*Preview*"]}}]}' `
                 -environmentSettingsVariableValue ''
-            $settings.optionalPatternForPrValidation | Should -Be @('*NextMinor*', '*NextMajor*', '*Preview*')
+            $settings.optionalPatternsForPrValidation | Should -Be @('*NextMinor*', '*NextMajor*', '*Preview*')
         }
 
         It 'Supports overwriting optional patterns with an empty array' {
             $settings = ReadSettings -baseFolder $TestDrive -repoName 'owner/repo' -project '' `
-                -workflowName '' -orgSettingsVariableValue '{"optionalPatternForPrValidation":["*NextMinor*"]}' `
-                -repoSettingsVariableValue '{"overwriteSettings":["optionalPatternForPrValidation"],"optionalPatternForPrValidation":[]}' `
+                -workflowName '' -orgSettingsVariableValue '{"optionalPatternsForPrValidation":["*NextMinor*"]}' `
+                -repoSettingsVariableValue '{"overwriteSettings":["optionalPatternsForPrValidation"],"optionalPatternsForPrValidation":[]}' `
                 -environmentSettingsVariableValue ''
-            $settings.optionalPatternForPrValidation.Count | Should -Be 0
+            $settings.optionalPatternsForPrValidation.Count | Should -Be 0
         }
 
         It 'Reads settings from all settings locations' {
