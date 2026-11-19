@@ -18,7 +18,7 @@ Check the status of a pull request build and fail if any required jobs have fail
 
 Optional build job patterns are read from `Settings.optionalPatternsForPrValidation`, which is populated by the preceding ReadSettings action. The setting is an array of case-insensitive PowerShell wildcard patterns matching full build job names.
 
-The PTE and AppSource Pull Request Build workflows read settings in the StatusCheck job after checking out the build ref. The patterns are passed as JSON from the ReadSettings action's standard `Settings` environment variable. Only jobs whose API names match `Build * (*) / * (*)` can be optional, and they must also match a configured pattern. Custom jobs using this naming convention also qualify. Jobs outside this convention remain required even with a broad wildcard. Invalid JSON or input shapes fail explicitly.
+The PTE and AppSource Pull Request Build workflows read settings in the StatusCheck job after checking out the build ref. The patterns are passed as JSON from the ReadSettings action's standard `Settings` environment variable. Only jobs whose API names match `Build * (*) / *` can be optional, and they must also match a configured pattern. Custom jobs using this naming convention also qualify. Jobs outside this convention remain required even with a broad wildcard. Invalid JSON or input shapes fail explicitly.
 
 Optional jobs and the workflow run may remain failed while this aggregate status check succeeds. See [optional PR builds](../../Scenarios/settings.md#optional-pr-builds).
 

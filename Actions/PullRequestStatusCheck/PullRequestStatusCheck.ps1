@@ -5,7 +5,7 @@
     Checks a Pull Request build run and fails if any required job failed.
 .DESCRIPTION
     Queries the GitHub Actions jobs API and throws for required jobs concluded with "failure".
-    Jobs named "Build * (*) / * (*)" matching optional wildcard patterns emit warnings instead.
+    Jobs named "Build * (*) / *" matching optional wildcard patterns emit warnings instead.
     Other jobs remain required. Other conclusions retain their existing behavior.
     Writes failedOptionalJobs as a JSON array of failed optional job names before reporting required failures.
     The jobs endpoint is paginated and can return a large response for builds with many jobs (for example
@@ -60,7 +60,7 @@ function PullRequestStatusCheck() {
     $badFailures = @(
         foreach ($job in $failedJobs) {
             $matchesOptionalPattern = @($OptionalPatterns | Where-Object { $job.name -like $_ }).Count -gt 0
-            if ($job.name -like 'Build * (*) / * (*)' -and $matchesOptionalPattern) {
+            if ($job.name -like 'Build * (*) / *' -and $matchesOptionalPattern) {
                 $failedOptionalJobs += $job.name
                 OutputWarning -message "Optional PR build job failed (non-blocking): $($job.name)"
                 continue

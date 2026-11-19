@@ -169,7 +169,6 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Name = 'Build Custom (NextMinor)' }
             @{ Name = 'Custom (NextMinor) / Custom (NextMinor)' }
             @{ Name = 'Build Custom / Custom' }
-            @{ Name = 'Build Custom (NextMinor) / Setup' }
         ) {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
@@ -189,11 +188,12 @@ Describe "PullRequestStatusCheck Action Tests" {
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
 
-        It 'Allows matching build names without build metadata: <Name>' -TestCases @(
+        It 'Allows matching build names without metadata or a matrix suffix: <Name>' -TestCases @(
             @{ Name = 'Build Custom (NextMinor) / Custom (NextMinor)' }
             @{ Name = 'Build Beta (Default) / Beta (Default)' }
             @{ Name = 'build alpha (nextminor) / alpha (nextminor)' }
             @{ Name = 'Build Al* (NextMinor) / Al* (NextMinor)' }
+            @{ Name = 'Build Custom (NextMinor) / Setup' }
         ) {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
