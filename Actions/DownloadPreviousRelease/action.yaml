@@ -24,6 +24,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: DownloadPreviousRelease
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _token: ${{ inputs.token }}
         _project: ${{ inputs.project }}
       run: |

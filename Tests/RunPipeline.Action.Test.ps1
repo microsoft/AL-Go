@@ -74,7 +74,7 @@ Describe "RunPipeline Action Tests" {
     It 'Test action.yaml matches script' {
         $outputs = [ordered]@{
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs -WithSettingsToken
     }
 
     It 'Creates and attaches the container credential before Run-AlPipeline' {

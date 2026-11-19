@@ -13,6 +13,68 @@ Describe "Get-ProjectsToBuild" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 
+    It 'Provides authentication to nested settings calls in <actionName>' -ForEach @(
+        @{ actionName = 'DetermineProjectsToBuild' }
+        @{ actionName = 'DetermineDeliveryTargets' }
+        @{ actionName = 'Deliver' }
+        @{ actionName = 'DetermineArtifactsForRelease' }
+        @{ actionName = 'CreateApp' }
+        @{ actionName = 'DownloadProjectDependencies' }
+        @{ actionName = 'IncrementVersionNumber' }
+        @{ actionName = 'CompileApps' }
+        @{ actionName = 'RunPipeline' }
+        @{ actionName = 'CheckForUpdates' }
+    ) {
+        $actionYaml = Get-Content -Path (Join-Path $PSScriptRoot "../Actions/$actionName/action.yaml") -Raw -Encoding UTF8
+        $actionYaml | Should -Match '(?m)^      env:\r?\n        GITHUB_TOKEN: \$\{\{ env\.GITHUB_TOKEN \|\| github\.token \}\}'
+    }
+
+    It 'Authenticates custom-property reads during project analysis and build matrix creation' {
+        $originalEnvironment = @{}
+        foreach ($name in @('GITHUB_TOKEN', 'GITHUB_API_URL', 'GITHUB_REPOSITORY', 'ALGoOrgSettings', 'ALGoRepoSettings', 'ALGoEnvSettings', 'Settings')) {
+            $originalEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+        }
+        try {
+            $env:GITHUB_TOKEN = 'nested-settings-test-token'
+            $env:GITHUB_API_URL = 'https://api.example.test'
+            $env:GITHUB_REPOSITORY = 'owner/internal-repository'
+            $env:ALGoOrgSettings = @{
+                ConditionalSettings = @(
+                    @{
+                        customProperties = @{ BusinessUnit = @('Food') }
+                        settings = @{ buildModes = @('PropertyMatched') }
+                    }
+                )
+            } | ConvertTo-Json -Depth 10
+            $env:ALGoRepoSettings = ''
+            $env:ALGoEnvSettings = ''
+            $env:Settings = '{"projects":[]}'
+            New-Item -Path (Join-Path $baseFolder '.AL-Go/settings.json') -ItemType File -Force | Out-Null
+            InModuleScope ReadSettings { $script:CustomPropertiesCache.Clear() }
+            Mock InvokeWebRequest -ModuleName ReadSettings {
+                if ($headers.Authorization -ne 'token nested-settings-test-token') {
+                    throw '404 Not Found: missing authentication'
+                }
+                [PSCustomObject]@{ Content = '[{"property_name":"BusinessUnit","value":"Food"}]' }
+            }
+
+            $allProjects, $modifiedProjects, $projectsToBuild, $projectDependencies, $buildOrder = Get-ProjectsToBuild -baseFolder $baseFolder
+
+            $projectsToBuild | Should -Be @('.')
+            $buildOrder[0].buildDimensions[0].buildMode | Should -Be 'PropertyMatched'
+            Should -Invoke InvokeWebRequest -ModuleName ReadSettings -Times 1 -Exactly -ParameterFilter {
+                $headers.Authorization -eq 'token nested-settings-test-token' -and
+                $uri -eq 'https://api.example.test/repos/owner/internal-repository/properties/values'
+            }
+        }
+        finally {
+            foreach ($name in $originalEnvironment.Keys) {
+                [Environment]::SetEnvironmentVariable($name, $originalEnvironment[$name])
+            }
+            InModuleScope ReadSettings { $script:CustomPropertiesCache.Clear() }
+        }
+    }
+
     It 'loads a single project in the root folder' {
         New-Item -Path "$baseFolder/.AL-Go/settings.json" -type File -Force
 

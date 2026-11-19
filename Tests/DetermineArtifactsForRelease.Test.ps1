@@ -40,7 +40,7 @@ Describe 'DetermineArtifactsForRelease Tests' {
             "artifacts" = "The artifacts to publish on the release"
             "commitish" = "The target commitish for the release"
         }
-        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
+        YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs -WithSettingsToken
     }
 
     Context 'Artifact selection behavior' {

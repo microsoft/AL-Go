@@ -6,7 +6,9 @@ Read settings for AL-Go workflows
 
 ### ENV variables
 
-none
+| Name | Description |
+| :-- | :-- |
+| GITHUB_TOKEN | Optional token used to read repository custom properties when `githubToken` is not supplied. |
 
 ### Parameters
 
@@ -17,6 +19,11 @@ none
 | buildMode | | Build mode. Only set when called from \_BuildALGoProject | Default |
 | workflowName | | Workflow name for which the settings are to be read | github.workflow |
 | get | | Specifies which properties to get from the settings file, default is all | |
+| githubToken | | Token used to read repository custom properties. Defaults to `GITHUB_TOKEN` or the workflow token. | |
+
+Repository custom properties are fetched only when a matching `ConditionalSettings` block uses the `customProperties` condition. The token must have read access to the target repository; API and permission errors fail the action instead of being treated as missing properties.
+
+Actions that re-read settings internally (for example, `DetermineProjectsToBuild`) provide the workflow token through their step's `GITHUB_TOKEN` environment variable. An existing `GITHUB_TOKEN` environment variable takes precedence. The token is not persisted to later steps.
 
 ## OUTPUT
 

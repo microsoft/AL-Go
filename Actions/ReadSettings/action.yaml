@@ -21,6 +21,10 @@ inputs:
     description: Specifies which properties to get from the settings file, default is all
     required: false
     default: ''
+  githubToken:
+    description: GitHub token used to read repository custom properties
+    required: false
+    default: ''
 outputs:
   GitHubRunnerJson:
     description: GitHubRunner in compressed Json format
@@ -35,13 +39,15 @@ runs:
       shell: ${{ inputs.shell }}
       id: readsettings
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ inputs.githubToken || env.GITHUB_TOKEN || github.token }}
         _project: ${{ inputs.project }}
         _buildMode: ${{ inputs.buildMode }}
         _workflowName: ${{ inputs.workflowName }}
         _get: ${{ inputs.get }}
+        _githubToken: ${{ inputs.githubToken || env.GITHUB_TOKEN || github.token }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "ReadSettings" -Action {
-          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -workflowName $ENV:_workflowName -get $ENV:_get
+          ${{ github.action_path }}/ReadSettings.ps1 -project $ENV:_project -buildMode $ENV:_buildMode -workflowName $ENV:_workflowName -get $ENV:_get -githubToken $ENV:_githubToken
         }
 branding:
   icon: terminal

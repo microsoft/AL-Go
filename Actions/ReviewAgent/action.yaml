@@ -105,6 +105,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: reviewagent
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _phase: ${{ inputs.phase }}
         _codeReviewSettingsJson: ${{ inputs.codeReviewSettingsJson }}
         _bcqualitySettingsJson: ${{ inputs.bcqualitySettingsJson }}

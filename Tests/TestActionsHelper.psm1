@@ -52,6 +52,8 @@ Require the action's run step to be non-blocking.
 
 .PARAMETER DefaultShell
 Expected default shell for the action.
+.PARAMETER WithSettingsToken
+Require the workflow-token fallback for nested settings calls.
 #>
 function YamlTest {
     Param(
@@ -61,7 +63,9 @@ function YamlTest {
         $outputs = @{},
         [ValidateSet('powershell', 'pwsh')]
         [string] $DefaultShell = 'powershell',
-        [switch] $ContinueOnError
+        [switch] $ContinueOnError,
+        [switch] $WithSettingsToken,
+        [hashtable] $inputEnvOverrides = @{}
     )
 
     $emptyActionScript = "function emptyAction {`n[CmdletBinding()]`nParam()`n}`n"
@@ -83,6 +87,15 @@ function YamlTest {
     $parameterString = ""
     $warningLines = @()
     $envLines = [System.Text.StringBuilder]::new()
+    if ($WithSettingsToken) {
+        $envLines.AppendLine('        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}') | Out-Null
+    }
+    elseif ($actionName -eq 'ReadSettings') {
+        $envLines.AppendLine('        _ALGO_TELEMETRY_TOKEN: ${{ inputs.githubToken || env.GITHUB_TOKEN || github.token }}') | Out-Null
+    }
+    else {
+        $envLines.AppendLine('        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}') | Out-Null
+    }
     if ($cmd.Parameters.Count -gt 0) {
         $cmd.Parameters.GetEnumerator() | ForEach-Object {
             $name = $_.Key
@@ -95,7 +108,11 @@ function YamlTest {
                 $yaml.AppendLine("  $($name):") | Out-Null
                 $yaml.AppendLine("    description: $description") | Out-Null
                 if ($name -ne 'GitHubSecrets') {
-                    $envLines.AppendLine("        _$($name): `${{ inputs.$($name) }}")
+                    $inputExpression = "`${{ inputs.$($name) }}"
+                    if ($inputEnvOverrides.ContainsKey($name)) {
+                        $inputExpression = $inputEnvOverrides[$name]
+                    }
+                    $envLines.AppendLine("        _$($name): $inputExpression")
                 }
                 $yaml.AppendLine("    required: $($required.ToString().ToLowerInvariant())") | Out-Null
                 if ($type -eq "System.String" -or $type -eq "System.Int32") {

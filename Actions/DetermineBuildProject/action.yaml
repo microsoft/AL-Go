@@ -33,6 +33,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineBuildProject
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _token: ${{ inputs.token }}
         _skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
         _project: ${{ inputs.project }}

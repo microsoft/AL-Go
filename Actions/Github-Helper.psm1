@@ -54,13 +54,20 @@ function GetExtendedErrorMessage {
     $message
 }
 
+<#
+    .SYNOPSIS
+    Invokes a web request with GitHub error handling and retries.
+    .PARAMETER NoAnonymousFallback
+    Prevents retrying an unauthorized request without authentication.
+#>
 function InvokeWebRequest {
     Param(
         [Hashtable] $headers,
         [string] $method,
         [string] $body,
         [string] $outFile,
-        [string] $uri
+        [string] $uri,
+        [switch] $NoAnonymousFallback
     )
 
     $params = @{ "UseBasicParsing" = $true }
@@ -102,7 +109,7 @@ function InvokeWebRequest {
                     continue
                 }
             }
-            if ($response.StatusCode -eq 401) {
+            if ($response.StatusCode -eq 401 -and -not $NoAnonymousFallback) {
                 if ($params.ContainsKey('Headers') -and $params.Headers.ContainsKey('Authorization')) {
                     $publicResponse = Invoke-WebRequest -Method Head -Uri $uri -ErrorAction SilentlyContinue
                     if ($publicResponse -and $publicResponse.StatusCode -eq 200) {

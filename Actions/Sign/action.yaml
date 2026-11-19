@@ -25,6 +25,7 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _azureCredentialsJson: ${{ inputs.azureCredentialsJson }}
         _pathToFiles: ${{ inputs.pathToFiles }}
         _timestampService: ${{ inputs.timestampService }}

@@ -6,14 +6,16 @@
     [Parameter(HelpMessage = "Workflow name for which the settings are to be read", Mandatory = $false)]
     [string] $workflowName = "$ENV:GITHUB_WORKFLOW",
     [Parameter(HelpMessage = "Specifies which properties to get from the settings file, default is all", Mandatory = $false)]
-    [string] $get = ""
+    [string] $get = "",
+    [Parameter(HelpMessage = "GitHub token used to read repository custom properties", Mandatory = $false)]
+    [string] $githubToken = "$ENV:GITHUB_TOKEN"
 )
 
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 
 $metadata = @{}
 
-$settings = ReadSettings -project $project -buildMode $buildMode -workflowName $workflowName -metadata $metadata
+$settings = ReadSettings -project $project -buildMode $buildMode -workflowName $workflowName -githubToken $githubToken -metadata $metadata
 
 if ($get) {
     $getSettings = $get.Split(',').Trim()

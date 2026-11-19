@@ -194,6 +194,38 @@ to your [project settings file](#where-are-the-settings-located) will ensure tha
 - **workflows** settings will be applied to workflows matching the patterns
 - **users** settings will be applied for users matching the patterns
 - **triggers** settings will be applied when `GITHUB_EVENT_NAME` matches values (for example `push`, `pull_request`, `schedule`, `workflow_dispatch`)
+- **customProperties** settings are applied when every named GitHub repository custom property matches at least one of its allowed values. Use an array of strings for each property; values within an array are alternatives, and multiple property names are combined with AND. Matching is case-insensitive and uses the existing wildcard pattern behavior. For multi-select properties, any actual value may match. Missing or `null` values do not match; empty allowed-value arrays and non-string values are invalid.
+
+Example:
+
+```json
+{
+    "ConditionalSettings": [
+        {
+            "customProperties": {
+                "al-go-profile": ["strict", "regulated*"],
+                "business-area": ["finance"]
+            },
+            "branches": ["main", "release/*"],
+            "settings": {
+                "enableCodeCop": true
+            }
+        }
+    ]
+}
+```
+
+GitHub custom properties are read from the repository identified by `GITHUB_REPOSITORY` (the base/target repository for pull request workflows) through `GET /repos/{owner}/{repo}/properties/values`. The workflow token must have read access to that repository; the standard `ReadSettings` action uses `github.token`. The request is made only when a property condition is evaluated. API access requires a non-empty authentication token, even for public repositories, and an unauthorized request is not retried anonymously. API, authentication, and permission errors (including HTTP 401/403/404) fail settings resolution and are not treated as missing properties. Property values are metadata, not secrets.
+
+Actions that re-read settings internally, including project discovery and dependency/build processing, also provide `github.token` through a step-scoped `GITHUB_TOKEN` environment variable unless one is already supplied.
+Action telemetry uses a step-scoped token for its settings lookup, including when telemetry settings are conditional.
+
+The fetched values are cached per GitHub API host and repository for the lifetime of the current PowerShell process. Changes made while that process is running are not observed by later `ReadSettings` calls in the same process; a new workflow run reads a fresh snapshot. Local callers can either provide a `customProperties` map directly to `ReadSettings`, or configure `GITHUB_API_URL`, `GITHUB_TOKEN`, and the full `owner/repository` name to use the API.
+
+> [!IMPORTANT]
+> Update AL-Go in every repository that consumes centralized conditional settings before adding `customProperties` conditions. Older AL-Go versions ignore unknown condition keys, so they can apply a block without enforcing its custom-property restriction. Properties are evaluated at runtime; they do not automatically regenerate workflow YAML. Settings such as `workflowSchedule` and `workflowConcurrency` still require **Update AL-Go System Files** after a property change.
+
+Current AL-Go versions reject unknown condition keys, so spelling mistakes fail settings resolution instead of silently broadening a rule.
 
 **Note:** You can use `workflowDefaultInputs` within conditional settings to apply workflow input defaults only when certain conditions are met. For example, you could set different default values for specific workflows or branches.
 

@@ -66,6 +66,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: setupbcquality
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _bcqualitySettingsJson: ${{ inputs.bcqualitySettingsJson }}
         _marketplace: ${{ inputs.marketplace }}
         _marketplaceRef: ${{ inputs.marketplaceRef }}

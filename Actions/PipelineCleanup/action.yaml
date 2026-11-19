@@ -15,6 +15,7 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _project: ${{ inputs.project }}
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PipelineCleanup" -Action {

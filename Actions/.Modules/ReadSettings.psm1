@@ -1,4 +1,11 @@
 Import-Module (Join-Path -Path $PSScriptRoot "DebugLogHelper.psm1")
+$githubHelperPath = Join-Path $PSScriptRoot "../Github-Helper.psm1"
+if (-not (Test-Path -LiteralPath $githubHelperPath -PathType Leaf)) {
+    $githubHelperPath = Join-Path $PSScriptRoot "Github-Helper.psm1"
+}
+Import-Module $githubHelperPath -ErrorAction Stop
+
+$script:CustomPropertiesCache = @{}
 
 $ALGoFolderName = '.AL-Go'
 $ALGoSettingsFileName = 'settings.json'
@@ -12,6 +19,175 @@ $CustomTemplateRepoSettingsFile = Join-Path '.github' $CustomTemplateRepoSetting
 
 $CustomTemplateProjectSettingsFileName = 'AL-Go-TemplateProjectSettings.doNotEdit.json'
 $CustomTemplateProjectSettingsFile = Join-Path '.github' $CustomTemplateProjectSettingsFileName
+
+function GetRepositoryCustomProperties {
+    Param(
+        [string] $apiUrl,
+        [string] $repository,
+        [string] $token
+    )
+
+    if ($repository -notmatch '^[^/]+/[^/]+$') {
+        throw "Cannot read custom properties because repository '$repository' is not in owner/repository format."
+    }
+    if ([string]::IsNullOrWhiteSpace($apiUrl)) {
+        throw "Cannot read custom properties for '$repository' because the GitHub API URL is not available."
+    }
+    if ([string]::IsNullOrWhiteSpace($token)) {
+        throw "Cannot read custom properties for '$repository' because an authentication token is required."
+    }
+
+    $apiUrl = $apiUrl.TrimEnd('/')
+    $cacheKey = "$($apiUrl.ToLowerInvariant())/$($repository.ToLowerInvariant())"
+    if ($script:CustomPropertiesCache.ContainsKey($cacheKey)) {
+        return $script:CustomPropertiesCache[$cacheKey]
+    }
+
+    $repositoryParts = $repository.Split('/')
+    $owner = [System.Uri]::EscapeDataString($repositoryParts[0])
+    $repo = [System.Uri]::EscapeDataString($repositoryParts[1])
+    $uri = "$apiUrl/repos/$owner/$repo/properties/values"
+    try {
+        $headers = GetHeaders -token $token -api_url $apiUrl -repository $repository -permissions @{ "metadata" = "read" }
+        $response = InvokeWebRequest -headers $headers -method GET -uri $uri -NoAnonymousFallback
+        if ($response.Content -notmatch '^\s*\[') {
+            throw "GitHub returned an invalid custom property response for '$repository'; expected a JSON array."
+        }
+        $decodedResponse = ConvertFrom-Json -InputObject $response.Content -ErrorAction Stop
+        if ($decodedResponse -is [System.Array]) {
+            $responseValues = $decodedResponse
+        }
+        elseif ($null -ne $decodedResponse) {
+            $responseValues = @($decodedResponse)
+        }
+        else {
+            $responseValues = @()
+        }
+        $properties = @{}
+        foreach ($property in $responseValues) {
+            if (-not $property -or $property.PSObject.Properties.Name -notcontains 'property_name' -or
+                $property.PSObject.Properties.Name -notcontains 'value' -or [string]::IsNullOrWhiteSpace($property.property_name)) {
+                throw "GitHub returned an invalid custom property value for '$repository'."
+            }
+            $properties[$property.property_name] = $property.value
+        }
+        $script:CustomPropertiesCache[$cacheKey] = $properties
+        return $properties
+    }
+    catch {
+        throw "Failed to read GitHub custom properties for '$repository' from '$apiUrl'. $($_.Exception.Message)"
+    }
+}
+
+function ConvertToCustomPropertiesMap {
+    Param(
+        [object] $properties
+    )
+
+    if ($null -eq $properties) {
+        throw "The customProperties context cannot be null; supply a property map, including an empty map when no properties are set."
+    }
+
+    $result = @{}
+    if ($properties -is [System.Collections.IDictionary]) {
+        foreach ($key in $properties.Keys) {
+            $result[$key] = $properties[$key]
+        }
+    }
+    elseif ($properties -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($property in $properties.PSObject.Properties) {
+            $result[$property.Name] = $property.Value
+        }
+    }
+    else {
+        throw "The customProperties context must be a property map."
+    }
+    return $result
+}
+
+function TestCustomPropertyConditions {
+    Param(
+        [object] $conditions,
+        [hashtable] $properties,
+        [switch] $ValidateOnly
+    )
+
+    if ($null -eq $conditions -or
+        ($conditions -isnot [System.Collections.IDictionary] -and $conditions -isnot [System.Management.Automation.PSCustomObject])) {
+        throw "The customProperties condition must be an object mapping property names to arrays of allowed values."
+    }
+
+    if ($conditions -is [System.Collections.IDictionary]) {
+        $entries = @($conditions.GetEnumerator())
+    }
+    else {
+        $entries = @($conditions.PSObject.Properties)
+    }
+    if ($entries.Count -eq 0) {
+        throw "The customProperties condition must contain at least one property."
+    }
+
+    foreach ($entry in $entries) {
+        if ($entry -is [System.Collections.DictionaryEntry]) {
+            $propertyName = "$($entry.Key)"
+            $allowedValues = $entry.Value
+        }
+        else {
+            $propertyName = "$($entry.Name)"
+            $allowedValues = $entry.Value
+        }
+        if ([string]::IsNullOrWhiteSpace($propertyName) -or $allowedValues -isnot [System.Array] -or $allowedValues.Count -eq 0) {
+            throw "The customProperties condition for '$propertyName' must be a non-empty array of allowed values."
+        }
+        foreach ($allowedValue in $allowedValues) {
+            if ($allowedValue -isnot [string] -or [string]::IsNullOrEmpty($allowedValue)) {
+                throw "The customProperties condition for '$propertyName' must contain only non-empty string values."
+            }
+        }
+    }
+
+    if ($ValidateOnly) {
+        return $true
+    }
+
+    foreach ($entry in $entries) {
+        if ($entry -is [System.Collections.DictionaryEntry]) {
+            $propertyName = "$($entry.Key)"
+            $allowedValues = $entry.Value
+        }
+        else {
+            $propertyName = "$($entry.Name)"
+            $allowedValues = $entry.Value
+        }
+        if (-not $properties.ContainsKey($propertyName) -or $null -eq $properties[$propertyName]) {
+            return $false
+        }
+
+        $actualValues = @($properties[$propertyName])
+        if ($actualValues.Count -eq 0) {
+            return $false
+        }
+        $propertyMatched = $false
+        foreach ($actualValue in $actualValues) {
+            if ($null -eq $actualValue) {
+                continue
+            }
+            foreach ($allowedValue in $allowedValues) {
+                if ("$actualValue" -like $allowedValue) {
+                    $propertyMatched = $true
+                    break
+                }
+            }
+            if ($propertyMatched) {
+                break
+            }
+        }
+        if (-not $propertyMatched) {
+            return $false
+        }
+    }
+    return $true
+}
 
 function MergeCustomObjectIntoOrderedDictionary {
     Param(
@@ -392,6 +568,12 @@ function GetDefaultSettings
         The base folder where the settings files are located. Default is $ENV:GITHUB_WORKSPACE when running in GitHub Actions.
     .PARAMETER repoName
         The name of the repository. Default is $ENV:GITHUB_REPOSITORY when running in GitHub Actions.
+    .PARAMETER githubToken
+        The token used to read repository custom properties. Default is $ENV:GITHUB_TOKEN.
+    .PARAMETER githubApiUrl
+        The GitHub API URL used to read repository custom properties. Default is $ENV:GITHUB_API_URL.
+    .PARAMETER customProperties
+        Optional custom property snapshot for local use and testing; when provided, no API request is made.
     .PARAMETER project
         The project path relative to the base folder. Default is '.'
     .PARAMETER buildMode
@@ -432,8 +614,13 @@ function ReadSettings {
         [string] $environmentSettingsVariableValue = "$ENV:ALGoEnvSettings",
         [string] $environmentName = "$ENV:ALGoEnvName",
         [string] $customSettings = "",
-        [hashtable] $metadata = @{}
+        [hashtable] $metadata = @{},
+        [string] $githubToken = "$ENV:GITHUB_TOKEN",
+        [string] $githubApiUrl = "$ENV:GITHUB_API_URL",
+        [object] $customProperties
     )
+
+    $customPropertiesProvided = $PSBoundParameters.ContainsKey('customProperties')
 
     # If the build is triggered by a pull request the refname will be the merge branch. To apply conditional settings we need to use the base branch
     if (($env:GITHUB_EVENT_NAME -eq "pull_request") -and ($branchName -eq $ENV:GITHUB_REF_NAME)) {
@@ -475,6 +662,7 @@ function ReadSettings {
         }
     }
 
+    $fullRepoName = $repoName
     $repoName = $repoName.SubString("$repoName".LastIndexOf('/') + 1)
     $githubFolder = Join-Path $baseFolder ".github"
     $workflowName = SanitizeWorkflowName -workflowName $workflowName
@@ -489,6 +677,8 @@ function ReadSettings {
     # Read settings from files and merge them into the settings object
 
     $settingsObjects = @()
+    $customPropertiesLoaded = $false
+    $customPropertiesForConditions = $null
 
     # Read settings from organization settings variable (parameter)
     if ($orgSettingsVariableValue) {
@@ -618,6 +808,14 @@ function ReadSettings {
             if ($settingsJson.PSObject.Properties.Name -eq "ConditionalSettings") {
                 foreach ($conditionalSetting in $settingsJson.ConditionalSettings) {
                     if ("$conditionalSetting" -ne "") {
+                        $supportedConditionProperties = @('buildModes', 'branches', 'repositories', 'projects', 'workflows', 'users', 'triggers', 'customProperties', 'settings')
+                        $unsupportedConditionProperties = @($conditionalSetting.PSObject.Properties |
+                            Where-Object { $_.Name -notin $supportedConditionProperties } |
+                            Select-Object -ExpandProperty Name)
+                        if ($unsupportedConditionProperties) {
+                            throw "Unsupported ConditionalSettings condition '$($unsupportedConditionProperties -join ', ')' in $($settingsObject.Source)."
+                        }
+
                         $conditionMet = $true
                         $conditions = @()
                         @{"buildModes" = $buildMode; "branches" = $branchName; "repositories" = $repoName; "projects" = $project; "workflows" = $workflowName; "users" = $userName; "triggers" = $trigger }.GetEnumerator() | ForEach-Object {
@@ -632,6 +830,28 @@ function ReadSettings {
 
                                 $conditionMet = $propValue -and $conditionMet -and ($conditionalSetting."$propName" | Where-Object { $propValue -like $_ })
                                 $conditions += @("$($propName): $propValue")
+                            }
+                        }
+                        if ($conditionalSetting.PSObject.Properties.Name -contains 'customProperties') {
+                            $null = TestCustomPropertyConditions -conditions $conditionalSetting.customProperties -properties @{} -ValidateOnly
+                            if ($conditionMet) {
+                                if (-not $customPropertiesLoaded) {
+                                    if ($customPropertiesProvided) {
+                                        $customPropertiesForConditions = ConvertToCustomPropertiesMap -properties $customProperties
+                                    }
+                                    else {
+                                        $customPropertiesForConditions = GetRepositoryCustomProperties -apiUrl $githubApiUrl -repository $fullRepoName -token $githubToken
+                                    }
+                                    $customPropertiesLoaded = $true
+                                }
+                                $conditionMet = TestCustomPropertyConditions -conditions $conditionalSetting.customProperties -properties $customPropertiesForConditions
+                                $propertyNames = if ($conditionalSetting.customProperties -is [System.Collections.IDictionary]) {
+                                    @($conditionalSetting.customProperties.Keys)
+                                }
+                                else {
+                                    @($conditionalSetting.customProperties.PSObject.Properties | Select-Object -ExpandProperty Name)
+                                }
+                                $conditions += "customProperties: $($propertyNames -join ', ')"
                             }
                         }
                         if ($conditionMet) {

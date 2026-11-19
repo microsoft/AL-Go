@@ -5,6 +5,51 @@ $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Set-S
 
 Import-Module (Join-Path $PSScriptRoot '../Actions/TelemetryHelper.psm1') -Force -DisableNameChecking
 
+Describe 'Action telemetry authentication' {
+    It 'Keeps the telemetry token out of the action environment after module import' {
+        $previousToken = $env:_ALGO_TELEMETRY_TOKEN
+        $previousModulePath = $env:_ALGO_TEST_MODULE
+        try {
+            $env:_ALGO_TELEMETRY_TOKEN = 'telemetry-token'
+            $env:_ALGO_TEST_MODULE = (Join-Path $PSScriptRoot '../Actions/TelemetryHelper.psm1' -Resolve)
+            $powerShellPath = (Get-Process -Id $PID).Path
+            & $powerShellPath -NoLogo -NoProfile -NonInteractive -Command @'
+$ErrorActionPreference = 'Stop'
+Import-Module $env:_ALGO_TEST_MODULE -Force -DisableNameChecking
+if ($env:_ALGO_TELEMETRY_TOKEN) { exit 1 }
+& (Get-Module TelemetryHelper) { if ($script:telemetryToken -ne 'telemetry-token') { exit 2 } }
+'@
+            $LASTEXITCODE | Should -Be 0
+        }
+        finally {
+            $env:_ALGO_TELEMETRY_TOKEN = $previousToken
+            $env:_ALGO_TEST_MODULE = $previousModulePath
+        }
+    }
+
+    It 'Provides a scoped token to every telemetry wrapper step' {
+        $actionFiles = Get-ChildItem -Path (Join-Path $PSScriptRoot '../Actions') -Filter 'action.yaml' -Recurse
+        $wrapperSteps = 0
+        foreach ($file in $actionFiles) {
+            $yaml = Get-Content -Path $file.FullName -Raw -Encoding UTF8
+            $steps = $yaml -split '(?m)(?=^    - (?:name:|uses:|run:))'
+            foreach ($step in $steps) {
+                if ($step -notmatch 'Invoke-AlGoAction\.ps1') {
+                    continue
+                }
+                $wrapperSteps++
+                if ($file.Directory.Name -eq 'ReadSettings') {
+                    $step | Should -Match '(?m)^        _ALGO_TELEMETRY_TOKEN: \$\{\{ inputs\.githubToken \|\| env\.GITHUB_TOKEN \|\| github\.token \}\}'
+                }
+                else {
+                    $step | Should -Match '(?m)^        (GITHUB_TOKEN|_ALGO_TELEMETRY_TOKEN): \$\{\{ env\.GITHUB_TOKEN \|\| github\.token \}\}'
+                }
+            }
+        }
+        $wrapperSteps | Should -BeGreaterThan 0
+    }
+}
+
 Describe 'Structured action telemetry' {
     InModuleScope TelemetryHelper {
         BeforeAll {
@@ -237,6 +282,96 @@ Describe 'Repository environment telemetry' {
             $data['PowerShellVersion'] | Should -Be $PSVersionTable.PSVersion.ToString()
             Assert-MockCalled ReadSettings -Times 1 -Exactly
             Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Failed to log telemetry event:*' }
+        }
+
+        It 'Uses the action telemetry token when resolving conditional settings' {
+            $savedTelemetryToken = $script:telemetryToken
+            $savedGitHubToken = $env:GITHUB_TOKEN
+            try {
+                $script:telemetryToken = 'telemetry-token'
+                $env:GITHUB_TOKEN = 'workflow-token'
+                Mock ReadSettings { return @{ microsoftTelemetryConnectionString = ''; partnerTelemetryConnectionString = '' } }
+                Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'BcContainerHelper' }
+
+                AddTelemetryEvent -Message 'Action completed' -Data $data
+
+                Assert-MockCalled ReadSettings -Times 1 -Exactly -ParameterFilter { $githubToken -eq 'telemetry-token' }
+                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Failed to log telemetry event:*' }
+            }
+            finally {
+                $script:telemetryToken = $savedTelemetryToken
+                $env:GITHUB_TOKEN = $savedGitHubToken
+            }
+        }
+
+        It 'Falls back to the existing GitHub token for telemetry settings' {
+            $savedTelemetryToken = $script:telemetryToken
+            $savedGitHubToken = $env:GITHUB_TOKEN
+            try {
+                $script:telemetryToken = ''
+                $env:GITHUB_TOKEN = 'workflow-token'
+                Mock ReadSettings { return @{ microsoftTelemetryConnectionString = ''; partnerTelemetryConnectionString = '' } }
+                Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'BcContainerHelper' }
+
+                AddTelemetryEvent -Message 'Action completed' -Data $data
+
+                Assert-MockCalled ReadSettings -Times 1 -Exactly -ParameterFilter { $githubToken -eq 'workflow-token' }
+            }
+            finally {
+                $script:telemetryToken = $savedTelemetryToken
+                $env:GITHUB_TOKEN = $savedGitHubToken
+            }
+        }
+
+        It 'Resolves telemetry settings through an authenticated custom-property request' {
+            $savedTelemetryToken = $script:telemetryToken
+            $savedEnvironment = @{}
+            foreach ($name in @('GITHUB_TOKEN', 'GITHUB_API_URL', 'GITHUB_REPOSITORY', 'GITHUB_WORKSPACE', 'ALGoOrgSettings', 'ALGoRepoSettings', 'ALGoEnvSettings')) {
+                $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+            }
+            try {
+                $script:telemetryToken = 'telemetry-token'
+                $env:GITHUB_TOKEN = ''
+                $env:GITHUB_API_URL = 'https://api.example.test'
+                $env:GITHUB_REPOSITORY = 'owner/telemetry-test'
+                $env:GITHUB_WORKSPACE = $TestDrive
+                $env:ALGoRepoSettings = ''
+                $env:ALGoEnvSettings = ''
+                $env:ALGoOrgSettings = @{
+                    microsoftTelemetryConnectionString = ''
+                    ConditionalSettings = @(
+                        @{
+                            customProperties = @{ BusinessUnit = @('Food') }
+                            settings = @{ partnerTelemetryConnectionString = '' }
+                        }
+                    )
+                } | ConvertTo-Json -Depth 10
+                InModuleScope ReadSettings { $script:CustomPropertiesCache.Clear() }
+                Mock GetHeaders -ModuleName ReadSettings { @{ Authorization = "token $token" } }
+                Mock InvokeWebRequest -ModuleName ReadSettings {
+                    if ($headers.Authorization -ne 'token telemetry-token') {
+                        throw '404 Not Found: missing authentication'
+                    }
+                    [PSCustomObject]@{ Content = '[{"property_name":"BusinessUnit","value":"Food"}]' }
+                }
+                Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'BcContainerHelper' }
+                Mock Get-ApplicationInsightsTelemetryClient { throw 'Telemetry must not be sent when disabled.' }
+
+                AddTelemetryEvent -Message 'Action completed' -Data $data
+
+                Assert-MockCalled Get-ApplicationInsightsTelemetryClient -Times 0
+                Should -Invoke InvokeWebRequest -ModuleName ReadSettings -Times 1 -Exactly -ParameterFilter {
+                    $headers.Authorization -eq 'token telemetry-token'
+                }
+                Assert-MockCalled Write-Host -Times 0 -ParameterFilter { $Object -like 'Failed to log telemetry event:*' }
+            }
+            finally {
+                $script:telemetryToken = $savedTelemetryToken
+                foreach ($name in $savedEnvironment.Keys) {
+                    [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name])
+                }
+                InModuleScope ReadSettings { $script:CustomPropertiesCache.Clear() }
+            }
         }
     }
 }

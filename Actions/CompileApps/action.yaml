@@ -47,6 +47,7 @@ runs:
     - name: run
       shell: ${{ inputs.shell }}
       env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _token: ${{ inputs.token }}
         _artifact: ${{ inputs.artifact }}
         _project: ${{ inputs.project }}

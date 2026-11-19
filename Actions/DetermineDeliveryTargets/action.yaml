@@ -27,6 +27,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: determineDeliveryTargets
       env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _projectsJson: ${{ inputs.projectsJson }}
         _checkContextSecrets: ${{ inputs.checkContextSecrets }}
       run: |

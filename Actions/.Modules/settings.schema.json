@@ -982,7 +982,44 @@
             "description": "An array of workflow input default values. See https://aka.ms/ALGoSettings#workflowDefaultInputs"
         }
     },
+    "$defs": {
+        "conditionalSettings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "buildModes": { "type": "array", "items": { "type": "string" } },
+                    "branches": { "type": "array", "items": { "type": "string" } },
+                    "repositories": { "type": "array", "items": { "type": "string" } },
+                    "projects": { "type": "array", "items": { "type": "string" } },
+                    "workflows": { "type": "array", "items": { "type": "string" } },
+                    "users": { "type": "array", "items": { "type": "string" } },
+                    "triggers": { "type": "array", "items": { "type": "string" } },
+                    "customProperties": {
+                        "type": "object",
+                        "propertyNames": { "minLength": 1 },
+                        "additionalProperties": {
+                            "type": "array",
+                            "minItems": 1,
+                            "items": { "type": "string", "minLength": 1 }
+                        },
+                        "description": "Repository custom property names mapped to non-empty arrays of allowed values. Every property must match at least one value."
+                    },
+                    "settings": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                },
+                "required": ["settings"],
+                "additionalProperties": false
+            },
+            "description": "Settings applied when all conditions match. Conditions for different properties are combined with AND."
+        }
+    },
     "patternProperties": {
+        "^[Cc]onditional[Ss]ettings$": {
+            "$ref": "#/$defs/conditionalSettings"
+        },
         "^DeployTo": {
             "type": "object",
             "description": "Structure with additional properties for the environment specified. See https://aka.ms/ALGoSettings#deployto",

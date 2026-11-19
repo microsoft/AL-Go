@@ -29,6 +29,7 @@ runs:
       shell: ${{ inputs.shell }}
       id: authenticate
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _secrets: ${{ inputs.secrets }}
         _secretNames: ${{ inputs.secretNames }}
         _authType: ${{ inputs.authType }}

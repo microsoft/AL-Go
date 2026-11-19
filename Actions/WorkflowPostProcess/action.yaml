@@ -28,6 +28,7 @@ runs:
       shell: ${{ inputs.shell }}
       continue-on-error: true
       env:
+        _ALGO_TELEMETRY_TOKEN: ${{ env.GITHUB_TOKEN || github.token }}
         _telemetryScopeJson: ${{ inputs.telemetryScopeJson }}
         _currentJobContext: ${{ inputs.currentJobContext }}
         _actionsRepo: ${{ inputs.actionsRepo }}
