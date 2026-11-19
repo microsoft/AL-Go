@@ -52,6 +52,8 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 
 ### Issues
 
+- Issue 2443 - GitHub App token requests are now retried, so a transient error such as a 404 on the installation lookup no longer fails the workflow.
+
 - Issue 2454 - Fix separate test execution on Windows PowerShell 5.1 when an app contains multiple test codeunits, preserving each codeunit's ID and test methods.
 
 - Issue 2417 - Fix workspace compilation with versioning strategy 3 to preserve each app's build number instead of failing with "build ('-1') must be a non-negative value". Explicit build number zero is now applied correctly.
