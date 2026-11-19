@@ -6,6 +6,8 @@ Actions that re-read settings during project discovery, dependency resolution, b
 
 Telemetry settings are also resolved using the action's step-scoped token, so custom-property conditions do not prevent telemetry from being sent for private or internal repositories.
 
+Custom-property API requests require an authentication token and never retry anonymously after an authentication failure. The settings module supports both the action directory layout and the flattened helper downloads used by local and cloud development-environment scripts.
+
 Update all repositories that consume central conditional settings before enabling this condition. Older AL-Go versions ignore unknown condition keys and may apply a block without enforcing its property restriction. Property changes affect runtime settings on a later run; generated workflow settings such as `workflowSchedule` still require **Update AL-Go System Files**.
 
 ### Optional draft PR build skipping

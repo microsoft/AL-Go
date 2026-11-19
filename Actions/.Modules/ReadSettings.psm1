@@ -1,5 +1,9 @@
 Import-Module (Join-Path -Path $PSScriptRoot "DebugLogHelper.psm1")
-Import-Module (Join-Path -Path $PSScriptRoot "../Github-Helper.psm1")
+$githubHelperPath = Join-Path $PSScriptRoot "../Github-Helper.psm1"
+if (-not (Test-Path -LiteralPath $githubHelperPath -PathType Leaf)) {
+    $githubHelperPath = Join-Path $PSScriptRoot "Github-Helper.psm1"
+}
+Import-Module $githubHelperPath -ErrorAction Stop
 
 $script:CustomPropertiesCache = @{}
 
@@ -29,6 +33,9 @@ function GetRepositoryCustomProperties {
     if ([string]::IsNullOrWhiteSpace($apiUrl)) {
         throw "Cannot read custom properties for '$repository' because the GitHub API URL is not available."
     }
+    if ([string]::IsNullOrWhiteSpace($token)) {
+        throw "Cannot read custom properties for '$repository' because an authentication token is required."
+    }
 
     $apiUrl = $apiUrl.TrimEnd('/')
     $cacheKey = "$($apiUrl.ToLowerInvariant())/$($repository.ToLowerInvariant())"
@@ -42,7 +49,7 @@ function GetRepositoryCustomProperties {
     $uri = "$apiUrl/repos/$owner/$repo/properties/values"
     try {
         $headers = GetHeaders -token $token -api_url $apiUrl -repository $repository -permissions @{ "metadata" = "read" }
-        $response = InvokeWebRequest -headers $headers -method GET -uri $uri
+        $response = InvokeWebRequest -headers $headers -method GET -uri $uri -NoAnonymousFallback
         if ($response.Content -notmatch '^\s*\[') {
             throw "GitHub returned an invalid custom property response for '$repository'; expected a JSON array."
         }

@@ -1,6 +1,64 @@
 ﻿Get-Module Github-Helper | Remove-Module -Force
 Import-Module (Join-Path $PSScriptRoot '..\Actions\Github-Helper.psm1' -Resolve)
 
+Describe 'InvokeWebRequest authentication fallback' {
+    BeforeAll {
+        if (-not ('ALGoUnauthorizedResponse' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System;
+using System.Net;
+
+public sealed class ALGoUnauthorizedResponse : WebResponse
+{
+    public override Uri ResponseUri
+    {
+        get { return new Uri("https://api.example.test/repos/owner/repo/properties/values"); }
+    }
+    public HttpStatusCode StatusCode
+    {
+        get { return HttpStatusCode.Unauthorized; }
+    }
+}
+'@
+        }
+    }
+
+    BeforeEach {
+        Mock Write-Host -ModuleName Github-Helper {}
+        Mock GetExtendedErrorMessage -ModuleName Github-Helper { '401 Unauthorized' }
+        Mock Invoke-WebRequest -ModuleName Github-Helper {
+            if ($Method -eq 'Head') {
+                return @{ StatusCode = 200 }
+            }
+            if ($Headers.ContainsKey('Authorization')) {
+                throw [System.Net.WebException]::new(
+                    '401 Unauthorized', $null, [System.Net.WebExceptionStatus]::ProtocolError,
+                    [ALGoUnauthorizedResponse]::new())
+            }
+            return @{ Content = '[]' }
+        }
+    }
+
+    It 'Does not probe or retry anonymously when authentication is required' {
+        {
+            InvokeWebRequest -headers @{ Authorization = 'token invalid' } -method GET `
+                -uri 'https://api.example.test/repos/owner/repo/properties/values' -NoAnonymousFallback
+        } | Should -Throw '*401 Unauthorized*'
+
+        Should -Invoke Invoke-WebRequest -ModuleName Github-Helper -Times 1 -Exactly
+        Should -Invoke Invoke-WebRequest -ModuleName Github-Helper -Times 0 -Exactly -ParameterFilter { $Method -eq 'Head' }
+    }
+
+    It 'Preserves anonymous fallback for existing callers' {
+        $result = InvokeWebRequest -headers @{ Authorization = 'token invalid' } -method GET `
+            -uri 'https://api.example.test/repos/owner/repo/properties/values'
+
+        $result.Content | Should -Be '[]'
+        Should -Invoke Invoke-WebRequest -ModuleName Github-Helper -Times 3 -Exactly
+        Should -Invoke Invoke-WebRequest -ModuleName Github-Helper -Times 1 -Exactly -ParameterFilter { $Method -eq 'Head' }
+    }
+}
+
 Describe "FindLatestSuccessfulCICDRun" {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')

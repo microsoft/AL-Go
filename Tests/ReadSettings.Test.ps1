@@ -1,4 +1,43 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'token', Justification = 'Used in a Pester assertion scriptblock.')]
+param()
+
 Import-Module (Join-Path $PSScriptRoot '../Actions/.Modules/ReadSettings.psm1') -Force
+
+Describe 'ReadSettings module layouts' {
+    It 'Imports with the GitHub helper in the <layout> layout' -TestCases @(
+        @{ layout = 'actions' }
+        @{ layout = 'flattened' }
+    ) {
+        param($layout)
+
+        $helperFolder = Join-Path $TestDrive $layout
+        $moduleFolder = $helperFolder
+        if ($layout -eq 'actions') {
+            $moduleFolder = Join-Path $helperFolder '.Modules'
+        }
+        New-Item -Path $moduleFolder -ItemType Directory -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../Actions/Github-Helper.psm1') -Destination $helperFolder
+        foreach ($file in @('ReadSettings.psm1', 'DebugLogHelper.psm1')) {
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot "../Actions/.Modules/$file") -Destination $moduleFolder
+        }
+        $modulePath = Join-Path $moduleFolder 'ReadSettings.psm1'
+        $powerShell = [PowerShell]::Create()
+        try {
+            $null = $powerShell.AddScript(@'
+$ErrorActionPreference = 'Stop'
+Import-Module $args[0] -Force -DisableNameChecking
+(Get-Command ReadSettings).Module.Path
+'@).AddArgument($modulePath)
+            $result = $powerShell.Invoke()
+
+            $powerShell.Streams.Error | Should -BeNullOrEmpty
+            $result | Should -Be @($modulePath)
+        }
+        finally {
+            $powerShell.Dispose()
+        }
+    }
+}
 
 InModuleScope ReadSettings { # Allows testing of private functions
     Describe 'ReadSettings' {
@@ -1802,8 +1841,27 @@ InModuleScope ReadSettings { # Allows testing of private functions
                 $permissions.metadata -eq 'read'
             }
             Should -Invoke InvokeWebRequest -Times 1 -Exactly -ParameterFilter {
-                $uri -eq 'https://api.example.test/repos/Owner/Repository/properties/values'
+                $uri -eq 'https://api.example.test/repos/Owner/Repository/properties/values' -and $NoAnonymousFallback
             }
+        }
+
+        It 'Rejects a missing authentication token before using the cache or making a request' -TestCases @(
+            @{ token = $null }
+            @{ token = '' }
+            @{ token = ' ' }
+        ) {
+            param($token)
+
+            Mock GetHeaders { throw 'Headers must not be requested.' }
+            Mock InvokeWebRequest { throw 'No API request should be made.' }
+            $script:CustomPropertiesCache['https://api.example.test/owner/repo'] = @{ profile = 'strict' }
+
+            {
+                GetRepositoryCustomProperties -apiUrl 'https://api.example.test' -repository 'owner/repo' -token $token
+            } | Should -Throw '*authentication token is required*'
+
+            Should -Invoke GetHeaders -Times 0 -Exactly
+            Should -Invoke InvokeWebRequest -Times 0 -Exactly
         }
 
         It 'Keeps cached values isolated by API host and repository' {
@@ -1819,9 +1877,14 @@ InModuleScope ReadSettings { # Allows testing of private functions
             Should -Invoke InvokeWebRequest -Times 3 -Exactly
         }
 
-        It 'Reports API failures instead of treating them as missing properties' {
+        It 'Reports API failure <failure> instead of treating it as missing properties' -TestCases @(
+            @{ failure = '401 Unauthorized' }
+            @{ failure = '403 Forbidden' }
+        ) {
+            param($failure)
+
             Mock GetHeaders { @{ Authorization = 'token test' } }
-            Mock InvokeWebRequest { throw '403 Forbidden' }
+            Mock InvokeWebRequest { throw $failure }
             $orgSettings = @{
                 ConditionalSettings = @(
                     @{ customProperties = @{ profile = @('strict') }; settings = @{ country = 'de' } }
@@ -1833,7 +1896,8 @@ InModuleScope ReadSettings { # Allows testing of private functions
                     -workflowName '' -branchName 'main' -userName '' -orgSettingsVariableValue $orgSettings `
                     -repoSettingsVariableValue '' -environmentSettingsVariableValue '' `
                     -githubToken 'test-token' -githubApiUrl 'https://api.example.test'
-            } | Should -Throw '*Failed to read GitHub custom properties*403 Forbidden*'
+            } | Should -Throw "*Failed to read GitHub custom properties*$failure*"
+            $script:CustomPropertiesCache.Count | Should -Be 0
         }
 
         It 'Rejects unsupported condition names and malformed custom property allowlists' {
