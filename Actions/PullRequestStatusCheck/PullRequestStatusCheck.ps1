@@ -67,7 +67,7 @@ function PullRequestStatusCheck() {
             $matchesOptionalPattern = @($OptionalPatterns | Where-Object { $job.name -like $_ }).Count -gt 0
             if ($job.name -like 'Build * (*) / * (*)' -and $matchesOptionalPattern) {
                 $failedOptionalJobs += $job.name
-                Write-Host "::Warning::Optional PR build job failed (non-blocking): $($job.name)"
+                OutputWarning -message "Optional PR build job failed (non-blocking): $($job.name)"
                 continue
             }
             $job

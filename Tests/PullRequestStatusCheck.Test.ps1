@@ -96,6 +96,7 @@ Describe "PullRequestStatusCheck Action Tests" {
                 @{ name = $requiredJobName; conclusion = 'success' }
             ) } -Depth 10
             Mock gh { $global:LASTEXITCODE = 0; $jobsJson }
+            Mock OutputWarning {}
             Mock Write-Host {}
             Mock Start-Sleep -ModuleName Github-Helper {}
         }
@@ -110,7 +111,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Patterns)
             & $scriptPath -optionalPatternForPrValidationJson $Patterns
-            Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq "::Warning::Optional PR build job failed (non-blocking): $optionalJobName" }
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -eq "Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
             $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName) -Compress)
@@ -130,7 +131,7 @@ Describe "PullRequestStatusCheck Action Tests" {
             $jobsJson = '[{"jobs":[{"name":"Build Alpha (NextMinor) / Alpha (NextMinor)","conclusion":"failure"}]},{"jobs":[{"name":"Build Beta (Default) / Beta (Default)","conclusion":"failure"}]}]'
             { & $scriptPath -optionalPatternForPrValidationJson '["*NextMinor*"]' } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $requiredJobName"
-            Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -like '::Warning::Optional PR build job failed*' }
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
             $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName) -Compress)
         }
@@ -175,7 +176,7 @@ Describe "PullRequestStatusCheck Action Tests" {
             ) } -Depth 10
             { & $scriptPath -optionalPatternForPrValidationJson '["*"]' } |
                 Should -Throw -ExpectedMessage 'PR Build failed. Failing jobs: Initialization'
-            Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -like '::Warning::Optional PR build job failed*' }
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
 
         It 'Allows matching build names without build metadata: <Name>' -TestCases @(
@@ -187,7 +188,7 @@ Describe "PullRequestStatusCheck Action Tests" {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
             & $scriptPath -optionalPatternForPrValidationJson '["*"]'
-            Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -like '::Warning::Optional PR build job failed*' }
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
 
         It 'Allows optional failures with duplicate API names and <Conclusion> conclusions' -TestCases @(
@@ -200,7 +201,7 @@ Describe "PullRequestStatusCheck Action Tests" {
                 @{ name = $optionalJobName; conclusion = $Conclusion }
             ) } -Depth 10
             & $scriptPath -optionalPatternForPrValidationJson '["*"]'
-            Assert-MockCalled Write-Host -Exactly $Warnings -ParameterFilter { $Object -eq "::Warning::Optional PR build job failed (non-blocking): $optionalJobName" }
+            Assert-MockCalled OutputWarning -Exactly $Warnings -ParameterFilter { $message -eq "Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
         }
 
