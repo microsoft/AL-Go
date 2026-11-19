@@ -23,4 +23,17 @@ Optional jobs and the workflow run may remain failed while this aggregate status
 
 ## OUTPUT
 
-none
+| Name | Description |
+| :-- | :-- |
+| failedOptionalJobs | JSON array of full names of failed optional build jobs, or `[]` when none qualify. Successful, skipped, cancelled, and required jobs are excluded. |
+
+After job classification, the output is written even if a required job failure causes the action to fail. API or input validation errors do not produce this output.
+
+Give the action step an `id` (for example, `statusCheck`) and read `${{ steps.statusCheck.outputs.failedOptionalJobs }}`. Use `fromJSON(steps.statusCheck.outputs.failedOptionalJobs)` to consume it as an array. To expose it to other jobs, map it to a job output and read `${{ needs.StatusCheck.outputs.failedOptionalJobs }}`:
+
+```yaml
+outputs:
+  failedOptionalJobs: ${{ steps.statusCheck.outputs.failedOptionalJobs }}
+```
+
+Consumers that must run after a required failure need an appropriate condition such as `if: always()`.

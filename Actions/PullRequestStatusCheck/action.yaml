@@ -9,11 +9,16 @@ inputs:
     description: Optional build job wildcard patterns in JSON array format
     required: false
     default: '[]'
+outputs:
+  failedOptionalJobs:
+    description: JSON array of failed optional build job names
+    value: ${{ steps.pullrequeststatuscheck.outputs.failedOptionalJobs }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      id: pullrequeststatuscheck
       env:
         _optionalPatternForPrValidationJson: ${{ inputs.optionalPatternForPrValidationJson }}
       run: |

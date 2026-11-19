@@ -25,12 +25,20 @@ Describe "PullRequestStatusCheck Action Tests" {
         $originalServerUrl = $ENV:GITHUB_SERVER_URL
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGhHost', Justification = 'False positive.')]
         $originalGhHost = $ENV:GH_HOST
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGithubOutput', Justification = 'Used in AfterAll.')]
+        $originalGithubOutput = $ENV:GITHUB_OUTPUT
         $ENV:GITHUB_SERVER_URL = "https://github.com"
+    }
+
+    BeforeEach {
+        $ENV:GITHUB_OUTPUT = Join-Path $TestDrive 'github_output.txt'
+        Set-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value $null
     }
 
     AfterAll {
         $ENV:GITHUB_SERVER_URL = $originalServerUrl
         $ENV:GH_HOST = $originalGhHost
+        $ENV:GITHUB_OUTPUT = $originalGithubOutput
     }
 
     It 'Compile Action' {
@@ -39,6 +47,7 @@ Describe "PullRequestStatusCheck Action Tests" {
 
     It 'Test action.yaml matches script' {
         $outputs = [ordered]@{
+            "failedOptionalJobs" = "JSON array of failed optional build job names"
         }
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
@@ -62,6 +71,7 @@ Describe "PullRequestStatusCheck Action Tests" {
         Mock Write-Host {}
         & $scriptPath
         Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "PR Build succeeded" }
+        (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() | Should -Be 'failedOptionalJobs=[]'
         $ENV:GH_HOST | Should -Be 'github.com'
     }
 
@@ -102,6 +112,8 @@ Describe "PullRequestStatusCheck Action Tests" {
             & $scriptPath -optionalPatternForPrValidationJson $Patterns
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq "::Warning::Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
+            $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
+            $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName) -Compress)
         }
 
         It 'Preserves failures with <Patterns>' -TestCases @(
@@ -111,6 +123,7 @@ Describe "PullRequestStatusCheck Action Tests" {
             param($Patterns)
             { & $scriptPath -optionalPatternForPrValidationJson $Patterns } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $optionalJobName"
+            (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() | Should -Be 'failedOptionalJobs=[]'
         }
 
         It 'Warns about optional failures and only reports required failures across pages' {
@@ -118,6 +131,26 @@ Describe "PullRequestStatusCheck Action Tests" {
             { & $scriptPath -optionalPatternForPrValidationJson '["*NextMinor*"]' } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $requiredJobName"
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -like '::Warning::Optional PR build job failed*' }
+            $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
+            $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName) -Compress)
+        }
+
+        It 'Outputs only failed optional build names across pages and escapes JSON characters' {
+            $escapedJobName = 'Build "Custom" (NextMinor) / Custom\Path (NextMinor)'
+            $jobsJson = ConvertTo-Json -InputObject @(
+                @{ jobs = @(
+                    @{ name = $optionalJobName; conclusion = 'failure' }
+                    @{ name = $optionalJobName; conclusion = 'success' }
+                    @{ name = 'Initialization'; conclusion = 'skipped' }
+                ) }
+                @{ jobs = @(
+                    @{ name = $escapedJobName; conclusion = 'failure' }
+                    @{ name = $optionalJobName; conclusion = 'cancelled' }
+                ) }
+            ) -Depth 10
+            & $scriptPath -optionalPatternForPrValidationJson '["*"]'
+            $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
+            $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName, $escapedJobName) -Compress)
         }
 
         It 'Keeps non-build jobs required even with a broad wildcard: <Name>' -TestCases @(
