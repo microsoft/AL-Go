@@ -27,18 +27,22 @@ Describe "PullRequestStatusCheck Action Tests" {
         $originalGhHost = $ENV:GH_HOST
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalGithubOutput', Justification = 'Used in AfterAll.')]
         $originalGithubOutput = $ENV:GITHUB_OUTPUT
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'originalSettings', Justification = 'Used in AfterAll.')]
+        $originalSettings = $ENV:Settings
         $ENV:GITHUB_SERVER_URL = "https://github.com"
     }
 
     BeforeEach {
         $ENV:GITHUB_OUTPUT = Join-Path $TestDrive 'github_output.txt'
         Set-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Value $null
+        $ENV:Settings = '{"optionalPatternsForPrValidation":[]}'
     }
 
     AfterAll {
         $ENV:GITHUB_SERVER_URL = $originalServerUrl
         $ENV:GH_HOST = $originalGhHost
         $ENV:GITHUB_OUTPUT = $originalGithubOutput
+        $ENV:Settings = $originalSettings
     }
 
     It 'Compile Action' {
@@ -110,7 +114,8 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Patterns = '["no match","*NextMinor*"]' }
         ) {
             param($Patterns)
-            & $scriptPath -optionalPatternsForPrValidationJson $Patterns
+            $ENV:Settings = "{`"optionalPatternsForPrValidation`":$Patterns}"
+            & $scriptPath
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -eq "Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
@@ -122,14 +127,16 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Patterns = '["no match"]' }
         ) {
             param($Patterns)
-            { & $scriptPath -optionalPatternsForPrValidationJson $Patterns } |
+            $ENV:Settings = "{`"optionalPatternsForPrValidation`":$Patterns}"
+            { & $scriptPath } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $optionalJobName"
             (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() | Should -Be 'failedOptionalJobs=[]'
         }
 
         It 'Warns about optional failures and only reports required failures across pages' {
             $jobsJson = '[{"jobs":[{"name":"Build Alpha (NextMinor) / Alpha (NextMinor)","conclusion":"failure"}]},{"jobs":[{"name":"Build Beta (Default) / Beta (Default)","conclusion":"failure"}]}]'
-            { & $scriptPath -optionalPatternsForPrValidationJson '["*NextMinor*"]' } |
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*NextMinor*"]}'
+            { & $scriptPath } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $requiredJobName"
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
@@ -149,7 +156,8 @@ Describe "PullRequestStatusCheck Action Tests" {
                     @{ name = $optionalJobName; conclusion = 'cancelled' }
                 ) }
             ) -Depth 10
-            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*"]}'
+            & $scriptPath
             $outputJson = (Get-Content -Encoding UTF8 -Path $ENV:GITHUB_OUTPUT -Raw).Trim() -replace '^failedOptionalJobs=', ''
             $outputJson | Should -Be (ConvertTo-Json -InputObject @($optionalJobName, $escapedJobName) -Compress)
         }
@@ -165,7 +173,8 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
-            { & $scriptPath -optionalPatternsForPrValidationJson '["*"]' } |
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*"]}'
+            { & $scriptPath } |
                 Should -Throw -ExpectedMessage "PR Build failed. Failing jobs: $Name"
         }
 
@@ -174,7 +183,8 @@ Describe "PullRequestStatusCheck Action Tests" {
                 @{ name = $optionalJobName; conclusion = 'failure' }
                 @{ name = 'Initialization'; conclusion = 'failure' }
             ) } -Depth 10
-            { & $scriptPath -optionalPatternsForPrValidationJson '["*"]' } |
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*"]}'
+            { & $scriptPath } |
                 Should -Throw -ExpectedMessage 'PR Build failed. Failing jobs: Initialization'
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
@@ -187,7 +197,8 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Name)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = $Name; conclusion = 'failure' }) } -Depth 10
-            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*"]}'
+            & $scriptPath
             Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like 'Optional PR build job failed*' }
         }
 
@@ -200,7 +211,8 @@ Describe "PullRequestStatusCheck Action Tests" {
                 @{ name = $optionalJobName; conclusion = 'failure' }
                 @{ name = $optionalJobName; conclusion = $Conclusion }
             ) } -Depth 10
-            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*"]}'
+            & $scriptPath
             Assert-MockCalled OutputWarning -Exactly $Warnings -ParameterFilter { $message -eq "Optional PR build job failed (non-blocking): $optionalJobName" }
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
         }
@@ -213,7 +225,8 @@ Describe "PullRequestStatusCheck Action Tests" {
         ) {
             param($Conclusion)
             $jobsJson = ConvertTo-Json -InputObject @{ jobs = @(@{ name = 'Initialization'; conclusion = $Conclusion }) } -Depth 10
-            & $scriptPath -optionalPatternsForPrValidationJson '["*"]'
+            $ENV:Settings = '{"optionalPatternsForPrValidation":["*"]}'
+            & $scriptPath
             Assert-MockCalled Write-Host -Exactly 1 -ParameterFilter { $Object -eq 'PR Build succeeded' }
         }
 
@@ -227,7 +240,8 @@ Describe "PullRequestStatusCheck Action Tests" {
             @{ Patterns = '[' }
         ) {
             param($Patterns)
-            { & $scriptPath -optionalPatternsForPrValidationJson $Patterns } | Should -Throw
+            $ENV:Settings = "{`"optionalPatternsForPrValidation`":$Patterns}"
+            { & $scriptPath } | Should -Throw
             Assert-MockCalled gh -Exactly 0
         }
     }

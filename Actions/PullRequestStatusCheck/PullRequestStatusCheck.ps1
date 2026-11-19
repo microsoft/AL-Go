@@ -1,9 +1,4 @@
-﻿param(
-    [Parameter(HelpMessage = "Optional build job wildcard patterns in JSON array format")]
-    [string] $optionalPatternsForPrValidationJson = '[]'
-)
-
-. (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
+﻿. (Join-Path $PSScriptRoot '..\AL-Go-Helper.ps1' -Resolve)
 
 <#
 .SYNOPSIS
@@ -80,18 +75,20 @@ function PullRequestStatusCheck() {
     }
 }
 
-if ($optionalPatternsForPrValidationJson -notmatch '^\s*\[') {
-    throw "optionalPatternsForPrValidationJson must be a JSON array."
+if (!$env:Settings) {
+    throw "Settings environment variable is required."
 }
-# Validate the standalone input before embedding it; object properties preserve arrays on PS5 and PS7.
-$null = $optionalPatternsForPrValidationJson | ConvertFrom-Json
-$inputsJson = "{`"optionalPatterns`":$optionalPatternsForPrValidationJson}"
-$parsedInputs = $inputsJson | ConvertFrom-Json
-$optionalPatterns = @($parsedInputs.optionalPatterns)
-if (@($optionalPatterns | Where-Object { $_ -isnot [string] }).Count -gt 0) {
-    throw "optionalPatternsForPrValidationJson must contain only strings."
+$settingsJson = $env:Settings | ConvertFrom-Json
+$rawOptionalPatterns = $settingsJson.optionalPatternsForPrValidation
+if ($rawOptionalPatterns -isnot [System.Array]) {
+    throw "Settings.optionalPatternsForPrValidation must be an array."
 }
-$parsedInputs = $parsedInputs | ConvertTo-HashTable -recurse
-$optionalPatterns = @($parsedInputs.optionalPatterns)
+foreach ($pattern in $rawOptionalPatterns) {
+    if ($pattern -isnot [string]) {
+        throw "Settings.optionalPatternsForPrValidation must contain only strings."
+    }
+}
+$settings = $settingsJson | ConvertTo-HashTable -recurse
+$optionalPatterns = @($settings.optionalPatternsForPrValidation)
 PullRequestStatusCheck -Repository $env:GITHUB_REPOSITORY -RunId $env:GITHUB_RUN_ID -OptionalPatterns $optionalPatterns
 Write-Host "PR Build succeeded"
