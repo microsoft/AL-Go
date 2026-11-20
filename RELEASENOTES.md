@@ -1,3 +1,31 @@
+### Separate test execution from RunPipeline (PREVIEW)
+
+A new `useSeparateTestAction` setting can run normal tests from `testFolders` in a dedicated `RunTests` action. Enable it in AL-Go settings:
+A new `useSeparateTestAction` complex setting (default `{ "enabled": false, "testType": "" }`) runs normal tests (`testFolders`) in a dedicated `RunTests` action when `enabled` is `true`. The separate action is used when tests are built and enabled and the build uses one local container. Normal tests remain in `RunPipeline` for builds with `additionalCountries`, no published apps, or test-data import callbacks that would otherwise have no remaining RunPipeline test category. BCPT and page scripting tests remain in `RunPipeline`.
+
+```json
+{
+  "useSeparateTestAction": {
+    "enabled": true,
+    "testType": "",
+    "codeCoverageEnabled": false,
+    "codeCoverageGenerateCobertura": true,
+    "codeCoverageSummary": "both"
+  }
+}
+```
+
+The separate action is used when normal tests are enabled and the build uses one local container. Builds with `additionalCountries` or without a local build container continue to run normal tests in `RunPipeline`. BCPT and page scripting tests remain in `RunPipeline`.
+
+The built-in runner uses AlTool, honors `disabledTests.json`, and supports the optional `testType` values `UnitTest`, `IntegrationTest`, and `Uncategorized`. Blank runs all supported test types. Test results continue to appear in AnalyzeTests and the TestResults artifact, and test failures include the refreshed container event log.
+
+Set `codeCoverageEnabled` to `true` to collect executable-line coverage. Coverage requires Business Central container platform 30.0.56026.0 or later. Older or unconfirmed versions produce a warning and continue running tests without coverage. BC JSON is always produced for AL-Go analysis. Set `codeCoverageGenerateCobertura` to `false` to omit the additional Cobertura interoperability artifact. `codeCoverageSummary` controls project and repository job summaries with `none`, `project`, `repository`, or `both`. Coverage files are published in the CodeCoverage artifact. Configured app and test folders without AL source files are skipped automatically. Line summaries ignore duplicate-object and method-identity enrichment diagnostics, but remain incomplete when the server reports missing lines that cannot be safely mapped.
+
+Projects with a custom `.AL-Go/RunTestsInBcContainer.ps1` can continue using its existing single-parameter signature. Before enabling coverage, update the override to use the coverage values AL-Go adds to the existing `$parameters` hashtable on supported containers. The context includes regular source-root application IDs, and compatible preview AlTool builds can pass matching compiler-instrumented packages through the optional runner `CoverageAppPaths` parameter. Coverage disabled and unsupported behavior is unchanged. See the [RunTests action documentation](Actions/RunTests/README.md) for the override example and supported fields.
+
+> [!NOTE]
+> The built-in AlTool runner does not support `Legacy` test-type codeunits or tests that require UI or client-callback interaction. Projects that need those scenarios can retain their custom `RunTestsInBcContainer.ps1` implementation.
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).

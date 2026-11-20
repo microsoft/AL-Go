@@ -66,50 +66,36 @@ function Set-RunPipelineContainerCredential {
     }
 }
 
-function Get-SeparateTestActionIneligibilityReasons {
+function Set-RunPipelineContainerPlatformVersion {
     <#
     .SYNOPSIS
-        Gets the reasons normal tests must remain in RunPipeline.
+        Exports the build container platform version for the separate RunTests action.
     .DESCRIPTION
-        Returns deterministic reasons that prevent normal tests from being deferred to the separate
-        RunTests action. The final Run-AlPipeline parameters are inspected so custom and generated
-        ImportTestDataInBcContainer callbacks are handled consistently.
-    .PARAMETER settings
-        The analyzed AL-Go settings.
-    .PARAMETER additionalCountries
-        Additional countries configured for the build.
-    .PARAMETER runAlPipelineParams
-        The final Run-AlPipeline parameter hashtable.
+        Looks up the actual platform version after Run-AlPipeline has completed. Lookup failures are
+        exported as a non-sensitive reason so RunTests can warn and continue without code coverage.
+    .PARAMETER containerName
+        Name of the kept-alive build container.
     #>
     param(
         [Parameter(Mandatory = $true)]
-        [hashtable] $settings,
-        [AllowNull()]
-        [AllowEmptyCollection()]
-        [AllowEmptyString()]
-        [string[]] $additionalCountries,
-        [Parameter(Mandatory = $true)]
-        [hashtable] $runAlPipelineParams
+        [string] $containerName
     )
 
-    $reasons = @()
-    if ($settings.doNotRunTests) {
-        $reasons += "doNotRunTests is enabled"
+    $containerPlatformVersion = ""
+    $containerPlatformVersionReason = ""
+    try {
+        $containerPlatformVersion = "$(Get-BcContainerPlatformVersion -containerOrImageName $containerName)".Trim()
+        if ([string]::IsNullOrWhiteSpace($containerPlatformVersion)) {
+            $containerPlatformVersionReason = "Get-BcContainerPlatformVersion returned no platform version."
+        }
     }
-    if ($settings.doNotBuildTests) {
-        $reasons += "doNotBuildTests is enabled"
+    catch {
+        $containerPlatformVersion = ""
+        $containerPlatformVersionReason = "Get-BcContainerPlatformVersion failed ($($_.Exception.GetType().Name))."
     }
-    if ($settings.doNotPublishApps) {
-        $reasons += "doNotPublishApps is enabled"
-    }
-    if (@($additionalCountries | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
-        $reasons += "additionalCountries is configured"
-    }
-    if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
-        $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
-        $reasons += "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
-    }
-    return @($reasons)
+
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerPlatformVersion=$containerPlatformVersion"
+    Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "containerPlatformVersionReason=$containerPlatformVersionReason"
 }
 
 $containerBaseFolder = $null
@@ -571,8 +557,12 @@ try {
     # yet be reproduced after the build.
     $separateTestActionIneligibilityReasons = @(Get-SeparateTestActionIneligibilityReasons `
         -settings $settings `
-        -additionalCountries @($additionalCountries) `
-        -runAlPipelineParams $runAlPipelineParams)
+        -additionalCountries @($additionalCountries))
+    if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
+        $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
+        $separateTestActionIneligibilityReasons +=
+            "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
+    }
     $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and $separateTestActionIneligibilityReasons.Count -eq 0
     Add-Content -Encoding UTF8 -Path $env:GITHUB_ENV -Value "runTestsInSeparateAction=$runTestsInSeparateAction"
 
@@ -634,6 +624,10 @@ try {
         -appVersion ($versionNumber.MajorMinorVersion) -appBuild ($versionNumber.BuildNumber) -appRevision ($versionNumber.RevisionNumber) `
         -keepContainer:$runTestsInSeparateAction `
         -uninstallRemovedApps
+
+    if ($runTestsInSeparateAction) {
+        Set-RunPipelineContainerPlatformVersion -containerName $containerName
+    }
 
     if ($containerBaseFolder) {
         Write-Host "Copy artifacts and build output back from build container"

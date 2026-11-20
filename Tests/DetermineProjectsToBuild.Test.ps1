@@ -13,6 +13,84 @@ Describe "Get-ProjectsToBuild" {
         $baseFolder = (New-Item -ItemType Directory -Path (Join-Path $([System.IO.Path]::GetTempPath()) $([System.IO.Path]::GetRandomFileName()))).FullName
     }
 
+    It 'Adds only repository coverage participation to build dimensions for summary scope <Summary>' -TestCases @(
+        @{ Summary = 'none'; ExpectedRepositorySummary = $false }
+        @{ Summary = 'project'; ExpectedRepositorySummary = $false }
+        @{ Summary = 'repository'; ExpectedRepositorySummary = $true }
+        @{ Summary = 'both'; ExpectedRepositorySummary = $true }
+    ) {
+        param($Summary, $ExpectedRepositorySummary)
+
+        $coverageDimensionSettings = @{
+            githubRunner          = 'windows-latest'
+            githubRunnerShell     = 'powershell'
+            buildModes            = @('Default')
+            projectName           = 'Coverage Project'
+            doNotRunTests         = $false
+            doNotBuildTests       = $false
+            doNotPublishApps      = $false
+            additionalCountries   = @()
+            useSeparateTestAction = @{
+                enabled                       = $true
+                codeCoverageEnabled           = $true
+                codeCoverageSummary           = $Summary
+            }
+        }
+        $dimensions = @(InModuleScope DetermineProjectsToBuild -Parameters @{
+                BaseFolder = $baseFolder
+                Settings   = $coverageDimensionSettings
+            } {
+                param($BaseFolder, $Settings)
+                $null = $Settings
+                Mock ReadSettings { return $Settings }
+                CreateBuildDimensions -projects @('CoverageProject') -baseFolder $BaseFolder
+            })
+
+        $dimensions.Count | Should -Be 1
+        $dimensions[0].codeCoverageRepositorySummary | Should -Be $ExpectedRepositorySummary
+        $dimensions[0].ContainsKey('codeCoverageExpected') | Should -BeFalse
+        $dimensions[0].ContainsKey('codeCoverageMode') | Should -BeFalse
+        $dimensions[0].ContainsKey('codeCoverageFormats') | Should -BeFalse
+    }
+
+    It 'Does not request repository coverage when separate execution is blocked by <Case>' -TestCases @(
+        @{ Case = 'disabled normal tests'; DoNotRunTests = $true }
+        @{ Case = 'disabled test builds'; DoNotBuildTests = $true }
+        @{ Case = 'disabled app publication'; DoNotPublishApps = $true }
+        @{ Case = 'additional countries'; AdditionalCountries = @('dk') }
+    ) {
+        param($DoNotRunTests, $DoNotBuildTests, $DoNotPublishApps, $AdditionalCountries)
+
+        $coverageDimensionSettings = @{
+            githubRunner          = 'windows-latest'
+            githubRunnerShell     = 'powershell'
+            buildModes            = @('Default')
+            projectName           = 'Coverage Project'
+            doNotRunTests         = [bool]$DoNotRunTests
+            doNotBuildTests       = [bool]$DoNotBuildTests
+            doNotPublishApps      = [bool]$DoNotPublishApps
+            additionalCountries   = @($AdditionalCountries)
+            useSeparateTestAction = @{
+                enabled                       = $true
+                codeCoverageEnabled           = $true
+                codeCoverageSummary           = 'both'
+            }
+        }
+        $dimension = @(InModuleScope DetermineProjectsToBuild -Parameters @{
+                BaseFolder = $baseFolder
+                Settings   = $coverageDimensionSettings
+            } {
+                param($BaseFolder, $Settings)
+                $null = $Settings
+                Mock ReadSettings { return $Settings }
+                CreateBuildDimensions -projects @('CoverageProject') -baseFolder $BaseFolder
+            })[0]
+
+        $dimension.codeCoverageRepositorySummary | Should -BeFalse
+        $dimension.ContainsKey('codeCoverageExpected') | Should -BeFalse
+        $dimension.ContainsKey('codeCoverageFormats') | Should -BeFalse
+    }
+
     It 'loads a single project in the root folder' {
         New-Item -Path "$baseFolder/.AL-Go/settings.json" -type File -Force
 

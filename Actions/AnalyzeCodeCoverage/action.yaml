@@ -1,0 +1,38 @@
+name: Analyze Code Coverage
+author: Microsoft Corporation
+inputs:
+  shell:
+    description: Shell in which you want to run the action (powershell or pwsh)
+    required: false
+    default: powershell
+  scope:
+    description: Coverage summary scope (project or repository)
+    required: true
+  project:
+    description: Project folder
+    required: false
+    default: '.'
+  coveragePath:
+    description: Path containing downloaded code coverage artifacts
+    required: true
+  buildOrderJson:
+    description: Build order JSON used to determine expected repository coverage artifacts
+    required: false
+    default: '[]'
+runs:
+  using: composite
+  steps:
+    - name: run
+      shell: ${{ inputs.shell }}
+      env:
+        _scope: ${{ inputs.scope }}
+        _project: ${{ inputs.project }}
+        _coveragePath: ${{ inputs.coveragePath }}
+        _buildOrderJson: ${{ inputs.buildOrderJson }}
+      run: |
+        ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "AnalyzeCodeCoverage" -Action {
+          ${{ github.action_path }}/AnalyzeCodeCoverage.ps1 -scope $ENV:_scope -project $ENV:_project -coveragePath $ENV:_coveragePath -buildOrderJson $ENV:_buildOrderJson
+        }
+branding:
+  icon: terminal
+  color: blue

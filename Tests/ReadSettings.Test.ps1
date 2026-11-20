@@ -306,16 +306,23 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $defaultSettings.useSeparateTestAction | Should -BeOfType System.Collections.Specialized.OrderedDictionary
             $defaultSettings.useSeparateTestAction.enabled | Should -BeFalse
             $defaultSettings.useSeparateTestAction.testType | Should -Be ''
+            $defaultSettings.useSeparateTestAction.codeCoverageEnabled | Should -BeFalse
+            $defaultSettings.useSeparateTestAction.codeCoverageGenerateCobertura | Should -BeTrue
+            $defaultSettings.useSeparateTestAction.codeCoverageSummary | Should -Be 'both'
             $defaultSettings.Contains('testType') | Should -BeFalse
 
             $customSettings = [PSCustomObject]@{
                 useSeparateTestAction = [PSCustomObject]@{
-                    testType = 'Legacy'
+                    testType                       = 'Legacy'
+                    codeCoverageGenerateCobertura = $false
                 }
             }
             MergeCustomObjectIntoOrderedDictionary -dst $defaultSettings -src $customSettings
             $defaultSettings.useSeparateTestAction.enabled | Should -BeFalse
             $defaultSettings.useSeparateTestAction.testType | Should -Be 'Legacy'
+            $defaultSettings.useSeparateTestAction.codeCoverageEnabled | Should -BeFalse
+            $defaultSettings.useSeparateTestAction.codeCoverageGenerateCobertura | Should -BeFalse
+            $defaultSettings.useSeparateTestAction.codeCoverageSummary | Should -Be 'both'
         }
 
         It 'Validates only the complex separate test setting shape' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
@@ -325,6 +332,9 @@ InModuleScope ReadSettings { # Allows testing of private functions
             $settings = GetDefaultSettings
             $settings.useSeparateTestAction.enabled = $true
             $settings.useSeparateTestAction.testType = 'IntegrationTest'
+            $settings.useSeparateTestAction.codeCoverageEnabled = $true
+            $settings.useSeparateTestAction.codeCoverageGenerateCobertura = $false
+            $settings.useSeparateTestAction.codeCoverageSummary = 'repository'
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema | Should -BeTrue
 
             $legacySettings = GetDefaultSettings
@@ -333,6 +343,18 @@ InModuleScope ReadSettings { # Allows testing of private functions
 
             $settings.useSeparateTestAction.Add('unexpected', $true)
             Test-Json -json (ConvertTo-Json $settings -Depth 99) -schema $schema -ErrorAction SilentlyContinue | Should -BeFalse
+
+            $removedModeSettings = GetDefaultSettings
+            $removedModeSettings.useSeparateTestAction.Add('codeCoverageMode', 'all')
+            Test-Json -json (ConvertTo-Json $removedModeSettings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                Should -BeFalse
+
+            foreach ($invalidSummary in @('', 'job', 'Both')) {
+                $invalidSettings = GetDefaultSettings
+                $invalidSettings.useSeparateTestAction.codeCoverageSummary = $invalidSummary
+                Test-Json -json (ConvertTo-Json $invalidSettings -Depth 99) -schema $schema -ErrorAction SilentlyContinue |
+                    Should -BeFalse
+            }
         }
 
         It 'Disables Copilot code review by default' {

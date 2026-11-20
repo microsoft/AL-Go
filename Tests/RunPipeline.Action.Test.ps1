@@ -11,6 +11,8 @@ Describe "RunPipeline Action Tests" {
         $scriptPath = Join-Path $scriptRoot $scriptName
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'actionScript', Justification = 'False positive.')]
         $actionScript = GetActionScript -scriptRoot $scriptRoot -scriptName $scriptName
+        Import-Module (Join-Path $scriptRoot "..\DetermineProjectsToBuild\DetermineProjectsToBuild.psm1" -Resolve) `
+            -Force -DisableNameChecking
 
         $tokens = $null
         $parseErrors = $null
@@ -27,15 +29,6 @@ Describe "RunPipeline Action Tests" {
                     $node.Left.Extent.Text -eq '$runTestsInSeparateAction'
                 }, $true))
         $eligibilityAssignments.Count | Should -Be 1
-
-        $eligibilityFunctionAst = @($runPipelineAst.FindAll({
-                    param($node)
-                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
-                    $node.Name -eq 'Get-SeparateTestActionIneligibilityReasons'
-                }, $true))
-        $eligibilityFunctionAst.Count | Should -Be 1
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'eligibilityFunction', Justification = 'Used by eligibility test cases.')]
-        $eligibilityFunction = $eligibilityFunctionAst[0].Body.GetScriptBlock()
 
         $newCredentialFunctionAst = @($runPipelineAst.FindAll({
                     param($node)
@@ -54,6 +47,15 @@ Describe "RunPipeline Action Tests" {
         $setCredentialFunctionAst.Count | Should -Be 1
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'setCredentialFunction', Justification = 'Used by credential test cases.')]
         $setCredentialFunction = $setCredentialFunctionAst[0].Body.GetScriptBlock()
+
+        $setPlatformVersionFunctionAst = @($runPipelineAst.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                    $node.Name -eq 'Set-RunPipelineContainerPlatformVersion'
+                }, $true))
+        $setPlatformVersionFunctionAst.Count | Should -Be 1
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'setPlatformVersionFunction', Justification = 'Used by platform handoff test cases.')]
+        $setPlatformVersionFunction = $setPlatformVersionFunctionAst[0].Body.GetScriptBlock()
 
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'credentialCommandAsts', Justification = 'Used by credential ordering tests.')]
         $credentialCommandAsts = @($runPipelineAst.FindAll({
@@ -96,6 +98,7 @@ Describe "RunPipeline Action Tests" {
         $eligibilityAssignments[0].Right.Extent.Text |
             Should -Be '$settings.useSeparateTestAction.enabled -and $separateTestActionIneligibilityReasons.Count -eq 0'
         $actionScript | Should -Match ([regex]::Escape('$separateTestActionIneligibilityReasons -join ''; '''))
+        $actionScript | Should -Match 'ImportTestDataInBcContainer requires RunPipeline'
     }
 
     It 'Computes eligibility and configures the container credential for <Name>' -TestCases @(
@@ -222,10 +225,14 @@ Describe "RunPipeline Action Tests" {
             if ($HasImportTestData) {
                 $runAlPipelineParams.ImportTestDataInBcContainer = {}
             }
-            $ineligibilityReasons = @(& $eligibilityFunction `
+            $ineligibilityReasons = @(Get-SeparateTestActionIneligibilityReasons `
                     -settings $settings `
-                    -additionalCountries @($AdditionalCountries) `
-                    -runAlPipelineParams $runAlPipelineParams)
+                    -additionalCountries @($AdditionalCountries))
+            if ($runAlPipelineParams.ContainsKey("ImportTestDataInBcContainer") -and
+                $settings.doNotRunBcptTests -and $settings.doNotRunPageScriptingTests) {
+                $ineligibilityReasons +=
+                    "ImportTestDataInBcContainer requires RunPipeline when BCPT and page scripting tests are disabled"
+            }
             ($ineligibilityReasons -join '; ') | Should -Be $ExpectedReason
             $runTestsInSeparateAction = $settings.useSeparateTestAction.enabled -and $ineligibilityReasons.Count -eq 0
             $runTestsInSeparateAction | Should -Be $Expected
@@ -264,6 +271,45 @@ Describe "RunPipeline Action Tests" {
         }
         finally {
             $env:GITHUB_ENV = $previousGitHubEnv
+        }
+    }
+
+    Context 'Container platform version handoff' {
+        BeforeEach {
+            $script:previousGitHubEnv = $env:GITHUB_ENV
+            $env:GITHUB_ENV = Join-Path $TestDrive "$([guid]::NewGuid()).env"
+        }
+
+        AfterEach {
+            $env:GITHUB_ENV = $script:previousGitHubEnv
+        }
+
+        It 'Exports the actual platform version returned by BcContainerHelper' {
+            Mock Get-BcContainerPlatformVersion { return [version]'30.0.56026.0' }
+
+            & $setPlatformVersionFunction -containerName 'build-container'
+
+            Get-Content -LiteralPath $env:GITHUB_ENV -Encoding UTF8 |
+                Should -Be @(
+                    'containerPlatformVersion=30.0.56026.0',
+                    'containerPlatformVersionReason='
+                )
+            Should -Invoke Get-BcContainerPlatformVersion -Times 1 -Exactly -ParameterFilter {
+                $containerOrImageName -eq 'build-container'
+            }
+        }
+
+        It 'Exports a blank version and safe reason without failing when lookup fails' {
+            Mock Get-BcContainerPlatformVersion { throw 'lookup included unsafe details' }
+
+            { & $setPlatformVersionFunction -containerName 'build-container' } | Should -Not -Throw
+
+            $handoff = Get-Content -LiteralPath $env:GITHUB_ENV -Encoding UTF8
+            $handoff | Should -Contain 'containerPlatformVersion='
+            $reason = @($handoff | Where-Object { $_ -like 'containerPlatformVersionReason=*' })
+            $reason.Count | Should -Be 1
+            $reason[0] | Should -Match 'Get-BcContainerPlatformVersion failed'
+            $reason[0] | Should -Not -Match 'unsafe details'
         }
     }
 

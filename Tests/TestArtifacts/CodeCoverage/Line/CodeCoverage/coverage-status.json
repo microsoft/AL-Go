@@ -1,0 +1,21 @@
+{
+  "project": "LineProject",
+  "projectName": "Line project",
+  "buildMode": "Default",
+  "sourceRootDetails": [
+    {
+      "path": "src",
+      "kind": "app",
+      "appId": "line-regular-app",
+      "appName": "Line app"
+    }
+  ],
+  "runs": [
+    {
+      "appId": "line-app",
+      "appName": "Line Tests",
+      "state": "complete",
+      "diagnostics": []
+    }
+  ]
+}
