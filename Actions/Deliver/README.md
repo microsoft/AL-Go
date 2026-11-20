@@ -23,6 +23,7 @@ Deliver App to deliveryTarget (AppSource, Storage, or...)
 | type | | Type of delivery (CD or Release) | CD |
 | atypes | | Artifact types to deliver | Apps,Dependencies,TestApps |
 | goLive | | Only relevant for AppSource delivery type. Promote AppSource App to Go Live? | false |
+| useLatestBuildIfNoRelease | | Use artifacts from the latest successful build if `current` is specified and no releases exist | false |
 
 ## OUTPUT
 
