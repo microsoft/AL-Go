@@ -322,6 +322,8 @@ function GetDefaultSettings
         }
         "pullRequestTrigger"                            = "pull_request"
         "skipDraftPullRequests"                         = $false
+        "deploymentBaseUrl"                            = ""
+        "deploymentApplicationFamily"                  = "BusinessCentral"
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
             "DurationError"                             = 25

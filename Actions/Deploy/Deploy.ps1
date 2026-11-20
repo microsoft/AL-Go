@@ -15,6 +15,7 @@ Param(
 )
 
 Import-Module (Join-Path -Path $PSScriptRoot "Deploy.psm1")
+Import-Module (Join-Path $PSScriptRoot '..\.Modules\AdminCenterApi.psm1') -DisableNameChecking
 . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
 DownloadAndImportBcContainerHelper
 
@@ -167,6 +168,23 @@ else {
             Write-Host "::Warning::Ignoring environment $($deploymentSettings.EnvironmentName), which is a production environment, as deploying from a PR is only supported in sandbox environments"
         }
         else {
+            $hasPTEDependencies = $false
+            if ($scope -eq 'Dev' -and $deploymentSettings.DependencyInstallMode -ne 'ignore') {
+                foreach ($dependency in $dependencies) {
+                    $appJson = Get-AppJsonFromAppFile -appFile $dependency
+                    if ($appJson.idRanges.from -ge 50000 -and $appJson.idRanges.from -lt 100000) {
+                        $hasPTEDependencies = $true
+                        break
+                    }
+                }
+            }
+            if ($scope -eq 'PTE' -or $hasPTEDependencies) {
+                # This copy will eventually be replaced by AL-Go native auth.
+                $adminAuthContext = $bcAuthContext.Clone()
+                Initialize-AdminCenterAuthContext -authContext $adminAuthContext -settings $settings `
+                    -preserveScopes:([bool]($authContextParams['scopes'] -or $authContextParams['resource']))
+                Initialize-PTEPublishingApi -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName
+            }
             if ($dependencies) {
                 InstallOrUpgradeApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -Apps $dependencies -installMode $deploymentSettings.DependencyInstallMode
             }
@@ -193,7 +211,6 @@ else {
                 Publish-BcContainerApp @parameters -useDevEndpoint -checkAlreadyInstalled -excludeRuntimePackages -replacePackageId
             }
             else {
-                # Use automation API for production environments (Publish-PerTenantExtensionApps)
                 $parameters = @{
                     "bcAuthContext" = $bcAuthContext
                     "environment" = $deploymentSettings.EnvironmentName
@@ -201,7 +218,7 @@ else {
                 }
                 if ($deploymentSettings.SyncMode) {
                     if (@('Add','ForceSync') -notcontains $deploymentSettings.SyncMode) {
-                        throw "Invalid SyncMode $($deploymentSettings.SyncMode) when deploying using the automation API. Valid values are Add and ForceSync."
+                        throw "Invalid SyncMode $($deploymentSettings.SyncMode) when deploying Per Tenant Extensions. Valid values are Add and ForceSync."
                     }
                     Write-Host "Using $($deploymentSettings.SyncMode)"
                     $syncMode = $deploymentSettings.SyncMode
@@ -211,11 +228,11 @@ else {
 
                 CheckInstalledApps -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
 
-                Write-Host "Publishing apps using automation API"
-                Publish-PerTenantExtensionApps @parameters
+                Write-Host "Publishing Per Tenant Extensions"
+                PublishPTEApps @parameters
 
                 if (($deploymentSettings['unpublishOldVersions'] -is [bool]) -and $deploymentSettings['unpublishOldVersions']) {
-                    Write-Host "Unpublishing old app versions"
+                    Write-Host "Checking cleanup of old app versions"
                     UnpublishOldAppVersions -bcAuthContext $bcAuthContext -environment $deploymentSettings.EnvironmentName -appFiles $apps
                 }
             }
