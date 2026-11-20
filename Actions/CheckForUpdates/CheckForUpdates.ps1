@@ -61,61 +61,62 @@ if ($repoSettings.templateUrl -ne $templateUrl -or $templateSha -eq '') {
 }
 
 $originalTemplateFolder = $null
-$templateFolder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$templateSha) -downloadLatest $downloadLatest
-$templateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $templateUrl -templateFolder $templateFolder
+# Download only the directly configured template; its checked-in files and settings snapshots include ancestor state.
+$template = GetTemplateRepository -token $token -templateUrl $templateUrl -templateSha $templateSha -downloadLatest $downloadLatest -repoType $repoSettings.type
+$templateSha = $template.sha
+$templateFolder = $template.folder
 Write-Host "Template Folder: $templateFolder"
 
 $templateBranch = $templateUrl.Split('@')[1]
 $templateOwner = $templateUrl.Split('/')[3]
 $templateInfo = "$templateOwner/$($templateUrl.Split('/')[4])"
 
-$isDirectALGo = IsDirectALGo -templateUrl $templateUrl
+$isDirectALGo = $template.isDirectALGo
+$templateRepoSettingsContent = $null
+$templateProjectSettingsContent = $null
 if (-not $isDirectALGo) {
-    $templateRepoSettingsFile = Join-Path $templateFolder $RepoSettingsFile
-    if (Test-Path -Path $templateRepoSettingsFile -PathType Leaf) {
-        $templateRepoSettings = Get-Content $templateRepoSettingsFile -Encoding UTF8 | ConvertFrom-Json | ConvertTo-HashTable -Recurse
-        if ($templateRepoSettings.Keys -contains "templateUrl" -and $templateRepoSettings.templateUrl -ne $templateUrl) {
-            # The template repository is a url to another AL-Go repository (a custom template repository)
-            Trace-Information -Message "Using custom AL-Go template repository"
-
-            # TemplateUrl and TemplateSha from .github/AL-Go-Settings.json in the custom template repository points to the "original" template repository
-            # Copy files and folders from the custom template repository, but grab the unmodified file from the "original" template repository if it exists and apply customizations
-            # Copy .github/AL-Go-Settings.json to .github/templateRepoSettings.doNotEdit.json (will be read before .github/AL-Go-Settings.json in the final repo)
-            # Copy .AL-Go/settings.json to .github/templateProjectSettings.doNotEdit.json (will be read before .AL-Go/settings.json in the final repo)
-
-            Write-Host "Custom AL-Go template repository detected, downloading the 'original' template repository"
-            $originalTemplateUrl = $templateRepoSettings.templateUrl
-            if ($templateRepoSettings.Keys -contains "templateSha") {
-                $originalTemplateSha = $templateRepoSettings.templateSha
+    # The template repository is a custom template; its snapshots and checked-in files include ancestor state.
+    Trace-Information -Message "Using custom AL-Go template repository"
+    $originalTemplateFolder = $templateFolder
+    Write-Host "Original Template Folder: $originalTemplateFolder"
+}
+if (-not $isDirectALGo) {
+    $templateRepoSettingsContent = GetTemplateSettingsContent -template $template -kind repo
+    $templateProjectSettingsContent = GetTemplateSettingsContent -template $template -kind project
+    if ($templateRepoSettingsContent) {
+        # Re-read the repository settings including the inherited template settings, so they take effect in this run
+        $tempSettingsFolder = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+        try {
+            New-Item -ItemType Directory -Path (Join-Path $tempSettingsFolder '.github') -Force | Out-Null
+            $currentRepoSettingsFile = Join-Path $ENV:GITHUB_WORKSPACE $RepoSettingsFile
+            if (Test-Path -Path $currentRepoSettingsFile -PathType Leaf) {
+                Copy-Item -Path $currentRepoSettingsFile -Destination (Join-Path $tempSettingsFolder $RepoSettingsFile) -ErrorAction Stop
             }
-            else {
-                $originalTemplateSha = ""
-            }
-
-            # Download the "original" template repository - use downloadLatest if no TemplateSha is specified in the custom template repository
-            $originalTemplateFolder = DownloadTemplateRepository -token $token -templateUrl $originalTemplateUrl -templateSha ([ref]$originalTemplateSha) -downloadLatest ($originalTemplateSha -eq '')
-            $originalTemplateFolder = GetSrcFolder -repoType $repoSettings.type -templateUrl $originalTemplateUrl -templateFolder $originalTemplateFolder
-
-            Write-Host "Original Template Folder: $originalTemplateFolder"
-
-            # Set TemplateBranch and TemplateOwner
-            # Keep TemplateUrl and TemplateSha pointing to the custom template repository
-            $templateBranch = $originalTemplateUrl.Split('@')[1]
-            $templateOwner = $originalTemplateUrl.Split('/')[3]
-
-            $isDirectALGo = IsDirectALGo -templateUrl $originalTemplateUrl
-            if ($isDirectALGo) {
-                Trace-Information -Message "Original template repository is direct AL-Go"
-            }
+            $templateRepoSettingsContent | Set-ContentLF -Path (Join-Path $tempSettingsFolder $CustomTemplateRepoSettingsFile)
+            $repoSettings = ReadSettings -baseFolder $tempSettingsFolder -buildMode '' -project '' -workflowName '' -userName '' -branchName '' | ConvertTo-HashTable -recurse
+        }
+        finally {
+            Remove-Item -Path $tempSettingsFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }
+
 
 # Get the list of projects in the current repository
 $baseFolder = $ENV:GITHUB_WORKSPACE
 $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $repoSettings.projects)
 
 $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $repoSettings -projects $projects -baseFolder $baseFolder -templateFolder $templateFolder -originalTemplateFolder $originalTemplateFolder
+if (-not $isDirectALGo) {
+    # Generate the doNotEdit settings snapshots from the direct parent's inherited snapshots and own settings
+    $templateSettingsFiles = @(
+        @{ name = $CustomTemplateRepoSettingsFileName; type = 'templateRepoSettings'; content = $templateRepoSettingsContent }
+        @{ name = $CustomTemplateProjectSettingsFileName; type = 'templateProjectSettings'; content = $templateProjectSettingsContent }
+    )
+    $fileLists = UpdateTemplateSettingsFileLists -filesToInclude $filesToInclude -filesToExclude $filesToExclude -baseFolder $baseFolder -templateFolder $templateFolder -templateSettings $templateSettingsFiles
+    $filesToInclude = $fileLists.filesToInclude
+    $filesToExclude = $fileLists.filesToExclude
+}
 
 # $updateFiles will hold an array of files, which needs to be updated
 $updateFiles = @()
@@ -151,13 +152,18 @@ foreach($fileToInclude in $filesToInclude) {
     switch ($type) {
         "workflow" {
             # For workflow files, we might need to modify the file based on the settings
-            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth
-            # Replace static placeholders
+            $srcContent = GetWorkflowContentWithChangesFromSettings -srcFile $originalSrcPath -repoSettings $repoSettings -depth $depth -templateUrl $templateUrl
             $srcContent = $srcContent.Replace('{TEMPLATEURL}', $templateUrl)
         }
         "settings" {
             # For settings files, we need to modify the file based on the settings
             $srcContent = GetModifiedSettingsContent -srcSettingsFile $originalSrcPath -dstSettingsFile $dstPath
+        }
+        "templateRepoSettings" {
+            $srcContent = $templateRepoSettingsContent
+        }
+        "templateProjectSettings" {
+            $srcContent = $templateProjectSettingsContent
         }
         Default {
             # For non-workflow files, just read the file content
@@ -170,10 +176,10 @@ foreach($fileToInclude in $filesToInclude) {
         ReplaceOwnerRepoAndBranch -srcContent ([ref]$srcContent) -templateOwner $templateOwner -templateBranch $templateBranch
     }
 
-    if ($type -eq 'workflow' -and $originalSrcPath -ne $srcPath) {
-        # Apply customizations from custom template repository
-        Write-Host "Apply customizations from custom template repository, file: $srcPath"
-        [Yaml]::ApplyTemplateCustomizations([ref] $srcContent, $srcPath)
+    $definedByTemplateLevel = @{}
+    if ($type -eq 'workflow' -and -not $isDirectALGo) {
+        Write-Host "Mark custom jobs from custom template repository, file: $srcPath"
+        MarkTemplateCustomJobs -srcContent ([ref] $srcContent) -definedBy $definedByTemplateLevel -levelName $templateUrl
     }
 
     # Get the relative path for the dstPath from the base folder. Don't use Resolve-Path as it will fail if the destination file doesn't exist
@@ -182,6 +188,7 @@ foreach($fileToInclude in $filesToInclude) {
     if ($dstFileExists) {
         if ($type -eq 'workflow') {
             Write-Host "Apply customizations from current repository, file: $relativeDstPath"
+            AssertNoDuplicateFinalCustomJobs -yamlFile $dstPath -definedBy $definedByTemplateLevel
             [Yaml]::ApplyFinalCustomizations([ref] $srcContent, $dstPath)
         }
 
