@@ -98,6 +98,10 @@ For detailed step-by-step instructions, configuration examples, and troubleshoot
 
 Custom delivery will be handled in an advanced part of this workshop later.
 
+## Important Note: Automatic Skip Behavior
+
+The Deliver step is automatically skipped when no app artifacts are available, so delivery targets are only invoked when there is something to deliver.
+
 OK, so **CD** stands for **Continuous Delivery**, I thought it was **Continuous Deployment**? Well, it is actually both, so let's talk about **Continuous Deployment**...
 
 ______________________________________________________________________
