@@ -129,6 +129,8 @@ E2E setup creates private temporary template repositories, and test fixtures def
 
 Template archives are downloaded through the authenticated GitHub API using the E2E identity. Each test repository receives the `ALGOAUTHAPP` credential as its workflow-token secret before the first push, so its initial CI/CD run can check for updates from private templates. Configured `ghTokenWorkflowSecretName` overrides are honored.
 
+When deploying E2E templates directly into the `microsoft` organization, setup also enables organization-level Actions access on the private temporary Actions repository so fixture workflows can resolve its actions. Organization policies must permit this sharing. Other deployment owners use actions from the source AL-Go repository and do not create a separate Actions repository.
+
 In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
 
 - You need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)

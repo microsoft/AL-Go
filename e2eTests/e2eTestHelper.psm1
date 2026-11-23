@@ -422,6 +422,7 @@ function ModifyAppInFolder {
 }
 
 function CreateAlGoRepository {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidDefaultValueSwitchParameter', '', Justification = 'Private fixtures are the default while preserving existing -private and -private:$false callers.')]
     Param(
         [switch] $github,
         [string] $repository,

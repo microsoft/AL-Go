@@ -1,3 +1,7 @@
+### E2E support for private templates and test repositories
+
+E2E templates and test repositories default to private, with authenticated template downloads and workflow credentials provisioned before the first push. The public/private matrix split is unchanged. For direct deployments into `microsoft`, setup also enables organization-level sharing of the private temporary Actions repository so fixture workflows can use its actions. See [End to End tests](Scenarios/Contribute.md#end-to-end-tests) for App permissions and organization prerequisites.
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).

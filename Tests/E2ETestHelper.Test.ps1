@@ -220,6 +220,7 @@ Describe 'Private E2E template deployment' {
         ) {
             Param($private, $visibility)
 
+            $expectedVisibility = $visibility
             $parameters = @{
                 config = @{
                     githubOwner = 'fixture-org'
@@ -235,10 +236,66 @@ Describe 'Private E2E template deployment' {
             Deploy @parameters
 
             Should -Invoke invoke-gh -Times 2 -Exactly -ParameterFilter {
-                $command -eq 'repo' -and $visibility -in $remaining -and '--clone' -in $remaining
+                $command -eq 'repo' -and $expectedVisibility -in $remaining -and '--clone' -in $remaining
             }
             Should -Invoke invoke-gh -Times 0 -Exactly -ParameterFilter {
                 $remaining[1] -like '*Actions'
+            }
+        }
+
+        Describe 'Private E2E Actions access' {
+            BeforeAll {
+                $setupRoot = Join-Path $TestDrive 'setup'
+                $setupScripts = Join-Path $setupRoot 'e2eTests'
+                $deploymentScripts = Join-Path $setupRoot 'Internal'
+                New-Item -Path $setupScripts, $deploymentScripts -ItemType Directory | Out-Null
+                Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\e2eTests\SetupRepositories.ps1') -Destination $setupScripts
+                'Param($config, $DirectCommit, [switch] $private)' |
+                    Set-Content -LiteralPath (Join-Path $deploymentScripts 'Deploy.ps1') -Encoding UTF8
+                Invoke-Expression (GetActionScript -scriptRoot $setupScripts -scriptName 'SetupRepositories.ps1')
+            }
+
+            BeforeEach {
+                $env:GITHUB_OUTPUT = Join-Path $TestDrive "$([Guid]::NewGuid()).output"
+                $script:originalExitCode = $global:LASTEXITCODE
+                Mock Import-Module {}
+                Mock Write-Host {}
+                Mock gh { $global:LASTEXITCODE = 0 }
+            }
+
+            AfterEach {
+                $global:LASTEXITCODE = $script:originalExitCode
+            }
+
+            It 'shares the private Actions repository with organization workflows' {
+                SetupRepositories -githubOwner 'microsoft'
+
+                Should -Invoke gh -Times 1 -Exactly -ParameterFilter {
+                    $args[3] -like '/repos/microsoft/*-Actions/actions/permissions/access' -and
+                    $args[5] -eq 'access_level=organization'
+                }
+                Should -Invoke gh -Times 3 -Exactly -ParameterFilter {
+                    $args[3] -like '/repos/microsoft/*/actions/permissions' -and
+                    $args[5] -eq 'enabled=false'
+                }
+            }
+
+            It 'does not configure a nonexistent Actions repository for fork deployments' {
+                SetupRepositories -githubOwner 'fixture-org'
+
+                Should -Invoke gh -Times 2 -Exactly
+                Should -Invoke gh -Times 0 -Exactly -ParameterFilter {
+                    $args[3] -like '*-Actions/*'
+                }
+            }
+
+            It 'fails setup if organization Actions access cannot be enabled' {
+                Mock gh { $global:LASTEXITCODE = 1 }
+
+                { SetupRepositories -githubOwner 'microsoft' } | Should -Throw '*Failed to enable organization Actions access*'
+
+                Should -Invoke gh -Times 1 -Exactly
+                Test-Path -LiteralPath $env:GITHUB_OUTPUT | Should -BeFalse
             }
         }
     }

@@ -28,6 +28,11 @@ $config = [ordered]@{
 # Non-Microsoft deployments use the source AL-Go actions instead of a separate Actions repository.
 $repositories = @($perTenantExtensionRepo, $appSourceAppRepo)
 if ($githubOwner -eq 'microsoft') {
+    Write-Host "Allowing organization workflows to use actions from $githubOwner/$actionsRepo"
+    gh api --method PUT /repos/$githubOwner/$actionsRepo/actions/permissions/access -f access_level=organization
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to enable organization Actions access for $githubOwner/$actionsRepo."
+    }
     $repositories += $actionsRepo
 }
 foreach ($repo in $repositories) {
