@@ -2,6 +2,8 @@
 
 Custom template repositories can now be chained to any depth. Update AL-Go System Files downloads only the directly configured template and uses its checked-in workflows/files and flattened inherited settings snapshot, so ancestor-added jobs remain present. Effective `protectedSettings` and `overwriteSettings` are retained, and ordered conditional rules are evaluated after flattened values in the consuming repository. Duplicate custom job names between the direct template and the repository fail with a descriptive error. See [Multi-level template inheritance](Scenarios/CustomizingALGoForGitHub.md#multi-level-template-inheritance).
 
+## v10.1
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
