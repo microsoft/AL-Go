@@ -47,7 +47,7 @@ Import-Module (Join-Path $PSScriptRoot '..\..\e2eTestHelper.psm1') -Force -Disab
 
 $repository = "$githubOwner/$repoName"
 $template = "https://github.com/$pteTemplate"
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 
 CreateAlGoRepository -github:$github -template $template -repository $repository -branch main -addRepoSettings @{
     CodeReviewAgent = @{ enabled = $true }
