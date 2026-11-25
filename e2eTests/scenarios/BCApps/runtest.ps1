@@ -61,7 +61,7 @@ Push-Location
 $repository = "$githubOwner/$repoName"
 
 # Login
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 
 # Create repository1
 CreateAlGoRepository `

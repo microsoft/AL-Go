@@ -76,7 +76,7 @@ $expectedTestCases = [ordered]@{
     "60002" = "SeparateTestActionE2E3"
 }
 
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 
 CreateAlGoRepository `
     -github:$github `
