@@ -1,3 +1,7 @@
+### Multi-level template inheritance
+
+Custom template repositories can now be chained to any depth. Update AL-Go System Files downloads only the directly configured template and uses its checked-in workflows/files and flattened inherited settings snapshot, so ancestor-added jobs remain present. Effective `protectedSettings` and `overwriteSettings` are retained, and ordered conditional rules are evaluated after flattened values in the consuming repository. Duplicate custom job names between the direct template and the repository fail with a descriptive error. See [Multi-level template inheritance](Scenarios/CustomizingALGoForGitHub.md#multi-level-template-inheritance).
+
 ## v10.1
 
 ### Optional draft PR build skipping

@@ -567,7 +567,8 @@ function GetWorkflowContentWithChangesFromSettings {
     Param(
         [string] $srcFile,
         [hashtable] $repoSettings,
-        [int] $depth
+        [int] $depth,
+        [string] $templateUrl
     )
 
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($srcFile)
@@ -671,6 +672,15 @@ function GetWorkflowContentWithChangesFromSettings {
 
     if($baseName -eq 'UpdateGitHubGoSystemFiles') {
         ModifyUpdateALGoSystemFiles -yaml $yaml -repoSettings $repoSettings
+        if ($templateUrl) {
+            # A custom template's checked-in workflow already has its own update source in place of {TEMPLATEURL}.
+            foreach ($trigger in @('workflow_dispatch', 'workflow_call')) {
+                $descriptionPath = "on:/${trigger}:/inputs:/templateUrl:/description:"
+                if ($yaml.GetProperty($descriptionPath) -cmatch '^Template Repository URL \(current is .*\)$') {
+                    $yaml.Replace($descriptionPath, "description: Template Repository URL (current is $templateUrl)")
+                }
+            }
+        }
     }
 
     # Apply workflow input defaults from settings
@@ -1078,6 +1088,180 @@ function GetDefaultFilesToInclude {
     return $filesToInclude
 }
 
+<#
+.SYNOPSIS
+    Downloads the directly configured template repository.
+.DESCRIPTION
+    The parent's checked-in files and doNotEdit settings snapshots already contain inherited template state, so no ancestor repositories are downloaded.
+#>
+function GetTemplateRepository {
+    Param(
+        [string] $token,
+        [Parameter(Mandatory = $true)]
+        [string] $templateUrl,
+        [string] $templateSha = '',
+        [bool] $downloadLatest = $true,
+        [string] $repoType
+    )
+
+    $resolvedSha = $templateSha
+    $folder = DownloadTemplateRepository -token $token -templateUrl $templateUrl -templateSha ([ref]$resolvedSha) -downloadLatest $downloadLatest
+    $folder = GetSrcFolder -repoType $repoType -templateUrl $templateUrl -templateFolder $folder
+    $template = @{
+        url = $templateUrl; sha = $resolvedSha; folder = $folder; isDirectALGo = (IsDirectALGo -templateUrl $templateUrl)
+        repoSettings = $null; repoSettingsFile = $null; projectSettings = $null; projectSettingsFile = $null
+    }
+
+    if (-not $template.isDirectALGo) {
+        $repoFile = Join-Path $folder $RepoSettingsFile
+        if (Test-Path -Path $repoFile -PathType Leaf) {
+            $obj = Get-Content $repoFile -Encoding UTF8 -Raw | ConvertFrom-Json
+            if ($obj) {
+                $template.repoSettings = $obj | Select-Object -Property * -ExcludeProperty templateUrl, templateSha
+                $template.repoSettingsFile = $repoFile
+            }
+        }
+        $projectFile = Join-Path $folder $ALGoSettingsFile
+        if (Test-Path -Path $projectFile -PathType Leaf) {
+            $obj = Get-Content $projectFile -Encoding UTF8 -Raw | ConvertFrom-Json
+            if ($obj) {
+                $template.projectSettings = $obj
+                $template.projectSettingsFile = $projectFile
+            }
+        }
+    }
+    return $template
+}
+
+<#
+.SYNOPSIS
+    Builds the content of the AL-Go-TemplateRepoSettings/ProjectSettings doNotEdit file.
+.DESCRIPTION
+    Flattens the parent's inherited snapshot and own settings in order, preserving effective control metadata and ordered conditional rules.
+    Returns $null when neither the inherited snapshot nor the parent's own settings contribute settings.
+#>
+function GetTemplateSettingsContent {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [hashtable] $template,
+        [ValidateSet('repo', 'project')]
+        [string] $kind
+    )
+    if ($template.isDirectALGo) { return $null }
+
+    if ($kind -eq 'repo') {
+        $snapshotName = $CustomTemplateRepoSettingsFileName
+        $ownSettings = $template.repoSettings
+    }
+    else {
+        $snapshotName = $CustomTemplateProjectSettingsFileName
+        $ownSettings = $template.projectSettings
+    }
+
+    $layers = @()
+    $snapshotFile = Join-Path (Join-Path $template.folder '.github') $snapshotName
+    if (Test-Path -Path $snapshotFile -PathType Leaf) {
+        $snapshot = Get-Content $snapshotFile -Encoding UTF8 -Raw | ConvertFrom-Json
+        if ($snapshot) {
+            if ($snapshot.PSObject.Properties.Name -contains 'templateLayers') {
+                foreach ($layer in @($snapshot.templateLayers)) {
+                    if ($layer.PSObject.Properties.Name -contains 'templateLayers') {
+                        $layers += @($layer.templateLayers)
+                    }
+                    else {
+                        $layers += $layer | Select-Object -Property * -ExcludeProperty templateUrl, templateSha
+                    }
+                }
+            }
+            else {
+                $layers += $snapshot | Select-Object -Property * -ExcludeProperty templateUrl, templateSha
+            }
+        }
+    }
+
+    if ($ownSettings) {
+        $ownSettings = $ownSettings | Select-Object -Property * -ExcludeProperty templateUrl, templateSha
+        if (@($ownSettings.PSObject.Properties).Count -gt 0) {
+            $layers += $ownSettings
+        }
+    }
+    if ($layers.Count -eq 0) { return $null }
+    $mergedSettings = MergeTemplateSettingsLayers -layers $layers
+    return (($mergedSettings | ConvertTo-Json -Depth 99) -replace "`r`n", "`n")
+}
+
+function UpdateTemplateSettingsFileLists {
+    Param(
+        [array] $filesToInclude,
+        [array] $filesToExclude,
+        [string] $baseFolder,
+        [string] $templateFolder,
+        [hashtable[]] $templateSettings
+    )
+
+    foreach ($settingsFile in $templateSettings) {
+        $destination = Join-Path (Join-Path $baseFolder '.github') $settingsFile.name
+        $existing = @($filesToInclude | Where-Object { $_.destinationFullPath -eq $destination })
+        if ($settingsFile.content) {
+            if ($existing) {
+                $existing | ForEach-Object { $_.type = $settingsFile.type }
+            }
+            else {
+                $filesToInclude += @{ sourceFullPath = $templateFolder; originalSourceFullPath = $null; type = $settingsFile.type; destinationFullPath = $destination }
+            }
+            continue
+        }
+
+        $filesToInclude = @($filesToInclude | Where-Object { $_.destinationFullPath -ne $destination })
+        if ((Test-Path -Path $destination -PathType Leaf) -and -not ($filesToExclude | Where-Object { $_.destinationFullPath -eq $destination })) {
+            $filesToExclude += @{ sourceFullPath = $destination; destinationFullPath = $destination; type = $settingsFile.type }
+        }
+    }
+
+    return @{ filesToInclude = @($filesToInclude); filesToExclude = @($filesToExclude) }
+}
+
+function GetOwnCustomJobs {
+    Param(
+        [string] $yamlFile
+    )
+    if (-not (Test-Path -Path $yamlFile -PathType Leaf)) {
+        return @()
+    }
+    $yaml = [Yaml]::Load($yamlFile)
+    # Own jobs are the custom jobs without the 'DO NOT EDIT' template marker (inherited jobs are ignored)
+    return @($yaml.GetCustomJobsFromYaml('CustomJob*') | Where-Object { $_.Origin -eq [CustomizationOrigin]::FinalRepository })
+}
+
+function MarkTemplateCustomJobs {
+    Param(
+        [ref] $srcContent,
+        [hashtable] $definedBy,
+        [string] $levelName
+    )
+    $srcYaml = [Yaml]::new($srcContent.Value.Split("`n"))
+    foreach ($job in @($srcYaml.GetCustomJobsFromYaml('CustomJob*'))) {
+        if ($definedBy.ContainsKey($job.Name)) {
+            throw "Custom job '$($job.Name)' in workflow is duplicated in template repository $levelName. Custom job names must be unique."
+        }
+        $definedBy[$job.Name] = $levelName
+    }
+    $srcYaml.MarkCustomJobsAsTemplate()
+    $srcContent.Value = $srcYaml.content -join "`n"
+}
+
+function AssertNoDuplicateFinalCustomJobs {
+    Param(
+        [string] $yamlFile,
+        [hashtable] $definedBy
+    )
+    foreach ($job in @(GetOwnCustomJobs -yamlFile $yamlFile)) {
+        if ($definedBy.ContainsKey($job.Name)) {
+            throw "Custom job '$($job.Name)' in workflow '$(Split-Path $yamlFile -Leaf)' is defined in the repository and in template level $($definedBy[$job.Name]). Custom job names must be unique."
+        }
+    }
+}
+
 function GetDefaultFilesToExclude {
     Param(
         $settings
@@ -1158,8 +1342,8 @@ function GetFilesToUpdate {
 
     $filesToExclude = GetDefaultFilesToExclude -settings $settings
     $filesToExclude += $settings.customALGoFiles.filesToExclude
-    $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $filesToExclude -projects $projects)
-
+    $excludeFileDefinitions = @($filesToExclude)
+    $filesToExclude = @(ResolveFilePaths -sourceFolder $templateFolder -originalSourceFolder $originalTemplateFolder -destinationFolder $baseFolder -files $excludeFileDefinitions -projects $projects)
     # Exclude files from filesToExclude that are not in filesToInclude
     $filesToExclude = @($filesToExclude | Where-Object {
         $fileToExclude = $_
