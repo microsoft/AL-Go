@@ -1,3 +1,7 @@
+### Issues
+
+- Issue 2405 - AppSource publishing now submits only the highest available version of each library app by app ID across project apps and included dependencies. Duplicate versions and packages with the main app's ID are excluded from library submissions.
+
 ## v10.1
 
 ### Optional draft PR build skipping
