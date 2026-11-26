@@ -11,6 +11,7 @@ InModuleScope Deploy { # Allows testing of private functions
         }
 
         BeforeEach {
+            $script:ptePublishingApi = ''
             Mock OutputDebugFunctionCall { }
             Mock OutputWarning { }
             Mock Write-Host { }
@@ -61,6 +62,133 @@ InModuleScope Deploy { # Allows testing of private functions
             Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
                 $Method -eq "Post" -and $Uri -like "*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish"
             }
+        }
+
+        It 'Keeps every cleanup request on the configured deployment API root' {
+            $originalApiBaseUrl = $bcContainerHelperConfig.apiBaseUrl
+            try {
+                $bcContainerHelperConfig.apiBaseUrl = 'https://api.embed.test/service/'
+                UnpublishOldAppVersions -bcAuthContext @{ tenantId = 'test-tenant' } -environment 'test-env' -appFiles @('App1.app')
+
+                Assert-MockCalled Invoke-RestMethod -Exactly 3 -ParameterFilter {
+                    $Uri -like 'https://api.embed.test/service/v2.0/test-env/api/microsoft/automation/v2.0/*'
+                }
+                Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter {
+                    $Uri -notlike 'https://api.embed.test/service/*'
+                }
+                Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                    $Method -eq 'Post' -and $Uri -like '*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish'
+                }
+            }
+            finally {
+                $bcContainerHelperConfig.apiBaseUrl = $originalApiBaseUrl
+            }
+        }
+
+        It 'Explains delayed service-managed cleanup without any writes on BC <major>.<minor>' -TestCases @(
+            @{ major = 29; minor = 0 },
+            @{ major = 29; minor = 9 },
+            @{ major = 30; minor = 0 },
+            @{ major = 30; minor = 1 },
+            @{ major = 31; minor = 0 }
+        ) {
+            param($major, $minor)
+            $script:applicationExtension.versionMajor = $major
+            $script:applicationExtension.versionMinor = $minor
+            $script:ptePublishingApi = 'AdminCenter'
+
+            { UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app") } | Should -Not -Throw
+
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
+                $message -like "*skips explicit cleanup*Admin Center publishing*Business Central manages cleanup in the background*may be delayed*timing and retained versions are not guaranteed*deployment remains successful*"
+            }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -ne "Get" }
+            Assert-MockCalled Invoke-RestMethod -Times 0
+        }
+
+        It 'Uses legacy cleanup after Automation fallback on BC <major>' -TestCases @(
+            @{ major = 29 }, @{ major = 30 }, @{ major = 31 }
+        ) {
+            param($major)
+            $script:applicationExtension.versionMajor = $major
+            $script:ptePublishingApi = 'Automation'
+
+            UnpublishOldAppVersions -bcAuthContext @{} -environment test-env -appFiles @('App1.app')
+
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq 'Post' -and $Uri -like '*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish'
+            }
+            Assert-MockCalled OutputWarning -Times 0
+        }
+
+        It 'Cleans all selected primary apps through Automation on BC 29' {
+            $script:applicationExtension.versionMajor = 29
+            $script:ptePublishingApi = 'Automation'
+            $script:mockExtensions += @(
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v3'; isInstalled = $false; versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:otherAppId; displayName = 'Other App'; packageId = 'pkg-other-v1'; isInstalled = $false; versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:otherAppId; displayName = 'Other App'; packageId = 'pkg-other-v2'; isInstalled = $true; versionMajor = 2; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+            )
+
+            UnpublishOldAppVersions -bcAuthContext @{} -environment test-env -appFiles @('App1.app', 'OtherApp.app')
+
+            Assert-MockCalled Invoke-RestMethod -Exactly 2 -ParameterFilter { $Method -eq 'Post' }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Method -eq 'Post' -and $Uri -like '*pkg-app1-v1*' }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Method -eq 'Post' -and $Uri -like '*pkg-other-v1*' }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter {
+                $Method -eq 'Post' -and $Uri -notlike '*pkg-app1-v1*' -and $Uri -notlike '*pkg-other-v1*'
+            }
+        }
+
+        It 'Cleans stale versions of a skipped primary app on BC <major> without touching installed, current, newer or unselected packages' -TestCases @(
+            @{ major = 29 }, @{ major = 30 }, @{ major = 31 }
+        ) {
+            param($major)
+            $script:applicationExtension.versionMajor = $major
+            $script:ptePublishingApi = 'Automation'
+            $script:mockExtensions = @(
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v1'; isInstalled = $false; versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v2'; isInstalled = $true; versionMajor = 2; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v3'; isInstalled = $true; versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v3-copy'; isInstalled = $false; versionMajor = 3; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:appId; displayName = 'App 1'; packageId = 'pkg-app1-v4'; isInstalled = $false; versionMajor = 4; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:otherAppId; displayName = 'Dependency'; packageId = 'pkg-other-v1'; isInstalled = $false; versionMajor = 1; versionMinor = 0; versionBuild = 0; versionRevision = 0 },
+                @{ id = $script:otherAppId; displayName = 'Dependency'; packageId = 'pkg-other-v2'; isInstalled = $true; versionMajor = 2; versionMinor = 0; versionBuild = 0; versionRevision = 0 }
+            )
+
+            UnpublishOldAppVersions -bcAuthContext @{} -environment test-env -appFiles @('App1.app')
+
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Method -eq 'Post' }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq 'Post' -and $Uri -like '*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish'
+            }
+            Assert-MockCalled OutputWarning -Times 0
+        }
+
+        It 'Preserves legacy cleanup on BC <major>.<minor>' -TestCases @(
+            @{ major = 25; minor = 4 },
+            @{ major = 28; minor = 9 },
+            @{ major = 28; minor = 0 }
+        ) {
+            param($major, $minor)
+            $script:applicationExtension.versionMajor = $major
+            $script:applicationExtension.versionMinor = $minor
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled OutputWarning -Times 0
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Method -eq "Post" -and $Uri -like "*extensions(pkg-app1-v1)/Microsoft.NAV.unpublish"
+            }
+        }
+
+        It 'Warns without writes when the installed Application version is unknown' {
+            $script:applicationExtension.isInstalled = $false
+
+            UnpublishOldAppVersions -bcAuthContext @{ tenantId = "test-tenant" } -environment "test-env" -appFiles @("App1.app")
+
+            Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter { $message -like "*Could not determine the Business Central version*" }
+            Assert-MockCalled Invoke-RestMethod -Times 0 -ParameterFilter { $Method -ne "Get" }
         }
 
         It 'Uses the automation API v2.0 endpoint with a bearer token' {

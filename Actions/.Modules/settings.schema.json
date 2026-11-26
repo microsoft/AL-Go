@@ -3,6 +3,29 @@
     "description": "Schema for AL-Go settings",
     "type": "object",
     "properties": {
+        "adminCenterApi": {
+            "type": "object",
+            "default": {
+                "baseUrl": "https://api.businesscentral.dynamics.com",
+                "applicationFamily": "BusinessCentral"
+            },
+            "description": "Optional repository target for native Admin Center reads, PTE publishing and polling in the standard Deploy action in both templates (CI/CD and Publish To Environment). Independent of BcContainerHelper configuration. Does not change Automation, AppSource or web-client configuration. See https://aka.ms/ALGoSettings#adminCenterApi",
+            "properties": {
+                "baseUrl": {
+                    "type": "string",
+                    "default": "https://api.businesscentral.dynamics.com",
+                    "pattern": "^(|https://[^\\s?#]+)$",
+                    "description": "HTTPS API root without credentials, query or fragment. Defaults to https://api.businesscentral.dynamics.com; an explicit empty string also uses this endpoint. Sets the default resource for an isolated Admin authentication context; explicit AUTHCONTEXT scopes or resource are preserved."
+                },
+                "applicationFamily": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S",
+                    "default": "BusinessCentral",
+                    "description": "Application family used by Admin Center installed-app reads, PTE publishing and operation polling. Never inferred from baseUrl. Automation URLs do not contain a family segment."
+                }
+            }
+        },
         "type": {
             "type": "string",
             "minLength": 1,
@@ -990,7 +1013,7 @@
                 "unpublishOldVersions": {
                     "type": "boolean",
                     "default": false,
-                    "description": "When set to true, AL-Go unpublishes old, uninstalled versions of the deployed apps from the environment after a successful deployment. Only applies to PTE deployments (Scope PTE) and is non-fatal. See https://aka.ms/ALGoSettings#deployto"
+                    "description": "Optional boolean, default false. After successful Scope PTE deployment through Automation on Business Central 25.4 or later, unpublishes only selected primary apps' uninstalled versions older than the currently installed version, including apps skipped because the same or a newer version is installed. With the Admin Center route, explicit cleanup is skipped; Business Central manages background cleanup, whose timing and retained versions are not guaranteed. This setting does not control background cleanup. Skipped cleanup and cleanup failures are warnings; does not apply to Scope Dev or custom deployments. See https://aka.ms/ALGoSettings#deployto"
                 }
             }
         }

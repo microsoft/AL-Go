@@ -322,6 +322,10 @@ function GetDefaultSettings
         }
         "pullRequestTrigger"                            = "pull_request"
         "skipDraftPullRequests"                         = $false
+        "adminCenterApi"                                = [ordered]@{
+            "baseUrl"                                   = "https://api.businesscentral.dynamics.com"
+            "applicationFamily"                         = "BusinessCentral"
+        }
         "bcptThresholds"                                = [ordered]@{
             "DurationWarning"                           = 10
             "DurationError"                             = 25
