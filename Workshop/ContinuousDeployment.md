@@ -104,16 +104,18 @@ This behavior also applies when a **Scope Dev** deployment installs or upgrades 
 
 ## Custom deployment targets
 
-For native Admin Center calls to an Embed or other custom service, set the repository settings `deploymentBaseUrl` (the HTTPS API root) and `deploymentApplicationFamily` (the service's exact application family). These apply to installed-app reads, PTE publishing and operation tracking only. For example:
+For native Admin Center calls to an Embed or other custom service, set the repository-level `adminCenterApi` object with `baseUrl` (the HTTPS API root) and `applicationFamily` (the service's exact application family). These apply to installed-app reads, PTE publishing and operation tracking only. Both fields are optional and can be overridden independently. For example:
 
 ```json
 {
-  "deploymentBaseUrl": "https://api.example.com",
-  "deploymentApplicationFamily": "YourApplicationFamily"
+  "adminCenterApi": {
+    "baseUrl": "https://api.example.com",
+    "applicationFamily": "YourApplicationFamily"
+  }
 }
 ```
 
-Empty or omitted `deploymentBaseUrl` uses `https://api.businesscentral.dynamics.com`, regardless of BCH settings. The family defaults to `BusinessCentral` and is never inferred from the host. Automation and AppSource operations keep their existing BCH configuration and authentication; configure `bcContainerHelperConfig.apiBaseUrl` separately if needed. The web-client/readiness URL remains `bcContainerHelperConfig.baseUrl`.
+The default `adminCenterApi.baseUrl` is `https://api.businesscentral.dynamics.com`, regardless of BCH settings; an explicit empty string also uses this endpoint. The family defaults to `BusinessCentral` and is never inferred from the host. Automation and AppSource operations keep their existing BCH configuration and authentication; configure `bcContainerHelperConfig.apiBaseUrl` separately if needed. The web-client/readiness URL remains `bcContainerHelperConfig.baseUrl`.
 
 Each Deploy run maintains a separate Admin authentication context and reuses its renewed tokens, using the Admin API root as the default OAuth resource without changing the BCH context. Explicit `AUTHCONTEXT` scopes or resource values are preserved, not retargeted; they must authorize the Admin service too. Credentials must support token renewal for that resource, and the service must support the corresponding API contracts and authorization.
 

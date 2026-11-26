@@ -13,7 +13,7 @@ If the Admin check fails for another reason, a read-only Automation version chec
 
 Optional `DeployTo<environment>.unpublishOldVersions` (default `false`) cleans older, uninstalled versions after Automation deployment on BC 25.4+. Administration center deployments use Business Central's background cleanup. See [cleanup details](../../Workshop/ContinuousDeployment.md#old-published-versions).
 
-For custom Admin services, use repository settings `deploymentBaseUrl` and `deploymentApplicationFamily`; Automation keeps its BCH configuration. These settings are validated only for PTE work, including PTE dependencies, not pure Dev deployment. See [target configuration and authentication](../../Workshop/ContinuousDeployment.md#custom-deployment-targets).
+For custom Admin services, use the repository setting `adminCenterApi` with `baseUrl` and `applicationFamily`; Automation keeps its BCH configuration. These settings are validated only for PTE work, including PTE dependencies, not pure Dev deployment. See [target configuration and authentication](../../Workshop/ContinuousDeployment.md#custom-deployment-targets).
 
 ## INPUT
 

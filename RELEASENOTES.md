@@ -8,7 +8,18 @@ Targets below BC 29 continue through Automation after other Admin check failures
 
 The Automation API's PTE upload endpoint (`extensionUpload`) is deprecated and planned for removal in 2027 release wave 1; this does not mean all Automation APIs are deprecated. See the [official deprecation notice](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/resources/dynamics_extensionupload).
 
-For custom Admin services, configure repository settings `deploymentBaseUrl` and `deploymentApplicationFamily`. Automation keeps its existing BCH settings independently. See [target setup and authorization](Workshop/ContinuousDeployment.md#custom-deployment-targets).
+For custom Admin services, configure repository setting `adminCenterApi` with `baseUrl` and `applicationFamily`. Automation keeps its existing BCH settings independently. See [target setup and authorization](Workshop/ContinuousDeployment.md#custom-deployment-targets).
+
+The defaults below require no configuration for ordinary deployments. An explicit empty `baseUrl` also uses the standard endpoint.
+
+```json
+{
+  "adminCenterApi": {
+    "baseUrl": "https://api.businesscentral.dynamics.com",
+    "applicationFamily": "BusinessCentral"
+  }
+}
+```
 
 The optional `DeployTo<environment>.unpublishOldVersions` setting (default `false`) removes older, uninstalled versions after successful Scope PTE deployment through Automation on BC 25.4+, including fallback. Administration center deployments use Business Central's background cleanup instead. See [old published versions](Workshop/ContinuousDeployment.md#old-published-versions) for details.
 

@@ -31,11 +31,55 @@ InModuleScope ReadSettings { # Allows testing of private functions
             . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
             $defaults = GetDefaultSettings
             $settingsSchema = $schema | ConvertFrom-Json | ConvertTo-HashTable -recurse
-            $defaults.deploymentBaseUrl | Should -Be ''
-            $defaults.deploymentApplicationFamily | Should -Be 'BusinessCentral'
-            foreach ($name in @('deploymentBaseUrl', 'deploymentApplicationFamily')) {
-                $settingsSchema.properties[$name].type | Should -Be 'string'
-                $settingsSchema.properties[$name].default | Should -Be $defaults[$name]
+            $defaults.adminCenterApi.baseUrl | Should -Be 'https://api.businesscentral.dynamics.com'
+            $defaults.adminCenterApi.applicationFamily | Should -Be 'BusinessCentral'
+            $settingsSchema.properties.adminCenterApi.type | Should -Be 'object'
+            foreach ($name in @('baseUrl', 'applicationFamily')) {
+                $settingsSchema.properties.adminCenterApi.properties[$name].type | Should -Be 'string'
+                $settingsSchema.properties.adminCenterApi.properties[$name].default | Should -Be $defaults.adminCenterApi[$name]
+                $settingsSchema.properties.adminCenterApi.default[$name] | Should -Be $defaults.adminCenterApi[$name]
+            }
+        }
+
+        It 'Merges partial Admin targets across settings sources without losing defaults' {
+            . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+            $settings = GetDefaultSettings
+            $first = '{"adminCenterApi":{"baseUrl":"https://admin.test"}}' | ConvertFrom-Json
+            $second = '{"adminCenterApi":{"applicationFamily":"CustomFamily"}}' | ConvertFrom-Json
+
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $first
+            $settings.adminCenterApi.applicationFamily | Should -Be BusinessCentral
+            MergeCustomObjectIntoOrderedDictionary -dst $settings -src $second
+
+            $settings.adminCenterApi.baseUrl | Should -Be 'https://admin.test'
+            $settings.adminCenterApi.applicationFamily | Should -Be CustomFamily
+        }
+
+        It 'Rejects a non-object Admin target during settings merging' {
+            . (Join-Path $PSScriptRoot '../Actions/AL-Go-Helper.ps1')
+            $settings = GetDefaultSettings
+            $source = '{"adminCenterApi":"https://admin.test"}' | ConvertFrom-Json
+
+            { MergeCustomObjectIntoOrderedDictionary -dst $settings -src $source } |
+                Should -Throw '*property adminCenterApi should be of type OrderedDictionary, is String*'
+        }
+
+        It 'Validates grouped Admin target fields in the schema' -Skip:($PSVersionTable.PSVersion.Major -lt 7) {
+            foreach ($json in @(
+                '{"adminCenterApi":{}}',
+                '{"adminCenterApi":{"baseUrl":"https://admin.test"}}',
+                '{"adminCenterApi":{"applicationFamily":"CustomFamily"}}'
+            )) {
+                Test-Json -Json $json -Schema $schema | Should -BeTrue
+            }
+            foreach ($json in @(
+                '{"adminCenterApi":"https://admin.test"}',
+                '{"adminCenterApi":{"baseUrl":29}}',
+                '{"adminCenterApi":{"baseUrl":"http://admin.test"}}',
+                '{"adminCenterApi":{"applicationFamily":""}}',
+                '{"adminCenterApi":{"applicationFamily":" "}}'
+            )) {
+                Test-Json -Json $json -Schema $schema -ErrorAction SilentlyContinue | Should -BeFalse
             }
         }
 

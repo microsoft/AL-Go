@@ -48,21 +48,28 @@ function Get-DeploymentTarget {
         [hashtable] $settings = @{}
     )
 
-    $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
-    if ($settings.ContainsKey('deploymentBaseUrl') -and $settings['deploymentBaseUrl'] -isnot [string]) {
-        throw 'deploymentBaseUrl must be a string.'
+    $adminCenterApi = @{}
+    if ($settings.ContainsKey('adminCenterApi')) {
+        if ($settings['adminCenterApi'] -isnot [System.Collections.IDictionary]) {
+            throw 'adminCenterApi must be an object.'
+        }
+        $adminCenterApi = $settings['adminCenterApi']
     }
-    if ($settings['deploymentBaseUrl']) { $apiBaseUrl = [string]$settings['deploymentBaseUrl'] }
+    $apiBaseUrl = 'https://api.businesscentral.dynamics.com'
+    if ($adminCenterApi.Contains('baseUrl') -and $adminCenterApi['baseUrl'] -isnot [string]) {
+        throw 'adminCenterApi.baseUrl must be a string.'
+    }
+    if ($adminCenterApi['baseUrl']) { $apiBaseUrl = [string]$adminCenterApi['baseUrl'] }
     $uri = $null
     if (![Uri]::TryCreate($apiBaseUrl, [UriKind]::Absolute, [ref]$uri) -or
         $uri.Scheme -ne 'https' -or $uri.UserInfo -or $uri.Query -or $uri.Fragment) {
-        throw 'deploymentBaseUrl must be an absolute HTTPS API root without credentials, query or fragment.'
+        throw 'adminCenterApi.baseUrl must be an absolute HTTPS API root without credentials, query or fragment.'
     }
     $applicationFamily = 'BusinessCentral'
-    if ($settings.ContainsKey('deploymentApplicationFamily')) {
-        $applicationFamily = $settings['deploymentApplicationFamily']
+    if ($adminCenterApi.Contains('applicationFamily')) {
+        $applicationFamily = $adminCenterApi['applicationFamily']
         if ($applicationFamily -isnot [string] -or [string]::IsNullOrWhiteSpace($applicationFamily)) {
-            throw 'deploymentApplicationFamily must be a nonempty string.'
+            throw 'adminCenterApi.applicationFamily must be a nonempty string.'
         }
     }
     return @{ apiBaseUrl = $apiBaseUrl.TrimEnd('/'); applicationFamily = $applicationFamily }

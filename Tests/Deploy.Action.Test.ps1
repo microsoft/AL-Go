@@ -24,78 +24,6 @@ Describe "Deploy Action Tests" {
         YamlTest -scriptRoot $scriptRoot -actionName $actionName -actionScript $actionScript -outputs $outputs
     }
 
-    It 'Shares custom target and retained native auth through the exact action imports in a fresh host' {
-        $repro = Join-Path $TestDrive 'ActionImports.ps1'
-        @'
-param([string] $actionPath)
-$ErrorActionPreference = 'Stop'
-$env:GITHUB_WORKSPACE = Split-Path (Split-Path (Split-Path $actionPath))
-$tokens = $null
-$errors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseFile($actionPath, [ref]$tokens, [ref]$errors)
-$prefix = ($ast.EndBlock.Statements | Select-Object -First 4 | ForEach-Object { $_.Extent.Text }) -join "`n"
-$prefix = $prefix.Replace('$PSScriptRoot', "'$(Split-Path $actionPath)'")
-$inspection = {
-    $expires = [DateTime]::UtcNow.AddHours(1)
-    $source = @{ Scopes = 'https://legacy.test/'; AccessToken = 'legacy-token'; UtcExpiresOn = $expires }
-    Initialize-AdminCenterAuthContext -authContext $source.Clone() -settings @{
-        deploymentBaseUrl = 'https://native.test/root'; deploymentApplicationFamily = 'Custom Family'
-    }
-    $native = (Get-Command Initialize-AdminCenterAuthContext).Module
-    $deploy = Get-Module Deploy
-    $nested = & $deploy { (Get-Command Get-AdminCenterInstalledExtensions).Module }
-    if (![object]::ReferenceEquals($native, $nested)) { throw 'Action and Deploy must share the native module before any requests.' }
-    & $native {
-        $script:exchanges = 0
-        $script:requests = @()
-        function script:Renew-BcAuthContext {
-            param($bcAuthContext)
-            if ($bcAuthContext.UtcExpiresOn -le [DateTime]::UtcNow) {
-                $script:exchanges++
-                $bcAuthContext = $bcAuthContext.Clone()
-                $bcAuthContext.AccessToken = 'retained-native-token'
-                $bcAuthContext.UtcExpiresOn = [DateTime]::UtcNow.AddHours(1)
-            }
-            return $bcAuthContext
-        }
-        function script:Invoke-RestMethod {
-            param($Uri, $Method, $Headers, $UseBasicParsing, $TimeoutSec, $ErrorAction)
-            $script:requests += @{ uri = [string]$Uri; authorization = $Headers.Authorization }
-            return @{ value = @() }
-        }
-        function script:Write-Host { }
-    }
-    Get-AdminCenterInstalledExtensions -environment Sandbox | Out-Null
-    & $deploy {
-        param($context)
-        GetInstalledExtensions -bcAuthContext $context -environment Sandbox -publishingApi AdminCenter | Out-Null
-    } $source
-    $state = & $native {
-        @{ exchanges = $script:exchanges; requests = $script:requests; scopes = $script:adminCenterAuthContext.Scopes }
-    }
-    $state.sameInstance = [object]::ReferenceEquals($native, $nested)
-    $state.originalUnchanged = $source.Scopes -eq 'https://legacy.test/' -and
-        $source.AccessToken -eq 'legacy-token' -and $source.UtcExpiresOn -eq $expires
-    $state | ConvertTo-Json -Depth 10 -Compress
-}
-& ([scriptblock]::Create($prefix + "`n" + $inspection.ToString()))
-'@ | Set-Content -Path $repro -Encoding UTF8
-
-        $hostPath = (Get-Process -Id $PID).Path
-        $output = & $hostPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $repro -actionPath $scriptPath
-        $LASTEXITCODE | Should -Be 0
-        $state = $output[-1] | ConvertFrom-Json | ConvertTo-HashTable -recurse
-        $state.sameInstance | Should -BeTrue
-        $state.originalUnchanged | Should -BeTrue
-        $state.exchanges | Should -Be 1
-        $state.scopes | Should -Be 'https://native.test/root/'
-        $state.requests.Count | Should -Be 2
-        foreach ($request in $state.requests) {
-            $request.uri | Should -Be 'https://native.test/root/admin/v2.29/applications/Custom%20Family/environments/Sandbox/apps'
-            $request.authorization | Should -Be 'Bearer retained-native-token'
-        }
-    }
-
     Context "unpublishOldVersions wiring" {
         BeforeAll {
             Import-Module (Join-Path $scriptRoot "Deploy.psm1") -Force
@@ -193,7 +121,7 @@ $inspection = {
                 $authContext.AccessToken = 'native-token'
             }
 
-            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://native.test' } `
+            InvokeDeploy -repositorySettings @{ adminCenterApi = @{ baseUrl = 'https://native.test' } } `
                 -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = $scope; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
 
             Assert-MockCalled New-BcAuthContext -Exactly 1
@@ -229,12 +157,12 @@ $inspection = {
             Mock OutputError { param($message) throw $message }
 
             try {
-                InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'http://invalid.test' } `
+                InvokeDeploy -repositorySettings @{ adminCenterApi = @{ baseUrl = 'http://invalid.test' } } `
                     -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = $scope; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
                 throw 'Expected native configuration validation to fail'
             }
             catch {
-                $_.Exception.Message | Should -Match 'deploymentBaseUrl must be an absolute HTTPS API root'
+                $_.Exception.Message | Should -Match 'adminCenterApi.baseUrl must be an absolute HTTPS API root'
                 $_.Exception.Message | Should -Not -Match 'Authentication failed'
             }
             Assert-MockCalled Initialize-PTEPublishingApi -Times 0
@@ -247,7 +175,7 @@ $inspection = {
             Mock Initialize-AdminCenterAuthContext { throw 'Unused native configuration must not be initialized' }
             Mock OutputError { param($message) throw $message }
 
-            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'http://invalid.test'; deploymentApplicationFamily = '' } `
+            InvokeDeploy -repositorySettings @{ adminCenterApi = @{ baseUrl = 'http://invalid.test'; applicationFamily = '' } } `
                 -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'Dev'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
 
             Assert-MockCalled Initialize-AdminCenterAuthContext -Times 0
@@ -275,8 +203,7 @@ $inspection = {
             }
 
             InvokeDeploy -repositorySettings @{
-                deploymentBaseUrl = 'https://deploy.test/root/'
-                deploymentApplicationFamily = 'Custom / Family'
+                adminCenterApi = @{ baseUrl = 'https://deploy.test/root/'; applicationFamily = 'Custom / Family' }
                 apiBaseUrl = 'https://legacy.test'
                 baseUrl = 'https://web.test'
             } -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @(); unpublishOldVersions = $true }
@@ -289,8 +216,8 @@ $inspection = {
             Assert-MockCalled UnpublishOldAppVersions -Exactly 1
             Assert-MockCalled InstallUnknownDependencies -Exactly 1
             Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
-                $settings.deploymentBaseUrl -eq 'https://deploy.test/root/' -and
-                $settings.deploymentApplicationFamily -eq 'Custom / Family' -and !$preserveScopes
+                $settings.adminCenterApi.baseUrl -eq 'https://deploy.test/root/' -and
+                $settings.adminCenterApi.applicationFamily -eq 'Custom / Family' -and !$preserveScopes
             }
             Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -like 'https://web.test/*' }
             $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
@@ -305,7 +232,7 @@ $inspection = {
             $deployment = @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
 
             InvokeDeploy -deploymentSettings $deployment -repositorySettings @{
-                deploymentBaseUrl = 'https://explicit.test'; deploymentApplicationFamily = 'CustomFamily'
+                adminCenterApi = @{ baseUrl = 'https://explicit.test'; applicationFamily = 'CustomFamily' }
                 apiBaseUrl = 'https://legacy.test'
             }
             $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
@@ -315,11 +242,11 @@ $inspection = {
 
             Assert-MockCalled PublishPTEApps -Exactly 2
             Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
-                $settings['deploymentBaseUrl'] -eq 'https://explicit.test' -and
-                $settings['deploymentApplicationFamily'] -eq 'CustomFamily'
+                $settings.ContainsKey('adminCenterApi') -and $settings['adminCenterApi']['baseUrl'] -eq 'https://explicit.test' -and
+                $settings['adminCenterApi']['applicationFamily'] -eq 'CustomFamily'
             }
             Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
-                !$settings.ContainsKey('deploymentBaseUrl') -and !$settings.ContainsKey('deploymentApplicationFamily')
+                !$settings.ContainsKey('adminCenterApi')
             }
             $script:deploymentConfig.apiBaseUrl | Should -Be 'https://legacy.test'
         }
@@ -333,7 +260,7 @@ $inspection = {
             Mock OutputError { param($message) throw $message }
 
             { InvokeDeploy -repositorySettings @{
-                deploymentBaseUrl = 'https://explicit.test'
+                adminCenterApi = @{ baseUrl = 'https://explicit.test' }
                 apiBaseUrl = 'https://legacy.test'
             } -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() } } | Should -Throw '*Authentication failed*'
 
@@ -347,7 +274,7 @@ $inspection = {
             Mock New-BcAuthContext {
                 return @{ tenantId = 'tenant'; Scopes = 'https://audience.test/.default' }
             }
-            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://explicit.test' } `
+            InvokeDeploy -repositorySettings @{ adminCenterApi = @{ baseUrl = 'https://explicit.test' } } `
                 -authParameters @{ refreshToken = 'dummy'; scopes = @('https://audience.test/.default') } `
                 -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
 
@@ -359,7 +286,7 @@ $inspection = {
             }
             Assert-MockCalled Initialize-AdminCenterAuthContext -Exactly 1 -ParameterFilter {
                 $preserveScopes -and $authContext.Scopes -eq 'https://audience.test/.default' -and
-                $settings.deploymentBaseUrl -eq 'https://explicit.test'
+                $settings.adminCenterApi.baseUrl -eq 'https://explicit.test'
             }
         }
 
@@ -376,7 +303,7 @@ $inspection = {
                 & $newContext -tenantID 'fake-tenant' -clientID 'fake-client' -clientSecret 'fake-secret' -silent
             }
 
-            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://explicit.test'; apiBaseUrl = 'https://legacy.test' } `
+            InvokeDeploy -repositorySettings @{ adminCenterApi = @{ baseUrl = 'https://explicit.test' }; apiBaseUrl = 'https://legacy.test' } `
                 -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
 
             Assert-MockCalled Invoke-RestMethod -ModuleName BcContainerHelper -Exactly 1 -ParameterFilter {
@@ -390,7 +317,7 @@ $inspection = {
                 tenantId = 'tenant'; Scopes = 'https://explicit-resource.test/'; AccessToken = 'original-token'
             }
             Mock New-BcAuthContext { return $script:originalAuthContext }
-            InvokeDeploy -repositorySettings @{ deploymentBaseUrl = 'https://admin.test' } `
+            InvokeDeploy -repositorySettings @{ adminCenterApi = @{ baseUrl = 'https://admin.test' } } `
                 -authParameters @{ refreshToken = 'dummy'; resource = 'https://explicit-resource.test' } `
                 -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'ignore'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @() }
 

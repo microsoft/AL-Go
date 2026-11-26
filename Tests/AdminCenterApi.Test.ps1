@@ -92,7 +92,7 @@ Describe 'AL-Go Admin Center API helpers' {
                     UtcExpiresOn = [DateTime]::UtcNow.AddHours(1)
                 }
                 $adminContext = $original.Clone()
-                Initialize-AdminCenterAuthContext -authContext $adminContext -settings @{ deploymentBaseUrl = 'https://admin.test' }
+                Initialize-AdminCenterAuthContext -authContext $adminContext -settings @{ adminCenterApi = @{ baseUrl = 'https://admin.test' } }
                 Mock Renew-BcAuthContext {
                     $bcAuthContext.Scopes | Should -Be 'https://admin.test/'
                     $bcAuthContext.UtcExpiresOn | Should -Be ([DateTime]::MinValue)
@@ -120,14 +120,14 @@ Describe 'AL-Go Admin Center API helpers' {
                     Scopes = 'https://explicit-resource.test/.default'
                     UtcExpiresOn = $expires
                 }
-                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ deploymentBaseUrl = 'https://admin.test' } -preserveScopes
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ adminCenterApi = @{ baseUrl = 'https://admin.test' } } -preserveScopes
                 Invoke-AdminCenterApi -environment Sandbox -path apps -apiBaseUrl 'https://admin.test'
                 Assert-MockCalled Renew-BcAuthContext -Exactly 1
             }
 
             It 'Does not mutate the BCH context when Admin renewal fails' {
                 $original = @{ Scopes = 'https://legacy.test/' }
-                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ deploymentBaseUrl = 'https://admin.test' }
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ adminCenterApi = @{ baseUrl = 'https://admin.test' } }
                 Mock Renew-BcAuthContext {
                     $bcAuthContext.Scopes = 'changed-copy'
                     throw [TimeoutException]::new('Renewal timed out')
@@ -145,7 +145,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 $newContext = Get-Command New-BcAuthContext -Module BcContainerHelper
                 $original = & $newContext -tenantID fake-tenant -clientID fake-client -clientSecret fake-secret `
                     -scopes 'https://legacy.test/' -silent
-                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ deploymentBaseUrl = 'https://admin.test' }
+                Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{ adminCenterApi = @{ baseUrl = 'https://admin.test' } }
                 Mock Renew-BcAuthContext {
                     $renew = Get-Command Renew-BcAuthContext -Module BcContainerHelper
                     & $renew -bcAuthContext $bcAuthContext -silent
@@ -177,9 +177,9 @@ Describe 'AL-Go Admin Center API helpers' {
                 $originalToken = $original.AccessToken
                 $originalExpiry = $original.UtcExpiresOn
                 $originalConfig = $bcContainerHelperConfig.apiBaseUrl
-                $settings = @{ deploymentBaseUrl = 'https://admin.test'; deploymentApplicationFamily = 'Family / US' }
+                $settings = @{ adminCenterApi = @{ baseUrl = 'https://admin.test'; applicationFamily = 'Family / US' } }
                 Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings $settings
-                $settings.deploymentBaseUrl = 'https://changed-after-initialization.test'
+                $settings.adminCenterApi.baseUrl = 'https://changed-after-initialization.test'
                 Mock Renew-BcAuthContext {
                     $renew = Get-Command Renew-BcAuthContext -Module BcContainerHelper
                     & $renew -bcAuthContext $bcAuthContext -silent
@@ -237,7 +237,7 @@ Describe 'AL-Go Admin Center API helpers' {
             It 'Replaces the supplied Admin context and target together on initialization' {
                 $first = @{ Scopes = 'https://first.test/'; AccessToken = 'first-token' }
                 Initialize-AdminCenterAuthContext -authContext $first -settings @{
-                    deploymentBaseUrl = 'https://first-admin.test'; deploymentApplicationFamily = 'FirstFamily'
+                    adminCenterApi = @{ baseUrl = 'https://first-admin.test'; applicationFamily = 'FirstFamily' }
                 }
                 Mock Renew-BcAuthContext {
                     $bcAuthContext.AccessToken = 'mutated-before-failure'
@@ -248,7 +248,7 @@ Describe 'AL-Go Admin Center API helpers' {
                 Assert-MockCalled Invoke-RestMethod -Times 0
                 $second = @{ Scopes = 'https://second.test/'; AccessToken = 'second-token' }
                 Initialize-AdminCenterAuthContext -authContext $second -settings @{
-                    deploymentBaseUrl = 'https://second.test'; deploymentApplicationFamily = 'SecondFamily'
+                    adminCenterApi = @{ baseUrl = 'https://second.test'; applicationFamily = 'SecondFamily' }
                 }
                 [object]::ReferenceEquals($script:adminCenterAuthContext, $second) | Should -BeTrue
                 Mock Renew-BcAuthContext { return $bcAuthContext }
@@ -267,7 +267,7 @@ Describe 'AL-Go Admin Center API helpers' {
             It 'Honors explicit native endpoint overrides independently of action target defaults' {
                 $original = @{ Scopes = 'https://action.test/'; AccessToken = 'action-token' }
                 Initialize-AdminCenterAuthContext -authContext $original.Clone() -settings @{
-                    deploymentBaseUrl = 'https://action.test'; deploymentApplicationFamily = 'ActionFamily'
+                    adminCenterApi = @{ baseUrl = 'https://action.test'; applicationFamily = 'ActionFamily' }
                 }
                 Mock Renew-BcAuthContext { return $bcAuthContext }
                 Mock Invoke-RestMethod { return @{ value = @(); id = 'operation' } }
@@ -483,8 +483,9 @@ Describe 'AL-Go Admin Center API helpers' {
         It 'Resolves <source> API root without deriving the family from the hostname' -TestCases @(
             @{ source = 'standard default'; settings = @{}; helper = @{}; expected = 'https://api.businesscentral.dynamics.com' },
             @{ source = 'default despite legacy override'; settings = @{}; helper = @{ apiBaseUrl = 'https://legacy.test/' }; expected = 'https://api.businesscentral.dynamics.com' },
-            @{ source = 'explicit deployment setting'; settings = @{ deploymentBaseUrl = 'https://deploy.test/root/' }; helper = @{ apiBaseUrl = 'https://legacy.test' }; expected = 'https://deploy.test/root' },
-            @{ source = 'empty setting despite legacy override'; settings = @{ deploymentBaseUrl = '' }; helper = @{ apiBaseUrl = 'https://legacy.test/' }; expected = 'https://api.businesscentral.dynamics.com' }
+            @{ source = 'explicit deployment setting'; settings = @{ adminCenterApi = @{ baseUrl = 'https://deploy.test/root/' } }; helper = @{ apiBaseUrl = 'https://legacy.test' }; expected = 'https://deploy.test/root' },
+            @{ source = 'empty setting despite legacy override'; settings = @{ adminCenterApi = @{ baseUrl = '' } }; helper = @{ apiBaseUrl = 'https://legacy.test/' }; expected = 'https://api.businesscentral.dynamics.com' },
+            @{ source = 'empty target'; settings = @{ adminCenterApi = @{} }; helper = @{}; expected = 'https://api.businesscentral.dynamics.com' }
         ) {
             param($settings, $helper, $expected)
 
@@ -497,7 +498,7 @@ Describe 'AL-Go Admin Center API helpers' {
         }
 
         It 'Resolves family independently and does not retain settings between invocations' {
-            $settings = @{ deploymentBaseUrl = 'https://custom.test'; deploymentApplicationFamily = 'Family / One' }
+            $settings = @{ adminCenterApi = @{ baseUrl = 'https://custom.test'; applicationFamily = 'Family / One' } }
             $helper = @{ apiBaseUrl = 'https://legacy.test' }
             $first = Get-DeploymentTarget -settings $settings
             $second = Get-DeploymentTarget
@@ -506,7 +507,7 @@ Describe 'AL-Go Admin Center API helpers' {
             $second.applicationFamily | Should -Be 'BusinessCentral'
             $second.apiBaseUrl | Should -Be 'https://api.businesscentral.dynamics.com'
             $helper.apiBaseUrl | Should -Be 'https://legacy.test'
-            $settings.deploymentBaseUrl | Should -Be 'https://custom.test'
+            $settings.adminCenterApi.baseUrl | Should -Be 'https://custom.test'
         }
 
         It 'Rejects invalid API root <root> without including it in the error' -TestCases @(
@@ -514,19 +515,33 @@ Describe 'AL-Go Admin Center API helpers' {
             @{ root = 'https://custom.test?private=value' }, @{ root = 'https://custom.test#fragment' }
         ) {
             param($root)
-            $invalidSettings = @{ deploymentBaseUrl = $root }
+            $invalidSettings = @{ adminCenterApi = @{ baseUrl = $root } }
             { Get-DeploymentTarget -settings $invalidSettings } |
-                Should -Throw 'deploymentBaseUrl must be an absolute HTTPS API root without credentials, query or fragment.'
+                Should -Throw 'adminCenterApi.baseUrl must be an absolute HTTPS API root without credentials, query or fragment.'
         }
 
         It 'Rejects an empty explicit application family' {
-            { Get-DeploymentTarget -settings @{ deploymentApplicationFamily = ' ' } } |
-                Should -Throw '*deploymentApplicationFamily must be a nonempty string*'
+            { Get-DeploymentTarget -settings @{ adminCenterApi = @{ applicationFamily = ' ' } } } |
+                Should -Throw '*adminCenterApi.applicationFamily must be a nonempty string*'
         }
 
         It 'Rejects non-string explicit settings rather than silently selecting the standard service' {
-            { Get-DeploymentTarget -settings @{ deploymentBaseUrl = $null } } | Should -Throw '*deploymentBaseUrl must be a string*'
-            { Get-DeploymentTarget -settings @{ deploymentApplicationFamily = @('One', 'Two') } } | Should -Throw '*deploymentApplicationFamily must be a nonempty string*'
+            { Get-DeploymentTarget -settings @{ adminCenterApi = @{ baseUrl = $null } } } | Should -Throw '*adminCenterApi.baseUrl must be a string*'
+            { Get-DeploymentTarget -settings @{ adminCenterApi = @{ applicationFamily = @('One', 'Two') } } } | Should -Throw '*adminCenterApi.applicationFamily must be a nonempty string*'
+        }
+
+        It 'Rejects a non-object target <target>' -TestCases @(
+            @{ target = $null }, @{ target = 'https://admin.test' }, @{ target = @('One', 'Two') }
+        ) {
+            param($target)
+            $settings = @{ adminCenterApi = $target }
+            { Get-DeploymentTarget -settings $settings } | Should -Throw '*adminCenterApi must be an object*'
+        }
+
+        It 'Accepts an ordered target with only an application family' {
+            $target = Get-DeploymentTarget -settings @{ adminCenterApi = [ordered]@{ applicationFamily = 'CustomFamily' } }
+            $target.apiBaseUrl | Should -Be 'https://api.businesscentral.dynamics.com'
+            $target.applicationFamily | Should -Be CustomFamily
         }
     }
 
