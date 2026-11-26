@@ -125,6 +125,8 @@ In the e2eTests folder, in the AL-Go repository, there are 3 types of end to end
   - SpecialCharacters - testing that various settings (+ publisher name and app name) can contain special national characters
   - and more...
 
+E2E templates and test repositories default to private; the existing matrix split is unchanged. Setup authenticates template downloads and provisions workflow credentials before the first push.
+
 In your personal fork, you can now run the end to end tests, if the following pre-requisites are available:
 
 - You need to have a GitHub organization setup, which will contain all the temporary repositories created by the end to end testing. This organization needs to have at least two instances of a GitHub runner registered as self-hosted (for running all private repo builds)
@@ -147,13 +149,16 @@ In your personal fork, you can now run the end to end tests, if the following pr
 
 - You need the following secrets:
 
-  - **ALGOAUTHAPP** needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_.
+  - **ALGOAUTHAPP** needs to be a JSON-formatted secret containing GitHubAppClientId and PrivateKey for a GitHub App with the following repo read & write permissions: _Actions, Administration, Content, Packages, Pages, Pull Requests and Workflows_. Install the App on all test repositories, including private templates.
   - **AdminCenterApiCredentials** needs to be the adminCenterApiCredentials as described [here](CreateOnlineDevEnv2.md).
   - **E2E_PRIVATE_KEY** a private key for the GitHub app installed on the GitHub organization used for testing
   - **E2EAZURECREDENTIALS** a federated credential set up as described [here](secrets.md#federated-credential)
   - **E2E_GHPACKAGESPAT** a classic PAT with the following permissions: write:packages, delete:packages
 
 Run the End to end tests by running the *End to end tests* workflow and specify your organization in the corresponding field.
+
+Organization policies must allow the tested features on private repositories. The ReferenceDocumentation scenario requires an anonymously readable Pages site.
+
 End to end testing will create a lot of repositories called tmpXYZ, where XYZ is a random letter combination. If End to end tests are failing, the tmp repositories are NOT removed, but can be used for troubleshooting.
 You can run the *Cleanup after failed E2E* workflow to cleanup these repositories.
 

@@ -1,9 +1,21 @@
-﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'directCommit', Justification = 'False positive.')]
+<#
+.SYNOPSIS
+Publishes AL-Go templates and actions using the specified deployment configuration.
+.PARAMETER config
+Target repositories, branch, and deployment settings.
+.PARAMETER directCommit
+Whether to commit directly instead of opening a pull request.
+.PARAMETER private
+Creates missing repositories privately, for E2E template deployment. Normal publication remains public.
+#>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'directCommit', Justification = 'False positive.')]
 Param(
     [Parameter(Mandatory=$true)]
     [Hashtable] $config,
     [Parameter(Mandatory=$false)]
-    [bool] $directCommit
+    [bool] $directCommit,
+    [Parameter(Mandatory=$false)]
+    [switch] $private
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\Actions\Github-Helper.psm1" -Resolve) -DisableNameChecking
@@ -173,9 +185,13 @@ try {
             }
         }
         catch {
-            Write-Host "gh repo create $($config.githubOwner)/$repo --public --clone"
+            $visibility = '--public'
+            if ($private) {
+                $visibility = '--private'
+            }
+            Write-Host "gh repo create $($config.githubOwner)/$repo $visibility --clone"
             $ownerRepo = "$($config.githubOwner)/$repo"
-            invoke-gh repo create $ownerRepo --public --clone
+            invoke-gh repo create $ownerRepo $visibility --clone
             Start-Sleep -Seconds 10
             Set-Location $repo
             invoke-git checkout -b $branch
