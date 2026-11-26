@@ -1,3 +1,9 @@
+### Issues
+
+- Issue 2405 - AppSource publishing now submits only the highest available version of each library app by app ID across project apps and included dependencies. Duplicate versions and packages with the main app's ID are excluded from library submissions.
+
+## v10.1
+
 ### Optional draft PR build skipping
 
 The new `skipDraftPullRequests` setting (default `false`) lets PTE and AppSource repositories skip AL-Go's built-in PR build jobs while a pull request is draft and build when it is marked ready for review. Custom jobs remain user-managed and are not modified. Default behavior and merge-queue builds are unchanged. Run **Update AL-Go System Files** after changing the setting. See [skipDraftPullRequests](Scenarios/settings.md#skipDraftPullRequests).
@@ -40,7 +46,7 @@ AL-Go repositories can now opt in to AI-powered review of AL pull requests, with
 
 ### Issues
 
-- Issue 2405 - AppSource publishing now submits only the highest available version of each library app by app ID across project apps and included dependencies. Duplicate versions and packages with the main app's ID are excluded from library submissions.
+- Issue 2443 - GitHub App token requests are now retried, so a transient error such as a 404 on the installation lookup no longer fails the workflow.
 
 - Issue 2454 - Fix separate test execution on Windows PowerShell 5.1 when an app contains multiple test codeunits, preserving each codeunit's ID and test methods.
 
