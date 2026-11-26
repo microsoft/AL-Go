@@ -294,16 +294,32 @@ function Initialize-PTEPublishingApi {
 
     $publishingApi = 'AdminCenter'
     $authorizationDetails = ''
+    $applicationVersion = $null
     try {
         $extensions = @(Get-AdminCenterInstalledExtensions -environment $environment)
     }
     catch {
-        if (!(Test-AdminCenterAuthorizationError -errorRecord $_)) { throw }
-        $authorizationDetails = "$_"
+        $probeError = $_
+        if (Test-AdminCenterAuthorizationError -errorRecord $probeError) {
+            $authorizationDetails = "$probeError"
+            $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -publishingApi Automation)
+        }
+        else {
+            try {
+                $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -publishingApi Automation)
+                $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
+            }
+            catch {
+                throw $probeError
+            }
+            if ($applicationVersion -ge [version]'29.0.0.0') { throw $probeError }
+            OutputWarning -message "Admin Center probe failed: $probeError. Environment $environment is running BC $applicationVersion, which uses Automation for PTE publishing."
+        }
         $publishingApi = 'Automation'
-        $extensions = @(GetInstalledExtensions -bcAuthContext $bcAuthContext -environment $environment -publishingApi $publishingApi)
     }
-    $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
+    if ($null -eq $applicationVersion) {
+        $applicationVersion = GetPTEApplicationVersion -extensions $extensions -environment $environment
+    }
     if ($applicationVersion -lt [version]'29.0.0.0') {
         $publishingApi = 'Automation'
     }

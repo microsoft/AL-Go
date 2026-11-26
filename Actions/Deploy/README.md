@@ -9,6 +9,8 @@ Native publishing logs each app's name and version when installation starts and 
 
 On BC 29+, PTE deployment checks administration center access first and selects Automation only for authentication or authorization failures. The selected API is used throughout the action. Configure the [required authorization](../../Workshop/ContinuousDeployment.md#pte-deployment-authorization). Primary-app Dev publishing is unchanged.
 
+If the Admin check fails for another reason, a read-only Automation version check allows confirmed targets below BC 29 to continue. BC 29+ or an unknown version retains the original Admin error. Deployment error annotations include the service's error details when provided.
+
 Optional `DeployTo<environment>.unpublishOldVersions` (default `false`) cleans older, uninstalled versions after Automation deployment on BC 25.4+. Administration center deployments use Business Central's background cleanup. See [cleanup details](../../Workshop/ContinuousDeployment.md#old-published-versions).
 
 For custom Admin services, use repository settings `deploymentBaseUrl` and `deploymentApplicationFamily`; Automation keeps its BCH configuration. These settings are validated only for PTE work, including PTE dependencies, not pure Dev deployment. See [target configuration and authentication](../../Workshop/ContinuousDeployment.md#custom-deployment-targets).

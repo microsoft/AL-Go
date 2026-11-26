@@ -112,7 +112,7 @@ InModuleScope Deploy {
                 { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } |
                     Should -Throw '*Token missing*'
                 $script:ptePublishingApi | Should -Be ''
-                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled OutputWarning -Times 0
             }
 
@@ -125,18 +125,18 @@ InModuleScope Deploy {
                     Should -Throw '*token renewal returned no access token*'
 
                 $script:ptePublishingApi | Should -Be ''
-                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
                 Assert-MockCalled OutputWarning -Times 0
                 Assert-MockCalled Invoke-RestMethod -Times 0
             }
 
             It 'Does not mistake a probe <problem> for an authorization setup failure' -TestCases @(
-                @{ problem = 'network' }, @{ problem = 'timeout' }, @{ problem = 'TLS' },
-                @{ problem = 'text-only 403' }, @{ problem = 'malformed' }, @{ problem = 'missing Application' },
+                @{ problem = 'network'; expectedReads = 1 }, @{ problem = 'timeout'; expectedReads = 1 }, @{ problem = 'TLS'; expectedReads = 1 },
+                @{ problem = 'text-only 403'; expectedReads = 1 }, @{ problem = 'malformed'; expectedReads = 1 }, @{ problem = 'missing Application' },
                 @{ problem = 'incomplete Application' }, @{ problem = 'invalid Application' }, @{ problem = 'ambiguous Application' },
-                @{ problem = '404' }, @{ problem = '500' }
+                @{ problem = '404'; expectedReads = 1 }, @{ problem = '500'; expectedReads = 1 }
             ) {
-                param($problem)
+                param($problem, $expectedReads = 0)
                 switch ($problem) {
                     network { Mock Get-AdminCenterInstalledExtensions { throw [System.Net.WebException]::new('Connection failed') } }
                     timeout { Mock Get-AdminCenterInstalledExtensions { throw [TimeoutException]::new('Timed out') } }
@@ -160,8 +160,59 @@ InModuleScope Deploy {
                 }
                 { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } | Should -Throw
                 $script:ptePublishingApi | Should -Be ''
-                Assert-MockCalled Get-BcInstalledExtensions -Times 0
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly $expectedReads
                 Assert-MockCalled OutputWarning -Times 0
+            }
+
+            It 'Uses Automation on BC 28 after an unexpected Admin <problem>' -TestCases @(
+                @{ problem = '404' }, @{ problem = '500' }, @{ problem = 'timeout' },
+                @{ problem = 'TLS' }, @{ problem = 'missing token' }
+            ) {
+                param($problem)
+                $script:application.versionMajor = 28
+                $script:probeProblem = $problem
+                Mock Get-AdminCenterInstalledExtensions {
+                    $message = "Admin probe $script:probeProblem"
+                    switch ($script:probeProblem) {
+                        timeout { throw [TimeoutException]::new($message) }
+                        TLS { throw [System.Security.Authentication.AuthenticationException]::new($message) }
+                        'missing token' { throw $message }
+                        default {
+                            $exception = [System.Exception]::new($message)
+                            $exception | Add-Member NoteProperty Response ([PSCustomObject]@{ StatusCode = [int]$script:probeProblem })
+                            throw $exception
+                        }
+                    }
+                }
+
+                Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox
+
+                $script:ptePublishingApi | Should -Be Automation
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled OutputWarning -Exactly 1 -ParameterFilter {
+                    $message -like '*Admin probe*BC 28.0.0.0*uses Automation*' -and $message -notlike '*authorization failed*'
+                }
+            }
+
+            It 'Preserves the original Admin failure when Automation version is <problem>' -TestCases @(
+                @{ problem = '29' }, @{ problem = 'unknown' }, @{ problem = 'unavailable' }
+            ) {
+                param($problem)
+                Mock Get-AdminCenterInstalledExtensions { throw 'Original Admin probe failure' }
+                switch ($problem) {
+                    '29' { $script:application.versionMajor = 29 }
+                    unknown { Mock Get-BcInstalledExtensions { return @() } }
+                    unavailable { Mock Get-BcInstalledExtensions { throw 'Automation read failed' } }
+                }
+
+                { Initialize-PTEPublishingApi -bcAuthContext @{} -environment Sandbox } |
+                    Should -Throw '*Original Admin probe failure*'
+
+                $script:ptePublishingApi | Should -Be ''
+                Assert-MockCalled Get-BcInstalledExtensions -Exactly 1
+                Assert-MockCalled OutputWarning -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled Install-AdminCenterPTEApps -Times 0
             }
 
             It 'Fails rather than using a default version if the selected Automation read fails' {
@@ -502,6 +553,20 @@ InModuleScope Deploy {
                 Assert-MockCalled Install-BcAppFromAppSource -Times 0
                 Assert-MockCalled Install-AdminCenterPTEApps -Times 0
                 Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            }
+
+            It 'Upgrades a matched AppSource dependency without appType after normalization' {
+                $script:rawApp.Remove('appType')
+                Mock Get-AppJsonFromAppFile {
+                    return @{ id = 'app-1'; name = 'App'; version = '2.0.0.0'; idRanges = @(@{ from = 100000 }) }
+                }
+
+                InstallOrUpgradeApps -bcAuthContext @{} -environment Sandbox -apps @('App.app') -installMode upgrade
+
+                Assert-MockCalled Install-BcAppFromAppSource -Exactly 1 -ParameterFilter { $appId -eq 'app-1' }
+                Assert-MockCalled OutputWarning -Times 0
+                Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+                Assert-MockCalled Install-AdminCenterPTEApps -Times 0
             }
         }
 

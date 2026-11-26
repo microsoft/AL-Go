@@ -306,7 +306,7 @@ function Get-AdminCenterInstalledExtensions {
             versionRevision = if ($version) { $version.Revision } else { $null }
             isInstalled = $true
             state = $app['state']
-            publishedAs = $app['appType']
+            publishedAs = [string]$app['appType']
         }
     }
 }

@@ -60,7 +60,7 @@ $template = "https://github.com/$appSourceTemplate"
 $sourceRepository = 'microsoft/bcsamples-bingmaps.appsource' # E2E test will create a copy of this repository
 
 # Create temp repository from sourceRepository
-SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository
+SetTokenAndRepository -github:$github -githubOwner $githubOwner -appId $e2eAppId -appKey $e2eAppKey -repository $repository -ghTokenWorkflow $algoauthapp
 
 gh api repos/$repository --method HEAD
 if ($LASTEXITCODE -eq 0) {

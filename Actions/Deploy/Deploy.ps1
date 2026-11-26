@@ -239,7 +239,7 @@ else {
         }
     }
     catch {
-        OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $($_.Exception.Message)"
+        OutputError -message "Deploying to $environmentName failed.$([environment]::Newline) $_"
         exit
     }
 }

@@ -462,6 +462,31 @@ $inspection = {
             Assert-MockCalled Initialize-PTEPublishingApi -Times 0
         }
 
+        It 'Includes service error details when <surface> deployment fails' -TestCases @(
+            @{ surface = 'primary' }, @{ surface = 'dependency' }
+        ) {
+            param($surface)
+            $failure = {
+                $record = [System.Management.Automation.ErrorRecord]::new(
+                    [System.Exception]::new('Generic HTTP 400'), 'PackageRejected', 'InvalidOperation', $null)
+                $record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('Package validation failed: incompatible dependency.')
+                throw $record
+            }
+            if ($surface -eq 'primary') { Mock PublishPTEApps $failure }
+            else {
+                Mock GetAppsAndDependenciesFromArtifacts { return @('/tmp/app1.app'), @('/tmp/dependency.app') }
+                Mock InstallOrUpgradeApps $failure
+            }
+            Mock OutputError { param($message) throw $message }
+
+            { InvokeDeploy -deploymentSettings @{ EnvironmentType = 'SaaS'; EnvironmentName = 'test'; Branches = @(); Projects = '*'; DependencyInstallMode = 'upgrade'; SyncMode = $null; Scope = 'PTE'; continuousDeployment = $true; includeTestAppsInSandboxEnvironment = $false; excludeAppIds = @(); unpublishOldVersions = $true } } |
+                Should -Throw '*Deploying to test failed.*Package validation failed: incompatible dependency.*'
+
+            Assert-MockCalled UnpublishOldAppVersions -Times 0
+            Assert-MockCalled Publish-PerTenantExtensionApps -Times 0
+            Assert-MockCalled Publish-BcContainerApp -Times 0
+        }
+
         It 'Probes before Dev dependency installation only for PTE dependency packages' -TestCases @(
             @{ from = 50000; expectedProbes = 1 },
             @{ from = 100000; expectedProbes = 0 }
