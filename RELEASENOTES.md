@@ -1,3 +1,9 @@
+### AlTool package discovery for separate test execution (PREVIEW)
+
+The separate `RunTests` action now discovers app metadata and normal tests locally from each exact `.app` package using AlTool. It continues to honor `disabledTests.json` definitions and runs each app's enabled tests in one batch and connection.
+
+The built-in runner does not support TestType filtering. A nonblank `useSeparateTestAction.testType` value produces a warning and is ignored, while a blank value discovers all subtype-Test codeunits. Custom `RunTestsInBcContainer` overrides still receive the configured value. Tests that require UI or client-callback interaction should continue to use an override script.
+
 ## v10.1
 
 ### Optional draft PR build skipping

@@ -158,7 +158,11 @@ Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $b
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
     -stepName "Run Tests" -actionName "RunTests" -expectedText "Using al CLI version"
 Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
+    -stepName "Run Tests" -actionName "RunTests" -expectedText "using al listtests --appfile"
+Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
     -stepName "Run Tests" -actionName "RunTests" -expectedText "Running tests in My App.Test"
+Test-ActionLogContainsFromRun -repository $repository -runId $run.id -jobName $buildJobName `
+    -stepName "Run Tests" -actionName "RunTests" -expectedText "Executing 3 discovered test method(s)."
 
 Test-ArtifactsFromRun `
     -runid $run.id `

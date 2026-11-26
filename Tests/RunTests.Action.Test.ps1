@@ -188,7 +188,6 @@ Describe "RunTests Action Tests" {
         )
 
         Mock DownloadAndImportBcContainerHelper {}
-        Mock GetAlToolPath { return 'C:\dotnet-tools\al.exe' }
         Mock AnalyzeRepo {
             param($settings)
             $settings | Should -BeOfType System.Collections.Hashtable
@@ -203,10 +202,7 @@ Describe "RunTests Action Tests" {
         & $scriptPath
 
         Should -Invoke AnalyzeRepo -Times 1 -Exactly
-        Should -Invoke GetAlToolPath -Times 0 -Exactly
-        Should -Invoke Invoke-AlGoTestRun -Times 1 -Exactly -ParameterFilter {
-            $getAlToolPath -is [scriptblock]
-        }
+        Should -Invoke Invoke-AlGoTestRun -Times 1 -Exactly
     }
 
     Context 'RunPipeline wiring' {
