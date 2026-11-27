@@ -5,11 +5,16 @@ inputs:
     description: Shell in which you want to run the action (powershell or pwsh)
     required: false
     default: powershell
+outputs:
+  failedOptionalJobs:
+    description: JSON array of failed optional build job names
+    value: ${{ steps.pullrequeststatuscheck.outputs.failedOptionalJobs }}
 runs:
   using: composite
   steps:
     - name: run
       shell: ${{ inputs.shell }}
+      id: pullrequeststatuscheck
       run: |
         ${{ github.action_path }}/../Invoke-AlGoAction.ps1 -ActionName "PullRequestStatusCheck" -Action {
           ${{ github.action_path }}/PullRequestStatusCheck.ps1
