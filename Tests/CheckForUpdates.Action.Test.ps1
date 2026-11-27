@@ -5069,7 +5069,7 @@ Describe "GetFilesToUpdate (general files to update logic)" {
         }
     }
 
-    It 'GetFilesToUpdate excludes only the exact-case unused file on Linux' -Skip:(-not $script:isLinuxPlatform) {
+    It 'GetFilesToUpdate excludes any case unused file on Linux' -Skip:(-not $script:isLinuxPlatform) {
         $upperCaseFile = Join-Path $templateFolder 'UnusedFile.ps1'
         $lowerCaseFile = Join-Path $templateFolder 'unusedfile.ps1'
         Set-Content -Path $upperCaseFile -Value '# upper case file'
@@ -5087,9 +5087,9 @@ Describe "GetFilesToUpdate (general files to update logic)" {
 
             $filesToInclude, $filesToExclude = GetFilesToUpdate -settings $settings -baseFolder $baseFolder -templateFolder $templateFolder
 
-            $filesToInclude.sourceFullPath -ccontains $upperCaseFile | Should -BeTrue
+            $filesToInclude.sourceFullPath -ccontains $upperCaseFile | Should -BeFalse
             $filesToInclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeFalse
-            $filesToExclude.sourceFullPath -ccontains $upperCaseFile | Should -BeFalse
+            $filesToExclude.sourceFullPath -ccontains $upperCaseFile | Should -BeTrue
             $filesToExclude.sourceFullPath -ccontains $lowerCaseFile | Should -BeTrue
         }
         finally {
