@@ -1,3 +1,7 @@
+### AL-Go settings schema
+
+The settings schema now recognizes `enableAppSourceCop`, `enablePerTenantExtensionCop`, `CICDPushBranches`, `CICDPullRequestBranches`, `BcContainerHelperVersion`, `trustedNuGetFeeds`, `ConditionalSettings`, `workflowSchedule`, and `workflowConcurrency`.
+
 ## v10.1
 
 ### Optional draft PR build skipping
