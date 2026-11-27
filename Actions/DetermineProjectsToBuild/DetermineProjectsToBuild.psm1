@@ -143,6 +143,9 @@ function CreateBuildDimensions {
     Analyzes a folder for AL-Go projects and determines the build order of these projects.
     The build order is determined by the project dependencies and the projects that have been modified.
 
+.Parameter settings
+    Settings used to select projects. Defaults to the deserialized Settings environment variable.
+
 .Outputs
     The function returns the following values:
     - projects: An array of all projects found in the folder
@@ -165,7 +168,9 @@ function Get-ProjectsToBuild {
         [Parameter(HelpMessage = "An array of changed files paths, used to filter the projects to build", Mandatory = $false)]
         [string[]] $modifiedFiles = @(),
         [Parameter(HelpMessage = "The maximum depth to build the dependency tree", Mandatory = $false)]
-        [int] $maxBuildDepth = 0
+        [int] $maxBuildDepth = 0,
+        [Parameter(HelpMessage = "Settings used to select projects", Mandatory = $false)]
+        [hashtable] $settings = ($env:Settings | ConvertFrom-Json | ConvertTo-HashTable -recurse)
     )
 
     . (Join-Path -Path $PSScriptRoot -ChildPath "..\AL-Go-Helper.ps1" -Resolve)
@@ -174,7 +179,6 @@ function Get-ProjectsToBuild {
 
     Push-Location $baseFolder
     try {
-        $settings = $env:Settings | ConvertFrom-Json
         $projects = @(GetProjectsFromRepository -baseFolder $baseFolder -projectsFromSettings $settings.projects)
         Write-Host "Found AL-Go Projects: $($projects -join ', ')"
 
